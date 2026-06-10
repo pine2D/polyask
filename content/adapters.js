@@ -42,6 +42,11 @@
         }
         escMenus();
       },
+      state: function () {
+        const e = document.querySelector('[data-testid="model-selector-dropdown"]');
+        const t = e ? e.getAttribute("aria-label") || "" : "";
+        return /opus/i.test(t) ? "think" : /sonnet|haiku/i.test(t) ? "fast" : null;
+      },
       think: async function () { await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true); },
       fast: async function () { await this._selectModel(/sonnet/i); await this._setThinking(false); },
     },
@@ -60,6 +65,12 @@
         if (!item) { openMenu(anchor); item = await waitFor(probe); }
         if (!item) { escMenus(); throw new Error("ChatGPT: 未找到档位 " + re); }
         clickEl(item); await sleep(400);
+      },
+      state: function () {
+        const b = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
+          .find((x) => /^(Instant|Medium|High)$/i.test((x.textContent || "").trim()));
+        const t = b ? b.textContent.trim() : "";
+        return /high/i.test(t) ? "think" : /medium|instant/i.test(t) ? "fast" : null;
       },
       think: async function () { await this._select(/^high$/i); },
       fast: async function () { await this._select(/^medium$/i); },
@@ -101,6 +112,11 @@
         lvl.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
         clickEl(lvl); await sleep(400); escMenus();
       },
+      state: function () {
+        const b = this._modelBtn();
+        const t = b ? b.getAttribute("aria-label") || "" : "";
+        return /pro/i.test(t) ? "think" : /flash/i.test(t) ? "fast" : null;
+      },
       think: async function () { await this._selectModel(/3\.1\s*pro\b/i); await this._setThinking(/^extended/i); },
       fast: async function () { await this._selectModel(/3\.5\s*flash\b/i); },
     },
@@ -122,6 +138,12 @@
         const el = findByText('[role="radio"]', re); // Instant / Expert / Vision
         if (el) { el.click(); await sleep(400); }
       },
+      state: function () {
+        const r = [...document.querySelectorAll('[role="radio"]')]
+          .find((x) => x.getAttribute("aria-checked") === "true");
+        const t = r ? r.textContent || "" : "";
+        return /Expert/.test(t) ? "think" : /Instant/.test(t) ? "fast" : null;
+      },
       think: async function () { await this._selectMode(/Expert/); await this._setDeepThink(true); },
       fast: async function () { await this._selectMode(/Instant/); await this._setDeepThink(false); },
     },
@@ -142,6 +164,11 @@
           if (item) { item.click(); await sleep(500); } // 选项 onclick，用原生 click
           escMenus(); await sleep(200);
         }
+      },
+      state: function () {
+        const b = this._modeBtn();
+        const t = b ? (b.textContent || "").trim() : "";
+        return /^专家/.test(t) ? "think" : /^快速/.test(t) ? "fast" : null;
       },
       think: async function () { await this._select(/^专家/); },
       fast: async function () { await this._select(/^快速/); },
@@ -178,6 +205,12 @@
         const isOn = (b.className || "").split(/\s+/).includes("text-theme");
         if (isOn !== on) { b.click(); await sleep(300); }
       },
+      state: function () {
+        const m = [...document.querySelectorAll('[aria-haspopup="dialog"]')]
+          .find((x) => /Qwen/i.test(x.textContent || ""));
+        const t = m ? m.textContent || "" : "";
+        return /Max/i.test(t) ? "think" : /千问|Flash/i.test(t) ? "fast" : null;
+      },
       think: async function () { await this._selectModel(/Qwen3\.7-Max/i); await this._setThink(true); },
       fast: async function () { await this._selectModel(/Qwen3\.7-千问/); await this._setThink(false); },
     },
@@ -204,6 +237,11 @@
           await sleep(400);
         }
         escMenus();
+      },
+      state: function () {
+        const e = document.querySelector(".current-model");
+        const t = e ? e.textContent || "" : "";
+        return /Thinking|思考/i.test(t) ? "think" : /Instant|快速/i.test(t) ? "fast" : null;
       },
       think: async function () { await this._select(/K2\.6\s*Thinking/i); },
       fast: async function () { await this._select(/K2\.6\s*Instant/i); },
