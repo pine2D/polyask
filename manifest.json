@@ -16,7 +16,9 @@
         "https://www.doubao.com/*",
         "https://chat.deepseek.com/*",
         "https://www.qianwen.com/*",
-        "https://www.kimi.com/*"
+        "https://www.kimi.com/*",
+        "https://yuanbao.tencent.com/*",
+        "https://chatglm.cn/*"
       ],
       "js": ["content/core.js", "content/adapters-intl.js", "content/adapters-cn.js", "content/pill.js"],
       "run_at": "document_idle"

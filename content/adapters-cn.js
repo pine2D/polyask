@@ -159,5 +159,54 @@
       think: async function () { await this._select(/K2[.\d]*\s*(Thinking|思考)/i); },
       fast: async function () { await this._select(/K2[.\d]*\s*(Instant|快速)/i); },
     },
+
+    // 元宝：composer 的 Deep Thinking/深度思考 为 toggle（CSS-module 类 ThinkSelector_selected=开），原生 click
+    "yuanbao.tencent.com": {
+      _toggle: function () { return document.querySelector('[class*="ThinkSelector"]'); },
+      _isOn: function () {
+        const t = this._toggle();
+        return !!t && /ThinkSelector_selected/.test((t.className || "").toString());
+      },
+      _set: async function (on) {
+        const t = this._toggle();
+        if (!t) throw new Error("元宝: Deep Thinking 控件未找到");
+        if (this._isOn() !== on) { t.click(); await sleep(500); }
+      },
+      diagnose: function () {
+        return [
+          { name: "Deep Thinking 开关", ok: !!this._toggle() },
+          { name: "档位可读", ok: this.state() != null },
+        ];
+      },
+      state: function () { return this._toggle() ? (this._isOn() ? "think" : "fast") : null; },
+      think: async function () { await this._set(true); },
+      fast: async function () { await this._set(false); },
+    },
+
+    // 智谱清言：composer 的「思考」mode-button 为 toggle（selected 类=开），原生 click
+    "chatglm.cn": {
+      _btn: function () {
+        return [...document.querySelectorAll(".mode-button, [class*=mode-button]")]
+          .find((x) => /思考|Thinking/i.test((x.textContent || "").trim()));
+      },
+      _isOn: function () {
+        const b = this._btn();
+        return !!b && /(^|\s)selected(\s|$)/.test((b.className || "").toString());
+      },
+      _set: async function (on) {
+        const b = this._btn();
+        if (!b) throw new Error("智谱: 思考按钮未找到");
+        if (this._isOn() !== on) { b.click(); await sleep(500); }
+      },
+      diagnose: function () {
+        return [
+          { name: "思考按钮", ok: !!this._btn() },
+          { name: "档位可读", ok: this.state() != null },
+        ];
+      },
+      state: function () { return this._btn() ? (this._isOn() ? "think" : "fast") : null; },
+      think: async function () { await this._set(true); },
+      fast: async function () { await this._set(false); },
+    },
   });
 })();
