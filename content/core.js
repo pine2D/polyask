@@ -60,6 +60,19 @@
     } catch (e) {}
   }
 
+  // 切换成功后把光标放回输入框：取视口内可见、面积最大的编辑区
+  function focusComposer() {
+    try {
+      const cands = [...document.querySelectorAll('textarea, [contenteditable="true"]')]
+        .map((el) => ({ el, r: el.getBoundingClientRect() }))
+        .filter(({ r }) => r.width > 80 && r.height > 20 &&
+          r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth);
+      if (!cands.length) return;
+      cands.sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height);
+      cands[0].el.focus();
+    } catch (e) {}
+  }
+
   // 注册表：适配器由 adapters.js 填充
   const adapters = {};
 
@@ -72,21 +85,34 @@
   async function runMode(mode) {
     const a = pickAdapter();
     if (!a || !a[mode]) return;
-    try {
-      escMenus(); // 清掉可能残留的菜单，保证从干净态开始
-      await sleep(150);
-      await a[mode]();
-      toast(mode === "think" ? "已切到：深度思考" : "已切到：快速模型", true);
-    } catch (e) {
-      toast("切换失败：" + (e && e.message ? e.message : e), false);
+    // 站点偶发渲染抖动会导致首次失败：静默重试一次，仍失败才报错
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        escMenus(); // 清掉可能残留的菜单，保证从干净态开始
+        await sleep(attempt ? 600 : 150);
+        await a[mode]();
+        toast(mode === "think" ? "已切到：深度思考" : "已切到：快速模型", true);
+        focusComposer();
+        try { document.dispatchEvent(new CustomEvent("ams:switched")); } catch (e) {}
+        return;
+      } catch (e) {
+        if (attempt) toast("切换失败：" + (e && e.message ? e.message : e), false);
+      }
     }
   }
 
-  // 快捷键入口：background onCommand → tabs.sendMessage（runtime 消息只来自本扩展，无需 origin 校验）
-  chrome.runtime.onMessage.addListener((msg) => {
+  // 当前档位（同步快速读，不开菜单）；适配器无 state 或读不出时返回 null
+  function getState() {
+    const a = pickAdapter();
+    try { return a && a.state ? a.state() : null; } catch (e) { return null; }
+  }
+
+  // 快捷键/弹窗入口：runtime 消息只来自本扩展，无需 origin 校验
+  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (!msg || msg.source !== "AMS") return;
     if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode);
+    if (msg.cmd === "getState") sendResponse({ state: getState() });
   });
 
-  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast };
+  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState };
 })();
