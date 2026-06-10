@@ -18,7 +18,7 @@
         "https://www.qianwen.com/*",
         "https://www.kimi.com/*"
       ],
-      "js": ["content/core.js", "content/adapters.js", "content/pill.js"],
+      "js": ["content/core.js", "content/adapters-intl.js", "content/adapters-cn.js", "content/pill.js"],
       "run_at": "document_idle"
     }
   ],
