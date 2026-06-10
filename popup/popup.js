@@ -41,7 +41,8 @@ document.querySelectorAll("input[name=dm]").forEach((r) =>
 
 chrome.commands.getAll((cmds) => {
   const div = document.getElementById("keys");
-  div.textContent = cmds.map((c) => `${c.description || c.name}: ${c.shortcut || "未设置"}`).join("　") + "　";
+  div.textContent = cmds.filter((c) => !c.name.startsWith("_"))
+    .map((c) => `${c.description || c.name}: ${c.shortcut || "未设置"}`).join("　") + "　";
   const a = document.createElement("a");
   a.textContent = "改键";
   a.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
