@@ -27,7 +27,7 @@
       _setThinking: async function (on) {
         await this._open();
         const sw = [...document.querySelectorAll('[role="switch"]')]
-          .find((s) => /thinking/i.test((s.getAttribute("aria-label") || "") +
+          .find((s) => /thinking|思考/i.test((s.getAttribute("aria-label") || "") +
             (s.closest('[role="menuitem"]') ? s.closest('[role="menuitem"]').textContent : "")));
         if (sw) {
           if ((sw.getAttribute("aria-checked") === "true") !== on) clickEl(sw);
@@ -36,7 +36,7 @@
         const trig = document.querySelector('[data-testid="effort-menu-trigger"]');
         if (trig) {
           openMenu(trig);
-          const lvl = await waitFor(() => findByText('[role="menuitemradio"]', on ? /max/i : /^low/i));
+          const lvl = await waitFor(() => findByText('[role="menuitemradio"]', on ? /max|最大/i : /^(low|低)/i));
           if (lvl) clickEl(lvl);
           await sleep(300); escMenus(); return;
         }
@@ -54,7 +54,7 @@
     "chatgpt.com": {
       _select: async function (re) {
         const anchor = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
-          .find((x) => /^(Instant|Medium|High)$/i.test((x.textContent || "").trim()));
+          .find((x) => /^(Instant|Medium|High|即时|中等|高)$/i.test((x.textContent || "").trim()));
         if (!anchor) throw new Error("ChatGPT: Intelligence 按钮未找到");
         const probe = () => {
           const wrap = document.querySelector("[data-radix-popper-content-wrapper]") || document;
@@ -68,12 +68,12 @@
       },
       state: function () {
         const b = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
-          .find((x) => /^(Instant|Medium|High)$/i.test((x.textContent || "").trim()));
+          .find((x) => /^(Instant|Medium|High|即时|中等|高)$/i.test((x.textContent || "").trim()));
         const t = b ? b.textContent.trim() : "";
-        return /high/i.test(t) ? "think" : /medium|instant/i.test(t) ? "fast" : null;
+        return /high|高/i.test(t) ? "think" : /medium|instant|中等|即时/i.test(t) ? "fast" : null;
       },
-      think: async function () { await this._select(/^high$/i); },
-      fast: async function () { await this._select(/^medium$/i); },
+      think: async function () { await this._select(/^(high|高)$/i); },
+      fast: async function () { await this._select(/^(medium|中等)$/i); },
     },
 
     "gemini.google.com": {
@@ -100,7 +100,7 @@
       // Material 嵌套子菜单不稳：仅在子菜单项未出现时点 trigger，轮询重试，Enter+click 提交
       _setThinking: async function (re) {
         await this._openModelMenu();
-        const trig = await waitFor(() => findByText(this._MI, /thinking level/i));
+        const trig = await waitFor(() => findByText(this._MI, /thinking level|思考(等级|程度)?/i));
         if (!trig) { escMenus(); return; }
         let lvl = null;
         for (let i = 0; i < 6 && !lvl; i++) {

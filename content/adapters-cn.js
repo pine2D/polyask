@@ -28,10 +28,10 @@
         const r = [...document.querySelectorAll('[role="radio"]')]
           .find((x) => x.getAttribute("aria-checked") === "true");
         const t = r ? r.textContent || "" : "";
-        return /Expert/.test(t) ? "think" : /Instant/.test(t) ? "fast" : null;
+        return /Expert|专家/.test(t) ? "think" : /Instant|快速/.test(t) ? "fast" : null;
       },
-      think: async function () { await this._selectMode(/Expert/); await this._setDeepThink(true); },
-      fast: async function () { await this._selectMode(/Instant/); await this._setDeepThink(false); },
+      think: async function () { await this._selectMode(/Expert|专家/); await this._setDeepThink(true); },
+      fast: async function () { await this._selectMode(/Instant|快速/); await this._setDeepThink(false); },
     },
 
     // 豆包：composer 模式按钮(当前显示当前模式)，点开菜单含 快速/专家/超能模式([role=menuitem])
@@ -83,7 +83,7 @@
       },
       _thinkBtn: function () {
         return [...document.querySelectorAll("button")]
-          .find((b) => [...b.querySelectorAll("span")].some((x) => /^思考$/.test((x.textContent || "").trim())) || /^思考$/.test((b.textContent || "").trim()));
+          .find((b) => [...b.querySelectorAll("span")].some((x) => /^(思考|Thinking)$/i.test((x.textContent || "").trim())) || /^(思考|Thinking)$/i.test((b.textContent || "").trim()));
       },
       _setThink: async function (on) {
         const b = this._thinkBtn();
@@ -129,8 +129,8 @@
         const t = e ? e.textContent || "" : "";
         return /Thinking|思考/i.test(t) ? "think" : /Instant|快速/i.test(t) ? "fast" : null;
       },
-      think: async function () { await this._select(/K2\.6\s*Thinking/i); },
-      fast: async function () { await this._select(/K2\.6\s*Instant/i); },
+      think: async function () { await this._select(/K2[.\d]*\s*(Thinking|思考)/i); },
+      fast: async function () { await this._select(/K2[.\d]*\s*(Instant|快速)/i); },
     },
   });
 })();
