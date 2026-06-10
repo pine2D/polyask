@@ -120,7 +120,7 @@
     if (!msg || msg.source !== "AMS") return;
     if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode);
     if (msg.cmd === "getState") sendResponse({ state: getState() });
-    if (msg.cmd === "diagnose") sendResponse({ checks: diagnose() });
+    if (msg.cmd === "diagnose") sendResponse({ checks: diagnose(), host: location.hostname });
   });
 
   window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState, diagnose };

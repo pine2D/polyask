@@ -13,8 +13,11 @@
 | 豆包 (doubao.com) | 专家 | 快速 |
 | 千问 (qianwen.com) | Qwen Max + 思考开 | Qwen 快速档 + 思考关 |
 | Kimi (kimi.com) | K2 Thinking | K2 Instant |
+| 元宝 (yuanbao.tencent.com) | Deep Thinking 开 | Deep Thinking 关 |
+| 智谱清言 (chatglm.cn) | 思考开 | 思考关 |
 
-> 站点 UI 改版可能导致个别适配失效；适配逻辑集中在 `content/adapters.js`，按文本/语义属性匹配，便于修复。
+> 站点 UI 改版可能导致个别适配失效；适配逻辑集中在 `content/adapters-intl.js`（国际站）与 `content/adapters-cn.js`（国内站），按文本/语义属性匹配，UI 词支持中英双语界面（其他语言不保证）。
+> 怀疑失效时：扩展图标 → 「🩺 诊断当前站点」，逐项检查控件是否仍能找到（只读、零副作用）。
 
 ## 安装
 

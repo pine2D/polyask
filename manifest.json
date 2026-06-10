@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "AI Model Switcher",
   "description": "一键在深度思考与快速模型间切换（Claude/ChatGPT/Gemini/DeepSeek/豆包/千问/Kimi）",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
   "action": { "default_popup": "popup/popup.html" },
   "permissions": ["storage"],
