@@ -24,6 +24,13 @@
         const el = findByText('[role="radio"]', re); // Instant / Expert / Vision
         if (el) { el.click(); await sleep(400); }
       },
+      diagnose: function () {
+        return [
+          { name: "DeepThink 开关", ok: !!this._deepThink() },
+          { name: "模式选择", ok: document.querySelectorAll('[role="radio"]').length > 0 },
+          { name: "档位可读", ok: this.state() != null },
+        ];
+      },
       state: function () {
         const r = [...document.querySelectorAll('[role="radio"]')]
           .find((x) => x.getAttribute("aria-checked") === "true");
@@ -50,6 +57,12 @@
           if (item) { item.click(); await sleep(500); } // 选项 onclick，用原生 click
           escMenus(); await sleep(200);
         }
+      },
+      diagnose: function () {
+        return [
+          { name: "模式按钮", ok: !!this._modeBtn() },
+          { name: "档位可读", ok: this.state() != null },
+        ];
       },
       state: function () {
         const b = this._modeBtn();
@@ -91,6 +104,14 @@
         const isOn = (b.className || "").split(/\s+/).includes("text-theme");
         if (isOn !== on) { b.click(); await sleep(300); }
       },
+      diagnose: function () {
+        const md = [...document.querySelectorAll('[aria-haspopup="dialog"]')].find((x) => /Qwen/i.test(x.textContent || ""));
+        return [
+          { name: "模型下拉", ok: !!md },
+          { name: "思考开关", ok: !!this._thinkBtn() },
+          { name: "档位可读", ok: this.state() != null },
+        ];
+      },
       state: function () {
         const m = [...document.querySelectorAll('[aria-haspopup="dialog"]')]
           .find((x) => /Qwen/i.test(x.textContent || ""));
@@ -123,6 +144,12 @@
           await sleep(400);
         }
         escMenus();
+      },
+      diagnose: function () {
+        return [
+          { name: "模型入口", ok: !!document.querySelector(".current-model") },
+          { name: "档位可读", ok: this.state() != null },
+        ];
       },
       state: function () {
         const e = document.querySelector(".current-model");

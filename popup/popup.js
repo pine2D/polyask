@@ -39,6 +39,27 @@ document.querySelectorAll("input[name=dm]").forEach((r) =>
   r.addEventListener("change", () => chrome.storage.sync.set({ displayMode: r.value }))
 );
 
+document.getElementById("diag").addEventListener("click", async () => {
+  const out = document.getElementById("diagout");
+  try {
+    const res = await send({ source: "AMS", cmd: "diagnose" });
+    out.textContent = "";
+    const checks = (res && res.checks) || [];
+    for (const c of checks) {
+      const row = document.createElement("div");
+      row.textContent = (c.ok ? "✓ " : "✗ ") + c.name;
+      row.style.color = c.ok ? "#16a34a" : "#dc2626";
+      out.append(row);
+    }
+    if (checks.some((c) => !c.ok)) {
+      const tip = document.createElement("div");
+      tip.textContent = "站点可能改版或语言未适配";
+      tip.style.color = "#888";
+      out.append(tip);
+    }
+  } catch (e) { out.textContent = "当前页面不支持"; }
+});
+
 chrome.commands.getAll((cmds) => {
   const div = document.getElementById("keys");
   div.textContent = cmds.filter((c) => !c.name.startsWith("_"))

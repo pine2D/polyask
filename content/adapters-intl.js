@@ -42,6 +42,12 @@
         }
         escMenus();
       },
+      diagnose: function () {
+        return [
+          { name: "模型入口", ok: !!document.querySelector('[data-testid="model-selector-dropdown"]') },
+          { name: "档位可读", ok: this.state() != null },
+        ];
+      },
       state: function () {
         const e = document.querySelector('[data-testid="model-selector-dropdown"]');
         const t = e ? e.getAttribute("aria-label") || "" : "";
@@ -65,6 +71,14 @@
         if (!item) { openMenu(anchor); item = await waitFor(probe); }
         if (!item) { escMenus(); throw new Error("ChatGPT: 未找到档位 " + re); }
         clickEl(item); await sleep(400);
+      },
+      diagnose: function () {
+        const anchor = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
+          .find((x) => /^(Instant|Medium|High|即时|中等|高)$/i.test((x.textContent || "").trim()));
+        return [
+          { name: "Intelligence 入口", ok: !!anchor },
+          { name: "档位可读", ok: this.state() != null },
+        ];
       },
       state: function () {
         const b = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
@@ -111,6 +125,12 @@
         if (lvl.focus) lvl.focus();
         lvl.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
         clickEl(lvl); await sleep(400); escMenus();
+      },
+      diagnose: function () {
+        return [
+          { name: "模型入口", ok: !!this._modelBtn() },
+          { name: "档位可读", ok: this.state() != null },
+        ];
       },
       state: function () {
         const b = this._modelBtn();
