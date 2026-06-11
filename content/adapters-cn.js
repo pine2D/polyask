@@ -76,9 +76,21 @@
     // 千问：模型下拉(aria-haspopup=dialog, 原生 click 开)含 Qwen3.7-Max / Qwen3.7-千问；
     // composer「思考」按钮无 aria-pressed，状态靠 class：text-theme=开 / text-primary=关
     "qianwen.com": {
+      // 模型下拉触发器：aria-haspopup 属性由前端延迟水合，新加载页面一段时间内只有纯文本节点，
+      // 先按 aria 找，找不到退回按可见文本找最内层节点（click 冒泡可达真正持有 handler 的祖先）
+      _trigger: function () {
+        const byAria = [...document.querySelectorAll('[aria-haspopup="dialog"]')].find((x) => /Qwen3/.test(x.textContent || ""));
+        if (byAria) return byAria;
+        return [...document.querySelectorAll("div,button,span")].filter((e) => {
+          const t = (e.textContent || "").trim();
+          if (!/^Qwen3/.test(t) || t.length > 25 || e.children.length > 3) return false;
+          const r = e.getBoundingClientRect();
+          return r.width > 0 && r.height > 0;
+        }).pop() || null;
+      },
       _selectModel: async function (re) {
-        const md = [...document.querySelectorAll('[aria-haspopup="dialog"]')].find((x) => /Qwen3/.test(x.textContent || ""));
-        if (!md) return;
+        const md = this._trigger();
+        if (!md) throw new Error("千问模型下拉未就绪");
         if (!findByText("div,li,span,button", re)) md.click();
         const leaf = await waitFor(() =>
           [...document.querySelectorAll("div,li,span,button")]
@@ -105,16 +117,14 @@
         if (isOn !== on) { b.click(); await sleep(300); }
       },
       diagnose: function () {
-        const md = [...document.querySelectorAll('[aria-haspopup="dialog"]')].find((x) => /Qwen/i.test(x.textContent || ""));
         return [
-          { name: "模型下拉", ok: !!md },
+          { name: "模型下拉", ok: !!this._trigger() },
           { name: "思考开关", ok: !!this._thinkBtn() },
           { name: "档位可读", ok: this.state() != null },
         ];
       },
       state: function () {
-        const m = [...document.querySelectorAll('[aria-haspopup="dialog"]')]
-          .find((x) => /Qwen/i.test(x.textContent || ""));
+        const m = this._trigger();
         const t = m ? m.textContent || "" : "";
         return /Max/i.test(t) ? "think" : /千问|Flash/i.test(t) ? "fast" : null;
       },
