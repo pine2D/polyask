@@ -42,19 +42,31 @@
         }
         escMenus();
       },
+      _label: function () {
+        const e = document.querySelector('[data-testid="model-selector-dropdown"]');
+        return e ? (e.getAttribute("aria-label") || "") : "";
+      },
       diagnose: function () {
         return [
           { name: "模型入口", ok: !!document.querySelector('[data-testid="model-selector-dropdown"]') },
-          { name: "档位可读", ok: this.state() != null },
+          { name: "模型可读", ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
         ];
       },
+      // think/fast 同为 Opus（Sonnet 已被灰度收进 More models 子菜单，不再依赖），
+      // 档位按 thinking/effort 后缀判：Adaptive/Max/Extra=think；Low/无后缀=fast；High/Medium 不判
       state: function () {
-        const e = document.querySelector('[data-testid="model-selector-dropdown"]');
-        const t = e ? e.getAttribute("aria-label") || "" : "";
-        return /opus/i.test(t) ? "think" : /sonnet|haiku/i.test(t) ? "fast" : null;
+        const t = this._label();
+        if (!t) return null;
+        if (/sonnet|haiku/i.test(t)) return "fast";
+        if (!/opus/i.test(t)) return null;
+        if (/adaptive|max|extra/i.test(t)) return "think";
+        if (/\blow\b|低/i.test(t)) return "fast";
+        if (/opus\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
+        return null;
       },
       think: async function () { await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true); },
-      fast: async function () { await this._selectModel(/sonnet/i); await this._setThinking(false); },
+      // fast = Opus 4.8 + 关思考（窄屏关 Adaptive 开关；宽屏 effort 取 Low）——零子菜单导航
+      fast: async function () { await this._selectModel(/opus\s*4\.8/i); await this._setThinking(false); },
     },
 
     "chatgpt.com": {

@@ -115,13 +115,16 @@
     return [{ name: "档位可读", ok: getState() != null }];
   }
 
-  // 快捷键/弹窗入口：runtime 消息只来自本扩展，无需 origin 校验
-  chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (!msg || msg.source !== "AMS") return;
-    if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode);
-    if (msg.cmd === "getState") sendResponse({ state: getState() });
-    if (msg.cmd === "diagnose") sendResponse({ checks: diagnose(), host: location.hostname });
-  });
+  // 快捷键/弹窗入口：runtime 消息只来自本扩展，无需 origin 校验。
+  // 守卫：主世界注入测试时 chrome.runtime.onMessage 不存在，跳过监听不影响其余能力。
+  try {
+    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+      if (!msg || msg.source !== "AMS") return;
+      if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode);
+      if (msg.cmd === "getState") sendResponse({ state: getState() });
+      if (msg.cmd === "diagnose") sendResponse({ checks: diagnose(), host: location.hostname });
+    });
+  } catch (e) {}
 
   window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState, diagnose };
 })();
