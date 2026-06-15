@@ -70,36 +70,56 @@
     },
 
     "chatgpt.com": {
-      _select: async function (re) {
-        const anchor = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
-          .find((x) => /^(Instant|Medium|High|即时|中等|高)$/i.test((x.textContent || "").trim()));
+      // 档位标签集：5 档英文 + 中文（均已确认）：极速/均衡/高级/超高/Pro 扩展
+      _LABELS: /^(instant|medium|high|extra\s*high|pro\s*extended|极速|均衡|高级|超高|pro\s*扩展)$/i,
+      // 锚点：composer pill（实测精确 1 个）优先，再回退任意 haspopup=menu；文本须属档位标签集（^锚定，避免误中侧栏标题）
+      _anchor: function () {
+        return [...document.querySelectorAll(
+            'button.__composer-pill[aria-haspopup="menu"], button[aria-haspopup="menu"]')]
+          .find((x) => this._LABELS.test((x.textContent || "").trim()));
+      },
+      _radios: function () {
+        const wrap = document.querySelector("[data-radix-popper-content-wrapper]") || document;
+        return [...wrap.querySelectorAll('[role="menuitemradio"]')];
+      },
+      // 打开档位菜单，返回 radio 列表（DOM 升序：极速…Pro 扩展）
+      _openEffort: async function () {
+        const anchor = this._anchor();
         if (!anchor) throw new Error("ChatGPT: Intelligence 按钮未找到");
-        const probe = () => {
-          const wrap = document.querySelector("[data-radix-popper-content-wrapper]") || document;
-          return findByText('[role="menuitemradio"]', re, wrap);
-        };
-        if (!probe()) openMenu(anchor);
-        let item = await waitFor(probe, 1500);
-        if (!item) { openMenu(anchor); item = await waitFor(probe); }
-        if (!item) { escMenus(); throw new Error("ChatGPT: 未找到档位 " + re); }
+        if (!this._radios().length) openMenu(anchor);
+        let rs = await waitFor(() => { const r = this._radios(); return r.length ? r : null; }, 1500);
+        if (!rs) { openMenu(anchor); rs = await waitFor(() => { const r = this._radios(); return r.length ? r : null; }); }
+        if (!rs) { escMenus(); throw new Error("ChatGPT: 档位菜单未展开"); }
+        return rs;
+      },
+      // top=true 取最高档（末位），否则最低档（首位）；不写死标签，自适应加减档
+      _pickEdge: async function (top) {
+        const rs = await this._openEffort();
+        const item = top ? rs[rs.length - 1] : rs[0];
+        if (!item) { escMenus(); throw new Error("ChatGPT: 档位为空"); }
         clickEl(item); await sleep(400);
       },
       diagnose: function () {
-        const anchor = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
-          .find((x) => /^(Instant|Medium|High|即时|中等|高)$/i.test((x.textContent || "").trim()));
         return [
-          { name: "Intelligence 入口", ok: !!anchor },
+          { name: "Intelligence 入口", ok: !!this._anchor() },
           { name: "档位可读", ok: this.state() != null },
         ];
       },
       state: function () {
-        const b = [...document.querySelectorAll('button[aria-haspopup="menu"]')]
-          .find((x) => /^(Instant|Medium|High|即时|中等|高)$/i.test((x.textContent || "").trim()));
-        const t = b ? b.textContent.trim() : "";
-        return /high|高/i.test(t) ? "think" : /medium|instant|中等|即时/i.test(t) ? "fast" : null;
+        const a = this._anchor();
+        const t = a ? (a.textContent || "").trim() : "";
+        if (/high|extended|高|扩展/i.test(t)) return "think";   // High/Extra High/Pro Extended·高级/超高/Pro 扩展
+        if (/instant|medium|极速|均衡/i.test(t)) return "fast";  // Instant/Medium·极速/均衡
+        return null;
       },
-      think: async function () { await this._select(/^(high|高)$/i); },
-      fast: async function () { await this._select(/^(medium|中等)$/i); },
+      think: async function () { await this._pickEdge(true); },   // 菜单最高档
+      fast: async function () { await this._pickEdge(false); },   // 菜单最低档 = Instant/极速
+      stop: function () {
+        const b = document.querySelector('[data-testid="stop-button"]') ||
+          [...document.querySelectorAll('button[aria-label]')]
+            .find((x) => /stop (answering|streaming|generating)/i.test(x.getAttribute("aria-label") || ""));
+        if (b) { clickEl(b); S.toast("已停止", true); }
+      },
     },
 
     "gemini.google.com": {
