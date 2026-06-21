@@ -46,7 +46,15 @@
         const e = document.querySelector('[data-testid="model-selector-dropdown"]');
         return e ? (e.getAttribute("aria-label") || "") : "";
       },
+      // 嵌入态被官方锁 haiku 的识别（同步）：① 确在 iframe（独立标签恒 false）；
+      // ② 模型入口显示原始兜底 id（正常 UI 只显示友好名，绝不显示 api id）——claude 官方嵌入门，无干净绕过
+      _isEmbedLocked: function () {
+        try { return window.self !== window.top && /haiku-latest|3-5-haiku/i.test(this._label()); }
+        catch (e) { return false; }
+      },
       diagnose: function () {
+        if (this._isEmbedLocked())
+          return [{ name: "iframe 受限：仅 haiku（claude 官方嵌入门，请在独立标签使用）", ok: false }];
         return [
           { name: "模型入口", ok: !!document.querySelector('[data-testid="model-selector-dropdown"]') },
           { name: "模型可读", ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
@@ -55,6 +63,7 @@
       // think/fast 同为 Opus（Sonnet 已被灰度收进 More models 子菜单，不再依赖），
       // 档位按 thinking/effort 后缀判：Adaptive/Max/Extra=think；Low/无后缀=fast；High/Medium 不判
       state: function () {
+        if (this._isEmbedLocked()) return null; // 受限态：不谎报 "fast"，HUD 不亮琥珀
         const t = this._label();
         if (!t) return null;
         if (/sonnet|haiku/i.test(t)) return "fast";
@@ -64,9 +73,15 @@
         if (/opus\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
         return null;
       },
-      think: async function () { await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true); },
+      think: async function () {
+        if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
+        await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true);
+      },
       // fast = Opus 4.8 + 关思考（窄屏关 Adaptive 开关；宽屏 effort 取 Low）——零子菜单导航
-      fast: async function () { await this._selectModel(/opus\s*4\.8/i); await this._setThinking(false); },
+      fast: async function () {
+        if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
+        await this._selectModel(/opus\s*4\.8/i); await this._setThinking(false);
+      },
     },
 
     "chatgpt.com": {
