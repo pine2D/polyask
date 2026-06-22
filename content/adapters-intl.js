@@ -23,23 +23,36 @@
         if (!item) { escMenus(); throw new Error("Claude: 未找到模型 " + re); }
         clickEl(item); await sleep(700);
       },
-      // 兼容两布局：窄屏 Adaptive thinking [role=switch]；宽屏 effort 子菜单
+      // effort 子菜单内的 Thinking 开关（与 effort-option-* 同层）
+      _thinkSwitch: function () {
+        return [...document.querySelectorAll('[role="switch"]')]
+          .find((s) => /thinking|思考/i.test((s.getAttribute("aria-label") || "") +
+            (s.closest('[role="menuitem"]') ? s.closest('[role="menuitem"]').textContent : ""))) || null;
+      },
+      // Opus 4.8 思考档 = 模型下拉内的 effort 子菜单：think=开 Thinking + effort Max；
+      // fast=关 Thinking + effort Low（显式压 Low，避免关思考后 label 停在 think 档词被 state() 误读）。
+      // 用稳定 testid effort-option-max/low；开关切换会重渲染故 waitFor 重取。
       _setThinking: async function (on) {
         await this._open();
-        const sw = [...document.querySelectorAll('[role="switch"]')]
-          .find((s) => /thinking|思考/i.test((s.getAttribute("aria-label") || "") +
-            (s.closest('[role="menuitem"]') ? s.closest('[role="menuitem"]').textContent : "")));
-        if (sw) {
-          if ((sw.getAttribute("aria-checked") === "true") !== on) clickEl(sw);
-          await sleep(300); escMenus(); return;
-        }
         const trig = document.querySelector('[data-testid="effort-menu-trigger"]');
         if (trig) {
-          openMenu(trig);
-          const lvl = await waitFor(() => findByText('[role="menuitemradio"]', on ? /max|最大/i : /^(low|低)/i));
-          if (lvl) clickEl(lvl);
+          if (!this._thinkSwitch() && !document.querySelector('[data-testid="effort-option-low"]')) openMenu(trig);
+          // 1) Thinking 开关切到目标态
+          const sw = await waitFor(() => this._thinkSwitch(), 1500);
+          if (sw && (sw.getAttribute("aria-checked") === "true") !== on) { clickEl(sw); await sleep(450); }
+          // 2) effort 档位：think→Max / fast→Low
+          if (!document.querySelector('[data-testid="effort-option-max"]')) {
+            const t2 = document.querySelector('[data-testid="effort-menu-trigger"]');
+            if (t2) openMenu(t2);
+          }
+          const opt = await waitFor(() =>
+            document.querySelector('[data-testid="' + (on ? "effort-option-max" : "effort-option-low") + '"]'), 1500);
+          if (opt) clickEl(opt);
           await sleep(300); escMenus(); return;
         }
+        // 回退：无 effort 入口的旧布局，仅切裸开关
+        const sw = this._thinkSwitch();
+        if (sw) { if ((sw.getAttribute("aria-checked") === "true") !== on) clickEl(sw); await sleep(300); }
         escMenus();
       },
       _label: function () {
