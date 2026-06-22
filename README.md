@@ -6,9 +6,9 @@
 
 | 站点 | 🧠 深度思考 | ⚡ 快速 |
 |---|---|---|
-| Claude (claude.ai) | Opus + 思考最高档 | Sonnet |
-| ChatGPT (chatgpt.com) | Intelligence: High | Intelligence: Medium |
-| Gemini (gemini.google.com) | Pro + Thinking: Extended | Flash |
+| Claude (claude.ai) | Opus 4.8（Thinking 开 + Effort Max） | Opus 4.8（Thinking 关 + Effort Low） |
+| ChatGPT (chatgpt.com) | Intelligence 最高档（超高 / Pro 扩展） | Intelligence 最低档（极速 Instant） |
+| Gemini (gemini.google.com) | 3.1 Pro + Thinking: Extended | 3.5 Flash |
 | DeepSeek (chat.deepseek.com) | Expert + DeepThink 开 | Instant + DeepThink 关 |
 | 豆包 (doubao.com) | 专家 | 快速 |
 | 千问 (qianwen.com) | Qwen Max + 思考开 | Qwen 快速档 + 思考关 |
@@ -54,11 +54,12 @@
 ## 结构
 
 ```
-manifest.json     MV3：content_scripts + commands + background
-background.js     快捷键 → 活动标签消息转发
-content/core.js   DOM 工具、toast、适配器注册表、runMode
-content/adapters.js  各站点切换逻辑
-content/pill.js   悬浮胶囊 UI
+manifest.json            MV3：content_scripts + commands + background
+background.js            快捷键 → 活动标签消息转发
+content/core.js          DOM 工具、toast、适配器注册表、runMode
+content/adapters-intl.js 国际站切换逻辑（Claude / ChatGPT / Gemini）
+content/adapters-cn.js   国内站切换逻辑（DeepSeek / 豆包 / 千问 / Kimi / 元宝 / 智谱）
+content/pill.js          悬浮胶囊 UI
 ```
 
 ## License
