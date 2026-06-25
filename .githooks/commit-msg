@@ -1,9 +1,0 @@
-#!/bin/sh
-# commit-msg — 拦截 AI 署名，保持提交历史干净。$1=提交信息临时文件。
-# 仅匹配署名上下文，不误伤正文里的 claude.ai / CLAUDE.md。
-msg_file="$1"
-if grep -iEq 'co-authored-by:.*(claude|anthropic|noreply)|generated with claude|claude\.com/claude-code|noreply@anthropic\.com|🤖' "$msg_file"; then
-  echo "✗ 提交被拒绝：检测到 AI 署名（Co-Authored-By: Claude / Generated with Claude Code / 🤖 等），请删除后重试。" >&2
-  exit 1
-fi
-exit 0
