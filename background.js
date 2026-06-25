@@ -158,13 +158,27 @@ async function closeAll() {
   }
   await setWindows({});
 }
-// 全部新会话：把每个站点绑定窗口的 tab 导航到该站新会话 URL（无需各站适配新建按钮）
+// tab 是否已停在该站“新会话入口”（origin+pathname 一致，忽略 query/hash 与尾斜杠）。
+// 这 9 站的会话 id 都落在 path（/new→/chat/x、/→/c/x、/app→/app/x），故 path 一致≈空白新会话。
+function isNewSessionUrl(tabUrl, newUrl) {
+  try {
+    const a = new URL(tabUrl), b = new URL(newUrl);
+    if (a.origin !== b.origin) return false;
+    const norm = (p) => p.replace(/\/+$/, "") || "/";
+    return norm(a.pathname) === norm(b.pathname);
+  } catch (e) { return false; }
+}
+// 全部新会话：把每个站点绑定窗口的 tab 导航到该站新会话 URL（无需各站适配新建按钮）；
+// 已在新会话入口的窗口跳过重载（省闪烁，并保留用户未发送的输入）。
 async function newSessionAll(sites) {
   const wins = await getWindows();
   for (const s of sites) {
     if (!s.url) continue;
     const tabs = await tabsForHost(s.host, wins);
-    if (tabs.length) { try { await chrome.tabs.update(tabs[0].id, { url: s.url }); } catch (e) {} }
+    if (!tabs.length) continue;
+    const tab = tabs[0];
+    if (tab.url && isNewSessionUrl(tab.url, s.url)) continue;
+    try { await chrome.tabs.update(tab.id, { url: s.url }); } catch (e) {}
   }
 }
 
