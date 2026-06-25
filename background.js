@@ -32,6 +32,22 @@ async function openConsole() {
   });
 }
 
+// 控制台创建过的窗口 host→windowId（持久化，跨 SW 重启）。仅这些会被自动关闭；
+// 复用的（用户已有）窗口不登记、不擅自关闭。
+function getCreated() {
+  return new Promise((res) => chrome.storage.local.get("amsCreated", (o) => res((o && o.amsCreated) || {})));
+}
+function setCreated(map) {
+  return new Promise((res) => chrome.storage.local.set({ amsCreated: map }, () => res()));
+}
+// 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）
+async function raiseConsole() {
+  try {
+    const ct = await chrome.tabs.query({ url: chrome.runtime.getURL("console/console.html") });
+    if (ct[0]) await chrome.windows.update(ct[0].windowId, { focused: true });
+  } catch (e) {}
+}
+
 async function openTile(sites) {
   const wa = await primaryWorkArea();
   const areaLeft = wa.left, areaTop = wa.top + STRIP_H, areaW = wa.width, areaH = wa.height - STRIP_H;
@@ -41,6 +57,16 @@ async function openTile(sites) {
   if (n <= 4) { cols = n; rows = 1; }
   else { cols = Math.ceil(Math.sqrt(n)); rows = Math.ceil(n / cols); }
   const cellW = Math.floor(areaW / cols), cellH = Math.floor(areaH / rows);
+  const created = await getCreated();
+  const selectedHosts = sites.map((s) => s.host);
+  // 1) 关闭已取消勾选、且由控制台创建的窗口（复用/用户窗口不动）
+  for (const host of Object.keys(created)) {
+    if (!selectedHosts.includes(host)) {
+      try { await chrome.windows.remove(created[host]); } catch (e) {}
+      delete created[host];
+    }
+  }
+  // 2) 处理选中站点：复用现有或新建 popup，逐个定位
   const out = [];
   for (let i = 0; i < sites.length; i++) {
     const s = sites[i];
@@ -53,10 +79,14 @@ async function openTile(sites) {
       windowId = tabs[0].windowId; reused = true;
       try { await chrome.windows.update(windowId, Object.assign({ state: "normal", focused: false }, bounds)); } catch (e) {}
     } else {
-      try { const w = await chrome.windows.create(Object.assign({ url: s.url, type: "popup", focused: false }, bounds)); windowId = w.id; } catch (e) {}
+      try { const w = await chrome.windows.create(Object.assign({ url: s.url, type: "popup", focused: false }, bounds)); windowId = w.id; created[s.host] = windowId; } catch (e) {}
     }
     out.push({ host: s.host, windowId, reused, opened: !reused && windowId != null });
   }
+  await setCreated(created);
+  // 3) 抬前所有平铺窗口，最后抬控制台（控制台置顶）→ 无论增删全部可见
+  for (const r of out) if (r.windowId != null) { try { await chrome.windows.update(r.windowId, { state: "normal", focused: true }); } catch (e) {} }
+  await raiseConsole();
   return out;
 }
 
@@ -98,6 +128,14 @@ async function minimizeAll(sites) {
     try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {}
   }
 }
+// 关闭全部：仅关闭控制台创建过的窗口（复用/用户窗口不动），并清空登记
+async function closeAll() {
+  const created = await getCreated();
+  for (const host of Object.keys(created)) {
+    try { await chrome.windows.remove(created[host]); } catch (e) {}
+  }
+  await setCreated({});
+}
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;
@@ -106,4 +144,5 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "broadcast") { broadcast(msg.sites || [], msg.text || "", msg.tier || null).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "focusAll") { focusAll(msg.sites || []); return; }
   if (msg.action === "minimizeAll") { minimizeAll(msg.sites || []); return; }
+  if (msg.action === "closeAll") { closeAll(); return; }
 });
