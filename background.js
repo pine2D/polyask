@@ -136,6 +136,15 @@ async function closeAll() {
   }
   await setCreated({});
 }
+// 全部新会话：把每个站点窗口的 tab 导航到该站新会话 URL（无需各站适配新建按钮）
+async function newSessionAll(sites) {
+  for (const s of sites) {
+    if (!s.url) continue;
+    let tabs = [];
+    try { tabs = await chrome.tabs.query({ url: "*://" + s.host + "/*" }); } catch (e) {}
+    if (tabs.length) { try { await chrome.tabs.update(tabs[0].id, { url: s.url }); } catch (e) {} }
+  }
+}
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;
@@ -145,4 +154,5 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "focusAll") { focusAll(msg.sites || []); return; }
   if (msg.action === "minimizeAll") { minimizeAll(msg.sites || []); return; }
   if (msg.action === "closeAll") { closeAll(); return; }
+  if (msg.action === "newSession") { newSessionAll(msg.sites || []); return; }
 });

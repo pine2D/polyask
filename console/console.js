@@ -73,6 +73,9 @@ document.getElementById("focusall").addEventListener("click", () => {
 document.getElementById("minall").addEventListener("click", () => {
   const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "minimizeAll", sites });
 });
+document.getElementById("newsession").addEventListener("click", () => {
+  const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "newSession", sites });
+});
 document.getElementById("closeall").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" });
   [...document.querySelectorAll('.dot')].forEach((d) => { d.style.background = "#d1d5db"; d.title = ""; });

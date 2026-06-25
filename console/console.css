@@ -7,3 +7,4 @@ html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",sans-serif
 #tier{padding:6px;border:1px solid #d9d9d9;border-radius:6px;background:#fff}
 button{padding:6px 12px;border:1px solid #6366f1;background:#eef2ff;border-radius:6px;cursor:pointer;white-space:nowrap}
 button:hover{background:#e0e7ff}
+button.icon{padding:6px 8px;min-width:32px;font-size:14px;line-height:1}
