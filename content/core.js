@@ -60,17 +60,50 @@
     } catch (e) {}
   }
 
-  // 切换成功后把光标放回输入框：取视口内可见、面积最大的编辑区
+  // 视口内可见、面积最大的编辑区（textarea / contenteditable）；找不到返回 null
+  function findComposer() {
+    const cands = [...document.querySelectorAll('textarea, [contenteditable="true"]')]
+      .map((el) => ({ el, r: el.getBoundingClientRect() }))
+      .filter(({ r }) => r.width > 80 && r.height > 20 &&
+        r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth);
+    if (!cands.length) return null;
+    cands.sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height);
+    return cands[0].el;
+  }
+
+  // 切换成功后把光标放回输入框
   function focusComposer() {
-    try {
-      const cands = [...document.querySelectorAll('textarea, [contenteditable="true"]')]
-        .map((el) => ({ el, r: el.getBoundingClientRect() }))
-        .filter(({ r }) => r.width > 80 && r.height > 20 &&
-          r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth);
-      if (!cands.length) return;
-      cands.sort((a, b) => b.r.width * b.r.height - a.r.width * a.r.height);
-      cands[0].el.focus();
-    } catch (e) {}
+    try { const el = findComposer(); if (el) el.focus(); } catch (e) {}
+  }
+
+  // 把 text 注入输入框并提交。textarea/input 用原生 value setter；contenteditable 用 execCommand。
+  // 提交：优先 adapter.submit(el)，否则发 Enter，回退点发送按钮。返回 {ok,reason?}。
+  async function submitPrompt(text) {
+    const el = findComposer();
+    if (!el) return { ok: false, reason: "输入框未找到" };
+    el.focus();
+    if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
+      const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+      Object.getOwnPropertyDescriptor(proto, "value").set.call(el, text);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    } else {
+      try { document.execCommand("selectAll", false, null); document.execCommand("insertText", false, text); }
+      catch (e) { el.textContent = text; el.dispatchEvent(new InputEvent("input", { bubbles: true })); }
+    }
+    await sleep(250);
+    const a = pickAdapter();
+    if (a && typeof a.submit === "function") {
+      try { await a.submit(el); return { ok: true }; } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
+    }
+    ["keydown", "keypress", "keyup"].forEach((t) =>
+      el.dispatchEvent(new KeyboardEvent(t, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true })));
+    await sleep(150);
+    // 回退：输入框仍有内容 → 找发送按钮
+    if (((el.value || el.textContent || "").trim()).length) {
+      const btn = document.querySelector('button[data-testid*="send" i], button[aria-label*="send" i], button[aria-label*="发送"]');
+      if (btn) clickEl(btn);
+    }
+    return { ok: true };
   }
 
   // 注册表：适配器由 adapters.js 填充
@@ -123,8 +156,18 @@
       if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode);
       if (msg.cmd === "getState") sendResponse({ state: getState() });
       if (msg.cmd === "diagnose") sendResponse({ checks: diagnose(), host: location.hostname });
+      if (msg.cmd === "submitPrompt") {
+        (async () => {
+          try {
+            if (msg.tier === "think" || msg.tier === "fast") { await runMode(msg.tier); await sleep(200); }
+            const r = await submitPrompt(msg.text || "");
+            sendResponse(Object.assign({ host: location.hostname }, r));
+          } catch (e) { sendResponse({ host: location.hostname, ok: false, reason: String((e && e.message) || e) }); }
+        })();
+        return true; // 异步 sendResponse
+      }
     });
   } catch (e) {}
 
-  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState, diagnose };
+  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState, diagnose, findComposer, submitPrompt };
 })();

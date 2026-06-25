@@ -70,4 +70,9 @@ chrome.commands.getAll((cmds) => {
   div.append(a);
 });
 
+document.getElementById("open-console").addEventListener("click", () => {
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openConsole" });
+  window.close();
+});
+
 refreshState();
