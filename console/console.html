@@ -2,15 +2,26 @@
 <html lang="zh"><head><meta charset="utf-8"><link rel="stylesheet" href="console.css"></head>
 <body>
   <div id="bar">
+    <div class="brand"><span class="logo">◈</span>PolyAsk</div>
+    <div class="presets">
+      <button id="preset-intl" title="勾选国际三家">国际</button>
+      <button id="preset-cn" title="勾选国产全部">国产</button>
+      <button id="preset-all" title="全选 / 全不选">全选</button>
+    </div>
     <div id="sites"></div>
     <select id="tier" title="发送前档位">
       <option value="">档位：不变</option>
       <option value="think">🧠 深度思考</option>
       <option value="fast">⚡ 快速</option>
     </select>
-    <input id="prompt" type="text" placeholder="输入要群发的问题…">
-    <button id="tile">开启并平铺</button>
-    <button id="send">发送到全部</button>
+    <div class="tplwrap">
+      <select id="tpl" title="提示词模板"><option value="">模板▾</option></select>
+      <button id="tpl-save" class="mini" title="保存当前输入为模板">＋</button>
+      <button id="tpl-del" class="mini" title="删除选中模板">✕</button>
+    </div>
+    <input id="prompt" type="text" placeholder="输入要群发的问题…（Enter 发送 · ↑↓ 历史）">
+    <button id="send">发送到全部 ▸</button>
+    <button id="tile">平铺</button>
     <button id="newsession" class="icon" title="全部新会话（各窗重载到新会话）" aria-label="全部新会话"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
     <button id="focusall" class="icon" title="全部恢复并置顶" aria-label="全部恢复并置顶"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12.5v-9M4 7.5l4-4 4 4"/></svg></button>
     <button id="minall" class="icon" title="全部最小化" aria-label="全部最小化"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.5v9M4 8.5l4 4 4-4"/></svg></button>

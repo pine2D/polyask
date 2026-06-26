@@ -14,6 +14,15 @@ chrome.commands.onCommand.addListener(async (command) => {
 // —— 广播控制台编排 ——
 const STRIP_H = 96;
 
+let consoleWinId = null;     // console 弹窗 id（内存缓存）
+let consoleMinimized = false; // 联动去抖：console 当前是否最小化
+async function getConsoleWinId() {
+  if (consoleWinId != null) return consoleWinId;
+  const o = await new Promise((r) => chrome.storage.local.get("amsConsoleWin", r));
+  consoleWinId = (o && o.amsConsoleWin) != null ? o.amsConsoleWin : null;
+  return consoleWinId;
+}
+
 async function primaryWorkArea() {
   let wa = { left: 0, top: 0, width: 1280, height: 800 };
   try {
@@ -24,12 +33,30 @@ async function primaryWorkArea() {
   return wa;
 }
 
+// 平铺需保留的顶部高度 = 控制台窗口的「实际底边」相对工作区顶。
+// 关键：c.top 已含窗口管理器在 Chrome 几何之外的上移装饰（如 X410 windowed 模式给每个
+// 窗口套的 ~30px 标题栏——请求 top=0 时 Chrome 会报告 top=30）。故必须用 (c.top+c.height)
+// -wa.top 才是真实占高；只用 c.height 会漏掉这段上移，导致平铺窗口压在控制台上。
+// 取不到登记窗口时回退 STRIP_H（原生 Windows/macOS 无此上移，结果即 96）。
+async function consoleReserveHeight(wa) {
+  const cid = await getConsoleWinId();
+  if (cid != null) {
+    try {
+      const c = await chrome.windows.get(cid);
+      if (c && c.top != null && c.height != null) return Math.max(STRIP_H, (c.top + c.height) - wa.top);
+    } catch (e) {}
+  }
+  return STRIP_H;
+}
+
 async function openConsole() {
   const wa = await primaryWorkArea();
-  await chrome.windows.create({
+  const w = await chrome.windows.create({
     url: chrome.runtime.getURL("console/console.html"),
     type: "popup", left: wa.left, top: wa.top, width: wa.width, height: STRIP_H, focused: true,
   });
+  consoleWinId = w.id;
+  await chrome.storage.local.set({ amsConsoleWin: w.id });
 }
 
 // 控制台管理的窗口 host→{id,owned}（持久化，跨 SW 重启）。owned=true 为控制台新建
@@ -41,16 +68,31 @@ function getWindows() {
 function setWindows(map) {
   return new Promise((res) => chrome.storage.local.set({ amsWindows: map }, () => res()));
 }
-async function windowExists(id) {
-  try { await chrome.windows.get(id); return true; } catch (e) { return false; }
-}
-// 解析 host 的标签：优先登记窗口内的（绑定），无登记/无命中再退回全局查询。
-async function tabsForHost(host, wins) {
-  const id = wins && wins[host] && wins[host].id;
-  if (id != null) {
-    try { const t = await chrome.tabs.query({ url: "*://" + host + "/*", windowId: id }); if (t.length) return t; } catch (e) {}
+// 解析某 host 的「PolyAsk 受管 popup 窗口」。铁律：只返回 type:"popup"，绝不返回用户
+// 日常浏览窗口(type:"normal")。①登记窗口若仍在且是 popup → 用它；②否则全局找一个含该
+// host 的 popup（自愈被污染/丢失的登记）；③都没有 → null（调用方新建或对该站静默跳过）。
+async function popupWindowForHost(host, wins) {
+  const rec = wins && wins[host];
+  if (rec && rec.id != null) {
+    try { const w = await chrome.windows.get(rec.id); if (w.type === "popup") return rec.id; } catch (e) {}
   }
-  try { return await chrome.tabs.query({ url: "*://" + host + "/*" }); } catch (e) { return []; }
+  try {
+    const tabs = await chrome.tabs.query({ url: "*://" + host + "/*" });
+    for (const t of tabs) {
+      try { const w = await chrome.windows.get(t.windowId); if (w.type === "popup") return t.windowId; } catch (e) {}
+    }
+  } catch (e) {}
+  return null;
+}
+// 仅当给定窗口 id 确实存在且是 popup 时才关闭它（不回退搜索，避免误关无关窗口）。
+async function removeIfPopup(id) {
+  try { const w = await chrome.windows.get(id); if (w.type === "popup") await chrome.windows.remove(id); } catch (e) {}
+}
+// host → 受管 popup 内的标签（只认 popup；无受管窗口则空，调用方对该站静默跳过）。
+async function tabsForHost(host, wins) {
+  const id = await popupWindowForHost(host, wins);
+  if (id == null) return [];
+  try { return await chrome.tabs.query({ url: "*://" + host + "/*", windowId: id }); } catch (e) { return []; }
 }
 // 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）
 async function raiseConsole() {
@@ -62,7 +104,8 @@ async function raiseConsole() {
 
 async function openTile(sites) {
   const wa = await primaryWorkArea();
-  const areaLeft = wa.left, areaTop = wa.top + STRIP_H, areaW = wa.width, areaH = wa.height - STRIP_H;
+  const reserve = await consoleReserveHeight(wa);
+  const areaLeft = wa.left, areaTop = wa.top + reserve, areaW = wa.width, areaH = wa.height - reserve;
   const n = sites.length || 1;
   // n≤4：单排等分并排（水平二/三/四等分，各占满高度）；n≥5：方形网格
   let cols, rows;
@@ -74,31 +117,25 @@ async function openTile(sites) {
   // 1) 处理已取消勾选：owned 的真正关闭，复用的仅解除登记（用户窗口不动）
   for (const host of Object.keys(wins)) {
     if (!selectedHosts.includes(host)) {
-      if (wins[host].owned) { try { await chrome.windows.remove(wins[host].id); } catch (e) {} }
+      if (wins[host].owned) { await removeIfPopup(wins[host].id); }
       delete wins[host];
     }
   }
-  // 2) 处理选中站点：优先复用上次绑定窗口 → 复用现有同站窗口 → 新建 popup，逐个定位
+  // 2) 处理选中站点：优先复用受管 popup → 新建 popup，逐个定位（popup-only 铁律）
   const out = [];
   for (let i = 0; i < sites.length; i++) {
     const s = sites[i];
     const col = i % cols, row = Math.floor(i / cols);
     const bounds = { left: areaLeft + col * cellW, top: areaTop + row * cellH, width: cellW, height: cellH };
-    let windowId = null, reused = false, owned = false;
-    const rec = wins[s.host];
-    if (rec && await windowExists(rec.id)) {
-      // 上次绑定的窗口仍在：直接复用，不再裸查 tabs（杜绝误抓主窗口同站标签）
-      windowId = rec.id; owned = rec.owned; reused = true;
+    let windowId = await popupWindowForHost(s.host, wins);
+    let reused = false, owned = false;
+    if (windowId != null) {
+      reused = true;
+      const rec = wins[s.host];
+      owned = !!(rec && rec.id === windowId && rec.owned); // 仅沿用「同一登记窗口」的归属
       try { await chrome.windows.update(windowId, Object.assign({ state: "normal", focused: false }, bounds)); } catch (e) {}
     } else {
-      let tabs = [];
-      try { tabs = await chrome.tabs.query({ url: "*://" + s.host + "/*" }); } catch (e) {}
-      if (tabs.length) {
-        windowId = tabs[0].windowId; reused = true; owned = false;
-        try { await chrome.windows.update(windowId, Object.assign({ state: "normal", focused: false }, bounds)); } catch (e) {}
-      } else {
-        try { const w = await chrome.windows.create(Object.assign({ url: s.url, type: "popup", focused: false }, bounds)); windowId = w.id; owned = true; } catch (e) {}
-      }
+      try { const w = await chrome.windows.create(Object.assign({ url: s.url, type: "popup", focused: false }, bounds)); windowId = w.id; owned = true; } catch (e) {}
     }
     if (windowId != null) wins[s.host] = { id: windowId, owned };
     out.push({ host: s.host, windowId, reused, opened: !reused && windowId != null });
@@ -131,10 +168,8 @@ async function windowIdsForSites(sites) {
   const wins = await getWindows();
   const ids = [];
   for (const s of sites) {
-    const rec = wins[s.host];
-    if (rec && rec.id != null) { ids.push(rec.id); continue; }
-    const tabs = await tabsForHost(s.host, wins);
-    if (tabs.length) ids.push(tabs[0].windowId);
+    const id = await popupWindowForHost(s.host, wins);
+    if (id != null) ids.push(id);
   }
   return ids;
 }
@@ -154,9 +189,25 @@ async function minimizeAll(sites) {
 async function closeAll() {
   const wins = await getWindows();
   for (const host of Object.keys(wins)) {
-    if (wins[host].owned) { try { await chrome.windows.remove(wins[host].id); } catch (e) {} }
+    if (wins[host].owned) { await removeIfPopup(wins[host].id); }
   }
   await setWindows({});
+}
+// 联动：遍历受管 popup 统一最小化 / 恢复（经 popup-only 解析，绝不碰日常窗口）
+async function minimizeAllManaged() {
+  const wins = await getWindows();
+  for (const host of Object.keys(wins)) {
+    const id = await popupWindowForHost(host, wins);
+    if (id != null) { try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {} }
+  }
+}
+async function restoreAllManaged() {
+  const wins = await getWindows();
+  for (const host of Object.keys(wins)) {
+    const id = await popupWindowForHost(host, wins);
+    if (id != null) { try { await chrome.windows.update(id, { state: "normal", focused: false }); } catch (e) {} }
+  }
+  await raiseConsole();
 }
 // tab 是否已停在该站“新会话入口”（origin+pathname 一致，忽略 query/hash 与尾斜杠）。
 // 这 9 站的会话 id 都落在 path（/new→/chat/x、/→/c/x、/app→/app/x），故 path 一致≈空白新会话。
@@ -181,6 +232,30 @@ async function newSessionAll(sites) {
     try { await chrome.tabs.update(tab.id, { url: s.url }); } catch (e) {}
   }
 }
+
+// console 关闭 → 关闭 owned 平铺窗口（不动收编的用户窗口）
+chrome.windows.onRemoved.addListener(async (winId) => {
+  const cid = await getConsoleWinId();
+  if (cid != null && winId === cid) {
+    consoleWinId = null; consoleMinimized = false;
+    await chrome.storage.local.remove("amsConsoleWin");
+    await closeAll();
+  }
+});
+// console 最小化/恢复 → 同步最小化/恢复全部受管 popup。
+// MV3 无原生「最小化」事件，借 onFocusChanged（会唤醒 SW）读 console 窗口 state 精确判定，
+// 从而区分「最小化」与「失焦/alt-tab」（后者 state 仍为 normal，不触发）。
+chrome.windows.onFocusChanged.addListener(async () => {
+  const cid = await getConsoleWinId();
+  if (cid == null) return;
+  let state = null;
+  try { state = (await chrome.windows.get(cid)).state; } catch (e) { return; } // 窗口没了交给 onRemoved
+  if (state === "minimized" && !consoleMinimized) {
+    consoleMinimized = true; await minimizeAllManaged();
+  } else if (state !== "minimized" && consoleMinimized) {
+    consoleMinimized = false; await restoreAllManaged();
+  }
+});
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;

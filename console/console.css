@@ -1,11 +1,27 @@
-html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",sans-serif;color:#222;background:#f8fafc}
-#bar{display:flex;align-items:center;gap:10px;height:100%;padding:0 12px;box-sizing:border-box;overflow-x:auto}
-#sites{display:flex;gap:10px;flex:0 0 auto}
-#sites label{display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer}
-.dot{width:8px;height:8px;border-radius:50%;background:#d1d5db;display:inline-block}
-#prompt{flex:1 1 240px;min-width:160px;padding:6px 8px;border:1px solid #d9d9d9;border-radius:6px}
-#tier{padding:6px;border:1px solid #d9d9d9;border-radius:6px;background:#fff}
-button{padding:6px 12px;border:1px solid #6366f1;background:#eef2ff;border-radius:6px;cursor:pointer;white-space:nowrap}
-button:hover{background:#e0e7ff}
-button.icon{padding:6px 8px;min-width:32px;display:inline-flex;align-items:center;justify-content:center;color:#374151}
+html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:#eef0f6;background:#12141c}
+#bar{display:flex;align-items:center;gap:9px;height:100%;padding:0 14px;box-sizing:border-box;overflow-x:auto;background:linear-gradient(180deg,#171a24,#12141c);border-bottom:1px solid rgba(255,255,255,.07)}
+.brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;white-space:nowrap;flex:0 0 auto}
+.brand .logo{font-size:16px;color:#a78bfa;text-shadow:0 0 12px rgba(139,92,246,.7)}
+.presets{display:flex;gap:4px;flex:0 0 auto}
+.presets button{padding:5px 9px;font-size:12px}
+#sites{display:flex;gap:8px;flex:0 0 auto}
+#sites label{display:flex;align-items:center;gap:5px;white-space:nowrap;cursor:pointer;color:#c8ccd8;font-size:12px}
+#sites input[type=checkbox]{accent-color:#8b5cf6;margin:0}
+.dot{width:8px;height:8px;border-radius:50%;background:#c2c7d0;display:inline-block;flex:none}
+.dot.idle{background:#c2c7d0}
+.dot.send{background:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.3)}
+.dot.done{background:#16a34a}
+.dot.fail{background:#dc2626}
+#tier,#tpl{padding:6px 8px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:rgba(255,255,255,.05);color:#cbd0dd;font-size:12px;flex:0 0 auto}
+#tier option,#tpl option{background:#1f2330;color:#eef0f6}
+.tplwrap{display:flex;align-items:center;gap:3px;flex:0 0 auto}
+#prompt{flex:1 1 240px;min-width:160px;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.04);color:#eef0f6;font-size:13px}
+#prompt::placeholder{color:#6b7186}
+button{padding:8px 13px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#cbd0dd;border-radius:9px;cursor:pointer;white-space:nowrap;font-size:13px}
+button:hover{background:rgba(255,255,255,.1)}
+button.mini{padding:0;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center}
+#send{font-weight:600;color:#fff;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 16px rgba(124,93,246,.5)}
+#send:hover{filter:brightness(1.08);background:linear-gradient(135deg,#6366f1,#8b5cf6)}
+button.icon{padding:0;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;color:#8b90a3}
 button.icon svg{display:block}
+button.icon:hover{color:#eef0f6}
