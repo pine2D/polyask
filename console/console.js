@@ -65,13 +65,17 @@ function setDot(host, state, title) {
 function applyResults(results) {
   (results || []).forEach((r) => {
     if (typeof r.ok === "boolean") {
-      setDot(r.host, r.ok ? "done" : "fail", r.reason || "");          // broadcast 结果
+      setDot(r.host, r.ok ? "done" : "fail", r.reason || "");          // sendAll 提交结果
     } else {
       const okWin = r.windowId != null;                                 // openTile 结果
       setDot(r.host, okWin ? "done" : "fail", r.reused ? "复用" : r.opened ? "已开" : "失败");
     }
   });
 }
+// 逐站实时回填：sendAll 期间每站一完成，background 即推单站结果，立刻更新该站圆点（不等全部）
+chrome.runtime.onMessage.addListener((msg) => {
+  if (msg && msg.from === "AMS_BG" && msg.type === "siteResult" && msg.result) applyResults([msg.result]);
+});
 function save() {
   chrome.storage.local.set({ amsConsole: { selected, tier: elTier.value, prompt: elPrompt.value } });
 }
@@ -100,9 +104,9 @@ document.getElementById("send").addEventListener("click", () => {
   const text = elPrompt.value.trim(); if (!text) return;
   // Task 4: 入栈历史
   pushHistory(text);
-  // Task 7: 改用 state "send"
-  sites.forEach((s) => setDot(s.host, "send", "发送中"));
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "broadcast", sites, text, tier: elTier.value || null }, (resp) => applyResults(resp && resp.results));
+  // Task 7: 改用 state "send"（sendAll 会按需先开窗，故文案含"开窗"）
+  sites.forEach((s) => setDot(s.host, "send", "开窗/发送中"));
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: elTier.value || null }, (resp) => applyResults(resp && resp.results));
 });
 document.getElementById("focusall").addEventListener("click", () => {
   const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "focusAll", sites });

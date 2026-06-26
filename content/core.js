@@ -76,8 +76,10 @@
     try { const el = findComposer(); if (el) el.focus(); } catch (e) {}
   }
 
-  // 把 text 注入输入框并提交。textarea/input 用原生 value setter；contenteditable 用 execCommand。
-  // 提交：优先 adapter.submit(el)，否则发 Enter，回退点发送按钮。返回 {ok,reason?}。
+  // 把 text 注入输入框并提交。textarea/input 用原生 value setter；contenteditable 用合成
+  // beforeinput（受控编辑器 Lexical/ProseMirror/Slate 无视 execCommand 的 DOM 写入，却处理
+  // beforeinput），失败退回 execCommand。提交：优先 adapter.submit(el)，否则原生点发送键，
+  // 无按钮再发 Enter。返回 {ok,reason?}。
   async function submitPrompt(text) {
     const el = findComposer();
     if (!el) return { ok: false, reason: "输入框未找到" };
@@ -87,22 +89,30 @@
       Object.getOwnPropertyDescriptor(proto, "value").set.call(el, text);
       el.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
-      try { document.execCommand("selectAll", false, null); document.execCommand("insertText", false, text); }
-      catch (e) { el.textContent = text; el.dispatchEvent(new InputEvent("input", { bubbles: true })); }
+      // 先全选(替换既有内容)，再用 beforeinput 注入；没进去再退回 execCommand。
+      try { const s = getSelection(); s.removeAllRanges(); const rg = document.createRange(); rg.selectNodeContents(el); s.addRange(rg); } catch (e) {}
+      el.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
+      await sleep(60);
+      if (!(el.textContent || "").includes(text)) {
+        try { document.execCommand("selectAll", false, null); document.execCommand("insertText", false, text); }
+        catch (e) { el.textContent = text; el.dispatchEvent(new InputEvent("input", { bubbles: true })); }
+      }
     }
     await sleep(250);
     const a = pickAdapter();
     if (a && typeof a.submit === "function") {
       try { await a.submit(el); return { ok: true }; } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
     }
+    // 通用提交：优先原生点击发送按钮（最稳，国产站拒合成事件，且避免对受控编辑器发 Enter 产生多余换行）；
+    // !disabled 防误触（空输入时按钮多为禁用）。无可用按钮再退回合成 Enter（适配靠 Enter 提交的 textarea）。
+    const sendBtn = () => document.querySelector('button[data-testid*="send" i], button[aria-label*="send" i], button[aria-label*="发送"]');
+    let btn = sendBtn();
+    if (btn && !btn.disabled) { btn.click(); await sleep(200); return { ok: true }; }
     ["keydown", "keypress", "keyup"].forEach((t) =>
       el.dispatchEvent(new KeyboardEvent(t, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true })));
     await sleep(150);
-    // 回退：输入框仍有内容 → 找发送按钮
-    if (((el.value || el.textContent || "").trim()).length) {
-      const btn = document.querySelector('button[data-testid*="send" i], button[aria-label*="send" i], button[aria-label*="发送"]');
-      if (btn) clickEl(btn);
-    }
+    btn = sendBtn();
+    if (btn && !btn.disabled) btn.click(); // Enter 没发出去且按钮可用 → 原生点
     return { ok: true };
   }
 
@@ -115,22 +125,42 @@
     return key ? adapters[key] : null;
   }
 
-  async function runMode(mode) {
+  // silent=true 时不弹 toast、只返回是否成功（供 switchTier 静默重试）。
+  async function runMode(mode, silent) {
     const a = pickAdapter();
-    if (!a || !a[mode]) return;
+    if (!a || !a[mode]) return false;
     // 站点偶发渲染抖动会导致首次失败：静默重试一次，仍失败才报错
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
         escMenus(); // 清掉可能残留的菜单，保证从干净态开始
         await sleep(attempt ? 600 : 150);
         await a[mode]();
-        toast(mode === "think" ? "已切到：深度思考" : "已切到：快速模型", true);
+        if (!silent) toast(mode === "think" ? "已切到：深度思考" : "已切到：快速模型", true);
         focusComposer();
         try { document.dispatchEvent(new CustomEvent("ams:switched")); } catch (e) {}
-        return;
+        return true;
       } catch (e) {
-        if (attempt) toast("切换失败：" + (e && e.message ? e.message : e), false);
+        if (attempt && !silent) toast("切换失败：" + (e && e.message ? e.message : e), false);
       }
+    }
+    return false;
+  }
+
+  // 群发场景专用：切档位并用 state() 验证真的生效。新开页面切换器渲染晚于输入框，
+  // 旧逻辑"runMode 没抛错就算切了"会误判；这里静默重试 runMode 直到 state() 确认目标档，
+  // 或超时按当前档发送（不丢提问）。state 不可读的站点：连续两次未报错即视为已尽力。
+  async function switchTier(mode, deadlineMs = 10000) {
+    const okMsg = mode === "think" ? "已切到：深度思考" : "已切到：快速模型";
+    const t0 = Date.now();
+    let nullTries = 0;
+    for (;;) {
+      if (getState() === mode) { toast(okMsg, true); return true; }   // 已在目标档（含 state 滞后后追上）
+      const switched = await runMode(mode, true);                     // 静默尝试切换
+      await sleep(350);
+      if (getState() === mode) { toast(okMsg, true); return true; }   // 验证已切到
+      if (switched && getState() == null && ++nullTries >= 2) { toast(okMsg, true); return true; }
+      if (Date.now() - t0 > deadlineMs) { toast("切换未稳定生效，按当前档发送", false); return false; }
+      await sleep(switched ? 400 : 700); // 切到了短等 state 追上；没切到多等页面加载出切换器
     }
   }
 
@@ -159,7 +189,13 @@
       if (msg.cmd === "submitPrompt") {
         (async () => {
           try {
-            if (msg.tier === "think" || msg.tier === "fast") { await runMode(msg.tier); await sleep(200); }
+            // 新开页面若立即 runMode 会因模型切换器未渲染而切换失败：先等输入框出现
+            //（页面交互就绪的代理，切换器此时通常已就位），再切档位、提交。未就绪则返回
+            //「输入框未找到」让 background(sendAll) 轮询重试，杜绝"切换失败仍直接提交"。
+            if (!(await waitFor(() => findComposer(), 4000))) {
+              sendResponse({ host: location.hostname, ok: false, reason: "输入框未找到" }); return;
+            }
+            if (msg.tier === "think" || msg.tier === "fast") { await switchTier(msg.tier); await sleep(200); }
             const r = await submitPrompt(msg.text || "");
             sendResponse(Object.assign({ host: location.hostname }, r));
           } catch (e) { sendResponse({ host: location.hostname, ok: false, reason: String((e && e.message) || e) }); }

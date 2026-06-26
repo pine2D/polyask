@@ -147,21 +147,44 @@ async function openTile(sites) {
   return out;
 }
 
-async function broadcast(sites, text, tier) {
+// 发送到全部：有站点尚无窗口则先平铺，再逐站等页面就绪后提交。
+// 用户初次使用无需先点「平铺」：勾选 → 输入 → Enter 即可一步开窗+群发。
+async function sendAll(sites, text, tier) {
   const wins = await getWindows();
-  const results = [];
-  for (const s of sites) {
-    const tabs = await tabsForHost(s.host, wins);
-    if (!tabs.length) { results.push({ host: s.host, ok: false, reason: "无窗口" }); continue; }
-    try {
-      const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "submitPrompt", text, tier });
-      if (r && typeof r.ok === "boolean") results.push({ host: s.host, ok: r.ok, reason: r.reason });
-      else results.push({ host: s.host, ok: false, reason: "无响应" });
-    } catch (e) {
-      results.push({ host: s.host, ok: false, reason: "content 未注入" });
-    }
-  }
+  let anyMissing = false;
+  for (const s of sites) { if ((await popupWindowForHost(s.host, wins)) == null) { anyMissing = true; break; } }
+  if (anyMissing) await openTile(sites); // 有缺 → 平铺全部，保持网格一致
+  const results = await Promise.all(sites.map((s) => submitWhenReady(s, text, tier)));
+  await raiseConsole();
   return results;
+}
+
+// 单站结果即时推给控制台（逐站实时回填，无需等全部完成）；无接收方时静默吞错。
+function pushSiteResult(res) {
+  try { chrome.runtime.sendMessage({ from: "AMS_BG", type: "siteResult", result: res }, () => void chrome.runtime.lastError); } catch (e) {}
+}
+
+// 轮询直到该站页面就绪并提交：已开窗口首轮即命中；新开窗口需加载+content 注入+composer 出现，
+// 故 content 未注入 / 「输入框未找到」都视为"还没好"继续等，其它 ok=false 才是真失败。
+// 任一出口都先 pushSiteResult 让该站圆点立刻变色，再返回参与 Promise.all 汇总。
+async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
+  const t0 = Date.now();
+  const done = (ok, reason) => { const res = { host: s.host, ok, reason }; pushSiteResult(res); return res; };
+  for (;;) {
+    const wins = await getWindows();
+    const tabs = await tabsForHost(s.host, wins);
+    if (tabs.length) {
+      try {
+        const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "submitPrompt", text, tier });
+        if (r && r.ok) return done(true, r.reason);
+        if (r && typeof r.ok === "boolean" && !/未找到|not found/i.test(r.reason || "")) {
+          return done(false, r.reason || "提交失败");
+        }
+      } catch (e) { /* content 未注入，页面还在加载 → 继续等 */ }
+    }
+    if (Date.now() - t0 > timeoutMs) return done(false, "超时未就绪");
+    await new Promise((res) => setTimeout(res, gap));
+  }
 }
 
 async function windowIdsForSites(sites) {
@@ -261,7 +284,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;
   if (msg.action === "openConsole") { openConsole(); return; }
   if (msg.action === "openTile") { openTile(msg.sites || []).then((results) => sendResponse({ results })); return true; }
-  if (msg.action === "broadcast") { broadcast(msg.sites || [], msg.text || "", msg.tier || null).then((results) => sendResponse({ results })); return true; }
+  if (msg.action === "sendAll") { sendAll(msg.sites || [], msg.text || "", msg.tier || null).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "focusAll") { focusAll(msg.sites || []); return; }
   if (msg.action === "minimizeAll") { minimizeAll(msg.sites || []); return; }
   if (msg.action === "closeAll") { closeAll(); return; }
