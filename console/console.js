@@ -228,4 +228,8 @@ elPrompt.addEventListener("keydown", (e) => {
   }
 });
 
+document.getElementById("compose").addEventListener("click", () => {
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openCompose" });
+});
+
 load();

@@ -16,6 +16,13 @@ const STRIP_H = 96;
 
 let consoleWinId = null;     // console 弹窗 id（内存缓存）
 let consoleMinimized = false; // 联动去抖：console 当前是否最小化
+let composeWinId = null;
+async function getComposeWinId() {
+  if (composeWinId != null) return composeWinId;
+  const o = await new Promise((r) => chrome.storage.local.get("amsComposeWin", r));
+  composeWinId = (o && o.amsComposeWin) != null ? o.amsComposeWin : null;
+  return composeWinId;
+}
 async function getConsoleWinId() {
   if (consoleWinId != null) return consoleWinId;
   const o = await new Promise((r) => chrome.storage.local.get("amsConsoleWin", r));
@@ -57,6 +64,19 @@ async function openConsole() {
   });
   consoleWinId = w.id;
   await chrome.storage.local.set({ amsConsoleWin: w.id });
+}
+
+// 伴侣窗：控制面（同 console），绝不进 amsWindows、不被平铺/closeAll/联动触碰。
+async function openCompose() {
+  const cid = await getComposeWinId();
+  if (cid != null) { try { await chrome.windows.update(cid, { focused: true, state: "normal" }); return; } catch (e) {} }
+  const wa = await primaryWorkArea();
+  const W = 560, H = 380;
+  const left = wa.left + Math.max(0, Math.floor((wa.width - W) / 2));
+  const top = wa.top + Math.max(0, Math.floor((wa.height - H) / 3));
+  const w = await chrome.windows.create({ url: chrome.runtime.getURL("console/compose.html"), type: "popup", left, top, width: W, height: H, focused: true });
+  composeWinId = w.id;
+  await chrome.storage.local.set({ amsComposeWin: w.id });
 }
 
 // 控制台管理的窗口 host→{id,owned}（持久化，跨 SW 重启）。owned=true 为控制台新建
@@ -280,9 +300,16 @@ chrome.windows.onFocusChanged.addListener(async () => {
   }
 });
 
+// 伴侣窗关闭 → 仅清自身登记（绝不触发 closeAll）
+chrome.windows.onRemoved.addListener(async (winId) => {
+  const cmp = await getComposeWinId();
+  if (cmp != null && winId === cmp) { composeWinId = null; await chrome.storage.local.remove("amsComposeWin"); }
+});
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;
   if (msg.action === "openConsole") { openConsole(); return; }
+  if (msg.action === "openCompose") { openCompose(); return; }
   if (msg.action === "openTile") { openTile(msg.sites || []).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "sendAll") { sendAll(msg.sites || [], msg.text || "", msg.tier || null).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "focusAll") { focusAll(msg.sites || []); return; }
