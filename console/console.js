@@ -204,6 +204,7 @@ document.getElementById("newsession").addEventListener("click", () => {
 document.getElementById("closeall").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" });
   [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "done", "fail"); c.title = c.dataset.label; });
+  updateRetry();
 });
 elTier.addEventListener("change", save);
 elPrompt.addEventListener("input", () => { histCursor = -1; save(); }); // 手打改字 → 复位游标（↑↓ 程序化设 value 不触发 input）
@@ -255,7 +256,7 @@ document.getElementById("retry").addEventListener("click", () => {
   const failHosts = [...document.querySelectorAll(".chip.fail")].map((c) => c.dataset.host);
   const sites = SITES.filter((s) => failHosts.includes(s.host));
   if (!sites.length) return;
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text: lastSend.text, tier: lastSend.tier }, (resp) => applyResults(resp && resp.results));
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text: lastSend.text, tier: lastSend.tier, tile: false }, (resp) => applyResults(resp && resp.results));
 });
 
 // 伴侣窗编辑 → 经 storage 回填细条输入框（本框未编辑时才更新，防回环）

@@ -120,12 +120,11 @@ async function tabsForHost(host, wins) {
   if (id == null) return [];
   try { return await chrome.tabs.query({ url: "*://" + host + "/*", windowId: id }); } catch (e) { return []; }
 }
-// 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）
 async function getAutoRaise() {
   const o = await new Promise((r) => chrome.storage.local.get({ amsAutoRaise: true }, r));
   return o.amsAutoRaise !== false;
 }
-
+// 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）
 async function raiseConsole() {
   try {
     const ct = await chrome.tabs.query({ url: chrome.runtime.getURL("console/console.html") });
@@ -180,11 +179,11 @@ async function openTile(sites) {
 
 // 发送到全部：有站点尚无窗口则先平铺，再逐站等页面就绪后提交。
 // 用户初次使用无需先点「平铺」：勾选 → 输入 → Enter 即可一步开窗+群发。
-async function sendAll(sites, text, tier) {
+async function sendAll(sites, text, tier, tile = true) {
   const wins = await getWindows();
   let anyMissing = false;
   for (const s of sites) { if ((await popupWindowForHost(s.host, wins)) == null) { anyMissing = true; break; } }
-  if (anyMissing) await openTile(sites); // 有缺 → 平铺全部，保持网格一致
+  if (tile && anyMissing) await openTile(sites); // retry 传 tile=false：只复发不重铺，避免 prune 误关成功兄弟窗
   pushBroadcast({ type: "sendStart", hosts: sites.map((s) => s.host) }); // 进度起点（console/compose 发起都统一）
   const results = await Promise.all(sites.map((s) => submitWhenReady(s, text, tier)));
   if (await getAutoRaise()) await focusAll(sites); // 发送后自动置顶全部平铺窗
@@ -325,7 +324,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "openConsole") { openConsole(); return; }
   if (msg.action === "openCompose") { openCompose(); return; }
   if (msg.action === "openTile") { openTile(msg.sites || []).then((results) => sendResponse({ results })); return true; }
-  if (msg.action === "sendAll") { sendAll(msg.sites || [], msg.text || "", msg.tier || null).then((results) => sendResponse({ results })); return true; }
+  if (msg.action === "sendAll") { sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "focusAll") { focusAll(msg.sites || []); return; }
   if (msg.action === "minimizeAll") { minimizeAll(msg.sites || []); return; }
   if (msg.action === "closeAll") { closeAll(); return; }
