@@ -3,10 +3,10 @@
 <body>
   <div id="bar">
     <div class="brand"><span class="logo">◈</span>PolyAsk</div>
-    <div class="presets">
-      <button id="preset-intl" title="勾选国际三家">国际</button>
-      <button id="preset-cn" title="勾选国产全部">国产</button>
-      <button id="preset-all" title="全选 / 全不选">全选</button>
+    <div class="grpwrap">
+      <select id="group" title="分组：预设 + 自定义" aria-label="站点分组"><option value="">分组▾</option></select>
+      <button id="grp-save" class="mini" title="把当前勾选存为分组" aria-label="保存分组">＋</button>
+      <button id="grp-del" class="mini" title="删除选中的自定义分组" aria-label="删除分组">✕</button>
     </div>
     <div id="sites"></div>
     <select id="tier" title="发送前档位">

@@ -2,8 +2,9 @@ html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"Pi
 #bar{display:flex;align-items:center;gap:9px;height:100%;padding:0 14px;box-sizing:border-box;overflow-x:auto;background:linear-gradient(180deg,#171a24,#12141c);border-bottom:1px solid rgba(255,255,255,.07)}
 .brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;white-space:nowrap;flex:0 0 auto}
 .brand .logo{font-size:16px;color:#a78bfa;text-shadow:0 0 12px rgba(139,92,246,.7)}
-.presets{display:flex;gap:4px;flex:0 0 auto}
-.presets button{padding:5px 9px;font-size:12px}
+.grpwrap{display:flex;align-items:center;gap:3px;flex:0 0 auto}
+#group{padding:6px 8px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:rgba(255,255,255,.05);color:#cbd0dd;font-size:12px}
+#group option,#group optgroup{background:#1f2330;color:#eef0f6}
 #sites{display:flex;gap:6px;flex:0 1 auto;overflow:hidden}
 .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:7px;font-size:12px;white-space:nowrap;
   border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);color:#eef0f6;cursor:pointer;flex:0 0 auto}

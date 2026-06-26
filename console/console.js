@@ -51,6 +51,66 @@ function render() {
 }
 function chosen() { return SITES.filter((s) => selected[s.host]); }
 
+// —— 分组（item4）：预设虚拟项 + 自定义 amsGroups ——
+let groups = []; // [{name, hosts}]
+const elGroup = document.getElementById("group");
+const BUILTINS = [
+  { key: "intl", name: "国际", hosts: PRESETS.intl },
+  { key: "cn", name: "国产", hosts: PRESETS.cn },
+  { key: "all", name: "全部", hosts: SITES.map((s) => s.host) },
+  { key: "none", name: "清空", hosts: [] },
+];
+function renderGroups() {
+  elGroup.replaceChildren();
+  const ph = document.createElement("option"); ph.value = ""; ph.textContent = "分组▾"; elGroup.appendChild(ph);
+  const og1 = document.createElement("optgroup"); og1.label = "预设";
+  BUILTINS.forEach((b) => { const o = document.createElement("option"); o.value = "b:" + b.key; o.textContent = b.name; og1.appendChild(o); });
+  elGroup.appendChild(og1);
+  if (groups.length) {
+    const og2 = document.createElement("optgroup"); og2.label = "我的分组";
+    groups.forEach((g, i) => { const o = document.createElement("option"); o.value = "g:" + i; o.textContent = g.name; og2.appendChild(o); });
+    elGroup.appendChild(og2);
+  }
+  syncGroupSelect();
+}
+function hostsOfValue(v) {
+  if (v.startsWith("b:")) { const b = BUILTINS.find((x) => "b:" + x.key === v); return b ? b.hosts : null; }
+  if (v.startsWith("g:")) { const g = groups[parseInt(v.slice(2), 10)]; return g ? g.hosts : null; }
+  return null;
+}
+function applyHosts(hosts) {
+  SITES.forEach((s) => { selected[s.host] = hosts.includes(s.host); });
+  save(); render();
+}
+// 当前选择精确匹配某分组 → 回显之；否则落到占位（"自定义"）
+function matchGroupValue() {
+  const cur = SITES.filter((s) => selected[s.host]).map((s) => s.host).sort().join(",");
+  for (const b of BUILTINS) { if (b.hosts.slice().sort().join(",") === cur) return "b:" + b.key; }
+  for (let i = 0; i < groups.length; i++) { if (groups[i].hosts.slice().sort().join(",") === cur) return "g:" + i; }
+  return "";
+}
+function syncGroupSelect() { elGroup.value = matchGroupValue(); }
+elGroup.addEventListener("change", () => {
+  const hosts = hostsOfValue(elGroup.value);
+  if (hosts) applyHosts(hosts); else syncGroupSelect();
+});
+document.getElementById("grp-save").addEventListener("click", () => {
+  const hosts = chosen().map((s) => s.host);
+  if (!hosts.length) return;
+  const name = (prompt("分组名称") || "").trim();
+  if (!name) return;
+  groups = [...groups.filter((g) => g.name !== name), { name, hosts }];
+  chrome.storage.local.set({ amsGroups: groups });
+  renderGroups();
+});
+document.getElementById("grp-del").addEventListener("click", () => {
+  const v = elGroup.value;
+  if (!v.startsWith("g:")) return; // 仅自定义可删
+  groups = groups.filter((_, idx) => idx !== parseInt(v.slice(2), 10));
+  chrome.storage.local.set({ amsGroups: groups });
+  renderGroups();
+});
+
 // 状态写到芯片：idle 清空 send/done/fail；title 拼「站名 · 原因」（item F 悬停提示）
 function setDot(host, state, reason) {
   const chip = document.querySelector('.chip[data-host="' + host + '"]');
@@ -77,6 +137,7 @@ chrome.runtime.onMessage.addListener((msg) => {
 });
 function save() {
   chrome.storage.local.set({ amsConsole: { selected, tier: elTier.value, prompt: elPrompt.value } });
+  if (typeof syncGroupSelect === "function") syncGroupSelect();
 }
 function load() {
   chrome.storage.local.get("amsConsole", (o) => {
@@ -90,6 +151,7 @@ function load() {
     render();
     // Task 6: 加载模板
     chrome.storage.local.get("amsTemplates", (t) => { templates = (t && t.amsTemplates) || []; renderTemplates(); });
+    chrome.storage.local.get("amsGroups", (g) => { groups = (g && g.amsGroups) || []; renderGroups(); });
   });
 }
 document.getElementById("tile").addEventListener("click", () => {
@@ -122,19 +184,6 @@ document.getElementById("closeall").addEventListener("click", () => {
 });
 elTier.addEventListener("change", save);
 elPrompt.addEventListener("input", () => { histCursor = -1; save(); }); // 手打改字 → 复位游标（↑↓ 程序化设 value 不触发 input）
-
-// Task 5: 预设分组
-function applyPreset(hosts) {
-  SITES.forEach((s) => { selected[s.host] = hosts.includes(s.host); });
-  save(); render();
-}
-document.getElementById("preset-intl").addEventListener("click", () => applyPreset(PRESETS.intl));
-document.getElementById("preset-cn").addEventListener("click", () => applyPreset(PRESETS.cn));
-document.getElementById("preset-all").addEventListener("click", () => {
-  const allOn = SITES.every((s) => selected[s.host]);
-  SITES.forEach((s) => { selected[s.host] = !allOn; }); // 已全选则全不选
-  save(); render();
-});
 
 // Task 6: 模板接线
 elTpl.addEventListener("change", () => {
