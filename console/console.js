@@ -31,23 +31,33 @@ function renderTemplates() {
 function render() {
   elSites.replaceChildren();
   SITES.forEach((s) => {
-    const lab = document.createElement("label");
-    const cb = document.createElement("input");
-    cb.type = "checkbox"; cb.checked = !!selected[s.host];
-    cb.addEventListener("change", () => { selected[s.host] = cb.checked; save(); });
-    const dot = document.createElement("span"); dot.className = "dot idle"; dot.dataset.dot = s.host;
-    lab.append(cb, document.createTextNode(s.label), dot);
-    elSites.appendChild(lab);
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "chip" + (selected[s.host] ? "" : " off");
+    chip.dataset.host = s.host;
+    chip.dataset.label = s.label;
+    chip.title = s.label;
+    chip.setAttribute("aria-pressed", selected[s.host] ? "true" : "false");
+    const d = document.createElement("span"); d.className = "d";
+    chip.append(d, document.createTextNode(s.label));
+    chip.addEventListener("click", () => {
+      selected[s.host] = !selected[s.host];
+      chip.classList.toggle("off", !selected[s.host]);
+      chip.setAttribute("aria-pressed", selected[s.host] ? "true" : "false");
+      save();
+    });
+    elSites.appendChild(chip);
   });
 }
 function chosen() { return SITES.filter((s) => selected[s.host]); }
 
-// Task 7: setDot 改为 state 签名（idle|send|done|fail），颜色/辉光由 CSS 控制
-function setDot(host, state, title) {
-  const d = document.querySelector('[data-dot="' + host + '"]');
-  if (!d) return;
-  d.className = "dot " + state;
-  d.title = title || "";
+// 状态写到芯片：idle 清空 send/done/fail；title 拼「站名 · 原因」（item F 悬停提示）
+function setDot(host, state, reason) {
+  const chip = document.querySelector('.chip[data-host="' + host + '"]');
+  if (!chip) return;
+  chip.classList.remove("send", "done", "fail");
+  if (state && state !== "idle") chip.classList.add(state);
+  chip.title = reason ? chip.dataset.label + " · " + reason : chip.dataset.label;
 }
 
 // Task 7: applyResults 改用 state 字符串
@@ -108,8 +118,7 @@ document.getElementById("newsession").addEventListener("click", () => {
 });
 document.getElementById("closeall").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" });
-  // Task 7: 重置为 idle state
-  [...document.querySelectorAll('.dot')].forEach((d) => { d.className = "dot idle"; d.title = ""; });
+  [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "done", "fail"); c.title = c.dataset.label; });
 });
 elTier.addEventListener("change", save);
 elPrompt.addEventListener("input", () => { histCursor = -1; save(); }); // 手打改字 → 复位游标（↑↓ 程序化设 value 不触发 input）
