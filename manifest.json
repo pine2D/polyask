@@ -32,6 +32,10 @@
     "switch-fast": {
       "suggested_key": { "default": "Alt+Y" },
       "description": "切换到快速模型"
+    },
+    "open-console": {
+      "suggested_key": { "default": "Alt+A" },
+      "description": "打开/聚焦群发控制台"
     }
   }
 }

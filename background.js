@@ -1,5 +1,11 @@
 // background.js — 快捷键转发：onCommand → 当前活动标签的 content script
 chrome.commands.onCommand.addListener(async (command) => {
+  if (command === "open-console") {
+    const cid = await getConsoleWinId();
+    if (cid != null) { try { await chrome.windows.update(cid, { focused: true, state: "normal" }); return; } catch (e) {} }
+    await openConsole();
+    return;
+  }
   const mode = command === "switch-think" ? "think" : command === "switch-fast" ? "fast" : null;
   if (!mode) return;
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
