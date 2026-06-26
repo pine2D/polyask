@@ -75,4 +75,11 @@ document.getElementById("open-console").addEventListener("click", () => {
   window.close();
 });
 
+chrome.storage.local.get({ amsAutoRaise: true }, (v) => {
+  document.getElementById("autoraise").checked = v.amsAutoRaise !== false;
+});
+document.getElementById("autoraise").addEventListener("change", (e) =>
+  chrome.storage.local.set({ amsAutoRaise: e.target.checked })
+);
+
 refreshState();

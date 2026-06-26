@@ -115,6 +115,11 @@ async function tabsForHost(host, wins) {
   try { return await chrome.tabs.query({ url: "*://" + host + "/*", windowId: id }); } catch (e) { return []; }
 }
 // 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）
+async function getAutoRaise() {
+  const o = await new Promise((r) => chrome.storage.local.get({ amsAutoRaise: true }, r));
+  return o.amsAutoRaise !== false;
+}
+
 async function raiseConsole() {
   try {
     const ct = await chrome.tabs.query({ url: chrome.runtime.getURL("console/console.html") });
@@ -176,6 +181,7 @@ async function sendAll(sites, text, tier) {
   if (anyMissing) await openTile(sites); // 有缺 → 平铺全部，保持网格一致
   pushBroadcast({ type: "sendStart", hosts: sites.map((s) => s.host) }); // 进度起点（console/compose 发起都统一）
   const results = await Promise.all(sites.map((s) => submitWhenReady(s, text, tier)));
+  if (await getAutoRaise()) await focusAll(sites); // 发送后自动置顶全部平铺窗
   await raiseConsole();
   return results;
 }
