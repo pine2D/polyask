@@ -20,6 +20,7 @@ html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"Pi
 .chip.fail .d{background:#dc2626}
 #tier,#tpl{padding:6px 8px;border:1px solid rgba(255,255,255,.1);border-radius:7px;background:rgba(255,255,255,.05);color:#cbd0dd;font-size:12px;flex:0 0 auto}
 #tier option,#tpl option{background:#1f2330;color:#eef0f6}
+#tpl{width:110px;text-overflow:ellipsis}
 .tplwrap{display:flex;align-items:center;gap:3px;flex:0 0 auto}
 #prompt{flex:1 1 240px;min-width:160px;padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:rgba(255,255,255,.04);color:#eef0f6;font-size:13px}
 #prompt::placeholder{color:#6b7186}

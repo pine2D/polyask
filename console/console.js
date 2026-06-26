@@ -23,7 +23,7 @@ function renderTemplates() {
   templates.forEach((t, i) => {
     const o = document.createElement("option");
     o.value = String(i);
-    o.textContent = t.length > 24 ? t.slice(0, 24) + "…" : t;
+    o.textContent = t.name || (t.text.length > 24 ? t.text.slice(0, 24) + "…" : t.text);
     elTpl.appendChild(o);
   });
 }
@@ -150,7 +150,11 @@ function load() {
     chrome.storage.local.get("amsHistory", (h) => { history = (h && h.amsHistory) || []; });
     render();
     // Task 6: 加载模板
-    chrome.storage.local.get("amsTemplates", (t) => { templates = (t && t.amsTemplates) || []; renderTemplates(); });
+    chrome.storage.local.get("amsTemplates", (t) => {
+      const raw = (t && t.amsTemplates) || [];
+      templates = raw.map((x) => (typeof x === "string" ? { name: "", text: x } : x)); // 旧 string[] 迁移
+      renderTemplates();
+    });
     chrome.storage.local.get("amsGroups", (g) => { groups = (g && g.amsGroups) || []; renderGroups(); });
   });
 }
@@ -188,12 +192,13 @@ elPrompt.addEventListener("input", () => { histCursor = -1; save(); }); // 手�
 // Task 6: 模板接线
 elTpl.addEventListener("change", () => {
   const i = parseInt(elTpl.value, 10);
-  if (!isNaN(i) && templates[i] != null) { elPrompt.value = templates[i]; save(); elPrompt.focus(); }
+  if (!isNaN(i) && templates[i] != null) { elPrompt.value = templates[i].text; save(); elPrompt.focus(); }
 });
 document.getElementById("tpl-save").addEventListener("click", () => {
-  const t = elPrompt.value.trim();
-  if (!t || templates.includes(t)) return;
-  templates = [...templates, t];
+  const text = elPrompt.value.trim();
+  if (!text || templates.some((t) => t.text === text)) return;
+  const name = (prompt("模板名称（可留空）") || "").trim();
+  templates = [...templates, { name, text }];
   chrome.storage.local.set({ amsTemplates: templates });
   renderTemplates();
 });
