@@ -2,4 +2,6 @@
 
 # 本地工作文档与工具产物
 docs/superpowers/
+.superpowers/
+.spec-workflow/
 .codegraph/
