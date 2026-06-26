@@ -44,3 +44,7 @@ body.compose{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 #ch-foot .scope{font-size:12px;color:#9aa0b2;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #ch-foot .scope b{color:#c9b8ff;font-weight:600}
 #ch-send{font-weight:600;color:#fff;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 14px rgba(124,93,246,.5)}
+
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.shake{animation:shake .3s}
+button.icon:disabled{opacity:.35;cursor:not-allowed}

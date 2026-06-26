@@ -174,15 +174,17 @@ async function sendAll(sites, text, tier) {
   let anyMissing = false;
   for (const s of sites) { if ((await popupWindowForHost(s.host, wins)) == null) { anyMissing = true; break; } }
   if (anyMissing) await openTile(sites); // 有缺 → 平铺全部，保持网格一致
+  pushBroadcast({ type: "sendStart", hosts: sites.map((s) => s.host) }); // 进度起点（console/compose 发起都统一）
   const results = await Promise.all(sites.map((s) => submitWhenReady(s, text, tier)));
   await raiseConsole();
   return results;
 }
 
 // 单站结果即时推给控制台（逐站实时回填，无需等全部完成）；无接收方时静默吞错。
-function pushSiteResult(res) {
-  try { chrome.runtime.sendMessage({ from: "AMS_BG", type: "siteResult", result: res }, () => void chrome.runtime.lastError); } catch (e) {}
+function pushBroadcast(payload) {
+  try { chrome.runtime.sendMessage(Object.assign({ from: "AMS_BG" }, payload), () => void chrome.runtime.lastError); } catch (e) {}
 }
+function pushSiteResult(res) { pushBroadcast({ type: "siteResult", result: res }); }
 
 // 轮询直到该站页面就绪并提交：已开窗口首轮即命中；新开窗口需加载+content 注入+composer 出现，
 // 故 content 未注入 / 「输入框未找到」都视为"还没好"继续等，其它 ok=false 才是真失败。

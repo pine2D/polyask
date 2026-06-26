@@ -132,8 +132,27 @@ function applyResults(results) {
   });
 }
 // 逐站实时回填：sendAll 期间每站一完成，background 即推单站结果，立刻更新该站圆点（不等全部）
+let progress = { total: 0, done: 0 };
+let lastSend = null; // {text, tier}
+const elSend = document.getElementById("send");
+function updateSendLabel() {
+  elSend.textContent = (progress.total && progress.done < progress.total) ? "发送中 " + progress.done + "/" + progress.total : "发送到全部 ▸";
+}
+function updateRetry() {
+  const hasFail = !!document.querySelector(".chip.fail");
+  document.getElementById("retry").disabled = !(hasFail && lastSend);
+}
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg && msg.from === "AMS_BG" && msg.type === "siteResult" && msg.result) applyResults([msg.result]);
+  if (!msg || msg.from !== "AMS_BG") return;
+  if (msg.type === "sendStart") {
+    progress = { total: msg.hosts.length, done: 0 };
+    msg.hosts.forEach((h) => setDot(h, "send", "发送中"));
+    updateSendLabel(); updateRetry();
+  } else if (msg.type === "siteResult" && msg.result) {
+    applyResults([msg.result]);
+    progress.done++;
+    updateSendLabel(); updateRetry();
+  }
 });
 function save() {
   chrome.storage.local.set({ amsConsole: { selected, tier: elTier.value, prompt: elPrompt.value } });
@@ -164,12 +183,12 @@ document.getElementById("tile").addEventListener("click", () => {
   sites.forEach((s) => setDot(s.host, "send", "开窗中"));
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openTile", sites }, (resp) => applyResults(resp && resp.results));
 });
+function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
 document.getElementById("send").addEventListener("click", () => {
-  const sites = chosen(); if (!sites.length) return;
-  const text = elPrompt.value.trim(); if (!text) return;
-  // Task 4: 入栈历史
+  const sites = chosen(); if (!sites.length) { shake(elSend); return; }
+  const text = elPrompt.value.trim(); if (!text) { shake(elPrompt); return; }
   pushHistory(text);
-  // Task 7: 改用 state "send"（sendAll 会按需先开窗，故文案含"开窗"）
+  lastSend = { text, tier: elTier.value || null };
   sites.forEach((s) => setDot(s.host, "send", "开窗/发送中"));
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: elTier.value || null }, (resp) => applyResults(resp && resp.results));
 });
@@ -230,6 +249,13 @@ elPrompt.addEventListener("keydown", (e) => {
 
 document.getElementById("compose").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openCompose" });
+});
+document.getElementById("retry").addEventListener("click", () => {
+  if (!lastSend) return;
+  const failHosts = [...document.querySelectorAll(".chip.fail")].map((c) => c.dataset.host);
+  const sites = SITES.filter((s) => failHosts.includes(s.host));
+  if (!sites.length) return;
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text: lastSend.text, tier: lastSend.tier }, (resp) => applyResults(resp && resp.results));
 });
 
 // 伴侣窗编辑 → 经 storage 回填细条输入框（本框未编辑时才更新，防回环）
