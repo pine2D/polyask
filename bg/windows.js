@@ -30,6 +30,13 @@ async function popupWindowForHost(host, wins) {
 async function removeIfPopup(id) {
   try { const w = await chrome.windows.get(id); if (w.type === "popup") await chrome.windows.remove(id); } catch (e) {}
 }
+// 仅当给定窗口 id 确实是 popup 时才 update（与 removeIfPopup 同款防御）：amsComposeWin 持久化，
+// 跨浏览器重启 Chrome 会重排窗口 id，陈旧值可能撞上用户 type:"normal" 日常窗口——故所有对
+// composeWinId 的 minimize/restore/focus 都先校验类型，绝不碰日常窗口。返回是否真的操作了 popup。
+async function updateIfPopup(id, props) {
+  try { const w = await chrome.windows.get(id); if (w.type === "popup") { await chrome.windows.update(id, props); return true; } } catch (e) {}
+  return false;
+}
 // host → 受管 popup 内的标签（只认 popup；无受管窗口则空，调用方对该站静默跳过）。
 async function tabsForHost(host, wins) {
   const id = await popupWindowForHost(host, wins);
@@ -91,7 +98,8 @@ async function openConsole() {
 // 制造「输入框向下展开」的错觉。取不到 console 几何则回退居中。
 async function openCompose(anchor) {
   const cid = await getComposeWinId();
-  if (cid != null) { try { await chrome.windows.update(cid, { focused: true, state: "normal" }); return; } catch (e) {} }
+  // 仅当确是伴侣 popup 才聚焦并返回；陈旧 id / 撞上日常窗口 → 不碰它、继续往下新建
+  if (cid != null && await updateIfPopup(cid, { focused: true, state: "normal" })) return;
   const wa = await primaryWorkArea();
   const H = 340;
   let W = 560;
@@ -157,7 +165,7 @@ async function minimizeAll(sites) {
 async function minimizeAllManaged() {
   for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {} }
   const cmp = await getComposeWinId(); // 伴侣窗经专属 id 随动（不入 amsWindows，不破 popup-only 模型）
-  if (cmp != null) { try { await chrome.windows.update(cmp, { state: "minimized" }); } catch (e) {} }
+  if (cmp != null) await updateIfPopup(cmp, { state: "minimized" }); // 类型校验：陈旧 id 不误碰日常窗口
 }
 // ③ 把 PolyAsk 工作区（平铺窗 + console）整体抬到前台：各窗 focused:true 抬 z-order，console 最后置顶。
 // ④ 跨平台：state/focused 是 chrome.windows 的可移植操作，三系统通用；但 focused:true 的实际
@@ -166,7 +174,7 @@ async function raiseWorkspace() {
   suppressFocusUntil = Date.now() + 600; // 抑制随后由程序化抬窗触发的 onFocusChanged，防递归
   for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {} }
   const cmp = await getComposeWinId(); // 伴侣窗随工作区前置：在平铺之上、console 之下
-  if (cmp != null) { try { await chrome.windows.update(cmp, { state: "normal", focused: true }); } catch (e) {} }
+  if (cmp != null) await updateIfPopup(cmp, { state: "normal", focused: true }); // 类型校验同上
   await raiseConsole();
   suppressFocusUntil = Date.now() + 600; // ponytail: 时间窗启发式(600ms)，上限=偶尔误抑制一次紧邻真实切换
 }
