@@ -39,6 +39,15 @@ document.querySelectorAll("input[name=dm]").forEach((r) =>
   r.addEventListener("change", () => chrome.storage.sync.set({ displayMode: r.value }))
 );
 
+// 控制台主题（console + compose 共用，theme.js 据此应用）
+chrome.storage.sync.get({ amsTheme: "auto" }, (v) => {
+  const el = document.querySelector(`input[name=theme][value="${v.amsTheme}"]`);
+  if (el) el.checked = true;
+});
+document.querySelectorAll("input[name=theme]").forEach((r) =>
+  r.addEventListener("change", () => chrome.storage.sync.set({ amsTheme: r.value }))
+);
+
 document.getElementById("diag").addEventListener("click", async () => {
   const out = document.getElementById("diagout");
   try {
