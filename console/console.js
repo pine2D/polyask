@@ -51,36 +51,6 @@ function render() {
 }
 function chosen() { return SITES.filter((s) => selected[s.host]); }
 
-// —— 内联命名（替代被 96px 窗口裁切的 prompt()）：点 ＋ 后在细条内就地起名 + 回车 ——
-const elName = document.getElementById("nameinput");
-let pendingSave = null; // {kind:"tpl", text} | {kind:"grp", hosts}
-function startName(kind, placeholder, payload) {
-  pendingSave = Object.assign({ kind }, payload);
-  elName.value = ""; elName.placeholder = placeholder;
-  elName.style.display = ""; elName.focus();
-}
-function cancelName() { pendingSave = null; elName.value = ""; elName.style.display = "none"; }
-function commitName() {
-  if (!pendingSave) return;
-  const name = elName.value.trim();
-  if (pendingSave.kind === "tpl") {                         // 模板名可留空
-    templates = [...templates, { name, text: pendingSave.text }];
-    chrome.storage.local.set({ amsTemplates: templates });
-    renderTemplates();
-  } else if (pendingSave.kind === "grp") {                  // 分组名必填
-    if (!name) { cancelName(); return; }
-    groups = [...groups.filter((g) => g.name !== name), { name, hosts: pendingSave.hosts }];
-    chrome.storage.local.set({ amsGroups: groups });
-    renderGroups();
-  }
-  cancelName();
-}
-elName.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); commitName(); }
-  else if (e.key === "Escape") { e.preventDefault(); cancelName(); }
-});
-elName.addEventListener("blur", () => { if (pendingSave) cancelName(); }); // 失焦即取消
-
 // —— 分组（item4）：预设虚拟项 + 自定义 amsGroups ——
 let groups = []; // [{name, hosts}]
 const elGroup = document.getElementById("group");
@@ -133,9 +103,8 @@ document.getElementById("grp-save").addEventListener("click", () => {
 document.getElementById("grp-del").addEventListener("click", () => {
   const v = elGroup.value;
   if (!v.startsWith("g:")) return; // 仅自定义可删
-  groups = groups.filter((_, idx) => idx !== parseInt(v.slice(2), 10));
-  chrome.storage.local.set({ amsGroups: groups });
-  renderGroups();
+  const i = parseInt(v.slice(2), 10);
+  askDelete("grp", i, groups[i].name);
 });
 
 // 状态写到芯片：idle 清空 send/done/fail；title 拼「站名 · 原因」（item F 悬停提示）
@@ -249,9 +218,8 @@ document.getElementById("tpl-save").addEventListener("click", () => {
 document.getElementById("tpl-del").addEventListener("click", () => {
   const i = parseInt(elTpl.value, 10);
   if (isNaN(i)) return;
-  templates = templates.filter((_, idx) => idx !== i);
-  chrome.storage.local.set({ amsTemplates: templates });
-  renderTemplates();
+  const t = templates[i];
+  askDelete("tpl", i, t.name || (t.text.length > 12 ? t.text.slice(0, 12) + "…" : t.text));
 });
 
 // Task 4: Enter 发送 + ↑↓ 历史

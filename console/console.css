@@ -69,6 +69,11 @@ button.mini{padding:0;width:28px;height:28px;display:inline-flex;align-items:cen
 button.mini:disabled{opacity:.35;cursor:not-allowed}
 #nameinput{flex:0 0 auto;width:170px;padding:7px 10px;border:1px solid var(--name-line);border-radius:9px;background:var(--name-fill);color:var(--text);font-size:12px}
 #nameinput::placeholder{color:var(--text-3)}
+/* 删除二次确认：细条内联确认条（96px 裁切下不能用 confirm()/浮层） */
+#confirmbar{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;font-size:12px;color:var(--text-2);white-space:nowrap}
+#confirm-yes{padding:5px 11px;font-size:12px;border:1px solid rgba(220,38,38,.6);background:rgba(220,38,38,.16);color:#ef4444}
+#confirm-yes:hover{background:rgba(220,38,38,.28)}
+#confirm-no{padding:5px 11px;font-size:12px}
 #send{font-weight:600;color:#fff;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 16px rgba(124,93,246,.5)}
 #send:hover{filter:brightness(1.08);background:linear-gradient(135deg,#6366f1,#8b5cf6)}
 button.icon{padding:0;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-3)}
