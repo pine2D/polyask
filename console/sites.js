@@ -1,4 +1,4 @@
-// console/sites.js — 站点清单与预设分组（console 与 compose 共享，classic 全局脚本）
+// console/sites.js — 站点清单（console 与 compose 共享，classic 全局脚本）
 const SITES = [
   { host: "claude.ai", label: "Claude", url: "https://claude.ai/new", on: true },
   { host: "chatgpt.com", label: "ChatGPT", url: "https://chatgpt.com/", on: true },
@@ -10,7 +10,3 @@ const SITES = [
   { host: "yuanbao.tencent.com", label: "元宝", url: "https://yuanbao.tencent.com/chat/", on: false },
   { host: "chatglm.cn", label: "智谱", url: "https://chatglm.cn/main/alltoolsdetail", on: false },
 ];
-const PRESETS = {
-  intl: ["claude.ai", "chatgpt.com", "gemini.google.com"],
-  cn: ["chat.deepseek.com", "www.doubao.com", "www.qianwen.com", "www.kimi.com", "yuanbao.tencent.com", "chatglm.cn"],
-};

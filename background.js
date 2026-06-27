@@ -3,7 +3,9 @@ chrome.commands.onCommand.addListener(async (command) => {
   if (command === "open-console") {
     const cid = await getConsoleWinId();
     if (cid != null) {
-      // 恢复 console 并把整组工作区带到前台（与点击/任务栏触发的前后台联动一致）
+      // 恢复 console 并把整组工作区带到前台（与点击/任务栏触发的前后台联动一致）。
+      // 先 arm 抑制窗：un-minimize 自身会触发 onFocusChanged(cid)，否则会与下面的显式 raiseWorkspace 重复抬一次。
+      suppressFocusUntil = Date.now() + 600;
       try { await chrome.windows.update(cid, { state: "normal" }); consoleMinimized = false; await raiseWorkspace(); return; } catch (e) {}
     }
     await openConsole();
