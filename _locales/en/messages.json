@@ -1,0 +1,7 @@
+{
+  "extName": { "message": "PolyAsk — Ask Many AIs" },
+  "extDescription": { "message": "Broadcast one question to many AIs and compare answers side by side in real windows; switch each site's deep-think/fast model." },
+  "cmdOpenConsole": { "message": "Open/focus the broadcast console" },
+  "cmdThink": { "message": "Switch to deep thinking" },
+  "cmdFast": { "message": "Switch to fast model" }
+}
