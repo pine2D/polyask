@@ -2,7 +2,10 @@
 chrome.commands.onCommand.addListener(async (command) => {
   if (command === "open-console") {
     const cid = await getConsoleWinId();
-    if (cid != null) { try { await chrome.windows.update(cid, { focused: true, state: "normal" }); return; } catch (e) {} }
+    if (cid != null) {
+      // 恢复 console 并把整组工作区带到前台（与点击/任务栏触发的前后台联动一致）
+      try { await chrome.windows.update(cid, { state: "normal" }); consoleMinimized = false; await raiseWorkspace(); return; } catch (e) {}
+    }
     await openConsole();
     return;
   }
@@ -22,6 +25,7 @@ const STRIP_H = 96;
 
 let consoleWinId = null;     // console 弹窗 id（内存缓存）
 let consoleMinimized = false; // 联动去抖：console 当前是否最小化
+let suppressFocusUntil = 0;  // 程序化抬窗期间忽略 onFocusChanged（时间窗），防递归
 let composeWinId = null;
 async function getComposeWinId() {
   if (composeWinId != null) return composeWinId;
@@ -126,6 +130,7 @@ async function getAutoRaise() {
 }
 // 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）
 async function raiseConsole() {
+  suppressFocusUntil = Date.now() + 600; // 程序化抬 console 会触发 onFocusChanged，抑制其自激
   try {
     const ct = await chrome.tabs.query({ url: chrome.runtime.getURL("console/console.html") });
     if (ct[0]) await chrome.windows.update(ct[0].windowId, { focused: true });
@@ -249,21 +254,25 @@ async function closeAll() {
   }
   await setWindows({});
 }
-// 联动：遍历受管 popup 统一最小化 / 恢复（经 popup-only 解析，绝不碰日常窗口）
-async function minimizeAllManaged() {
+// 受管平铺窗 id 列表（经 popup-only 解析，绝不含日常窗口）
+async function managedTileIds() {
   const wins = await getWindows();
-  for (const host of Object.keys(wins)) {
-    const id = await popupWindowForHost(host, wins);
-    if (id != null) { try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {} }
-  }
+  const ids = [];
+  for (const host of Object.keys(wins)) { const id = await popupWindowForHost(host, wins); if (id != null) ids.push(id); }
+  return ids;
 }
-async function restoreAllManaged() {
-  const wins = await getWindows();
-  for (const host of Object.keys(wins)) {
-    const id = await popupWindowForHost(host, wins);
-    if (id != null) { try { await chrome.windows.update(id, { state: "normal", focused: false }); } catch (e) {} }
-  }
+// 联动：统一最小化全部受管 popup（绝不碰日常窗口）
+async function minimizeAllManaged() {
+  for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {} }
+}
+// ③ 把 PolyAsk 工作区（平铺窗 + console）整体抬到前台：各窗 focused:true 抬 z-order，console 最后置顶。
+// ④ 跨平台：state/focused 是 chrome.windows 的可移植操作，三系统通用；但 focused:true 的实际
+// 置顶效果受各 OS 窗口管理器左右（尤其 Linux 防焦点抢占可能拦截程序化置顶），只能尽力而为。
+async function raiseWorkspace() {
+  suppressFocusUntil = Date.now() + 600; // 抑制随后由程序化抬窗触发的 onFocusChanged，防递归
+  for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {} }
   await raiseConsole();
+  suppressFocusUntil = Date.now() + 600; // ponytail: 时间窗启发式(600ms)，上限=偶尔误抑制一次紧邻真实切换
 }
 // tab 是否已停在该站“新会话入口”（origin+pathname 一致，忽略 query/hash 与尾斜杠）。
 // 这 9 站的会话 id 都落在 path（/new→/chat/x、/→/c/x、/app→/app/x），故 path 一致≈空白新会话。
@@ -298,19 +307,22 @@ chrome.windows.onRemoved.addListener(async (winId) => {
     await closeAll();
   }
 });
-// console 最小化/恢复 → 同步最小化/恢复全部受管 popup。
-// MV3 无原生「最小化」事件，借 onFocusChanged（会唤醒 SW）读 console 窗口 state 精确判定，
-// 从而区分「最小化」与「失焦/alt-tab」（后者 state 仍为 normal，不触发）。
-chrome.windows.onFocusChanged.addListener(async () => {
+// console 最小化/恢复/前后台 → 联动全部受管 popup。MV3 无原生「最小化」事件，借 onFocusChanged
+// （会唤醒 SW）读 console 窗口 state 精确判定，区分「最小化」与「失焦/alt-tab」（后者 state 仍 normal）。
+// ③ 扩展：console 从后方被带到前台（点击窗口 / 点任务栏缩略图 / Alt+A——三者最终都走「console 获焦」）
+//   也联动整组前置。winId === console 即「console 这次获得了焦点」。
+chrome.windows.onFocusChanged.addListener(async (winId) => {
+  if (Date.now() < suppressFocusUntil) return; // 忽略程序化抬窗的自激
   const cid = await getConsoleWinId();
   if (cid == null) return;
   let state = null;
   try { state = (await chrome.windows.get(cid)).state; } catch (e) { return; } // 窗口没了交给 onRemoved
-  if (state === "minimized" && !consoleMinimized) {
-    consoleMinimized = true; await minimizeAllManaged();
-  } else if (state !== "minimized" && consoleMinimized) {
-    consoleMinimized = false; await restoreAllManaged();
+  if (state === "minimized") {
+    if (!consoleMinimized) { consoleMinimized = true; await minimizeAllManaged(); }
+    return;
   }
+  if (consoleMinimized) { consoleMinimized = false; await raiseWorkspace(); return; } // 从最小化恢复
+  if (winId === cid) { await raiseWorkspace(); }                                       // 从后方被带到前台
 });
 
 // 伴侣窗关闭 → 仅清自身登记（绝不触发 closeAll）
