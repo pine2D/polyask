@@ -67,7 +67,7 @@ chrome.windows.onRemoved.addListener(async (winId) => {
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;
   if (msg.action === "openConsole") { openConsole(); return; }
-  if (msg.action === "openCompose") { openCompose(); return; }
+  if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
   if (msg.action === "openTile") { openTile(msg.sites || []).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "sendAll") { sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "focusAll") { focusAll(msg.sites || []); return; }

@@ -87,13 +87,29 @@ async function openConsole() {
 }
 
 // 伴侣窗：控制面（同 console），绝不进 amsWindows、不被平铺/closeAll/联动触碰。
-async function openCompose() {
+// anchor（可选）= console 输入框的视口内 {left,width}：据此把伴侣窗贴 console 底边、与输入框等宽，
+// 制造「输入框向下展开」的错觉。取不到 console 几何则回退居中。
+async function openCompose(anchor) {
   const cid = await getComposeWinId();
   if (cid != null) { try { await chrome.windows.update(cid, { focused: true, state: "normal" }); return; } catch (e) {} }
   const wa = await primaryWorkArea();
-  const W = 560, H = 380;
-  const left = wa.left + Math.max(0, Math.floor((wa.width - W) / 2));
-  const top = wa.top + Math.max(0, Math.floor((wa.height - H) / 3));
+  const H = 340;
+  let W = 560;
+  let left = wa.left + Math.max(0, Math.floor((wa.width - W) / 2));
+  let top = wa.top + Math.max(0, Math.floor((wa.height - H) / 3));
+  if (anchor && anchor.width) {
+    try {
+      const c = await chrome.windows.get(await getConsoleWinId());
+      if (c && c.left != null && c.top != null && c.height != null) {
+        W = Math.round(anchor.width);
+        left = Math.round(c.left + anchor.left); // 窗口屏幕左 + 输入框视口内左 ≈ 输入框屏幕左
+        top = c.top + c.height;                  // 贴 console 实际底边（c.top 已含 WM 标题栏上移）
+        if (left < wa.left) left = wa.left;       // 夹取到工作区，防越界
+        W = Math.min(W, wa.left + wa.width - left);
+        if (top + H > wa.top + wa.height) top = wa.top + wa.height - H;
+      }
+    } catch (e) {}
+  }
   const w = await chrome.windows.create({ url: chrome.runtime.getURL("console/compose.html"), type: "popup", left, top, width: W, height: H, focused: true });
   composeWinId = w.id;
   await chrome.storage.local.set({ amsComposeWin: w.id });

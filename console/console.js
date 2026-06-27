@@ -273,7 +273,9 @@ elPrompt.addEventListener("keydown", (e) => {
 });
 
 document.getElementById("compose").addEventListener("click", () => {
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openCompose" });
+  // 上报输入框的视口内位置/宽度，让伴侣窗贴着它展开（制造"输入框展开"的错觉）
+  const r = elPrompt.getBoundingClientRect();
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openCompose", anchor: { left: r.left, width: r.width } });
 });
 document.getElementById("retry").addEventListener("click", () => {
   if (!lastSend) return;
