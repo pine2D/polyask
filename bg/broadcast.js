@@ -7,7 +7,8 @@ function serializeOp(fn) { const r = _opChain.then(fn, fn); _opChain = r.then(()
 async function openTile(sites) {
   const wa = await primaryWorkArea();
   const reserve = await consoleReserveHeight(wa);
-  const areaLeft = wa.left, areaTop = wa.top + reserve, areaW = wa.width, areaH = wa.height - reserve;
+  const areaLeft = wa.left, areaTop = wa.top + reserve, areaW = wa.width;
+  const areaH = Math.max(120, wa.height - reserve); // 夹下界：console 被拖低/小屏时 reserve≈全高 → 防负高度建窗
   const n = sites.length || 1;
   // n≤4：单排等分并排（水平二/三/四等分，各占满高度）；n≥5：方形网格
   let cols, rows;
@@ -75,8 +76,8 @@ function pushSiteResult(res) { pushBroadcast({ type: "siteResult", result: res }
 async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
   const t0 = Date.now();
   const done = (ok, reason) => { const res = { host: s.host, ok, reason }; pushSiteResult(res); return res; };
+  const wins = await getWindows(); // openTile 已在 Promise.all 前定稿登记表，轮询期不变，读一次即可
   for (;;) {
-    const wins = await getWindows();
     const tabs = await tabsForHost(s.host, wins);
     if (tabs.length) {
       try {
