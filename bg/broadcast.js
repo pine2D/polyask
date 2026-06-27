@@ -1,5 +1,9 @@
 // bg/broadcast.js — 广播层：群发、平铺开窗、新会话（依赖 bg/windows.js 的窗口层）
 
+// 把 openTile/sendAll 串行化，杜绝并发各自读-改-写 amsWindows 泄漏同 host 重复 popup
+let _opChain = Promise.resolve();
+function serializeOp(fn) { const r = _opChain.then(fn, fn); _opChain = r.then(() => {}, () => {}); return r; }
+
 async function openTile(sites) {
   const wa = await primaryWorkArea();
   const reserve = await consoleReserveHeight(wa);

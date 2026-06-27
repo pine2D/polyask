@@ -181,12 +181,17 @@ document.getElementById("tile").addEventListener("click", () => {
 });
 function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
 document.getElementById("send").addEventListener("click", () => {
+  if (elSend.disabled) return;                       // in-flight 防双发/双 Enter
   const sites = chosen(); if (!sites.length) { shake(elSend); return; }
   const text = elPrompt.value.trim(); if (!text) { shake(elPrompt); return; }
   pushHistory(text);
   lastSend = { text, tier: elTier.value || null };
+  elSend.disabled = true;
+  const reEnableTimer = setTimeout(() => { elSend.disabled = false; }, 25000); // 兜底复位
   sites.forEach((s) => setDot(s.host, "send", "开窗/发送中"));
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: elTier.value || null }, (resp) => applyResults(resp && resp.results));
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: elTier.value || null }, (resp) => {
+    clearTimeout(reEnableTimer); elSend.disabled = false; applyResults(resp && resp.results);
+  });
 });
 document.getElementById("newsession").addEventListener("click", () => {
   const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "newSession", sites });

@@ -69,8 +69,8 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;
   if (msg.action === "openConsole") { openConsole(); return; }
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
-  if (msg.action === "openTile") { openTile(msg.sites || []).then((results) => sendResponse({ results })); return true; }
-  if (msg.action === "sendAll") { sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false).then((results) => sendResponse({ results })); return true; }
+  if (msg.action === "openTile") { serializeOp(() => openTile(msg.sites || [])).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
+  if (msg.action === "sendAll") { serializeOp(() => sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false)).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "closeAll") { closeAll(); return; }
   if (msg.action === "newSession") { newSessionAll(msg.sites || []); return; }
 });
