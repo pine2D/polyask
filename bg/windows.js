@@ -84,6 +84,9 @@ async function getComposeWinId() {
 }
 
 async function openConsole() {
+  // 幂等：已开则聚焦既有 console（经 type 校验，陈旧/撞日常窗 → 继续新建），杜绝重复 console 孤立旧窗
+  const cid = await getConsoleWinId();
+  if (cid != null && await updateIfPopup(cid, { focused: true, state: "normal" })) return;
   const wa = await primaryWorkArea();
   const w = await chrome.windows.create({
     url: chrome.runtime.getURL("console/console.html"),
