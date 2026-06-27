@@ -43,7 +43,7 @@ chrome.windows.onRemoved.addListener(async (winId) => {
 });
 // console 最小化/恢复/前后台 → 联动全部受管 popup。MV3 无原生「最小化」事件，借 onFocusChanged
 // （会唤醒 SW）读 console 窗口 state 精确判定，区分「最小化」与「失焦/alt-tab」（后者 state 仍 normal）。
-// ③ 扩展：console 从后方被带到前台（点击窗口 / 点任务栏缩略图 / Alt+A——三者最终都走「console 获焦」）
+// ③ 扩展：console 从后方被带到前台（点击窗口 / 点任务栏缩略图 / Alt+Q——三者最终都走「console 获焦」）
 //   也联动整组前置。winId === console 即「console 这次获得了焦点」。
 chrome.windows.onFocusChanged.addListener(async (winId) => {
   if (Date.now() < suppressFocusUntil) return; // 忽略程序化抬窗的自激
