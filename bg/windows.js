@@ -153,9 +153,11 @@ async function minimizeAll(sites) {
     try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {}
   }
 }
-// 联动：统一最小化全部受管 popup（绝不碰日常窗口）
+// 联动：统一最小化全部受管 popup（绝不碰日常窗口）+ 伴侣窗一起最小化
 async function minimizeAllManaged() {
   for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {} }
+  const cmp = await getComposeWinId(); // 伴侣窗经专属 id 随动（不入 amsWindows，不破 popup-only 模型）
+  if (cmp != null) { try { await chrome.windows.update(cmp, { state: "minimized" }); } catch (e) {} }
 }
 // ③ 把 PolyAsk 工作区（平铺窗 + console）整体抬到前台：各窗 focused:true 抬 z-order，console 最后置顶。
 // ④ 跨平台：state/focused 是 chrome.windows 的可移植操作，三系统通用；但 focused:true 的实际
@@ -163,6 +165,8 @@ async function minimizeAllManaged() {
 async function raiseWorkspace() {
   suppressFocusUntil = Date.now() + 600; // 抑制随后由程序化抬窗触发的 onFocusChanged，防递归
   for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {} }
+  const cmp = await getComposeWinId(); // 伴侣窗随工作区前置：在平铺之上、console 之下
+  if (cmp != null) { try { await chrome.windows.update(cmp, { state: "normal", focused: true }); } catch (e) {} }
   await raiseConsole();
   suppressFocusUntil = Date.now() + 600; // ponytail: 时间窗启发式(600ms)，上限=偶尔误抑制一次紧邻真实切换
 }
@@ -171,11 +175,13 @@ async function getAutoRaise() {
   const o = await new Promise((r) => chrome.storage.local.get({ amsAutoRaise: true }, r));
   return o.amsAutoRaise !== false;
 }
-// 关闭全部：仅关闭控制台新建（owned）的窗口（复用/用户窗口不动），并清空登记
+// 关闭全部：仅关闭控制台新建（owned）的窗口（复用/用户窗口不动），并清空登记；伴侣窗一起关
 async function closeAll() {
   const wins = await getWindows();
   for (const host of Object.keys(wins)) {
     if (wins[host].owned) { await removeIfPopup(wins[host].id); }
   }
   await setWindows({});
+  const cmp = await getComposeWinId(); // 伴侣窗随平铺一起关（经专属 id；其 onRemoved 清登记）
+  if (cmp != null) await removeIfPopup(cmp);
 }
