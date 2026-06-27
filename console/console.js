@@ -199,10 +199,20 @@ document.getElementById("newsession").addEventListener("click", () => {
 document.getElementById("closeall").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" });
   [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "done", "fail"); c.title = c.dataset.label; });
-  updateRetry();
+  progress = { total: 0, done: 0 }; updateSendLabel(); lastSend = null; updateRetry();
 });
 elTier.addEventListener("change", save);
-elPrompt.addEventListener("input", () => { histCursor = -1; save(); }); // 手打改字 → 复位游标（↑↓ 程序化设 value 不触发 input）
+let _promptSaveTimer = null;
+elPrompt.addEventListener("input", () => {
+  histCursor = -1;
+  clearTimeout(_promptSaveTimer);
+  _promptSaveTimer = setTimeout(() => { // 防抖：每字一次 storage.set 太贵；prompt 与分组无关，不跑 syncGroupSelect
+    chrome.storage.local.get("amsConsole", (o) => {
+      const c = Object.assign({}, (o && o.amsConsole) || {}, { prompt: elPrompt.value });
+      chrome.storage.local.set({ amsConsole: c });
+    });
+  }, 200);
+});
 
 // Task 6: 模板接线
 elTpl.addEventListener("change", () => {
@@ -246,7 +256,8 @@ document.getElementById("compose").addEventListener("click", () => {
 });
 document.getElementById("retry").addEventListener("click", () => {
   if (!lastSend) return;
-  const failHosts = [...document.querySelectorAll(".chip.fail")].map((c) => c.dataset.host);
+  const sel = new Set(chosen().map((s) => s.host));   // 只重发"仍勾选且失败"的站
+  const failHosts = [...document.querySelectorAll(".chip.fail")].map((c) => c.dataset.host).filter((h) => sel.has(h));
   const sites = SITES.filter((s) => failHosts.includes(s.host));
   if (!sites.length) return;
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text: lastSend.text, tier: lastSend.tier, tile: false }, (resp) => applyResults(resp && resp.results));
