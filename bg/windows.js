@@ -150,15 +150,10 @@ async function windowIdsForSites(sites) {
   return ids;
 }
 
-// 全部置顶：逐个恢复+抬前（OS 限制：只能一个持焦，平铺不重叠故视觉全前置）
+// 发送后自动置顶选中站点（sendAll 用）：逐个恢复+抬前（OS 限制：只能一个持焦，平铺不重叠故视觉全前置）
 async function focusAll(sites) {
   for (const id of await windowIdsForSites(sites)) {
     try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {}
-  }
-}
-async function minimizeAll(sites) {
-  for (const id of await windowIdsForSites(sites)) {
-    try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {}
   }
 }
 // 联动：统一最小化全部受管 popup（绝不碰日常窗口）+ 伴侣窗一起最小化

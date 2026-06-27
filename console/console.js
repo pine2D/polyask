@@ -188,12 +188,6 @@ document.getElementById("send").addEventListener("click", () => {
   sites.forEach((s) => setDot(s.host, "send", "开窗/发送中"));
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: elTier.value || null }, (resp) => applyResults(resp && resp.results));
 });
-document.getElementById("focusall").addEventListener("click", () => {
-  const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "focusAll", sites });
-});
-document.getElementById("minall").addEventListener("click", () => {
-  const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "minimizeAll", sites });
-});
 document.getElementById("newsession").addEventListener("click", () => {
   const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "newSession", sites });
 });

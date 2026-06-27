@@ -70,8 +70,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
   if (msg.action === "openTile") { openTile(msg.sites || []).then((results) => sendResponse({ results })); return true; }
   if (msg.action === "sendAll") { sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false).then((results) => sendResponse({ results })); return true; }
-  if (msg.action === "focusAll") { focusAll(msg.sites || []); return; }
-  if (msg.action === "minimizeAll") { minimizeAll(msg.sites || []); return; }
   if (msg.action === "closeAll") { closeAll(); return; }
   if (msg.action === "newSession") { newSessionAll(msg.sites || []); return; }
 });
