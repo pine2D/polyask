@@ -40,7 +40,7 @@ const elConfirmText = document.getElementById("confirmtext");
 function askDelete(kind, index, name) {
   cancelName();                                // 与命名互斥：避免两个内联控件同现 + 提交同名分组致索引漂移删错
   pendingDelete = { kind, index };
-  elConfirmText.textContent = (kind === "grp" ? "删除分组「" : "删除模板「") + name + "」？";
+  elConfirmText.textContent = t(kind === "grp" ? "con_delGroup" : "con_delTpl", name);
   elConfirm.style.display = "";
   document.getElementById("confirm-no").focus(); // 默认落在「取消」，更安全
 }

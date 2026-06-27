@@ -1,35 +1,36 @@
 <!doctype html>
 <html lang="zh"><head><meta charset="utf-8">
+<script src="../i18n.js"></script>
 <script src="theme.js"></script>
 <link rel="stylesheet" href="console.css"></head>
 <body>
   <div id="bar">
     <div class="brand"><span class="logo">◈</span>PolyAsk</div>
     <div class="grpwrap">
-      <select id="group" title="分组：预设 + 自定义" aria-label="站点分组"><option value="">分组▾</option></select>
-      <button id="grp-save" class="mini" title="把当前勾选存为分组" aria-label="保存分组">＋</button>
-      <button id="grp-del" class="mini" title="删除选中的自定义分组" aria-label="删除分组" disabled>✕</button>
+      <select id="group" title="分组：预设 + 自定义" aria-label="站点分组"><option value="" data-i18n="con_groupPh">分组▾</option></select>
+      <button id="grp-save" class="mini" data-i18n-title="con_grpSaveTitle" data-i18n-aria="con_grpSaveTitle" title="把当前勾选存为分组" aria-label="保存分组">＋</button>
+      <button id="grp-del" class="mini" data-i18n-title="con_grpDelTitle" data-i18n-aria="con_grpDelTitle" title="删除选中的自定义分组" aria-label="删除分组" disabled>✕</button>
     </div>
     <div id="sites"></div>
     <select id="tier" title="发送前档位">
-      <option value="">档位：不变</option>
-      <option value="think">🧠 深度思考</option>
-      <option value="fast">⚡ 快速</option>
+      <option value="" data-i18n="con_tierKeep">档位：不变</option>
+      <option value="think" data-i18n="con_tierThink">🧠 深度思考</option>
+      <option value="fast" data-i18n="con_tierFast">⚡ 快速</option>
     </select>
     <div class="tplwrap">
-      <select id="tpl" title="提示词模板"><option value="">模板▾</option></select>
-      <button id="tpl-save" class="mini" title="保存当前输入为模板">＋</button>
-      <button id="tpl-del" class="mini" title="删除选中模板">✕</button>
+      <select id="tpl" title="提示词模板"><option value="" data-i18n="con_tplPh">模板▾</option></select>
+      <button id="tpl-save" class="mini" data-i18n-title="con_tplSaveTitle" title="保存当前输入为模板">＋</button>
+      <button id="tpl-del" class="mini" data-i18n-title="con_tplDelTitle" title="删除选中模板">✕</button>
     </div>
     <input id="nameinput" type="text" style="display:none" aria-label="名称（模板/分组）">
-    <span id="confirmbar" style="display:none"><span id="confirmtext"></span><button id="confirm-yes">删除</button><button id="confirm-no">取消</button></span>
-    <input id="prompt" type="text" placeholder="输入要群发的问题…（Enter 发送 · ↑↓ 历史）">
-    <button id="compose" class="icon" title="展开编辑长文本" aria-label="展开编辑长文本"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5M3 13l.8-3L11 2.8 13.2 5 6 12.2 3 13z"/></svg></button>
-    <button id="send">发送到全部 ▸</button>
-    <button id="retry" class="icon" title="重试失败的站点" aria-label="重试失败的站点" disabled><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5V6h-3.5"/></svg></button>
-    <button id="tile">平铺</button>
-    <button id="newsession" class="icon" title="全部新会话（各窗重载到新会话）" aria-label="全部新会话"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
-    <button id="closeall" class="icon" title="关闭控制台开启的全部窗口" aria-label="关闭全部"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
+    <span id="confirmbar" style="display:none"><span id="confirmtext"></span><button id="confirm-yes" data-i18n="con_delete">删除</button><button id="confirm-no" data-i18n="con_cancel">取消</button></span>
+    <input id="prompt" type="text" data-i18n-ph="con_promptPh" placeholder="输入要群发的问题…（Enter 发送 · ↑↓ 历史）">
+    <button id="compose" class="icon" data-i18n-title="con_composeTitle" data-i18n-aria="con_composeTitle" title="展开编辑长文本" aria-label="展开编辑长文本"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5M3 13l.8-3L11 2.8 13.2 5 6 12.2 3 13z"/></svg></button>
+    <button id="send" data-i18n="con_sendAll">发送到全部 ▸</button>
+    <button id="retry" class="icon" data-i18n-title="con_retryTitle" data-i18n-aria="con_retryTitle" title="重试失败的站点" aria-label="重试失败的站点" disabled><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5V6h-3.5"/></svg></button>
+    <button id="tile" data-i18n="con_tile">平铺</button>
+    <button id="newsession" class="icon" data-i18n-title="con_newSessionTitle" data-i18n-aria="con_newSessionTitle" title="全部新会话（各窗重载到新会话）" aria-label="全部新会话"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
+    <button id="closeall" class="icon" data-i18n-title="con_closeAllTitle" data-i18n-aria="con_closeAllTitle" title="关闭控制台开启的全部窗口" aria-label="关闭全部"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
   </div>
   <script src="sites.js"></script>
   <script src="console.js"></script>

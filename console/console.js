@@ -18,7 +18,7 @@ let templates = [];
 const elTpl = document.getElementById("tpl");
 function renderTemplates() {
   elTpl.replaceChildren();
-  const ph = document.createElement("option"); ph.value = ""; ph.textContent = "模板▾";
+  const ph = document.createElement("option"); ph.value = ""; ph.textContent = t("con_tplPh");
   elTpl.appendChild(ph);
   templates.forEach((t, i) => {
     const o = document.createElement("option");
@@ -56,17 +56,17 @@ let groups = []; // [{name, hosts}]
 const elGroup = document.getElementById("group");
 // 仅保留范围助手「全部 / 清空」；区域分组（国际/国产）已移除——避免对不可删的内置项点 ✕ 无反应
 const BUILTINS = [
-  { key: "all", name: "全部", hosts: SITES.map((s) => s.host) },
-  { key: "none", name: "清空", hosts: [] },
+  { key: "all", tKey: "con_grpAll", hosts: SITES.map((s) => s.host) },
+  { key: "none", tKey: "con_grpNone", hosts: [] },
 ];
 function renderGroups() {
   elGroup.replaceChildren();
-  const ph = document.createElement("option"); ph.value = ""; ph.textContent = "分组▾"; elGroup.appendChild(ph);
-  const og1 = document.createElement("optgroup"); og1.label = "预设";
-  BUILTINS.forEach((b) => { const o = document.createElement("option"); o.value = "b:" + b.key; o.textContent = b.name; og1.appendChild(o); });
+  const ph = document.createElement("option"); ph.value = ""; ph.textContent = t("con_groupPh"); elGroup.appendChild(ph);
+  const og1 = document.createElement("optgroup"); og1.label = t("con_grpSection");
+  BUILTINS.forEach((b) => { const o = document.createElement("option"); o.value = "b:" + b.key; o.textContent = t(b.tKey); og1.appendChild(o); });
   elGroup.appendChild(og1);
   if (groups.length) {
-    const og2 = document.createElement("optgroup"); og2.label = "我的分组";
+    const og2 = document.createElement("optgroup"); og2.label = t("con_grpMine");
     groups.forEach((g, i) => { const o = document.createElement("option"); o.value = "g:" + i; o.textContent = g.name; og2.appendChild(o); });
     elGroup.appendChild(og2);
   }
@@ -98,7 +98,7 @@ elGroup.addEventListener("change", () => {
 document.getElementById("grp-save").addEventListener("click", () => {
   const hosts = chosen().map((s) => s.host);
   if (!hosts.length) return;
-  startName("grp", "分组名称（回车保存）", { hosts });
+  startName("grp", t("con_grpNamePh"), { hosts });
 });
 document.getElementById("grp-del").addEventListener("click", () => {
   const v = elGroup.value;
@@ -123,7 +123,7 @@ function applyResults(results) {
       setDot(r.host, r.ok ? "done" : "fail", r.reason || "");          // sendAll 提交结果
     } else {
       const okWin = r.windowId != null;                                 // openTile 结果
-      setDot(r.host, okWin ? "done" : "fail", r.reused ? "复用" : r.opened ? "已开" : "失败");
+      setDot(r.host, okWin ? "done" : "fail", r.reused ? t("con_reused") : r.opened ? t("con_opened") : t("con_failed"));
     }
   });
 }
@@ -132,7 +132,7 @@ let progress = { total: 0, done: 0 };
 let lastSend = null; // {text, tier}
 const elSend = document.getElementById("send");
 function updateSendLabel() {
-  elSend.textContent = (progress.total && progress.done < progress.total) ? "发送中 " + progress.done + "/" + progress.total : "发送到全部 ▸";
+  elSend.textContent = (progress.total && progress.done < progress.total) ? t("con_sending", progress.done, progress.total) : t("con_sendAll");
 }
 function updateRetry() {
   const hasFail = !!document.querySelector(".chip.fail");
@@ -142,7 +142,7 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.from !== "AMS_BG") return;
   if (msg.type === "sendStart") {
     progress = { total: msg.hosts.length, done: 0 };
-    msg.hosts.forEach((h) => setDot(h, "send", "发送中"));
+    msg.hosts.forEach((h) => setDot(h, "send", t("con_sendingDot")));
     updateSendLabel(); updateRetry();
   } else if (msg.type === "siteResult" && msg.result) {
     applyResults([msg.result]);
@@ -176,7 +176,7 @@ function load() {
 document.getElementById("tile").addEventListener("click", () => {
   const sites = chosen(); if (!sites.length) return;
   // Task 7: 改用 state "send"
-  sites.forEach((s) => setDot(s.host, "send", "开窗中"));
+  sites.forEach((s) => setDot(s.host, "send", t("con_winOpening")));
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openTile", sites }, (resp) => applyResults(resp && resp.results));
 });
 function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
@@ -188,7 +188,7 @@ document.getElementById("send").addEventListener("click", () => {
   lastSend = { text, tier: elTier.value || null };
   elSend.disabled = true;
   const reEnableTimer = setTimeout(() => { elSend.disabled = false; }, 25000); // 兜底复位
-  sites.forEach((s) => setDot(s.host, "send", "开窗/发送中"));
+  sites.forEach((s) => setDot(s.host, "send", t("con_sendingTile")));
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: elTier.value || null }, (resp) => {
     clearTimeout(reEnableTimer); elSend.disabled = false; applyResults(resp && resp.results);
   });
@@ -222,7 +222,7 @@ elTpl.addEventListener("change", () => {
 document.getElementById("tpl-save").addEventListener("click", () => {
   const text = elPrompt.value.trim();
   if (!text || templates.some((t) => t.text === text)) return;
-  startName("tpl", "模板名称（可留空，回车保存）", { text });
+  startName("tpl", t("con_tplNamePh"), { text });
 });
 document.getElementById("tpl-del").addEventListener("click", () => {
   const i = parseInt(elTpl.value, 10);
@@ -273,3 +273,5 @@ chrome.storage.onChanged.addListener((ch, area) => {
 });
 
 load();
+document.addEventListener("i18n:changed", () => { render(); renderGroups(); renderTemplates(); updateSendLabel(); });
+applyI18n();
