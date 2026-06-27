@@ -75,13 +75,13 @@ document.getElementById("diag").addEventListener("click", async () => {
       tip.style.color = "#888";
       out.append(tip);
     }
-  } catch (e) { out.textContent = "当前页面不支持"; }
+  } catch (e) { out.textContent = t("pop_diagUnsupported"); }
 });
 
 chrome.commands.getAll((cmds) => {
   const div = document.getElementById("keys");
   div.textContent = cmds.filter((c) => !c.name.startsWith("_"))
-    .map((c) => `${c.description || c.name}: ${c.shortcut || "未设置"}`).join("　") + "　";
+    .map((c) => `${c.description || c.name}: ${c.shortcut || t("pop_shortcutUnset")}`).join("　") + "　";
   const a = document.createElement("a");
   a.textContent = t("pop_rebind");
   a.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));

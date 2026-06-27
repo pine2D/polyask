@@ -146,7 +146,7 @@
         const b = document.querySelector('[data-testid="stop-button"]') ||
           [...document.querySelectorAll('button[aria-label]')]
             .find((x) => /stop (answering|streaming|generating)/i.test(x.getAttribute("aria-label") || ""));
-        if (b) { clickEl(b); S.toast("已停止", true); }
+        if (b) { clickEl(b); S.toast(t("cs_stopped"), true); }
       },
     },
 
