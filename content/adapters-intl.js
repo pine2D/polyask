@@ -67,10 +67,10 @@
       },
       diagnose: function () {
         if (this._isEmbedLocked())
-          return [{ name: "iframe 受限：仅 haiku（claude 官方嵌入门，请在独立标签使用）", ok: false }];
+          return [{ name: t("diag_iframeLimited"), ok: false }];
         return [
-          { name: "模型入口", ok: !!document.querySelector('[data-testid="model-selector-dropdown"]') },
-          { name: "模型可读", ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
+          { name: t("diag_modelEntry"), ok: !!document.querySelector('[data-testid="model-selector-dropdown"]') },
+          { name: t("diag_modelReadable"), ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
         ];
       },
       // think/fast 同为 Opus（Sonnet 已被灰度收进 More models 子菜单，不再依赖），
@@ -129,8 +129,8 @@
       },
       diagnose: function () {
         return [
-          { name: "Intelligence 入口", ok: !!this._anchor() },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_intelEntry"), ok: !!this._anchor() },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () {
@@ -188,8 +188,8 @@
       },
       diagnose: function () {
         return [
-          { name: "模型入口", ok: !!this._modelBtn() },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_modelEntry"), ok: !!this._modelBtn() },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () {

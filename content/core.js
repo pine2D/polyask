@@ -142,12 +142,12 @@
         escMenus(); // 清掉可能残留的菜单，保证从干净态开始
         await sleep(attempt ? 600 : 150);
         await a[mode]();
-        if (!silent) toast(mode === "think" ? "已切到：深度思考" : "已切到：快速模型", true);
+        if (!silent) toast(t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast"), true);
         focusComposer();
         try { document.dispatchEvent(new CustomEvent("ams:switched")); } catch (e) {}
         return true;
       } catch (e) {
-        if (attempt && !silent) toast("切换失败：" + (e && e.message ? e.message : e), false);
+        if (attempt && !silent) toast(t("cs_switchFail", (e && e.message ? e.message : e)), false);
       }
     }
     return false;
@@ -157,7 +157,7 @@
   // 旧逻辑"runMode 没抛错就算切了"会误判；这里静默重试 runMode 直到 state() 确认目标档，
   // 或超时按当前档发送（不丢提问）。state 不可读的站点：连续两次未报错即视为已尽力。
   async function switchTier(mode, deadlineMs = 10000) {
-    const okMsg = mode === "think" ? "已切到：深度思考" : "已切到：快速模型";
+    const okMsg = t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast");
     const t0 = Date.now();
     let nullTries = 0;
     for (;;) {
@@ -166,7 +166,7 @@
       await sleep(350);
       if (getState() === mode) { toast(okMsg, true); return true; }   // 验证已切到
       if (switched && getState() == null && ++nullTries >= 2) { toast(okMsg, true); return true; }
-      if (Date.now() - t0 > deadlineMs) { toast("切换未稳定生效，按当前档发送", false); return false; }
+      if (Date.now() - t0 > deadlineMs) { toast(t("cs_switchUnstable"), false); return false; }
       await sleep(switched ? 400 : 700); // 切到了短等 state 追上；没切到多等页面加载出切换器
     }
   }
@@ -180,9 +180,9 @@
   // 只读健康自检：适配器自带 diagnose() 优先，否则回退为档位可读性
   function diagnose() {
     const a = pickAdapter();
-    if (!a) return [{ name: "站点适配器", ok: false }];
-    if (a.diagnose) { try { return a.diagnose(); } catch (e) { return [{ name: "diagnose 异常", ok: false }]; } }
-    return [{ name: "档位可读", ok: getState() != null }];
+    if (!a) return [{ name: t("cs_siteAdapter"), ok: false }];
+    if (a.diagnose) { try { return a.diagnose(); } catch (e) { return [{ name: t("cs_diagError"), ok: false }]; } }
+    return [{ name: t("diag_tierReadable"), ok: getState() != null }];
   }
 
   // 快捷键/弹窗入口：runtime 消息只来自本扩展，无需 origin 校验。

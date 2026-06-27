@@ -26,9 +26,9 @@
       },
       diagnose: function () {
         return [
-          { name: "DeepThink 开关", ok: !!this._deepThink() },
-          { name: "模式选择", ok: document.querySelectorAll('[role="radio"]').length > 0 },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_deepThink"), ok: !!this._deepThink() },
+          { name: t("diag_modeSelect"), ok: document.querySelectorAll('[role="radio"]').length > 0 },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () {
@@ -60,8 +60,8 @@
       },
       diagnose: function () {
         return [
-          { name: "模式按钮", ok: !!this._modeBtn() },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_modeBtn"), ok: !!this._modeBtn() },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () {
@@ -116,9 +116,9 @@
       },
       diagnose: function () {
         return [
-          { name: "模型下拉", ok: !!this._trigger() },
-          { name: "思考开关", ok: !!this._thinkBtn() },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_modelDropdown"), ok: !!this._trigger() },
+          { name: t("diag_thinkBtn"), ok: !!this._thinkBtn() },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () {
@@ -155,8 +155,8 @@
       },
       diagnose: function () {
         return [
-          { name: "模型入口", ok: !!document.querySelector(".current-model") },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_modelEntry"), ok: !!document.querySelector(".current-model") },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () {
@@ -182,8 +182,8 @@
       },
       diagnose: function () {
         return [
-          { name: "Deep Thinking 开关", ok: !!this._toggle() },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_deepThinking"), ok: !!this._toggle() },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () { return this._toggle() ? (this._isOn() ? "think" : "fast") : null; },
@@ -208,8 +208,8 @@
       },
       diagnose: function () {
         return [
-          { name: "思考按钮", ok: !!this._btn() },
-          { name: "档位可读", ok: this.state() != null },
+          { name: t("diag_thinkButton"), ok: !!this._btn() },
+          { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
       state: function () { return this._btn() ? (this._isOn() ? "think" : "fast") : null; },

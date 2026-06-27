@@ -34,11 +34,11 @@
       .wrap[data-mode=handle].open .pill{display:flex}
     </style>
     <div class="wrap" id="wrap" data-mode="handle">
-      <div class="handle" id="handle" title="AI Model Switcher"></div>
+      <div class="handle" id="handle"></div>
       <div class="pill" id="pill">
-        <button id="think" title="深度思考 (Alt+T)">🧠 思考</button>
+        <button id="think"></button>
         <span class="sep"></span>
-        <button id="fast" title="快速模型 (Alt+Y)">⚡ 快速</button>
+        <button id="fast"></button>
       </div>
     </div>`;
   document.documentElement.appendChild(host);
@@ -47,6 +47,17 @@
   const pill = root.getElementById("pill");
   const btnT = root.getElementById("think");
   const btnF = root.getElementById("fast");
+  const hdl  = root.getElementById("handle");
+
+  function applyTexts() {
+    hdl.title        = t("cs_pillHandleTitle");
+    btnT.textContent = t("cs_pillThink");
+    btnT.title       = t("cs_pillThinkTitle");
+    btnF.textContent = t("cs_pillFast");
+    btnF.title       = t("cs_pillFastTitle");
+  }
+  applyTexts();
+  document.addEventListener("i18n:changed", applyTexts);
 
   // 当前档位高亮（同步读，不开菜单）
   function refreshState() {
@@ -66,8 +77,8 @@
     refreshState();
     armCollapse();
   }
-  root.getElementById("handle").addEventListener("mouseenter", openPill);
-  root.getElementById("handle").addEventListener("click", openPill);
+  hdl.addEventListener("mouseenter", openPill);
+  hdl.addEventListener("click", openPill);
   pill.addEventListener("mouseenter", () => { clearTimeout(collapseTimer); pill.classList.remove("idle"); });
   pill.addEventListener("mouseleave", () => { if (wrap.dataset.mode === "handle") armCollapse(); else if (wrap.dataset.mode === "always") armIdle(); });
 

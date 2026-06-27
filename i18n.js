@@ -68,6 +68,31 @@ const MSG = {
   pop_langLegend:  { en: "Language",                                    zh_CN: "语言 / Language",                   zh_TW: "語言 / Language" },
   pop_langAuto:    { en: "Auto",                                        zh_CN: "随系统",                            zh_TW: "隨系統" },
   pop_rebind:      { en: "Rebind",                                      zh_CN: "改键",                              zh_TW: "改鍵" },
+  // —— content-script 段（I5）——
+  cs_switchedThink:  { en: "Switched: Deep Think",                              zh_CN: "已切到：深度思考",                zh_TW: "已切到：深度思考" },
+  cs_switchedFast:   { en: "Switched: Fast Model",                              zh_CN: "已切到：快速模型",                zh_TW: "已切到：快速模型" },
+  cs_switchFail:     { en: "Switch failed: {0}",                                zh_CN: "切换失败：{0}",                   zh_TW: "切換失敗：{0}" },
+  cs_switchUnstable: { en: "Switch not confirmed, sending as current tier",     zh_CN: "切换未稳定生效，按当前档发送",    zh_TW: "切換未穩定生效，依目前檔發送" },
+  cs_pillThink:      { en: "🧠 Think",                                          zh_CN: "🧠 思考",                        zh_TW: "🧠 思考" },
+  cs_pillFast:       { en: "⚡ Fast",                                           zh_CN: "⚡ 快速",                        zh_TW: "⚡ 快速" },
+  cs_pillThinkTitle: { en: "Deep Think (Alt+T)",                                zh_CN: "深度思考 (Alt+T)",                zh_TW: "深度思考 (Alt+T)" },
+  cs_pillFastTitle:  { en: "Fast Model (Alt+Y)",                                zh_CN: "快速模型 (Alt+Y)",                zh_TW: "快速模型 (Alt+Y)" },
+  cs_pillHandleTitle:{ en: "AI Model Switcher",                                 zh_CN: "AI Model Switcher",               zh_TW: "AI Model Switcher" },
+  cs_siteAdapter:    { en: "Site adapter",                                      zh_CN: "站点适配器",                      zh_TW: "站點適配器" },
+  cs_diagError:      { en: "diagnose error",                                    zh_CN: "diagnose 异常",                   zh_TW: "diagnose 異常" },
+  // —— diagnose 检查名（I5）——
+  diag_modelEntry:   { en: "Model entry",                                       zh_CN: "模型入口",                        zh_TW: "模型入口" },
+  diag_modelReadable:{ en: "Model readable",                                    zh_CN: "模型可读",                        zh_TW: "模型可讀" },
+  diag_tierReadable: { en: "Tier readable",                                     zh_CN: "档位可读",                        zh_TW: "檔位可讀" },
+  diag_iframeLimited:{ en: "iframe limited: haiku only (Claude embed — use standalone tab)", zh_CN: "iframe 受限：仅 haiku（claude 官方嵌入门，请在独立标签使用）", zh_TW: "iframe 受限：僅 haiku（claude 官方嵌入，請在獨立分頁使用）" },
+  diag_intelEntry:   { en: "Intelligence entry",                                zh_CN: "Intelligence 入口",               zh_TW: "Intelligence 入口" },
+  diag_deepThink:    { en: "DeepThink toggle",                                  zh_CN: "DeepThink 开关",                  zh_TW: "DeepThink 開關" },
+  diag_modeSelect:   { en: "Mode select",                                       zh_CN: "模式选择",                        zh_TW: "模式選擇" },
+  diag_modeBtn:      { en: "Mode button",                                       zh_CN: "模式按钮",                        zh_TW: "模式按鈕" },
+  diag_modelDropdown:{ en: "Model dropdown",                                    zh_CN: "模型下拉",                        zh_TW: "模型下拉" },
+  diag_thinkBtn:     { en: "Thinking toggle",                                   zh_CN: "思考开关",                        zh_TW: "思考開關" },
+  diag_deepThinking: { en: "Deep Thinking toggle",                              zh_CN: "Deep Thinking 开关",              zh_TW: "Deep Thinking 開關" },
+  diag_thinkButton:  { en: "Thinking button",                                   zh_CN: "思考按钮",                        zh_TW: "思考按鈕" },
 };
 const I18N_LANGS = ["en", "zh_CN", "zh_TW"];
 function _resolveAuto() {
