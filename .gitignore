@@ -5,3 +5,6 @@ docs/superpowers/
 .superpowers/
 .spec-workflow/
 .codegraph/
+
+# 打包产物
+dist/

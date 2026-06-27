@@ -1,0 +1,32 @@
+name: Release
+
+# 推送 v* 标签即自动打包并发布 GitHub Release。
+# 切版本：改 manifest.json 的 version → git tag vX.Y.Z → git push origin vX.Y.Z
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # 创建 Release 需写权限
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 校验 tag 与 manifest 版本一致
+        run: |
+          MANIFEST_VER=$(grep -m1 '"version"' manifest.json | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
+          TAG_VER="${GITHUB_REF_NAME#v}"
+          echo "manifest=$MANIFEST_VER  tag=$TAG_VER"
+          [ "$MANIFEST_VER" = "$TAG_VER" ] || { echo "::error::tag $TAG_VER 与 manifest 版本 $MANIFEST_VER 不一致"; exit 1; }
+
+      - name: 打包扩展
+        run: bash scripts/package.sh
+
+      - name: 发布 Release（附 zip）
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/polyask-*.zip
+          generate_release_notes: true
