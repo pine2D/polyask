@@ -83,9 +83,7 @@
         if (byAria) return byAria;
         return [...document.querySelectorAll("div,button,span")].filter((e) => {
           const t = (e.textContent || "").trim();
-          if (!/^Qwen3/.test(t) || t.length > 25 || e.children.length > 3) return false;
-          const r = e.getBoundingClientRect();
-          return r.width > 0 && r.height > 0;
+          return /^Qwen3/.test(t) && t.length <= 25 && e.children.length <= 3; // 只读 state() 不需可见性判定
         }).pop() || null;
       },
       _selectModel: async function (re) {

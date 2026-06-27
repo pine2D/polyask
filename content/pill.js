@@ -69,7 +69,7 @@
   root.getElementById("handle").addEventListener("mouseenter", openPill);
   root.getElementById("handle").addEventListener("click", openPill);
   pill.addEventListener("mouseenter", () => { clearTimeout(collapseTimer); pill.classList.remove("idle"); });
-  pill.addEventListener("mouseleave", () => { if (wrap.dataset.mode === "handle") armCollapse(); });
+  pill.addEventListener("mouseleave", () => { if (wrap.dataset.mode === "handle") armCollapse(); else if (wrap.dataset.mode === "always") armIdle(); });
 
   // always 模式：闲置半透明
   let idleTimer = null;

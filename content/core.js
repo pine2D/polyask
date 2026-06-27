@@ -90,10 +90,12 @@
       el.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
       // 先全选(替换既有内容)，再用 beforeinput 注入；没进去再退回 execCommand。
+      const _before = (el.textContent || "").trim();
       try { const s = getSelection(); s.removeAllRanges(); const rg = document.createRange(); rg.selectNodeContents(el); s.addRange(rg); } catch (e) {}
       el.dispatchEvent(new InputEvent("beforeinput", { inputType: "insertText", data: text, bubbles: true, cancelable: true }));
       await sleep(60);
-      if (!(el.textContent || "").includes(text)) {
+      const _after = (el.textContent || "").trim();
+      if (!(_after && _after !== _before)) { // 受控编辑器多行会重排换行，includes 误判；改判"非空且较注入前有变化"
         try { document.execCommand("selectAll", false, null); document.execCommand("insertText", false, text); }
         catch (e) { el.textContent = text; el.dispatchEvent(new InputEvent("input", { bubbles: true })); }
       }
@@ -108,11 +110,16 @@
     const sendBtn = () => document.querySelector('button[data-testid*="send" i], button[aria-label*="send" i], button[aria-label*="发送"]');
     let btn = sendBtn();
     if (btn && !btn.disabled) { btn.click(); await sleep(200); return { ok: true }; }
+    const _txtBefore = (el.textContent || el.value || "").trim();
     ["keydown", "keypress", "keyup"].forEach((t) =>
       el.dispatchEvent(new KeyboardEvent(t, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true })));
     await sleep(150);
     btn = sendBtn();
     if (btn && !btn.disabled) btn.click(); // Enter 没发出去且按钮可用 → 原生点
+    await sleep(200);
+    // 校验：真发出去编辑器会清空；仍有原文 → 判失败，不再假成功（Kimi/元宝/chatglm 无标签发送键存疑路径）
+    const _txtAfter = (el.textContent || el.value || "").trim();
+    if (_txtAfter && _txtAfter === _txtBefore) return { ok: false, reason: "提交未确认" };
     return { ok: true };
   }
 
