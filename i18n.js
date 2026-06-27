@@ -37,6 +37,16 @@ const MSG = {
   con_grpSection: { en: "Presets", zh_CN: "预设", zh_TW: "預設" },
   con_grpMine: { en: "My groups", zh_CN: "我的分组", zh_TW: "我的群組" },
   con_sendingDot: { en: "Sending…", zh_CN: "发送中", zh_TW: "發送中" },
+  // —— compose 段（I3）——
+  cmp_title:       { en: "Edit broadcast question",    zh_CN: "编辑群发问题",    zh_TW: "編輯廣播問題" },
+  cmp_ph:          { en: "Enter your broadcast question…", zh_CN: "输入要群发的问题…", zh_TW: "輸入要廣播的問題…" },
+  cmp_close:       { en: "Close",                      zh_CN: "关闭",            zh_TW: "關閉" },
+  cmp_back:        { en: "Fill back & close",           zh_CN: "回填并关闭",      zh_TW: "回填並關閉" },
+  cmp_send:        { en: "Send to all ▸",               zh_CN: "发送到全部 ▸",    zh_TW: "發送到全部 ▸" },
+  cmp_scopeNone:   { en: "No sites selected",           zh_CN: "未选择站点",      zh_TW: "未選擇站點" },
+  cmp_scopePrefix: { en: "Broadcasting to ",            zh_CN: "将群发到 ",       zh_TW: "將廣播到 " },
+  cmp_scopeN:      { en: "{0} sites",                   zh_CN: "{0} 站",          zh_TW: "{0} 站" },
+  cmp_scopeColon:  { en: ": ",                          zh_CN: "：",              zh_TW: "：" },
 };
 const I18N_LANGS = ["en", "zh_CN", "zh_TW"];
 function _resolveAuto() {

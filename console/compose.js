@@ -1,4 +1,5 @@
-// console/compose.js — 伴侣编辑窗口（Task 5 最小骨架；Task 6 补双向同步与发送）
+// console/compose.js — 伴侣编辑窗口（Task 5 最小骨架；Task 6 补双向同步与发送；Task 9 补 i18n）
+applyI18n(); // 静态元素首屏本地化（i18n.js 在 head 同步加载，此处安全调用）
 const elText = document.getElementById("ch-text");
 chrome.storage.local.get("amsConsole", (o) => {
   const c = (o && o.amsConsole) || {};
@@ -24,10 +25,10 @@ function renderScope(selected) {
   const chosen = SITES.filter((s) => selected[s.host]);
   const el = document.getElementById("ch-scope");
   el.replaceChildren();
-  if (!chosen.length) { el.textContent = "未选择站点"; return; }
-  el.append(document.createTextNode("将群发到 "));
-  const b = document.createElement("b"); b.textContent = chosen.length + " 站"; el.append(b);
-  el.append(document.createTextNode("：" + chosen.map((s) => s.label).join(" · ")));
+  if (!chosen.length) { el.textContent = t("cmp_scopeNone"); return; }
+  el.append(document.createTextNode(t("cmp_scopePrefix")));
+  const b = document.createElement("b"); b.textContent = t("cmp_scopeN", chosen.length); el.append(b);
+  el.append(document.createTextNode(t("cmp_scopeColon") + chosen.map((s) => s.label).join(" · ")));
 }
 chrome.storage.local.get("amsConsole", (o) => renderScope(((o && o.amsConsole) || {}).selected || {}));
 chrome.storage.onChanged.addListener((ch, area) => {
@@ -36,6 +37,11 @@ chrome.storage.onChanged.addListener((ch, area) => {
   // 文本：外部（细条）改了且本框未在编辑 → 回填，避免打断输入与回环
   if (nv.prompt != null && nv.prompt !== elText.value && document.activeElement !== elText) elText.value = nv.prompt;
   renderScope(nv.selected || {});
+});
+
+document.addEventListener("i18n:changed", () => {
+  applyI18n();
+  chrome.storage.local.get("amsConsole", (o) => renderScope(((o && o.amsConsole) || {}).selected || {}));
 });
 
 document.getElementById("ch-back").addEventListener("click", () => {
