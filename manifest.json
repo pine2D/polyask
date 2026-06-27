@@ -35,7 +35,7 @@
       "description": "__MSG_cmdFast__"
     },
     "open-console": {
-      "suggested_key": { "default": "Alt+A" },
+      "suggested_key": { "default": "Alt+Q" },
       "description": "__MSG_cmdOpenConsole__"
     }
   }
