@@ -13,33 +13,42 @@
   .hint{font-size:12px;color:#888}
   .hint a{color:#6366f1;cursor:pointer;text-decoration:none}
   #unsupported{color:#dc2626;font-size:12px;display:none;margin-bottom:8px}
-</style></head>
+</style>
+<script src="../i18n.js"></script>
+</head>
 <body>
   <div class="btns">
-    <button id="think">🧠 深度思考</button>
-    <button id="fast">⚡ 快速模型</button>
+    <button id="think" data-i18n="pop_think">🧠 深度思考</button>
+    <button id="fast" data-i18n="pop_fast">⚡ 快速模型</button>
   </div>
-  <div id="unsupported">当前页面不是受支持的 AI 站点</div>
-  <button id="open-console" style="width:100%;padding:8px 0;margin-bottom:10px;border:1px solid #6366f1;border-radius:8px;background:#eef2ff;cursor:pointer">🗂 打开广播控制台</button>
+  <div id="unsupported" data-i18n="pop_unsupported">当前页面不是受支持的 AI 站点</div>
+  <button id="open-console" data-i18n="pop_openConsole" style="width:100%;padding:8px 0;margin-bottom:10px;border:1px solid #6366f1;border-radius:8px;background:#eef2ff;cursor:pointer">🗂 打开广播控制台</button>
   <fieldset>
-    <legend>群发</legend>
-    <label><input type="checkbox" id="autoraise">发送后自动置顶全部窗口</label>
+    <legend data-i18n="pop_grpLegend">群发</legend>
+    <label><input type="checkbox" id="autoraise"><span data-i18n="pop_autoRaise">发送后自动置顶全部窗口</span></label>
   </fieldset>
   <fieldset>
-    <legend>控制台主题（含群发控制台与编辑窗）</legend>
-    <label><input type="radio" name="theme" value="auto">随系统</label>
-    <label><input type="radio" name="theme" value="light">亮色</label>
-    <label><input type="radio" name="theme" value="dark">暗色</label>
+    <legend data-i18n="pop_themeLegend">控制台主题（含群发控制台与编辑窗）</legend>
+    <label><input type="radio" name="theme" value="auto"><span data-i18n="pop_themeAuto">随系统</span></label>
+    <label><input type="radio" name="theme" value="light"><span data-i18n="pop_themeLight">亮色</span></label>
+    <label><input type="radio" name="theme" value="dark"><span data-i18n="pop_themeDark">暗色</span></label>
   </fieldset>
   <fieldset>
-    <legend>悬浮控件显示</legend>
-    <label><input type="radio" name="dm" value="handle">贴边把手（悬停展开）</label>
-    <label><input type="radio" name="dm" value="always">始终显示</label>
-    <label><input type="radio" name="dm" value="hidden">隐藏（仅快捷键）</label>
+    <legend data-i18n="pop_langLegend">语言 / Language</legend>
+    <label><input type="radio" name="lang" value="auto"><span data-i18n="pop_langAuto">随系统</span></label>
+    <label><input type="radio" name="lang" value="en">English</label>
+    <label><input type="radio" name="lang" value="zh_CN">简体中文</label>
+    <label><input type="radio" name="lang" value="zh_TW">繁體中文</label>
   </fieldset>
   <fieldset>
-    <legend>健康自检</legend>
-    <button id="diag" style="width:100%;padding:6px 0;border:1px solid #d9d9d9;border-radius:6px;background:#fff;cursor:pointer">🩺 诊断当前站点</button>
+    <legend data-i18n="pop_dmLegend">悬浮控件显示</legend>
+    <label><input type="radio" name="dm" value="handle"><span data-i18n="pop_dmHandle">贴边把手（悬停展开）</span></label>
+    <label><input type="radio" name="dm" value="always"><span data-i18n="pop_dmAlways">始终显示</span></label>
+    <label><input type="radio" name="dm" value="hidden"><span data-i18n="pop_dmHidden">隐藏（仅快捷键）</span></label>
+  </fieldset>
+  <fieldset>
+    <legend data-i18n="pop_diagLegend">健康自检</legend>
+    <button id="diag" data-i18n="pop_diag" style="width:100%;padding:6px 0;border:1px solid #d9d9d9;border-radius:6px;background:#fff;cursor:pointer">🩺 诊断当前站点</button>
     <div id="diagout" style="font-size:12px;margin-top:6px"></div>
   </fieldset>
   <div class="hint" id="keys"></div>

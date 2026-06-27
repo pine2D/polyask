@@ -1,4 +1,5 @@
 // popup/popup.js — 切换按钮 + 显示模式设置 + 快捷键展示
+applyI18n(); // i18n.js 已在 head 载入并从 localStorage 镜像同步了语言，立即本地化静态文案
 async function activeTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -31,6 +32,14 @@ for (const mode of ["think", "fast"]) {
   });
 }
 
+chrome.storage.sync.get({ amsLang: "auto" }, (v) => {
+  const el = document.querySelector(`input[name=lang][value="${v.amsLang}"]`);
+  if (el) el.checked = true;
+});
+document.querySelectorAll("input[name=lang]").forEach((r) =>
+  r.addEventListener("change", () => chrome.storage.sync.set({ amsLang: r.value }))
+);
+
 chrome.storage.sync.get({ displayMode: "handle" }, (v) => {
   const el = document.querySelector(`input[name=dm][value="${v.displayMode}"]`);
   if (el) el.checked = true;
@@ -62,7 +71,7 @@ document.getElementById("diag").addEventListener("click", async () => {
     }
     if (checks.some((c) => !c.ok)) {
       const tip = document.createElement("div");
-      tip.textContent = "站点可能改版或语言未适配";
+      tip.textContent = t("pop_diagStale");
       tip.style.color = "#888";
       out.append(tip);
     }
@@ -74,7 +83,7 @@ chrome.commands.getAll((cmds) => {
   div.textContent = cmds.filter((c) => !c.name.startsWith("_"))
     .map((c) => `${c.description || c.name}: ${c.shortcut || "未设置"}`).join("　") + "　";
   const a = document.createElement("a");
-  a.textContent = "改键";
+  a.textContent = t("pop_rebind");
   a.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
   div.append(a);
 });

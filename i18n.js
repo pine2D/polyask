@@ -47,6 +47,27 @@ const MSG = {
   cmp_scopePrefix: { en: "Broadcasting to ",            zh_CN: "将群发到 ",       zh_TW: "將廣播到 " },
   cmp_scopeN:      { en: "{0} sites",                   zh_CN: "{0} 站",          zh_TW: "{0} 站" },
   cmp_scopeColon:  { en: ": ",                          zh_CN: "：",              zh_TW: "：" },
+  // —— popup 段（I4）——
+  pop_think:       { en: "🧠 Deep Think",                                zh_CN: "🧠 深度思考",                       zh_TW: "🧠 深度思考" },
+  pop_fast:        { en: "⚡ Fast Model",                                zh_CN: "⚡ 快速模型",                       zh_TW: "⚡ 快速模型" },
+  pop_openConsole: { en: "🗂 Open Broadcast Console",                   zh_CN: "🗂 打开广播控制台",                 zh_TW: "🗂 開啟廣播主控台" },
+  pop_unsupported: { en: "Current page is not a supported AI site",     zh_CN: "当前页面不是受支持的 AI 站点",      zh_TW: "目前頁面不是受支援的 AI 站點" },
+  pop_grpLegend:   { en: "Broadcast",                                   zh_CN: "群发",                              zh_TW: "廣播" },
+  pop_autoRaise:   { en: "Auto-raise all windows after send",           zh_CN: "发送后自动置顶全部窗口",            zh_TW: "發送後自動置頂全部視窗" },
+  pop_themeLegend: { en: "Console theme (broadcast & compose)",         zh_CN: "控制台主题（含群发控制台与编辑窗）", zh_TW: "主控台主題（含廣播主控台與編輯窗）" },
+  pop_themeAuto:   { en: "Auto",                                        zh_CN: "随系统",                            zh_TW: "隨系統" },
+  pop_themeLight:  { en: "Light",                                       zh_CN: "亮色",                              zh_TW: "亮色" },
+  pop_themeDark:   { en: "Dark",                                        zh_CN: "暗色",                              zh_TW: "暗色" },
+  pop_dmLegend:    { en: "Floating widget",                             zh_CN: "悬浮控件显示",                      zh_TW: "浮動控件顯示" },
+  pop_dmHandle:    { en: "Edge handle (hover to expand)",               zh_CN: "贴边把手（悬停展开）",              zh_TW: "貼邊把手（懸停展開）" },
+  pop_dmAlways:    { en: "Always show",                                 zh_CN: "始终显示",                          zh_TW: "始終顯示" },
+  pop_dmHidden:    { en: "Hidden (shortcuts only)",                     zh_CN: "隐藏（仅快捷键）",                  zh_TW: "隱藏（僅快捷鍵）" },
+  pop_diagLegend:  { en: "Health check",                                zh_CN: "健康自检",                          zh_TW: "健康自檢" },
+  pop_diag:        { en: "🩺 Diagnose current site",                    zh_CN: "🩺 诊断当前站点",                   zh_TW: "🩺 診斷目前站點" },
+  pop_diagStale:   { en: "Site may have changed or language not adapted", zh_CN: "站点可能改版或语言未适配",        zh_TW: "站點可能改版或語言未適配" },
+  pop_langLegend:  { en: "Language",                                    zh_CN: "语言 / Language",                   zh_TW: "語言 / Language" },
+  pop_langAuto:    { en: "Auto",                                        zh_CN: "随系统",                            zh_TW: "隨系統" },
+  pop_rebind:      { en: "Rebind",                                      zh_CN: "改键",                              zh_TW: "改鍵" },
 };
 const I18N_LANGS = ["en", "zh_CN", "zh_TW"];
 function _resolveAuto() {
