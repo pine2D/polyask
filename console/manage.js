@@ -6,6 +6,7 @@
 const elName = document.getElementById("nameinput");
 let pendingSave = null; // {kind:"tpl", text} | {kind:"grp", hosts}
 function startName(kind, placeholder, payload) {
+  closeConfirm();                              // 与删除确认互斥：同一时刻只显示一个内联控件
   pendingSave = Object.assign({ kind }, payload);
   elName.value = ""; elName.placeholder = placeholder;
   elName.style.display = ""; elName.focus();
@@ -37,6 +38,7 @@ let pendingDelete = null; // {kind:"grp"|"tpl", index}
 const elConfirm = document.getElementById("confirmbar");
 const elConfirmText = document.getElementById("confirmtext");
 function askDelete(kind, index, name) {
+  cancelName();                                // 与命名互斥：避免两个内联控件同现 + 提交同名分组致索引漂移删错
   pendingDelete = { kind, index };
   elConfirmText.textContent = (kind === "grp" ? "删除分组「" : "删除模板「") + name + "」？";
   elConfirm.style.display = "";

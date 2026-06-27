@@ -105,7 +105,7 @@ async function openCompose(anchor) {
         left = Math.round(c.left + anchor.left); // 窗口屏幕左 + 输入框视口内左 ≈ 输入框屏幕左
         top = c.top + c.height;                  // 贴 console 实际底边（c.top 已含 WM 标题栏上移）
         if (left < wa.left) left = wa.left;       // 夹取到工作区，防越界
-        W = Math.min(W, wa.left + wa.width - left);
+        W = Math.max(80, Math.min(W, wa.left + wa.width - left)); // 防右溢，且宽度兜底下界
         if (top + H > wa.top + wa.height) top = wa.top + wa.height - H;
       }
     } catch (e) {}
