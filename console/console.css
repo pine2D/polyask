@@ -27,6 +27,9 @@ html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"Pi
 button{padding:8px 13px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.06);color:#cbd0dd;border-radius:9px;cursor:pointer;white-space:nowrap;font-size:13px}
 button:hover{background:rgba(255,255,255,.1)}
 button.mini{padding:0;width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center}
+button.mini:disabled{opacity:.35;cursor:not-allowed}
+#nameinput{flex:0 0 auto;width:170px;padding:7px 10px;border:1px solid rgba(139,92,246,.55);border-radius:9px;background:rgba(139,92,246,.08);color:#eef0f6;font-size:12px}
+#nameinput::placeholder{color:#8b90a3}
 #send{font-weight:600;color:#fff;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 16px rgba(124,93,246,.5)}
 #send:hover{filter:brightness(1.08);background:linear-gradient(135deg,#6366f1,#8b5cf6)}
 button.icon{padding:0;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;color:#8b90a3}
@@ -40,6 +43,12 @@ body.compose{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 #ch-head .logo{color:#a78bfa}
 #ch-text{flex:1;margin:12px 14px;padding:11px 12px;border:1px solid rgba(255,255,255,.1);border-radius:9px;background:rgba(255,255,255,.04);color:#eef0f6;font-size:13px;line-height:1.6;resize:none;font-family:inherit}
 #ch-text::placeholder{color:#6b7186}
+/* ⑤ 滚动条适配暗色主题 */
+body.compose,#ch-text{scrollbar-width:thin;scrollbar-color:#3a3f4d transparent}
+#ch-text::-webkit-scrollbar{width:10px}
+#ch-text::-webkit-scrollbar-track{background:transparent}
+#ch-text::-webkit-scrollbar-thumb{background:#3a3f4d;border-radius:5px;border:2px solid #12141c}
+#ch-text::-webkit-scrollbar-thumb:hover{background:#4a4f5d}
 #ch-foot{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid rgba(255,255,255,.07)}
 #ch-foot .scope{font-size:12px;color:#9aa0b2;margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #ch-foot .scope b{color:#c9b8ff;font-weight:600}

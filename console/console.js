@@ -51,12 +51,41 @@ function render() {
 }
 function chosen() { return SITES.filter((s) => selected[s.host]); }
 
+// —— 内联命名（替代被 96px 窗口裁切的 prompt()）：点 ＋ 后在细条内就地起名 + 回车 ——
+const elName = document.getElementById("nameinput");
+let pendingSave = null; // {kind:"tpl", text} | {kind:"grp", hosts}
+function startName(kind, placeholder, payload) {
+  pendingSave = Object.assign({ kind }, payload);
+  elName.value = ""; elName.placeholder = placeholder;
+  elName.style.display = ""; elName.focus();
+}
+function cancelName() { pendingSave = null; elName.value = ""; elName.style.display = "none"; }
+function commitName() {
+  if (!pendingSave) return;
+  const name = elName.value.trim();
+  if (pendingSave.kind === "tpl") {                         // 模板名可留空
+    templates = [...templates, { name, text: pendingSave.text }];
+    chrome.storage.local.set({ amsTemplates: templates });
+    renderTemplates();
+  } else if (pendingSave.kind === "grp") {                  // 分组名必填
+    if (!name) { cancelName(); return; }
+    groups = [...groups.filter((g) => g.name !== name), { name, hosts: pendingSave.hosts }];
+    chrome.storage.local.set({ amsGroups: groups });
+    renderGroups();
+  }
+  cancelName();
+}
+elName.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); commitName(); }
+  else if (e.key === "Escape") { e.preventDefault(); cancelName(); }
+});
+elName.addEventListener("blur", () => { if (pendingSave) cancelName(); }); // 失焦即取消
+
 // —— 分组（item4）：预设虚拟项 + 自定义 amsGroups ——
 let groups = []; // [{name, hosts}]
 const elGroup = document.getElementById("group");
+// 仅保留范围助手「全部 / 清空」；区域分组（国际/国产）已移除——避免对不可删的内置项点 ✕ 无反应
 const BUILTINS = [
-  { key: "intl", name: "国际", hosts: PRESETS.intl },
-  { key: "cn", name: "国产", hosts: PRESETS.cn },
   { key: "all", name: "全部", hosts: SITES.map((s) => s.host) },
   { key: "none", name: "清空", hosts: [] },
 ];
@@ -89,7 +118,9 @@ function matchGroupValue() {
   for (let i = 0; i < groups.length; i++) { if (groups[i].hosts.slice().sort().join(",") === cur) return "g:" + i; }
   return "";
 }
-function syncGroupSelect() { elGroup.value = matchGroupValue(); }
+// ✕ 仅在选中「自定义分组(g:)」时可用；选中内置项/占位时置灰（给反馈，不再静默 no-op）
+function updateGrpDel() { document.getElementById("grp-del").disabled = !elGroup.value.startsWith("g:"); }
+function syncGroupSelect() { elGroup.value = matchGroupValue(); updateGrpDel(); }
 elGroup.addEventListener("change", () => {
   const hosts = hostsOfValue(elGroup.value);
   if (hosts) applyHosts(hosts); else syncGroupSelect();
@@ -97,11 +128,7 @@ elGroup.addEventListener("change", () => {
 document.getElementById("grp-save").addEventListener("click", () => {
   const hosts = chosen().map((s) => s.host);
   if (!hosts.length) return;
-  const name = (prompt("分组名称") || "").trim();
-  if (!name) return;
-  groups = [...groups.filter((g) => g.name !== name), { name, hosts }];
-  chrome.storage.local.set({ amsGroups: groups });
-  renderGroups();
+  startName("grp", "分组名称（回车保存）", { hosts });
 });
 document.getElementById("grp-del").addEventListener("click", () => {
   const v = elGroup.value;
@@ -217,10 +244,7 @@ elTpl.addEventListener("change", () => {
 document.getElementById("tpl-save").addEventListener("click", () => {
   const text = elPrompt.value.trim();
   if (!text || templates.some((t) => t.text === text)) return;
-  const name = (prompt("模板名称（可留空）") || "").trim();
-  templates = [...templates, { name, text }];
-  chrome.storage.local.set({ amsTemplates: templates });
-  renderTemplates();
+  startName("tpl", "模板名称（可留空，回车保存）", { text });
 });
 document.getElementById("tpl-del").addEventListener("click", () => {
   const i = parseInt(elTpl.value, 10);
