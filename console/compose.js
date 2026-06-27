@@ -47,7 +47,11 @@ document.getElementById("ch-send").addEventListener("click", () => {
     const c = (o && o.amsConsole) || {};
     const sel = c.selected || {};
     const sites = SITES.filter((s) => sel[s.host]); if (!sites.length) return;
-    chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: c.tier || null });
-    window.close();
+    chrome.storage.local.get("amsHistory", (h) => {
+      const hist = [text, ...((h && h.amsHistory) || []).filter((x) => x !== text)].slice(0, 20);
+      chrome.storage.local.set({ amsHistory: hist });
+      chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: c.tier || null });
+      window.close();
+    });
   });
 });

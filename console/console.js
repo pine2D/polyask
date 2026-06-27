@@ -265,7 +265,9 @@ document.getElementById("retry").addEventListener("click", () => {
 
 // 伴侣窗编辑 → 经 storage 回填细条输入框（本框未编辑时才更新，防回环）
 chrome.storage.onChanged.addListener((ch, area) => {
-  if (area !== "local" || !ch.amsConsole) return;
+  if (area !== "local") return;
+  if (ch.amsHistory) history = ch.amsHistory.newValue || [];
+  if (!ch.amsConsole) return;
   const p = (ch.amsConsole.newValue || {}).prompt;
   if (p != null && p !== elPrompt.value && document.activeElement !== elPrompt) { elPrompt.value = p; }
 });
