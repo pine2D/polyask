@@ -78,15 +78,24 @@ document.getElementById("diag").addEventListener("click", async () => {
   } catch (e) { out.textContent = t("pop_diagUnsupported"); }
 });
 
-chrome.commands.getAll((cmds) => {
-  const div = document.getElementById("keys");
-  div.textContent = cmds.filter((c) => !c.name.startsWith("_"))
-    .map((c) => `${c.description || c.name}: ${c.shortcut || t("pop_shortcutUnset")}`).join("　") + "　";
-  const a = document.createElement("a");
-  a.textContent = t("pop_rebind");
-  a.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
-  div.append(a);
-});
+function buildKeys() {
+  chrome.commands.getAll((cmds) => {
+    const div = document.getElementById("keys");
+    div.textContent = "";
+    div.append(
+      document.createTextNode(
+        cmds.filter((c) => !c.name.startsWith("_"))
+          .map((c) => `${c.description || c.name}: ${c.shortcut || t("pop_shortcutUnset")}`).join("　") + "　"
+      )
+    );
+    const a = document.createElement("a");
+    a.textContent = t("pop_rebind");
+    a.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
+    div.append(a);
+  });
+}
+buildKeys();
+document.addEventListener("i18n:changed", buildKeys);
 
 document.getElementById("open-console").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openConsole" });

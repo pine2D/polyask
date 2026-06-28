@@ -79,7 +79,8 @@ const MSG = {
   cs_switchedFast:   { en: "Switched: Fast Model",                              zh_CN: "已切到：快速模型",                zh_TW: "已切到：快速模型" },
   cs_stopped:        { en: "Stopped",                                           zh_CN: "已停止",                          zh_TW: "已停止" },
   cs_switchFail:     { en: "Switch failed: {0}",                                zh_CN: "切换失败：{0}",                   zh_TW: "切換失敗：{0}" },
-  cs_switchUnstable: { en: "Switch not confirmed, sending as current tier",     zh_CN: "切换未稳定生效，按当前档发送",    zh_TW: "切換未穩定生效，依目前檔發送" },
+  cs_switchUnstable:      { en: "Switch not confirmed, sending as current tier",     zh_CN: "切换未稳定生效，按当前档发送",    zh_TW: "切換未穩定生效，依目前檔發送" },
+  cs_submitUnconfirmed:   { en: "Submit not confirmed",                              zh_CN: "提交未确认",                      zh_TW: "提交未確認" },
   cs_pillThink:      { en: "🧠 Think",                                          zh_CN: "🧠 思考",                        zh_TW: "🧠 思考" },
   cs_pillFast:       { en: "⚡ Fast",                                           zh_CN: "⚡ 快速",                        zh_TW: "⚡ 快速" },
   cs_pillThinkTitle: { en: "Deep Think (Alt+T)",                                zh_CN: "深度思考 (Alt+T)",                zh_TW: "深度思考 (Alt+T)" },
@@ -111,7 +112,7 @@ let _lang = "en";
 function _setLangFrom(pref) {
   const p = pref || "auto";
   _lang = (p !== "auto" && I18N_LANGS.includes(p)) ? p : _resolveAuto();
-  try { localStorage.amsLang = p; } catch (e) {} // 扩展页镜像；内容脚本 origin 不同，无害
+  if (location.protocol === "chrome-extension:") { try { localStorage.amsLang = p; } catch (e) {} } // 仅扩展页镜像；内容脚本运行在第三方 origin，不写入
 }
 // 启动同步：扩展页用 localStorage 镜像即时定语言（无 FOUC）；内容脚本拿不到则先 auto，稍后 storage 回写
 try { _setLangFrom(localStorage.amsLang); } catch (e) { _setLangFrom("auto"); }
@@ -123,6 +124,7 @@ function t(key, ...subs) {
 }
 function applyI18n(root) {
   root = root || document;
+  try { document.documentElement.lang = _lang.replace("_", "-"); } catch (e) {}
   root.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = t(el.getAttribute("data-i18n")); });
   root.querySelectorAll("[data-i18n-title]").forEach((el) => { el.title = t(el.getAttribute("data-i18n-title")); });
   root.querySelectorAll("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.getAttribute("data-i18n-ph")); });

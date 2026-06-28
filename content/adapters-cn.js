@@ -204,7 +204,7 @@
           el.dispatchEvent(new MouseEvent(e, { bubbles: true, cancelable: true, view: window })));
       },
       _itemByName: function (name) {
-        return [...document.querySelectorAll(".think-mode-item")].find((it) => {
+        return [...document.querySelectorAll(".think-mode-item:not(.has-submenu)")].find((it) => {
           const n = it.querySelector(".item-name"); return n && (n.textContent || "").trim() === name;
         });
       },

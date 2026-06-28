@@ -119,7 +119,7 @@
     await sleep(200);
     // 校验：真发出去编辑器会清空；仍有原文 → 判失败，不再假成功（Kimi/元宝/chatglm 无标签发送键存疑路径）
     const _txtAfter = (el.textContent || el.value || "").trim();
-    if (_txtAfter && _txtAfter === _txtBefore) return { ok: false, reason: "提交未确认" };
+    if (_txtAfter && _txtAfter === _txtBefore) return { ok: false, reason: t("cs_submitUnconfirmed") };
     return { ok: true };
   }
 
@@ -160,12 +160,15 @@
     const okMsg = t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast");
     const t0 = Date.now();
     let nullTries = 0;
+    let sawReadable = false; // ponytail: guards two-null shortcut from firing on transient nulls for state-readable sites
     for (;;) {
-      if (getState() === mode) { toast(okMsg, true); return true; }   // 已在目标档（含 state 滞后后追上）
+      const _s = getState(); if (_s != null) sawReadable = true;
+      if (_s === mode) { toast(okMsg, true); return true; }           // 已在目标档（含 state 滞后后追上）
       const switched = await runMode(mode, true);                     // 静默尝试切换
       await sleep(350);
-      if (getState() === mode) { toast(okMsg, true); return true; }   // 验证已切到
-      if (switched && getState() == null && ++nullTries >= 2) { toast(okMsg, true); return true; }
+      const _s2 = getState(); if (_s2 != null) sawReadable = true;
+      if (_s2 === mode) { toast(okMsg, true); return true; }          // 验证已切到
+      if (switched && _s2 == null && !sawReadable && ++nullTries >= 2) { toast(okMsg, true); return true; }
       if (Date.now() - t0 > deadlineMs) { toast(t("cs_switchUnstable"), false); return false; }
       await sleep(switched ? 400 : 700); // 切到了短等 state 追上；没切到多等页面加载出切换器
     }

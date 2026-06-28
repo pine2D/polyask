@@ -273,5 +273,5 @@ chrome.storage.onChanged.addListener((ch, area) => {
 });
 
 load();
-document.addEventListener("i18n:changed", () => { render(); renderGroups(); renderTemplates(); updateSendLabel(); });
+document.addEventListener("i18n:changed", () => { renderGroups(); renderTemplates(); updateSendLabel(); });
 applyI18n();
