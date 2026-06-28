@@ -191,30 +191,46 @@
       fast: async function () { await this._set(false); },
     },
 
-    // 智谱清言：composer 的「思考」mode-button 为 toggle（selected 类=开），原生 click
+    // 智谱清言：思考已从「toggle」改为「触发器 + el-tooltip 弹层菜单」——顶层 快速 / 思考(.has-submenu)，
+    // 思考子菜单含 标准 / 深度。映射 think→深度（深度全力推理）、fast→快速。
+    // 选档序列（chrome-dbg 实测验证）：hover+click .think-mode-trigger 开弹层；深度还需先 hover 父项
+    //（.has-submenu，其名随当前档变故按 class 找）展开子菜单，再原生 click 目标 .item-name 项。
+    // state 只读：读 .think-mode-item 的 selected 类（弹层关闭时菜单项仍在 DOM，不开菜单）。
     "chatglm.cn": {
-      _btn: function () {
-        return [...document.querySelectorAll(".mode-button, [class*=mode-button]")]
-          .find((x) => /思考|Thinking/i.test((x.textContent || "").trim()));
+      _trigger: function () { return document.querySelector(".think-mode-trigger"); },
+      _hover: function (el) {
+        if (!el) return;
+        ["pointerenter", "mouseenter", "pointerover", "mouseover"].forEach((e) =>
+          el.dispatchEvent(new MouseEvent(e, { bubbles: true, cancelable: true, view: window })));
       },
-      _isOn: function () {
-        const b = this._btn();
-        return !!b && /(^|\s)selected(\s|$)/.test((b.className || "").toString());
+      _itemByName: function (name) {
+        return [...document.querySelectorAll(".think-mode-item")].find((it) => {
+          const n = it.querySelector(".item-name"); return n && (n.textContent || "").trim() === name;
+        });
       },
-      _set: async function (on) {
-        const b = this._btn();
-        if (!b) throw new Error("智谱: 思考按钮未找到");
-        if (this._isOn() !== on) { b.click(); await sleep(500); }
+      _selected: function (name) {
+        const it = this._itemByName(name);
+        return !!it && /(^|\s)selected(\s|$)/.test((it.className || "").toString());
+      },
+      _pick: async function (name, viaSubmenu) {
+        const tg = this._trigger();
+        if (!tg) throw new Error("智谱: 思考触发器未找到");
+        this._hover(tg); tg.click();                                          // 开 el-tooltip 弹层
+        await sleep(350);
+        if (viaSubmenu) { this._hover(document.querySelector(".think-mode-item.has-submenu")); await sleep(300); } // 展开子菜单
+        const it = this._itemByName(name);
+        if (!it) throw new Error("智谱: 档位「" + name + "」未找到");
+        it.click(); await sleep(500); escMenus();
       },
       diagnose: function () {
         return [
-          { name: t("diag_thinkButton"), ok: !!this._btn() },
+          { name: t("diag_thinkButton"), ok: !!this._trigger() },
           { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
-      state: function () { return this._btn() ? (this._isOn() ? "think" : "fast") : null; },
-      think: async function () { await this._set(true); },
-      fast: async function () { await this._set(false); },
+      state: function () { return this._selected("深度") ? "think" : this._selected("快速") ? "fast" : null; },
+      think: async function () { await this._pick("深度", true); },
+      fast: async function () { await this._pick("快速", false); },
     },
   });
 })();
