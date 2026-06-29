@@ -275,3 +275,15 @@ chrome.storage.onChanged.addListener((ch, area) => {
 load();
 document.addEventListener("i18n:changed", () => { renderGroups(); renderTemplates(); updateSendLabel(); });
 applyI18n();
+
+// 可靠抬窗触发：chrome.windows.onFocusChanged 在部分 Windows 环境下不触发、也不唤醒休眠的 SW（实测
+// 「从非 Chrome 窗口点回 console，平铺窗不跟随」即此因——该事件压根没派发）。改用 console 页面自身的
+// DOM focus 事件：只要 console 窗口被点到前台，渲染进程必触发，且 sendMessage 必唤醒 SW，比 onFocusChanged 可靠。
+window.addEventListener("focus", () => {
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "consoleFocused" }, () => void chrome.runtime.lastError);
+});
+// 最小化联动同样改用可靠页面事件：console 窗口被最小化 → document.hidden=true → 通知后台联动最小化
+// 平铺窗（后台再校验 window state 区分「最小化 vs 被完全遮挡」）。还原/抬前由上面的 focus 监听覆盖。
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "consoleHidden" }, () => void chrome.runtime.lastError);
+});

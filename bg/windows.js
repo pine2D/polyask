@@ -165,14 +165,16 @@ async function minimizeAllManaged() {
   const cmp = await getComposeWinId(); // 伴侣窗经专属 id 随动（不入 amsWindows，不破 popup-only 模型）
   if (cmp != null) await updateIfPopup(cmp, { state: "minimized" }); // 类型校验：陈旧 id 不误碰日常窗口
 }
-// ③ 把 PolyAsk 工作区（平铺窗 + console）整体抬到前台：各窗 focused:true 抬 z-order，console 最后置顶。
-// ④ 跨平台：state/focused 是 chrome.windows 的可移植操作，三系统通用；但 focused:true 的实际
-// 置顶效果受各 OS 窗口管理器左右（尤其 Linux 防焦点抢占可能拦截程序化置顶），只能尽力而为。
+// ③ 把 PolyAsk 工作区（平铺窗 + console）整体抬到前台：各窗 focused:true 抬 z-order，伴侣窗随后，
+// console 最后置顶。由 console 页面 focus 事件经 background 去抖后调用——此时 console 已是前台进程，
+// focused:true 即可把自家窗口抬到前面（温和、不闪；还原最小化窗也走这条，state:normal 即解最小化）。
+// ④ 跨平台：state/focused 是 chrome.windows 的可移植操作，三系统通用；置顶实效受各 OS 窗口管理器左右，尽力而为。
 async function raiseWorkspace() {
-  suppressFocusUntil = Date.now() + 600; // 抑制随后由程序化抬窗触发的 onFocusChanged，防递归
-  for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {} }
+  suppressFocusUntil = Date.now() + 600; // 抑制随后由 raiseConsole 重聚焦 console 回报的 focus 事件，防递归
+  const tileIds = await managedTileIds();
   const cmp = await getComposeWinId(); // 伴侣窗随工作区前置：在平铺之上、console 之下
-  if (cmp != null) await updateIfPopup(cmp, { state: "normal", focused: true }); // 类型校验同上
+  for (const id of tileIds) { try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {} }
+  if (cmp != null) await updateIfPopup(cmp, { state: "normal", focused: true }); // 类型校验同 removeIfPopup
   await raiseConsole();
   suppressFocusUntil = Date.now() + 600; // ponytail: 时间窗启发式(600ms)，上限=偶尔误抑制一次紧邻真实切换
 }

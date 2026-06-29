@@ -71,6 +71,13 @@
     return cands[0].el;
   }
 
+  // 读输入框当前文本：textarea/input 取 .value（.textContent 是初始值不随输入更新），其余取 .textContent
+  function readText(e) {
+    if (!e) return "";
+    const v = (e.tagName === "TEXTAREA" || e.tagName === "INPUT") ? (e.value || "") : (e.textContent || "");
+    return v.trim();
+  }
+
   // 切换成功后把光标放回输入框
   function focusComposer() {
     try { const el = findComposer(); if (el) el.focus(); } catch (e) {}
@@ -110,17 +117,23 @@
     const sendBtn = () => document.querySelector('button[data-testid*="send" i], button[aria-label*="send" i], button[aria-label*="发送"]');
     let btn = sendBtn();
     if (btn && !btn.disabled) { btn.click(); await sleep(200); return { ok: true }; }
-    const _txtBefore = (el.textContent || el.value || "").trim();
+    const _txtBefore = readText(el);
     ["keydown", "keypress", "keyup"].forEach((t) =>
       el.dispatchEvent(new KeyboardEvent(t, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true })));
     await sleep(150);
     btn = sendBtn();
     if (btn && !btn.disabled) btn.click(); // Enter 没发出去且按钮可用 → 原生点
-    await sleep(200);
-    // 校验：真发出去编辑器会清空；仍有原文 → 判失败，不再假成功（Kimi/元宝/chatglm 无标签发送键存疑路径）
-    const _txtAfter = (el.textContent || el.value || "").trim();
-    if (_txtAfter && _txtAfter === _txtBefore) return { ok: false, reason: t("cs_submitUnconfirmed") };
-    return { ok: true };
+    // 校验提交：成功发送后输入框会清空，但①清空是异步的（等服务端 ack/动画）②框架常把输入框**重挂为
+    // 新节点**——此时捕获的 el 已脱离 DOM，其 value/textContent 永远停在旧文本，只看 el 会把成功站误判
+    // 失败（红边）。故每轮**重新 findComposer 读当前活的输入框**（脱离的旧节点不会被 querySelector 选中）：
+    // 空 或 不再等于注入前原文 → 判成功；始终是原文 → 真失败（Kimi/元宝 的 Enter 只插换行不提交）。
+    // 仅无标签发送键的站会走到这里（带标签站已在上面原生点击后即返回）。
+    for (let i = 0; i < 15; i++) {
+      await sleep(200);
+      const cur = readText(findComposer());
+      if (!cur || cur !== _txtBefore) return { ok: true };
+    }
+    return { ok: false, reason: t("cs_submitUnconfirmed") };
   }
 
   // 注册表：适配器由 adapters.js 填充
