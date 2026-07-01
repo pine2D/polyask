@@ -29,24 +29,23 @@
           .find((s) => /thinking|思考/i.test((s.getAttribute("aria-label") || "") +
             (s.closest('[role="menuitem"]') ? s.closest('[role="menuitem"]').textContent : ""))) || null;
       },
-      // Opus 4.8 思考档 = 模型下拉内的 effort 子菜单：think=开 Thinking + effort Max；
-      // fast=关 Thinking + effort Low（显式压 Low，避免关思考后 label 停在 think 档词被 state() 误读）。
-      // 用稳定 testid effort-option-max/low；开关切换会重渲染故 waitFor 重取。
-      _setThinking: async function (on) {
+      // 思考档 = 模型下拉内的 effort 子菜单：think=开 Thinking + effort Max；fast=开 Thinking + effort Medium。
+      // effort 级别由 effort 参数传入（max/medium/low…）；用稳定 testid effort-option-<level>；开关切换会重渲染故 waitFor 重取。
+      _setThinking: async function (on, effort) {
         await this._open();
+        const optSel = '[data-testid="effort-option-' + effort + '"]';
         const trig = document.querySelector('[data-testid="effort-menu-trigger"]');
         if (trig) {
-          if (!this._thinkSwitch() && !document.querySelector('[data-testid="effort-option-low"]')) openMenu(trig);
+          if (!this._thinkSwitch() && !document.querySelector(optSel)) openMenu(trig);
           // 1) Thinking 开关切到目标态
           const sw = await waitFor(() => this._thinkSwitch(), 1500);
           if (sw && (sw.getAttribute("aria-checked") === "true") !== on) { clickEl(sw); await sleep(450); }
-          // 2) effort 档位：think→Max / fast→Low
-          if (!document.querySelector('[data-testid="effort-option-max"]')) {
+          // 2) effort 档位切到目标级别
+          if (!document.querySelector(optSel)) {
             const t2 = document.querySelector('[data-testid="effort-menu-trigger"]');
             if (t2) openMenu(t2);
           }
-          const opt = await waitFor(() =>
-            document.querySelector('[data-testid="' + (on ? "effort-option-max" : "effort-option-low") + '"]'), 1500);
+          const opt = await waitFor(() => document.querySelector(optSel), 1500);
           if (opt) clickEl(opt);
           await sleep(300); escMenus(); return;
         }
@@ -73,8 +72,8 @@
           { name: t("diag_modelReadable"), ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
         ];
       },
-      // think/fast 同为 Opus（Sonnet 已被灰度收进 More models 子菜单，不再依赖），
-      // 档位按 thinking/effort 后缀判：Adaptive/Max/Extra=think；Low/无后缀=fast；High/Medium 不判
+      // think = Opus 4.8（最强）；fast = Sonnet 5（新发布快模型）。
+      // 判档：模型名带 sonnet/haiku 恒 fast；Opus 再按 thinking/effort 后缀（Adaptive/Max/Extra=think，Low/无后缀=fast，High/Medium 不判）
       state: function () {
         if (this._isEmbedLocked()) return null; // 受限态：不谎报 "fast"，HUD 不亮琥珀
         const t = this._label();
@@ -88,12 +87,12 @@
       },
       think: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
-        await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true);
+        await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true, "max");
       },
-      // fast = Opus 4.8 + 关思考（窄屏关 Adaptive 开关；宽屏 effort 取 Low）——零子菜单导航
+      // fast = Sonnet 5 + 开思考 effort Medium（均衡快速；选到 sonnet 后 state() 即恒判 fast，无思考控件则自然降级为纯选模型）
       fast: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
-        await this._selectModel(/opus\s*4\.8/i); await this._setThinking(false);
+        await this._selectModel(/sonnet\s*5/i); await this._setThinking(true, "medium");
       },
     },
 
