@@ -45,16 +45,27 @@ function askDelete(kind, index, name) {
   document.getElementById("confirm-no").focus(); // 默认落在「取消」，更安全
 }
 function closeConfirm() { pendingDelete = null; elConfirm.style.display = "none"; }
+// 删除分组的流程副作用恢复：删除前必须先在下拉选中该组，而选中即 applyHosts 覆盖了当前勾选——
+// 无论删除还是取消，都把勾选还原到套用分组前的快照（selBeforeGroup 由 console.js 在 change 时记录）
+function restoreGroupSel() {
+  if (!selBeforeGroup) return;
+  selected = selBeforeGroup; selBeforeGroup = null;
+  save(); render();
+}
 document.getElementById("confirm-yes").addEventListener("click", () => {
   if (!pendingDelete) return;
   if (pendingDelete.kind === "grp") {
     groups = groups.filter((_, i) => i !== pendingDelete.index);
     chrome.storage.local.set({ amsGroups: groups }); renderGroups();
+    restoreGroupSel();
   } else {
     templates = templates.filter((_, i) => i !== pendingDelete.index);
     chrome.storage.local.set({ amsTemplates: templates }); renderTemplates();
   }
   closeConfirm();
 });
-document.getElementById("confirm-no").addEventListener("click", closeConfirm);
+document.getElementById("confirm-no").addEventListener("click", () => {
+  if (pendingDelete && pendingDelete.kind === "grp") restoreGroupSel();
+  closeConfirm();
+});
 elConfirm.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); closeConfirm(); } });

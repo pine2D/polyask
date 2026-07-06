@@ -40,7 +40,7 @@ function render() {
     chip.className = "chip" + (selected[s.host] ? "" : " off");
     chip.dataset.host = s.host;
     chip.dataset.label = s.label;
-    chip.title = s.label;
+    chip.title = s.label + " · " + t("con_chipHint"); // 闲时教学、忙时报状态（setDot 会覆盖为原因）
     chip.setAttribute("aria-pressed", selected[s.host] ? "true" : "false");
     const d = document.createElement("span"); d.className = "d";
     chip.append(d, document.createTextNode(s.label));
@@ -58,6 +58,7 @@ function chosen() { return SITES.filter((s) => selected[s.host]); }
 
 // —— 分组（item4）：预设虚拟项 + 自定义 amsGroups ——
 let groups = []; // [{name, hosts}]
+let selBeforeGroup = null; // 最近一次套用分组前的勾选快照（删除分组流程用于恢复，见 manage.js）
 const elGroup = document.getElementById("group");
 // 仅保留范围助手「全部 / 清空」；区域分组（国际/国产）已移除——避免对不可删的内置项点 ✕ 无反应
 const BUILTINS = [
@@ -98,7 +99,7 @@ function updateGrpDel() { document.getElementById("grp-del").disabled = !elGroup
 function syncGroupSelect() { elGroup.value = matchGroupValue(); updateGrpDel(); }
 elGroup.addEventListener("change", () => {
   const hosts = hostsOfValue(elGroup.value);
-  if (hosts) applyHosts(hosts); else syncGroupSelect();
+  if (hosts) { selBeforeGroup = Object.assign({}, selected); applyHosts(hosts); } else syncGroupSelect();
 });
 document.getElementById("grp-save").addEventListener("click", () => {
   const hosts = chosen().map((s) => s.host);
@@ -112,54 +113,7 @@ document.getElementById("grp-del").addEventListener("click", () => {
   askDelete("grp", i, groups[i].name);
 });
 
-// 状态写到芯片：idle 清空 send/done/fail；title 拼「站名 · 原因」（item F 悬停提示）
-function setDot(host, state, reason) {
-  const chip = document.querySelector('.chip[data-host="' + host + '"]');
-  if (!chip) return;
-  chip.classList.remove("send", "done", "fail");
-  if (state && state !== "idle") chip.classList.add(state);
-  chip.title = reason ? chip.dataset.label + " · " + reason : chip.dataset.label;
-}
-
-// 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
-const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier" };
-function errText(r) { return (ERR_KEYS[r.code] && t(ERR_KEYS[r.code])) || r.reason || t("con_failed"); }
-// Task 7: applyResults 改用 state 字符串
-function applyResults(results) {
-  (results || []).forEach((r) => {
-    if (typeof r.ok === "boolean") {
-      // sendAll 提交结果；ok+code（如 tier_unconfirmed）= 绿点带警示 title
-      setDot(r.host, r.ok ? "done" : "fail", r.ok ? (ERR_KEYS[r.code] ? t(ERR_KEYS[r.code]) : "") : errText(r));
-    } else {
-      const okWin = r.windowId != null;                                 // openTile 结果
-      setDot(r.host, okWin ? "done" : "fail", r.reused ? t("con_reused") : r.opened ? t("con_opened") : t("con_failed"));
-    }
-  });
-}
-// 逐站实时回填：sendAll 期间每站一完成，background 即推单站结果，立刻更新该站圆点（不等全部）
-let progress = { total: 0, done: 0 };
-let lastSend = null; // {text, tier}
-const elSend = document.getElementById("send");
-function updateSendLabel() {
-  elSend.textContent = (progress.total && progress.done < progress.total) ? t("con_sending", progress.done, progress.total) : t("con_sendAll");
-}
-function updateRetry() {
-  const hasFail = !!document.querySelector(".chip.fail");
-  document.getElementById("retry").disabled = !(hasFail && lastSend);
-}
-chrome.runtime.onMessage.addListener((msg) => {
-  if (!msg || msg.from !== "AMS_BG") return;
-  if (msg.type === "sendStart") {
-    if (msg.text) lastSend = { text: msg.text, tier: msg.tier || null }; // compose 发起的群发也可重试
-    progress = { total: msg.hosts.length, done: 0 };
-    msg.hosts.forEach((h) => setDot(h, "send", t("con_sendingDot")));
-    updateSendLabel(); updateRetry();
-  } else if (msg.type === "siteResult" && msg.result) {
-    applyResults([msg.result]);
-    progress.done++;
-    updateSendLabel(); updateRetry();
-  }
-});
+// 群发进度/结果状态（setDot/applyResults/errText/progress/lastSend/失败汇总）拆在 console/status.js（本文件之后加载）
 function save() {
   chrome.storage.local.set({ amsConsole: { selected, tier: elTier.value, prompt: elPrompt.value } });
   if (typeof syncGroupSelect === "function") syncGroupSelect();
@@ -208,13 +162,13 @@ document.getElementById("newsession").addEventListener("click", () => {
 });
 document.getElementById("closeall").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" });
-  [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "done", "fail"); c.title = c.dataset.label; });
-  progress = { total: 0, done: 0 }; updateSendLabel(); lastSend = null; updateRetry();
+  [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "done", "fail"); c.title = c.dataset.label + " · " + t("con_chipHint"); });
+  progress = { total: 0, done: 0 }; updateSendLabel(); lastSend = null; updateRetry(); updateFailSum();
 });
 elTier.addEventListener("change", save);
 let _promptSaveTimer = null;
 elPrompt.addEventListener("input", () => {
-  histCursor = -1;
+  histCursor = -1; elPrompt.title = ""; // 编辑历史条目即成为新草稿，清位置指示
   clearTimeout(_promptSaveTimer);
   _promptSaveTimer = setTimeout(() => { // 防抖：每字一次 storage.set 太贵；prompt 与分组无关，不跑 syncGroupSelect
     chrome.storage.local.get("amsConsole", (o) => {
@@ -251,11 +205,12 @@ elPrompt.addEventListener("keydown", (e) => {
     if (histCursor === -1) histDraft = elPrompt.value; // 进浏览前先存草稿，↓ 回来可还原
     histCursor = Math.min(histCursor + 1, history.length - 1);
     elPrompt.value = history[histCursor]; // 浏览期间不落盘：storage 里始终是草稿，误关窗也不丢
+    elPrompt.title = t("con_histPos", histCursor + 1, history.length); // 位置指示（悬停可见）
   } else if (e.key === "ArrowDown" && !e.isComposing) {
     if (histCursor === -1) return; // 未在浏览历史 → 不动用户草稿
     e.preventDefault();
-    if (histCursor === 0) { histCursor = -1; elPrompt.value = histDraft; }
-    else { histCursor -= 1; elPrompt.value = history[histCursor]; }
+    if (histCursor === 0) { histCursor = -1; elPrompt.value = histDraft; elPrompt.title = ""; }
+    else { histCursor -= 1; elPrompt.value = history[histCursor]; elPrompt.title = t("con_histPos", histCursor + 1, history.length); }
   }
 });
 

@@ -2,17 +2,23 @@
 <html lang="en">
 <head><meta charset="utf-8">
 <style>
-  body{width:240px;margin:0;padding:12px;font:13px/1.5 -apple-system,"Segoe UI",sans-serif;color:#222}
+  /* 变量化 + prefers-color-scheme：popup 随系统暗色，不再与暗色控制台/站点形成白色反差 */
+  :root{--bg:#fff;--text:#222;--muted:#6b6f7a;--line:#d9d9d9;--line-soft:#e5e5e5;--btn:#fff;--btn-hover:#f5f5f5;--acc:#6366f1;--acc-bg:#eef2ff}
+  @media (prefers-color-scheme:dark){:root{--bg:#1b1e28;--text:#e8eaf2;--muted:#9aa0b2;--line:#3a3f4d;--line-soft:#2c3140;--btn:#232734;--btn-hover:#2c3140;--acc:#8b8ff5;--acc-bg:#2a2d4a}}
+  body{width:240px;margin:0;padding:12px;font:13px/1.5 -apple-system,"Segoe UI",sans-serif;color:var(--text);background:var(--bg)}
   .btns{display:flex;gap:8px;margin-bottom:12px}
-  .btns button{flex:1;padding:10px 0;border:1px solid #d9d9d9;border-radius:8px;background:#fff;cursor:pointer;font-size:13px}
-  .btns button:hover{background:#f5f5f5}
-  .btns button.active{border-color:#6366f1;background:#eef2ff}
-  fieldset{border:1px solid #e5e5e5;border-radius:8px;margin:0 0 10px;padding:8px 10px}
-  legend{font-size:12px;color:#888;padding:0 4px}
+  .btns button{flex:1;padding:10px 0;border:1px solid var(--line);border-radius:8px;background:var(--btn);color:var(--text);cursor:pointer;font-size:13px}
+  .btns button:hover{background:var(--btn-hover)}
+  .btns button.active{border-color:var(--acc);background:var(--acc-bg)}
+  fieldset{border:1px solid var(--line-soft);border-radius:8px;margin:0 0 10px;padding:8px 10px}
+  legend{font-size:12px;color:var(--muted);padding:0 4px}
   label{display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer}
-  .hint{font-size:12px;color:#888}
-  .hint a{color:#6366f1;cursor:pointer;text-decoration:none}
+  .hint{font-size:12px;color:var(--muted)}
+  .hint a{color:var(--acc);cursor:pointer;text-decoration:none}
   #unsupported{color:#dc2626;font-size:12px;display:none;margin-bottom:8px}
+  #open-console{width:100%;padding:8px 0;margin-bottom:10px;border:1px solid var(--acc);border-radius:8px;background:var(--acc-bg);color:var(--text);cursor:pointer}
+  #diag{width:100%;padding:6px 0;border:1px solid var(--line);border-radius:6px;background:var(--btn);color:var(--text);cursor:pointer}
+  #diagout{font-size:12px;margin-top:6px}
 </style>
 <script src="../i18n.js"></script>
 </head>
@@ -22,7 +28,7 @@
     <button id="fast" data-i18n="pop_fast">⚡ 快速模型</button>
   </div>
   <div id="unsupported" data-i18n="pop_unsupported">当前页面不是受支持的 AI 站点</div>
-  <button id="open-console" data-i18n="pop_openConsole" style="width:100%;padding:8px 0;margin-bottom:10px;border:1px solid #6366f1;border-radius:8px;background:#eef2ff;cursor:pointer">🗂 打开广播控制台</button>
+  <button id="open-console" data-i18n="pop_openConsole">🗂 打开群发控制台</button>
   <fieldset>
     <legend data-i18n="pop_grpLegend">群发</legend>
     <label><input type="checkbox" id="autoraise"><span data-i18n="pop_autoRaise">发送后自动置顶全部窗口</span></label>
@@ -48,8 +54,8 @@
   </fieldset>
   <fieldset>
     <legend data-i18n="pop_diagLegend">健康自检</legend>
-    <button id="diag" data-i18n="pop_diag" style="width:100%;padding:6px 0;border:1px solid #d9d9d9;border-radius:6px;background:#fff;cursor:pointer">🩺 诊断当前站点</button>
-    <div id="diagout" style="font-size:12px;margin-top:6px"></div>
+    <button id="diag" data-i18n="pop_diag">🩺 诊断当前站点</button>
+    <div id="diagout"></div>
   </fieldset>
   <div class="hint" id="keys"></div>
   <script src="popup.js"></script>

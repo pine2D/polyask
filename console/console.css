@@ -5,7 +5,7 @@
   --edge:rgba(255,255,255,.07); --line:rgba(255,255,255,.1); --line-2:rgba(255,255,255,.12); --line-3:rgba(255,255,255,.08);
   --fill:rgba(255,255,255,.05); --fill-2:rgba(255,255,255,.04); --fill-3:rgba(255,255,255,.06);
   --hover:rgba(255,255,255,.09); --hover-2:rgba(255,255,255,.1);
-  --text:#eef0f6; --text-2:#cbd0dd; --text-3:#8b90a3; --faint:#6b7186;
+  --text:#eef0f6; --text-2:#cbd0dd; --text-3:#8b90a3; --faint:#8a90a4; /* ≥4.5:1（WCAG AA）：未选中芯片文字在暗底可读 */
   --accent:#a78bfa; --accent-glow:rgba(139,92,246,.7);
   --option-bg:#1f2330; --chip-off-line:rgba(255,255,255,.06); --chip-off-dot:#3a3f4d; --dot-idle:#c2c7d0;
   --name-line:rgba(139,92,246,.55); --name-fill:rgba(139,92,246,.08);
@@ -54,10 +54,15 @@ html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"Pi
 .chip.off .d{background:var(--chip-off-dot)}
 .chip.send{border-color:#f59e0b;box-shadow:0 0 0 2px rgba(245,158,11,.22)}
 .chip.send .d{background:#f59e0b}
+/* 终态用形状（✓/✕）而非仅红绿色相：色觉障碍用户也能分辨成功/失败 */
+.chip.done .d,.chip.fail .d{background:none;border-radius:0;width:auto;height:auto;font-size:10px;line-height:1;font-weight:700}
 .chip.done{border-color:rgba(22,163,74,.7)}
-.chip.done .d{background:#16a34a}
+.chip.done .d::before{content:"✓";color:#16a34a}
 .chip.fail{border-color:rgba(220,38,38,.7)}
-.chip.fail .d{background:#dc2626}
+.chip.fail .d::before{content:"✕";color:#dc2626}
+/* 失败汇总（全部结果回齐后内联显示）与读屏播报 */
+#failsum{flex:0 1 auto;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#ef4444}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 #tier,#tpl{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--fill);color:var(--text-2);font-size:12px;flex:0 0 auto}
 #tier option,#tpl option{background:var(--option-bg);color:var(--text)}
 #tpl{width:110px;text-overflow:ellipsis}

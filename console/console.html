@@ -28,11 +28,14 @@
     <button id="compose" class="icon" data-i18n-title="con_composeTitle" data-i18n-aria="con_composeTitle" title="展开编辑长文本" aria-label="展开编辑长文本"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M11 2.5l2.5 2.5M3 13l.8-3L11 2.8 13.2 5 6 12.2 3 13z"/></svg></button>
     <button id="send" data-i18n="con_sendAll">发送到全部 ▸</button>
     <button id="retry" class="icon" data-i18n-title="con_retryTitle" data-i18n-aria="con_retryTitle" title="重试失败的站点" aria-label="重试失败的站点" disabled><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5V6h-3.5"/></svg></button>
-    <button id="tile" data-i18n="con_tile">平铺</button>
+    <span id="failsum" style="display:none"></span>
+    <button id="tile" data-i18n="con_tile" data-i18n-title="con_tileTitle" title="只开窗与重排布局，不发送">平铺</button>
     <button id="newsession" class="icon" data-i18n-title="con_newSessionTitle" data-i18n-aria="con_newSessionTitle" title="全部新会话（各窗重载到新会话）" aria-label="全部新会话"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
     <button id="closeall" class="icon" data-i18n-title="con_closeAllTitle" data-i18n-aria="con_closeAllTitle" title="关闭控制台开启的全部窗口" aria-label="关闭全部"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
   </div>
+  <span id="live" class="sr" aria-live="polite"></span>
   <script src="sites.js"></script>
   <script src="console.js"></script>
+  <script src="status.js"></script>
   <script src="manage.js"></script>
 </body></html>

@@ -72,7 +72,7 @@ document.getElementById("diag").addEventListener("click", async () => {
     if (checks.some((c) => !c.ok)) {
       const tip = document.createElement("div");
       tip.textContent = t("pop_diagStale");
-      tip.style.color = "#888";
+      tip.className = "hint"; // 用变量色，暗色下保持可读
       out.append(tip);
     }
   } catch (e) { out.textContent = t("pop_diagUnsupported"); }

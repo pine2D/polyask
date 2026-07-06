@@ -47,9 +47,13 @@ const MSG = {
   con_errInject: { en: "Injection failed — editor rejected input", zh_CN: "注入未生效（站点编辑器拒绝写入）", zh_TW: "注入未生效（站點編輯器拒絕寫入）" },
   con_errSubmit: { en: "Submit not confirmed", zh_CN: "提交未确认", zh_TW: "提交未確認" },
   con_errTier: { en: "Tier not switched — sent at current tier", zh_CN: "档位未切换，已按当前档发送", zh_TW: "檔位未切換，已依目前檔發送" },
+  con_failSum: { en: "✗ {0} failed: {1} — hover chips for reason, hit ↻ to retry", zh_CN: "✗ {0} 站失败：{1}（悬停芯片看原因，点 ↻ 重试）", zh_TW: "✗ {0} 站失敗：{1}（游標懸停看原因，點 ↻ 重試）" },
+  con_histPos: { en: "History {0}/{1}", zh_CN: "历史 {0}/{1}", zh_TW: "歷史 {0}/{1}" },
+  con_chipHint: { en: "click to toggle", zh_CN: "点击选/取消", zh_TW: "點擊選/取消" },
+  con_tileTitle: { en: "Arrange windows only, no send (Send opens missing windows automatically)", zh_CN: "只开窗与重排布局，不发送（发送会自动为缺窗站开窗）", zh_TW: "只開窗與重排版面，不發送（發送會自動為缺窗站開窗）" },
   // —— compose 段（I3）——
   cmp_title:       { en: "Edit broadcast question",    zh_CN: "编辑群发问题",    zh_TW: "編輯群發問題" },
-  cmp_ph:          { en: "Enter your broadcast question…", zh_CN: "输入要群发的问题…", zh_TW: "輸入要群發的問題…" },
+  cmp_ph:          { en: "Enter your broadcast question… (Ctrl+Enter to send)", zh_CN: "输入要群发的问题…（Ctrl+Enter 发送）", zh_TW: "輸入要群發的問題…（Ctrl+Enter 發送）" },
   cmp_close:       { en: "Close",                      zh_CN: "关闭",            zh_TW: "關閉" },
   cmp_back:        { en: "Fill back & close",           zh_CN: "回填并关闭",      zh_TW: "回填並關閉" },
   cmp_send:        { en: "Send to all ▸",               zh_CN: "发送到全部 ▸",    zh_TW: "群發到全部 ▸" },
@@ -60,7 +64,7 @@ const MSG = {
   // —— popup 段（I4）——
   pop_think:       { en: "🧠 Deep Think",                                zh_CN: "🧠 深度思考",                       zh_TW: "🧠 深度思考" },
   pop_fast:        { en: "⚡ Fast Model",                                zh_CN: "⚡ 快速模型",                       zh_TW: "⚡ 快速模型" },
-  pop_openConsole: { en: "🗂 Open Broadcast Console",                   zh_CN: "🗂 打开广播控制台",                 zh_TW: "🗂 開啟群發主控台" },
+  pop_openConsole: { en: "🗂 Open Broadcast Console",                   zh_CN: "🗂 打开群发控制台",                 zh_TW: "🗂 開啟群發主控台" },
   pop_unsupported: { en: "Current page is not a supported AI site",     zh_CN: "当前页面不是受支持的 AI 站点",      zh_TW: "目前頁面不是受支援的 AI 站點" },
   pop_grpLegend:   { en: "Broadcast",                                   zh_CN: "群发",                              zh_TW: "群發" },
   pop_autoRaise:   { en: "Auto-raise all windows after send",           zh_CN: "发送后自动置顶全部窗口",            zh_TW: "群發後自動置頂全部視窗" },

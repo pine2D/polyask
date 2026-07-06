@@ -48,12 +48,16 @@ document.addEventListener("i18n:changed", () => {
 document.getElementById("ch-back").addEventListener("click", () => {
   patchConsole({ prompt: elText.value }, () => window.close());
 });
+function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); } // 与细条同款空态反馈
+elText.addEventListener("keydown", (e) => { // 长文场景键盘闭环：Ctrl/Cmd+Enter 发送
+  if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); document.getElementById("ch-send").click(); }
+});
 document.getElementById("ch-send").addEventListener("click", () => {
-  const text = elText.value.trim(); if (!text) return;
+  const text = elText.value.trim(); if (!text) { shake(elText); return; }
   chrome.storage.local.get("amsConsole", (o) => {
     const c = (o && o.amsConsole) || {};
     const sel = c.selected || {};
-    const sites = SITES.filter((s) => sel[s.host]); if (!sites.length) return;
+    const sites = SITES.filter((s) => sel[s.host]); if (!sites.length) { shake(document.getElementById("ch-scope")); return; }
     chrome.storage.local.get("amsHistory", (h) => {
       const hist = [text, ...((h && h.amsHistory) || []).filter((x) => x !== text)].slice(0, 20);
       chrome.storage.local.set({ amsHistory: hist });
