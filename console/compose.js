@@ -34,8 +34,9 @@ chrome.storage.local.get("amsConsole", (o) => renderScope(((o && o.amsConsole) |
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local" || !ch.amsConsole) return;
   const nv = ch.amsConsole.newValue || {};
-  // 文本：外部（细条）改了且本框未在编辑 → 回填，避免打断输入与回环
-  if (nv.prompt != null && nv.prompt !== elText.value && document.activeElement !== elText) elText.value = nv.prompt;
+  // 文本：外部（细条）改了且本框未在编辑 → 回填。"编辑中"须同时窗口持焦：窗口失焦后
+  // activeElement 不重置，单看它会永久挡住回填，「回填并关闭」就会拿旧文覆盖细条新编辑。
+  if (nv.prompt != null && nv.prompt !== elText.value && !(document.hasFocus() && document.activeElement === elText)) elText.value = nv.prompt;
   renderScope(nv.selected || {});
 });
 

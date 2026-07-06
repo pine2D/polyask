@@ -222,8 +222,10 @@
             if (!(await waitFor(() => findComposer(), 4000))) {
               sendResponse({ host: location.hostname, ok: false, code: "composer_not_found" }); return;
             }
-            if (msg.tier === "think" || msg.tier === "fast") { await switchTier(msg.tier); await sleep(200); }
+            let tierOk = true;
+            if (msg.tier === "think" || msg.tier === "fast") { tierOk = await switchTier(msg.tier); await sleep(200); }
             const r = await submitPrompt(msg.text || "");
+            if (r.ok && !tierOk) r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿
             sendResponse(Object.assign({ host: location.hostname }, r));
           } catch (e) { sendResponse({ host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }); }
         })();

@@ -4,7 +4,9 @@
 let _opChain = Promise.resolve();
 function serializeOp(fn) { const r = _opChain.then(fn, fn); _opChain = r.then(() => {}, () => {}); return r; }
 
-async function openTile(sites) {
+// prune=false（sendAll 隐式开窗）：只为缺窗站开窗落格，不关未勾选站、不重排已有窗口的
+// 用户手调布局（追问少数站时不得动别人正摆着答案的窗）；显式「平铺」按钮保持全量重排语义。
+async function openTile(sites, prune = true) {
   const wa = await primaryWorkArea();
   const reserve = await consoleReserveHeight(wa);
   const areaLeft = wa.left, areaTop = wa.top + reserve, areaW = wa.width;
@@ -17,8 +19,8 @@ async function openTile(sites) {
   const cellW = Math.floor(areaW / cols), cellH = Math.floor(areaH / rows);
   const wins = await getWindows();
   const selectedHosts = sites.map((s) => s.host);
-  // 1) 处理已取消勾选：owned 的真正关闭，复用的仅解除登记（用户窗口不动）
-  for (const host of Object.keys(wins)) {
+  // 1) 处理已取消勾选（仅显式平铺）：owned 的真正关闭，复用的仅解除登记（用户窗口不动）
+  if (prune) for (const host of Object.keys(wins)) {
     if (!selectedHosts.includes(host)) {
       if (wins[host].owned) { await removeIfPopup(wins[host].id); }
       delete wins[host];
@@ -36,7 +38,7 @@ async function openTile(sites) {
       reused = true;
       const rec = wins[s.host];
       owned = !!(rec && rec.id === windowId && rec.owned); // 仅沿用「同一登记窗口」的归属
-      try { await chrome.windows.update(windowId, Object.assign({ state: "normal", focused: false }, bounds)); } catch (e) {}
+      if (prune) { try { await chrome.windows.update(windowId, Object.assign({ state: "normal", focused: false }, bounds)); } catch (e) {} } // 隐式开窗不重排既有窗
     } else {
       try { const w = await chrome.windows.create(Object.assign({ url: s.url, type: "popup", focused: false }, bounds)); windowId = w.id; owned = true; } catch (e) {}
     }
@@ -56,8 +58,9 @@ async function sendAll(sites, text, tier, tile = true) {
   const wins = await getWindows();
   let anyMissing = false;
   for (const s of sites) { if ((await popupWindowForHost(s.host, wins)) == null) { anyMissing = true; break; } }
-  if (tile && anyMissing) await openTile(sites); // retry 传 tile=false：只复发不重铺，避免 prune 误关成功兄弟窗
-  pushBroadcast({ type: "sendStart", hosts: sites.map((s) => s.host) }); // 进度起点（console/compose 发起都统一）
+  if (tile && anyMissing) await openTile(sites, false); // 隐式开窗不 prune/不重排；retry 传 tile=false 连开窗也免
+  // 进度起点（console/compose 发起都统一）；带 text/tier 让 console 重建 lastSend（compose 发起的失败也能一键重试）
+  pushBroadcast({ type: "sendStart", hosts: sites.map((s) => s.host), text, tier });
   const results = await Promise.all(sites.map((s) => submitWhenReady(s, text, tier)));
   if (await getAutoRaise()) await focusAll(sites); // 发送后自动置顶全部平铺窗
   await raiseConsole();
@@ -83,7 +86,7 @@ async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
     if (tabs.length) {
       try {
         const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "submitPrompt", text, tier });
-        if (r && r.ok) return done(true);
+        if (r && r.ok) return done(true, r.code); // ok 时 code 可携带 tier_unconfirmed 警示
         if (r && typeof r.ok === "boolean" && r.code !== "composer_not_found") {
           return done(false, r.code || "error", r.reason);
         }

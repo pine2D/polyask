@@ -83,7 +83,13 @@ async function getComposeWinId() {
   return composeWinId;
 }
 
+let _openingConsole = null; // in-flight 去重：SW 冷启动时连按 Alt+Q 两个 onCommand 背靠背派发会双开 console
 async function openConsole() {
+  if (_openingConsole) return _openingConsole;
+  _openingConsole = _openConsole().finally(() => { _openingConsole = null; });
+  return _openingConsole;
+}
+async function _openConsole() {
   // 幂等：已开则聚焦既有 console（经 type 校验，陈旧/撞日常窗 → 继续新建），杜绝重复 console 孤立旧窗
   const cid = await getConsoleWinId();
   if (cid != null && await updateIfPopup(cid, { focused: true, state: "normal" })) return;

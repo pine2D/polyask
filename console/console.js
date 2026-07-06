@@ -6,6 +6,7 @@ let selected = {};
 // Task 4: 历史状态
 let history = [];
 let histCursor = -1; // -1 = 未在浏览历史
+let histDraft = ""; // 进入历史浏览前的未发送草稿（↓ 回到 -1 时还原）
 function pushHistory(text) {
   if (!text) return;
   history = [text, ...history.filter((h) => h !== text)].slice(0, 20);
@@ -29,6 +30,9 @@ function renderTemplates() {
 }
 
 function render() {
+  // 快照重建前的运行时状态（send/done/fail + 原因 title），重建后恢复——群发中改分组不再抹掉进度
+  const prev = {};
+  elSites.querySelectorAll(".chip").forEach((c) => { const st = ["send", "done", "fail"].find((x) => c.classList.contains(x)); if (st) prev[c.dataset.host] = { st, title: c.title }; });
   elSites.replaceChildren();
   SITES.forEach((s) => {
     const chip = document.createElement("button");
@@ -40,6 +44,7 @@ function render() {
     chip.setAttribute("aria-pressed", selected[s.host] ? "true" : "false");
     const d = document.createElement("span"); d.className = "d";
     chip.append(d, document.createTextNode(s.label));
+    const p = prev[s.host]; if (p) { chip.classList.add(p.st); chip.title = p.title; }
     chip.addEventListener("click", () => {
       selected[s.host] = !selected[s.host];
       chip.classList.toggle("off", !selected[s.host]);
@@ -117,13 +122,14 @@ function setDot(host, state, reason) {
 }
 
 // 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
-const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit" };
+const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier" };
 function errText(r) { return (ERR_KEYS[r.code] && t(ERR_KEYS[r.code])) || r.reason || t("con_failed"); }
 // Task 7: applyResults 改用 state 字符串
 function applyResults(results) {
   (results || []).forEach((r) => {
     if (typeof r.ok === "boolean") {
-      setDot(r.host, r.ok ? "done" : "fail", r.ok ? "" : errText(r));  // sendAll 提交结果
+      // sendAll 提交结果；ok+code（如 tier_unconfirmed）= 绿点带警示 title
+      setDot(r.host, r.ok ? "done" : "fail", r.ok ? (ERR_KEYS[r.code] ? t(ERR_KEYS[r.code]) : "") : errText(r));
     } else {
       const okWin = r.windowId != null;                                 // openTile 结果
       setDot(r.host, okWin ? "done" : "fail", r.reused ? t("con_reused") : r.opened ? t("con_opened") : t("con_failed"));
@@ -144,6 +150,7 @@ function updateRetry() {
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.from !== "AMS_BG") return;
   if (msg.type === "sendStart") {
+    if (msg.text) lastSend = { text: msg.text, tier: msg.tier || null }; // compose 发起的群发也可重试
     progress = { total: msg.hosts.length, done: 0 };
     msg.hosts.forEach((h) => setDot(h, "send", t("con_sendingDot")));
     updateSendLabel(); updateRetry();
@@ -241,14 +248,14 @@ elPrompt.addEventListener("keydown", (e) => {
   }
   if (e.key === "ArrowUp" && !e.isComposing && history.length) { // IME 方向键选词不劫持
     e.preventDefault();
+    if (histCursor === -1) histDraft = elPrompt.value; // 进浏览前先存草稿，↓ 回来可还原
     histCursor = Math.min(histCursor + 1, history.length - 1);
-    elPrompt.value = history[histCursor]; save();
+    elPrompt.value = history[histCursor]; // 浏览期间不落盘：storage 里始终是草稿，误关窗也不丢
   } else if (e.key === "ArrowDown" && !e.isComposing) {
     if (histCursor === -1) return; // 未在浏览历史 → 不动用户草稿
     e.preventDefault();
-    if (histCursor === 0) { histCursor = -1; elPrompt.value = ""; }
+    if (histCursor === 0) { histCursor = -1; elPrompt.value = histDraft; }
     else { histCursor -= 1; elPrompt.value = history[histCursor]; }
-    save();
   }
 });
 
@@ -272,7 +279,8 @@ chrome.storage.onChanged.addListener((ch, area) => {
   if (ch.amsHistory) history = ch.amsHistory.newValue || [];
   if (!ch.amsConsole) return;
   const p = (ch.amsConsole.newValue || {}).prompt;
-  if (p != null && p !== elPrompt.value && document.activeElement !== elPrompt) { elPrompt.value = p; }
+  // "编辑中"须同时窗口持焦：窗口失焦后 activeElement 不重置，单看它会永久挡住回填
+  if (p != null && p !== elPrompt.value && !(document.hasFocus() && document.activeElement === elPrompt)) { elPrompt.value = p; }
 });
 
 load();

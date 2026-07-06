@@ -46,6 +46,7 @@ const MSG = {
   con_errNoComposer: { en: "Composer not found (page not ready or site changed)", zh_CN: "输入框未找到（页面未就绪或站点改版）", zh_TW: "輸入框未找到（頁面未就緒或站點改版）" },
   con_errInject: { en: "Injection failed — editor rejected input", zh_CN: "注入未生效（站点编辑器拒绝写入）", zh_TW: "注入未生效（站點編輯器拒絕寫入）" },
   con_errSubmit: { en: "Submit not confirmed", zh_CN: "提交未确认", zh_TW: "提交未確認" },
+  con_errTier: { en: "Tier not switched — sent at current tier", zh_CN: "档位未切换，已按当前档发送", zh_TW: "檔位未切換，已依目前檔發送" },
   // —— compose 段（I3）——
   cmp_title:       { en: "Edit broadcast question",    zh_CN: "编辑群发问题",    zh_TW: "編輯群發問題" },
   cmp_ph:          { en: "Enter your broadcast question…", zh_CN: "输入要群发的问题…", zh_TW: "輸入要群發的問題…" },
