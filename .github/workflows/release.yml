@@ -31,7 +31,7 @@ jobs:
       - name: 提取本版 changelog
         run: |
           TAG_VER="${GITHUB_REF_NAME#v}"
-          awk -v ver="$TAG_VER" '/^## \[/{flag = index($0, "[" ver "]") > 0; next} flag' CHANGELOG.md > /tmp/notes.md
+          awk -v ver="$TAG_VER" '/^## \[/{flag = index($0, "[" ver "]") > 0; next} /^\[[^]]+\]: /{flag=0} flag' CHANGELOG.md > /tmp/notes.md
           [ -s /tmp/notes.md ] || { echo "::error::CHANGELOG.md 缺少 [$TAG_VER] 版本段落，先写 changelog 再发版"; exit 1; }
 
       - name: 发布 Release（附 zip）
