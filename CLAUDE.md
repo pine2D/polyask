@@ -15,6 +15,7 @@ content/adapters-intl.js    Claude/ChatGPT/Gemini
 content/adapters-cn.js      DeepSeek/豆包/千问/Kimi/元宝/智谱清言
 content/pill.js             三态悬浮控件(handle/always/hidden, storage.sync displayMode, Shadow DOM)
 console/console.html|css|js 群发指挥台(暗色单行顶栏 popup 窗口；勾选/档位/历史/模板/发送/平铺/联动)
+console/status.js           群发进度/结果状态(圆点状态机/错误码翻译/失败汇总/aria-live；console.js 之后加载共享其全局)
 popup/                      🧠/⚡按钮 + 显示模式 + 快捷键展示 + 🩺诊断 + 打开控制台
 ```
 - 权限：`storage`、`tabs`、`system.display`（群发要 tabs.sendMessage/query + 多显示器工作区；无 host_permissions）。
