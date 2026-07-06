@@ -19,6 +19,10 @@
   #open-console{width:100%;padding:8px 0;margin-bottom:10px;border:1px solid var(--acc);border-radius:8px;background:var(--acc-bg);color:var(--text);cursor:pointer}
   #diag{width:100%;padding:6px 0;border:1px solid var(--line);border-radius:6px;background:var(--btn);color:var(--text);cursor:pointer}
   #diagout{font-size:12px;margin-top:6px}
+  /* 诊断行状态标记用 SVG 而非字形字符（大字体集下字形回退扫描致卡顿） */
+  .ck{display:inline-block;width:9px;height:9px;margin-right:5px;background:center/contain no-repeat}
+  .ck.ok{background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M2.5 9l4 4 7-10" fill="none" stroke="%2316a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>')}
+  .ck.bad{background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13" stroke="%23dc2626" stroke-width="3" stroke-linecap="round"/></svg>')}
 </style>
 <script src="../i18n.js"></script>
 </head>

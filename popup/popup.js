@@ -65,7 +65,9 @@ document.getElementById("diag").addEventListener("click", async () => {
     const checks = (res && res.checks) || [];
     for (const c of checks) {
       const row = document.createElement("div");
-      row.textContent = (c.ok ? "✓ " : "✗ ") + c.name;
+      const mark = document.createElement("span");
+      mark.className = "ck " + (c.ok ? "ok" : "bad"); // SVG 标记，不用 ✓/✗ 字形
+      row.append(mark, document.createTextNode(c.name));
       row.style.color = c.ok ? "#16a34a" : "#dc2626";
       out.append(row);
     }
