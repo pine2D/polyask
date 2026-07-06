@@ -13,7 +13,8 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # 第三方 Action 固定到 commit SHA：可变 tag 在 contents:write 权限下构成供应链投毒面；升级时人工审 diff 后更新 SHA
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: 校验 tag 与 manifest 版本一致
         run: |
@@ -26,7 +27,7 @@ jobs:
         run: bash scripts/package.sh
 
       - name: 发布 Release（附 zip）
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: dist/polyask-*.zip
           generate_release_notes: true

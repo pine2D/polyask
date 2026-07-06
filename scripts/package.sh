@@ -24,6 +24,26 @@ rm -f "$OUT"
 # 排除任何隐藏文件 / .DS_Store / 临时备份
 zip -r -q "$OUT" "${RUNTIME[@]}" -x '*/.*' -x '*.DS_Store' -x '*~'
 
-echo "✓ 打包完成: $OUT ($(du -h "$OUT" | cut -f1))"
+# —— 产物对账：manifest/HTML/importScripts 引用的每个文件必须真的在 zip 里 ——
+# v0.5.0/v0.6.0 坏包事故根因：RUNTIME 白名单漏项只在干净机器装 zip 时才暴露；这里让它在打包时就炸。
+ENTRIES=$(zip -sf "$OUT" | sed 's/^ *//')
+refs() {
+  # manifest 里所有带扩展名的文件路径（icons/popup/background/content js）
+  grep -oE '"[A-Za-z0-9_][A-Za-z0-9_/.-]*\.(js|html|png|css|json)"' manifest.json | tr -d '"'
+  # default_locale 对应的 messages.json
+  echo "_locales/$(grep -m1 '"default_locale"' manifest.json | sed -E 's/.*"default_locale"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')/messages.json"
+  # SW 的 importScripts 依赖（路径相对扩展根）
+  grep -oE 'importScripts\([^)]*\)' background.js | grep -oE '"[^"]+"' | tr -d '"'
+  # 包内每个 HTML 的 src/href 相对引用，折算成包内路径
+  for h in $(echo "$ENTRIES" | grep '\.html$'); do
+    grep -oE '(src|href)="[^"]+"' "$h" | sed -E 's/^(src|href)="//; s/"$//' | while read -r r; do
+      case "$r" in http*|data:*|\#*) ;; *) realpath -m --relative-to=. "$(dirname "$h")/$r" ;; esac
+    done
+  done
+}
+MISS=$(refs | sort -u | while read -r p; do echo "$ENTRIES" | grep -qx "$p" || echo "$p"; done)
+[ -z "$MISS" ] || { echo "✗ zip 缺少运行时引用的文件（RUNTIME 白名单漏项？）：" >&2; echo "$MISS" | sed 's/^/    /' >&2; rm -f "$OUT"; exit 1; }
+
+echo "✓ 打包完成: $OUT ($(du -h "$OUT" | cut -f1))，产物对账通过"
 echo "包含条目："
 zip -sf "$OUT" | sed '1d;$d' | sed 's/^/  /'
