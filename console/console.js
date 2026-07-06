@@ -116,11 +116,14 @@ function setDot(host, state, reason) {
   chip.title = reason ? chip.dataset.label + " · " + reason : chip.dataset.label;
 }
 
+// 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
+const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit" };
+function errText(r) { return (ERR_KEYS[r.code] && t(ERR_KEYS[r.code])) || r.reason || t("con_failed"); }
 // Task 7: applyResults 改用 state 字符串
 function applyResults(results) {
   (results || []).forEach((r) => {
     if (typeof r.ok === "boolean") {
-      setDot(r.host, r.ok ? "done" : "fail", r.reason || "");          // sendAll 提交结果
+      setDot(r.host, r.ok ? "done" : "fail", r.ok ? "" : errText(r));  // sendAll 提交结果
     } else {
       const okWin = r.windowId != null;                                 // openTile 结果
       setDot(r.host, okWin ? "done" : "fail", r.reused ? t("con_reused") : r.opened ? t("con_opened") : t("con_failed"));
@@ -236,11 +239,11 @@ elPrompt.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.isComposing && !e.shiftKey) { // 输入法合成中不误发
     e.preventDefault(); document.getElementById("send").click(); return;
   }
-  if (e.key === "ArrowUp" && history.length) {
+  if (e.key === "ArrowUp" && !e.isComposing && history.length) { // IME 方向键选词不劫持
     e.preventDefault();
     histCursor = Math.min(histCursor + 1, history.length - 1);
     elPrompt.value = history[histCursor]; save();
-  } else if (e.key === "ArrowDown") {
+  } else if (e.key === "ArrowDown" && !e.isComposing) {
     if (histCursor === -1) return; // 未在浏览历史 → 不动用户草稿
     e.preventDefault();
     if (histCursor === 0) { histCursor = -1; elPrompt.value = ""; }

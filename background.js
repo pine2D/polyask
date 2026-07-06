@@ -8,6 +8,12 @@ let raiseTimer = null;       // consoleFocused 抬窗去抖句柄（见 schedule
 
 importScripts("bg/windows.js", "bg/broadcast.js");
 
+// 窗口 id 仅本次浏览器会话有效：重启后 id 重排，陈旧登记可能撞上无关 popup（如 OAuth 弹窗）
+// 被误关/误收编——按 id 的操作只验 type 无法防住 popup 撞 popup，故启动时一律清空登记。
+chrome.runtime.onStartup.addListener(() =>
+  chrome.storage.local.remove(["amsWindows", "amsConsoleWin", "amsComposeWin"])
+);
+
 // console 获焦 → 延迟 ~180ms 再抬整组工作区。点 console 的「最小化按钮」会先让窗口获焦（→ 本会立刻
 // 抬窗、把正在最小化的 console 又解最小化，与最小化打架、时好时坏），延迟给紧随其后的「最小化」一个
 // 取消窗口：consoleHidden 到达即 clearTimeout 取消本次抬窗。真要抬时再核对 console 非 minimized 兜底。
@@ -47,7 +53,7 @@ chrome.windows.onRemoved.addListener(async (winId) => {
   if (cid != null && winId === cid) {
     consoleWinId = null;
     await chrome.storage.local.remove("amsConsoleWin");
-    await closeAll();
+    await serializeOp(closeAll); // 进串行链：与在途 openTile/sendAll 的读-改-写 amsWindows 互斥
   }
 });
 // console 前后台/最小化联动改由 console 页面自身的可靠 DOM 事件驱动（见 console/console.js：window
@@ -85,6 +91,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
   if (msg.action === "openTile") { serializeOp(() => openTile(msg.sites || [])).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "sendAll") { serializeOp(() => sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false)).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
-  if (msg.action === "closeAll") { closeAll(); return; }
-  if (msg.action === "newSession") { newSessionAll(msg.sites || []); return; }
+  if (msg.action === "closeAll") { serializeOp(closeAll); return; }
+  if (msg.action === "newSession") { serializeOp(() => newSessionAll(msg.sites || [])); return; }
 });

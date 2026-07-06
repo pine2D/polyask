@@ -86,10 +86,10 @@
   // 把 text 注入输入框并提交。textarea/input 用原生 value setter；contenteditable 用合成
   // beforeinput（受控编辑器 Lexical/ProseMirror/Slate 无视 execCommand 的 DOM 写入，却处理
   // beforeinput），失败退回 execCommand。提交：优先 adapter.submit(el)，否则原生点发送键，
-  // 无按钮再发 Enter。返回 {ok,reason?}。
+  // 无按钮再发 Enter。返回 {ok, code?, reason?}（失败传错误码，console 端按界面语言翻译）。
   async function submitPrompt(text) {
     const el = findComposer();
-    if (!el) return { ok: false, reason: "输入框未找到" };
+    if (!el) return { ok: false, code: "composer_not_found" }; // 失败一律传 code，由 console 端按界面语言翻译
     el.focus();
     if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
       const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
@@ -103,14 +103,18 @@
       await sleep(60);
       const _after = (el.textContent || "").trim();
       if (!(_after && _after !== _before)) { // 受控编辑器多行会重排换行，includes 误判；改判"非空且较注入前有变化"
-        try { document.execCommand("selectAll", false, null); document.execCommand("insertText", false, text); }
-        catch (e) { el.textContent = text; el.dispatchEvent(new InputEvent("input", { bubbles: true })); }
+        let injected = false;
+        try { document.execCommand("selectAll", false, null); injected = document.execCommand("insertText", false, text); }
+        catch (e) {}
+        if (!injected) { el.textContent = text; el.dispatchEvent(new InputEvent("input", { bubbles: true })); }
       }
+      // 硬校验：注入彻底落空时框仍为空，绝不能走到下面"空框=已发送"的校验循环产生假成功
+      if (text.trim() && !readText(el)) return { ok: false, code: "inject_failed" };
     }
     await sleep(250);
     const a = pickAdapter();
     if (a && typeof a.submit === "function") {
-      try { await a.submit(el); return { ok: true }; } catch (e) { return { ok: false, reason: String((e && e.message) || e) }; }
+      try { await a.submit(el); return { ok: true }; } catch (e) { return { ok: false, code: "error", reason: String((e && e.message) || e) }; }
     }
     // 通用提交：优先原生点击发送按钮（最稳，国产站拒合成事件，且避免对受控编辑器发 Enter 产生多余换行）；
     // !disabled 防误触（空输入时按钮多为禁用）。无可用按钮再退回合成 Enter（适配靠 Enter 提交的 textarea）。
@@ -133,7 +137,7 @@
       const cur = readText(findComposer());
       if (!cur || cur !== _txtBefore) return { ok: true };
     }
-    return { ok: false, reason: t("cs_submitUnconfirmed") };
+    return { ok: false, code: "submit_unconfirmed" };
   }
 
   // 注册表：适配器由 adapters.js 填充
@@ -214,14 +218,14 @@
           try {
             // 新开页面若立即 runMode 会因模型切换器未渲染而切换失败：先等输入框出现
             //（页面交互就绪的代理，切换器此时通常已就位），再切档位、提交。未就绪则返回
-            //「输入框未找到」让 background(sendAll) 轮询重试，杜绝"切换失败仍直接提交"。
+            // composer_not_found 让 background(sendAll) 轮询重试，杜绝"切换失败仍直接提交"。
             if (!(await waitFor(() => findComposer(), 4000))) {
-              sendResponse({ host: location.hostname, ok: false, reason: "输入框未找到" }); return;
+              sendResponse({ host: location.hostname, ok: false, code: "composer_not_found" }); return;
             }
             if (msg.tier === "think" || msg.tier === "fast") { await switchTier(msg.tier); await sleep(200); }
             const r = await submitPrompt(msg.text || "");
             sendResponse(Object.assign({ host: location.hostname }, r));
-          } catch (e) { sendResponse({ host: location.hostname, ok: false, reason: String((e && e.message) || e) }); }
+          } catch (e) { sendResponse({ host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }); }
         })();
         return true; // 异步 sendResponse
       }

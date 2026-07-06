@@ -126,13 +126,12 @@ async function openCompose(anchor) {
   await chrome.storage.local.set({ amsComposeWin: w.id });
 }
 
-// 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）
+// 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）。
+// 只认登记 id + 类型校验：裸查 URL 会命中被用户开进 normal 窗口标签的 console.html，抢焦日常窗口。
 async function raiseConsole() {
   suppressFocusUntil = Date.now() + 600; // 程序化抬 console 会触发 onFocusChanged，抑制其自激
-  try {
-    const ct = await chrome.tabs.query({ url: chrome.runtime.getURL("console/console.html") });
-    if (ct[0]) await chrome.windows.update(ct[0].windowId, { focused: true });
-  } catch (e) {}
+  const cid = await getConsoleWinId();
+  if (cid != null) await updateIfPopup(cid, { focused: true });
 }
 
 // 受管平铺窗 id 列表（经 popup-only 解析，绝不含日常窗口）

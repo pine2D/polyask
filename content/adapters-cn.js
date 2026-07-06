@@ -15,12 +15,13 @@
       },
       _setDeepThink: async function (on) {
         const t = this._deepThink();
-        if (!t) return;
+        if (!t) throw new Error("DeepSeek: DeepThink 开关未找到"); // 开关常驻 composer，缺失即异常（静默 return 会让 runMode 误报成功）
         if ((t.getAttribute("aria-pressed") === "true") !== on) clickEl(t);
         await sleep(300);
       },
       _selectMode: async function (re) {
-        // DeepSeek 模式 radio 只认原生 click(拒绝合成事件 isTrusted=false)；选择幂等，原生 click 安全
+        // DeepSeek 模式 radio 只认原生 click(拒绝合成事件 isTrusted=false)；选择幂等，原生 click 安全。
+        // radio 仅空对话首屏存在，聊天中缺失属正常态 → 静默跳过（档位真值由 DeepThink 开关兜底）
         const el = findByText('[role="radio"]', re); // Instant / Expert / Vision
         if (el) { el.click(); await sleep(400); }
       },
@@ -50,13 +51,14 @@
       _select: async function (re) {
         for (let i = 0; i < 3; i++) {
           const btn = this._modeBtn();
-          if (!btn) return;
+          if (!btn) throw new Error("豆包: 模式按钮未找到"); // 静默 return 会让 runMode 误报"已切到"
           if (re.test((btn.textContent || "").trim())) return; // 已是目标，幂等返回
           if (!findByText('[role="menuitem"]', re)) openMenu(btn);
           const item = await waitFor(() => findByText('[role="menuitem"]', re), 1500);
           if (item) { item.click(); await sleep(500); } // 选项 onclick，用原生 click
           escMenus(); await sleep(200);
         }
+        throw new Error("豆包: 目标模式未选中");
       },
       diagnose: function () {
         return [
@@ -93,15 +95,14 @@
         const leaf = await waitFor(() =>
           [...document.querySelectorAll("div,li,span,button")]
             .filter((e) => e.children.length <= 2 && re.test((e.textContent || "").trim()) && (e.textContent || "").trim().length < 26).pop());
-        if (leaf) {
-          let c = leaf, clicked = false;
-          for (let i = 0; i < 5 && c; i++) {
-            if (c.onclick || /option|menuitem/.test(c.getAttribute("role") || "") || c.tagName === "LI") { c.click(); clicked = true; break; }
-            c = c.parentElement;
-          }
-          if (!clicked) leaf.click();
-          await sleep(500);
+        if (!leaf) { escMenus(); throw new Error("千问: 模型选项未找到"); } // 静默 return 会让 runMode 误报成功
+        let c = leaf, clicked = false;
+        for (let i = 0; i < 5 && c; i++) {
+          if (c.onclick || /option|menuitem/.test(c.getAttribute("role") || "") || c.tagName === "LI") { c.click(); clicked = true; break; }
+          c = c.parentElement;
         }
+        if (!clicked) leaf.click();
+        await sleep(500);
         escMenus();
       },
       _thinkBtn: function () {
@@ -110,7 +111,7 @@
       },
       _setThink: async function (on) {
         const b = this._thinkBtn();
-        if (!b) return;
+        if (!b) throw new Error("千问: 思考按钮未找到"); // 常驻 composer，缺失即异常
         const isOn = (b.className || "").split(/\s+/).includes("text-theme");
         if (isOn !== on) { b.click(); await sleep(300); }
       },
@@ -136,21 +137,20 @@
       _entry: function () { return document.querySelector(".current-model"); },
       _select: async function (re) {
         const e = this._entry();
-        if (!e) return;
+        if (!e) throw new Error("Kimi: 模型入口未找到"); // 静默 return 会让 runMode 误报成功
         if (!e.classList.contains("active")) e.click();
         const opt = await waitFor(() =>
           [...document.querySelectorAll("*")].find((el) =>
             el.children.length <= 2 && re.test((el.textContent || "").trim()) &&
             (el.textContent || "").trim().length < 20 && !el.closest(".current-model")), 1500);
-        if (opt) {
-          let c = opt, clicked = false;
-          for (let i = 0; i < 5 && c; i++) {
-            if (c.onclick || /menuitem|option/.test(c.getAttribute("role") || "") || (c.className || "").toString().includes("menu-item")) { c.click(); clicked = true; break; }
-            c = c.parentElement;
-          }
-          if (!clicked) opt.click();
-          await sleep(400);
+        if (!opt) { escMenus(); throw new Error("Kimi: 目标选项未找到"); }
+        let c = opt, clicked = false;
+        for (let i = 0; i < 5 && c; i++) {
+          if (c.onclick || /menuitem|option/.test(c.getAttribute("role") || "") || (c.className || "").toString().includes("menu-item")) { c.click(); clicked = true; break; }
+          c = c.parentElement;
         }
+        if (!clicked) opt.click();
+        await sleep(400);
         escMenus();
       },
       diagnose: function () {

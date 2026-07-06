@@ -28,7 +28,7 @@ function commitName() {
   cancelName();
 }
 elName.addEventListener("keydown", (e) => {
-  if (e.key === "Enter") { e.preventDefault(); commitName(); }
+  if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); commitName(); } // 输入法合成中不误存
   else if (e.key === "Escape") { e.preventDefault(); cancelName(); }
 });
 elName.addEventListener("blur", () => { if (pendingSave) cancelName(); }); // 失焦即取消

@@ -41,6 +41,11 @@ const MSG = {
   con_grpSection: { en: "Presets", zh_CN: "预设", zh_TW: "預設" },
   con_grpMine: { en: "My groups", zh_CN: "我的分组", zh_TW: "我的群組" },
   con_sendingDot: { en: "Sending…", zh_CN: "发送中", zh_TW: "發送中" },
+  // 群发失败原因（错误码 → 文案，console.js ERR_KEYS）
+  con_errTimeout: { en: "Timed out — check the site is logged in and loaded, then hit ↻", zh_CN: "超时：请确认该站已登录且页面加载完成，可点 ↻ 重试", zh_TW: "逾時：請確認該站已登入且頁面載入完成，可點 ↻ 重試" },
+  con_errNoComposer: { en: "Composer not found (page not ready or site changed)", zh_CN: "输入框未找到（页面未就绪或站点改版）", zh_TW: "輸入框未找到（頁面未就緒或站點改版）" },
+  con_errInject: { en: "Injection failed — editor rejected input", zh_CN: "注入未生效（站点编辑器拒绝写入）", zh_TW: "注入未生效（站點編輯器拒絕寫入）" },
+  con_errSubmit: { en: "Submit not confirmed", zh_CN: "提交未确认", zh_TW: "提交未確認" },
   // —— compose 段（I3）——
   cmp_title:       { en: "Edit broadcast question",    zh_CN: "编辑群发问题",    zh_TW: "編輯群發問題" },
   cmp_ph:          { en: "Enter your broadcast question…", zh_CN: "输入要群发的问题…", zh_TW: "輸入要群發的問題…" },
@@ -80,7 +85,6 @@ const MSG = {
   cs_stopped:        { en: "Stopped",                                           zh_CN: "已停止",                          zh_TW: "已停止" },
   cs_switchFail:     { en: "Switch failed: {0}",                                zh_CN: "切换失败：{0}",                   zh_TW: "切換失敗：{0}" },
   cs_switchUnstable:      { en: "Switch not confirmed, sending as current tier",     zh_CN: "切换未稳定生效，按当前档发送",    zh_TW: "切換未穩定生效，依目前檔發送" },
-  cs_submitUnconfirmed:   { en: "Submit not confirmed",                              zh_CN: "提交未确认",                      zh_TW: "提交未確認" },
   cs_pillThink:      { en: "🧠 Think",                                          zh_CN: "🧠 思考",                        zh_TW: "🧠 思考" },
   cs_pillFast:       { en: "⚡ Fast",                                           zh_CN: "⚡ 快速",                        zh_TW: "⚡ 快速" },
   cs_pillThinkTitle: { en: "Deep Think (Alt+T)",                                zh_CN: "深度思考 (Alt+T)",                zh_TW: "深度思考 (Alt+T)" },

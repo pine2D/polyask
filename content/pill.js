@@ -93,6 +93,7 @@
   function applyMode(mode) {
     wrap.dataset.mode = mode === "always" || mode === "hidden" ? mode : "handle";
     wrap.classList.remove("open");
+    clearTimeout(idleTimer); pill.classList.remove("idle"); // idle 是 always 专属态，防切回 handle 后残留半透明
     if (mode === "always") { refreshState(); armIdle(); }
   }
 

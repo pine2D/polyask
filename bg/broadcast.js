@@ -71,24 +71,25 @@ function pushBroadcast(payload) {
 function pushSiteResult(res) { pushBroadcast({ type: "siteResult", result: res }); }
 
 // 轮询直到该站页面就绪并提交：已开窗口首轮即命中；新开窗口需加载+content 注入+composer 出现，
-// 故 content 未注入 / 「输入框未找到」都视为"还没好"继续等，其它 ok=false 才是真失败。
+// 故 content 未注入 / composer_not_found 都视为"还没好"继续等，其它 ok=false 才是真失败。
+// 失败原因走错误码协议（code），由 console 端按界面语言翻译——bg/content 不产出用户可见文案。
 // 任一出口都先 pushSiteResult 让该站圆点立刻变色，再返回参与 Promise.all 汇总。
 async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
   const t0 = Date.now();
-  const done = (ok, reason) => { const res = { host: s.host, ok, reason }; pushSiteResult(res); return res; };
+  const done = (ok, code, reason) => { const res = { host: s.host, ok, code, reason }; pushSiteResult(res); return res; };
   const wins = await getWindows(); // openTile 已在 Promise.all 前定稿登记表，轮询期不变，读一次即可
   for (;;) {
     const tabs = await tabsForHost(s.host, wins);
     if (tabs.length) {
       try {
         const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "submitPrompt", text, tier });
-        if (r && r.ok) return done(true, r.reason);
-        if (r && typeof r.ok === "boolean" && !/未找到|not found/i.test(r.reason || "")) {
-          return done(false, r.reason || "提交失败");
+        if (r && r.ok) return done(true);
+        if (r && typeof r.ok === "boolean" && r.code !== "composer_not_found") {
+          return done(false, r.code || "error", r.reason);
         }
       } catch (e) { /* content 未注入，页面还在加载 → 继续等 */ }
     }
-    if (Date.now() - t0 > timeoutMs) return done(false, "超时未就绪");
+    if (Date.now() - t0 > timeoutMs) return done(false, "timeout");
     await new Promise((res) => setTimeout(res, gap));
   }
 }
