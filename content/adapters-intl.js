@@ -174,13 +174,13 @@
       _setThinking: async function (re) {
         await this._openModelMenu();
         const trig = await waitFor(() => findByText(this._MI, /thinking level|思考(等级|程度)?/i));
-        if (!trig) { escMenus(); return; }
+        if (!trig) { escMenus(); return; } // 无等级子菜单的布局（窄屏/模型无此项）：合法缺席，静默跳过
         let lvl = null;
         for (let i = 0; i < 6 && !lvl; i++) {
           if (!findByText(this._MI, re)) openMenu(trig);
           lvl = await waitFor(() => findByText(this._MI, re), 600);
         }
-        if (!lvl) { escMenus(); return; }
+        if (!lvl) { escMenus(); throw new Error("Gemini: 思考等级选项未找到"); } // 子菜单在但目标缺 → 报错可见（静默会漏设等级）
         if (lvl.focus) lvl.focus();
         lvl.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
         clickEl(lvl); await sleep(400); escMenus();
@@ -196,7 +196,8 @@
         const t = b ? b.getAttribute("aria-label") || "" : "";
         return /pro/i.test(t) ? "think" : /flash/i.test(t) ? "fast" : null;
       },
-      think: async function () { await this._selectModel(/3\.1\s*pro\b/i); await this._setThinking(/^extended/i); },
+      // 等级 UI 词中英双写；中文文案按 Extended 直译取「扩展」，真机若不符再校正
+      think: async function () { await this._selectModel(/3\.1\s*pro\b/i); await this._setThinking(/^(extended|扩展)/i); },
       fast: async function () { await this._selectModel(/3\.5\s*flash\b/i); },
     },
 

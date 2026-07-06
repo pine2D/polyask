@@ -54,6 +54,21 @@ async function primaryWorkArea() {
   return wa;
 }
 
+// 平铺/伴侣窗的基准工作区 = console 中心点所在显示器（拖到哪屏就铺哪屏）；取不到回退主屏。
+// 同时根除 reserve 混坐标系问题：console 在副屏时 (c.top+c.height)-wa.top 曾被算成跨屏距离。
+async function consoleWorkArea() {
+  const wa = await primaryWorkArea();
+  const cid = await getConsoleWinId();
+  if (cid == null) return wa;
+  try {
+    const [c, info] = [await chrome.windows.get(cid), await chrome.system.display.getInfo()];
+    const cx = c.left + c.width / 2, cy = c.top + c.height / 2;
+    const d = info.find((x) => x.workArea && cx >= x.workArea.left && cx < x.workArea.left + x.workArea.width &&
+      cy >= x.workArea.top && cy < x.workArea.top + x.workArea.height);
+    return (d && d.workArea) || wa;
+  } catch (e) { return wa; }
+}
+
 // 平铺需保留的顶部高度 = 控制台窗口的「实际底边」相对工作区顶。
 // 关键：c.top 已含窗口管理器在 Chrome 几何之外的上移装饰（如 X410 windowed 模式给每个
 // 窗口套的 ~30px 标题栏——请求 top=0 时 Chrome 会报告 top=30）。故必须用 (c.top+c.height)
@@ -109,7 +124,7 @@ async function openCompose(anchor) {
   const cid = await getComposeWinId();
   // 仅当确是伴侣 popup 才聚焦并返回；陈旧 id / 撞上日常窗口 → 不碰它、继续往下新建
   if (cid != null && await updateIfPopup(cid, { focused: true, state: "normal" })) return;
-  const wa = await primaryWorkArea();
+  const wa = await consoleWorkArea(); // 贴着 console 所在显示器展开
   const H = 340;
   let W = 560;
   let left = wa.left + Math.max(0, Math.floor((wa.width - W) / 2));

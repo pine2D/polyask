@@ -90,7 +90,7 @@ const MSG = {
   cs_pillFast:       { en: "⚡ Fast",                                           zh_CN: "⚡ 快速",                        zh_TW: "⚡ 快速" },
   cs_pillThinkTitle: { en: "Deep Think (Alt+T)",                                zh_CN: "深度思考 (Alt+T)",                zh_TW: "深度思考 (Alt+T)" },
   cs_pillFastTitle:  { en: "Fast Model (Alt+Y)",                                zh_CN: "快速模型 (Alt+Y)",                zh_TW: "快速模型 (Alt+Y)" },
-  cs_pillHandleTitle:{ en: "AI Model Switcher",                                 zh_CN: "AI Model Switcher",               zh_TW: "AI Model Switcher" },
+  cs_pillHandleTitle:{ en: "PolyAsk · Model tier switcher",                     zh_CN: "PolyAsk · 模型档位切换",          zh_TW: "PolyAsk · 模型檔位切換" },
   cs_siteAdapter:    { en: "Site adapter",                                      zh_CN: "站点适配器",                      zh_TW: "站點適配器" },
   cs_diagError:      { en: "diagnose error",                                    zh_CN: "diagnose 异常",                   zh_TW: "diagnose 異常" },
   // —— diagnose 检查名（I5）——

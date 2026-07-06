@@ -7,7 +7,8 @@ function serializeOp(fn) { const r = _opChain.then(fn, fn); _opChain = r.then(()
 // prune=false（sendAll 隐式开窗）：只为缺窗站开窗落格，不关未勾选站、不重排已有窗口的
 // 用户手调布局（追问少数站时不得动别人正摆着答案的窗）；显式「平铺」按钮保持全量重排语义。
 async function openTile(sites, prune = true) {
-  const wa = await primaryWorkArea();
+  const wa = await consoleWorkArea(); // console 拖到哪个显示器就铺哪个显示器
+
   const reserve = await consoleReserveHeight(wa);
   const areaLeft = wa.left, areaTop = wa.top + reserve, areaW = wa.width;
   const areaH = Math.max(120, wa.height - reserve); // 夹下界：console 被拖低/小屏时 reserve≈全高 → 防负高度建窗
