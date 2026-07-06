@@ -157,6 +157,11 @@ document.getElementById("send").addEventListener("click", () => {
     clearTimeout(reEnableTimer); elSend.disabled = false; applyResults(resp && resp.results);
   });
 });
+document.getElementById("checkup").addEventListener("click", () => {
+  const sites = chosen(); if (!sites.length) return;
+  sites.forEach((s) => setDot(s.host, "send", t("con_checking")));
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "checkup", sites }, (resp) => applyResults(resp && resp.results));
+});
 document.getElementById("newsession").addEventListener("click", () => {
   const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "newSession", sites });
 });

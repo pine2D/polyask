@@ -11,7 +11,8 @@ function setDot(host, state, reason) {
 }
 
 // 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
-const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier" };
+const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier",
+  no_window: "con_errNoWindow", not_ready: "con_errNotReady", checkup_ok: "con_checkupOk" };
 function errText(r) { return (ERR_KEYS[r.code] && t(ERR_KEYS[r.code])) || r.reason || t("con_failed"); }
 function applyResults(results) {
   (results || []).forEach((r) => {

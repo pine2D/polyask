@@ -91,6 +91,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
   if (msg.action === "openTile") { serializeOp(() => openTile(msg.sites || [])).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "sendAll") { serializeOp(() => sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false)).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
+  if (msg.action === "checkup") { checkupAll(msg.sites || []).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; } // 只读诊断，不动登记表，无需串行链
   if (msg.action === "closeAll") { serializeOp(closeAll); return; }
   if (msg.action === "newSession") { serializeOp(() => newSessionAll(msg.sites || [])); return; }
 });
