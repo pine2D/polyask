@@ -55,7 +55,7 @@
 2. 点「加载已解压的扩展程序」，选择本仓库目录
 
 > 自己打包：`bash scripts/package.sh` → 产出 `dist/polyask-v<版本>.zip`。
-> 发布流程：改 `manifest.json` 版本号 → `git tag vX.Y.Z && git push origin vX.Y.Z`，GitHub Actions 自动打包并发布 Release（见 `.github/workflows/release.yml`）。
+> 发布流程：改 `manifest.json` 版本号 → 在 `CHANGELOG.md` 写本版分类条目 → `git tag vX.Y.Z && git push origin vX.Y.Z`，GitHub Actions 自动打包并发布 Release（发布说明取自 CHANGELOG 对应段落，缺段落拒发；见 `.github/workflows/release.yml`）。
 > ⚠️ v0.6.1 之前的 tag（v0.4.0–v0.6.0）打包脚本有缺陷（漏打 `i18n.js`/`_locales`，Chrome 拒载），勿从这些旧 tag 重新打包或重跑 Release。
 
 ## 快捷键

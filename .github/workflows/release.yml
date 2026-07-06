@@ -26,8 +26,16 @@ jobs:
       - name: 打包扩展
         run: bash scripts/package.sh
 
+      # 发布说明 = CHANGELOG.md 中本版段落（分门别类的人写 changelog，不用自动生成的 compare 链接）；
+      # 缺本版段落直接拒发——发版前必须先写 changelog。
+      - name: 提取本版 changelog
+        run: |
+          TAG_VER="${GITHUB_REF_NAME#v}"
+          awk -v ver="$TAG_VER" '/^## \[/{flag = index($0, "[" ver "]") > 0; next} flag' CHANGELOG.md > /tmp/notes.md
+          [ -s /tmp/notes.md ] || { echo "::error::CHANGELOG.md 缺少 [$TAG_VER] 版本段落，先写 changelog 再发版"; exit 1; }
+
       - name: 发布 Release（附 zip）
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           files: dist/polyask-*.zip
-          generate_release_notes: true
+          body_path: /tmp/notes.md
