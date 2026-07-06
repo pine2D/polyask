@@ -16,7 +16,7 @@
 - **发送前统一设档**：🧠 深度思考 / ⚡ 快速 / 不变
 - **命名提示词模板** + 历史（↑↓）；长问题点 `✎` 在**暗色伴侣窗**里多行编辑，与细条双向同步
 - **进度与重试**：发送键聚合「发送中 d/总」，失败站一键 `↻` 只重发失败的那几家
-- **批量窗口管理**：全部新会话、全部恢复并置顶、全部最小化、关闭全部；**前后台联动**——console 最小化/恢复/被带到前台时，平铺窗整组跟随
+- **批量窗口管理**：全部新会话、关闭全部；**前后台联动**——console 最小化/恢复/被带到前台时，平铺窗整组自动跟随（最小化/恢复/置顶无需手动按钮）
 
 > 窗口按 id 绑定且只认扩展自建的 popup：从平铺窗口点链接另开到主浏览器窗口、或你日常的浏览窗口，都不会被误纳入平铺/群发/关闭。「全部新会话」对已在新会话入口的窗口跳过重载（不闪、不丢草稿）。
 
@@ -28,7 +28,7 @@
 
 | 站点 | 🧠 深度思考 | ⚡ 快速 |
 |---|---|---|
-| Claude (claude.ai) | Opus 4.8（Thinking 开 + Effort Max） | Opus 4.8（Thinking 关 + Effort Low） |
+| Claude (claude.ai) | Opus 4.8（Thinking 开 + Effort Max） | Sonnet 5（Thinking 开 + Effort Medium） |
 | ChatGPT (chatgpt.com) | Intelligence 最高档（超高 / Pro 扩展） | Intelligence 最低档（极速 Instant） |
 | Gemini (gemini.google.com) | 3.1 Pro + Thinking: Extended | 3.5 Flash |
 | DeepSeek (chat.deepseek.com) | Expert + DeepThink 开 | Instant + DeepThink 关 |
