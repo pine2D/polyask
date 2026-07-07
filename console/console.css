@@ -37,15 +37,26 @@
   }
 }
 
-html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
+/* overflow:hidden：细条内容恒等于窗高，任何游离节点（如读屏 live region）都不该顶出竖向滚动条 */
+html,body{margin:0;height:100%;overflow:hidden;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
 #bar{display:flex;align-items:center;gap:9px;height:100%;padding:0 14px;box-sizing:border-box;overflow-x:auto;background:linear-gradient(180deg,var(--strip-a),var(--strip-b));border-bottom:1px solid var(--edge)}
 .brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;white-space:nowrap;flex:0 0 auto}
 .brand .logo{font-size:16px;color:var(--accent);text-shadow:0 0 12px var(--accent-glow)}
 .grpwrap{display:flex;align-items:center;gap:3px;flex:0 0 auto}
 #group{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--fill);color:var(--text-2);font-size:12px}
 #group option,#group optgroup{background:var(--option-bg);color:var(--text)}
-/* overflow-x:auto 而非 hidden：hidden 会把 flex 自动最小宽度归零，窄屏时芯片被静默裁切且 #bar 滚动永不触发 */
-#sites{display:flex;gap:6px;flex:0 1 auto;overflow-x:auto;scrollbar-width:thin;scrollbar-color:var(--scroll) transparent}
+/* overflow-x:auto 而非 hidden：hidden 会把 flex 自动最小宽度归零，窄屏时芯片被静默裁切且 #bar 滚动永不触发。
+   滚动条本体隐藏（零布局占位，芯片不被挤偏；96px 密排条里滚动条也放不下），滚轮横滚/按住拖动由
+   console.js 接管，溢出方向由两侧箭头指示 */
+#siteswrap{position:relative;display:flex;flex:0 1 auto;min-width:0}
+#sites{display:flex;gap:6px;flex:1 1 auto;min-width:0;overflow-x:auto;scrollbar-width:none}
+#sites::-webkit-scrollbar{display:none}
+/* 溢出指示箭头：仅对应方向有隐藏芯片时出现（.on），点击滚动一步；渐变底把被裁芯片淡出以示"还有更多" */
+.sarr{position:absolute;top:0;bottom:0;width:18px;display:none;align-items:center;cursor:pointer;z-index:1;color:var(--text-3)}
+.sarr.on{display:flex}
+.sarr:hover{color:var(--text)}
+#sites-l{left:0;justify-content:flex-start;background:linear-gradient(90deg,var(--strip-b) 40%,transparent)}
+#sites-r{right:0;justify-content:flex-end;background:linear-gradient(270deg,var(--strip-b) 40%,transparent)}
 .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 9px;border-radius:7px;font-size:12px;white-space:nowrap;
   border:1px solid var(--line-2);background:var(--fill);color:var(--text);cursor:pointer;flex:0 0 auto}
 .chip:hover{background:var(--hover)}
@@ -63,7 +74,7 @@ html,body{margin:0;height:100%;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"Pi
 .chip.fail .d{background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13" stroke="%23dc2626" stroke-width="3" stroke-linecap="round"/></svg>')}
 /* 失败汇总（全部结果回齐后内联显示）与读屏播报 */
 #failsum{flex:0 1 auto;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#ef4444}
-.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.sr{position:absolute;top:0;left:0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} /* 必须钉在 (0,0)：static 定位会落到细条下方、顶出竖向滚动条 */
 #tier,#tpl{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--fill);color:var(--text-2);font-size:12px;flex:0 0 auto}
 #tier option,#tpl option{background:var(--option-bg);color:var(--text)}
 #tpl{width:110px;text-overflow:ellipsis}

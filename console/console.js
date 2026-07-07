@@ -53,8 +53,32 @@ function render() {
     });
     elSites.appendChild(chip);
   });
+  updateArrows(); // 芯片数量/宽度变化后重算溢出箭头
 }
 function chosen() { return SITES.filter((s) => selected[s.host]); }
+// 芯片区滚动条已隐藏（挤占 96px 细条布局）：滚轮横滚 + 按住拖动补滚动通道，两侧箭头指示溢出方向
+function updateArrows() {
+  document.getElementById("sites-l").classList.toggle("on", elSites.scrollLeft > 2);
+  document.getElementById("sites-r").classList.toggle("on", elSites.scrollLeft + elSites.clientWidth < elSites.scrollWidth - 2);
+}
+elSites.addEventListener("scroll", updateArrows, { passive: true });
+window.addEventListener("resize", updateArrows);
+document.getElementById("sites-l").addEventListener("click", () => elSites.scrollBy({ left: -120, behavior: "smooth" }));
+document.getElementById("sites-r").addEventListener("click", () => elSites.scrollBy({ left: 120, behavior: "smooth" }));
+elSites.addEventListener("wheel", (e) => {
+  if (!e.deltaY || e.deltaX) return; // 触控板横扫走原生
+  elSites.scrollLeft += e.deltaY; e.preventDefault();
+}, { passive: false });
+let dragX = null, dragL = 0, dragged = false; // 按住拖动；4px 阈值内视为点选、不进入拖动
+elSites.addEventListener("pointerdown", (e) => { dragX = e.clientX; dragL = elSites.scrollLeft; dragged = false; });
+elSites.addEventListener("pointermove", (e) => {
+  if (dragX == null) return;
+  if (!dragged && Math.abs(e.clientX - dragX) > 4) { dragged = true; elSites.setPointerCapture(e.pointerId); }
+  if (dragged) elSites.scrollLeft = dragL - (e.clientX - dragX);
+});
+elSites.addEventListener("pointerup", () => { dragX = null; });
+elSites.addEventListener("pointercancel", () => { dragX = null; });
+elSites.addEventListener("click", (e) => { if (dragged) { e.stopPropagation(); e.preventDefault(); dragged = false; } }, true); // 拖动收尾的 click 不算点选
 
 // —— 分组（item4）：预设虚拟项 + 自定义 amsGroups ——
 let groups = []; // [{name, hosts}]

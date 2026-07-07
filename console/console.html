@@ -11,7 +11,11 @@
       <button id="grp-save" class="mini" data-i18n-title="con_grpSaveTitle" data-i18n-aria="con_grpSaveTitle" title="把当前勾选存为分组" aria-label="保存分组">＋</button>
       <button id="grp-del" class="mini" data-i18n-title="con_grpDelTitle" data-i18n-aria="con_grpDelTitle" title="删除选中的自定义分组" aria-label="删除分组" disabled>✕</button>
     </div>
-    <div id="sites"></div>
+    <div id="siteswrap">
+      <span id="sites-l" class="sarr" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></span>
+      <div id="sites"></div>
+      <span id="sites-r" class="sarr" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3l5 5-5 5"/></svg></span>
+    </div>
     <select id="tier" data-i18n-title="con_tierTitle" title="发送前档位">
       <option value="" data-i18n="con_tierKeep">档位：不变</option>
       <option value="think" data-i18n="con_tierThink">🧠 深度思考</option>
