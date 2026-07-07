@@ -12,7 +12,7 @@ function setDot(host, state, reason) {
 
 // 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
 const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier",
-  no_window: "con_errNoWindow", not_ready: "con_errNotReady", checkup_ok: "con_checkupOk" };
+  no_window: "con_errNoWindow", not_ready: "con_errNotReady", checkup_ok: "con_checkupOk", no_answer: "con_errNoAnswer" };
 function errText(r) { return (ERR_KEYS[r.code] && t(ERR_KEYS[r.code])) || r.reason || t("con_failed"); }
 function applyResults(results) {
   (results || []).forEach((r) => {
@@ -37,9 +37,36 @@ function updateRetry() {
   const hasFail = !!document.querySelector(".chip.fail");
   document.getElementById("retry").disabled = !(hasFail && lastSend);
 }
+// 短暂内联提示（借 failsum 位；中性色，3s 后交还失败汇总）+ 读屏播报
+let noteUntil = 0; // 展示期内挡住并发 siteResult/sendStart 触发的 updateFailSum 覆盖
+function flashNote(text) {
+  const el = document.getElementById("failsum");
+  el.textContent = text; el.style.display = ""; el.style.color = "var(--text-2)";
+  document.getElementById("live").textContent = text;
+  noteUntil = Date.now() + 3000;
+  setTimeout(() => { noteUntil = 0; updateFailSum(); }, 3000);
+}
+// 汇总复制：所选站点的最新回答拼 Markdown 写剪贴板（各站标注当时档位；未适配/未获取的站如实标出）
+function copySummary(sites, results) {
+  const byHost = {}; results.forEach((r) => { byHost[r.host] = r; });
+  const q = (lastSend && lastSend.text) || document.getElementById("prompt").value.trim();
+  const md = ["# " + t("con_mdHeader") + " · " + new Date().toLocaleString()];
+  if (q) md.push("\n**" + t("con_mdQuestion") + "**: " + q);
+  for (const s of sites) {
+    const r = byHost[s.host] || { code: "not_ready" };
+    const tier = r.state === "think" ? " · " + t("con_mdThink") : r.state === "fast" ? " · " + t("con_mdFast") : "";
+    md.push("\n## " + s.label + tier + "\n", r.text ? r.text : "> " + errText(r));
+  }
+  navigator.clipboard.writeText(md.join("\n")).then(
+    () => flashNote(t("con_collectDone", sites.length)),
+    () => flashNote(t("con_collectFail"))
+  );
+}
 // 全部结果回齐后在细条内联显示失败汇总（薄弹窗限制下不用浮层），并经 aria-live 播报给读屏
 function updateFailSum() {
+  if (Date.now() < noteUntil) return; // flashNote 展示期内不覆盖
   const el = document.getElementById("failsum");
+  el.style.color = ""; // 复位 flashNote 的中性色
   const fails = [...document.querySelectorAll(".chip.fail")];
   if (!fails.length || !progress.total || progress.done < progress.total) { el.style.display = "none"; el.textContent = ""; return; }
   el.textContent = t("con_failSum", fails.length, fails.map((c) => c.dataset.label).join(" "));

@@ -1,4 +1,4 @@
-// content/adapters-cn.js — 国内站点适配器（DeepSeek/豆包/千问/Kimi）
+// content/adapters-cn.js — 国内站点适配器（DeepSeek/豆包/千问；Kimi/元宝/智谱在 adapters-cn2.js）
 // think = 最强思考(最强模型/最高思考档/思考开)；fast = 均衡快速(快模型/思考关)。
 // 切换前对有状态控件先读状态、仅在需要时点击(幂等)；单站失败由 runMode 兜底为 toast。
 (function () {
@@ -40,6 +40,23 @@
       },
       think: async function () { await this._selectMode(/Expert|专家/); await this._setDeepThink(true); },
       fast: async function () { await this._selectMode(/Instant|快速/); await this._setDeepThink(false); },
+      // 发送键无 send/发送 标签（真机审计 2026-07：composer 右下 primary 圆钮），原生点击；没找到落回通用路径。
+      // 已知限制（真机证实，DeepSeek/豆包/Kimi 同）：流式生成期间站点把同一按钮复用为「停止」（class/id 不变
+      // 仅换图标），流式中二次群发会点成停止、截断上一条回答——confirmSubmitted 会诚实报失败，retry 可恢复；
+      // 图标判别太脆弱不做守卫，属窄窗口取舍。
+      submit: function () {
+        const b = [...document.querySelectorAll('[role="button"].ds-button--primary.ds-button--circle')].pop();
+        if (!b || b.getAttribute("aria-disabled") === "true") return false;
+        b.click();
+      },
+      // 最后一条回答：.ds-message 为 AI 消息容器，正文取思考段（.ds-think-content）之外的最后一个 .ds-markdown
+      answer: function () {
+        const msgs = document.querySelectorAll(".ds-message");
+        if (!msgs.length) return null;
+        const mds = [...msgs[msgs.length - 1].querySelectorAll(".ds-markdown")].filter((x) => !x.closest(".ds-think-content"));
+        const pick = mds[mds.length - 1] || msgs[msgs.length - 1];
+        return pick;
+      },
     },
 
     // 豆包：composer 模式按钮(当前显示当前模式)，点开菜单含 快速/专家/超能模式([role=menuitem])
@@ -73,6 +90,21 @@
       },
       think: async function () { await this._select(/^专家/); },
       fast: async function () { await this._select(/^快速/); },
+      // 发送键无标签但有稳定 id（真机审计 2026-07）；不可用时落回通用路径（textarea Enter 可发）
+      submit: function () {
+        const b = document.getElementById("flow-end-msg-send");
+        if (!b || b.disabled || b.getAttribute("aria-disabled") === "true" || b.getAttribute("data-disabled") === "true") return false;
+        b.click();
+      },
+      // 最后一条回答（chrome-dbg 真机审计 2026-07：消息容器 [data-message-id]，用户消息右对齐带
+      // justify-end、AI 无；正文在 .md-box-root。注意豆包渲染会在中文与数字间插空格）
+      answer: function () {
+        const msgs = [...document.querySelectorAll("[data-message-id]")]
+          .filter((m) => !((m.className || "").includes("justify-end")) && !m.querySelector(".justify-end"));
+        if (!msgs.length) return null;
+        const el = msgs[msgs.length - 1];
+        return el.querySelector(".md-box-root") || el;
+      },
     },
 
     // 千问：模型下拉(aria-haspopup=dialog, 原生 click 开)含 Qwen3.7-Max / Qwen3.7-千问；
@@ -129,108 +161,13 @@
       },
       think: async function () { await this._selectModel(/Qwen3\.7-Max/i); await this._setThink(true); },
       fast: async function () { await this._selectModel(/Qwen3\.7-千问/); await this._setThink(false); },
-    },
-
-    // Kimi：composer .current-model 触发(开菜单时加 active 类)，选项英文 K2.6 Thinking / K2.6 Instant。
-    // 用原生 click(合成事件不生效)；选项排除 trigger 本身(同名 K2.6 Instant)。
-    "kimi.com": {
-      _entry: function () { return document.querySelector(".current-model"); },
-      _select: async function (re) {
-        const e = this._entry();
-        if (!e) throw new Error("Kimi: 模型入口未找到"); // 静默 return 会让 runMode 误报成功
-        if (!e.classList.contains("active")) e.click();
-        const opt = await waitFor(() =>
-          [...document.querySelectorAll("*")].find((el) =>
-            el.children.length <= 2 && re.test((el.textContent || "").trim()) &&
-            (el.textContent || "").trim().length < 20 && !el.closest(".current-model")), 1500);
-        if (!opt) { escMenus(); throw new Error("Kimi: 目标选项未找到"); }
-        let c = opt, clicked = false;
-        for (let i = 0; i < 5 && c; i++) {
-          if (c.onclick || /menuitem|option/.test(c.getAttribute("role") || "") || (c.className || "").toString().includes("menu-item")) { c.click(); clicked = true; break; }
-          c = c.parentElement;
-        }
-        if (!clicked) opt.click();
-        await sleep(400);
-        escMenus();
+      // 最后一条回答（真机审计锚点 2026-07：.answer-common-card，正文在 .qk-markdown）
+      answer: function () {
+        const cards = document.querySelectorAll(".answer-common-card");
+        if (!cards.length) return null;
+        const el = cards[cards.length - 1];
+        return el.querySelector(".qk-markdown") || el;
       },
-      diagnose: function () {
-        return [
-          { name: t("diag_modelEntry"), ok: !!document.querySelector(".current-model") },
-          { name: t("diag_tierReadable"), ok: this.state() != null },
-        ];
-      },
-      state: function () {
-        const e = document.querySelector(".current-model");
-        const t = e ? e.textContent || "" : "";
-        return /Thinking|思考/i.test(t) ? "think" : /Instant|快速/i.test(t) ? "fast" : null;
-      },
-      think: async function () { await this._select(/K2[.\d]*\s*(Thinking|思考)/i); },
-      fast: async function () { await this._select(/K2[.\d]*\s*(Instant|快速)/i); },
-    },
-
-    // 元宝：composer 的 Deep Thinking/深度思考 为 toggle（CSS-module 类 ThinkSelector_selected=开），原生 click
-    "yuanbao.tencent.com": {
-      _toggle: function () { return document.querySelector('[class*="ThinkSelector"]'); },
-      _isOn: function () {
-        const t = this._toggle();
-        return !!t && /ThinkSelector_selected/.test((t.className || "").toString());
-      },
-      _set: async function (on) {
-        const t = this._toggle();
-        if (!t) throw new Error("元宝: Deep Thinking 控件未找到");
-        if (this._isOn() !== on) { t.click(); await sleep(500); }
-      },
-      diagnose: function () {
-        return [
-          { name: t("diag_deepThinking"), ok: !!this._toggle() },
-          { name: t("diag_tierReadable"), ok: this.state() != null },
-        ];
-      },
-      state: function () { return this._toggle() ? (this._isOn() ? "think" : "fast") : null; },
-      think: async function () { await this._set(true); },
-      fast: async function () { await this._set(false); },
-    },
-
-    // 智谱清言：思考已从「toggle」改为「触发器 + el-tooltip 弹层菜单」——顶层 快速 / 思考(.has-submenu)，
-    // 思考子菜单含 标准 / 深度。映射 think→深度（深度全力推理）、fast→快速。
-    // 选档序列（chrome-dbg 实测验证）：hover+click .think-mode-trigger 开弹层；深度还需先 hover 父项
-    //（.has-submenu，其名随当前档变故按 class 找）展开子菜单，再原生 click 目标 .item-name 项。
-    // state 只读：读 .think-mode-item 的 selected 类（弹层关闭时菜单项仍在 DOM，不开菜单）。
-    "chatglm.cn": {
-      _trigger: function () { return document.querySelector(".think-mode-trigger"); },
-      _hover: function (el) {
-        if (!el) return;
-        ["pointerenter", "mouseenter", "pointerover", "mouseover"].forEach((e) =>
-          el.dispatchEvent(new MouseEvent(e, { bubbles: true, cancelable: true, view: window })));
-      },
-      _itemByName: function (name) {
-        return [...document.querySelectorAll(".think-mode-item:not(.has-submenu)")].find((it) => {
-          const n = it.querySelector(".item-name"); return n && (n.textContent || "").trim() === name;
-        });
-      },
-      _selected: function (name) {
-        const it = this._itemByName(name);
-        return !!it && /(^|\s)selected(\s|$)/.test((it.className || "").toString());
-      },
-      _pick: async function (name, viaSubmenu) {
-        const tg = this._trigger();
-        if (!tg) throw new Error("智谱: 思考触发器未找到");
-        this._hover(tg); tg.click();                                          // 开 el-tooltip 弹层
-        await sleep(350);
-        if (viaSubmenu) { this._hover(document.querySelector(".think-mode-item.has-submenu")); await sleep(300); } // 展开子菜单
-        const it = this._itemByName(name);
-        if (!it) throw new Error("智谱: 档位「" + name + "」未找到");
-        it.click(); await sleep(500); escMenus();
-      },
-      diagnose: function () {
-        return [
-          { name: t("diag_thinkButton"), ok: !!this._trigger() },
-          { name: t("diag_tierReadable"), ok: this.state() != null },
-        ];
-      },
-      state: function () { return this._selected("深度") ? "think" : this._selected("快速") ? "fast" : null; },
-      think: async function () { await this._pick("深度", true); },
-      fast: async function () { await this._pick("快速", false); },
     },
   });
 })();

@@ -85,6 +85,11 @@
         if (/opus\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
         return null;
       },
+      // 最后一条回答（真机审计锚点 2026-07：每条 AI 回答一个 .font-claude-response）
+      answer: function () {
+        const els = document.querySelectorAll(".font-claude-response");
+        return els.length ? els[els.length - 1] : null;
+      },
       think: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
         await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true, "max");
@@ -138,6 +143,13 @@
         if (/high|extended|高|扩展/i.test(t)) return "think";   // High/Extra High/Pro Extended·高级/超高/Pro 扩展
         if (/instant|medium|极速|均衡/i.test(t)) return "fast";  // Instant/Medium·极速/均衡
         return null;
+      },
+      // 最后一条回答（真机审计锚点 2026-07：data-message-author-role，正文在 .markdown）
+      answer: function () {
+        const els = document.querySelectorAll('[data-message-author-role="assistant"]');
+        if (!els.length) return null;
+        const el = els[els.length - 1];
+        return el.querySelector(".markdown") || el;
       },
       think: async function () { await this._pickEdge(true); },   // 菜单最高档
       fast: async function () { await this._pickEdge(false); },   // 菜单最低档 = Instant/极速
@@ -196,7 +208,14 @@
         const t = b ? b.getAttribute("aria-label") || "" : "";
         return /pro/i.test(t) ? "think" : /flash/i.test(t) ? "fast" : null;
       },
-      // 等级 UI 词中英双写；中文文案按 Extended 直译取「扩展」，真机若不符再校正
+      // 最后一条回答（真机审计锚点 2026-07：每条回答一个 <message-content>，正文在 .markdown）
+      answer: function () {
+        const els = document.querySelectorAll("message-content");
+        if (!els.length) return null;
+        const el = els[els.length - 1];
+        return el.querySelector(".markdown") || el;
+      },
+      // 等级 UI 词中英双写；英文 "Extended" 真机已确认，中文「扩展」为直译候选
       think: async function () { await this._selectModel(/3\.1\s*pro\b/i); await this._setThinking(/^(extended|扩展)/i); },
       fast: async function () { await this._selectModel(/3\.5\s*flash\b/i); },
     },

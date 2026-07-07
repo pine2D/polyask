@@ -20,7 +20,7 @@
 - **批量窗口管理**：全部新会话、关闭全部；**前后台联动**——console 最小化/恢复/被带到前台时，平铺窗整组自动跟随（最小化/恢复/置顶无需手动按钮）
 
 > 窗口按 id 绑定且只认扩展自建的 popup：从平铺窗口点链接另开到主浏览器窗口、或你日常的浏览窗口，都不会被误纳入平铺/群发/关闭。「全部新会话」对已在新会话入口的窗口跳过重载（不闪、不丢草稿）。
-> 新开的站点窗口会**续上该站上次会话**（跨 Chrome 重启也能恢复对比现场）；要空白对话用「全部新会话」。
+> **Chrome 重启后**的首次平铺会续上各站上次会话（对比现场不丢）；平时新开的窗口都是空白新会话。汇总复制取界面**可见文本**（隐藏水印/标记不入汇总）。
 
 ### 🧠⚡ 模型档位切换
 
@@ -40,7 +40,7 @@
 | 元宝 (yuanbao.tencent.com) | Deep Thinking 开 | Deep Thinking 关 |
 | 智谱清言 (chatglm.cn) | 思考开 | 思考关 |
 
-> 站点 UI 改版可能导致个别适配失效；适配逻辑集中在 `content/adapters-intl.js`（国际站）与 `content/adapters-cn.js`（国内站），按文本/语义属性匹配，UI 词支持中英双语界面（其他语言不保证）。
+> 站点 UI 改版可能导致个别适配失效；适配逻辑集中在 `content/adapters-intl.js`（国际站）与 `content/adapters-cn.js`+`adapters-cn2.js`（国内站），按文本/语义属性匹配，UI 词支持中英双语界面（其他语言不保证）。
 > 怀疑失效时：扩展图标 →「🩺 诊断当前站点」，逐项检查控件是否仍能找到（只读、零副作用）。
 
 ## 安装
@@ -97,7 +97,8 @@ manifest.json            MV3：content_scripts + commands + background
 background.js            快捷键转发 + 群发控制台编排（开窗/平铺/群发/窗口管理）
 content/core.js          DOM 工具、toast、适配器注册表、runMode、群发注入
 content/adapters-intl.js 国际站切换逻辑（Claude / ChatGPT / Gemini）
-content/adapters-cn.js   国内站切换逻辑（DeepSeek / 豆包 / 千问 / Kimi / 元宝 / 智谱）
+content/adapters-cn.js   国内站切换逻辑（DeepSeek / 豆包 / 千问）
+content/adapters-cn2.js  国内站切换逻辑·续（Kimi / 元宝 / 智谱）
 content/pill.js          悬浮胶囊 UI
 console/                 群发控制台（细条窗口 UI）
 popup/                   扩展弹窗

@@ -71,6 +71,10 @@
     return cands[0].el;
   }
 
+  // 可见文本（answer 收集用）：innerText 只取渲染可见内容——textContent 会把站内/第三方扩展注入的
+  // 隐藏节点（水印 UUID、翻译克隆等）一并带出，所见即所得必须用 innerText（textContent 仅作兜底）
+  function visText(el) { return ((el && (el.innerText != null ? el.innerText : el.textContent)) || "").trim(); }
+
   // 读输入框当前文本：textarea/input 取 .value（.textContent 是初始值不随输入更新），其余取 .textContent
   function readText(e) {
     if (!e) return "";
@@ -114,7 +118,13 @@
     await sleep(250);
     const a = pickAdapter();
     if (a && typeof a.submit === "function") {
-      try { await a.submit(el); return { ok: true }; } catch (e) { return { ok: false, code: "error", reason: String((e && e.message) || e) }; }
+      // 契约：submit 返回 false = 本站发送键此刻未找到/不可用 → 落回下方通用路径（按钮/Enter/校验循环）。
+      // 点击成功也要过提交校验：新适配的发送键（div 无 role 等）点了未必生效，不校验就是假成功回归。
+      try {
+        const before = readText(el);
+        if ((await a.submit(el)) !== false)
+          return (await confirmSubmitted(before)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
+      } catch (e) { return { ok: false, code: "error", reason: String((e && e.message) || e) }; }
     }
     // 通用提交：优先原生点击发送按钮（最稳，国产站拒合成事件，且避免对受控编辑器发 Enter 产生多余换行）；
     // !disabled 防误触（空输入时按钮多为禁用）。无可用按钮再退回合成 Enter（适配靠 Enter 提交的 textarea）。
@@ -127,17 +137,19 @@
     await sleep(150);
     btn = sendBtn();
     if (btn && !btn.disabled) btn.click(); // Enter 没发出去且按钮可用 → 原生点
-    // 校验提交：成功发送后输入框会清空，但①清空是异步的（等服务端 ack/动画）②框架常把输入框**重挂为
-    // 新节点**——此时捕获的 el 已脱离 DOM，其 value/textContent 永远停在旧文本，只看 el 会把成功站误判
-    // 失败（红边）。故每轮**重新 findComposer 读当前活的输入框**（脱离的旧节点不会被 querySelector 选中）：
-    // 空 或 不再等于注入前原文 → 判成功；始终是原文 → 真失败（Kimi/元宝 的 Enter 只插换行不提交）。
-    // 仅无标签发送键的站会走到这里（带标签站已在上面原生点击后即返回）。
+    return (await confirmSubmitted(_txtBefore)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
+  }
+
+  // 提交校验：成功发送后输入框会清空，但①清空是异步的（等服务端 ack/动画）②框架常把输入框**重挂为
+  // 新节点**——此时先前捕获的节点已脱离 DOM，其文本永远停在旧值，只看它会把成功站误判失败。故每轮
+  // **重新 findComposer 读当前活的输入框**：空 或 不再等于注入前原文 → 已发出；始终是原文 → 没发出去。
+  async function confirmSubmitted(before) {
     for (let i = 0; i < 15; i++) {
       await sleep(200);
       const cur = readText(findComposer());
-      if (!cur || cur !== _txtBefore) return { ok: true };
+      if (!cur || cur !== before) return true;
     }
-    return { ok: false, code: "submit_unconfirmed" };
+    return false;
   }
 
   // 注册表：适配器由 adapters.js 填充
@@ -212,6 +224,16 @@
       if (!msg || msg.source !== "AMS") return;
       if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode);
       if (msg.cmd === "getState") sendResponse({ state: getState() });
+      if (msg.cmd === "collectAnswer") { // 只读快照：adapter.answer 返回最后一条回答的根节点，通用序列化为 Markdown
+        let text = null;
+        try {
+          const a = pickAdapter();
+          const node = a && a.answer ? a.answer() : null;
+          text = typeof node === "string" ? node
+            : node ? (window.__AMS.toMarkdown ? window.__AMS.toMarkdown(node) : visText(node)) : null;
+        } catch (e) {}
+        sendResponse({ host: location.hostname, state: getState(), text: text || null });
+      }
       if (msg.cmd === "diagnose") sendResponse({ checks: diagnose(), host: location.hostname });
       if (msg.cmd === "submitPrompt") {
         (async () => {
@@ -234,5 +256,5 @@
     });
   } catch (e) {}
 
-  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState, diagnose, findComposer, submitPrompt };
+  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState, diagnose, findComposer, submitPrompt, visText };
 })();

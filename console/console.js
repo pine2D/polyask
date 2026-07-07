@@ -181,6 +181,10 @@ document.getElementById("send").addEventListener("click", () => {
     clearTimeout(reEnableTimer); elSend.disabled = false; applyResults(resp && resp.results);
   });
 });
+document.getElementById("collect").addEventListener("click", () => {
+  const sites = chosen(); if (!sites.length) return;
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => copySummary(sites, (resp && resp.results) || []));
+});
 document.getElementById("checkup").addEventListener("click", () => {
   const sites = chosen(); if (!sites.length) return;
   sites.forEach((s) => setDot(s.host, "send", t("con_checking")));

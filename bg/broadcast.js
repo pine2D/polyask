@@ -19,7 +19,10 @@ async function openTile(sites, prune = true) {
   else { cols = Math.ceil(Math.sqrt(n)); rows = Math.ceil(n / cols); }
   const cellW = Math.floor(areaW / cols), cellH = Math.floor(areaH / rows);
   const wins = await getWindows();
-  const sessions = await getSessions();
+  // 会话记忆只用于「跨重启恢复对比现场」：仅重启后的首次开窗（amsRestorePending）续上旧会话，
+  // 常规新开窗口一律走空白新会话入口——否则每个新窗都续旧对话，违背"新窗=新对话"的直觉。
+  const restore = await new Promise((r) => chrome.storage.local.get("amsRestorePending", (o) => r(!!(o && o.amsRestorePending))));
+  const sessions = restore ? await getSessions() : {};
   const selectedHosts = sites.map((s) => s.host);
   // 1) 处理已取消勾选（仅显式平铺）：owned 的真正关闭，复用的仅解除登记（用户窗口不动）
   if (prune) for (const host of Object.keys(wins)) {
@@ -51,6 +54,7 @@ async function openTile(sites, prune = true) {
     out.push({ host: s.host, windowId, reused, opened: !reused && windowId != null });
   }
   await setWindows(wins);
+  if (restore) chrome.storage.local.remove("amsRestorePending"); // 恢复机会一次性消费
   // 3) 抬前所有平铺窗口，最后抬控制台（控制台置顶）→ 无论增删全部可见
   for (const r of out) if (r.windowId != null) { try { await chrome.windows.update(r.windowId, { state: "normal", focused: true }); } catch (e) {} }
   await raiseConsole();
@@ -133,6 +137,21 @@ async function checkupAll(sites) {
       const bad = ((r && r.checks) || []).filter((c) => !c.ok).map((c) => c.name);
       out.push(bad.length ? { host: s.host, ok: false, reason: bad.join(" / ") } : { host: s.host, ok: true, code: "checkup_ok" });
     } catch (e) { out.push({ host: s.host, ok: false, code: "not_ready" }); }
+  }
+  return out;
+}
+
+// 汇总收集：逐站取最后一条 AI 回答的只读快照（不等流式完成——以点击时刻为准，ponytail 有意取舍）
+async function collectAll(sites) {
+  const wins = await getWindows();
+  const out = [];
+  for (const s of sites) {
+    const tabs = await tabsForHost(s.host, wins);
+    if (!tabs.length) { out.push({ host: s.host, code: "no_window" }); continue; }
+    try {
+      const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "collectAnswer" });
+      out.push(r && r.text ? { host: s.host, text: r.text, state: r.state } : { host: s.host, code: "no_answer" });
+    } catch (e) { out.push({ host: s.host, code: "not_ready" }); }
   }
   return out;
 }
