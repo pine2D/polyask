@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [0.6.3] - 2026-07-07
+
 ### 新增
 
 - 新增站点区溢出指示箭头：有隐藏芯片时出现，点击可滚动
@@ -108,7 +110,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.6.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.6.3...HEAD
+[0.6.3]: https://github.com/pine2D/polyask/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/pine2D/polyask/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/pine2D/polyask/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/pine2D/polyask/compare/v0.5.0...v0.6.0
