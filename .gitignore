@@ -8,3 +8,6 @@ docs/superpowers/
 
 # 打包产物
 dist/
+
+# 本地调试脚本
+scratchpad/
