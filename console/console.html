@@ -5,11 +5,11 @@
 <link rel="stylesheet" href="console.css"></head>
 <body>
   <div id="bar">
-    <div class="brand"><span class="logo">◈</span>PolyAsk</div>
+    <div class="brand"><svg class="logo" viewBox="0 0 16 16" width="15" height="15" aria-hidden="true"><path d="M8 1.5 14.5 8 8 14.5 1.5 8z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 5.4 10.6 8 8 10.6 5.4 8z" fill="currentColor"/></svg>PolyAsk</div>
     <div class="grpwrap">
       <select id="group" data-i18n-title="con_groupTitle" data-i18n-aria="con_groupAria" title="分组：预设 + 自定义" aria-label="站点分组"><option value="" data-i18n="con_groupPh">分组▾</option></select>
-      <button id="grp-save" class="mini" data-i18n-title="con_grpSaveTitle" data-i18n-aria="con_grpSaveTitle" title="把当前勾选存为分组" aria-label="保存分组">＋</button>
-      <button id="grp-del" class="mini" data-i18n-title="con_grpDelTitle" data-i18n-aria="con_grpDelTitle" title="删除选中的自定义分组" aria-label="删除分组" disabled>✕</button>
+      <button id="grp-save" class="mini" data-i18n-title="con_grpSaveTitle" data-i18n-aria="con_grpSaveTitle" title="把当前勾选存为分组" aria-label="保存分组"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
+      <button id="grp-del" class="mini" data-i18n-title="con_grpDelTitle" data-i18n-aria="con_grpDelTitle" title="删除选中的自定义分组" aria-label="删除分组" disabled><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
     </div>
     <div id="siteswrap">
       <span id="sites-l" class="sarr" aria-hidden="true"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3L5 8l5 5"/></svg></span>
@@ -23,8 +23,8 @@
     </select>
     <div class="tplwrap">
       <select id="tpl" data-i18n-title="con_tplTitle" title="提示词模板"><option value="" data-i18n="con_tplPh">模板▾</option></select>
-      <button id="tpl-save" class="mini" data-i18n-title="con_tplSaveTitle" title="保存当前输入为模板">＋</button>
-      <button id="tpl-del" class="mini" data-i18n-title="con_tplDelTitle" title="删除选中模板">✕</button>
+      <button id="tpl-save" class="mini" data-i18n-title="con_tplSaveTitle" title="保存当前输入为模板"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
+      <button id="tpl-del" class="mini" data-i18n-title="con_tplDelTitle" title="删除选中模板"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
     </div>
     <input id="nameinput" type="text" style="display:none" data-i18n-aria="con_nameAria" aria-label="名称（模板/分组）">
     <span id="confirmbar" style="display:none"><span id="confirmtext"></span><button id="confirm-yes" data-i18n="con_delete">删除</button><button id="confirm-no" data-i18n="con_cancel">取消</button></span>

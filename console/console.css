@@ -41,7 +41,7 @@
 html,body{margin:0;height:100%;overflow:hidden;font:13px/1.4 -apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--text);background:var(--bg)}
 #bar{display:flex;align-items:center;gap:9px;height:100%;padding:0 14px;box-sizing:border-box;overflow-x:auto;background:linear-gradient(180deg,var(--strip-a),var(--strip-b));border-bottom:1px solid var(--edge)}
 .brand{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px;white-space:nowrap;flex:0 0 auto}
-.brand .logo{font-size:16px;color:var(--accent);text-shadow:0 0 12px var(--accent-glow)}
+.brand .logo{color:var(--accent);filter:drop-shadow(0 0 6px var(--accent-glow))} /* SVG 版 ◈：字形在大字体集下有回退扫描开销 */
 .grpwrap{display:flex;align-items:center;gap:3px;flex:0 0 auto}
 #group{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--fill);color:var(--text-2);font-size:12px}
 #group option,#group optgroup{background:var(--option-bg);color:var(--text)}
