@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [0.7.0] - 2026-07-07
+
 ### 新增
 
 - 新增汇总复制：所选站点最新回答转为 Markdown 复制（表格、链接、代码块保真，仅取可见内容）
@@ -124,7 +126,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.6.3...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/pine2D/polyask/compare/v0.6.3...v0.7.0
 [0.6.3]: https://github.com/pine2D/polyask/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/pine2D/polyask/compare/v0.6.1...v0.6.2
 [0.6.1]: https://github.com/pine2D/polyask/compare/v0.6.0...v0.6.1
