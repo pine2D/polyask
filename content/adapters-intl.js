@@ -102,13 +102,21 @@
     },
 
     "chatgpt.com": {
-      // 档位标签集：5 档英文 + 中文（均已确认）：极速/均衡/高级/超高/Pro 扩展
-      _LABELS: /^(instant|medium|high|extra\s*high|pro\s*extended|极速|均衡|高级|超高|pro\s*扩展)$/i,
+      // GPT-5.6：Instant 仍为 GPT-5.5；Medium～Extra High 为 Sol；Pro 为 Sol Pro。
+      // 兼容滚动发布期间仍显示的 Pro Standard/Extended（标准/扩展）。
+      // 真机验证 2026-07-11（chrome-dbg，英文界面）：pill 为纯档名（Pro/Instant，无版本前缀）；
+      // 菜单 radio 的 "Instant5.5" 尾缀是行内徽标拼接（不影响按位置取档/只看 pill 的锚点）；
+      // 模型子菜单触发器唯一、文本 "GPT-5.6 Sol" 无零宽字符。中文界面档位词仍为候选、待真机验证。
+      _LABELS: /^(instant|medium|high|extra\s*high|o3|极速|即时|均衡|中(?:等)?|高(?:级)?|[极超]高|pro(?:\s*(?:standard|extended|标准|扩展|深度模式))?)$/i,
+      // 旧模型会把版本前缀并进 pill（实测如 5.5Pro / 5.5Instant），先剥掉再判档。
+      _tier: function (text) {
+        return (text || "").trim().replace(/^(?:gpt-?)?5\.[3456](?:\s*sol)?/i, "").trim();
+      },
       // 锚点：composer pill（实测精确 1 个）优先，再回退任意 haspopup=menu；文本须属档位标签集（^锚定，避免误中侧栏标题）
       _anchor: function () {
         return [...document.querySelectorAll(
             'button.__composer-pill[aria-haspopup="menu"], button[aria-haspopup="menu"]')]
-          .find((x) => this._LABELS.test((x.textContent || "").trim()));
+          .find((x) => this._LABELS.test(this._tier(x.textContent)));
       },
       _radios: function () {
         const wrap = document.querySelector("[data-radix-popper-content-wrapper]") || document;
@@ -131,6 +139,18 @@
         if (!item) { escMenus(); throw new Error("ChatGPT: 档位为空"); }
         clickEl(item); await sleep(400);
       },
+      // 模型子菜单靠原生 click 展开；通用 pointer 序列会连续触发开/关而把两级菜单一起收起。
+      _selectModel: async function (re) {
+        await this._openEffort();
+        const trig = await waitFor(() => [...document.querySelectorAll('[role="menuitem"][aria-haspopup="menu"]')]
+          .find((x) => /GPT-|^o3$/i.test((x.textContent || "").trim())), 1500);
+        if (!trig) { escMenus(); throw new Error("ChatGPT: 模型入口未找到"); }
+        if (re.test((trig.textContent || "").trim())) { escMenus(); return; }
+        trig.click();
+        const item = await waitFor(() => findByText('[role="menuitemradio"]', re), 1500);
+        if (!item) { escMenus(); throw new Error("ChatGPT: GPT-5.6 Sol 未找到"); }
+        item.click(); await sleep(700);
+      },
       diagnose: function () {
         return [
           { name: t("diag_intelEntry"), ok: !!this._anchor() },
@@ -139,9 +159,11 @@
       },
       state: function () {
         const a = this._anchor();
-        const t = a ? (a.textContent || "").trim() : "";
-        if (/high|extended|高|扩展/i.test(t)) return "think";   // High/Extra High/Pro Extended·高级/超高/Pro 扩展
-        if (/instant|medium|极速|均衡/i.test(t)) return "fast";  // Instant/Medium·极速/均衡
+        const raw = a ? (a.textContent || "").trim() : "";
+        const t = this._tier(raw);
+        if (/instant|medium|极速|即时|均衡|中/i.test(t)) return "fast"; // Instant/Medium
+        if (/(?:gpt-?)?5\.[345](?!\d)|\bo3\b/i.test(raw)) return null; // 旧模型高档不能冒充 5.6 think
+        if (/high|pro|高/i.test(t)) return "think";             // High/Extra High/Pro（含旧 Standard/Extended）
         return null;
       },
       // 最后一条回答（真机审计锚点 2026-07：data-message-author-role，正文在 .markdown）
@@ -151,8 +173,8 @@
         const el = els[els.length - 1];
         return el.querySelector(".markdown") || el;
       },
-      think: async function () { await this._pickEdge(true); },   // 菜单最高档
-      fast: async function () { await this._pickEdge(false); },   // 菜单最低档 = Instant/极速
+      think: async function () { await this._selectModel(/^GPT-5\.6\s*Sol$/i); await this._pickEdge(true); },
+      fast: async function () { await this._selectModel(/^GPT-5\.6\s*Sol$/i); await this._pickEdge(false); },
       stop: function () {
         const b = document.querySelector('[data-testid="stop-button"]') ||
           [...document.querySelectorAll('button[aria-label]')]
