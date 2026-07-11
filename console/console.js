@@ -161,8 +161,10 @@ function load() {
 }
 document.getElementById("tile").addEventListener("click", () => {
   const sites = chosen(); if (!sites.length) return;
+  ignoreResults = false; // 用户新动作：解除 closeAll 后的结果忽略态
   // Task 7: 改用 state "send"
   sites.forEach((s) => setDot(s.host, "send", t("con_winOpening")));
+  armDotTimeouts(sites.map((s) => s.host)); // 回调断掉时"开窗中"不永久挂起
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openTile", sites }, (resp) => applyResults(resp && resp.results));
 });
 function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
@@ -185,7 +187,9 @@ document.getElementById("collect").addEventListener("click", () => {
 });
 document.getElementById("checkup").addEventListener("click", () => {
   const sites = chosen(); if (!sites.length) return;
+  ignoreResults = false; // 用户新动作：解除结果忽略态
   sites.forEach((s) => setDot(s.host, "send", t("con_checking")));
+  armDotTimeouts(sites.map((s) => s.host));
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "checkup", sites }, (resp) => applyResults(resp && resp.results));
 });
 document.getElementById("newsession").addEventListener("click", () => {
@@ -193,6 +197,7 @@ document.getElementById("newsession").addEventListener("click", () => {
 });
 document.getElementById("closeall").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" });
+  ignoreResults = true; // 在途群发的迟到结果不得复活刚清空的芯片（下一次 sendStart/tile/checkup 解除）
   [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "done", "fail"); c.title = c.dataset.label + " · " + t("con_chipHint"); });
   progress = { total: 0, done: 0 }; updateSendLabel(); lastSend = null; updateRetry(); updateFailSum();
 });

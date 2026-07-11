@@ -43,7 +43,9 @@ const MSG = {
   con_sendingDot: { en: "Sending…", zh_CN: "发送中", zh_TW: "發送中" },
   // 群发失败原因（错误码 → 文案，console.js ERR_KEYS）
   con_errTimeout: { en: "Timed out — check the site is logged in and loaded, then retry", zh_CN: "超时：请确认该站已登录且页面加载完成，再点重试", zh_TW: "逾時：請確認該站已登入且頁面載入完成，再點重試" },
-  con_errNoComposer: { en: "Composer not found (page not ready or site changed)", zh_CN: "输入框未找到（页面未就绪或站点改版）", zh_TW: "輸入框未找到（頁面未就緒或站點改版）" },
+  con_errNoComposer: { en: "Composer not found (page not ready, not signed in, or site changed)", zh_CN: "输入框未找到（页面未就绪、未登录或站点改版）", zh_TW: "輸入框未找到（頁面未就緒、未登入或站點改版）" },
+  con_errGeneric: { en: "Unexpected error", zh_CN: "未知错误", zh_TW: "未知錯誤" },
+  con_allDone: { en: "All {0} sites sent", zh_CN: "{0} 站已全部发送", zh_TW: "{0} 站已全部發送" },
   con_errInject: { en: "Injection failed — editor rejected input", zh_CN: "注入未生效（站点编辑器拒绝写入）", zh_TW: "注入未生效（站點編輯器拒絕寫入）" },
   con_errSubmit: { en: "Submit not confirmed", zh_CN: "提交未确认", zh_TW: "提交未確認" },
   con_errTier: { en: "Tier not switched — sent at current tier", zh_CN: "档位未切换，已按当前档发送", zh_TW: "檔位未切換，已依目前檔發送" },

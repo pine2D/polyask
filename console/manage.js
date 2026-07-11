@@ -5,13 +5,19 @@
 // —— 内联命名（替代被裁切的 prompt()）：点 ＋ 后在细条内就地起名 + 回车 ——
 const elName = document.getElementById("nameinput");
 let pendingSave = null; // {kind:"tpl", text} | {kind:"grp", hosts}
+let nameOpener = null;  // 触发命名的按钮：收尾归还焦点，键盘用户不必从头 Tab（blur 主动移开除外）
 function startName(kind, placeholder, payload) {
-  closeConfirm();                              // 与删除确认互斥：同一时刻只显示一个内联控件
+  closeConfirm(false);                         // 与删除确认互斥：同一时刻只显示一个内联控件（互斥清理不归还焦点）
+  nameOpener = document.activeElement;
   pendingSave = Object.assign({ kind }, payload);
   elName.value = ""; elName.placeholder = placeholder;
   elName.style.display = ""; elName.focus();
 }
-function cancelName() { pendingSave = null; elName.value = ""; elName.style.display = "none"; }
+function cancelName(restoreFocus) {
+  pendingSave = null; elName.value = ""; elName.style.display = "none";
+  if (restoreFocus && nameOpener) { try { nameOpener.focus(); } catch (e) {} }
+  nameOpener = null;
+}
 function commitName() {
   if (!pendingSave) return;
   const name = elName.value.trim();
@@ -20,31 +26,37 @@ function commitName() {
     chrome.storage.local.set({ amsTemplates: templates });
     renderTemplates();
   } else if (pendingSave.kind === "grp") {                  // 分组名必填
-    if (!name) { cancelName(); return; }
+    if (!name) { cancelName(true); return; }
     groups = [...groups.filter((g) => g.name !== name), { name, hosts: pendingSave.hosts }];
     chrome.storage.local.set({ amsGroups: groups });
     renderGroups();
   }
-  cancelName();
+  cancelName(true);
 }
 elName.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); commitName(); } // 输入法合成中不误存
-  else if (e.key === "Escape") { e.preventDefault(); cancelName(); }
+  else if (e.key === "Escape") { e.preventDefault(); cancelName(true); }
 });
-elName.addEventListener("blur", () => { if (pendingSave) cancelName(); }); // 失焦即取消
+elName.addEventListener("blur", () => { if (pendingSave) cancelName(false); }); // 失焦即取消（用户主动移开，不抢焦点）
 
 // —— 删除二次确认：细条内联确认条（替代会被裁切的 confirm()/浮层）——
 let pendingDelete = null; // {kind:"grp"|"tpl", index}
+let confirmOpener = null; // 触发删除确认的按钮：收尾归还焦点
 const elConfirm = document.getElementById("confirmbar");
 const elConfirmText = document.getElementById("confirmtext");
 function askDelete(kind, index, name) {
-  cancelName();                                // 与命名互斥：避免两个内联控件同现 + 提交同名分组致索引漂移删错
+  cancelName(false);                           // 与命名互斥：避免两个内联控件同现 + 提交同名分组致索引漂移删错
+  confirmOpener = document.activeElement;
   pendingDelete = { kind, index };
   elConfirmText.textContent = t(kind === "grp" ? "con_delGroup" : "con_delTpl", name);
   elConfirm.style.display = "";
   document.getElementById("confirm-no").focus(); // 默认落在「取消」，更安全
 }
-function closeConfirm() { pendingDelete = null; elConfirm.style.display = "none"; }
+function closeConfirm(restoreFocus) {
+  pendingDelete = null; elConfirm.style.display = "none";
+  if (restoreFocus !== false && confirmOpener) { try { confirmOpener.focus(); } catch (e) {} }
+  confirmOpener = null;
+}
 // 删除分组的流程副作用恢复：删除前必须先在下拉选中该组，而选中即 applyHosts 覆盖了当前勾选——
 // 无论删除还是取消，都把勾选还原到套用分组前的快照（selBeforeGroup 由 console.js 在 change 时记录）
 function restoreGroupSel() {
