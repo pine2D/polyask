@@ -28,8 +28,12 @@ function applyResults(results) {
   if (ignoreResults) return;
   (results || []).forEach((r) => {
     if (typeof r.ok === "boolean") {
-      // sendAll 提交结果；ok+code（如 tier_unconfirmed）= 绿点带警示 title
-      setDot(r.host, r.ok ? "done" : "fail", r.ok ? (ERR_KEYS[r.code] ? t(ERR_KEYS[r.code]) : "") : errText(r));
+      // sendAll 提交结果；ok+code（如 tier_unconfirmed）= 绿点带警示 title。
+      // 耗时（ms）与自动重试标记拼进提示：直接服务"对比各家响应速度"的核心场景
+      const parts = [r.ok ? (ERR_KEYS[r.code] ? t(ERR_KEYS[r.code]) : "") : errText(r)];
+      if (r.retried) parts.push(t("con_autoRetried"));
+      if (r.ms != null) parts.push((r.ms / 1000).toFixed(1) + "s");
+      setDot(r.host, r.ok ? "done" : "fail", parts.filter(Boolean).join(" · "));
     } else {
       // openTile 结果用「open」态（空心绿圈）：与「已回答」的实心绿勾区分，平铺后满屏绿勾曾被误读为已回复
       const okWin = r.windowId != null;
@@ -58,23 +62,55 @@ function flashNote(text) {
   noteUntil = Date.now() + 3000;
   setTimeout(() => { noteUntil = 0; updateFailSum(); }, 3000);
 }
-// 汇总复制：所选站点的最新回答拼 Markdown 写剪贴板（各站标注当时档位；未适配/未获取的站如实标出）
-function copySummary(sites, results) {
+// 汇总拼装（复制与导出共用）：各站标注当时档位；未适配/未获取的站如实标出。
+// miss = 无回答的站数：提示里如实标注，别让用户把错误占位贴给别人而不自知。
+function buildSummary(sites, results) {
   const byHost = {}; results.forEach((r) => { byHost[r.host] = r; });
   const q = (lastSend && lastSend.text) || document.getElementById("prompt").value.trim();
   const md = ["# " + t("con_mdHeader") + " · " + new Date().toLocaleString()];
   if (q) md.push("\n**" + t("con_mdQuestion") + "**: " + q);
-  let miss = 0; // 无回答的站数：提示里如实标注，别让用户把错误占位贴给别人而不自知
+  let miss = 0;
   for (const s of sites) {
     const r = byHost[s.host] || { code: "not_ready" };
     if (!r.text) miss++;
     const tier = r.state === "think" ? " · " + t("con_mdThink") : r.state === "fast" ? " · " + t("con_mdFast") : "";
     md.push("\n## " + s.label + tier + "\n", r.text ? r.text : "> " + errText(r));
   }
-  navigator.clipboard.writeText(md.join("\n")).then(
+  return { md: md.join("\n"), miss, q };
+}
+// 归档快照（amsArchive ≤30 条）：用户点汇总/导出的时刻就是"对比现场定格"的时刻，顺带归档——
+// "上次这个问题各家怎么答"从此可回看（console/archive.html）。与首条同问题的现场重复时替换不追加。
+function archiveSummary(sites, results, q) {
+  const byHost = {}; results.forEach((r) => { byHost[r.host] = r; });
+  const entry = {
+    ts: Date.now(), text: q || "",
+    results: sites.map((s) => { const r = byHost[s.host] || {}; return { host: s.host, label: s.label, text: r.text || null, state: r.state || null, code: r.code || null }; }),
+  };
+  chrome.storage.local.get("amsArchive", (o) => {
+    let arr = (o && o.amsArchive) || [];
+    if (arr[0] && arr[0].text === entry.text && arr[0].results.length === entry.results.length) arr = arr.slice(1);
+    chrome.storage.local.set({ amsArchive: [entry, ...arr].slice(0, 30) });
+  });
+}
+function copySummary(sites, results) {
+  const { md, miss, q } = buildSummary(sites, results);
+  archiveSummary(sites, results, q);
+  navigator.clipboard.writeText(md).then(
     () => flashNote(miss ? t("con_collectDonePart", sites.length, miss) : t("con_collectDone", sites.length)),
     () => flashNote(t("con_collectFail"))
   );
+}
+// 导出 .md 文件：不需要 downloads 权限（createObjectURL + a[download] 走浏览器默认下载）
+function downloadSummary(sites, results) {
+  const { md, miss, q } = buildSummary(sites, results);
+  archiveSummary(sites, results, q);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown" }));
+  const d = new Date(), p = (n) => String(n).padStart(2, "0"); // 本地时间命名（toISOString 是 UTC，会差出时区）
+  a.download = "polyask-" + d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + ".md";
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  flashNote(miss ? t("con_collectDonePart", sites.length, miss) : t("con_exportDone", sites.length));
 }
 // 全部结果回齐后在细条内联显示失败汇总（薄弹窗限制下不用浮层），并经 aria-live 播报给读屏
 function updateFailSum() {
@@ -94,7 +130,8 @@ function updateFailSum() {
   document.getElementById("live").textContent = el.textContent;
 }
 // 芯片状态的客户端兜底：回调/推送断掉（SW 被杀、扩展重载）时圆点会永久卡"发送中"，
-// 到点仍是 send 态就地翻超时失败（bg 22s 超时必推结果，故正常路径下 26s 兜底不会触发）
+// 到点仍是 send 态就地翻超时失败。默认 50s：bg 超时 22s×2（timeout 自动重试一轮）必推结果，
+// 正常路径下兜底不会触发。
 function armDotTimeouts(hosts, ms) {
   hosts.forEach((h) => setTimeout(() => {
     const chip = document.querySelector('.chip[data-host="' + h + '"]');
@@ -102,7 +139,7 @@ function armDotTimeouts(hosts, ms) {
     setDot(h, "fail", t("con_errTimeout"));
     if (progress.total && progress.done < progress.total) { progress.done++; updateSendLabel(); }
     updateRetry(); updateFailSum();
-  }, ms || 26000));
+  }, ms || 50000));
 }
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.from !== "AMS_BG") return;

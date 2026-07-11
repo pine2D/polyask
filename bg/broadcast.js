@@ -114,7 +114,12 @@ function pushSiteResult(res) { pushBroadcast({ type: "siteResult", result: res }
 // 任一出口都先 pushSiteResult 让该站圆点立刻变色，再返回参与 Promise.all 汇总。
 async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
   const t0 = Date.now();
-  const done = (ok, code, reason) => { const res = { host: s.host, ok, code, reason }; pushSiteResult(res); return res; };
+  let retried = false; // timeout 自动追加一轮：慢加载站首开常超 22s（真机实证 Kimi），多为假性超时
+  const done = (ok, code, reason) => {
+    const res = { host: s.host, ok, code, reason, ms: Date.now() - t0 }; // ms：逐站耗时，console 拼进 title 服务速度对比
+    if (retried) res.retried = true;
+    pushSiteResult(res); return res;
+  };
   const wins = await getWindows(); // openTile 已在 Promise.all 前定稿登记表，轮询期不变，读一次即可
   for (;;) {
     const tabs = await tabsForHost(s.host, wins);
@@ -127,7 +132,10 @@ async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
         }
       } catch (e) { /* content 未注入，页面还在加载 → 继续等 */ }
     }
-    if (Date.now() - t0 > timeoutMs) return done(false, "timeout");
+    if (Date.now() - t0 > timeoutMs) {
+      if (retried) return done(false, "timeout");
+      retried = true; timeoutMs *= 2; // 只在原窗口内继续轮询，从未成功提交过 → 无重复提交风险
+    }
     await new Promise((res) => setTimeout(res, gap));
   }
 }

@@ -36,12 +36,15 @@
     <span id="failsum" style="display:none"></span>
     <button id="tile" data-i18n="con_tile" data-i18n-title="con_tileTitle" title="只开窗与重排布局，不发送">平铺</button>
     <button id="collect" class="icon" data-i18n-title="con_collectTitle" data-i18n-aria="con_collectTitle" title="汇总复制：把所选站点的最新回答拼成 Markdown 复制" aria-label="汇总复制回答"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="5.5" width="8" height="8" rx="1.5"/><path d="M10.5 3.5v-1h-8v8h1"/></svg></button>
+    <button id="export" class="icon" data-i18n-title="con_exportTitle" data-i18n-aria="con_exportTitle" title="汇总导出：保存为 .md 文件" aria-label="汇总导出文件"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2.5v8M4.5 7L8 10.5 11.5 7M3 13.5h10"/></svg></button>
+    <button id="archive" class="icon" data-i18n-title="con_archiveTitle" data-i18n-aria="con_archiveTitle" title="查看历史归档（问题+各站回答）" aria-label="查看历史归档"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="12" height="3.5" rx="1"/><path d="M3.5 6.5v6a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-6M6.5 9.5h3"/></svg></button>
     <button id="checkup" class="icon" data-i18n-title="con_checkupTitle" data-i18n-aria="con_checkupTitle" title="巡检所选站点适配是否失效（只读诊断）" aria-label="巡检站点"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8h3l2-4.5 3 9 2-4.5h3"/></svg></button>
     <button id="newsession" class="icon" data-i18n-title="con_newSessionTitle" data-i18n-aria="con_newSessionTitle" title="全部新会话（各窗重载到新会话）" aria-label="全部新会话"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M8 3.5v9M3.5 8h9"/></svg></button>
     <button id="closeall" class="icon" data-i18n-title="con_closeAllTitle" data-i18n-aria="con_closeAllTitle" title="关闭控制台开启的全部窗口" aria-label="关闭全部"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>
   </div>
   <span id="live" class="sr" aria-live="polite"></span>
   <script src="sites.js"></script>
+  <script src="library.js"></script>
   <script src="console.js"></script>
   <script src="status.js"></script>
   <script src="manage.js"></script>
