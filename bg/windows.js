@@ -120,7 +120,14 @@ async function _openConsole() {
 // 伴侣窗：控制面（同 console），绝不进 amsWindows、不被平铺/closeAll/联动触碰。
 // anchor（可选）= console 输入框的视口内 {left,width}：据此把伴侣窗贴 console 底边、与输入框等宽，
 // 制造「输入框向下展开」的错觉。取不到 console 几何则回退居中。
+// in-flight 去重同 openConsole：背靠背两条 openCompose 消息会双开伴侣窗并孤儿化前一个。
+let _openingCompose = null;
 async function openCompose(anchor) {
+  if (_openingCompose) return _openingCompose;
+  _openingCompose = _openCompose(anchor).finally(() => { _openingCompose = null; });
+  return _openingCompose;
+}
+async function _openCompose(anchor) {
   const cid = await getComposeWinId();
   // 仅当确是伴侣 popup 才聚焦并返回；陈旧 id / 撞上日常窗口 → 不碰它、继续往下新建
   if (cid != null && await updateIfPopup(cid, { focused: true, state: "normal" })) return;
@@ -155,22 +162,18 @@ async function raiseConsole() {
   if (cid != null) await updateIfPopup(cid, { focused: true });
 }
 
-// 受管平铺窗 id 列表（经 popup-only 解析，绝不含日常窗口）
+// 受管平铺窗 id 列表（经 popup-only 解析，绝不含日常窗口）。并行解析：逐 host 串行 await
+// 是 9+ 次 windows.get 往返，联动抬窗/最小化的到位速度直接受其拖累。
 async function managedTileIds() {
   const wins = await getWindows();
-  const ids = [];
-  for (const host of Object.keys(wins)) { const id = await popupWindowForHost(host, wins); if (id != null) ids.push(id); }
-  return ids;
+  const ids = await Promise.all(Object.keys(wins).map((host) => popupWindowForHost(host, wins)));
+  return ids.filter((id) => id != null);
 }
 
 async function windowIdsForSites(sites) {
   const wins = await getWindows();
-  const ids = [];
-  for (const s of sites) {
-    const id = await popupWindowForHost(s.host, wins);
-    if (id != null) ids.push(id);
-  }
-  return ids;
+  const ids = await Promise.all(sites.map((s) => popupWindowForHost(s.host, wins)));
+  return ids.filter((id) => id != null);
 }
 
 // 发送后自动置顶选中站点（sendAll 用）：逐个恢复+抬前（OS 限制：只能一个持焦，平铺不重叠故视觉全前置）

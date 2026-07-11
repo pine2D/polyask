@@ -143,22 +143,20 @@ function save() {
   if (typeof syncGroupSelect === "function") syncGroupSelect();
 }
 function load() {
-  chrome.storage.local.get("amsConsole", (o) => {
+  // 四个 key 单次 get：冷启动少一轮 storage IPC 往返
+  chrome.storage.local.get(["amsConsole", "amsHistory", "amsTemplates", "amsGroups"], (o) => {
     const c = (o && o.amsConsole) || {};
     selected = c.selected || {};
     if (!Object.keys(selected).length) SITES.forEach((s) => { selected[s.host] = !!s.on; });
     if (c.tier) elTier.value = c.tier;
     if (c.prompt) elPrompt.value = c.prompt;
-    // Task 4: 加载历史
-    chrome.storage.local.get("amsHistory", (h) => { history = (h && h.amsHistory) || []; });
+    history = (o && o.amsHistory) || []; // Task 4: 历史
     render();
-    // Task 6: 加载模板
-    chrome.storage.local.get("amsTemplates", (t) => {
-      const raw = (t && t.amsTemplates) || [];
-      templates = raw.map((x) => (typeof x === "string" ? { name: "", text: x } : x)); // 旧 string[] 迁移
-      renderTemplates();
-    });
-    chrome.storage.local.get("amsGroups", (g) => { groups = (g && g.amsGroups) || []; renderGroups(); });
+    const raw = (o && o.amsTemplates) || []; // Task 6: 模板
+    templates = raw.map((x) => (typeof x === "string" ? { name: "", text: x } : x)); // 旧 string[] 迁移
+    renderTemplates();
+    groups = (o && o.amsGroups) || [];
+    renderGroups();
   });
 }
 document.getElementById("tile").addEventListener("click", () => {

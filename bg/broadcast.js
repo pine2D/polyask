@@ -70,7 +70,13 @@ async function sendAll(sites, text, tier, tile = true) {
   if (tile && anyMissing) await openTile(sites, false); // 隐式开窗不 prune/不重排；retry 传 tile=false 连开窗也免
   // 进度起点（console/compose 发起都统一）；带 text/tier 让 console 重建 lastSend（compose 发起的失败也能一键重试）
   pushBroadcast({ type: "sendStart", hosts: sites.map((s) => s.host), text, tier });
-  const results = await Promise.all(sites.map((s) => submitWhenReady(s, text, tier)));
+  const wins2 = tile ? null : await getWindows(); // retry(tile=false) 有意不开窗：缺窗站立即报 no_window，不空转 22s 假 timeout
+  const results = await Promise.all(sites.map(async (s) => {
+    if (wins2 && (await popupWindowForHost(s.host, wins2)) == null) {
+      const res = { host: s.host, ok: false, code: "no_window" }; pushSiteResult(res); return res;
+    }
+    return submitWhenReady(s, text, tier);
+  }));
   if (await getAutoRaise()) await focusAll(sites); // 发送后自动置顶全部平铺窗
   await raiseConsole();
   return results;
@@ -82,8 +88,10 @@ function getSessions() {
 }
 // 发送成功后延迟记录该 tab 的会话 URL。ponytail: 固定 3s 等站点把 URL 落到会话地址（多数站首条
 // 消息后才改 path；SW 空闲期 ≥30s，定时器必然赶在休眠前触发）；落晚了下次发送会再记，无累积错。
+// 读改写进 serializeOp 串行链：多站定时器并发各读旧表整体覆写会互相丢更新；且用户发送后 3s 内点
+// 「全部新会话」时，链外写会把 newSessionAll 刚删的 host 复活（重启后恢复本该丢弃的旧对话）。
 function rememberSession(host, tabId) {
-  setTimeout(async () => {
+  setTimeout(() => serializeOp(async () => {
     try {
       const tab = await chrome.tabs.get(tabId);
       if (!tab.url || !new URL(tab.url).hostname.includes(host.replace(/^www\./, ""))) return;
@@ -91,7 +99,7 @@ function rememberSession(host, tabId) {
       sess[host] = tab.url;
       await chrome.storage.local.set({ amsSessions: sess });
     } catch (e) {}
-  }, 3000);
+  }), 3000);
 }
 
 // 单站结果即时推给控制台（逐站实时回填，无需等全部完成）；无接收方时静默吞错。
@@ -126,34 +134,32 @@ async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
 
 // 全站健康巡检：对每个选中站点的受管 tab 发只读 diagnose（零副作用），逐站汇总失败项。
 // 无窗/未注入也如实上报——适配器失效不再要用户逐站打开 popup 手动诊断。
+// 并行逐站（Promise.all 保序）：串行时一站挂起（如水合中的重站）会拖住整批结果。
 async function checkupAll(sites) {
   const wins = await getWindows();
-  const out = [];
-  for (const s of sites) {
+  return Promise.all(sites.map(async (s) => {
     const tabs = await tabsForHost(s.host, wins);
-    if (!tabs.length) { out.push({ host: s.host, ok: false, code: "no_window" }); continue; }
+    if (!tabs.length) return { host: s.host, ok: false, code: "no_window" };
     try {
       const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "diagnose" });
       const bad = ((r && r.checks) || []).filter((c) => !c.ok).map((c) => c.name);
-      out.push(bad.length ? { host: s.host, ok: false, reason: bad.join(" / ") } : { host: s.host, ok: true, code: "checkup_ok" });
-    } catch (e) { out.push({ host: s.host, ok: false, code: "not_ready" }); }
-  }
-  return out;
+      return bad.length ? { host: s.host, ok: false, reason: bad.join(" / ") } : { host: s.host, ok: true, code: "checkup_ok" };
+    } catch (e) { return { host: s.host, ok: false, code: "not_ready" }; }
+  }));
 }
 
-// 汇总收集：逐站取最后一条 AI 回答的只读快照（不等流式完成——以点击时刻为准，ponytail 有意取舍）
+// 汇总收集：逐站取最后一条 AI 回答的只读快照（不等流式完成——以点击时刻为准，ponytail 有意取舍）；
+// 并行同 checkupAll，汇总耗时从各站之和降为最慢单站。
 async function collectAll(sites) {
   const wins = await getWindows();
-  const out = [];
-  for (const s of sites) {
+  return Promise.all(sites.map(async (s) => {
     const tabs = await tabsForHost(s.host, wins);
-    if (!tabs.length) { out.push({ host: s.host, code: "no_window" }); continue; }
+    if (!tabs.length) return { host: s.host, code: "no_window" };
     try {
       const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "collectAnswer" });
-      out.push(r && r.text ? { host: s.host, text: r.text, state: r.state } : { host: s.host, code: "no_answer" });
-    } catch (e) { out.push({ host: s.host, code: "not_ready" }); }
-  }
-  return out;
+      return r && r.text ? { host: s.host, text: r.text, state: r.state } : { host: s.host, code: "no_answer" };
+    } catch (e) { return { host: s.host, code: "not_ready" }; }
+  }));
 }
 
 // tab 是否已停在该站"新会话入口"（origin+pathname 一致，忽略 query/hash 与尾斜杠）。
