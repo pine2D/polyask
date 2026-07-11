@@ -99,8 +99,11 @@ function buildKeys() {
 buildKeys();
 document.addEventListener("i18n:changed", buildKeys);
 
-document.getElementById("open-console").addEventListener("click", () => {
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openConsole" });
+document.getElementById("open-console").addEventListener("click", async () => {
+  // 带上当前站 host：console 首次使用（无勾选历史）时预勾该站，打通"正看着这个站想群发"的路径
+  let host = null;
+  try { const tab = await activeTab(); host = tab && tab.url ? new URL(tab.url).hostname : null; } catch (e) {}
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openConsole", host });
   window.close();
 });
 

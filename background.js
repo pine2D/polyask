@@ -50,25 +50,24 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
-// console 关闭 → 关闭 owned 平铺窗口（不动收编的用户窗口）
+// console 关闭 → 关闭 owned 平铺窗口（不动收编的用户窗口）；伴侣窗关闭 → 仅清自身登记。
+// 单监听器承两职：每次任意窗口关闭少跑一次监听器与 storage 读。
 chrome.windows.onRemoved.addListener(async (winId) => {
   const cid = await getConsoleWinId();
   if (cid != null && winId === cid) {
     consoleWinId = null;
     await chrome.storage.local.remove("amsConsoleWin");
     await serializeOp(closeAll); // 进串行链：与在途 openTile/sendAll 的读-改-写 amsWindows 互斥
+    return;
   }
+  const cmp = await getComposeWinId();
+  if (cmp != null && winId === cmp) { composeWinId = null; await chrome.storage.local.remove("amsComposeWin"); }
 });
 // console 前后台/最小化联动改由 console 页面自身的可靠 DOM 事件驱动（见 console/console.js：window
 // focus → consoleFocused 抬整组；document visibilitychange hidden → consoleHidden 联动最小化）。弃用
 // chrome.windows.onFocusChanged：实测 Windows 上它对「点 console 抬窗 / 最小化 console」常不派发、也
 // 不唤醒休眠的 SW，且在 minimizeAllManaged 期间乱发焦点事件，造成「最小化后又自动复原」的竞态。
 
-// 伴侣窗关闭 → 仅清自身登记（绝不触发 closeAll）
-chrome.windows.onRemoved.addListener(async (winId) => {
-  const cmp = await getComposeWinId();
-  if (cmp != null && winId === cmp) { composeWinId = null; await chrome.storage.local.remove("amsComposeWin"); }
-});
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (!msg || msg.source !== "AMS_CONSOLE") return;
@@ -90,12 +89,17 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     })();
     return;
   }
-  if (msg.action === "openConsole") { openConsole(); return; }
+  if (msg.action === "openConsole") {
+    // popup 发起时带当前站 host：console 首次使用（无勾选历史）预勾该站，打通"正看着这个站想群发"的路径
+    if (msg.host) chrome.storage.local.set({ amsConsolePrefill: msg.host });
+    openConsole(); return;
+  }
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
   if (msg.action === "openTile") { serializeOp(() => openTile(msg.sites || [])).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "sendAll") { serializeOp(() => sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false)).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "checkup") { checkupAll(msg.sites || []).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; } // 只读诊断，不动登记表，无需串行链
   if (msg.action === "collect") { collectAll(msg.sites || []).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; } // 只读收集回答，同上
-  if (msg.action === "closeAll") { serializeOp(closeAll); return; }
-  if (msg.action === "newSession") { serializeOp(() => newSessionAll(msg.sites || [])); return; }
+  // 回应完成时刻：console 据此解除按钮忙碌态（操作可能在串行链里排队最长 ~22s，无反馈像卡死）
+  if (msg.action === "closeAll") { serializeOp(closeAll).then(() => sendResponse({}), () => sendResponse({})); return true; }
+  if (msg.action === "newSession") { serializeOp(() => newSessionAll(msg.sites || [])).then(() => sendResponse({}), () => sendResponse({})); return true; }
 });

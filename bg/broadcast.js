@@ -21,7 +21,7 @@ async function openTile(sites, prune = true) {
   const wins = await getWindows();
   // 会话记忆只用于「跨重启恢复对比现场」：仅重启后的首次开窗（amsRestorePending）续上旧会话，
   // 常规新开窗口一律走空白新会话入口——否则每个新窗都续旧对话，违背"新窗=新对话"的直觉。
-  const restore = await new Promise((r) => chrome.storage.local.get("amsRestorePending", (o) => r(!!(o && o.amsRestorePending))));
+  const restore = await new Promise((r) => chrome.storage.local.get("amsRestorePending", (o) => { void chrome.runtime.lastError; r(!!(o && o.amsRestorePending)); }));
   const sessions = restore ? await getSessions() : {};
   const selectedHosts = sites.map((s) => s.host);
   // 1) 处理已取消勾选（仅显式平铺）：owned 的真正关闭，复用的仅解除登记（用户窗口不动）
@@ -84,7 +84,7 @@ async function sendAll(sites, text, tier, tile = true) {
 
 // —— 会话记忆（amsSessions: host→url，独立于随重启清空的 amsWindows，跨 Chrome 重启续上对比现场）——
 function getSessions() {
-  return new Promise((r) => chrome.storage.local.get("amsSessions", (o) => r((o && o.amsSessions) || {})));
+  return new Promise((r) => chrome.storage.local.get("amsSessions", (o) => { void chrome.runtime.lastError; r((o && o.amsSessions) || {}); }));
 }
 // 发送成功后延迟记录该 tab 的会话 URL。ponytail: 固定 3s 等站点把 URL 落到会话地址（多数站首条
 // 消息后才改 path；SW 空闲期 ≥30s，定时器必然赶在休眠前触发）；落晚了下次发送会再记，无累积错。

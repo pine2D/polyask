@@ -5,10 +5,10 @@ const STRIP_H = 96;
 // （closeAll 可自动关）；owned=false 为复用的用户窗口（不擅自关）。后续所有按 host
 // 的操作都认这里登记的 windowId，不再裸查 tabs——否则会误抓用户事后在主窗口开的同站标签。
 function getWindows() {
-  return new Promise((res) => chrome.storage.local.get("amsWindows", (o) => res((o && o.amsWindows) || {})));
+  return new Promise((res) => chrome.storage.local.get("amsWindows", (o) => { void chrome.runtime.lastError; res((o && o.amsWindows) || {}); }));
 }
 function setWindows(map) {
-  return new Promise((res) => chrome.storage.local.set({ amsWindows: map }, () => res()));
+  return new Promise((res) => chrome.storage.local.set({ amsWindows: map }, () => { void chrome.runtime.lastError; res(); }));
 }
 // 解析某 host 的「PolyAsk 受管 popup 窗口」。铁律：只返回 type:"popup"，绝不返回用户
 // 日常浏览窗口(type:"normal")。①登记窗口若仍在且是 popup → 用它；②否则全局找一个含该
@@ -87,13 +87,13 @@ async function consoleReserveHeight(wa) {
 
 async function getConsoleWinId() {
   if (consoleWinId != null) return consoleWinId;
-  const o = await new Promise((r) => chrome.storage.local.get("amsConsoleWin", r));
+  const o = await new Promise((r) => chrome.storage.local.get("amsConsoleWin", (v) => { void chrome.runtime.lastError; r(v); }));
   consoleWinId = (o && o.amsConsoleWin) != null ? o.amsConsoleWin : null;
   return consoleWinId;
 }
 async function getComposeWinId() {
   if (composeWinId != null) return composeWinId;
-  const o = await new Promise((r) => chrome.storage.local.get("amsComposeWin", r));
+  const o = await new Promise((r) => chrome.storage.local.get("amsComposeWin", (v) => { void chrome.runtime.lastError; r(v); }));
   composeWinId = (o && o.amsComposeWin) != null ? o.amsComposeWin : null;
   return composeWinId;
 }
@@ -203,7 +203,7 @@ async function raiseWorkspace() {
 }
 
 async function getAutoRaise() {
-  const o = await new Promise((r) => chrome.storage.local.get({ amsAutoRaise: true }, r));
+  const o = await new Promise((r) => chrome.storage.local.get({ amsAutoRaise: true }, (v) => { void chrome.runtime.lastError; r(v); }));
   return o.amsAutoRaise !== false;
 }
 // 关闭全部：仅关闭控制台新建（owned）的窗口（复用/用户窗口不动），并清空登记；伴侣窗一起关

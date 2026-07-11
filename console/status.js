@@ -1,13 +1,15 @@
 // console/status.js — 群发进度/结果状态：圆点状态机、错误码翻译、失败汇总、无障碍播报。
 // 在 console.js 之后加载，共享其全局（SITES/t/save 等）；progress/lastSend 声明于此，console.js 的事件处理器读写。
 
-// 状态写到芯片：idle 清空 send/done/fail；title 拼「站名 · 原因」（悬停提示）
+// 状态写到芯片：idle 清空 send/open/done/fail；title 拼「站名 · 原因」（悬停提示）。
+// aria-label 同步状态：title 对读屏/触屏不可靠，可访问名须自带状态信息。
 function setDot(host, state, reason) {
   const chip = document.querySelector('.chip[data-host="' + host + '"]');
   if (!chip) return;
-  chip.classList.remove("send", "done", "fail");
+  chip.classList.remove("send", "open", "done", "fail");
   if (state && state !== "idle") chip.classList.add(state);
   chip.title = reason ? chip.dataset.label + " · " + reason : chip.dataset.label + " · " + t("con_chipHint");
+  chip.setAttribute("aria-label", reason ? chip.dataset.label + " · " + reason : chip.dataset.label);
 }
 
 // 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
@@ -29,8 +31,9 @@ function applyResults(results) {
       // sendAll 提交结果；ok+code（如 tier_unconfirmed）= 绿点带警示 title
       setDot(r.host, r.ok ? "done" : "fail", r.ok ? (ERR_KEYS[r.code] ? t(ERR_KEYS[r.code]) : "") : errText(r));
     } else {
-      const okWin = r.windowId != null;                                 // openTile 结果
-      setDot(r.host, okWin ? "done" : "fail", r.reused ? t("con_reused") : r.opened ? t("con_opened") : t("con_failed"));
+      // openTile 结果用「open」态（空心绿圈）：与「已回答」的实心绿勾区分，平铺后满屏绿勾曾被误读为已回复
+      const okWin = r.windowId != null;
+      setDot(r.host, okWin ? "open" : "fail", r.reused ? t("con_reused") : r.opened ? t("con_opened") : t("con_failed"));
     }
   });
 }
@@ -61,13 +64,15 @@ function copySummary(sites, results) {
   const q = (lastSend && lastSend.text) || document.getElementById("prompt").value.trim();
   const md = ["# " + t("con_mdHeader") + " · " + new Date().toLocaleString()];
   if (q) md.push("\n**" + t("con_mdQuestion") + "**: " + q);
+  let miss = 0; // 无回答的站数：提示里如实标注，别让用户把错误占位贴给别人而不自知
   for (const s of sites) {
     const r = byHost[s.host] || { code: "not_ready" };
+    if (!r.text) miss++;
     const tier = r.state === "think" ? " · " + t("con_mdThink") : r.state === "fast" ? " · " + t("con_mdFast") : "";
     md.push("\n## " + s.label + tier + "\n", r.text ? r.text : "> " + errText(r));
   }
   navigator.clipboard.writeText(md.join("\n")).then(
-    () => flashNote(t("con_collectDone", sites.length)),
+    () => flashNote(miss ? t("con_collectDonePart", sites.length, miss) : t("con_collectDone", sites.length)),
     () => flashNote(t("con_collectFail"))
   );
 }

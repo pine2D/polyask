@@ -12,7 +12,30 @@ function pushHistory(text) {
   history = [text, ...history.filter((h) => h !== text)].slice(0, 20);
   chrome.storage.local.set({ amsHistory: history });
   histCursor = -1;
+  renderHist();
 }
+
+// 历史下拉：↑↓ 仅键盘可达，给鼠标/触屏一个原生 select 入口（96px 细条下唯一安全的下拉形态）
+const elHist = document.getElementById("hist");
+function renderHist() {
+  elHist.replaceChildren();
+  const ph = document.createElement("option"); ph.value = ""; ph.textContent = t("con_histPh");
+  elHist.appendChild(ph);
+  history.forEach((h, i) => {
+    const o = document.createElement("option");
+    o.value = String(i);
+    o.textContent = h.length > 24 ? h.slice(0, 24) + "…" : h;
+    elHist.appendChild(o);
+  });
+}
+elHist.addEventListener("change", () => {
+  const i = parseInt(elHist.value, 10);
+  if (!isNaN(i) && history[i] != null) {
+    elPrompt.value = history[i]; histCursor = -1; elPrompt.title = "";
+    save(); elPrompt.focus();
+  }
+  elHist.value = ""; // 回填即成草稿，下拉拨回占位（与 ↑↓ 浏览语义一致，不驻留选中态）
+});
 
 // Task 6: 模板状态
 let templates = [];
@@ -30,9 +53,9 @@ function renderTemplates() {
 }
 
 function render() {
-  // 快照重建前的运行时状态（send/done/fail + 原因 title），重建后恢复——群发中改分组不再抹掉进度
+  // 快照重建前的运行时状态（send/open/done/fail + 原因 title），重建后恢复——群发中改分组不再抹掉进度
   const prev = {};
-  elSites.querySelectorAll(".chip").forEach((c) => { const st = ["send", "done", "fail"].find((x) => c.classList.contains(x)); if (st) prev[c.dataset.host] = { st, title: c.title }; });
+  elSites.querySelectorAll(".chip").forEach((c) => { const st = ["send", "open", "done", "fail"].find((x) => c.classList.contains(x)); if (st) prev[c.dataset.host] = { st, title: c.title }; });
   elSites.replaceChildren();
   SITES.forEach((s) => {
     const chip = document.createElement("button");
@@ -42,6 +65,7 @@ function render() {
     chip.dataset.label = s.label;
     chip.title = s.label + " · " + t("con_chipHint"); // 闲时教学、忙时报状态（setDot 会覆盖为原因）
     chip.setAttribute("aria-pressed", selected[s.host] ? "true" : "false");
+    chip.setAttribute("aria-label", s.label); // setDot 会随状态更新（读屏拿不到 title）
     const d = document.createElement("span"); d.className = "d";
     chip.append(d, document.createTextNode(s.label));
     const p = prev[s.host]; if (p) { chip.classList.add(p.st); chip.title = p.title; }
@@ -143,14 +167,22 @@ function save() {
   if (typeof syncGroupSelect === "function") syncGroupSelect();
 }
 function load() {
-  // 四个 key 单次 get：冷启动少一轮 storage IPC 往返
-  chrome.storage.local.get(["amsConsole", "amsHistory", "amsTemplates", "amsGroups"], (o) => {
+  // 五个 key 单次 get：冷启动少一轮 storage IPC 往返
+  chrome.storage.local.get(["amsConsole", "amsHistory", "amsTemplates", "amsGroups", "amsConsolePrefill"], (o) => {
     const c = (o && o.amsConsole) || {};
     selected = c.selected || {};
-    if (!Object.keys(selected).length) SITES.forEach((s) => { selected[s.host] = !!s.on; });
+    const pre = o && o.amsConsolePrefill; // popup「打开控制台」带来的当前站（一次性消费）
+    if (pre) chrome.storage.local.remove("amsConsolePrefill");
+    if (!Object.keys(selected).length) {
+      // 首次使用（无勾选历史）：从 popup 带站进来就只预勾该站，否则用默认勾选集
+      const hit = pre && SITES.find((s) => pre.includes(s.host.replace(/^www\./, "")) || s.host.includes(pre.replace(/^www\./, "")));
+      if (hit) selected[hit.host] = true;
+      else SITES.forEach((s) => { selected[s.host] = !!s.on; });
+    }
     if (c.tier) elTier.value = c.tier;
     if (c.prompt) elPrompt.value = c.prompt;
     history = (o && o.amsHistory) || []; // Task 4: 历史
+    renderHist();
     render();
     const raw = (o && o.amsTemplates) || []; // Task 6: 模板
     templates = raw.map((x) => (typeof x === "string" ? { name: "", text: x } : x)); // 旧 string[] 迁移
@@ -159,13 +191,21 @@ function load() {
     renderGroups();
   });
 }
-document.getElementById("tile").addEventListener("click", () => {
+// 排队操作忙碌态：openTile/closeAll/newSession/sendAll 在 bg 走 serializeOp 严格排队，群发中点这些
+// 按钮最长要等 ~22s 才真正执行——零反馈像卡死。禁用到回调返回，兜底定时器防回调丢失永久禁用。
+function busy(btn, ms) {
+  btn.disabled = true;
+  const timer = setTimeout(() => { btn.disabled = false; }, ms || 30000);
+  return () => { clearTimeout(timer); btn.disabled = false; };
+}
+document.getElementById("tile").addEventListener("click", (e) => {
   const sites = chosen(); if (!sites.length) return;
   ignoreResults = false; // 用户新动作：解除 closeAll 后的结果忽略态
+  const free = busy(e.currentTarget);
   // Task 7: 改用 state "send"
   sites.forEach((s) => setDot(s.host, "send", t("con_winOpening")));
   armDotTimeouts(sites.map((s) => s.host)); // 回调断掉时"开窗中"不永久挂起
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openTile", sites }, (resp) => applyResults(resp && resp.results));
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openTile", sites }, (resp) => { free(); applyResults(resp && resp.results); });
 });
 function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
 document.getElementById("send").addEventListener("click", () => {
@@ -192,13 +232,16 @@ document.getElementById("checkup").addEventListener("click", () => {
   armDotTimeouts(sites.map((s) => s.host));
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "checkup", sites }, (resp) => applyResults(resp && resp.results));
 });
-document.getElementById("newsession").addEventListener("click", () => {
-  const sites = chosen(); if (sites.length) chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "newSession", sites });
+document.getElementById("newsession").addEventListener("click", (e) => {
+  const sites = chosen(); if (!sites.length) return;
+  const free = busy(e.currentTarget);
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "newSession", sites }, () => { void chrome.runtime.lastError; free(); });
 });
-document.getElementById("closeall").addEventListener("click", () => {
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" });
+document.getElementById("closeall").addEventListener("click", (e) => {
+  const free = busy(e.currentTarget);
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" }, () => { void chrome.runtime.lastError; free(); });
   ignoreResults = true; // 在途群发的迟到结果不得复活刚清空的芯片（下一次 sendStart/tile/checkup 解除）
-  [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "done", "fail"); c.title = c.dataset.label + " · " + t("con_chipHint"); });
+  [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "open", "done", "fail"); c.title = c.dataset.label + " · " + t("con_chipHint"); c.setAttribute("aria-label", c.dataset.label); });
   progress = { total: 0, done: 0 }; updateSendLabel(); lastSend = null; updateRetry(); updateFailSum();
 });
 elTier.addEventListener("change", save);
@@ -255,19 +298,20 @@ document.getElementById("compose").addEventListener("click", () => {
   const r = elPrompt.getBoundingClientRect();
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openCompose", anchor: { left: r.left, width: r.width } });
 });
-document.getElementById("retry").addEventListener("click", () => {
+document.getElementById("retry").addEventListener("click", (e) => {
   if (!lastSend) return;
   const sel = new Set(chosen().map((s) => s.host));   // 只重发"仍勾选且失败"的站
   const failHosts = [...document.querySelectorAll(".chip.fail")].map((c) => c.dataset.host).filter((h) => sel.has(h));
   const sites = SITES.filter((s) => failHosts.includes(s.host));
   if (!sites.length) return;
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text: lastSend.text, tier: lastSend.tier, tile: false }, (resp) => applyResults(resp && resp.results));
+  const free = busy(e.currentTarget);
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text: lastSend.text, tier: lastSend.tier, tile: false }, (resp) => { free(); applyResults(resp && resp.results); });
 });
 
 // 伴侣窗编辑 → 经 storage 回填细条输入框（本框未编辑时才更新，防回环）
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local") return;
-  if (ch.amsHistory) history = ch.amsHistory.newValue || [];
+  if (ch.amsHistory) { history = ch.amsHistory.newValue || []; renderHist(); }
   if (!ch.amsConsole) return;
   const p = (ch.amsConsole.newValue || {}).prompt;
   // "编辑中"须同时窗口持焦：窗口失焦后 activeElement 不重置，单看它会永久挡住回填
@@ -275,7 +319,7 @@ chrome.storage.onChanged.addListener((ch, area) => {
 });
 
 load();
-document.addEventListener("i18n:changed", () => { renderGroups(); renderTemplates(); updateSendLabel(); });
+document.addEventListener("i18n:changed", () => { renderGroups(); renderTemplates(); renderHist(); updateSendLabel(); });
 applyI18n();
 
 // 可靠抬窗触发：chrome.windows.onFocusChanged 在部分 Windows 环境下不触发、也不唤醒休眠的 SW（实测
