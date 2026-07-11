@@ -14,20 +14,42 @@
     return cs.display === "none" || cs.visibility === "hidden";
   };
   let pendingLang = ""; // 代码块语言名放在 pre 外部头部条的站点（如 DeepSeek）：前瞻吸收进围栏
+  // 下一个"有实质内容"的兄弟是代码块？跳过纯空文本兄弟（Claude 的 opacity-0 复制按钮容器
+  // drop() 剔不掉但 innerText 为空）；PRE 常被再包一层透明 DIV（Claude overflow-x-auto /
+  // Kimi syntax-highlighter），故含 PRE 的 DIV 也算命中。真机取证 2026-07-11。
+  function preAhead(x) {
+    let s = x.nextElementSibling;
+    while (s && s.tagName.toUpperCase() !== "PRE" && !(s.innerText || "").trim()) s = s.nextElementSibling;
+    if (!s) return false;
+    const t = s.tagName.toUpperCase();
+    return t === "PRE" || (t === "DIV" && !!s.querySelector("pre"));
+  }
+  // 首个非空文本节点（头部条内常有纯空白文本节点垫在语言名前，真机实证：Kimi）
+  function firstTextNode(root) {
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let ft = w.nextNode();
+    while (ft && !ft.nodeValue.trim()) ft = w.nextNode();
+    return ft;
+  }
   function inline(node) {
     let out = "";
     for (const n of node.childNodes) {
-      if (n.nodeType === 3) { out += n.nodeValue.replace(/\s+/g, " "); continue; }
+      // 文本转义：成对的 * _ [ ] ` 会被下游渲染器解析成强调/链接（真机实证 a_i 与 b_j 同段即触发）
+      if (n.nodeType === 3) { out += n.nodeValue.replace(/\s+/g, " ").replace(/([\\`*_\[\]])/g, "\\$1"); continue; }
       if (n.nodeType !== 1 || drop(n)) continue;
       const tag = n.tagName.toUpperCase();
-      if (n.nextElementSibling && n.nextElementSibling.tagName.toUpperCase() === "PRE") {
-        const ft = document.createTreeWalker(n, NodeFilter.SHOW_TEXT).nextNode(); // 首个文本节点（绕开头部条里的按钮文本）
+      // 语义标签绝不吸收：ChatGPT 的 h3 直邻 pre（真机实证），旧逻辑会把「### Example」吞成语言名
+      if (!/^(H[1-6]|P|LI|UL|OL|TABLE|BLOCKQUOTE)$/.test(tag) && preAhead(n)) {
+        const ft = firstTextNode(n); // 首个非空文本节点（绕开头部条里的空白垫片与按钮文本）
         const t = ft ? ft.nodeValue.trim() : "";
         if (/^[A-Za-z0-9+#.-]{1,20}$/.test(t)) { pendingLang = t.toLowerCase(); continue; }
       }
       if (tag === "BR") { out += "\n"; continue; }
       if (tag === "IMG") continue;
-      if (tag === "CODE") { out += "`" + (n.textContent || "").trim() + "`"; continue; }
+      if (tag === "CODE") { // 内容自带反引号时用双反引号+空格包裹（CommonMark），防提前截断
+        const c = (n.textContent || "").trim();
+        out += c.includes("`") ? "`` " + c + " ``" : "`" + c + "`"; continue;
+      }
       if (tag === "A") {
         const href = n.getAttribute("href") || "";
         const t = inline(n).trim();
@@ -63,9 +85,16 @@
     if (tag === "P") { const t = inline(el).trim(); return t ? t + "\n\n" : ""; }
     if (tag === "PRE") { // 代码块：只取 code 本体（剔除站点加在 pre 头部的语言标签/复制按钮），语言进围栏
       const code = el.querySelector("code") || el;
-      const lang = ((code.className || "").toString().match(/language-([\w+-]+)/) || [])[1] || pendingLang;
+      let lang = ((code.className || "").toString().match(/language-([\w+-]+)/) || [])[1] || pendingLang;
+      if (!lang && code !== el) { // 语言头在 pre 内部且 code 无 class 的站点（真机实证：ChatGPT）
+        const ft = firstTextNode(el);
+        const t = ft && !code.contains(ft) ? ft.nodeValue.trim() : "";
+        if (/^[A-Za-z0-9+#.-]{1,20}$/.test(t)) lang = t.toLowerCase();
+      }
       pendingLang = "";
-      return "```" + lang + "\n" + (code.innerText || code.textContent || "").replace(/\n+$/, "") + "\n```\n\n";
+      const body = (code.innerText || code.textContent || "").replace(/\n+$/, "");
+      const fence = body.includes("```") ? "````" : "```"; // 代码本身含三连反引号时升级围栏
+      return fence + lang + "\n" + body + "\n" + fence + "\n\n";
     }
     if (tag === "UL") return list(el, false);
     if (tag === "OL") return list(el, true);
@@ -77,6 +106,6 @@
   S.toMarkdown = function (root) {
     if (!root) return "";
     pendingLang = "";
-    return block(root).replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+    return block(root).replace(/[ \t]+\n/g, "\n").replace(/^[ \t]+(`{3,})/gm, "$1").replace(/\n{3,}/g, "\n\n").trim();
   };
 })();

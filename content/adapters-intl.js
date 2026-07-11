@@ -85,10 +85,14 @@
         if (/opus\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
         return null;
       },
-      // 最后一条回答（真机审计锚点 2026-07：每条 AI 回答一个 .font-claude-response）
+      // 最后一条回答（真机审计锚点 2026-07：每条 AI 回答一个 .font-claude-response）。
+      // 思考折叠头与正文同在一个 grid（真机 2026-07-11：折叠头 .row-start-1 / 正文 .row-start-2），
+      // 取正文格，否则思考摘要文本会混入汇总复制；无思考时无该 grid，回退整块。
       answer: function () {
         const els = document.querySelectorAll(".font-claude-response");
-        return els.length ? els[els.length - 1] : null;
+        if (!els.length) return null;
+        const el = els[els.length - 1];
+        return el.querySelector(".row-start-2") || el;
       },
       think: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");

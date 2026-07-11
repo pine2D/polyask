@@ -48,12 +48,15 @@
         if (!b) return false;
         b.click();
       },
-      // 最后一条回答（真机审计锚点 2026-07：.chat-content-item-assistant，正文在 .markdown）
+      // 最后一条回答（真机审计锚点 2026-07：.chat-content-item-assistant，正文在 .markdown）。
+      // Thinking 档思考段也是 .markdown（祖先 .thinking-container，真机 2026-07-11），querySelector
+      // 会取到思考全文淹没正文——须过滤后取最后一个（同 DeepSeek/元宝的排除模式）。
       answer: function () {
         const els = document.querySelectorAll(".chat-content-item-assistant");
         if (!els.length) return null;
         const el = els[els.length - 1];
-        return el.querySelector(".markdown") || el;
+        const mds = [...el.querySelectorAll(".markdown")].filter((m) => !m.closest(".thinking-container"));
+        return mds[mds.length - 1] || el;
       },
     },
 

@@ -161,12 +161,15 @@
       },
       think: async function () { await this._selectModel(/Qwen3\.7-Max/i); await this._setThink(true); },
       fast: async function () { await this._selectModel(/Qwen3\.7-千问/); await this._setThink(false); },
-      // 最后一条回答（真机审计锚点 2026-07：.answer-common-card，正文在 .qk-markdown）
+      // 最后一条回答（真机审计锚点 2026-07：.answer-common-card，正文在 .qk-markdown）。
+      // 思考档思考段也是 .qk-markdown（祖先 thinkingContent-<hash>，CSS-module 后缀会变故用
+      // [class*=] 匹配，真机 2026-07-11），过滤后取最后一个，否则思考全文混入汇总。
       answer: function () {
         const cards = document.querySelectorAll(".answer-common-card");
         if (!cards.length) return null;
         const el = cards[cards.length - 1];
-        return el.querySelector(".qk-markdown") || el;
+        const mds = [...el.querySelectorAll(".qk-markdown")].filter((m) => !m.closest('[class*="thinkingContent"]'));
+        return mds[mds.length - 1] || el;
       },
     },
   });
