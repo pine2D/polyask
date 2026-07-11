@@ -37,9 +37,11 @@
         const trig = document.querySelector('[data-testid="effort-menu-trigger"]');
         if (trig) {
           if (!this._thinkSwitch() && !document.querySelector(optSel)) openMenu(trig);
-          // 1) Thinking 开关切到目标态
+          // 1) Thinking 开关切到目标态。effort 布局下开关与 effort 选项同层必在，缺失=结构
+          // 变化，静默跳过会让 runMode 报"已切换"假成功（独立访问场景无 state() 二道防线）
           const sw = await waitFor(() => this._thinkSwitch(), 1500);
-          if (sw && (sw.getAttribute("aria-checked") === "true") !== on) { clickEl(sw); await sleep(450); }
+          if (!sw) { escMenus(); throw new Error("Claude: Thinking 开关未找到"); }
+          if ((sw.getAttribute("aria-checked") === "true") !== on) { clickEl(sw); await sleep(450); }
           // 2) effort 档位切到目标级别
           if (!document.querySelector(optSel)) {
             const t2 = document.querySelector('[data-testid="effort-menu-trigger"]');
@@ -49,7 +51,8 @@
           if (opt) clickEl(opt);
           await sleep(300); escMenus(); return;
         }
-        // 回退：无 effort 入口的旧布局，仅切裸开关
+        // 回退：无 effort 入口的旧布局（窄屏 Adaptive 开关），仅切裸开关；开关也缺失时保持
+        // 静默——fast() 依赖"无思考控件自然降级为纯选模型"的语义（见 fast() 注释），不误伤
         const sw = this._thinkSwitch();
         if (sw) { if ((sw.getAttribute("aria-checked") === "true") !== on) clickEl(sw); await sleep(300); }
         escMenus();

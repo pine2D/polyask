@@ -128,10 +128,15 @@
     }
     // 通用提交：优先原生点击发送按钮（最稳，国产站拒合成事件，且避免对受控编辑器发 Enter 产生多余换行）；
     // !disabled 防误触（空输入时按钮多为禁用）。无可用按钮再退回合成 Enter（适配靠 Enter 提交的 textarea）。
+    // 按钮路径同样过 confirmSubmitted（与 adapter.submit/Enter 两路径对齐）：流式中发送键被站点
+    // 复用为"停止"且标签不变时，点击不发新问而截断上一条——校验让它诚实报失败可 retry，而非假成功。
     const sendBtn = () => document.querySelector('button[data-testid*="send" i], button[aria-label*="send" i], button[aria-label*="发送"]');
-    let btn = sendBtn();
-    if (btn && !btn.disabled) { btn.click(); await sleep(200); return { ok: true }; }
     const _txtBefore = readText(el);
+    let btn = sendBtn();
+    if (btn && !btn.disabled) {
+      btn.click();
+      return (await confirmSubmitted(_txtBefore)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
+    }
     ["keydown", "keypress", "keyup"].forEach((t) =>
       el.dispatchEvent(new KeyboardEvent(t, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true })));
     await sleep(150);

@@ -25,14 +25,19 @@
         const el = findByText('[role="radio"]', re); // Instant / Expert / Vision
         if (el) { el.click(); await sleep(400); }
       },
+      // diag 不含模式 radio：它仅空对话首屏存在，聊天中缺失属正常态，列进来会让巡检恒红误报
       diagnose: function () {
         return [
           { name: t("diag_deepThink"), ok: !!this._deepThink() },
-          { name: t("diag_modeSelect"), ok: document.querySelectorAll('[role="radio"]').length > 0 },
           { name: t("diag_tierReadable"), ok: this.state() != null },
         ];
       },
+      // 档位真值优先读常驻 composer 的 DeepThink 开关（真机实证 2026-07-11：radio 首条消息后
+      // 从 DOM 消失，只读 radio 会在整个对话期恒 null——pill 高亮熄灭/巡检误报/二轮切档失去确认）；
+      // radio 仅作首屏无开关时的兜底。
       state: function () {
+        const dt = this._deepThink();
+        if (dt) return dt.getAttribute("aria-pressed") === "true" ? "think" : "fast";
         const r = [...document.querySelectorAll('[role="radio"]')]
           .find((x) => x.getAttribute("aria-checked") === "true");
         const t = r ? r.textContent || "" : "";
