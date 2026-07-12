@@ -21,6 +21,10 @@
   label{display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer}
   .hint{font-size:12px;color:var(--muted)}
   .hint a{color:var(--acc);cursor:pointer;text-decoration:none}
+  .keyrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:2px 0}
+  .keyrow span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  kbd{flex:0 0 auto;font:11px ui-monospace,Consolas,monospace;padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--btn)}
+  :focus-visible{outline:2px solid var(--acc);outline-offset:1px}
   /* 非 AI 站点打开 popup 是常态而非错误：中性提示色，不用警告红制造负面情绪 */
   #unsupported{color:var(--muted);font-size:12px;display:none;margin-bottom:8px}
   #open-console{width:100%;padding:8px 0;margin-bottom:10px;border:1px solid var(--acc);border-radius:8px;background:var(--acc-bg);color:var(--text);cursor:pointer}

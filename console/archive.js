@@ -16,6 +16,32 @@ function entryMd(e) {
   }
   return md.join("\n");
 }
+// 详情区极简行级渲染（标题/引用/围栏/行内粗体，其余原样）：回看场景读内容而非 md 源码；
+// 「复制」仍取 entryMd 源文（看=渲染，复制=可再粘贴的 Markdown）。全程 textContent 组装，无注入面。
+function renderMd(md, box) {
+  const add = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; box.appendChild(n); return n; };
+  // 围栏状态机记录开栏长度：md.js 对含 ``` 的代码主动升级四反引号外栏（本项目正常产物），
+  // 闭栏必须 ≥ 开栏长度且行内仅反引号——内层 ``` 不再提前截断（对抗审查批 B）
+  let fenceLen = 0, codeBuf = [];
+  for (const ln of md.split("\n")) {
+    const f = ln.match(/^(`{3,})(.*)$/);
+    if (fenceLen) {
+      if (f && f[1].length >= fenceLen && !f[2].trim()) { add("pre", "ar-code", codeBuf.join("\n")); codeBuf = []; fenceLen = 0; }
+      else codeBuf.push(ln);
+      continue;
+    }
+    if (f) { fenceLen = f[1].length; continue; } // 开栏（f[2] 为语言标记，渲染不需要）
+    const h = ln.match(/^(#{1,4})\s+(.*)/);
+    if (h) { add("div", "ar-mh ar-mh" + h[1].length, h[2]); continue; }
+    if (/^>\s?/.test(ln)) { add("div", "ar-quote", ln.replace(/^>\s?/, "")); continue; }
+    const p = add("div", "ar-p");
+    ln.split(/(\*\*[^*]+\*\*)/).forEach((seg) => {
+      if (/^\*\*[^*]+\*\*$/.test(seg)) { const b = document.createElement("b"); b.textContent = seg.slice(2, -2); p.appendChild(b); }
+      else if (seg) p.appendChild(document.createTextNode(seg));
+    });
+  }
+  if (fenceLen && codeBuf.length) add("pre", "ar-code", codeBuf.join("\n")); // 未闭合围栏兜底
+}
 function renderList() {
   disarmDel(); // 任何重渲染（i18n 切换/storage 变更）都撤销删除确认态，防确认目标漂移
   elList.replaceChildren();
@@ -32,7 +58,8 @@ function renderList() {
 function showCurrent() {
   const i = parseInt(elList.value, 10);
   const e = archive[i];
-  elDetail.textContent = e ? entryMd(e) : "";
+  elDetail.replaceChildren();
+  if (e) renderMd(entryMd(e), elDetail);
   elCopy.disabled = elDel.disabled = !e;
 }
 elList.addEventListener("change", showCurrent);

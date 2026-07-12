@@ -87,12 +87,17 @@ function buildKeys() {
   chrome.commands.getAll((cmds) => {
     const div = document.getElementById("keys");
     div.textContent = "";
-    div.append(
-      document.createTextNode(
-        cmds.filter((c) => !c.name.startsWith("_"))
-          .map((c) => `${c.description || c.name}: ${c.shortcut || t("pop_shortcutUnset")}`).join("　") + "　"
-      )
-    );
+    // 每条快捷键一行（曾用全角空格连成一段流文本，扫读性差）：左描述右 <kbd> 键位
+    cmds.filter((c) => !c.name.startsWith("_")).forEach((c) => {
+      const row = document.createElement("div");
+      row.className = "keyrow";
+      const label = document.createElement("span");
+      label.textContent = c.description || c.name;
+      const kbd = document.createElement("kbd");
+      kbd.textContent = c.shortcut || t("pop_shortcutUnset");
+      row.append(label, kbd);
+      div.append(row);
+    });
     const a = document.createElement("a");
     a.textContent = t("pop_rebind");
     a.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));

@@ -11,6 +11,18 @@ body.archive{display:flex;flex-direction:column;height:100vh;margin:0;padding:10
 #ar-head button:hover:not(:disabled){background:var(--hover)}
 #ar-head button:disabled{opacity:.45;cursor:default}
 #ar-head button.danger{border-color:rgba(220,38,38,.6);background:rgba(220,38,38,.14);color:#ef4444}
-#ar-detail{flex:1 1 auto;margin:0;padding:12px;border:1px solid var(--line);border-radius:8px;
-  background:var(--fill);overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12.5px}
+#ar-detail{flex:1 1 auto;margin:0;padding:14px 16px;border:1px solid var(--line);border-radius:9px;
+  background:var(--fill);overflow:auto;word-break:break-word;font-size:12.5px;line-height:1.65;
+  scrollbar-width:thin;scrollbar-color:var(--scroll) transparent}
+#ar-detail::-webkit-scrollbar{width:10px}
+#ar-detail::-webkit-scrollbar-thumb{background:var(--scroll);border-radius:5px;border:2px solid var(--bg)}
 #ar-detail:empty::before{content:attr(data-empty);color:var(--faint)}
+/* 极简 md 渲染块（archive.js renderMd） */
+.ar-mh{font-weight:700;margin:10px 0 4px}
+.ar-mh1{font-size:15px;border-bottom:1px solid var(--line);padding-bottom:6px}
+.ar-mh2{font-size:13.5px;color:var(--accent)}
+.ar-mh3,.ar-mh4{font-size:12.5px}
+.ar-p{min-height:6px;margin:2px 0}
+.ar-quote{border-left:3px solid var(--line);padding:2px 10px;margin:4px 0;color:var(--text-3)}
+.ar-code{margin:6px 0;padding:10px 12px;border-radius:7px;background:var(--fill-3);border:1px solid var(--line-3);
+  overflow-x:auto;white-space:pre;font:12px/1.5 ui-monospace,Consolas,monospace}
