@@ -150,7 +150,10 @@ async function _openCompose(anchor) {
         left = Math.round(c.left + anchor.left); // 窗口屏幕左 + 输入框视口内左 ≈ 输入框屏幕左
         top = c.top + c.height;                  // 贴 console 实际底边（c.top 已含 WM 标题栏上移）
         if (left < wa.left) left = wa.left;       // 夹取到工作区，防越界
-        W = Math.max(80, Math.min(W, wa.left + wa.width - left)); // 防右溢，且宽度兜底下界
+        // 宽度下界 320：footer 两按钮 nowrap 放不进更窄的窗（旧下界 80 会裁切按钮，对抗审查批 C）；
+        // 贴屏幕右缘时左移窗口而非压缩宽度
+        W = Math.max(320, Math.min(W, wa.width));
+        if (left + W > wa.left + wa.width) left = wa.left + wa.width - W;
         if (top + H > wa.top + wa.height) top = wa.top + wa.height - H;
       }
     } catch (e) {}

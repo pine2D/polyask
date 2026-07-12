@@ -114,9 +114,9 @@ body.compose{display:flex;flex-direction:column;height:100vh;overflow:hidden}
 #ch-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:linear-gradient(180deg,var(--strip-a),var(--strip-b));border-bottom:1px solid var(--edge);font-weight:600}
 #ch-head .t{display:flex;align-items:center;gap:8px}
 #ch-head .logo{color:var(--accent)}
-#ch-text{flex:1;margin:12px 14px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--fill-2);color:var(--text);font-size:13px;line-height:1.6;resize:none;font-family:inherit}
+#ch-text{flex:1;min-height:120px;margin:12px 14px;padding:11px 12px;border:1px solid var(--line);border-radius:9px;background:var(--fill-2);color:var(--text);font-size:13px;line-height:1.6;resize:none;font-family:inherit} /* min-height：footer 换行也不把编辑区挤没 */
 #ch-text::placeholder{color:var(--faint)}
-#ch-foot{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--edge)}
+#ch-foot{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--edge);flex-wrap:wrap} /* 伴侣窗宽随 console 输入框，窄时按钮换行不溢出 */
 #ch-foot .scope{font-size:12px;color:var(--text-3);margin-right:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #ch-foot .scope b{color:var(--accent);font-weight:600}
 #ch-send{font-weight:600;color:#fff;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 14px rgba(124,93,246,.5)}

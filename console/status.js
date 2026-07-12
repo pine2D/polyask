@@ -67,7 +67,7 @@ function flashNote(text) {
 function buildSummary(sites, results) {
   const byHost = {}; results.forEach((r) => { byHost[r.host] = r; });
   const q = (lastSend && lastSend.text) || document.getElementById("prompt").value.trim();
-  const md = ["# " + t("con_mdHeader") + " · " + new Date().toLocaleString()];
+  const md = ["# " + t("con_mdHeader") + " · " + new Date().toLocaleString(document.documentElement.lang || undefined)];
   if (q) md.push("\n**" + t("con_mdQuestion") + "**: " + q);
   let miss = 0;
   for (const s of sites) {

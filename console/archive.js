@@ -8,7 +8,7 @@ const elDel = document.getElementById("ar-del");
 let archive = [];
 
 function entryMd(e) {
-  const md = ["# " + t("con_mdHeader") + " · " + new Date(e.ts).toLocaleString()];
+  const md = ["# " + t("con_mdHeader") + " · " + new Date(e.ts).toLocaleString(document.documentElement.lang || undefined)];
   if (e.text) md.push("\n**" + t("con_mdQuestion") + "**: " + e.text);
   for (const r of e.results || []) {
     const tier = r.state === "think" ? " · " + t("con_mdThink") : r.state === "fast" ? " · " + t("con_mdFast") : "";
@@ -49,7 +49,7 @@ function renderList() {
     const o = document.createElement("option");
     o.value = String(i);
     const q = (e.text || "").length > 40 ? e.text.slice(0, 40) + "…" : (e.text || "—");
-    o.textContent = new Date(e.ts).toLocaleString() + " · " + q;
+    o.textContent = new Date(e.ts).toLocaleString(document.documentElement.lang || undefined) + " · " + q;
     elList.appendChild(o);
   });
   elDetail.setAttribute("data-empty", t("arc_empty"));
