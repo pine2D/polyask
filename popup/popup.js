@@ -17,7 +17,10 @@ async function refreshState() {
     document.getElementById("think").classList.toggle("active", !!res && res.state === "think");
     document.getElementById("fast").classList.toggle("active", !!res && res.state === "fast");
   } catch (e) {
+    // 非 AI 站点是常态：中性提示 + 禁用两个档位按钮（否则看似可点、点了才失败）
     document.getElementById("unsupported").style.display = "block";
+    document.getElementById("think").disabled = true;
+    document.getElementById("fast").disabled = true;
   }
 }
 

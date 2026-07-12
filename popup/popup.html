@@ -10,12 +10,19 @@
   .btns button{flex:1;padding:10px 0;border:1px solid var(--line);border-radius:8px;background:var(--btn);color:var(--text);cursor:pointer;font-size:13px}
   .btns button:hover{background:var(--btn-hover)}
   .btns button.active{border-color:var(--acc);background:var(--acc-bg)}
+  .btns button:disabled{opacity:.45;cursor:default}
+  .btns button:disabled:hover{background:var(--btn)}
+  /* 按钮图标统一 SVG（emoji 依赖系统字体，无 emoji 字体环境渲染为豆腐块） */
+  button svg{vertical-align:-2px;margin-right:5px}
+  .btns button svg,#diag svg{color:var(--muted)}
+  #open-console svg{color:var(--acc)}
   fieldset{border:1px solid var(--line-soft);border-radius:8px;margin:0 0 10px;padding:8px 10px}
   legend{font-size:12px;color:var(--muted);padding:0 4px}
   label{display:flex;align-items:center;gap:6px;padding:3px 0;cursor:pointer}
   .hint{font-size:12px;color:var(--muted)}
   .hint a{color:var(--acc);cursor:pointer;text-decoration:none}
-  #unsupported{color:#dc2626;font-size:12px;display:none;margin-bottom:8px}
+  /* 非 AI 站点打开 popup 是常态而非错误：中性提示色，不用警告红制造负面情绪 */
+  #unsupported{color:var(--muted);font-size:12px;display:none;margin-bottom:8px}
   #open-console{width:100%;padding:8px 0;margin-bottom:10px;border:1px solid var(--acc);border-radius:8px;background:var(--acc-bg);color:var(--text);cursor:pointer}
   #diag{width:100%;padding:6px 0;border:1px solid var(--line);border-radius:6px;background:var(--btn);color:var(--text);cursor:pointer}
   #diagout{font-size:12px;margin-top:6px}
@@ -28,11 +35,11 @@
 </head>
 <body>
   <div class="btns">
-    <button id="think" data-i18n="pop_think">🧠 深度思考</button>
-    <button id="fast" data-i18n="pop_fast">⚡ 快速模型</button>
+    <button id="think"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M8 1.8 9.7 6.3 14.2 8 9.7 9.7 8 14.2 6.3 9.7 1.8 8 6.3 6.3z"/></svg><span data-i18n="pop_think">深度思考</span></button>
+    <button id="fast"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M9 1.5 3.5 9h4l-1 5.5L12.5 7h-4l.5-5.5z"/></svg><span data-i18n="pop_fast">快速模型</span></button>
   </div>
-  <div id="unsupported" data-i18n="pop_unsupported">当前页面不是受支持的 AI 站点</div>
-  <button id="open-console" data-i18n="pop_openConsole">🗂 打开群发控制台</button>
+  <div id="unsupported" data-i18n="pop_unsupported">档位切换需在 AI 站点页使用（群发控制台不受影响）</div>
+  <button id="open-console"><svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5 14.5 8 8 14.5 1.5 8z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 5.4 10.6 8 8 10.6 5.4 8z" fill="currentColor"/></svg><span data-i18n="pop_openConsole">打开群发控制台</span></button>
   <fieldset>
     <legend data-i18n="pop_grpLegend">群发</legend>
     <label><input type="checkbox" id="autoraise"><span data-i18n="pop_autoRaise">发送后自动置顶全部窗口</span></label>
@@ -58,7 +65,7 @@
   </fieldset>
   <fieldset>
     <legend data-i18n="pop_diagLegend">健康自检</legend>
-    <button id="diag" data-i18n="pop_diag">🩺 诊断当前站点</button>
+    <button id="diag"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 8h3l2-4.5 3 9 2-4.5h3"/></svg><span data-i18n="pop_diag">诊断当前站点</span></button>
     <div id="diagout"></div>
   </fieldset>
   <div class="hint" id="keys"></div>

@@ -17,6 +17,7 @@ function entryMd(e) {
   return md.join("\n");
 }
 function renderList() {
+  disarmDel(); // 任何重渲染（i18n 切换/storage 变更）都撤销删除确认态，防确认目标漂移
   elList.replaceChildren();
   archive.forEach((e, i) => {
     const o = document.createElement("option");
@@ -39,12 +40,32 @@ elCopy.addEventListener("click", () => {
   const e = archive[parseInt(elList.value, 10)];
   if (e) navigator.clipboard.writeText(entryMd(e)).then(() => { elCopy.textContent = t("arc_copied"); setTimeout(() => { elCopy.textContent = t("arc_copy"); }, 1500); });
 });
+// 删除二段确认（与 console 删模板/分组的确认保护一致，归档是不可恢复的完整对比现场）：
+// 首击按钮变「确认删除？」危险态并绑定目标条目（ts 唯一标识），3s 内对同一条目再击才删；
+// 超时/换条目/任何重渲染（renderList 首行）都撤销确认——确认目标绝不漂移（对抗审查 F1）。
+let delArmedUntil = 0, delArmedTs = null;
+function disarmDel() { delArmedUntil = 0; delArmedTs = null; elDel.textContent = t("arc_del"); elDel.classList.remove("danger"); }
 elDel.addEventListener("click", () => {
-  const i = parseInt(elList.value, 10);
-  if (isNaN(i)) return;
-  archive.splice(i, 1);
-  chrome.storage.local.set({ amsArchive: archive });
-  renderList();
+  const cur = archive[parseInt(elList.value, 10)];
+  if (!cur) return;
+  if (Date.now() > delArmedUntil || delArmedTs !== cur.ts) {
+    delArmedUntil = Date.now() + 3000; delArmedTs = cur.ts;
+    elDel.textContent = t("arc_delConfirm"); elDel.classList.add("danger");
+    setTimeout(() => { if (delArmedUntil && Date.now() >= delArmedUntil) disarmDel(); }, 3100);
+    return;
+  }
+  disarmDel();
+  // 先重读最新库、按 ts 定位删除（对抗审查 F2）：本页数组是打开时的快照，console 侧汇总
+  // 会并发追加新快照——对陈旧快照 splice 整值回写会把新快照抹掉。ponytail: 不设后台串行
+  // 入口——写方仅两处且无并发定时器，重读+onChanged 刷新已把竞态窗口缩到毫秒级。
+  chrome.storage.local.get("amsArchive", (o) => {
+    chrome.storage.local.set({ amsArchive: ((o && o.amsArchive) || []).filter((e) => e.ts !== cur.ts) });
+  });
+});
+elList.addEventListener("change", disarmDel); // 换条目即撤销待确认态，防误删别的条目
+// 库变更（console 侧新增快照 / 本页删除落盘）→ 刷新列表；本页数组因此常新，不再长寿陈旧
+chrome.storage.onChanged.addListener((ch, area) => {
+  if (area === "local" && ch.amsArchive) { archive = ch.amsArchive.newValue || []; renderList(); }
 });
 chrome.storage.local.get("amsArchive", (o) => { archive = (o && o.amsArchive) || []; renderList(); });
 document.addEventListener("i18n:changed", renderList);

@@ -38,7 +38,16 @@ function updateArrows() {
   document.getElementById("sites-r").classList.toggle("on", elSites.scrollLeft + elSites.clientWidth < elSites.scrollWidth - 2);
 }
 elSites.addEventListener("scroll", updateArrows, { passive: true });
-window.addEventListener("resize", updateArrows);
+// ResizeObserver 而非 window resize：命名输入/确认条展开会挤压 #sites 但不触发窗口 resize，
+// 旧监听下芯片被裁一半却不出溢出箭头
+new ResizeObserver(updateArrows).observe(elSites);
+// #bar 滚动条已隐藏（96px 细条里系统滚动条吃视觉空间），滚轮横滚补上鼠标通道（对抗审查 F3）：
+// 窄屏下右端按钮溢出视口时，鼠标用户靠滚轮可达；芯片区上的滚轮已被 #sites 接管（defaultPrevented）
+document.getElementById("bar").addEventListener("wheel", (e) => {
+  if (e.defaultPrevented || !e.deltaY || e.deltaX) return;
+  const bar = e.currentTarget;
+  if (bar.scrollWidth > bar.clientWidth) { bar.scrollLeft += e.deltaY; e.preventDefault(); }
+}, { passive: false });
 document.getElementById("sites-l").addEventListener("click", () => elSites.scrollBy({ left: -120, behavior: "smooth" }));
 document.getElementById("sites-r").addEventListener("click", () => elSites.scrollBy({ left: 120, behavior: "smooth" }));
 elSites.addEventListener("wheel", (e) => {

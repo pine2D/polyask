@@ -10,6 +10,7 @@ body.archive{display:flex;flex-direction:column;height:100vh;margin:0;padding:10
   color:var(--text);font-size:12px;cursor:pointer;flex:0 0 auto}
 #ar-head button:hover:not(:disabled){background:var(--hover)}
 #ar-head button:disabled{opacity:.45;cursor:default}
+#ar-head button.danger{border-color:rgba(220,38,38,.6);background:rgba(220,38,38,.14);color:#ef4444}
 #ar-detail{flex:1 1 auto;margin:0;padding:12px;border:1px solid var(--line);border-radius:8px;
   background:var(--fill);overflow:auto;white-space:pre-wrap;word-break:break-word;font-size:12.5px}
 #ar-detail:empty::before{content:attr(data-empty);color:var(--faint)}
