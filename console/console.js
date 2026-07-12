@@ -125,8 +125,8 @@ document.getElementById("export").addEventListener("click", () => {
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => downloadSummary(sites, (resp && resp.results) || []));
 });
 document.getElementById("archive").addEventListener("click", () => {
-  // 独立只读页（window.open 的 popup 不入 amsWindows、不受平铺/联动管辖，用户自关）
-  window.open(chrome.runtime.getURL("console/archive.html"), "ams-archive", "popup,width=760,height=560");
+  // 受管归档窗（与伴侣窗同款）：幂等打开、随 console 联动最小化/抬前、closeAll 一起关
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openArchive" });
 });
 document.getElementById("checkup").addEventListener("click", () => {
   const sites = chosen(); if (!sites.length) return;

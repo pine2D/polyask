@@ -97,6 +97,12 @@ async function getComposeWinId() {
   composeWinId = (o && o.amsComposeWin) != null ? o.amsComposeWin : null;
   return composeWinId;
 }
+async function getArchiveWinId() {
+  if (archiveWinId != null) return archiveWinId;
+  const o = await new Promise((r) => chrome.storage.local.get("amsArchiveWin", (v) => { void chrome.runtime.lastError; r(v); }));
+  archiveWinId = (o && o.amsArchiveWin) != null ? o.amsArchiveWin : null;
+  return archiveWinId;
+}
 
 let _openingConsole = null; // in-flight 去重：SW 冷启动时连按 Alt+Q 两个 onCommand 背靠背派发会双开 console
 async function openConsole() {
@@ -154,6 +160,29 @@ async function _openCompose(anchor) {
   await chrome.storage.local.set({ amsComposeWin: w.id });
 }
 
+// 归档查看窗：与伴侣窗同款受管（专属登记 id、随 console 联动最小化/抬前、closeAll 一起关、
+// 绝不进 amsWindows）。幂等：已开则聚焦（经 type 校验，陈旧 id/撞日常窗 → 继续新建）。
+let _openingArchive = null;
+async function openArchive() {
+  if (_openingArchive) return _openingArchive;
+  _openingArchive = _openArchive().finally(() => { _openingArchive = null; });
+  return _openingArchive;
+}
+async function _openArchive() {
+  const aid = await getArchiveWinId();
+  if (aid != null && await updateIfPopup(aid, { focused: true, state: "normal" })) return;
+  const wa = await consoleWorkArea(); // 开在 console 所在显示器，居中偏上
+  const W = Math.min(760, wa.width - 40), H = Math.min(560, wa.height - 60);
+  const w = await chrome.windows.create({
+    url: chrome.runtime.getURL("console/archive.html"), type: "popup",
+    left: wa.left + Math.max(0, Math.floor((wa.width - W) / 2)),
+    top: wa.top + Math.max(0, Math.floor((wa.height - H) / 3)),
+    width: W, height: H, focused: true,
+  });
+  archiveWinId = w.id;
+  await chrome.storage.local.set({ amsArchiveWin: w.id });
+}
+
 // 把控制台细条窗口抬到最前（每次平铺/操作后保持可见）。
 // 只认登记 id + 类型校验：裸查 URL 会命中被用户开进 normal 窗口标签的 console.html，抢焦日常窗口。
 async function raiseConsole() {
@@ -182,11 +211,13 @@ async function focusAll(sites) {
     try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {}
   }
 }
-// 联动：统一最小化全部受管 popup（绝不碰日常窗口）+ 伴侣窗一起最小化
+// 联动：统一最小化全部受管 popup（绝不碰日常窗口）+ 伴侣窗/归档窗一起最小化
 async function minimizeAllManaged() {
   for (const id of await managedTileIds()) { try { await chrome.windows.update(id, { state: "minimized" }); } catch (e) {} }
   const cmp = await getComposeWinId(); // 伴侣窗经专属 id 随动（不入 amsWindows，不破 popup-only 模型）
   if (cmp != null) await updateIfPopup(cmp, { state: "minimized" }); // 类型校验：陈旧 id 不误碰日常窗口
+  const arc = await getArchiveWinId(); // 归档窗同款随动
+  if (arc != null) await updateIfPopup(arc, { state: "minimized" });
 }
 // ③ 把 PolyAsk 工作区（平铺窗 + console）整体抬到前台：各窗 focused:true 抬 z-order，伴侣窗随后，
 // console 最后置顶。由 console 页面 focus 事件经 background 去抖后调用——此时 console 已是前台进程，
@@ -195,8 +226,10 @@ async function minimizeAllManaged() {
 async function raiseWorkspace() {
   suppressFocusUntil = Date.now() + 600; // 抑制随后由 raiseConsole 重聚焦 console 回报的 focus 事件，防递归
   const tileIds = await managedTileIds();
-  const cmp = await getComposeWinId(); // 伴侣窗随工作区前置：在平铺之上、console 之下
+  const cmp = await getComposeWinId(); // 伴侣窗/归档窗随工作区前置：在平铺之上、console 之下
+  const arc = await getArchiveWinId();
   for (const id of tileIds) { try { await chrome.windows.update(id, { state: "normal", focused: true }); } catch (e) {} }
+  if (arc != null) await updateIfPopup(arc, { state: "normal", focused: true });
   if (cmp != null) await updateIfPopup(cmp, { state: "normal", focused: true }); // 类型校验同 removeIfPopup
   await raiseConsole();
   suppressFocusUntil = Date.now() + 600; // ponytail: 时间窗启发式(600ms)，上限=偶尔误抑制一次紧邻真实切换
@@ -213,6 +246,8 @@ async function closeAll() {
     if (wins[host].owned) { await removeIfPopup(wins[host].id); }
   }
   await setWindows({});
-  const cmp = await getComposeWinId(); // 伴侣窗随平铺一起关（经专属 id；其 onRemoved 清登记）
+  const cmp = await getComposeWinId(); // 伴侣窗/归档窗随平铺一起关（经专属 id；各自 onRemoved 清登记）
   if (cmp != null) await removeIfPopup(cmp);
+  const arc = await getArchiveWinId();
+  if (arc != null) await removeIfPopup(arc);
 }

@@ -4,6 +4,7 @@
 let consoleWinId = null;     // console 弹窗 id（内存缓存）
 let suppressFocusUntil = 0;  // 程序化抬窗(raiseConsole 末尾重聚焦 console)期间忽略 console 页面回报的 focus 事件（时间窗），防递归
 let composeWinId = null;
+let archiveWinId = null;     // 归档查看窗（与伴侣窗同款受管：随 console 联动、closeAll 一起关）
 let raiseTimer = null;       // consoleFocused 抬窗去抖句柄（见 scheduleRaise）
 
 importScripts("bg/windows.js", "bg/broadcast.js");
@@ -13,7 +14,7 @@ importScripts("bg/windows.js", "bg/broadcast.js");
 // amsRestorePending：会话恢复（amsSessions）只授权给重启后的首次开窗——平时新开窗口必须是空白
 // 新会话，否则每个新窗都续旧对话（用户预期新窗=新对话）。
 chrome.runtime.onStartup.addListener(() => {
-  chrome.storage.local.remove(["amsWindows", "amsConsoleWin", "amsComposeWin"]);
+  chrome.storage.local.remove(["amsWindows", "amsConsoleWin", "amsComposeWin", "amsArchiveWin"]);
   chrome.storage.local.set({ amsRestorePending: true });
 });
 
@@ -61,7 +62,9 @@ chrome.windows.onRemoved.addListener(async (winId) => {
     return;
   }
   const cmp = await getComposeWinId();
-  if (cmp != null && winId === cmp) { composeWinId = null; await chrome.storage.local.remove("amsComposeWin"); }
+  if (cmp != null && winId === cmp) { composeWinId = null; await chrome.storage.local.remove("amsComposeWin"); return; }
+  const arc = await getArchiveWinId();
+  if (arc != null && winId === arc) { archiveWinId = null; await chrome.storage.local.remove("amsArchiveWin"); }
 });
 // console 前后台/最小化联动改由 console 页面自身的可靠 DOM 事件驱动（见 console/console.js：window
 // focus → consoleFocused 抬整组；document visibilitychange hidden → consoleHidden 联动最小化）。弃用
@@ -95,6 +98,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     openConsole(); return;
   }
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
+  if (msg.action === "openArchive") { openArchive(); return; }
   if (msg.action === "openTile") { serializeOp(() => openTile(msg.sites || [])).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "sendAll") { serializeOp(() => sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false)).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "checkup") { checkupAll(msg.sites || []).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; } // 只读诊断，不动登记表，无需串行链
