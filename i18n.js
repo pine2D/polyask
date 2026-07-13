@@ -3,12 +3,12 @@
 // MSG 由各 surface 任务填充：{ key: { en, zh_CN, zh_TW } }
 const MSG = {
   // —— console 段（I2）——
-  con_groupPh: { en: "Group▾", zh_CN: "分组▾", zh_TW: "分組▾" },
+  con_groupPh: { en: "Group", zh_CN: "分组", zh_TW: "分組" },
   con_tierKeep: { en: "Tier: keep", zh_CN: "档位：不变", zh_TW: "檔位：不變" },
   con_tierThink: { en: "🧠 Deep think", zh_CN: "🧠 深度思考", zh_TW: "🧠 深度思考" },
   con_tierFast: { en: "⚡ Fast", zh_CN: "⚡ 快速", zh_TW: "⚡ 快速" },
-  con_tplPh: { en: "Template▾", zh_CN: "模板▾", zh_TW: "範本▾" },
-  con_histPh: { en: "History▾", zh_CN: "历史▾", zh_TW: "歷史▾" },
+  con_tplPh: { en: "Template", zh_CN: "模板", zh_TW: "範本" },
+  con_histPh: { en: "History", zh_CN: "历史", zh_TW: "歷史" },
   con_histTitle: { en: "Question history (also ↑↓ in the input)", zh_CN: "历史提问（也可在输入框 ↑↓ 翻）", zh_TW: "歷史提問（也可在輸入框 ↑↓ 翻）" },
   con_collectDonePart: { en: "Summary of {0} sites copied ({1} without answers)", zh_CN: "已复制 {0} 站汇总（{1} 站无回答）", zh_TW: "已複製 {0} 站彙總（{1} 站無回答）" },
   con_autoRetried: { en: "auto-retried", zh_CN: "已自动重试", zh_TW: "已自動重試" },
