@@ -8,6 +8,20 @@
 
 ## [未发布]
 
+## [0.8.0] - 2026-07-13
+
+### 新增
+
+- 新增全套品牌图标（16/32/48/128，紫罗兰圆角方块 + 双菱形标）：128 按 CWS 规范留边，工具栏小尺寸满幅显示，与相邻扩展观感一致
+
+### 变更
+
+- 历史/模板/分组下拉去掉占位文案中多余的 ▾ 符号（原生箭头已有），并收窄闭合宽度消除按钮右侧空白
+
+### 修复
+
+- 修复控制台/编辑窗/归档窗在 Windows 任务栏与标题栏仍显示旧图标：窗口页显式声明 favicon，绕开浏览器 favicon 缓存
+
 ## [0.7.2] - 2026-07-12
 
 ### 修复
@@ -177,7 +191,10 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.7.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/pine2D/polyask/compare/v0.7.2...v0.8.0
+[0.7.2]: https://github.com/pine2D/polyask/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/pine2D/polyask/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/pine2D/polyask/compare/v0.6.3...v0.7.0
 [0.6.3]: https://github.com/pine2D/polyask/compare/v0.6.2...v0.6.3
 [0.6.2]: https://github.com/pine2D/polyask/compare/v0.6.1...v0.6.2
