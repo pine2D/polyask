@@ -211,9 +211,11 @@
         if (!item) { escMenus(); throw new Error("Gemini: 未找到模型 " + re); }
         clickEl(item); await sleep(700);
       },
-      // Material 嵌套子菜单不稳：仅在子菜单项未出现时点 trigger，轮询重试，Enter+click 提交
+      // 当前布局把 Extended thinking 作为模型菜单直达项；旧布局仍走 Thinking level 嵌套子菜单。
       _setThinking: async function (re) {
         await this._openModelMenu();
+        const direct = findByText(this._MI, re);
+        if (direct) { clickEl(direct); await sleep(400); escMenus(); return; }
         const trig = await waitFor(() => findByText(this._MI, /thinking level|思考(等级|程度)?/i));
         if (!trig) { escMenus(); return; } // 无等级子菜单的布局（窄屏/模型无此项）：合法缺席，静默跳过
         let lvl = null;
