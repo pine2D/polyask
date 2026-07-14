@@ -21,7 +21,7 @@
 - **批量窗口管理**：全部新会话、关闭全部；**前后台联动**——console 最小化/恢复/被带到前台时，平铺窗整组自动跟随（最小化/恢复/置顶无需手动按钮）
 
 > 窗口按 id 绑定且只认扩展自建的 popup：从平铺窗口点链接另开到主浏览器窗口、或你日常的浏览窗口，都不会被误纳入平铺/群发/关闭。「全部新会话」对已在新会话入口的窗口跳过重载（不闪、不丢草稿）。
-> **Chrome 重启后**的首次平铺会续上各站上次会话（对比现场不丢）；平时新开的窗口都是空白新会话。
+> 每次新开的平铺窗口都从空白新会话开始；已存在的受管窗口会继续当前对话。
 
 ### 🧠⚡ 模型档位切换
 
@@ -31,7 +31,7 @@
 
 | 站点 | 🧠 深度思考 | ⚡ 快速 |
 |---|---|---|
-| Claude (claude.ai) | Opus 4.8（Thinking 开 + Effort Max） | Sonnet 5（Thinking 开 + Effort Medium） |
+| Claude (claude.ai) | Opus 4.8（Thinking 开 + Effort Max） | Sonnet 5（默认设置） |
 | ChatGPT (chatgpt.com) | Intelligence 最高档（超高 / Pro 扩展） | Intelligence 最低档（极速 Instant） |
 | Gemini (gemini.google.com) | 3.1 Pro + Thinking: Extended | 3.5 Flash |
 | DeepSeek (chat.deepseek.com) | Expert + DeepThink 开 | Instant + DeepThink 关 |

@@ -29,8 +29,8 @@
           .find((s) => /thinking|思考/i.test((s.getAttribute("aria-label") || "") +
             (s.closest('[role="menuitem"]') ? s.closest('[role="menuitem"]').textContent : ""))) || null;
       },
-      // 思考档 = 模型下拉内的 effort 子菜单：think=开 Thinking + effort Max；fast=开 Thinking + effort Medium。
-      // effort 级别由 effort 参数传入（max/medium/low…）；用稳定 testid effort-option-<level>；开关切换会重渲染故 waitFor 重取。
+      // Thinking/effort 控制位于模型下拉内；effort 级别由参数传入（max/medium/low…），
+      // 用稳定 testid effort-option-<level>；开关切换会重渲染故 waitFor 重取。
       _setThinking: async function (on, effort) {
         await this._open();
         const optSel = '[data-testid="effort-option-' + effort + '"]';
@@ -75,7 +75,7 @@
           { name: t("diag_modelReadable"), ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
         ];
       },
-      // think = Opus 4.8（最强）；fast = Sonnet 5（新发布快模型）。
+      // think = Opus 4.8（最强）；fast = Sonnet 5（快模型，使用该模型默认设置）。
       // 判档：模型名带 sonnet/haiku 恒 fast；Opus 再按 thinking/effort 后缀（Adaptive/Max/Extra=think，Low/无后缀=fast，High/Medium 不判）
       state: function () {
         if (this._isEmbedLocked()) return null; // 受限态：不谎报 "fast"，HUD 不亮琥珀
@@ -101,10 +101,10 @@
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
         await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true, "max");
       },
-      // fast = Sonnet 5 + 开思考 effort Medium（均衡快速；选到 sonnet 后 state() 即恒判 fast，无思考控件则自然降级为纯选模型）
+      // Sonnet 5 不提供 effort 选择器；fast 只选模型，避免再操作不适用的 Thinking/effort 菜单而误报失败。
       fast: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
-        await this._selectModel(/sonnet\s*5/i); await this._setThinking(true, "medium");
+        await this._selectModel(/sonnet\s*5/i);
       },
     },
 

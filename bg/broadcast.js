@@ -19,10 +19,6 @@ async function openTile(sites, prune = true) {
   else { cols = Math.ceil(Math.sqrt(n)); rows = Math.ceil(n / cols); }
   const cellW = Math.floor(areaW / cols), cellH = Math.floor(areaH / rows);
   const wins = await getWindows();
-  // 会话记忆只用于「跨重启恢复对比现场」：仅重启后的首次开窗（amsRestorePending）续上旧会话，
-  // 常规新开窗口一律走空白新会话入口——否则每个新窗都续旧对话，违背"新窗=新对话"的直觉。
-  const restore = await new Promise((r) => chrome.storage.local.get("amsRestorePending", (o) => { void chrome.runtime.lastError; r(!!(o && o.amsRestorePending)); }));
-  const sessions = restore ? await getSessions() : {};
   const selectedHosts = sites.map((s) => s.host);
   // 1) 处理已取消勾选（仅显式平铺）：owned 的真正关闭，复用的仅解除登记（用户窗口不动）
   if (prune) for (const host of Object.keys(wins)) {
@@ -45,16 +41,13 @@ async function openTile(sites, prune = true) {
       owned = !!(rec && rec.id === windowId && rec.owned); // 仅沿用「同一登记窗口」的归属
       if (prune) { try { await chrome.windows.update(windowId, Object.assign({ state: "normal", focused: false }, bounds)); } catch (e) {} } // 隐式开窗不重排既有窗
     } else {
-      // 新建窗口优先续上该站上次会话（同 origin 才用；跨重启恢复对比现场）；要空白用「全部新会话」
-      let url = s.url;
-      try { const sess = sessions[s.host]; if (sess && new URL(sess).origin === new URL(s.url).origin) url = sess; } catch (e) {}
-      try { const w = await chrome.windows.create(Object.assign({ url, type: "popup", focused: false }, bounds)); windowId = w.id; owned = true; } catch (e) {}
+      // 新建窗口始终从该站的新会话入口开始；只有已存在的受管 popup 才延续当前对话。
+      try { const w = await chrome.windows.create(Object.assign({ url: s.url, type: "popup", focused: false }, bounds)); windowId = w.id; owned = true; } catch (e) {}
     }
     if (windowId != null) wins[s.host] = { id: windowId, owned };
     out.push({ host: s.host, windowId, reused, opened: !reused && windowId != null });
   }
   await setWindows(wins);
-  if (restore) chrome.storage.local.remove("amsRestorePending"); // 恢复机会一次性消费
   // 3) 抬前所有平铺窗口，最后抬控制台（控制台置顶）→ 无论增删全部可见
   for (const r of out) if (r.windowId != null) { try { await chrome.windows.update(r.windowId, { state: "normal", focused: true }); } catch (e) {} }
   await raiseConsole();
@@ -82,26 +75,6 @@ async function sendAll(sites, text, tier, tile = true) {
   return results;
 }
 
-// —— 会话记忆（amsSessions: host→url，独立于随重启清空的 amsWindows，跨 Chrome 重启续上对比现场）——
-function getSessions() {
-  return new Promise((r) => chrome.storage.local.get("amsSessions", (o) => { void chrome.runtime.lastError; r((o && o.amsSessions) || {}); }));
-}
-// 发送成功后延迟记录该 tab 的会话 URL。ponytail: 固定 3s 等站点把 URL 落到会话地址（多数站首条
-// 消息后才改 path；SW 空闲期 ≥30s，定时器必然赶在休眠前触发）；落晚了下次发送会再记，无累积错。
-// 读改写进 serializeOp 串行链：多站定时器并发各读旧表整体覆写会互相丢更新；且用户发送后 3s 内点
-// 「全部新会话」时，链外写会把 newSessionAll 刚删的 host 复活（重启后恢复本该丢弃的旧对话）。
-function rememberSession(host, tabId) {
-  setTimeout(() => serializeOp(async () => {
-    try {
-      const tab = await chrome.tabs.get(tabId);
-      if (!tab.url || !new URL(tab.url).hostname.includes(host.replace(/^www\./, ""))) return;
-      const sess = await getSessions();
-      sess[host] = tab.url;
-      await chrome.storage.local.set({ amsSessions: sess });
-    } catch (e) {}
-  }), 3000);
-}
-
 // 单站结果即时推给控制台（逐站实时回填，无需等全部完成）；无接收方时静默吞错。
 function pushBroadcast(payload) {
   try { chrome.runtime.sendMessage(Object.assign({ from: "AMS_BG" }, payload), () => void chrome.runtime.lastError); } catch (e) {}
@@ -126,7 +99,7 @@ async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
     if (tabs.length) {
       try {
         const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "submitPrompt", text, tier });
-        if (r && r.ok) { rememberSession(s.host, tabs[0].id); return done(true, r.code); } // ok 时 code 可携带 tier_unconfirmed 警示
+        if (r && r.ok) return done(true, r.code); // ok 时 code 可携带 tier_unconfirmed 警示
         if (r && typeof r.ok === "boolean" && r.code !== "composer_not_found") {
           return done(false, r.code || "error", r.reason);
         }
@@ -184,9 +157,7 @@ function isNewSessionUrl(tabUrl, newUrl) {
 // 已在新会话入口的窗口跳过重载（省闪烁，并保留用户未发送的输入）。
 async function newSessionAll(sites) {
   const wins = await getWindows();
-  const sess = await getSessions();
   for (const s of sites) {
-    delete sess[s.host]; // 用户点了新会话 = 不要旧现场，清掉该站会话记忆
     if (!s.url) continue;
     const tabs = await tabsForHost(s.host, wins);
     if (!tabs.length) continue;
@@ -194,5 +165,4 @@ async function newSessionAll(sites) {
     if (tab.url && isNewSessionUrl(tab.url, s.url)) continue;
     try { await chrome.tabs.update(tab.id, { url: s.url }); } catch (e) {}
   }
-  await chrome.storage.local.set({ amsSessions: sess });
 }

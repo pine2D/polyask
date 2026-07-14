@@ -11,12 +11,9 @@ importScripts("bg/windows.js", "bg/broadcast.js");
 
 // 窗口 id 仅本次浏览器会话有效：重启后 id 重排，陈旧登记可能撞上无关 popup（如 OAuth 弹窗）
 // 被误关/误收编——按 id 的操作只验 type 无法防住 popup 撞 popup，故启动时一律清空登记。
-// amsRestorePending：会话恢复（amsSessions）只授权给重启后的首次开窗——平时新开窗口必须是空白
-// 新会话，否则每个新窗都续旧对话（用户预期新窗=新对话）。
-chrome.runtime.onStartup.addListener(() => {
-  chrome.storage.local.remove(["amsWindows", "amsConsoleWin", "amsComposeWin", "amsArchiveWin"]);
-  chrome.storage.local.set({ amsRestorePending: true });
-});
+chrome.runtime.onStartup.addListener(() =>
+  chrome.storage.local.remove(["amsWindows", "amsConsoleWin", "amsComposeWin", "amsArchiveWin"])
+);
 
 // console 获焦 → 延迟 ~180ms 再抬整组工作区。点 console 的「最小化按钮」会先让窗口获焦（→ 本会立刻
 // 抬窗、把正在最小化的 console 又解最小化，与最小化打架、时好时坏），延迟给紧随其后的「最小化」一个
