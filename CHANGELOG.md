@@ -8,6 +8,19 @@
 
 ## [未发布]
 
+## [0.8.1] - 2026-07-17
+
+### 修复
+
+- 修复 Kimi 升级 K3 后无法切换深度思考档的问题
+- 修复 Gemini 无法选择 Extended thinking 直达项的问题
+- 修复新开群发窗口恢复旧对话的问题
+- 修复 Claude Sonnet 5 快速档误操作 Thinking 菜单的问题
+
+### 安全
+
+- 发布包新增 SHA-256 校验文件，便于核验下载完整性
+
 ## [0.8.0] - 2026-07-13
 
 ### 新增
@@ -191,7 +204,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.8.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.8.1...HEAD
+[0.8.1]: https://github.com/pine2D/polyask/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/pine2D/polyask/compare/v0.7.2...v0.8.0
 [0.7.2]: https://github.com/pine2D/polyask/compare/v0.7.1...v0.7.2
 [0.7.1]: https://github.com/pine2D/polyask/compare/v0.7.0...v0.7.1
