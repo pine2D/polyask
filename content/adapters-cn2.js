@@ -7,25 +7,45 @@
   const { waitFor, findByText, openMenu, clickEl, sleep, escMenus } = S;
 
   Object.assign(S.adapters, {
-    // Kimi：composer .current-model 触发(开菜单时加 active 类)，选项英文 K2.6 Thinking / K2.6 Instant。
-    // 用原生 click(合成事件不生效)；选项排除 trigger 本身(同名 K2.6 Instant)。
+    // Kimi：K3 有 Standard/High/Max 思考强度；think=K3 Max，fast=K2.6（chrome-dbg 实测 2026-07-17）。
+    // 模型菜单原生 click；Thinking effort 子菜单需 hover 展开后再点 Max。
     "kimi.com": {
       _entry: function () { return document.querySelector(".current-model"); },
-      _select: async function (re) {
+      _model: function () {
+        const n = this._entry() && this._entry().querySelector(".name");
+        return n ? (n.textContent || "").trim() : "";
+      },
+      _isMax: function () {
+        const n = this._entry() && this._entry().querySelector(".current-effort");
+        return !!n && /^(Max|最大|最高|最强)$/i.test((n.textContent || "").trim());
+      },
+      _select: async function (name) {
         const e = this._entry();
         if (!e) throw new Error("Kimi: 模型入口未找到"); // 静默 return 会让 runMode 误报成功
         if (!e.classList.contains("active")) e.click();
-        const opt = await waitFor(() =>
-          [...document.querySelectorAll("*")].find((el) =>
-            el.children.length <= 2 && re.test((el.textContent || "").trim()) &&
-            (el.textContent || "").trim().length < 20 && !el.closest(".current-model")), 1500);
+        const opt = await waitFor(() => [...document.querySelectorAll(".model-item")].find((el) => {
+          const n = el.querySelector(".name");
+          return n && (n.textContent || "").trim() === name;
+        }), 1500);
         if (!opt) { escMenus(); throw new Error("Kimi: 目标选项未找到"); }
-        let c = opt, clicked = false;
-        for (let i = 0; i < 5 && c; i++) {
-          if (c.onclick || /menuitem|option/.test(c.getAttribute("role") || "") || (c.className || "").toString().includes("menu-item")) { c.click(); clicked = true; break; }
-          c = c.parentElement;
-        }
-        if (!clicked) opt.click();
+        opt.click();
+        await sleep(400);
+        escMenus();
+      },
+      _max: async function () {
+        if (this._isMax()) return;
+        const e = this._entry();
+        if (!e) throw new Error("Kimi: 模型入口未找到");
+        if (!e.classList.contains("active")) e.click();
+        const row = await waitFor(() => [...document.querySelectorAll(".effort-item")].find((el) =>
+          /Thinking|思考|推理/i.test((el.querySelector(".effort-title") || {}).textContent || "")), 1500);
+        if (!row) { escMenus(); throw new Error("Kimi: 思考强度入口未找到"); }
+        ["pointerenter", "mouseenter", "pointerover", "mouseover"].forEach((type) =>
+          row.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
+        const opt = await waitFor(() => [...document.querySelectorAll(".effort-option")].find((el) =>
+          /^(Max|最大|最高|最强)$/i.test(((el.querySelector(".effort-name") || {}).textContent || "").trim())), 1500);
+        if (!opt) { escMenus(); throw new Error("Kimi: Max 思考强度未找到"); }
+        opt.click();
         await sleep(400);
         escMenus();
       },
@@ -36,12 +56,11 @@
         ];
       },
       state: function () {
-        const e = document.querySelector(".current-model");
-        const t = e ? e.textContent || "" : "";
-        return /Thinking|思考/i.test(t) ? "think" : /Instant|快速/i.test(t) ? "fast" : null;
+        const model = this._model();
+        return model === "K3" && this._isMax() ? "think" : model === "K2.6" ? "fast" : null;
       },
-      think: async function () { await this._select(/K2[.\d]*\s*(Thinking|思考)/i); },
-      fast: async function () { await this._select(/K2[.\d]*\s*(Instant|快速)/i); },
+      think: async function () { if (this._model() !== "K3") await this._select("K3"); await this._max(); },
+      fast: async function () { if (this._model() !== "K2.6") await this._select("K2.6"); },
       // 发送键是无 role 的 div（真机审计 2026-07），Enter 只插换行 → 原生点它；没找到落回通用路径由校验循环兜底
       submit: function () {
         const b = document.querySelector(".send-button-container");
