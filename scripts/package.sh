@@ -11,7 +11,8 @@ command -v zip >/dev/null || { echo "需要 zip 命令（Debian/Ubuntu: sudo apt
 VERSION=$(grep -m1 '"version"' manifest.json | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
 [ -n "$VERSION" ] || { echo "无法从 manifest.json 解析版本号" >&2; exit 1; }
 
-OUT="dist/polyask-v${VERSION}.zip"
+DIST_DIR="${POLYASK_DIST_DIR:-dist}"
+OUT="${DIST_DIR}/polyask-v${VERSION}.zip"
 RUNTIME=(manifest.json _locales i18n.js background.js bg icons content console popup)
 
 # 运行时文件齐全性校验（缺一即扩展静默不工作）
@@ -19,7 +20,7 @@ for p in "${RUNTIME[@]}"; do
   [ -e "$p" ] || { echo "缺少运行时文件: $p" >&2; exit 1; }
 done
 
-mkdir -p dist
+mkdir -p "$DIST_DIR"
 rm -f "$OUT"
 # 排除任何隐藏文件 / .DS_Store / 临时备份
 zip -r -q "$OUT" "${RUNTIME[@]}" -x '*/.*' -x '*.DS_Store' -x '*~'
@@ -42,7 +43,12 @@ refs() {
   done
 }
 MISS=$(refs | sort -u | while read -r p; do echo "$ENTRIES" | grep -qx "$p" || echo "$p"; done)
-[ -z "$MISS" ] || { echo "✗ zip 缺少运行时引用的文件（RUNTIME 白名单漏项？）：" >&2; echo "$MISS" | sed 's/^/    /' >&2; rm -f "$OUT"; exit 1; }
+[ -z "$MISS" ] || {
+  echo "✗ zip 缺少运行时引用的文件（RUNTIME 白名单漏项？）：" >&2
+  while IFS= read -r missing; do echo "    $missing" >&2; done <<< "$MISS"
+  rm -f "$OUT"
+  exit 1
+}
 
 echo "✓ 打包完成: $OUT ($(du -h "$OUT" | cut -f1))，产物对账通过"
 echo "包含条目："

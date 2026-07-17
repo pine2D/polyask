@@ -1,13 +1,17 @@
 name: Release
 
 # 推送 v* 标签即自动打包并发布 GitHub Release。
-# 切版本：改 manifest.json 的 version → git tag vX.Y.Z → git push origin vX.Y.Z
+# 本地入口：prepare-release.sh 准备版本 → release.sh --publish 做 exact-HEAD CI 门禁并推 tag。
 on:
   push:
     tags: ["v*"]
 
 permissions:
   contents: write   # 创建 Release 需写权限
+  actions: read     # 校验 tag 对应提交的 CI 结果
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   release:
@@ -15,27 +19,38 @@ jobs:
     steps:
       # 第三方 Action 固定到 commit SHA：可变 tag 在 contents:write 权限下构成供应链投毒面；升级时人工审 diff 后更新 SHA
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
 
-      - name: 校验 tag 与 manifest 版本一致
+      - name: 校验 tag 来自已通过 CI 的 main
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          MANIFEST_VER=$(grep -m1 '"version"' manifest.json | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')
-          TAG_VER="${GITHUB_REF_NAME#v}"
-          echo "manifest=$MANIFEST_VER  tag=$TAG_VER"
-          [ "$MANIFEST_VER" = "$TAG_VER" ] || { echo "::error::tag $TAG_VER 与 manifest 版本 $MANIFEST_VER 不一致"; exit 1; }
+          git merge-base --is-ancestor "$GITHUB_SHA" "origin/main" || {
+            echo "::error::tag 提交不在 origin/main 上"
+            exit 1
+          }
 
-      - name: 打包扩展
-        run: bash scripts/package.sh
+          CI_RESULT=$(gh run list \
+            --repo "$GITHUB_REPOSITORY" \
+            --workflow "CI" \
+            --commit "$GITHUB_SHA" \
+            --limit 1 \
+            --json conclusion,status \
+            --jq '.[0] | "\(.status):\(.conclusion)"')
+          [ "$CI_RESULT" = "completed:success" ] || {
+            echo "::error::当前提交没有成功完成的 CI（实际：${CI_RESULT:-无记录}）"
+            exit 1
+          }
 
-      # 发布说明 = CHANGELOG.md 中本版段落（分门别类的人写 changelog，不用自动生成的 compare 链接）；
-      # 缺本版段落直接拒发——发版前必须先写 changelog。
-      - name: 提取本版 changelog
-        run: |
-          TAG_VER="${GITHUB_REF_NAME#v}"
-          awk -v ver="$TAG_VER" '/^## \[/{flag = index($0, "[" ver "]") > 0; next} /^\[[^]]+\]: /{flag=0} flag' CHANGELOG.md > /tmp/notes.md
-          [ -s /tmp/notes.md ] || { echo "::error::CHANGELOG.md 缺少 [$TAG_VER] 版本段落，先写 changelog 再发版"; exit 1; }
+      - name: 构建并校验发布产物
+        run: bash scripts/release.sh --build-only
 
-      - name: 发布 Release（附 zip）
+      - name: 发布 Release（ZIP + SHA-256）
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
-          files: dist/polyask-*.zip
-          body_path: /tmp/notes.md
+          files: |
+            dist/polyask-*.zip
+            dist/polyask-*.zip.sha256
+          body_path: dist/release-notes.md
