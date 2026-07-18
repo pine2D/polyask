@@ -22,5 +22,8 @@ for file in "${JS_FILES[@]}"; do
   [ "$lines" -le 300 ] || { echo "✗ $file: $lines 行" >&2; exit 1; }
 done
 
+echo "[test] 后台窗口与提交安全边界"
+node scripts/test-background.js
+
 git diff --check
 echo "[verify] 全部通过"

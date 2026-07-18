@@ -31,6 +31,18 @@
     while (ft && !ft.nodeValue.trim()) ft = w.nextNode();
     return ft;
   }
+  function backtickFence(text, minimum) {
+    const runs = (text.match(/`+/g) || []).map((x) => x.length);
+    return "`".repeat(Math.max(minimum || 1, (runs.length ? Math.max(...runs) : 0) + 1));
+  }
+  function safeHref(node) {
+    const raw = node.getAttribute("href");
+    if (!raw) return "";
+    try {
+      const url = new URL(raw, location.href);
+      return /^(https?:|mailto:|tel:)$/.test(url.protocol) ? url.href : "";
+    } catch (e) { return ""; }
+  }
   function inline(node) {
     let out = "";
     for (const n of node.childNodes) {
@@ -48,12 +60,13 @@
       if (tag === "IMG") continue;
       if (tag === "CODE") { // 内容自带反引号时用双反引号+空格包裹（CommonMark），防提前截断
         const c = (n.textContent || "").trim();
-        out += c.includes("`") ? "`` " + c + " ``" : "`" + c + "`"; continue;
+        const fence = backtickFence(c, 1), pad = c.includes("`") ? " " : "";
+        out += fence + pad + c + pad + fence; continue;
       }
       if (tag === "A") {
-        const href = n.getAttribute("href") || "";
+        const href = safeHref(n);
         const t = inline(n).trim();
-        out += (href && !/^javascript:/i.test(href)) ? "[" + (t || href) + "](" + n.href + ")" : t;
+        out += href ? "[" + (t || href) + "](" + href + ")" : t;
         continue;
       }
       if (tag === "STRONG" || tag === "B") { const t = inline(n).trim(); out += t ? "**" + t + "**" : ""; continue; }
@@ -93,7 +106,7 @@
       }
       pendingLang = "";
       const body = (code.innerText || code.textContent || "").replace(/\n+$/, "");
-      const fence = body.includes("```") ? "````" : "```"; // 代码本身含三连反引号时升级围栏
+      const fence = backtickFence(body, 3);
       return fence + lang + "\n" + body + "\n" + fence + "\n\n";
     }
     if (tag === "UL") return list(el, false);

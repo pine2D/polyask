@@ -6,8 +6,26 @@ let suppressFocusUntil = 0;  // 程序化抬窗(raiseConsole 末尾重聚焦 con
 let composeWinId = null;
 let archiveWinId = null;     // 归档查看窗（与伴侣窗同款受管：随 console 联动、closeAll 一起关）
 let raiseTimer = null;       // consoleFocused 抬窗去抖句柄（见 scheduleRaise）
+let archiveChain = Promise.resolve(); // 归档追加/删除串行，避免两个页面 get→set 丢更新
 
 importScripts("bg/windows.js", "bg/broadcast.js");
+
+function mutateArchive(mutator) {
+  const task = archiveChain.then(async () => {
+    const o = await new Promise((resolve) => chrome.storage.local.get("amsArchive", resolve));
+    const next = mutator((o && o.amsArchive) || []);
+    await new Promise((resolve) => chrome.storage.local.set({ amsArchive: next }, resolve));
+  });
+  archiveChain = task.then(() => {}, () => {});
+  return task;
+}
+function addArchive(entry) {
+  return mutateArchive((arr) => {
+    const hosts = (entry.results || []).map((r) => r.host).join("\n");
+    if (arr[0] && arr[0].text === entry.text && (arr[0].results || []).map((r) => r.host).join("\n") === hosts) arr = arr.slice(1);
+    return [entry, ...arr].slice(0, 30);
+  });
+}
 
 // 窗口 id 仅本次浏览器会话有效：重启后 id 重排，陈旧登记可能撞上无关 popup（如 OAuth 弹窗）
 // 被误关/误收编——按 id 的操作只验 type 无法防住 popup 撞 popup，故启动时一律清空登记。
@@ -55,6 +73,7 @@ chrome.windows.onRemoved.addListener(async (winId) => {
   if (cid != null && winId === cid) {
     consoleWinId = null;
     await chrome.storage.local.remove("amsConsoleWin");
+    cancelPendingSends(); // 不等串行链：尚未正式派发的站点立即停止
     await serializeOp(closeAll); // 进串行链：与在途 openTile/sendAll 的读-改-写 amsWindows 互斥
     return;
   }
@@ -91,16 +110,20 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg.action === "openConsole") {
     // popup 发起时带当前站 host：console 首次使用（无勾选历史）预勾该站，打通"正看着这个站想群发"的路径
-    if (msg.host) chrome.storage.local.set({ amsConsolePrefill: msg.host });
-    openConsole(); return;
+    openConsole(msg.host); return;
   }
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
   if (msg.action === "openArchive") { openArchive(); return; }
   if (msg.action === "openTile") { serializeOp(() => openTile(msg.sites || [])).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
-  if (msg.action === "sendAll") { serializeOp(() => sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false)).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
-  if (msg.action === "checkup") { checkupAll(msg.sites || []).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; } // 只读诊断，不动登记表，无需串行链
+  if (msg.action === "sendAll") {
+    const epoch = currentSendEpoch();
+    serializeOp(() => sendAll(msg.sites || [], msg.text || "", msg.tier || null, msg.tile !== false, epoch)).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true;
+  }
+  if (msg.action === "checkup") { serializeOp(() => checkupAll(msg.sites || [])).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; }
   if (msg.action === "collect") { collectAll(msg.sites || []).then((results) => sendResponse({ results })).catch(() => sendResponse({ results: [] })); return true; } // 只读收集回答，同上
+  if (msg.action === "archiveAdd") { addArchive(msg.entry || {}).then(() => sendResponse({}), () => sendResponse({})); return true; }
+  if (msg.action === "archiveDelete") { mutateArchive((arr) => arr.filter((e) => e.ts !== msg.ts)).then(() => sendResponse({}), () => sendResponse({})); return true; }
   // 回应完成时刻：console 据此解除按钮忙碌态（操作可能在串行链里排队最长 ~22s，无反馈像卡死）
-  if (msg.action === "closeAll") { serializeOp(closeAll).then(() => sendResponse({}), () => sendResponse({})); return true; }
-  if (msg.action === "newSession") { serializeOp(() => newSessionAll(msg.sites || [])).then(() => sendResponse({}), () => sendResponse({})); return true; }
+  if (msg.action === "closeAll") { cancelPendingSends(); serializeOp(closeAll).then(() => sendResponse({}), () => sendResponse({})); return true; }
+  if (msg.action === "newSession") { cancelPendingSends(); serializeOp(() => newSessionAll(msg.sites || [])).then(() => sendResponse({}), () => sendResponse({})); return true; }
 });

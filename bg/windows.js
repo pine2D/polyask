@@ -1,30 +1,36 @@
 // bg/windows.js — 窗口层：工作区查询/创建/定位/联动（popup-only 铁律核心）
 const STRIP_H = 96;
 
-// 控制台管理的窗口 host→{id,owned}（持久化，跨 SW 重启）。owned=true 为控制台新建
+// 控制台管理的窗口 host→{id,owned}（会话级，跨 SW 休眠但不跨浏览器重启）。owned=true 为控制台新建
 // （closeAll 可自动关）；owned=false 为复用的用户窗口（不擅自关）。后续所有按 host
 // 的操作都认这里登记的 windowId，不再裸查 tabs——否则会误抓用户事后在主窗口开的同站标签。
 function getWindows() {
-  return new Promise((res) => chrome.storage.local.get("amsWindows", (o) => { void chrome.runtime.lastError; res((o && o.amsWindows) || {}); }));
+  return new Promise((res) => chrome.storage.session.get("amsWindows", (o) => { void chrome.runtime.lastError; res((o && o.amsWindows) || {}); }));
 }
 function setWindows(map) {
-  return new Promise((res) => chrome.storage.local.set({ amsWindows: map }, () => { void chrome.runtime.lastError; res(); }));
+  return new Promise((res) => chrome.storage.session.set({ amsWindows: map }, () => { void chrome.runtime.lastError; res(); }));
 }
 // 解析某 host 的「PolyAsk 受管 popup 窗口」。铁律：只返回 type:"popup"，绝不返回用户
-// 日常浏览窗口(type:"normal")。①登记窗口若仍在且是 popup → 用它；②否则全局找一个含该
-// host 的 popup（自愈被污染/丢失的登记）；③都没有 → null（调用方新建或对该站静默跳过）。
-async function popupWindowForHost(host, wins) {
+// 日常浏览窗口(type:"normal")，也不全局收编同站第三方 popup。登记窗口还必须让活动标签停在
+// 目标 host；用户把受管窗导航走后绑定立即失效，调用方会新建正确窗口。
+async function managedTabForHost(host, wins) {
   const rec = wins && wins[host];
-  if (rec && rec.id != null) {
-    try { const w = await chrome.windows.get(rec.id); if (w.type === "popup") return rec.id; } catch (e) {}
-  }
+  if (!rec || rec.id == null) return null;
   try {
-    const tabs = await chrome.tabs.query({ url: "*://" + host + "/*" });
-    for (const t of tabs) {
-      try { const w = await chrome.windows.get(t.windowId); if (w.type === "popup") return t.windowId; } catch (e) {}
-    }
-  } catch (e) {}
-  return null;
+    const w = await chrome.windows.get(rec.id);
+    if (w.type !== "popup") return null;
+    const tabs = await chrome.tabs.query({ active: true, windowId: rec.id });
+    const tab = tabs[0];
+    if (!tab) return null;
+    const matches = [tab.url, tab.pendingUrl].some((url) => {
+      try { return !!url && new URL(url).hostname === host; } catch (e) { return false; }
+    });
+    return matches ? tab : null;
+  } catch (e) { return null; }
+}
+async function popupWindowForHost(host, wins) {
+  const tab = await managedTabForHost(host, wins);
+  return tab ? tab.windowId : null;
 }
 // 仅当给定窗口 id 确实存在且是 popup 时才关闭它（不回退搜索，避免误关无关窗口）。
 async function removeIfPopup(id) {
@@ -39,9 +45,8 @@ async function updateIfPopup(id, props) {
 }
 // host → 受管 popup 内的标签（只认 popup；无受管窗口则空，调用方对该站静默跳过）。
 async function tabsForHost(host, wins) {
-  const id = await popupWindowForHost(host, wins);
-  if (id == null) return [];
-  try { return await chrome.tabs.query({ url: "*://" + host + "/*", windowId: id }); } catch (e) { return []; }
+  const tab = await managedTabForHost(host, wins);
+  return tab ? [tab] : [];
 }
 
 async function primaryWorkArea() {
@@ -105,15 +110,16 @@ async function getArchiveWinId() {
 }
 
 let _openingConsole = null; // in-flight 去重：SW 冷启动时连按 Alt+Q 两个 onCommand 背靠背派发会双开 console
-async function openConsole() {
+async function openConsole(prefillHost) {
   if (_openingConsole) return _openingConsole;
-  _openingConsole = _openConsole().finally(() => { _openingConsole = null; });
+  _openingConsole = _openConsole(prefillHost).finally(() => { _openingConsole = null; });
   return _openingConsole;
 }
-async function _openConsole() {
+async function _openConsole(prefillHost) {
   // 幂等：已开则聚焦既有 console（经 type 校验，陈旧/撞日常窗 → 继续新建），杜绝重复 console 孤立旧窗
   const cid = await getConsoleWinId();
   if (cid != null && await updateIfPopup(cid, { focused: true, state: "normal" })) return;
+  if (prefillHost) await chrome.storage.local.set({ amsConsolePrefill: prefillHost });
   const wa = await primaryWorkArea();
   const w = await chrome.windows.create({
     url: chrome.runtime.getURL("console/console.html"),
@@ -192,6 +198,12 @@ async function raiseConsole() {
   suppressFocusUntil = Date.now() + 600; // 程序化抬 console 会触发 onFocusChanged，抑制其自激
   const cid = await getConsoleWinId();
   if (cid != null) await updateIfPopup(cid, { focused: true });
+}
+
+async function consoleIsMinimized() {
+  const cid = await getConsoleWinId();
+  if (cid == null) return false;
+  try { return (await chrome.windows.get(cid)).state === "minimized"; } catch (e) { return false; }
 }
 
 // 受管平铺窗 id 列表（经 popup-only 解析，绝不含日常窗口）。并行解析：逐 host 串行 await

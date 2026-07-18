@@ -16,6 +16,8 @@ async function refreshState() {
     const res = await send({ source: "AMS", cmd: "getState" });
     document.getElementById("think").classList.toggle("active", !!res && res.state === "think");
     document.getElementById("fast").classList.toggle("active", !!res && res.state === "fast");
+    document.getElementById("think").setAttribute("aria-pressed", !!res && res.state === "think" ? "true" : "false");
+    document.getElementById("fast").setAttribute("aria-pressed", !!res && res.state === "fast" ? "true" : "false");
   } catch (e) {
     // 非 AI 站点是常态：中性提示 + 禁用两个档位按钮（否则看似可点、点了才失败）
     document.getElementById("unsupported").style.display = "block";
@@ -70,7 +72,9 @@ document.getElementById("diag").addEventListener("click", async () => {
       const row = document.createElement("div");
       const mark = document.createElement("span");
       mark.className = "ck " + (c.ok ? "ok" : "bad"); // SVG 标记，不用 ✓/✗ 字形
+      mark.setAttribute("aria-hidden", "true");
       row.append(mark, document.createTextNode(c.name));
+      row.setAttribute("aria-label", c.name + " · " + t(c.ok ? "pop_diagPass" : "pop_diagFail"));
       row.style.color = c.ok ? "#16a34a" : "#dc2626";
       out.append(row);
     }
@@ -92,16 +96,17 @@ function buildKeys() {
       const row = document.createElement("div");
       row.className = "keyrow";
       const label = document.createElement("span");
-      label.textContent = c.description || c.name;
+      const key = { "open-console": "pop_openConsole", "switch-think": "pop_think", "switch-fast": "pop_fast" }[c.name];
+      label.textContent = key ? t(key) : (c.description || c.name);
       const kbd = document.createElement("kbd");
       kbd.textContent = c.shortcut || t("pop_shortcutUnset");
       row.append(label, kbd);
       div.append(row);
     });
-    const a = document.createElement("a");
-    a.textContent = t("pop_rebind");
-    a.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
-    div.append(a);
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "link"; button.textContent = t("pop_rebind");
+    button.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
+    div.append(button);
   });
 }
 buildKeys();

@@ -159,12 +159,14 @@
       state: function () { return this._selected("深度") ? "think" : this._selected("快速") ? "fast" : null; },
       think: async function () { await this._pick("深度", true); },
       fast: async function () { await this._pick("快速", false); },
-      // 最后一条回答（真机审计锚点 2026-07：.answer-content；正文优先 .markdown-body，否则整块 best-effort）
+      // 最后一条回答（真机审计锚点 2026-07：.answer-content；排除隐藏思考段后取末尾正文）
       answer: function () {
         const els = document.querySelectorAll(".answer-content");
         if (!els.length) return null;
         const el = els[els.length - 1];
-        return el.querySelector(".markdown-body") || el;
+        const mds = [...el.querySelectorAll(".markdown-body")]
+          .filter((m) => !m.closest(".text-advance-thinking-content"));
+        return mds[mds.length - 1] || el;
       },
     },
   });

@@ -7,7 +7,7 @@ const elName = document.getElementById("nameinput");
 let pendingSave = null; // {kind:"tpl", text} | {kind:"grp", hosts}
 let nameOpener = null;  // 触发命名的按钮：收尾归还焦点，键盘用户不必从头 Tab（blur 主动移开除外）
 function startName(kind, placeholder, payload) {
-  closeConfirm(false);                         // 与删除确认互斥：同一时刻只显示一个内联控件（互斥清理不归还焦点）
+  cancelConfirm(false);                        // 与删除确认互斥；删除分组的临时选站副作用同时恢复
   nameOpener = document.activeElement;
   pendingSave = Object.assign({ kind }, payload);
   elName.value = ""; elName.placeholder = placeholder;
@@ -57,6 +57,10 @@ function closeConfirm(restoreFocus) {
   if (restoreFocus !== false && confirmOpener) { try { confirmOpener.focus(); } catch (e) {} }
   confirmOpener = null;
 }
+function cancelConfirm(restoreFocus) {
+  if (pendingDelete && pendingDelete.kind === "grp") restoreGroupSel();
+  closeConfirm(restoreFocus);
+}
 // 删除分组的流程副作用恢复：删除前必须先在下拉选中该组，而选中即 applyHosts 覆盖了当前勾选——
 // 无论删除还是取消，都把勾选还原到套用分组前的快照（selBeforeGroup 由 console.js 在 change 时记录）
 function restoreGroupSel() {
@@ -77,7 +81,6 @@ document.getElementById("confirm-yes").addEventListener("click", () => {
   closeConfirm();
 });
 document.getElementById("confirm-no").addEventListener("click", () => {
-  if (pendingDelete && pendingDelete.kind === "grp") restoreGroupSel();
-  closeConfirm();
+  cancelConfirm();
 });
-elConfirm.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); closeConfirm(); } });
+elConfirm.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); cancelConfirm(); } });

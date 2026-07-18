@@ -151,6 +151,8 @@
         if (!b) throw new Error("千问: 思考按钮未找到"); // 常驻 composer，缺失即异常
         const isOn = (b.className || "").split(/\s+/).includes("text-theme");
         if (isOn !== on) { b.click(); await sleep(300); }
+        const after = this._thinkBtn();
+        if (!after || (after.className || "").split(/\s+/).includes("text-theme") !== on) throw new Error("千问: 思考开关未生效");
       },
       diagnose: function () {
         return [
@@ -162,7 +164,10 @@
       state: function () {
         const m = this._trigger();
         const t = m ? m.textContent || "" : "";
-        return /Max/i.test(t) ? "think" : /千问|Flash/i.test(t) ? "fast" : null;
+        const b = this._thinkBtn();
+        if (!b) return null;
+        const on = (b.className || "").split(/\s+/).includes("text-theme");
+        return /Max/i.test(t) && on ? "think" : /千问|Flash/i.test(t) && !on ? "fast" : null;
       },
       think: async function () { await this._selectModel(/Qwen3\.7-Max/i); await this._setThink(true); },
       fast: async function () { await this._selectModel(/Qwen3\.7-千问/); await this._setThink(false); },

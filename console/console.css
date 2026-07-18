@@ -6,7 +6,7 @@
   --fill:rgba(255,255,255,.05); --fill-2:rgba(255,255,255,.04); --fill-3:rgba(255,255,255,.06);
   --hover:rgba(255,255,255,.09); --hover-2:rgba(255,255,255,.1);
   --text:#eef0f6; --text-2:#cbd0dd; --text-3:#8b90a3; --faint:#8a90a4; /* ≥4.5:1（WCAG AA）：未选中芯片文字在暗底可读 */
-  --accent:#a78bfa; --accent-glow:rgba(139,92,246,.7);
+  --accent:#a78bfa; --accent-glow:rgba(139,92,246,.7); --danger:#f87171;
   --option-bg:#1f2330; --chip-off-line:rgba(255,255,255,.06); --chip-off-dot:#3a3f4d; --dot-idle:#c2c7d0;
   --name-line:rgba(139,92,246,.55); --name-fill:rgba(139,92,246,.08);
   --scroll:#3a3f4d; --scroll-hover:#4a4f5d;
@@ -17,8 +17,8 @@
   --edge:rgba(0,0,0,.08); --line:rgba(0,0,0,.14); --line-2:rgba(0,0,0,.14); --line-3:rgba(0,0,0,.12);
   --fill:rgba(0,0,0,.04); --fill-2:rgba(0,0,0,.03); --fill-3:rgba(0,0,0,.05);
   --hover:rgba(0,0,0,.07); --hover-2:rgba(0,0,0,.08);
-  --text:#1f2330; --text-2:#3f4453; --text-3:#6b7186; --faint:#9098aa;
-  --accent:#7c5cf0; --accent-glow:rgba(124,92,240,.35);
+  --text:#1f2330; --text-2:#3f4453; --text-3:#6b7186; --faint:#6b7186;
+  --accent:#7c5cf0; --accent-glow:rgba(124,92,240,.35); --danger:#b91c1c;
   --option-bg:#ffffff; --chip-off-line:rgba(0,0,0,.10); --chip-off-dot:#c4c8d4; --dot-idle:#9aa0b2;
   --name-line:rgba(124,92,240,.5); --name-fill:rgba(124,92,240,.08);
   --scroll:#c4c8d4; --scroll-hover:#aab0c0;
@@ -29,8 +29,8 @@
     --edge:rgba(0,0,0,.08); --line:rgba(0,0,0,.14); --line-2:rgba(0,0,0,.14); --line-3:rgba(0,0,0,.12);
     --fill:rgba(0,0,0,.04); --fill-2:rgba(0,0,0,.03); --fill-3:rgba(0,0,0,.05);
     --hover:rgba(0,0,0,.07); --hover-2:rgba(0,0,0,.08);
-    --text:#1f2330; --text-2:#3f4453; --text-3:#6b7186; --faint:#9098aa;
-    --accent:#7c5cf0; --accent-glow:rgba(124,92,240,.35);
+    --text:#1f2330; --text-2:#3f4453; --text-3:#6b7186; --faint:#6b7186;
+    --accent:#7c5cf0; --accent-glow:rgba(124,92,240,.35); --danger:#b91c1c;
     --option-bg:#ffffff; --chip-off-line:rgba(0,0,0,.10); --chip-off-dot:#c4c8d4; --dot-idle:#9aa0b2;
     --name-line:rgba(124,92,240,.5); --name-fill:rgba(124,92,240,.08);
     --scroll:#c4c8d4; --scroll-hover:#aab0c0;
@@ -80,10 +80,10 @@ html,body{margin:0;height:100%;overflow:hidden;font:13px/1.4 -apple-system,"Sego
 .chip.fail{border-color:rgba(220,38,38,.7)}
 .chip.fail .d{background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13" stroke="%23dc2626" stroke-width="3" stroke-linecap="round"/></svg>')}
 /* 失败汇总（全部结果回齐后内联显示）与读屏播报 */
-#failsum{flex:0 1 auto;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:#ef4444}
+#failsum{flex:0 1 auto;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--danger)}
 /* 图标按钮群按语义分组：编辑/发送/重试 · 平铺/汇总/导出/归档 · 巡检/新会话/关闭 */
 .vsep{width:1px;height:20px;background:var(--line);flex:0 0 auto}
-#closeall:hover{color:#ef4444;border-color:rgba(220,38,38,.5)} /* 破坏性操作 hover 危险提示 */
+#closeall:hover{color:var(--danger);border-color:rgba(220,38,38,.5)} /* 破坏性操作 hover 危险提示 */
 .sr{position:absolute;top:0;left:0;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)} /* 必须钉在 (0,0)：static 定位会落到细条下方、顶出竖向滚动条 */
 #tier,#tpl,#hist{padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--fill);color:var(--text-2);font-size:12px;flex:0 0 auto}
 #tier option,#tpl option,#hist option{background:var(--option-bg);color:var(--text)}
@@ -100,7 +100,7 @@ button.mini:disabled{opacity:.35;cursor:not-allowed}
 #nameinput::placeholder{color:var(--text-3)}
 /* 删除二次确认：细条内联确认条（96px 裁切下不能用 confirm()/浮层） */
 #confirmbar{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;font-size:12px;color:var(--text-2);white-space:nowrap}
-#confirm-yes{padding:5px 11px;font-size:12px;border:1px solid rgba(220,38,38,.6);background:rgba(220,38,38,.16);color:#ef4444}
+#confirm-yes{padding:5px 11px;font-size:12px;border:1px solid rgba(220,38,38,.6);background:rgba(220,38,38,.16);color:var(--danger)}
 #confirm-yes:hover{background:rgba(220,38,38,.28)}
 #confirm-no{padding:5px 11px;font-size:12px}
 #send{font-weight:600;color:#fff;border:none;background:linear-gradient(135deg,#6366f1,#8b5cf6);box-shadow:0 4px 16px rgba(124,93,246,.5)}

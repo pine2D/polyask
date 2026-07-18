@@ -7,7 +7,10 @@ let selected = {};
 function render() {
   // 快照重建前的运行时状态（send/open/done/fail + 原因 title），重建后恢复——群发中改分组不再抹掉进度
   const prev = {};
-  elSites.querySelectorAll(".chip").forEach((c) => { const st = ["send", "open", "done", "fail"].find((x) => c.classList.contains(x)); if (st) prev[c.dataset.host] = { st, title: c.title }; });
+  elSites.querySelectorAll(".chip").forEach((c) => {
+    const st = ["send", "open", "done", "fail"].find((x) => c.classList.contains(x));
+    if (st) prev[c.dataset.host] = { st, title: c.title, aria: c.getAttribute("aria-label") };
+  });
   elSites.replaceChildren();
   SITES.forEach((s) => {
     const chip = document.createElement("button");
@@ -20,12 +23,13 @@ function render() {
     chip.setAttribute("aria-label", s.label); // setDot 会随状态更新（读屏拿不到 title）
     const d = document.createElement("span"); d.className = "d";
     chip.append(d, document.createTextNode(s.label));
-    const p = prev[s.host]; if (p) { chip.classList.add(p.st); chip.title = p.title; }
+    const p = prev[s.host]; if (p) { chip.classList.add(p.st); chip.title = p.title; chip.setAttribute("aria-label", p.aria || s.label); }
     chip.addEventListener("click", () => {
       selected[s.host] = !selected[s.host];
       chip.classList.toggle("off", !selected[s.host]);
       chip.setAttribute("aria-pressed", selected[s.host] ? "true" : "false");
       save();
+      if (typeof updateRetry === "function") { updateRetry(); updateFailSum(); }
     });
     elSites.appendChild(chip);
   });
@@ -67,12 +71,12 @@ elSites.addEventListener("click", (e) => { if (dragged) { e.stopPropagation(); e
 
 // 群发进度/结果状态（setDot/applyResults/errText/progress/lastSend/失败汇总）拆在 console/status.js（本文件之后加载）
 function save() {
-  chrome.storage.local.set({ amsConsole: { selected, tier: elTier.value, prompt: elPrompt.value } });
+  chrome.storage.local.set({ amsConsole: { selected, tier: elTier.value }, amsConsolePrompt: elPrompt.value });
   if (typeof syncGroupSelect === "function") syncGroupSelect();
 }
 function load() {
-  // 五个 key 单次 get：冷启动少一轮 storage IPC 往返
-  chrome.storage.local.get(["amsConsole", "amsHistory", "amsTemplates", "amsGroups", "amsConsolePrefill"], (o) => {
+  // 所需 key 单次 get：冷启动少一轮 storage IPC 往返
+  chrome.storage.local.get(["amsConsole", "amsConsolePrompt", "amsHistory", "amsTemplates", "amsGroups", "amsConsolePrefill"], (o) => {
     const c = (o && o.amsConsole) || {};
     selected = c.selected || {};
     const pre = o && o.amsConsolePrefill; // popup「打开控制台」带来的当前站（一次性消费）
@@ -84,7 +88,9 @@ function load() {
       else SITES.forEach((s) => { selected[s.host] = !!s.on; });
     }
     if (c.tier) elTier.value = c.tier;
-    if (c.prompt) elPrompt.value = c.prompt;
+    const prompt = o.amsConsolePrompt != null ? o.amsConsolePrompt : c.prompt;
+    if (prompt) elPrompt.value = prompt;
+    if (o.amsConsolePrompt == null && c.prompt != null) chrome.storage.local.set({ amsConsolePrompt: c.prompt }); // 旧结构一次性迁移
     history = (o && o.amsHistory) || []; // Task 4: 历史
     renderHist();
     render();
@@ -127,11 +133,13 @@ document.getElementById("send").addEventListener("click", () => {
 });
 document.getElementById("collect").addEventListener("click", () => {
   const sites = chosen(); if (!sites.length) return;
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => copySummary(sites, (resp && resp.results) || []));
+  const question = (lastSend && lastSend.text) || elPrompt.value.trim();
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => copySummary(sites, (resp && resp.results) || [], question));
 });
 document.getElementById("export").addEventListener("click", () => {
   const sites = chosen(); if (!sites.length) return;
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => downloadSummary(sites, (resp && resp.results) || []));
+  const question = (lastSend && lastSend.text) || elPrompt.value.trim();
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => downloadSummary(sites, (resp && resp.results) || [], question));
 });
 document.getElementById("archive").addEventListener("click", () => {
   // 受管归档窗（与伴侣窗同款）：幂等打开、随 console 联动最小化/抬前、closeAll 一起关
@@ -153,20 +161,14 @@ document.getElementById("closeall").addEventListener("click", (e) => {
   const free = busy(e.currentTarget);
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "closeAll" }, () => { void chrome.runtime.lastError; free(); });
   ignoreResults = true; // 在途群发的迟到结果不得复活刚清空的芯片（下一次 sendStart/tile/checkup 解除）
+  clearDotTimeouts();
   [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "open", "done", "fail"); c.title = c.dataset.label + " · " + t("con_chipHint"); c.setAttribute("aria-label", c.dataset.label); });
   progress = { total: 0, done: 0 }; updateSendLabel(); lastSend = null; updateRetry(); updateFailSum();
 });
 elTier.addEventListener("change", save);
-let _promptSaveTimer = null;
 elPrompt.addEventListener("input", () => {
   histCursor = -1; elPrompt.title = ""; // 编辑历史条目即成为新草稿，清位置指示
-  clearTimeout(_promptSaveTimer);
-  _promptSaveTimer = setTimeout(() => { // 防抖：每字一次 storage.set 太贵；prompt 与分组无关，不跑 syncGroupSelect
-    chrome.storage.local.get("amsConsole", (o) => {
-      const c = Object.assign({}, (o && o.amsConsole) || {}, { prompt: elPrompt.value });
-      chrome.storage.local.set({ amsConsole: c });
-    });
-  }, 200);
+  chrome.storage.local.set({ amsConsolePrompt: elPrompt.value });
 });
 
 // Task 4: Enter 发送 + ↑↓ 历史（历史下拉与模板接线在 library.js）
@@ -207,8 +209,8 @@ document.getElementById("retry").addEventListener("click", (e) => {
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local") return;
   if (ch.amsHistory) { history = ch.amsHistory.newValue || []; renderHist(); }
-  if (!ch.amsConsole) return;
-  const p = (ch.amsConsole.newValue || {}).prompt;
+  if (!ch.amsConsolePrompt) return;
+  const p = ch.amsConsolePrompt.newValue;
   // "编辑中"须同时窗口持焦：窗口失焦后 activeElement 不重置，单看它会永久挡住回填
   if (p != null && p !== elPrompt.value && !(document.hasFocus() && document.activeElement === elPrompt)) { elPrompt.value = p; }
 });

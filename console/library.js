@@ -51,7 +51,9 @@ function renderTemplates() {
 }
 elTpl.addEventListener("change", () => {
   const i = parseInt(elTpl.value, 10);
-  if (!isNaN(i) && templates[i] != null) { elPrompt.value = templates[i].text; save(); elPrompt.focus(); }
+  if (!isNaN(i) && templates[i] != null) {
+    elPrompt.value = templates[i].text; histCursor = -1; elPrompt.title = ""; save(); elPrompt.focus();
+  }
 });
 document.getElementById("tpl-save").addEventListener("click", () => {
   const text = elPrompt.value.trim();
@@ -99,6 +101,9 @@ function applyHosts(hosts) {
 // 当前选择精确匹配某分组 → 回显之；否则落到占位（"自定义"）
 function matchGroupValue() {
   const cur = SITES.filter((s) => selected[s.host]).map((s) => s.host).sort().join(",");
+  const explicit = elGroup.value;
+  const explicitHosts = hostsOfValue(explicit);
+  if (explicit.startsWith("g:") && explicitHosts && explicitHosts.slice().sort().join(",") === cur) return explicit;
   for (const b of BUILTINS) { if (b.hosts.slice().sort().join(",") === cur) return "b:" + b.key; }
   for (let i = 0; i < groups.length; i++) { if (groups[i].hosts.slice().sort().join(",") === cur) return "g:" + i; }
   return "";
@@ -113,6 +118,8 @@ elGroup.addEventListener("change", () => {
 document.getElementById("grp-save").addEventListener("click", () => {
   const hosts = chosen().map((s) => s.host);
   if (!hosts.length) return;
+  const sig = hosts.slice().sort().join(",");
+  if ([...BUILTINS, ...groups].some((g) => g.hosts.slice().sort().join(",") === sig)) { shake(document.getElementById("grp-save")); return; }
   startName("grp", t("con_grpNamePh"), { hosts });
 });
 document.getElementById("grp-del").addEventListener("click", () => {

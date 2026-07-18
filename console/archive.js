@@ -6,13 +6,17 @@ const elDetail = document.getElementById("ar-detail");
 const elCopy = document.getElementById("ar-copy");
 const elDel = document.getElementById("ar-del");
 let archive = [];
+const ARCH_ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject",
+  submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier", no_window: "con_errNoWindow",
+  not_ready: "con_errNotReady", cancelled: "con_errCancelled", no_answer: "con_errNoAnswer", error: "con_errGeneric" };
+function resultError(r) { return t(ARCH_ERR_KEYS[r.code] || "con_errNoAnswer"); }
 
 function entryMd(e) {
   const md = ["# " + t("con_mdHeader") + " · " + new Date(e.ts).toLocaleString(document.documentElement.lang || undefined)];
   if (e.text) md.push("\n**" + t("con_mdQuestion") + "**: " + e.text);
   for (const r of e.results || []) {
     const tier = r.state === "think" ? " · " + t("con_mdThink") : r.state === "fast" ? " · " + t("con_mdFast") : "";
-    md.push("\n## " + r.label + tier + "\n", r.text ? r.text : "> " + t("con_errNoAnswer"));
+    md.push("\n## " + r.label + tier + "\n", r.text ? r.text : "> " + resultError(r));
   }
   return md.join("\n");
 }
@@ -42,7 +46,9 @@ function renderMd(md, box) {
   }
   if (fenceLen && codeBuf.length) add("pre", "ar-code", codeBuf.join("\n")); // 未闭合围栏兜底
 }
-function renderList() {
+function renderList(preferredTs) {
+  const current = archive[parseInt(elList.value, 10)];
+  const keepTs = preferredTs != null ? preferredTs : current && current.ts;
   disarmDel(); // 任何重渲染（i18n 切换/storage 变更）都撤销删除确认态，防确认目标漂移
   elList.replaceChildren();
   archive.forEach((e, i) => {
@@ -52,6 +58,8 @@ function renderList() {
     o.textContent = new Date(e.ts).toLocaleString(document.documentElement.lang || undefined) + " · " + q;
     elList.appendChild(o);
   });
+  const keepIndex = archive.findIndex((e) => e.ts === keepTs);
+  if (keepIndex >= 0) elList.value = String(keepIndex);
   elDetail.setAttribute("data-empty", t("arc_empty"));
   showCurrent();
 }
@@ -82,17 +90,15 @@ elDel.addEventListener("click", () => {
     return;
   }
   disarmDel();
-  // 先重读最新库、按 ts 定位删除（对抗审查 F2）：本页数组是打开时的快照，console 侧汇总
-  // 会并发追加新快照——对陈旧快照 splice 整值回写会把新快照抹掉。ponytail: 不设后台串行
-  // 入口——写方仅两处且无并发定时器，重读+onChanged 刷新已把竞态窗口缩到毫秒级。
-  chrome.storage.local.get("amsArchive", (o) => {
-    chrome.storage.local.set({ amsArchive: ((o && o.amsArchive) || []).filter((e) => e.ts !== cur.ts) });
-  });
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "archiveDelete", ts: cur.ts }, () => void chrome.runtime.lastError);
 });
 elList.addEventListener("change", disarmDel); // 换条目即撤销待确认态，防误删别的条目
 // 库变更（console 侧新增快照 / 本页删除落盘）→ 刷新列表；本页数组因此常新，不再长寿陈旧
 chrome.storage.onChanged.addListener((ch, area) => {
-  if (area === "local" && ch.amsArchive) { archive = ch.amsArchive.newValue || []; renderList(); }
+  if (area === "local" && ch.amsArchive) {
+    const current = archive[parseInt(elList.value, 10)];
+    archive = ch.amsArchive.newValue || []; renderList(current && current.ts);
+  }
 });
 chrome.storage.local.get("amsArchive", (o) => { archive = (o && o.amsArchive) || []; renderList(); });
-document.addEventListener("i18n:changed", renderList);
+document.addEventListener("i18n:changed", () => renderList());

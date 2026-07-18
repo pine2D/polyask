@@ -59,6 +59,7 @@ const MSG = {
   con_errTimeout: { en: "Timed out — check the site is logged in and loaded, then retry", zh_CN: "超时：请确认该站已登录且页面加载完成，再点重试", zh_TW: "逾時：請確認該站已登入且頁面載入完成，再點重試" },
   con_errNoComposer: { en: "Composer not found (page not ready, not signed in, or site changed)", zh_CN: "输入框未找到（页面未就绪、未登录或站点改版）", zh_TW: "輸入框未找到（頁面未就緒、未登入或站點改版）" },
   con_errGeneric: { en: "Unexpected error", zh_CN: "未知错误", zh_TW: "未知錯誤" },
+  con_errCancelled: { en: "Cancelled", zh_CN: "已取消", zh_TW: "已取消" },
   con_allDone: { en: "All {0} sites sent", zh_CN: "{0} 站已全部发送", zh_TW: "{0} 站已全部發送" },
   con_errInject: { en: "Injection failed — editor rejected input", zh_CN: "注入未生效（站点编辑器拒绝写入）", zh_TW: "注入未生效（站點編輯器拒絕寫入）" },
   con_errSubmit: { en: "Submit not confirmed", zh_CN: "提交未确认", zh_TW: "提交未確認" },
@@ -112,6 +113,8 @@ const MSG = {
   pop_langAuto:    { en: "Auto",                                        zh_CN: "随系统",                            zh_TW: "隨系統" },
   pop_rebind:          { en: "Rebind",                   zh_CN: "改键",        zh_TW: "改鍵" },
   pop_diagUnsupported: { en: "Current page not supported", zh_CN: "当前页面不支持", zh_TW: "目前頁面不支援" },
+  pop_diagPass:        { en: "passed", zh_CN: "通过", zh_TW: "通過" },
+  pop_diagFail:        { en: "failed", zh_CN: "失败", zh_TW: "失敗" },
   pop_shortcutUnset:   { en: "not set",                  zh_CN: "未设置",      zh_TW: "未設定" },
   // —— content-script 段（I5）——
   cs_switchedThink:  { en: "Switched: Deep Think",                              zh_CN: "已切到：深度思考",                zh_TW: "已切到：深度思考" },

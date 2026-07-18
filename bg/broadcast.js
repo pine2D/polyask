@@ -3,6 +3,18 @@
 // 把 openTile/sendAll 串行化，杜绝并发各自读-改-写 amsWindows 泄漏同 host 重复 popup
 let _opChain = Promise.resolve();
 function serializeOp(fn) { const r = _opChain.then(fn, fn); _opChain = r.then(() => {}, () => {}); return r; }
+let _sendEpoch = 0;
+function currentSendEpoch() { return _sendEpoch; }
+function cancelPendingSends() { _sendEpoch++; }
+const MESSAGE_TIMEOUT = Symbol("message-timeout");
+async function messageBefore(send, deadline) {
+  const left = deadline - Date.now();
+  if (left <= 0) return MESSAGE_TIMEOUT;
+  let timer;
+  try {
+    return await Promise.race([send(), new Promise((resolve) => { timer = setTimeout(() => resolve(MESSAGE_TIMEOUT), left); })]);
+  } finally { clearTimeout(timer); }
+}
 
 // prune=false（sendAll 隐式开窗）：只为缺窗站开窗落格，不关未勾选站、不重排已有窗口的
 // 用户手调布局（追问少数站时不得动别人正摆着答案的窗）；显式「平铺」按钮保持全量重排语义。
@@ -48,30 +60,40 @@ async function openTile(sites, prune = true) {
     out.push({ host: s.host, windowId, reused, opened: !reused && windowId != null });
   }
   await setWindows(wins);
-  // 3) 抬前所有平铺窗口，最后抬控制台（控制台置顶）→ 无论增删全部可见
-  for (const r of out) if (r.windowId != null) { try { await chrome.windows.update(r.windowId, { state: "normal", focused: true }); } catch (e) {} }
-  await raiseConsole();
+  // 3) 操作期间用户若最小化控制台，新建窗口也保持最小化，不在完成回调里把整组重新抬起。
+  const minimized = await consoleIsMinimized();
+  for (const r of out) if (r.windowId != null) {
+    try { await chrome.windows.update(r.windowId, minimized ? { state: "minimized" } : { state: "normal", focused: true }); } catch (e) {}
+  }
+  if (!minimized) await raiseConsole();
   return out;
 }
 
 // 发送到全部：有站点尚无窗口则先平铺，再逐站等页面就绪后提交。
 // 用户初次使用无需先点「平铺」：勾选 → 输入 → Enter 即可一步开窗+群发。
-async function sendAll(sites, text, tier, tile = true) {
+async function sendAll(sites, text, tier, tile = true, epoch = currentSendEpoch()) {
+  if (epoch !== currentSendEpoch()) return sites.map((s) => ({ host: s.host, ok: false, code: "cancelled" }));
   const wins = await getWindows();
   let anyMissing = false;
   for (const s of sites) { if ((await popupWindowForHost(s.host, wins)) == null) { anyMissing = true; break; } }
   if (tile && anyMissing) await openTile(sites, false); // 隐式开窗不 prune/不重排；retry 传 tile=false 连开窗也免
+  if (epoch !== currentSendEpoch()) return sites.map((s) => ({ host: s.host, ok: false, code: "cancelled" }));
   // 进度起点（console/compose 发起都统一）；带 text/tier 让 console 重建 lastSend（compose 发起的失败也能一键重试）
   pushBroadcast({ type: "sendStart", hosts: sites.map((s) => s.host), text, tier });
-  const wins2 = tile ? null : await getWindows(); // retry(tile=false) 有意不开窗：缺窗站立即报 no_window，不空转 22s 假 timeout
+  const wins2 = await getWindows(); // 开窗失败或 retry 不开窗：缺窗站立即报 no_window，不空转到 timeout
   const results = await Promise.all(sites.map(async (s) => {
-    if (wins2 && (await popupWindowForHost(s.host, wins2)) == null) {
+    if ((await popupWindowForHost(s.host, wins2)) == null) {
       const res = { host: s.host, ok: false, code: "no_window" }; pushSiteResult(res); return res;
     }
-    return submitWhenReady(s, text, tier);
+    return submitWhenReady(s, text, tier, 22000, 800, epoch);
   }));
-  if (await getAutoRaise()) await focusAll(sites); // 发送后自动置顶全部平铺窗
-  await raiseConsole();
+  if (epoch === currentSendEpoch()) {
+    if (await consoleIsMinimized()) await minimizeAllManaged();
+    else {
+      if (await getAutoRaise()) await focusAll(sites); // 发送后自动置顶全部平铺窗
+      await raiseConsole();
+    }
+  }
   return results;
 }
 
@@ -85,9 +107,10 @@ function pushSiteResult(res) { pushBroadcast({ type: "siteResult", result: res }
 // 故 content 未注入 / composer_not_found 都视为"还没好"继续等，其它 ok=false 才是真失败。
 // 失败原因走错误码协议（code），由 console 端按界面语言翻译——bg/content 不产出用户可见文案。
 // 任一出口都先 pushSiteResult 让该站圆点立刻变色，再返回参与 Promise.all 汇总。
-async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
+async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800, epoch = currentSendEpoch()) {
   const t0 = Date.now();
-  let retried = false; // timeout 自动追加一轮：慢加载站首开常超 22s（真机实证 Kimi），多为假性超时
+  const firstDeadline = t0 + timeoutMs, deadline = t0 + timeoutMs * 2;
+  let retried = false; // 慢加载站首开超过 22s 后继续等到绝对截止线 44s
   const done = (ok, code, reason) => {
     const res = { host: s.host, ok, code, reason, ms: Date.now() - t0 }; // ms：逐站耗时，console 拼进 title 服务速度对比
     if (retried) res.retried = true;
@@ -95,35 +118,50 @@ async function submitWhenReady(s, text, tier, timeoutMs = 22000, gap = 800) {
   };
   const wins = await getWindows(); // openTile 已在 Promise.all 前定稿登记表，轮询期不变，读一次即可
   for (;;) {
+    if (epoch !== currentSendEpoch()) return done(false, "cancelled");
+    if (Date.now() >= deadline) return done(false, "timeout");
+    if (!retried && Date.now() >= firstDeadline) retried = true;
     const tabs = await tabsForHost(s.host, wins);
     if (tabs.length) {
+      let ready = false;
       try {
-        const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "submitPrompt", text, tier });
+        const probe = await messageBefore(() => chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "getState" }), deadline);
+        if (probe === MESSAGE_TIMEOUT) return done(false, "timeout");
+        ready = !!probe && Object.prototype.hasOwnProperty.call(probe, "state");
+      } catch (e) { /* content 尚未注入，继续等 */ }
+      if (ready) {
+        if (epoch !== currentSendEpoch()) return done(false, "cancelled");
+        if (Date.now() >= deadline) return done(false, "timeout");
+        let r;
+        try {
+          r = await messageBefore(() => chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "submitPrompt", text, tier, deadline }), deadline);
+        } catch (e) { return done(false, "submit_unconfirmed"); } // 已派发后绝不自动重发，避免端口断开造成重复提问
+        if (r === MESSAGE_TIMEOUT) return done(false, "submit_unconfirmed");
+        if (!r || typeof r.ok !== "boolean") return done(false, "submit_unconfirmed");
         if (r && r.ok) return done(true, r.code); // ok 时 code 可携带 tier_unconfirmed 警示
-        if (r && typeof r.ok === "boolean" && r.code !== "composer_not_found") {
+        if (r.code !== "composer_not_found") {
           return done(false, r.code || "error", r.reason);
         }
-      } catch (e) { /* content 未注入，页面还在加载 → 继续等 */ }
+      }
     }
-    if (Date.now() - t0 > timeoutMs) {
-      if (retried) return done(false, "timeout");
-      retried = true; timeoutMs *= 2; // 只在原窗口内继续轮询，从未成功提交过 → 无重复提交风险
-    }
-    await new Promise((res) => setTimeout(res, gap));
+    await new Promise((res) => setTimeout(res, Math.min(gap, Math.max(0, deadline - Date.now()))));
   }
 }
 
 // 全站健康巡检：对每个选中站点的受管 tab 发只读 diagnose（零副作用），逐站汇总失败项。
 // 无窗/未注入也如实上报——适配器失效不再要用户逐站打开 popup 手动诊断。
 // 并行逐站（Promise.all 保序）：串行时一站挂起（如水合中的重站）会拖住整批结果。
-async function checkupAll(sites) {
+async function checkupAll(sites, timeoutMs = 8000) {
   const wins = await getWindows();
+  const deadline = Date.now() + timeoutMs;
   return Promise.all(sites.map(async (s) => {
     const tabs = await tabsForHost(s.host, wins);
     if (!tabs.length) return { host: s.host, ok: false, code: "no_window" };
     try {
-      const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "diagnose" });
-      const bad = ((r && r.checks) || []).filter((c) => !c.ok).map((c) => c.name);
+      const r = await messageBefore(() => chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "diagnose" }), deadline);
+      if (r === MESSAGE_TIMEOUT) return { host: s.host, ok: false, code: "not_ready" };
+      if (!r || !Array.isArray(r.checks)) return { host: s.host, ok: false, code: "not_ready" };
+      const bad = r.checks.filter((c) => !c.ok).map((c) => c.name);
       return bad.length ? { host: s.host, ok: false, reason: bad.join(" / ") } : { host: s.host, ok: true, code: "checkup_ok" };
     } catch (e) { return { host: s.host, ok: false, code: "not_ready" }; }
   }));
@@ -131,13 +169,15 @@ async function checkupAll(sites) {
 
 // 汇总收集：逐站取最后一条 AI 回答的只读快照（不等流式完成——以点击时刻为准，ponytail 有意取舍）；
 // 并行同 checkupAll，汇总耗时从各站之和降为最慢单站。
-async function collectAll(sites) {
+async function collectAll(sites, timeoutMs = 8000) {
   const wins = await getWindows();
+  const deadline = Date.now() + timeoutMs;
   return Promise.all(sites.map(async (s) => {
     const tabs = await tabsForHost(s.host, wins);
     if (!tabs.length) return { host: s.host, code: "no_window" };
     try {
-      const r = await chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "collectAnswer" });
+      const r = await messageBefore(() => chrome.tabs.sendMessage(tabs[0].id, { source: "AMS", cmd: "collectAnswer" }), deadline);
+      if (r === MESSAGE_TIMEOUT) return { host: s.host, code: "not_ready" };
       return r && r.text ? { host: s.host, text: r.text, state: r.state } : { host: s.host, code: "no_answer" };
     } catch (e) { return { host: s.host, code: "not_ready" }; }
   }));

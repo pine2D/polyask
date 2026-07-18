@@ -91,7 +91,7 @@
   // beforeinput（受控编辑器 Lexical/ProseMirror/Slate 无视 execCommand 的 DOM 写入，却处理
   // beforeinput），失败退回 execCommand。提交：优先 adapter.submit(el)，否则原生点发送键，
   // 无按钮再发 Enter。返回 {ok, code?, reason?}（失败传错误码，console 端按界面语言翻译）。
-  async function submitPrompt(text) {
+  async function submitPromptNow(text, deadline) {
     const el = findComposer();
     if (!el) return { ok: false, code: "composer_not_found" }; // 失败一律传 code，由 console 端按界面语言翻译
     el.focus();
@@ -116,6 +116,7 @@
       if (text.trim() && !readText(el)) return { ok: false, code: "inject_failed" };
     }
     await sleep(250);
+    if (deadline && Date.now() >= deadline) return { ok: false, code: "timeout" };
     const a = pickAdapter();
     if (a && typeof a.submit === "function") {
       // 契约：submit 返回 false = 本站发送键此刻未找到/不可用 → 落回下方通用路径（按钮/Enter/校验循环）。
@@ -151,7 +152,9 @@
   async function confirmSubmitted(before) {
     for (let i = 0; i < 15; i++) {
       await sleep(200);
-      const cur = readText(findComposer());
+      const composer = findComposer();
+      if (!composer) continue;
+      const cur = readText(composer);
       if (!cur || cur !== before) return true;
     }
     return false;
@@ -167,7 +170,7 @@
   }
 
   // silent=true 时不弹 toast、只返回是否成功（供 switchTier 静默重试）。
-  async function runMode(mode, silent) {
+  async function runModeNow(mode, silent) {
     const a = pickAdapter();
     if (!a || !a[mode]) return false;
     // 站点偶发渲染抖动会导致首次失败：静默重试一次，仍失败才报错
@@ -187,6 +190,17 @@
     return false;
   }
 
+  // 站点模型菜单是共享 UI：快捷键、悬浮按钮与群发交错会互相关菜单/点错项。
+  // 所有外部交互串行；群发把「切档 + 提交」放在同一任务里，发送前档位不会被插队改写。
+  let interactionChain = Promise.resolve();
+  function serializeInteraction(fn) {
+    const next = interactionChain.then(fn, fn);
+    interactionChain = next.then(() => {}, () => {});
+    return next;
+  }
+  function runMode(mode, silent) { return serializeInteraction(() => runModeNow(mode, silent)); }
+  function submitPrompt(text, deadline) { return serializeInteraction(() => submitPromptNow(text, deadline)); }
+
   // 群发场景专用：切档位并用 state() 验证真的生效。新开页面切换器渲染晚于输入框，
   // 旧逻辑"runMode 没抛错就算切了"会误判；这里静默重试 runMode 直到 state() 确认目标档，
   // 或超时按当前档发送（不丢提问）。state 不可读的站点：连续两次未报错即视为已尽力。
@@ -195,13 +209,16 @@
     const t0 = Date.now();
     let nullTries = 0;
     let sawReadable = false; // ponytail: guards two-null shortcut from firing on transient nulls for state-readable sites
+    let attemptedOk = false;
     for (;;) {
       const _s = getState(); if (_s != null) sawReadable = true;
-      if (_s === mode) { toast(okMsg, true); return true; }           // 已在目标档（含 state 滞后后追上）
-      const switched = await runMode(mode, true);                     // 静默尝试切换
+      // state 只表示粗档位，不能证明模型版本/强度/开关均精确；每次群发至少跑一次幂等适配器。
+      if (attemptedOk && _s === mode) { toast(okMsg, true); return true; }
+      const switched = await runModeNow(mode, true);                  // 已在交互队列内，直接调用内部实现
+      if (switched) attemptedOk = true;
       await sleep(350);
       const _s2 = getState(); if (_s2 != null) sawReadable = true;
-      if (_s2 === mode) { toast(okMsg, true); return true; }          // 验证已切到
+      if (switched && _s2 === mode) { toast(okMsg, true); return true; } // 适配器成功且状态已切到
       if (switched && _s2 == null && !sawReadable && ++nullTries >= 2) { toast(okMsg, true); return true; }
       if (Date.now() - t0 > deadlineMs) { toast(t("cs_switchUnstable"), false); return false; }
       await sleep(switched ? 400 : 700); // 切到了短等 state 追上；没切到多等页面加载出切换器
@@ -241,21 +258,27 @@
       }
       if (msg.cmd === "diagnose") sendResponse({ checks: diagnose(), host: location.hostname });
       if (msg.cmd === "submitPrompt") {
-        (async () => {
+        serializeInteraction(async () => {
           try {
+            const deadline = Number(msg.deadline) || 0;
+            if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
             // 新开页面若立即 runMode 会因模型切换器未渲染而切换失败：先等输入框出现
             //（页面交互就绪的代理，切换器此时通常已就位），再切档位、提交。未就绪则返回
             // composer_not_found 让 background(sendAll) 轮询重试，杜绝"切换失败仍直接提交"。
-            if (!(await waitFor(() => findComposer(), 4000))) {
-              sendResponse({ host: location.hostname, ok: false, code: "composer_not_found" }); return;
-            }
+            const waitMs = deadline ? Math.max(0, Math.min(4000, deadline - Date.now())) : 4000;
+            if (!(await waitFor(() => findComposer(), waitMs))) return { host: location.hostname, ok: false, code: "composer_not_found" };
+            if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
             let tierOk = true;
-            if (msg.tier === "think" || msg.tier === "fast") { tierOk = await switchTier(msg.tier); await sleep(200); }
-            const r = await submitPrompt(msg.text || "");
+            if (msg.tier === "think" || msg.tier === "fast") {
+              const tierMs = deadline ? Math.max(1, Math.min(10000, deadline - Date.now())) : 10000;
+              tierOk = await switchTier(msg.tier, tierMs); await sleep(200);
+            }
+            if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
+            const r = await submitPromptNow(msg.text || "", deadline);
             if (r.ok && !tierOk) r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿
-            sendResponse(Object.assign({ host: location.hostname }, r));
-          } catch (e) { sendResponse({ host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }); }
-        })();
+            return Object.assign({ host: location.hostname }, r);
+          } catch (e) { return { host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }; }
+        }).then(sendResponse, (e) => sendResponse({ host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }));
         return true; // 异步 sendResponse
       }
     });

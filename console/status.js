@@ -10,11 +10,12 @@ function setDot(host, state, reason) {
   if (state && state !== "idle") chip.classList.add(state);
   chip.title = reason ? chip.dataset.label + " · " + reason : chip.dataset.label + " · " + t("con_chipHint");
   chip.setAttribute("aria-label", reason ? chip.dataset.label + " · " + reason : chip.dataset.label);
+  if (state !== "send") clearDotTimeout(host);
 }
 
 // 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
 const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier",
-  no_window: "con_errNoWindow", not_ready: "con_errNotReady", checkup_ok: "con_checkupOk", no_answer: "con_errNoAnswer", error: "con_errGeneric" };
+  no_window: "con_errNoWindow", not_ready: "con_errNotReady", cancelled: "con_errCancelled", checkup_ok: "con_checkupOk", no_answer: "con_errNoAnswer", error: "con_errGeneric" };
 // error 码 = 意外异常兜底：主文案用词条（不让英文异常原文裸露在 zh 界面），原始 reason 附在后面供排障
 function errText(r) {
   const base = ERR_KEYS[r.code] && t(ERR_KEYS[r.code]);
@@ -50,7 +51,7 @@ function updateSendLabel() {
   elSend.textContent = (progress.total && progress.done < progress.total) ? t("con_sending", progress.done, progress.total) : t("con_sendAll");
 }
 function updateRetry() {
-  const hasFail = !!document.querySelector(".chip.fail");
+  const hasFail = [...document.querySelectorAll(".chip.fail")].some((c) => selected[c.dataset.host]);
   document.getElementById("retry").disabled = !(hasFail && lastSend);
 }
 // 短暂内联提示（借 failsum 位；中性色，3s 后交还失败汇总）+ 读屏播报
@@ -64,9 +65,9 @@ function flashNote(text) {
 }
 // 汇总拼装（复制与导出共用）：各站标注当时档位；未适配/未获取的站如实标出。
 // miss = 无回答的站数：提示里如实标注，别让用户把错误占位贴给别人而不自知。
-function buildSummary(sites, results) {
+function buildSummary(sites, results, question) {
   const byHost = {}; results.forEach((r) => { byHost[r.host] = r; });
-  const q = (lastSend && lastSend.text) || document.getElementById("prompt").value.trim();
+  const q = question || "";
   const md = ["# " + t("con_mdHeader") + " · " + new Date().toLocaleString(document.documentElement.lang || undefined)];
   if (q) md.push("\n**" + t("con_mdQuestion") + "**: " + q);
   let miss = 0;
@@ -86,14 +87,10 @@ function archiveSummary(sites, results, q) {
     ts: Date.now(), text: q || "",
     results: sites.map((s) => { const r = byHost[s.host] || {}; return { host: s.host, label: s.label, text: r.text || null, state: r.state || null, code: r.code || null }; }),
   };
-  chrome.storage.local.get("amsArchive", (o) => {
-    let arr = (o && o.amsArchive) || [];
-    if (arr[0] && arr[0].text === entry.text && arr[0].results.length === entry.results.length) arr = arr.slice(1);
-    chrome.storage.local.set({ amsArchive: [entry, ...arr].slice(0, 30) });
-  });
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "archiveAdd", entry }, () => void chrome.runtime.lastError);
 }
-function copySummary(sites, results) {
-  const { md, miss, q } = buildSummary(sites, results);
+function copySummary(sites, results, question) {
+  const { md, miss, q } = buildSummary(sites, results, question);
   archiveSummary(sites, results, q);
   navigator.clipboard.writeText(md).then(
     () => flashNote(miss ? t("con_collectDonePart", sites.length, miss) : t("con_collectDone", sites.length)),
@@ -101,8 +98,8 @@ function copySummary(sites, results) {
   );
 }
 // 导出 .md 文件：不需要 downloads 权限（createObjectURL + a[download] 走浏览器默认下载）
-function downloadSummary(sites, results) {
-  const { md, miss, q } = buildSummary(sites, results);
+function downloadSummary(sites, results, question) {
+  const { md, miss, q } = buildSummary(sites, results, question);
   archiveSummary(sites, results, q);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown" }));
@@ -117,7 +114,7 @@ function updateFailSum() {
   if (Date.now() < noteUntil) return; // flashNote 展示期内不覆盖
   const el = document.getElementById("failsum");
   el.style.color = ""; // 复位 flashNote 的中性色
-  const fails = [...document.querySelectorAll(".chip.fail")];
+  const fails = [...document.querySelectorAll(".chip.fail")].filter((c) => selected[c.dataset.host]);
   const finished = !!progress.total && progress.done >= progress.total;
   if (!fails.length || !finished) {
     el.style.display = "none"; el.textContent = "";
@@ -132,14 +129,26 @@ function updateFailSum() {
 // 芯片状态的客户端兜底：回调/推送断掉（SW 被杀、扩展重载）时圆点会永久卡"发送中"，
 // 到点仍是 send 态就地翻超时失败。默认 50s：bg 超时 22s×2（timeout 自动重试一轮）必推结果，
 // 正常路径下兜底不会触发。
+const dotTimers = new Map();
+function clearDotTimeout(host) {
+  const timer = dotTimers.get(host);
+  if (timer) clearTimeout(timer);
+  dotTimers.delete(host);
+}
+function clearDotTimeouts() { [...dotTimers.keys()].forEach(clearDotTimeout); }
 function armDotTimeouts(hosts, ms) {
-  hosts.forEach((h) => setTimeout(() => {
-    const chip = document.querySelector('.chip[data-host="' + h + '"]');
-    if (!chip || !chip.classList.contains("send")) return;
-    setDot(h, "fail", t("con_errTimeout"));
-    if (progress.total && progress.done < progress.total) { progress.done++; updateSendLabel(); }
-    updateRetry(); updateFailSum();
-  }, ms || 50000));
+  hosts.forEach((h) => {
+    clearDotTimeout(h);
+    const timer = setTimeout(() => {
+      dotTimers.delete(h);
+      const chip = document.querySelector('.chip[data-host="' + h + '"]');
+      if (!chip || !chip.classList.contains("send")) return;
+      setDot(h, "fail", t("con_errTimeout"));
+      if (progress.total && progress.done < progress.total) { progress.done++; updateSendLabel(); }
+      updateRetry(); updateFailSum();
+    }, ms || 50000);
+    dotTimers.set(h, timer);
+  });
 }
 chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.from !== "AMS_BG") return;

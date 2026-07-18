@@ -13,7 +13,7 @@
     <style>
       :host{display:block}
       .wrap{display:flex;flex-direction:column;align-items:center}
-      .handle{width:36px;height:6px;border-radius:0 0 6px 6px;cursor:pointer;
+      .handle{border:0;padding:0;width:36px;height:6px;border-radius:0 0 6px 6px;cursor:pointer;
         background:rgba(120,120,120,.45);transition:background .2s}
       .handle:hover{background:rgba(120,120,120,.8)}
       .pill{display:none;align-items:center;border-radius:999px;overflow:hidden;margin-top:4px;
@@ -22,9 +22,10 @@
         opacity:1;transition:opacity .4s}
       .pill.idle{opacity:.35}
       .pill:hover{opacity:1}
-      button{all:unset;cursor:pointer;padding:7px 14px;white-space:nowrap}
-      button:hover{background:rgba(255,255,255,.14)}
-      button.active{background:rgba(255,255,255,.22)}
+      .pill button{all:unset;cursor:pointer;padding:7px 14px;white-space:nowrap}
+      .pill button:hover{background:rgba(255,255,255,.14)}
+      .pill button.active{background:rgba(255,255,255,.22)}
+      .handle:focus-visible,.pill button:focus-visible{outline:2px solid #fff;outline-offset:2px}
       .sep{width:1px;align-self:stretch;background:rgba(255,255,255,.22)}
       /* 模式形态 */
       .wrap[data-mode=hidden]{display:none}
@@ -34,7 +35,7 @@
       .wrap[data-mode=handle].open .pill{display:flex}
     </style>
     <div class="wrap" id="wrap" data-mode="handle">
-      <div class="handle" id="handle"></div>
+      <button type="button" class="handle" id="handle"></button>
       <div class="pill" id="pill">
         <button id="think"></button>
         <span class="sep"></span>
@@ -51,6 +52,7 @@
 
   function applyTexts() {
     hdl.title        = t("cs_pillHandleTitle");
+    hdl.setAttribute("aria-label", hdl.title);
     btnT.textContent = t("cs_pillThink");
     btnT.title       = t("cs_pillThinkTitle");
     btnF.textContent = t("cs_pillFast");
@@ -64,6 +66,8 @@
     const s = window.__AMS && window.__AMS.getState ? window.__AMS.getState() : null;
     btnT.classList.toggle("active", s === "think");
     btnF.classList.toggle("active", s === "fast");
+    btnT.setAttribute("aria-pressed", s === "think" ? "true" : "false");
+    btnF.setAttribute("aria-pressed", s === "fast" ? "true" : "false");
   }
 
   // handle 模式：hover/click 展开，4s 无交互收回
@@ -78,9 +82,11 @@
     armCollapse();
   }
   hdl.addEventListener("mouseenter", openPill);
-  hdl.addEventListener("click", openPill);
+  hdl.addEventListener("click", () => { openPill(); (btnF.classList.contains("active") ? btnF : btnT).focus(); });
   pill.addEventListener("mouseenter", () => { clearTimeout(collapseTimer); pill.classList.remove("idle"); });
   pill.addEventListener("mouseleave", () => { if (wrap.dataset.mode === "handle") armCollapse(); else if (wrap.dataset.mode === "always") armIdle(); });
+  pill.addEventListener("focusin", () => clearTimeout(collapseTimer));
+  pill.addEventListener("focusout", () => { if (wrap.dataset.mode === "handle") armCollapse(); });
 
   // always 模式：闲置半透明
   let idleTimer = null;
@@ -103,6 +109,12 @@
   });
 
   document.addEventListener("ams:switched", refreshState);
+  let hostRefreshTimer = null;
+  document.addEventListener("click", (e) => {
+    if (e.composedPath && e.composedPath().includes(host)) return;
+    clearTimeout(hostRefreshTimer);
+    hostRefreshTimer = setTimeout(refreshState, 500); // 宿主原生控件切档后同步 HUD，不观察整页 DOM
+  }, true);
   setTimeout(refreshState, 2500); // 页面载入后读一次初始档位
 
   function act(mode) {

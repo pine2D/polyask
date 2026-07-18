@@ -48,7 +48,8 @@
             if (t2) openMenu(t2);
           }
           const opt = await waitFor(() => document.querySelector(optSel), 1500);
-          if (opt) clickEl(opt);
+          if (!opt) { escMenus(); throw new Error("Claude: 目标 effort 未找到"); }
+          clickEl(opt);
           await sleep(300); escMenus(); return;
         }
         // 回退：无 effort 入口的旧布局（窄屏 Adaptive 开关），仅切裸开关；开关也缺失时保持
@@ -215,7 +216,10 @@
       _setThinking: async function (re) {
         await this._openModelMenu();
         const direct = findByText(this._MI, re);
-        if (direct) { clickEl(direct); await sleep(400); escMenus(); return; }
+        if (direct) {
+          if (!direct.classList.contains("selected") && direct.getAttribute("aria-checked") !== "true") clickEl(direct);
+          await sleep(400); escMenus(); return;
+        }
         const trig = await waitFor(() => findByText(this._MI, /thinking level|思考(等级|程度)?/i));
         if (!trig) { escMenus(); return; } // 无等级子菜单的布局（窄屏/模型无此项）：合法缺席，静默跳过
         let lvl = null;
@@ -237,7 +241,7 @@
       state: function () {
         const b = this._modelBtn();
         const t = b ? b.getAttribute("aria-label") || "" : "";
-        return /pro/i.test(t) ? "think" : /flash/i.test(t) ? "fast" : null;
+        return /pro\b.*(?:extended|扩展)|(?:extended|扩展).*pro\b/i.test(t) ? "think" : /flash/i.test(t) ? "fast" : null;
       },
       // 最后一条回答（真机审计锚点 2026-07：每条回答一个 <message-content>，正文在 .markdown）
       answer: function () {
