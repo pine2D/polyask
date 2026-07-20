@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [0.9.0] - 2026-07-20
+
 ### 变更
 
 - 升级千问快速/思考档至 `Qwen3.8-Max-Preview`
@@ -234,7 +236,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.8.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/pine2D/polyask/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/pine2D/polyask/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/pine2D/polyask/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/pine2D/polyask/compare/v0.7.2...v0.8.0
