@@ -112,7 +112,7 @@
       },
     },
 
-    // 千问：模型下拉(aria-haspopup=dialog, 原生 click 开)含 Qwen3.7-Max / Qwen3.7-千问；
+    // 千问：快速/思考都用 Qwen3.8-Max-Preview，仅用 composer「思考」按钮区分档位；
     // composer「思考」按钮无 aria-pressed，状态靠 class：text-theme=开 / text-primary=关
     "qianwen.com": {
       // 模型下拉触发器：aria-haspopup 属性由前端延迟水合，新加载页面一段时间内只有纯文本节点，
@@ -165,12 +165,12 @@
         const m = this._trigger();
         const t = m ? m.textContent || "" : "";
         const b = this._thinkBtn();
-        if (!b) return null;
+        if (!b || !/Qwen3\.8-Max-Preview/i.test(t)) return null;
         const on = (b.className || "").split(/\s+/).includes("text-theme");
-        return /Max/i.test(t) && on ? "think" : /千问|Flash/i.test(t) && !on ? "fast" : null;
+        return on ? "think" : "fast";
       },
-      think: async function () { await this._selectModel(/Qwen3\.7-Max/i); await this._setThink(true); },
-      fast: async function () { await this._selectModel(/Qwen3\.7-千问/); await this._setThink(false); },
+      think: async function () { await this._selectModel(/Qwen3\.8-Max-Preview/i); await this._setThink(true); },
+      fast: async function () { await this._selectModel(/Qwen3\.8-Max-Preview/i); await this._setThink(false); },
       // 最后一条回答（真机审计锚点 2026-07：.answer-common-card，正文在 .qk-markdown）。
       // 思考档思考段也是 .qk-markdown（祖先 thinkingContent-<hash>，CSS-module 后缀会变故用
       // [class*=] 匹配，真机 2026-07-11），过滤后取最后一个，否则思考全文混入汇总。

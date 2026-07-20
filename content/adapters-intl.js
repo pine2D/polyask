@@ -76,17 +76,17 @@
           { name: t("diag_modelReadable"), ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
         ];
       },
-      // think = Opus 4.8（最强）；fast = Sonnet 5（快模型，使用该模型默认设置）。
-      // 判档：模型名带 sonnet/haiku 恒 fast；Opus 再按 thinking/effort 后缀（Adaptive/Max/Extra=think，Low/无后缀=fast，High/Medium 不判）
+      // think = Fable 5 Max（最强）；fast = Sonnet 5（快模型，使用该模型默认设置）。
+      // 判档：模型名带 sonnet/haiku 恒 fast；Fable/Opus 再按 thinking/effort 后缀（Adaptive/Max/Extra=think，Low/无后缀=fast，High/Medium 不判）
       state: function () {
         if (this._isEmbedLocked()) return null; // 受限态：不谎报 "fast"，HUD 不亮琥珀
         const t = this._label();
         if (!t) return null;
         if (/sonnet|haiku/i.test(t)) return "fast";
-        if (!/opus/i.test(t)) return null;
+        if (!/fable|opus/i.test(t)) return null;
         if (/adaptive|max|extra/i.test(t)) return "think";
         if (/\blow\b|低/i.test(t)) return "fast";
-        if (/opus\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
+        if (/(?:fable|opus)\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
         return null;
       },
       // 最后一条回答（真机审计锚点 2026-07：每条 AI 回答一个 .font-claude-response）。
@@ -100,9 +100,9 @@
       },
       think: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
-        await this._selectModel(/opus\s*4\.8/i); await this._setThinking(true, "max");
+        await this._selectModel(/fable\s*5/i); await this._setThinking(true, "max");
       },
-      // Sonnet 5 不提供 effort 选择器；fast 只选模型，避免再操作不适用的 Thinking/effort 菜单而误报失败。
+      // fast 只选 Sonnet 5，使用该模型记忆的默认 effort，避免把思考档的 Max 强加给快档。
       fast: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
         await this._selectModel(/sonnet\s*5/i);

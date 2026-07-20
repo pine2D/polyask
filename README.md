@@ -31,15 +31,15 @@
 
 | 站点 | 🧠 深度思考 | ⚡ 快速 |
 |---|---|---|
-| Claude (claude.ai) | Opus 4.8（Thinking 开 + Effort Max） | Sonnet 5（默认设置） |
+| Claude (claude.ai) | Fable 5（Thinking 开 + Effort Max） | Sonnet 5（默认设置） |
 | ChatGPT (chatgpt.com) | Intelligence 最高档（超高 / Pro 扩展） | Intelligence 最低档（极速 Instant） |
 | Gemini (gemini.google.com) | 3.1 Pro + Thinking: Extended | 3.5 Flash |
 | DeepSeek (chat.deepseek.com) | Expert + DeepThink 开 | Instant + DeepThink 关 |
 | 豆包 (doubao.com) | 专家 | 快速 |
-| 千问 (qianwen.com) | Qwen Max + 思考开 | Qwen 快速档 + 思考关 |
-| Kimi (kimi.com) | K2 Thinking | K2 Instant |
+| 千问 (qianwen.com) | Qwen3.8-Max-Preview + 思考开 | Qwen3.8-Max-Preview + 思考关 |
+| Kimi (kimi.com) | K3 + Thinking Max | K2.6 |
 | 元宝 (yuanbao.tencent.com) | Deep Thinking 开 | Deep Thinking 关 |
-| 智谱清言 (chatglm.cn) | 思考开 | 思考关 |
+| 智谱清言 (chatglm.cn) | 深度思考：深度 | 快速 |
 
 > 站点 UI 改版可能导致个别适配失效；适配逻辑集中在 `content/adapters-intl.js`（国际站）与 `content/adapters-cn.js`+`adapters-cn2.js`（国内站），按文本/语义属性匹配，UI 词支持中英双语界面（其他语言不保证）。
 > 怀疑失效时：扩展图标 →「🩺 诊断当前站点」，逐项检查控件是否仍能找到（只读、零副作用）。
