@@ -7,17 +7,19 @@
   const { waitFor, findByText, openMenu, clickEl, sleep, escMenus } = S;
 
   Object.assign(S.adapters, {
-    // Kimi：K3 有 Standard/High/Max 思考强度；think=K3 Max，fast=K2.6（chrome-dbg 实测 2026-07-17）。
-    // 模型菜单原生 click；Thinking effort 子菜单需 hover 展开后再点 Max。
+    // Kimi：think=K3+Max、fast=K3+Standard（K3 才有 Max 档；effort 经 hover 子菜单选）。
+    // 换模型会 SPA 路由跳 /agent?chat_enter_method=change_model（2026-07-21 真机），该面发送
+    // 偶发对真人也失效（疑站点高峰限流禁用对话）——发送失败会诚实报 submit_unconfirmed 可 retry。
     "kimi.com": {
       _entry: function () { return document.querySelector(".current-model"); },
       _model: function () {
         const n = this._entry() && this._entry().querySelector(".name");
         return n ? (n.textContent || "").trim() : "";
       },
-      _isMax: function () {
+      _zap: function (s) { return (s || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim(); }, // 零宽字符防御
+      _effort: function () {
         const n = this._entry() && this._entry().querySelector(".current-effort");
-        return !!n && /^(Max|最大|最高|最强)$/i.test((n.textContent || "").trim());
+        return n ? this._zap(n.textContent) : "";
       },
       _select: async function (name) {
         const e = this._entry();
@@ -32,22 +34,29 @@
         await sleep(400);
         escMenus();
       },
-      _max: async function () {
-        if (this._isMax()) return;
+      _setEffort: async function (re) {
+        if (re.test(this._effort())) return;
         const e = this._entry();
         if (!e) throw new Error("Kimi: 模型入口未找到");
         if (!e.classList.contains("active")) e.click();
-        const row = await waitFor(() => [...document.querySelectorAll(".effort-item")].find((el) =>
-          /Thinking|思考|推理/i.test((el.querySelector(".effort-title") || {}).textContent || "")), 1500);
-        if (!row) { escMenus(); throw new Error("Kimi: 思考强度入口未找到"); }
-        ["pointerenter", "mouseenter", "pointerover", "mouseover"].forEach((type) =>
-          row.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
-        const opt = await waitFor(() => [...document.querySelectorAll(".effort-option")].find((el) =>
-          /^(Max|最大|最高|最强)$/i.test(((el.querySelector(".effort-name") || {}).textContent || "").trim())), 1500);
-        if (!opt) { escMenus(); throw new Error("Kimi: Max 思考强度未找到"); }
+        // 菜单开启动画期间合成 hover 会丢失、effort 行节点还会被重挂（真机 2026-07-21：
+        // 重开菜单后对首个找到的行 hover 子菜单不渲染，重查新节点再 hover 才出）
+        // → 每轮重新取行、重发 hover，而不是单次 hover 后干等
+        let opt = null;
+        for (let i = 0; i < 4 && !opt; i++) {
+          const row = await waitFor(() => [...document.querySelectorAll(".effort-item")].find((el) =>
+            /Thinking|思考|推理/i.test((el.querySelector(".effort-title") || {}).textContent || "")), 1500);
+          if (!row) { escMenus(); throw new Error("Kimi: 思考强度入口未找到"); }
+          ["pointerenter", "mouseenter", "pointerover", "mouseover"].forEach((type) =>
+            row.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
+          opt = await waitFor(() => [...document.querySelectorAll(".effort-option")].find((el) =>
+            re.test(this._zap((el.querySelector(".effort-name") || {}).textContent))), 900);
+        }
+        if (!opt) { escMenus(); throw new Error("Kimi: 目标思考强度未找到"); }
         opt.click();
         await sleep(400);
         escMenus();
+        if (!re.test(this._effort())) throw new Error("Kimi: 思考强度未生效"); // 点击被吞时不许静默成功
       },
       diagnose: function () {
         return [
@@ -56,16 +65,27 @@
         ];
       },
       state: function () {
-        const model = this._model();
-        return model === "K3" && this._isMax() ? "think" : model === "K2.6" ? "fast" : null;
+        if (this._model() !== "K3") return null;
+        const ef = this._effort();
+        return /^(Max|极致|最大|最高|最强)$/i.test(ef) ? "think" : /^(Standard|标准)$/i.test(ef) ? "fast" : null; // 中文 UI Max=「极致」（用户实证 2026-07-21）
       },
-      think: async function () { if (this._model() !== "K3") await this._select("K3"); await this._max(); },
-      fast: async function () { if (this._model() !== "K2.6") await this._select("K2.6"); },
-      // 发送键是无 role 的 div（真机审计 2026-07），Enter 只插换行 → 原生点它；没找到落回通用路径由校验循环兜底
+      think: async function () { if (this._model() !== "K3") await this._select("K3"); await this._setEffort(/^(Max|极致|最大|最高|最强)$/i); },
+      fast: async function () { if (this._model() !== "K3") await this._select("K3"); await this._setEffort(/^(Standard|标准)$/i); },
+      // 新编辑器（真机 2026-07-21）：合成 beforeinput 会 DOM/model 分叉并冻死编辑器（发送键失灵、
+      // 可信键盘也不再接受）；execCommand insertText 反而正常入 model → 站点特调注入改道
+      inject: function (el, text) {
+        el.focus();
+        // 新开页 focus 后选区未必落进编辑器（execCommand 无处可写）：显式设 Range 再插入
+        const s = getSelection(); s.removeAllRanges();
+        const rg = document.createRange(); rg.selectNodeContents(el); s.addRange(rg);
+        // 失败必须抛（而非返回 false）：本站通用 beforeinput 回退会写死编辑器，宁可 inject_failed
+        if (!document.execCommand("insertText", false, text)) throw new Error("Kimi: execCommand 注入失败");
+      },
+      // 发送键是无 role 的 div（真机审计 2026-07），Enter 只插换行 → clickEl（detail:1 拟真）点它
       submit: function () {
         const b = document.querySelector(".send-button-container");
         if (!b) return false;
-        b.click();
+        clickEl(b);
       },
       // 最后一条回答（真机审计锚点 2026-07：.chat-content-item-assistant，正文在 .markdown）。
       // Thinking 档思考段也是 .markdown（祖先 .thinking-container，真机 2026-07-11），querySelector

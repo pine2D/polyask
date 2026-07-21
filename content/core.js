@@ -33,8 +33,9 @@
 
   function clickEl(el) {
     if (!el) return false;
+    // detail:1 拟真（真实点击 detail=1；el.click()/裸构造是 0）——Kimi 新首页按 detail===0 过滤机器人点击（真机 2026-07-21）
     ["pointerdown", "mousedown", "pointerup", "mouseup", "click"].forEach((t) =>
-      el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window }))
+      el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, view: window, detail: 1, button: 0 }))
     );
     return true;
   }
@@ -100,6 +101,15 @@
       Object.getOwnPropertyDescriptor(proto, "value").set.call(el, text);
       el.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
+      // 站点特调注入优先。契约：inject 返回 false=交回通用链；抛异常=通用链对本站不安全，直接 inject_failed
+      //（Kimi Lexical 把合成 beforeinput 当 DOM 污染：文本上屏但 model 为空、编辑器冻结连可信键盘都不再
+      // 接受，且"DOM 有变化=注入成功"检查会被骗过——通用链无法自愈，真机 2026-07-21）
+      const a0 = pickAdapter();
+      let injected0 = false;
+      try { injected0 = !!(a0 && typeof a0.inject === "function" && a0.inject(el, text) !== false); }
+      catch (e) { return { ok: false, code: "inject_failed" }; }
+      if (injected0) { await sleep(150); } // Lexical 类编辑器异步应用注入，立即读文本会误判 inject_failed
+      else {
       // 先全选(替换既有内容)，再用 beforeinput 注入；没进去再退回 execCommand。
       const _before = (el.textContent || "").trim();
       try { const s = getSelection(); s.removeAllRanges(); const rg = document.createRange(); rg.selectNodeContents(el); s.addRange(rg); } catch (e) {}
@@ -111,6 +121,7 @@
         try { document.execCommand("selectAll", false, null); injected = document.execCommand("insertText", false, text); }
         catch (e) {}
         if (!injected) { el.textContent = text; el.dispatchEvent(new InputEvent("input", { bubbles: true })); }
+      }
       }
       // 硬校验：注入彻底落空时框仍为空，绝不能走到下面"空框=已发送"的校验循环产生假成功
       if (text.trim() && !readText(el)) return { ok: false, code: "inject_failed" };

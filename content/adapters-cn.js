@@ -128,6 +128,10 @@
       _selectModel: async function (re) {
         const md = this._trigger();
         if (!md) throw new Error("千问模型下拉未就绪");
+        // 先读后点：已是目标模型直接返回。否则触发器自身文本会让下面的 findByText 误判
+        // "菜单已开"，leaf 又抓到触发器本身，点击反而打开模型对话框（真机 2026-07-21：
+        // fast/think 同模型后每次切档都踩中此分支，白开对话框靠 Escape 兜底，慢且脆弱）
+        if (re.test((md.textContent || "").trim())) return;
         if (!findByText("div,li,span,button", re)) md.click();
         const leaf = await waitFor(() =>
           [...document.querySelectorAll("div,li,span,button")]
