@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [0.9.1] - 2026-07-21
+
 ### 变更
 
 - Kimi 快速档由 K2.6 改为 K3 Standard（与思考档 K3 Max 同模型，仅思考强度区分）
@@ -247,7 +249,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.9.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.9.1...HEAD
+[0.9.1]: https://github.com/pine2D/polyask/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/pine2D/polyask/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/pine2D/polyask/compare/v0.8.1...v0.8.2
 [0.8.1]: https://github.com/pine2D/polyask/compare/v0.8.0...v0.8.1
