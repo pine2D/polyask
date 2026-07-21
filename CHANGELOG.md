@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [0.9.2] - 2026-07-21
+
 ### 修复
 
 - 修复 Claude 深度思考档切换报错，改用 Fable 5 High
@@ -253,7 +255,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.9.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.9.2...HEAD
+[0.9.2]: https://github.com/pine2D/polyask/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/pine2D/polyask/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/pine2D/polyask/compare/v0.8.2...v0.9.0
 [0.8.2]: https://github.com/pine2D/polyask/compare/v0.8.1...v0.8.2
