@@ -37,11 +37,11 @@
         const trig = document.querySelector('[data-testid="effort-menu-trigger"]');
         if (trig) {
           if (!this._thinkSwitch() && !document.querySelector(optSel)) openMenu(trig);
-          // 1) Thinking 开关切到目标态。effort 布局下开关与 effort 选项同层必在，缺失=结构
-          // 变化，静默跳过会让 runMode 报"已切换"假成功（独立访问场景无 state() 二道防线）
-          const sw = await waitFor(() => this._thinkSwitch(), 1500);
-          if (!sw) { escMenus(); throw new Error("Claude: Thinking 开关未找到"); }
-          if ((sw.getAttribute("aria-checked") === "true") !== on) { clickEl(sw); await sleep(450); }
+          // 1) 旧布局有 Thinking 开关；Fable 5 新布局只有 effort 单选项。
+          const ready = await waitFor(() => this._thinkSwitch() || document.querySelector(optSel), 1500);
+          if (!ready) { escMenus(); throw new Error("Claude: Thinking/effort 控件未找到"); }
+          const sw = this._thinkSwitch();
+          if (sw && (sw.getAttribute("aria-checked") === "true") !== on) { clickEl(sw); await sleep(450); }
           // 2) effort 档位切到目标级别
           if (!document.querySelector(optSel)) {
             const t2 = document.querySelector('[data-testid="effort-menu-trigger"]');
@@ -49,8 +49,12 @@
           }
           const opt = await waitFor(() => document.querySelector(optSel), 1500);
           if (!opt) { escMenus(); throw new Error("Claude: 目标 effort 未找到"); }
-          clickEl(opt);
-          await sleep(300); escMenus(); return;
+          if (opt.getAttribute("aria-checked") !== "true") clickEl(opt);
+          await sleep(300);
+          if (effort === "high" && !/high|高/i.test(this._label())) {
+            escMenus(); throw new Error("Claude: High effort 未生效");
+          }
+          escMenus(); return;
         }
         // 回退：无 effort 入口的旧布局（窄屏 Adaptive 开关），仅切裸开关；开关也缺失时保持
         // 静默——fast() 依赖"无思考控件自然降级为纯选模型"的语义（见 fast() 注释），不误伤
@@ -76,15 +80,15 @@
           { name: t("diag_modelReadable"), ok: /opus|sonnet|haiku|fable/i.test(this._label()) },
         ];
       },
-      // think = Fable 5 Max（最强）；fast = Sonnet 5（快模型，使用该模型默认设置）。
-      // 判档：模型名带 sonnet/haiku 恒 fast；Fable/Opus 再按 thinking/effort 后缀（Adaptive/Max/Extra=think，Low/无后缀=fast，High/Medium 不判）
+      // think = Fable 5 High；fast = Sonnet 5（快模型，使用该模型默认设置）。
+      // 判档：模型名带 sonnet/haiku 恒 fast；Fable/Opus 再按 thinking/effort 后缀（Adaptive/High=think，Low/无后缀=fast，其余 effort 不判）
       state: function () {
         if (this._isEmbedLocked()) return null; // 受限态：不谎报 "fast"，HUD 不亮琥珀
         const t = this._label();
         if (!t) return null;
         if (/sonnet|haiku/i.test(t)) return "fast";
         if (!/fable|opus/i.test(t)) return null;
-        if (/adaptive|max|extra/i.test(t)) return "think";
+        if (/adaptive|high|高/i.test(t)) return "think";
         if (/\blow\b|低/i.test(t)) return "fast";
         if (/(?:fable|opus)\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
         return null;
@@ -100,9 +104,9 @@
       },
       think: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
-        await this._selectModel(/fable\s*5/i); await this._setThinking(true, "max");
+        await this._selectModel(/fable\s*5/i); await this._setThinking(true, "high");
       },
-      // fast 只选 Sonnet 5，使用该模型记忆的默认 effort，避免把思考档的 Max 强加给快档。
+      // fast 只选 Sonnet 5，使用该模型记忆的默认 effort，避免把思考档的 High 强加给快档。
       fast: async function () {
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
         await this._selectModel(/sonnet\s*5/i);

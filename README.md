@@ -31,7 +31,7 @@
 
 | 站点 | 🧠 深度思考 | ⚡ 快速 |
 |---|---|---|
-| Claude (claude.ai) | Fable 5（Thinking 开 + Effort Max） | Sonnet 5（默认设置） |
+| Claude (claude.ai) | Fable 5（Thinking 开 + Effort High） | Sonnet 5（默认设置） |
 | ChatGPT (chatgpt.com) | Intelligence 最高档（超高 / Pro 扩展） | Intelligence 最低档（极速 Instant） |
 | Gemini (gemini.google.com) | 3.1 Pro + Thinking: Extended | 3.5 Flash |
 | DeepSeek (chat.deepseek.com) | Expert + DeepThink 开 | Instant + DeepThink 关 |
