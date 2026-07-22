@@ -33,7 +33,7 @@
 |---|---|---|
 | Claude (claude.ai) | Fable 5（Thinking 开 + Effort High） | Sonnet 5（默认设置） |
 | ChatGPT (chatgpt.com) | Intelligence 最高档（超高 / Pro 扩展） | Intelligence 最低档（极速 Instant） |
-| Gemini (gemini.google.com) | 3.1 Pro + Thinking: Extended | 3.5 Flash |
+| Gemini (gemini.google.com) | 3.1 Pro + Thinking: Extended | 3.6 Flash |
 | DeepSeek (chat.deepseek.com) | Expert + DeepThink 开 | Instant + DeepThink 关 |
 | 豆包 (doubao.com) | 专家 | 快速 |
 | 千问 (qianwen.com) | Qwen3.8-Max-Preview + 思考开 | Qwen3.8-Max-Preview + 思考关 |

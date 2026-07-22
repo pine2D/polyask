@@ -216,14 +216,16 @@
         if (!item) { escMenus(); throw new Error("Gemini: 未找到模型 " + re); }
         clickEl(item); await sleep(700);
       },
-      // 当前布局把 Extended thinking 作为模型菜单直达项；旧布局仍走 Thinking level 嵌套子菜单。
-      _setThinking: async function (re) {
+      // 当前布局把 Extended thinking 作为模型菜单直达开关；旧布局仍走 Thinking level 嵌套子菜单。
+      _setThinking: async function (re, on = true) {
         await this._openModelMenu();
         const direct = findByText(this._MI, re);
         if (direct) {
-          if (!direct.classList.contains("selected") && direct.getAttribute("aria-checked") !== "true") clickEl(direct);
+          const active = direct.classList.contains("selected") || direct.getAttribute("aria-checked") === "true";
+          if (active !== on) clickEl(direct);
           await sleep(400); escMenus(); return;
         }
+        if (!on) { escMenus(); return; }
         const trig = await waitFor(() => findByText(this._MI, /thinking level|思考(等级|程度)?/i));
         if (!trig) { escMenus(); return; } // 无等级子菜单的布局（窄屏/模型无此项）：合法缺席，静默跳过
         let lvl = null;
@@ -245,7 +247,8 @@
       state: function () {
         const b = this._modelBtn();
         const t = b ? b.getAttribute("aria-label") || "" : "";
-        return /pro\b.*(?:extended|扩展)|(?:extended|扩展).*pro\b/i.test(t) ? "think" : /flash/i.test(t) ? "fast" : null;
+        if (/extended|扩展/i.test(t)) return /pro\b/i.test(t) ? "think" : null;
+        return /flash/i.test(t) ? "fast" : null;
       },
       // 最后一条回答（真机审计锚点 2026-07：每条回答一个 <message-content>，正文在 .markdown）
       answer: function () {
@@ -256,7 +259,7 @@
       },
       // 等级 UI 词中英双写；英文 "Extended" 真机已确认，中文「扩展」为直译候选
       think: async function () { await this._selectModel(/3\.1\s*pro\b/i); await this._setThinking(/^(extended|扩展)/i); },
-      fast: async function () { await this._selectModel(/3\.5\s*flash\b/i); },
+      fast: async function () { await this._selectModel(/3\.6\s*flash\b/i); await this._setThinking(/^(extended|扩展)/i, false); },
     },
 
     // DeepSeek：模式 tab(Instant/Expert/Vision，空对话首屏) + DeepThink 开关(ds-toggle-button, aria-pressed)
