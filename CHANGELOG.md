@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [0.10.0] - 2026-07-22
+
 ### 变更
 
 - 升级 Gemini 快速档至 3.6 Flash
@@ -259,7 +261,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.9.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/pine2D/polyask/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/pine2D/polyask/compare/v0.9.1...v0.9.2
 [0.9.1]: https://github.com/pine2D/polyask/compare/v0.9.0...v0.9.1
 [0.9.0]: https://github.com/pine2D/polyask/compare/v0.8.2...v0.9.0
