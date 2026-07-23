@@ -111,6 +111,9 @@
         if (this._isEmbedLocked()) throw new Error("Claude 在 iframe 中被官方限制为 haiku，档位不可切换（请在独立标签使用）");
         await this._selectModel(/sonnet\s*5/i);
       },
+      attach: function (file, el, deadline) {
+        return S.setInputFile(document.querySelector('input[data-testid="file-upload"]'), file, el, deadline);
+      },
     },
 
     "chatgpt.com": {
@@ -187,6 +190,9 @@
       },
       think: async function () { await this._selectModel(/^GPT-5\.6\s*Sol$/i); await this._pickEdge(true); },
       fast: async function () { await this._selectModel(/^GPT-5\.6\s*Sol$/i); await this._pickEdge(false); },
+      attach: function (file, el, deadline) {
+        return S.setInputFile(document.querySelector("#upload-photos"), file, el, deadline);
+      },
       stop: function () {
         const b = document.querySelector('[data-testid="stop-button"]') ||
           [...document.querySelectorAll('button[aria-label]')]
@@ -260,6 +266,7 @@
       // 等级 UI 词中英双写；英文 "Extended" 真机已确认，中文「扩展」为直译候选
       think: async function () { await this._selectModel(/3\.1\s*pro\b/i); await this._setThinking(/^(extended|扩展)/i); },
       fast: async function () { await this._selectModel(/3\.6\s*flash\b/i); await this._setThinking(/^(extended|扩展)/i, false); },
+      // Gemini 忽略合成 drop，附件菜单又要求可信点击且不保留 file input；留空明确报 unsupported。
     },
 
     // DeepSeek：模式 tab(Instant/Expert/Vision，空对话首屏) + DeepThink 开关(ds-toggle-button, aria-pressed)

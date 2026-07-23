@@ -119,6 +119,7 @@ button.mini:disabled{opacity:.35;cursor:not-allowed}
 button.icon{padding:0;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;flex:0 0 30px;color:var(--text-3);border-color:transparent;background:transparent}
 button.icon svg{display:block}
 button.icon:hover{color:var(--text)}
+#image[data-set="true"]{color:var(--active-text);background:var(--active-bg);border-color:var(--active-line)}
 
 /* —— 站点范围伴侣窗：独立 popup，主 console 恒定 96px；失焦由 scope.js 关闭。 —— */
 body.scope{height:100vh;box-sizing:border-box;padding:12px;overflow:auto;background:var(--fill-2);scrollbar-width:thin;scrollbar-color:var(--scroll) transparent}

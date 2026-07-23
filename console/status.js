@@ -15,6 +15,7 @@ function setDot(host, state, reason) {
 
 // 错误码 → 当前语言文案（bg/content 只传 code，避免硬编码中文泄漏到 en/zh_TW 界面）
 const ERR_KEYS = { timeout: "con_errTimeout", composer_not_found: "con_errNoComposer", inject_failed: "con_errInject", submit_unconfirmed: "con_errSubmit", tier_unconfirmed: "con_errTier",
+  image_invalid: "con_errImageInvalid", attachment_unsupported: "con_errAttachmentUnsupported", attachment_failed: "con_errAttachmentFailed", attachment_timeout: "con_errAttachmentTimeout", attachment_action_required: "con_errAttachmentAction",
   no_window: "con_errNoWindow", not_ready: "con_errNotReady", cancelled: "con_errCancelled", checkup_ok: "con_checkupOk", no_answer: "con_errNoAnswer", error: "con_errGeneric" };
 // error 码 = 意外异常兜底：主文案用词条（不让英文异常原文裸露在 zh 界面），原始 reason 附在后面供排障
 function errText(r) {
@@ -45,14 +46,15 @@ function applyResults(results) {
 
 // 逐站实时回填：sendAll 期间每站一完成，background 即推单站结果，立刻更新该站圆点（不等全部）
 let progress = { total: 0, done: 0 };
-let lastSend = null; // {text, tier}
+let lastSend = null; // {text, tier, hasImage, image}
 const elSend = document.getElementById("send");
 function updateSendLabel() {
   elSend.textContent = (progress.total && progress.done < progress.total) ? t("con_sending", progress.done, progress.total) : t("con_sendAll");
 }
 function updateRetry() {
   const hasFail = [...document.querySelectorAll(".chip.fail")].some((c) => selected[c.dataset.host]);
-  document.getElementById("retry").disabled = !(hasFail && lastSend);
+  const retryable = lastSend && (!lastSend.hasImage || lastSend.image);
+  document.getElementById("retry").disabled = !(hasFail && retryable);
 }
 // 短暂内联提示（借 failsum 位；中性色，3s 后交还失败汇总）+ 读屏播报
 let noteUntil = 0; // 展示期内挡住并发 siteResult/sendStart 触发的 updateFailSum 覆盖
@@ -142,7 +144,8 @@ chrome.runtime.onMessage.addListener((msg) => {
   if (!msg || msg.from !== "AMS_BG") return;
   if (msg.type === "sendStart") {
     ignoreResults = false; // 新一轮群发开始，恢复接收结果
-    if (msg.text) lastSend = { text: msg.text, tier: msg.tier || null }; // compose 发起的群发也可重试
+    const image = msg.hasImage && lastSend && lastSend.text === msg.text ? lastSend.image : null;
+    if (msg.text) lastSend = { text: msg.text, tier: msg.tier || null, hasImage: !!msg.hasImage, image };
     progress = { total: msg.hosts.length, done: 0 };
     msg.hosts.forEach((h) => setDot(h, "send", t("con_sendingDot")));
     armDotTimeouts(msg.hosts);

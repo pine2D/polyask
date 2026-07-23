@@ -89,22 +89,25 @@
     try { const el = findComposer(); if (el) el.focus(); } catch (e) {}
   }
 
-  // 把 text 注入输入框并提交。textarea/input 用原生 value setter；contenteditable 用合成
-  // beforeinput（受控编辑器 Lexical/ProseMirror/Slate 无视 execCommand 的 DOM 写入，却处理
-  // beforeinput），失败退回 execCommand。提交：优先 adapter.submit(el)，否则原生点发送键，
-  // 无按钮再发 Enter。返回 {ok, code?, reason?}（失败传错误码，console 端按界面语言翻译）。
-  async function submitPromptNow(text, deadline) {
-    const el = findComposer();
+  // 注入并提交：附件必须先确认；文字按 textarea setter / beforeinput 注入，再走 adapter、按钮或 Enter。
+  // 返回 {ok, code?, reason?}，用户文案由 console 按错误码翻译。
+  async function submitPromptNow(text, deadline, image) {
+    let el = findComposer();
     if (!el) return { ok: false, code: "composer_not_found" }; // 失败一律传 code，由 console 端按界面语言翻译
+    if (image) {
+      const upload = window.__AMS.uploadImage && await window.__AMS.uploadImage(image, pickAdapter(), el, deadline);
+      if (!upload || !upload.ok) return upload || { ok: false, code: "attachment_unsupported" };
+      const left = Number(deadline) ? Math.max(0, Number(deadline) - Date.now()) : 3500;
+      el = findComposer() || (left ? await waitFor(findComposer, Math.min(3500, left)) : null);
+      if (!el) return { ok: false, code: "attachment_timeout" }; // 不返回 composer_not_found，避免 bg 整包重传同一图片
+    }
     el.focus();
     if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
       const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
       Object.getOwnPropertyDescriptor(proto, "value").set.call(el, text);
       el.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
-      // 站点特调注入优先。契约：inject 返回 false=交回通用链；抛异常=通用链对本站不安全，直接 inject_failed
-      //（Kimi Lexical 把合成 beforeinput 当 DOM 污染：文本上屏但 model 为空、编辑器冻结连可信键盘都不再
-      // 接受，且"DOM 有变化=注入成功"检查会被骗过——通用链无法自愈，真机 2026-07-21）
+      // inject 返回 false=交回通用链；抛异常=通用链不安全，直接 inject_failed（Kimi 会 DOM/model 分叉）。
       const a0 = pickAdapter();
       let injected0 = false;
       try { injected0 = !!(a0 && typeof a0.inject === "function" && a0.inject(el, text) !== false); }
@@ -139,10 +142,7 @@
           return (await confirmSubmitted(before)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
       } catch (e) { return { ok: false, code: "error", reason: String((e && e.message) || e) }; }
     }
-    // 通用提交：优先原生点击发送按钮（最稳，国产站拒合成事件，且避免对受控编辑器发 Enter 产生多余换行）；
-    // !disabled 防误触（空输入时按钮多为禁用）。无可用按钮再退回合成 Enter（适配靠 Enter 提交的 textarea）。
-    // 按钮路径同样过 confirmSubmitted（与 adapter.submit/Enter 两路径对齐）：流式中发送键被站点
-    // 复用为"停止"且标签不变时，点击不发新问而截断上一条——校验让它诚实报失败可 retry，而非假成功。
+    // 通用提交优先原生发送按钮，无可用按钮再发 Enter；所有路径都用 confirmSubmitted 防假成功。
     const sendBtn = () => document.querySelector('button[data-testid*="send" i], button[aria-label*="send" i], button[aria-label*="发送"]');
     const _txtBefore = readText(el);
     let btn = sendBtn();
@@ -158,9 +158,7 @@
     return (await confirmSubmitted(_txtBefore)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
   }
 
-  // 提交校验：成功发送后输入框会清空，但①清空是异步的（等服务端 ack/动画）②框架常把输入框**重挂为
-  // 新节点**——此时先前捕获的节点已脱离 DOM，其文本永远停在旧值，只看它会把成功站误判失败。故每轮
-  // **重新 findComposer 读当前活的输入框**：空 或 不再等于注入前原文 → 已发出；始终是原文 → 没发出去。
+  // 提交后输入框可能异步清空或重挂；每轮重取活节点，空或不再等于原文才算成功。
   async function confirmSubmitted(before) {
     for (let i = 0; i < 15; i++) {
       await sleep(200);
@@ -211,11 +209,9 @@
     return next;
   }
   function runMode(mode, silent) { return serializeInteraction(() => runModeNow(mode, silent)); }
-  function submitPrompt(text, deadline) { return serializeInteraction(() => submitPromptNow(text, deadline)); }
+  function submitPrompt(text, deadline, image) { return serializeInteraction(() => submitPromptNow(text, deadline, image)); }
 
-  // 群发场景专用：切档位并用 state() 验证真的生效。新开页面切换器渲染晚于输入框，
-  // 旧逻辑"runMode 没抛错就算切了"会误判；这里静默重试 runMode 直到 state() 确认目标档，
-  // 或超时按当前档发送（不丢提问）。state 不可读的站点：连续两次未报错即视为已尽力。
+  // 群发切档用 state() 验证；静默重试到目标档或超时，state 不可读则连续两次无异常视为已尽力。
   async function switchTier(mode, deadlineMs = 10000) {
     const okMsg = t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast");
     const t0 = Date.now();
@@ -286,7 +282,7 @@
               tierOk = await switchTier(msg.tier, tierMs); await sleep(200);
             }
             if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
-            const r = await submitPromptNow(msg.text || "", deadline);
+            const r = await submitPromptNow(msg.text || "", deadline, msg.image || null);
             if (r.ok && !tierOk) r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿
             return Object.assign({ host: location.hostname }, r);
           } catch (e) { return { host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }; }

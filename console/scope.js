@@ -4,6 +4,9 @@ let groups = [];
 let checks = {};
 let checking = false;
 const ALL_HOSTS = SITES.map((site) => site.host);
+const IMAGE_HOSTS = SITES.filter((site) => site.image).map((site) => site.host);
+const INTL_HOSTS = SITES.filter((site) => site.intl).map((site) => site.host);
+const DOMESTIC_HOSTS = SITES.filter((site) => !site.intl).map((site) => site.host);
 const elNameRow = document.getElementById("scope-name");
 const elConfirm = document.getElementById("scope-confirm");
 const elManage = document.getElementById("scope-manage");
@@ -79,6 +82,9 @@ function saveGroup() {
 
 document.getElementById("scope-all").addEventListener("click", () => applyHosts(ALL_HOSTS));
 document.getElementById("scope-none").addEventListener("click", () => applyHosts([]));
+document.getElementById("scope-image").addEventListener("click", () => applyHosts(IMAGE_HOSTS));
+document.getElementById("scope-intl").addEventListener("click", () => applyHosts(INTL_HOSTS));
+document.getElementById("scope-domestic").addEventListener("click", () => applyHosts(DOMESTIC_HOSTS));
 const CHECK_ERR_KEYS = { no_window: "con_errNoWindow", not_ready: "con_errNotReady" };
 function checkText(result) {
   if (result.ok) return t("con_checkupOk");
