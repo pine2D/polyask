@@ -63,6 +63,23 @@ function testConsoleControls() {
   assert.ok(!source("popup/popup.css").includes("@media (hover:hover) and (pointer:fine){button:active"), "popup 按压反馈应支持触摸和触控笔");
 }
 
+function testFinalReviewRegressions() {
+  const [css, composeHtml, compose, scope, pill, popup] = ["console/console.css", "console/compose.html", "console/compose.js", "console/scope.js", "content/pill.js", "popup/popup.css"].map(source);
+  assert.ok(css.indexOf("#ch-foot .scope") < css.indexOf("#ch-foot #ch-scope[data-invalid=\"true\"]"), "范围错误色必须覆盖基础 scope 色");
+  assert.match(composeHtml, /id="ch-scope" class="scope" role="status" aria-live="polite" tabindex="-1"/, "scope 状态必须可编程聚焦且保留 live 状态语义");
+  assert.match(compose, /setAttribute\("data-invalid", "true"\);\s*[^\n]*\.focus\(\)/, "无站点发送必须聚焦 scope 状态以播报现有文案");
+  for (const query of ["prefers-reduced-transparency:reduce", "prefers-contrast:more"]) assert.match(pill, new RegExp(`@media \\(${query}\\)\\{[^\\n]*\\.pill\\.idle\\{opacity:1\\}`), `${query} 下 idle pill 不得降低可见度`);
+  const clear = scope.match(/function clearGroupName\(\) \{[^\n]*\}/)?.[0];
+  assert.ok(clear, "分组名应有共享清理路径");
+  const name = { value: "无效名称", invalid: true, removeAttribute: (key) => { if (key === "aria-invalid") name.invalid = false; } };
+  vm.runInNewContext(`${clear}; clearGroupName();`, { elName: name });
+  assert.equal(name.value, "", "分组名清理必须复位值");
+  assert.equal(name.invalid, false, "分组名清理必须移除 aria-invalid");
+  assert.equal((scope.match(/clearGroupName\(\);/g) || []).length, 3, "取消、Escape 和成功保存必须复用同一分组名清理路径");
+  const reducedMotion = popup.match(/@media \(prefers-reduced-motion:reduce\)\{([\s\S]*?)\n\}/)?.[1] || "";
+  assert.ok(reducedMotion.includes(".status-dot{transition:background-color .1s}"), "reduced-motion 下状态圆点只保留背景色过渡");
+}
+
 function testCompanionResponsibilities() {
   const compose = source("console/compose.html");
   assert.ok(!compose.includes("<select") && compose.includes('id="cmp-tab-templates"') && compose.includes('id="cmp-tab-history"'), "编辑窗应使用自定义模板/历史列表");
@@ -267,6 +284,7 @@ async function testHungCheckupReleasesOperationQueue() {
 (async () => {
   testPopupLayout();
   testConsoleControls();
+  testFinalReviewRegressions();
   testCompanionResponsibilities();
   testScopeControls();
   testConsoleShortcuts();

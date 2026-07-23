@@ -141,7 +141,7 @@ document.getElementById("ch-send").addEventListener("click", () => {
   chrome.storage.local.get(["amsConsole", "amsHistory"], (o) => {
     const c = (o && o.amsConsole) || {};
     const sites = SITES.filter((s) => (c.selected || {})[s.host]);
-    if (!sites.length) { document.getElementById("ch-scope").setAttribute("data-invalid", "true"); return; }
+    if (!sites.length) { const scope = document.getElementById("ch-scope"); scope.setAttribute("data-invalid", "true"); scope.focus(); return; }
     const hist = [text, ...((o && o.amsHistory) || []).filter((x) => x !== text)].slice(0, 20);
     chrome.storage.local.set({ amsConsolePrompt: elText.value, amsHistory: hist }, () => {
       chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: c.tier || null });

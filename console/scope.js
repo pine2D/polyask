@@ -66,6 +66,7 @@ function renderScope() {
 function showOnly(row) {
   elManage.hidden = row !== elManage; elNameRow.hidden = row !== elNameRow; elConfirm.hidden = row !== elConfirm;
 }
+function clearGroupName() { elName.value = ""; elName.removeAttribute("aria-invalid"); }
 function saveGroup() {
   const name = elName.value.trim();
   if (!name) { elName.setAttribute("aria-invalid", "true"); elName.focus(); return; }
@@ -73,7 +74,7 @@ function saveGroup() {
   if (!canSaveGroup(hosts)) { showOnly(elManage); renderScope(); return; }
   groups = [...groups.filter((group) => group.name !== name), { name, hosts }];
   chrome.storage.local.set({ amsGroups: groups });
-  elName.value = ""; showOnly(elManage); renderScope();
+  clearGroupName(); showOnly(elManage); renderScope();
 }
 
 document.getElementById("scope-all").addEventListener("click", () => applyHosts(ALL_HOSTS));
@@ -99,10 +100,10 @@ document.getElementById("scope-checkup").addEventListener("click", () => {
   });
 });
 document.getElementById("grp-save").addEventListener("click", () => { showOnly(elNameRow); elName.focus(); });
-document.getElementById("group-name-cancel").addEventListener("click", () => { elName.value = ""; showOnly(elManage); });
+document.getElementById("group-name-cancel").addEventListener("click", () => { clearGroupName(); showOnly(elManage); });
 elName.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.isComposing) { event.preventDefault(); saveGroup(); }
-  else if (event.key === "Escape") { event.preventDefault(); elName.value = ""; showOnly(elManage); }
+  else if (event.key === "Escape") { event.preventDefault(); clearGroupName(); showOnly(elManage); }
 });
 elName.addEventListener("input", () => elName.removeAttribute("aria-invalid"));
 document.getElementById("grp-del").addEventListener("click", () => {

@@ -108,7 +108,6 @@ html,body{margin:0;height:100%;overflow:hidden;font:13px/1.4 -apple-system,"Sego
 #prompt::placeholder{color:var(--faint)}
 #prompt:focus{border-color:var(--name-line)}
 #prompt[aria-invalid="true"],#group[aria-invalid="true"],#ch-text[aria-invalid="true"],#group-name[aria-invalid="true"]{border-color:var(--danger);box-shadow:0 0 0 2px var(--danger-fill)}
-#ch-scope[data-invalid="true"]{color:var(--danger)}
 button{height:32px;padding:0 11px;border:1px solid var(--line);background:var(--fill-3);color:var(--text-2);border-radius:8px;cursor:pointer;white-space:nowrap;font-size:12px;transition:background .12s,color .12s,border-color .12s,transform .12s var(--ease-out)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:1px} /* 键盘焦点环随主题（浏览器默认环与暗色违和） */
 button:hover{background:var(--hover-2)}
@@ -176,6 +175,7 @@ body.compose [hidden]{display:none!important}
 #ch-text::placeholder{color:var(--faint)}
 #ch-foot{display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--edge);flex-wrap:wrap} /* 伴侣窗宽随 console 输入框，窄时按钮换行不溢出 */
 #ch-foot .scope{flex:1 0 100%;font-size:12px;color:var(--text-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ch-foot #ch-scope[data-invalid="true"]{color:var(--danger)}
 #ch-foot .scope b{color:var(--accent);font-weight:600}
 #ch-back{margin-left:auto}
 #ch-send{font-weight:700;color:var(--send-text);border:1px solid transparent;background:var(--send-bg);box-shadow:0 1px 2px rgba(0,0,0,.2)}

@@ -31,8 +31,8 @@
       .pill button:active{transform:scale(.97)}
       @media (hover:hover) and (pointer:fine){.handle:hover:before{background:rgba(120,120,120,.8)}}
       @media (prefers-reduced-motion:reduce){.handle:before{transition:background-color .1s ease}.pill{transition:opacity .1s ease}.pill button{transition:background-color .1s ease}.pill button:active{transform:none}}
-      @media (prefers-reduced-transparency:reduce){.pill{background:#12161e;backdrop-filter:none}}
-      @media (prefers-contrast:more){.pill{background:#0c0f15;border-color:rgba(255,255,255,.55);backdrop-filter:none}}
+      @media (prefers-reduced-transparency:reduce){.pill{background:#12161e;backdrop-filter:none}.pill.idle{opacity:1}}
+      @media (prefers-contrast:more){.pill{background:#0c0f15;border-color:rgba(255,255,255,.55);backdrop-filter:none}.pill.idle{opacity:1}}
       /* 模式形态 */
       .wrap[data-mode=hidden]{display:none}
       .wrap[data-mode=always] .handle{display:none}

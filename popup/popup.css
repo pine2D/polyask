@@ -75,6 +75,7 @@ kbd{padding:2px 6px;border:1px solid var(--line);border-bottom-width:2px;border-
 button:active:not(:disabled),.switch:active,.mini-segment label:active span{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){
   button,.switch,.mini-segment span{transition-property:background-color,border-color,color,opacity;transition-duration:.1s}
+  .status-dot{transition:background-color .1s}
   .switch:after{transition:none}
   .select-menu{transform:none;transition:opacity .1s ease,display .1s allow-discrete}
   button:active:not(:disabled),.switch:active,.mini-segment label:active span,.select-menu[hidden]{transform:none}
