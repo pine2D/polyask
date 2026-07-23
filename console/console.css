@@ -187,7 +187,7 @@ body.compose,#ch-text{scrollbar-width:thin;scrollbar-color:var(--scroll) transpa
 #ch-text::-webkit-scrollbar-thumb:hover{background:var(--scroll-hover)}
 
 button.icon:disabled{opacity:.35;cursor:not-allowed}
-@media (hover:hover) and (pointer:fine){button:active:not(:disabled),.scope-site:active{transform:scale(.97)}}
+button:active:not(:disabled),.scope-site:active{transform:scale(.97)}
 @media (prefers-reduced-motion:reduce){
   button,.chip,.scope-site{transition-property:background-color,border-color,color,opacity;transition-duration:.1s}
   button:active:not(:disabled),.scope-site:active{transform:none}

@@ -23,6 +23,9 @@ function testPopupLayout() {
   assert.ok(html.includes('class="status checking"') && css.includes(".status.connected .status-dot"), "popup 检测中应为中性状态，连接成功后才变绿");
   assert.ok(js.includes('classList.remove("checking")') && js.includes('classList.toggle("connected"'), "popup 状态机应明确结束 checking");
   const pill = source("content/pill.js"); assert.ok(pill.includes("width:36px;height:24px") && pill.includes(".handle:before") && pill.includes("transition:opacity .16s var(--ease-out)") && pill.includes("prefers-reduced-motion:reduce"), "悬浮把手应扩大命中区并使用克制反馈");
+  assert.ok(pill.includes("prefers-reduced-transparency:reduce") && pill.includes("prefers-contrast:more"), "悬浮控件应支持降低透明度和提高对比度");
+  assert.ok(pill.includes("background-color .12s ease"), "pill 档位状态应使用短颜色反馈");
+  assert.ok(pill.indexOf(".pill button:active") < pill.indexOf("@media (hover:hover)"), "pill 按压反馈不应只服务精细鼠标");
   const core = source("content/core.js"); assert.ok(core.includes('setAttribute("role", "status")') && core.includes("pointer-events:none") && core.includes("matchMedia(\"(prefers-reduced-motion: reduce)\")") && core.includes(".animate(") && core.includes("exit.finished.then"), "跨站提示应具备状态语义、克制进退场与 reduced-motion");
 }
 
@@ -56,6 +59,8 @@ function testConsoleControls() {
   assert.ok(css.includes("transition-property:background-color,border-color,color,opacity"), "reduced-motion 应保留颜色与透明度反馈");
   const popupCss = source("popup/popup.css");
   assert.ok(popupCss.includes("transition-property:background-color,border-color,color,opacity"), "popup reduced-motion 应保留非位移反馈");
+  assert.ok(!css.includes("@media (hover:hover) and (pointer:fine){button:active"), "console 按压反馈应支持触摸和触控笔");
+  assert.ok(!source("popup/popup.css").includes("@media (hover:hover) and (pointer:fine){button:active"), "popup 按压反馈应支持触摸和触控笔");
 }
 
 function testCompanionResponsibilities() {

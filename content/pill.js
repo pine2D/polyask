@@ -23,13 +23,16 @@
         opacity:1;transition:opacity .16s var(--ease-out)}
       .pill.idle{opacity:.42}
       .pill:hover{opacity:1}
-      .pill button{all:unset;cursor:pointer;padding:7px 14px;white-space:nowrap;transition:transform .12s var(--ease-out)}
+      .pill button{all:unset;cursor:pointer;padding:7px 14px;white-space:nowrap;transition:background-color .12s ease,transform .12s var(--ease-out)}
       .pill button:hover{background:rgba(255,255,255,.14)}
       .pill button.active{background:rgba(98,89,222,.78)}
       .handle:focus-visible,.pill button:focus-visible{outline:2px solid #fff;outline-offset:2px}
       .sep{width:1px;align-self:stretch;background:rgba(255,255,255,.22)}
-      @media (hover:hover) and (pointer:fine){.handle:hover:before{background:rgba(120,120,120,.8)}.pill button:active{transform:scale(.97)}}
-      @media (prefers-reduced-motion:reduce){.handle:before,.pill,.pill button{transition-duration:0s}.pill button:active{transform:none}}
+      .pill button:active{transform:scale(.97)}
+      @media (hover:hover) and (pointer:fine){.handle:hover:before{background:rgba(120,120,120,.8)}}
+      @media (prefers-reduced-motion:reduce){.handle:before{transition:background-color .1s ease}.pill{transition:opacity .1s ease}.pill button{transition:background-color .1s ease}.pill button:active{transform:none}}
+      @media (prefers-reduced-transparency:reduce){.pill{background:#12161e;backdrop-filter:none}}
+      @media (prefers-contrast:more){.pill{background:#0c0f15;border-color:rgba(255,255,255,.55);backdrop-filter:none}}
       /* 模式形态 */
       .wrap[data-mode=hidden]{display:none}
       .wrap[data-mode=always] .handle{display:none}
