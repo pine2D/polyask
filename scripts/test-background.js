@@ -38,6 +38,17 @@ function testConsoleControls() {
     const button = html.match(new RegExp(`<button id="${id}"[\\s\\S]*?</button>`))[0];
     assert.ok(button.includes('class="icon"') && button.includes("<svg") && !button.includes("<span"), `${id} 应为带无障碍说明的纯 SVG 图标按钮`);
   }
+  const consoleJs = source("console/console.js");
+  const composeJs = source("console/compose.js");
+  const scopeJs = source("console/scope.js");
+  assert.ok(!consoleJs.includes('behavior: "smooth"'), "芯片箭头滚动不得强制 smooth，以尊重 reduced-motion 和高频操作");
+  for (const [name, code] of [["console", consoleJs], ["compose", composeJs], ["scope", scopeJs]]) {
+    assert.ok(!code.includes("offsetWidth") && !code.includes('"shake"'), `${name} 不得通过强制重排重启 shake`);
+  }
+  assert.ok(!css.includes("@keyframes shake") && css.includes('[aria-invalid="true"]'), "错误反馈应使用静态无障碍状态而非位移动画");
+  assert.ok(css.includes("transition-property:background-color,border-color,color,opacity"), "reduced-motion 应保留颜色与透明度反馈");
+  const popupCss = source("popup/popup.css");
+  assert.ok(popupCss.includes("transition-property:background-color,border-color,color,opacity"), "popup reduced-motion 应保留非位移反馈");
 }
 
 function testCompanionResponsibilities() {

@@ -68,7 +68,7 @@ function showOnly(row) {
 }
 function saveGroup() {
   const name = elName.value.trim();
-  if (!name) { elName.classList.remove("shake"); void elName.offsetWidth; elName.classList.add("shake"); return; }
+  if (!name) { elName.setAttribute("aria-invalid", "true"); elName.focus(); return; }
   const hosts = currentHosts();
   if (!canSaveGroup(hosts)) { showOnly(elManage); renderScope(); return; }
   groups = [...groups.filter((group) => group.name !== name), { name, hosts }];
@@ -104,6 +104,7 @@ elName.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.isComposing) { event.preventDefault(); saveGroup(); }
   else if (event.key === "Escape") { event.preventDefault(); elName.value = ""; showOnly(elManage); }
 });
+elName.addEventListener("input", () => elName.removeAttribute("aria-invalid"));
 document.getElementById("grp-del").addEventListener("click", () => {
   const index = currentGroupIndex(); if (index < 0) return;
   document.getElementById("scope-confirm-text").textContent = t("con_delGroup", groups[index].name);

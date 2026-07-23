@@ -58,8 +58,8 @@ document.getElementById("bar").addEventListener("wheel", (e) => {
   const bar = e.currentTarget;
   if (bar.scrollWidth > bar.clientWidth) { bar.scrollLeft += e.deltaY; e.preventDefault(); }
 }, { passive: false });
-document.getElementById("sites-l").addEventListener("click", () => elSites.scrollBy({ left: -120, behavior: "smooth" }));
-document.getElementById("sites-r").addEventListener("click", () => elSites.scrollBy({ left: 120, behavior: "smooth" }));
+document.getElementById("sites-l").addEventListener("click", () => elSites.scrollBy({ left: -120 }));
+document.getElementById("sites-r").addEventListener("click", () => elSites.scrollBy({ left: 120 }));
 elSites.addEventListener("wheel", (e) => {
   if (!e.deltaY || e.deltaX) return; // 触控板横扫走原生
   elSites.scrollLeft += e.deltaY; e.preventDefault();
@@ -122,11 +122,11 @@ document.getElementById("tile").addEventListener("click", (e) => {
   armDotTimeouts(sites.map((s) => s.host)); // 回调断掉时"开窗中"不永久挂起
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openTile", sites }, (resp) => { free(); applyResults(resp && resp.results); });
 });
-function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+function markInvalid(el) { el.setAttribute("aria-invalid", "true"); el.focus(); }
 document.getElementById("send").addEventListener("click", () => {
   if (elSend.disabled) return;                       // in-flight 防双发/双 Enter
-  const sites = chosen(); if (!sites.length) { shake(elSend); return; }
-  const text = elPrompt.value.trim(); if (!text) { shake(elPrompt); return; }
+  const sites = chosen(); if (!sites.length) { markInvalid(document.getElementById("group")); return; }
+  const text = elPrompt.value.trim(); if (!text) { markInvalid(elPrompt); return; }
   pushHistory(text);
   lastSend = { text, tier: elTier.value || null };
   elSend.disabled = true;
@@ -166,6 +166,7 @@ document.getElementById("closeall").addEventListener("click", (e) => {
 });
 elTier.addEventListener("change", () => { syncTierButtons(); save(); });
 elPrompt.addEventListener("input", () => {
+  elPrompt.removeAttribute("aria-invalid");
   histCursor = -1; elPrompt.title = ""; // 编辑历史条目即成为新草稿，清位置指示
   chrome.storage.local.set({ amsConsolePrompt: elPrompt.value });
 });

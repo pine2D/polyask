@@ -13,6 +13,7 @@ function pushHistory(text) {
 const elGroup = document.getElementById("group");
 function syncGroupSelect() {
   document.getElementById("group-count").textContent = t("con_scopeCount", chosen().length, SITES.length);
+  if (chosen().length) elGroup.removeAttribute("aria-invalid");
 }
 elGroup.addEventListener("click", () => {
   const r = elGroup.getBoundingClientRect();

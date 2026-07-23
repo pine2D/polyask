@@ -59,6 +59,7 @@ function persistAndClose() {
 document.getElementById("ch-close").addEventListener("click", persistAndClose);
 document.getElementById("ch-back").addEventListener("click", persistAndClose);
 elText.addEventListener("input", () => {
+  elText.removeAttribute("aria-invalid");
   chrome.storage.local.set({ amsConsolePrompt: elText.value });
   if (selectedTemplate >= 0) { selectedTemplate = -1; renderLibrary(); } else syncTemplateActions();
 });
@@ -96,6 +97,7 @@ document.getElementById("cmp-confirm-no").addEventListener("click", () => showLi
 function renderScope(selected) {
   const chosen = SITES.filter((s) => selected[s.host]);
   const el = document.getElementById("ch-scope");
+  el.removeAttribute("data-invalid");
   el.replaceChildren();
   if (!chosen.length) { el.textContent = t("cmp_scopeNone"); return; }
   el.append(document.createTextNode(t("cmp_scopePrefix")));
@@ -130,16 +132,16 @@ document.addEventListener("i18n:changed", () => {
   renderLibrary();
 });
 
-function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
 elText.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); document.getElementById("ch-send").click(); }
 });
 document.getElementById("ch-send").addEventListener("click", () => {
-  const text = elText.value.trim(); if (!text) { shake(elText); return; }
+  const text = elText.value.trim();
+  if (!text) { elText.setAttribute("aria-invalid", "true"); elText.focus(); return; }
   chrome.storage.local.get(["amsConsole", "amsHistory"], (o) => {
     const c = (o && o.amsConsole) || {};
     const sites = SITES.filter((s) => (c.selected || {})[s.host]);
-    if (!sites.length) { shake(document.getElementById("ch-scope")); return; }
+    if (!sites.length) { document.getElementById("ch-scope").setAttribute("data-invalid", "true"); return; }
     const hist = [text, ...((o && o.amsHistory) || []).filter((x) => x !== text)].slice(0, 20);
     chrome.storage.local.set({ amsConsolePrompt: elText.value, amsHistory: hist }, () => {
       chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: c.tier || null });

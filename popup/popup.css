@@ -73,6 +73,8 @@ kbd{padding:2px 6px;border:1px solid var(--line);border-bottom-width:2px;border-
 .ck.bad{background-image:url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13" stroke="%23dc2626" stroke-width="3" stroke-linecap="round"/></svg>')}
 @media (hover:hover) and (pointer:fine){button:active:not(:disabled),.switch:active,.mini-segment label:active span{transform:scale(.97)}}
 @media (prefers-reduced-motion:reduce){
-  button,.switch,.switch:after,.mini-segment span,.select-menu{transition-duration:0s}
-  button:active:not(:disabled),.switch:active,.mini-segment label:active span,.select-menu,.select-menu[hidden]{transform:none}
+  button,.switch,.mini-segment span{transition-property:background-color,border-color,color,opacity;transition-duration:.1s}
+  .switch:after{transition:none}
+  .select-menu{transform:none;transition:opacity .1s ease,display .1s allow-discrete}
+  button:active:not(:disabled),.switch:active,.mini-segment label:active span,.select-menu[hidden]{transform:none}
 }
