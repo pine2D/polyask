@@ -18,6 +18,8 @@ function siteFor(tab) {
 }
 function renderStatus() {
   const status = document.getElementById("site-status");
+  status.classList.remove("checking");
+  status.classList.toggle("connected", statusConnected);
   status.classList.toggle("unsupported", !statusConnected);
   document.getElementById("status-text").textContent = statusConnected ? t("pop_connected", statusSite) : t("pop_unsupportedShort");
 }

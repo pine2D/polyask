@@ -49,7 +49,7 @@ function renderScope() {
     const check = checks[site.host];
     if (check) {
       label.dataset.state = check.state;
-      status.textContent = check.state === "checking" ? "…" : check.state === "ok" ? "✓" : "!";
+      status.textContent = check.state === "checking" ? "…" : "";
       status.setAttribute("aria-label", check.text); label.title = check.text;
     }
     label.append(input, name, status); sites.appendChild(label);

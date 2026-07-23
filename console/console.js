@@ -44,8 +44,15 @@ function chosen() { return SITES.filter((s) => selected[s.host]); }
 elTierButtons.forEach((button) => button.addEventListener("click", () => setTierValue(button.dataset.tier)));
 // 芯片区滚动条已隐藏（挤占 96px 细条布局）：滚轮横滚 + 按住拖动补滚动通道，两侧箭头指示溢出方向
 function updateArrows() {
-  document.getElementById("sites-l").classList.toggle("on", elSites.scrollLeft > 2);
-  document.getElementById("sites-r").classList.toggle("on", elSites.scrollLeft + elSites.clientWidth < elSites.scrollWidth - 2);
+  const left = document.getElementById("sites-l");
+  const right = document.getElementById("sites-r");
+  const leftOn = elSites.scrollLeft > 2;
+  const rightOn = elSites.scrollLeft + elSites.clientWidth < elSites.scrollWidth - 2;
+  const chips = [...elSites.querySelectorAll(".chip:not([hidden])")];
+  if (!leftOn && document.activeElement === left) (chips[0] || document.getElementById("group")).focus();
+  if (!rightOn && document.activeElement === right) (chips.at(-1) || document.getElementById("group")).focus();
+  left.classList.toggle("on", leftOn); left.disabled = !leftOn; left.setAttribute("aria-hidden", String(!leftOn));
+  right.classList.toggle("on", rightOn); right.disabled = !rightOn; right.setAttribute("aria-hidden", String(!rightOn));
 }
 elSites.addEventListener("scroll", updateArrows, { passive: true });
 // ResizeObserver 而非 window resize：命名输入/确认条展开会挤压 #sites 但不触发窗口 resize，

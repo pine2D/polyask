@@ -20,6 +20,8 @@ function testPopupLayout() {
   for (const key of ["Alt+C", "Alt+L", "Alt+N", "Alt+P", "Alt+R"]) assert.ok(html.includes(`<kbd>${key}</kbd>`), `popup 应直接展示控制台快捷键 ${key}`);
   assert.ok(!html.includes("pop_denseHint") && !html.includes("shortcut-dialog"), "popup 不应保留无功能宣传语或隐藏式快捷键弹窗");
   assert.ok(css.includes("--ease-out:cubic-bezier(0.23,1,0.32,1)") && css.includes("transform-origin:top right") && css.includes("@starting-style") && css.includes("@media (prefers-reduced-motion:reduce)"), "popup 应使用克制的弹层与按压反馈并支持 reduced-motion");
+  assert.ok(html.includes('class="status checking"') && css.includes(".status.connected .status-dot"), "popup 检测中应为中性状态，连接成功后才变绿");
+  assert.ok(js.includes('classList.remove("checking")') && js.includes('classList.toggle("connected"'), "popup 状态机应明确结束 checking");
   const pill = source("content/pill.js"); assert.ok(pill.includes("width:36px;height:24px") && pill.includes(".handle:before") && pill.includes("transition:opacity .16s var(--ease-out)") && pill.includes("prefers-reduced-motion:reduce"), "悬浮把手应扩大命中区并使用克制反馈");
   const core = source("content/core.js"); assert.ok(core.includes('setAttribute("role", "status")') && core.includes("pointer-events:none") && core.includes("matchMedia(\"(prefers-reduced-motion: reduce)\")") && core.includes(".animate(") && core.includes("exit.finished.then"), "跨站提示应具备状态语义、克制进退场与 reduced-motion");
 }
@@ -38,6 +40,11 @@ function testConsoleControls() {
     const button = html.match(new RegExp(`<button id="${id}"[\\s\\S]*?</button>`))[0];
     assert.ok(button.includes('class="icon"') && button.includes("<svg") && !button.includes("<span"), `${id} 应为带无障碍说明的纯 SVG 图标按钮`);
   }
+  for (const id of ["sites-l", "sites-r"]) {
+    const arrow = html.match(new RegExp(`<button id="${id}"[\\s\\S]*?</button>`))?.[0] || "";
+    assert.ok(arrow.includes("data-i18n-aria") && arrow.includes('aria-hidden="true"') && arrow.includes("disabled"), `${id} 应为有名称且初始禁用的语义按钮`);
+  }
+  assert.ok(css.includes("transition:opacity .12s var(--ease-out)") && css.includes("--status-ok-icon:url("), "溢出箭头和状态图标应复用克制反馈");
   const consoleJs = source("console/console.js");
   const composeJs = source("console/compose.js");
   const scopeJs = source("console/scope.js");
@@ -58,6 +65,8 @@ function testCompanionResponsibilities() {
 
   const scope = source("console/scope.html");
   assert.ok(scope.includes('id="scope-checkup"') && scope.includes('id="scope-live"'), "范围窗应接管站点巡检及状态播报");
+  const scopeJs = source("console/scope.js");
+  assert.ok(!scopeJs.includes('"✓"') && scopeJs.includes('check.state === "checking" ? "…" : ""'), "范围巡检终态应使用共享 SVG 状态图标");
 
   const archive = source("console/archive.html");
   assert.ok(!archive.includes("<select") && archive.includes('id="ar-list"') && archive.includes('role="listbox"'), "归档应使用自定义可访问列表");

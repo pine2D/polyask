@@ -37,6 +37,8 @@ const MSG = {
   con_sendAll: { en: "Send ▸", zh_CN: "发送 ▸", zh_TW: "發送 ▸" },
   con_tile: { en: "Tile", zh_CN: "平铺", zh_TW: "平鋪" },
   con_collect: { en: "Copy", zh_CN: "汇总", zh_TW: "彙總" },
+  con_scrollSitesLeft: { en: "Scroll sites left", zh_CN: "向左滚动站点", zh_TW: "向左捲動站點" },
+  con_scrollSitesRight: { en: "Scroll sites right", zh_CN: "向右滚动站点", zh_TW: "向右捲動站點" },
   con_composeTitle: { en: "Open prompt workspace", zh_CN: "打开提示词工作区", zh_TW: "開啟提示詞工作區" },
   con_retryTitle: { en: "Retry failed sites · Alt+R", zh_CN: "重试失败的站点 · Alt+R", zh_TW: "重試失敗的站點 · Alt+R" },
   con_newSessionTitle: { en: "New session for selected sites (reload each window) · Alt+N", zh_CN: "为所选站点开启新会话（重载各窗口）· Alt+N", zh_TW: "為所選站點開啟新對話（重新載入各視窗）· Alt+N" },
