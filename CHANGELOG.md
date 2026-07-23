@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [0.12.0] - 2026-07-23
+
 ### 新增
 
 - 支持粘贴或选择图片并群发至兼容 AI 站点
@@ -291,7 +293,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v0.11.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/pine2D/polyask/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/pine2D/polyask/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/pine2D/polyask/compare/v0.9.2...v0.10.0
 [0.9.2]: https://github.com/pine2D/polyask/compare/v0.9.1...v0.9.2
