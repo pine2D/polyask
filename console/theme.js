@@ -1,4 +1,4 @@
-// console/theme.js — 主题：auto(随系统)/light/dark。console 与 compose 共用，在 <head> 内最先加载。
+// console/theme.js — 主题：auto(随系统)/light/dark。popup、console 与 compose 共用，在 <head> 内最先加载。
 // MV3 CSP（script-src 'self'）禁止内联脚本，故「防首帧闪烁的同步读 localStorage 抢先应用」也放这里
 // （外链脚本仍先于首帧执行）。真值存 storage.sync.amsTheme（跨设备，popup 改）；localStorage 仅同步缓存。
 // auto 时不设 data-theme，交给 console.css 的 @media 跟随系统。

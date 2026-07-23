@@ -1,18 +1,97 @@
-// console/compose.js — 伴侣编辑窗口（Task 5 最小骨架；Task 6 补双向同步与发送；Task 9 补 i18n）
-applyI18n(); // 静态元素首屏本地化（i18n.js 在 head 同步加载，此处安全调用）
+// console/compose.js — 提示词工作区：编辑、模板、历史与发送。
+applyI18n();
 const elText = document.getElementById("ch-text");
-chrome.storage.local.get(["amsConsole", "amsConsolePrompt"], (o) => {
-  const c = (o && o.amsConsole) || {};
-  const prompt = o.amsConsolePrompt != null ? o.amsConsolePrompt : c.prompt;
-  if (prompt) elText.value = prompt;
-  elText.focus();
-});
+const elList = document.getElementById("cmp-list");
+const elActions = document.getElementById("cmp-actions");
+const elNameRow = document.getElementById("cmp-name");
+const elConfirm = document.getElementById("cmp-confirm");
+let templates = [], history = [], activeKind = "templates", selectedTemplate = -1;
+
+function itemLabel(item) {
+  const text = item.text || "";
+  return item.name || (text.length > 40 ? text.slice(0, 40) + "…" : text);
+}
+function showLibraryRow(row) {
+  elActions.hidden = row !== elActions;
+  elNameRow.hidden = row !== elNameRow;
+  elConfirm.hidden = row !== elConfirm;
+}
+function syncTemplateActions() {
+  const text = elText.value.trim();
+  document.getElementById("cmp-save-template").disabled = !text || templates.some((item) => item.text === text);
+  document.getElementById("cmp-delete-template").disabled = selectedTemplate < 0;
+}
+function renderLibrary() {
+  const items = activeKind === "templates" ? templates : history.map((text) => ({ text }));
+  elList.replaceChildren();
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "cmp-empty";
+    empty.textContent = t(activeKind === "templates" ? "cmp_emptyTemplates" : "cmp_emptyHistory");
+    elList.appendChild(empty);
+  }
+  items.forEach((item, index) => {
+    const button = document.createElement("button");
+    button.type = "button"; button.className = "cmp-item"; button.setAttribute("role", "option");
+    button.setAttribute("aria-selected", String(activeKind === "templates" && index === selectedTemplate));
+    const title = document.createElement("strong"); title.textContent = itemLabel(item);
+    const preview = document.createElement("span"); preview.textContent = item.text;
+    button.append(title, preview);
+    button.addEventListener("click", () => {
+      elText.value = item.text; selectedTemplate = activeKind === "templates" ? index : -1;
+      chrome.storage.local.set({ amsConsolePrompt: elText.value });
+      renderLibrary(); elText.focus();
+    });
+    elList.appendChild(button);
+  });
+  document.querySelectorAll("#cmp-tabs [data-kind]").forEach((button) => button.setAttribute("aria-selected", String(button.dataset.kind === activeKind)));
+  elActions.hidden = activeKind !== "templates";
+  syncTemplateActions();
+}
+function setKind(kind) {
+  activeKind = kind; selectedTemplate = -1; showLibraryRow(elActions); renderLibrary();
+}
+document.querySelectorAll("#cmp-tabs [data-kind]").forEach((button) => button.addEventListener("click", () => setKind(button.dataset.kind)));
 
 function persistAndClose() {
   chrome.storage.local.set({ amsConsolePrompt: elText.value }, () => window.close());
 }
 document.getElementById("ch-close").addEventListener("click", persistAndClose);
-elText.addEventListener("input", () => chrome.storage.local.set({ amsConsolePrompt: elText.value }));
+document.getElementById("ch-back").addEventListener("click", persistAndClose);
+elText.addEventListener("input", () => {
+  chrome.storage.local.set({ amsConsolePrompt: elText.value });
+  if (selectedTemplate >= 0) { selectedTemplate = -1; renderLibrary(); } else syncTemplateActions();
+});
+
+document.getElementById("cmp-save-template").addEventListener("click", () => {
+  if (!elText.value.trim()) return;
+  showLibraryRow(elNameRow); document.getElementById("cmp-template-name").focus();
+});
+function saveTemplate() {
+  const text = elText.value.trim();
+  if (!text || templates.some((item) => item.text === text)) { showLibraryRow(elActions); syncTemplateActions(); return; }
+  const name = document.getElementById("cmp-template-name");
+  templates = [...templates, { name: name.value.trim(), text }];
+  selectedTemplate = templates.length - 1; name.value = "";
+  chrome.storage.local.set({ amsTemplates: templates }); showLibraryRow(elActions); renderLibrary();
+}
+document.getElementById("cmp-name-save").addEventListener("click", saveTemplate);
+document.getElementById("cmp-name-cancel").addEventListener("click", () => showLibraryRow(elActions));
+document.getElementById("cmp-template-name").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.isComposing) { event.preventDefault(); saveTemplate(); }
+  else if (event.key === "Escape") { event.preventDefault(); showLibraryRow(elActions); }
+});
+document.getElementById("cmp-delete-template").addEventListener("click", () => {
+  if (selectedTemplate < 0) return;
+  document.getElementById("cmp-confirm-text").textContent = t("con_delTpl", itemLabel(templates[selectedTemplate]));
+  showLibraryRow(elConfirm); document.getElementById("cmp-confirm-no").focus();
+});
+document.getElementById("cmp-confirm-yes").addEventListener("click", () => {
+  if (selectedTemplate >= 0) templates = templates.filter((_, index) => index !== selectedTemplate);
+  selectedTemplate = -1; chrome.storage.local.set({ amsTemplates: templates });
+  showLibraryRow(elActions); renderLibrary();
+});
+document.getElementById("cmp-confirm-no").addEventListener("click", () => showLibraryRow(elActions));
 
 function renderScope(selected) {
   const chosen = SITES.filter((s) => selected[s.host]);
@@ -23,42 +102,48 @@ function renderScope(selected) {
   const b = document.createElement("b"); b.textContent = t("cmp_scopeN", chosen.length); el.append(b);
   el.append(document.createTextNode(t("cmp_scopeColon") + chosen.map((s) => s.label).join(" · ")));
 }
-chrome.storage.local.get("amsConsole", (o) => renderScope(((o && o.amsConsole) || {}).selected || {}));
+chrome.storage.local.get(["amsConsole", "amsConsolePrompt", "amsTemplates", "amsHistory"], (o) => {
+  const c = (o && o.amsConsole) || {};
+  const prompt = o.amsConsolePrompt != null ? o.amsConsolePrompt : c.prompt;
+  if (prompt) elText.value = prompt;
+  templates = ((o && o.amsTemplates) || []).map((item) => typeof item === "string" ? { name: "", text: item } : item);
+  history = (o && o.amsHistory) || [];
+  renderScope(c.selected || {}); renderLibrary(); elText.focus();
+});
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local") return;
-  // 文本：外部（细条）改了且本框未在编辑 → 回填。"编辑中"须同时窗口持焦：窗口失焦后
-  // activeElement 不重置，单看它会永久挡住回填，「回填并关闭」就会拿旧文覆盖细条新编辑。
   if (ch.amsConsolePrompt) {
     const prompt = ch.amsConsolePrompt.newValue;
     if (prompt != null && prompt !== elText.value && !(document.hasFocus() && document.activeElement === elText)) elText.value = prompt;
   }
   if (ch.amsConsole) renderScope((ch.amsConsole.newValue || {}).selected || {});
+  if (ch.amsTemplates) {
+    templates = (ch.amsTemplates.newValue || []).map((item) => typeof item === "string" ? { name: "", text: item } : item);
+    selectedTemplate = Math.min(selectedTemplate, templates.length - 1); renderLibrary();
+  }
+  if (ch.amsHistory) { history = ch.amsHistory.newValue || []; if (activeKind === "history") renderLibrary(); }
 });
 
 document.addEventListener("i18n:changed", () => {
   applyI18n();
   chrome.storage.local.get("amsConsole", (o) => renderScope(((o && o.amsConsole) || {}).selected || {}));
+  renderLibrary();
 });
 
-document.getElementById("ch-back").addEventListener("click", () => {
-  persistAndClose();
-});
-function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); } // 与细条同款空态反馈
-elText.addEventListener("keydown", (e) => { // 长文场景键盘闭环：Ctrl/Cmd+Enter 发送
+function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+elText.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); document.getElementById("ch-send").click(); }
 });
 document.getElementById("ch-send").addEventListener("click", () => {
   const text = elText.value.trim(); if (!text) { shake(elText); return; }
-  chrome.storage.local.get("amsConsole", (o) => {
+  chrome.storage.local.get(["amsConsole", "amsHistory"], (o) => {
     const c = (o && o.amsConsole) || {};
-    const sel = c.selected || {};
-    const sites = SITES.filter((s) => sel[s.host]); if (!sites.length) { shake(document.getElementById("ch-scope")); return; }
-    chrome.storage.local.get("amsHistory", (h) => {
-      const hist = [text, ...((h && h.amsHistory) || []).filter((x) => x !== text)].slice(0, 20);
-      chrome.storage.local.set({ amsConsolePrompt: elText.value, amsHistory: hist }, () => {
-        chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: c.tier || null });
-        window.close();
-      });
+    const sites = SITES.filter((s) => (c.selected || {})[s.host]);
+    if (!sites.length) { shake(document.getElementById("ch-scope")); return; }
+    const hist = [text, ...((o && o.amsHistory) || []).filter((x) => x !== text)].slice(0, 20);
+    chrome.storage.local.set({ amsConsolePrompt: elText.value, amsHistory: hist }, () => {
+      chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "sendAll", sites, text, tier: c.tier || null });
+      window.close();
     });
   });
 });

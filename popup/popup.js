@@ -1,5 +1,7 @@
-// popup/popup.js — 切换按钮 + 显示模式设置 + 快捷键展示
+// popup/popup.js — 当前站模式 + console 入口 + 紧凑设置与快捷键
 applyI18n(); // i18n.js 已在 head 载入并从 localStorage 镜像同步了语言，立即本地化静态文案
+let statusSite = "";
+let statusConnected = false;
 async function activeTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
@@ -11,9 +13,20 @@ async function send(msg) {
   return chrome.tabs.sendMessage(tab.id, msg);
 }
 
+function siteFor(tab) {
+  try { const host = new URL(tab.url).hostname; return SITES.find((site) => site.host === host) || null; } catch (e) { return null; }
+}
+function renderStatus() {
+  const status = document.getElementById("site-status");
+  status.classList.toggle("unsupported", !statusConnected);
+  document.getElementById("status-text").textContent = statusConnected ? t("pop_connected", statusSite) : t("pop_unsupportedShort");
+}
 async function refreshState() {
   try {
-    const res = await send({ source: "AMS", cmd: "getState" });
+    const tab = await activeTab();
+    const site = tab && siteFor(tab); if (!site) throw new Error("unsupported");
+    const res = await chrome.tabs.sendMessage(tab.id, { source: "AMS", cmd: "getState" });
+    statusSite = site.label; statusConnected = true; renderStatus();
     document.getElementById("think").classList.toggle("active", !!res && res.state === "think");
     document.getElementById("fast").classList.toggle("active", !!res && res.state === "fast");
     document.getElementById("think").setAttribute("aria-pressed", !!res && res.state === "think" ? "true" : "false");
@@ -23,6 +36,7 @@ async function refreshState() {
     document.getElementById("unsupported").style.display = "block";
     document.getElementById("think").disabled = true;
     document.getElementById("fast").disabled = true;
+    statusConnected = false; renderStatus();
   }
 }
 
@@ -33,27 +47,43 @@ for (const mode of ["think", "fast"]) {
       window.close(); // 切换在页面内异步执行，toast 会提示结果
     } catch (e) {
       document.getElementById("unsupported").style.display = "block";
+      statusConnected = false; renderStatus();
     }
   });
 }
 
-chrome.storage.sync.get({ amsLang: "auto" }, (v) => {
-  const el = document.querySelector(`input[name=lang][value="${v.amsLang}"]`);
-  if (el) el.checked = true;
-});
-document.querySelectorAll("input[name=lang]").forEach((r) =>
-  r.addEventListener("change", () => chrome.storage.sync.set({ amsLang: r.value }))
-);
+function setupSelect(id, storageKey, fallback) {
+  const root = document.getElementById(id), trigger = root.querySelector(".select-trigger"), menu = root.querySelector(".select-menu");
+  const options = [...menu.querySelectorAll("[data-value]")];
+  function select(value) {
+    const option = options.find((item) => item.dataset.value === value) || options[0];
+    root.dataset.value = option.dataset.value;
+    trigger.querySelector(".select-value").textContent = option.textContent;
+    options.forEach((item) => item.setAttribute("aria-selected", item === option ? "true" : "false"));
+  }
+  function close() { menu.hidden = true; trigger.setAttribute("aria-expanded", "false"); }
+  function open() { menu.hidden = false; trigger.setAttribute("aria-expanded", "true"); }
+  trigger.addEventListener("click", () => menu.hidden ? open() : close());
+  menu.addEventListener("click", (e) => {
+    const option = e.target.closest("[data-value]"); if (!option) return;
+    select(option.dataset.value); close(); trigger.focus(); chrome.storage.sync.set({ [storageKey]: option.dataset.value });
+  });
+  root.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { close(); trigger.focus(); return; }
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+    e.preventDefault();
+    if (menu.hidden) { open(); (options.find((item) => item.getAttribute("aria-selected") === "true") || options[0]).focus(); return; }
+    const current = Math.max(0, options.indexOf(document.activeElement));
+    options[(current + (e.key === "ArrowDown" ? 1 : options.length - 1)) % options.length].focus();
+  });
+  document.addEventListener("click", (e) => { if (!root.contains(e.target)) close(); });
+  document.addEventListener("i18n:changed", () => select(root.dataset.value || fallback));
+  chrome.storage.sync.get({ [storageKey]: fallback }, (v) => select(v[storageKey]));
+}
+setupSelect("lang", "amsLang", "auto");
+setupSelect("dm", "displayMode", "handle");
 
-chrome.storage.sync.get({ displayMode: "handle" }, (v) => {
-  const el = document.querySelector(`input[name=dm][value="${v.displayMode}"]`);
-  if (el) el.checked = true;
-});
-document.querySelectorAll("input[name=dm]").forEach((r) =>
-  r.addEventListener("change", () => chrome.storage.sync.set({ displayMode: r.value }))
-);
-
-// 控制台主题（console + compose 共用，theme.js 据此应用）
+// popup / console / compose 共用 amsTheme，由 theme.js 即时应用
 chrome.storage.sync.get({ amsTheme: "auto" }, (v) => {
   const el = document.querySelector(`input[name=theme][value="${v.amsTheme}"]`);
   if (el) el.checked = true;
@@ -91,26 +121,24 @@ function buildKeys() {
   chrome.commands.getAll((cmds) => {
     const div = document.getElementById("keys");
     div.textContent = "";
-    // 每条快捷键一行（曾用全角空格连成一段流文本，扫读性差）：左描述右 <kbd> 键位
-    cmds.filter((c) => !c.name.startsWith("_")).forEach((c) => {
+    const order = { "open-console": 0, "switch-think": 1, "switch-fast": 2 };
+    cmds.filter((c) => !c.name.startsWith("_")).sort((a, b) => order[a.name] - order[b.name]).forEach((c) => {
       const row = document.createElement("div");
       row.className = "keyrow";
       const label = document.createElement("span");
-      const key = { "open-console": "pop_openConsole", "switch-think": "pop_think", "switch-fast": "pop_fast" }[c.name];
+      const key = { "open-console": "pop_shortcutOpen", "switch-think": "pop_shortcutThink", "switch-fast": "pop_shortcutFast" }[c.name];
       label.textContent = key ? t(key) : (c.description || c.name);
       const kbd = document.createElement("kbd");
       kbd.textContent = c.shortcut || t("pop_shortcutUnset");
       row.append(label, kbd);
       div.append(row);
     });
-    const button = document.createElement("button");
-    button.type = "button"; button.className = "link"; button.textContent = t("pop_rebind");
-    button.addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
-    div.append(button);
   });
 }
 buildKeys();
-document.addEventListener("i18n:changed", buildKeys);
+document.addEventListener("i18n:changed", () => { buildKeys(); renderStatus(); });
+
+document.getElementById("shortcut-help").addEventListener("click", () => chrome.tabs.create({ url: "chrome://extensions/shortcuts" }));
 
 document.getElementById("open-console").addEventListener("click", async () => {
   // 带上当前站 host：console 首次使用（无勾选历史）时预勾该站，打通"正看着这个站想群发"的路径

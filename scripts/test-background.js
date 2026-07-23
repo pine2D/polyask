@@ -8,6 +8,109 @@ const vm = require("node:vm");
 
 const source = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8");
 
+function testPopupLayout() {
+  const html = source("popup/popup.html"), css = source("popup/popup.css"), js = source("popup/popup.js");
+  const order = ["site-status", "open-console", "think", "autoraise", "keys", "console-keys", "shortcut-help", "diag", "diagout"];
+  const positions = order.map((id) => html.indexOf(`id="${id}"`));
+  assert.ok(positions.every((position) => position >= 0) && positions.every((position, i) => i === 0 || position > positions[i - 1]), "popup 应严格保持 B 版信息顺序");
+  assert.ok(html.includes('href="popup.css"') && !html.includes("<fieldset"), "popup 应使用 B 版连续控制面，不得退回旧 fieldset 卡片");
+  assert.ok(css.includes("body{width:356px") && css.includes("grid-template-columns:70px 1fr"), "popup 应保持 B 版宽度与模式栏比例");
+  assert.ok(html.includes('../console/theme.js') && css.includes(':root[data-theme="light"]') && css.includes(':root:not([data-theme])'), "popup 应复用共享主题逻辑并支持显式亮暗主题");
+  assert.ok(!html.includes("<select") && html.match(/role="listbox"/g)?.length === 2 && js.includes('setupSelect("lang"') && js.includes('setupSelect("dm"'), "语言与悬浮控件应使用匹配 B 版的自定义菜单");
+  for (const key of ["Alt+C", "Alt+L", "Alt+N", "Alt+P", "Alt+R"]) assert.ok(html.includes(`<kbd>${key}</kbd>`), `popup 应直接展示控制台快捷键 ${key}`);
+  assert.ok(!html.includes("pop_denseHint") && !html.includes("shortcut-dialog"), "popup 不应保留无功能宣传语或隐藏式快捷键弹窗");
+  assert.ok(css.includes("--ease-out:cubic-bezier(0.23,1,0.32,1)") && css.includes("transform-origin:top right") && css.includes("@starting-style") && css.includes("@media (prefers-reduced-motion:reduce)"), "popup 应使用克制的弹层与按压反馈并支持 reduced-motion");
+  const pill = source("content/pill.js"); assert.ok(pill.includes("width:36px;height:24px") && pill.includes(".handle:before") && pill.includes("transition:opacity .16s var(--ease-out)") && pill.includes("prefers-reduced-motion:reduce"), "悬浮把手应扩大命中区并使用克制反馈");
+  const core = source("content/core.js"); assert.ok(core.includes('setAttribute("role", "status")') && core.includes("pointer-events:none") && core.includes("matchMedia(\"(prefers-reduced-motion: reduce)\")") && core.includes(".animate(") && core.includes("exit.finished.then"), "跨站提示应具备状态语义、克制进退场与 reduced-motion");
+}
+
+function testConsoleControls() {
+  const js = source("console/library.js"), html = source("console/console.html");
+  const css = source("console/console.css");
+  assert.ok(!html.includes('id="more"') && !html.includes('id="proxies"'), "console 不应保留 More 或隐藏代理控件");
+  const archive = html.match(/<button id="archive"[\s\S]*?<\/button>/)?.[0] || "";
+  assert.ok(archive.includes('class="icon"') && archive.includes("<svg"), "归档应作为 console 独立 SVG 图标");
+  assert.ok(!js.includes("renderMore") && !js.includes("dispatchMore") && !js.includes("amsTemplates"), "console 物料层只保留快捷历史与范围入口");
+  assert.ok(!html.includes("scopebackdrop") && !source("background.js").includes("resizeScope") && !source("bg/windows.js").includes("SCOPE_H"), "主 console 不得再包含或触发拉高逻辑");
+  assert.ok(css.includes("#scope-manage{display:grid;grid-template-columns:1fr;") && css.includes("#ch-foot .scope{flex:1 0 100%;") && css.includes("#ch-back{margin-left:auto}"), "范围管理与编辑窗操作应在真实窗口宽度下保持完整稳定");
+  assert.ok(css.includes("--ease-out:cubic-bezier(0.23,1,0.32,1)") && css.includes("button:active:not(:disabled)") && css.includes("@media (prefers-reduced-motion:reduce)"), "console 系界面应统一指针反馈并支持 reduced-motion");
+  for (const id of ["tile", "collect"]) {
+    const button = html.match(new RegExp(`<button id="${id}"[\\s\\S]*?</button>`))[0];
+    assert.ok(button.includes('class="icon"') && button.includes("<svg") && !button.includes("<span"), `${id} 应为带无障碍说明的纯 SVG 图标按钮`);
+  }
+}
+
+function testCompanionResponsibilities() {
+  const compose = source("console/compose.html");
+  assert.ok(!compose.includes("<select") && compose.includes('id="cmp-tab-templates"') && compose.includes('id="cmp-tab-history"'), "编辑窗应使用自定义模板/历史列表");
+  assert.ok(compose.includes('id="cmp-save-template"') && compose.includes('id="cmp-delete-template"'), "模板管理应归入编辑窗");
+
+  const scope = source("console/scope.html");
+  assert.ok(scope.includes('id="scope-checkup"') && scope.includes('id="scope-live"'), "范围窗应接管站点巡检及状态播报");
+
+  const archive = source("console/archive.html");
+  assert.ok(!archive.includes("<select") && archive.includes('id="ar-list"') && archive.includes('role="listbox"'), "归档应使用自定义可访问列表");
+  for (const id of ["ar-capture", "ar-copy", "ar-export", "ar-del"]) assert.ok(archive.includes(`id="${id}"`), `归档窗应提供 ${id}`);
+}
+
+function testScopeControls() {
+  const js = source("console/scope.js");
+  const start = js.indexOf("// SCOPE_LOGIC_START");
+  const end = js.indexOf("// SCOPE_LOGIC_END") + "// SCOPE_LOGIC_END".length;
+  assert.ok(start >= 0 && end > start, "应找到范围选择逻辑");
+  const selected = { a: true, b: false, c: false };
+  let saves = 0, renders = 0;
+  const context = vm.createContext({
+    ALL_HOSTS: ["a", "b", "c"], selected, groups: [{ name: "A", hosts: ["a"] }],
+    persistSelection: () => { saves++; }, renderScope: () => { renders++; },
+  });
+  vm.runInContext(js.slice(start, end), context);
+  assert.equal(context.canSaveGroup([]), false, "空选择不能保存为分组");
+  assert.equal(context.canSaveGroup(["a"]), false, "与已有分组重复的选择不能保存");
+  assert.equal(context.canSaveGroup(["c", "b", "a"]), false, "全部站点不能重复保存为分组");
+  assert.equal(context.canSaveGroup(["b"]), true, "新选择可以保存为分组");
+  assert.equal(context.setSiteSelected("b", true), true, "已知站点应可连续切换");
+  assert.equal(selected.b, true); assert.equal(saves, 1); assert.equal(renders, 1);
+  assert.equal(context.setSiteSelected("missing", true), false, "未知站点不得写入选择");
+  assert.equal(saves, 1);
+  const panels = source("bg/panels.js");
+  assert.ok(panels.includes('getURL("console/scope.html")') && panels.includes('type: "popup"'), "范围选择应使用独立 popup");
+}
+
+function testConsoleShortcuts() {
+  const js = source("console/console.js");
+  const start = js.indexOf('document.addEventListener("keydown", (e) => {', js.indexOf('action: "newSession"'));
+  const end = js.indexOf("\n});", start) + 4;
+  assert.ok(start >= 0 && end > start, "应找到控制台快捷键处理器");
+
+  const actions = [];
+  const elements = Object.fromEntries(["collect", "tile", "newsession", "prompt", "retry"].map((id) => [id, {
+    click: () => actions.push(id), focus: () => actions.push(id),
+  }]));
+  let handler;
+  const document = {
+    addEventListener: (type, fn) => { if (type === "keydown") handler = fn; },
+    getElementById: (id) => elements[id],
+  };
+  vm.runInNewContext(js.slice(start, end), { document, elPrompt: elements.prompt });
+
+  const press = (code, extra = {}) => {
+    const event = { code, altKey: true, ctrlKey: false, metaKey: false, shiftKey: false, repeat: false, isComposing: false,
+      preventDefault() { this.defaultPrevented = true; }, ...extra };
+    actions.length = 0; handler(event); return { event, actions: [...actions] };
+  };
+  Object.entries({ KeyC: "collect", KeyL: "tile", KeyN: "newsession", KeyP: "prompt", KeyR: "retry" }).forEach(([code, id]) => {
+    const result = press(code);
+    assert.equal(result.event.defaultPrevented, true, `${code} 应阻止浏览器默认行为`);
+    assert.deepEqual(result.actions, [id], `${code} 应触发 ${id}`);
+  });
+  [{ altKey: false }, { ctrlKey: true }, { shiftKey: true }, { repeat: true }, { isComposing: true }].forEach((extra) => {
+    const result = press("KeyC", extra);
+    assert.equal(result.event.defaultPrevented, undefined, "非精确 Alt 组合不得被接管");
+    assert.deepEqual(result.actions, [], "非精确 Alt 组合不得触发操作");
+  });
+}
+
 async function testManagedWindows() {
   const records = {
     "chatgpt.com": { id: 1, owned: true },
@@ -37,10 +140,13 @@ async function testManagedWindows() {
         set: (_value, cb) => cb(),
       },
     },
-    windows: { get: async (id) => windows.get(id) || Promise.reject(new Error("missing")) },
+    windows: {
+      get: async (id) => windows.get(id) || Promise.reject(new Error("missing")),
+      update: async (id, props) => Object.assign(windows.get(id), props),
+    },
     tabs: { query: async ({ active, windowId }) => (tabs.get(windowId) || []).filter((tab) => !active || tab.active) },
   };
-  const context = vm.createContext({ chrome, URL, console });
+  const context = vm.createContext({ chrome, URL, console, consoleWinId: 1, composeWinId: null, archiveWinId: null });
   vm.runInContext(source("bg/windows.js"), context);
   const resolve = (host) => vm.runInContext(`popupWindowForHost(${JSON.stringify(host)}, ${JSON.stringify(records)})`, context);
 
@@ -134,11 +240,16 @@ async function testHungCheckupReleasesOperationQueue() {
 }
 
 (async () => {
+  testPopupLayout();
+  testConsoleControls();
+  testCompanionResponsibilities();
+  testScopeControls();
+  testConsoleShortcuts();
   await testManagedWindows();
   await testSubmitIsAtMostOnce();
   await testHungMessageHonorsDeadline();
   await testHungCheckupReleasesOperationQueue();
-  console.log("[background] 安全边界回归通过");
+  console.log("[regression] 安全边界与控制台控件通过");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

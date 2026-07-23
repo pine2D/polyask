@@ -22,7 +22,7 @@ for file in "${JS_FILES[@]}"; do
   [ "$lines" -le 300 ] || { echo "✗ $file: $lines 行" >&2; exit 1; }
 done
 
-echo "[test] 后台窗口与提交安全边界"
+echo "[test] 后台安全边界与控制台交互"
 node scripts/test-background.js
 
 git diff --check

@@ -1,8 +1,9 @@
 const elSites = document.getElementById("sites");
 const elTier = document.getElementById("tier");
+const elTierButtons = [...document.querySelectorAll("#tierbuttons [data-tier]")];
 const elPrompt = document.getElementById("prompt");
 let selected = {};
-// 历史/模板/分组（状态+渲染+接线）拆在 console/library.js（本文件之前加载，classic script 共享全局）
+// 细条历史与范围/档位控件拆在 console/library.js（本文件之前加载，classic script 共享全局）
 
 function render() {
   // 快照重建前的运行时状态（send/open/done/fail + 原因 title），重建后恢复——群发中改分组不再抹掉进度
@@ -16,6 +17,7 @@ function render() {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip" + (selected[s.host] ? "" : " off");
+    chip.hidden = !selected[s.host];
     chip.dataset.host = s.host;
     chip.dataset.label = s.label;
     chip.title = s.label + " · " + t("con_chipHint"); // 闲时教学、忙时报状态（setDot 会覆盖为原因）
@@ -25,10 +27,13 @@ function render() {
     chip.append(d, document.createTextNode(s.label));
     const p = prev[s.host]; if (p) { chip.classList.add(p.st); chip.title = p.title; chip.setAttribute("aria-label", p.aria || s.label); }
     chip.addEventListener("click", () => {
+      const hadFocus = document.activeElement === chip;
       selected[s.host] = !selected[s.host];
       chip.classList.toggle("off", !selected[s.host]);
+      chip.hidden = !selected[s.host];
       chip.setAttribute("aria-pressed", selected[s.host] ? "true" : "false");
       save();
+      if (chip.hidden && hadFocus) document.getElementById("group").focus();
       if (typeof updateRetry === "function") { updateRetry(); updateFailSum(); }
     });
     elSites.appendChild(chip);
@@ -36,6 +41,7 @@ function render() {
   updateArrows(); // 芯片数量/宽度变化后重算溢出箭头
 }
 function chosen() { return SITES.filter((s) => selected[s.host]); }
+elTierButtons.forEach((button) => button.addEventListener("click", () => setTierValue(button.dataset.tier)));
 // 芯片区滚动条已隐藏（挤占 96px 细条布局）：滚轮横滚 + 按住拖动补滚动通道，两侧箭头指示溢出方向
 function updateArrows() {
   document.getElementById("sites-l").classList.toggle("on", elSites.scrollLeft > 2);
@@ -76,9 +82,10 @@ function save() {
 }
 function load() {
   // 所需 key 单次 get：冷启动少一轮 storage IPC 往返
-  chrome.storage.local.get(["amsConsole", "amsConsolePrompt", "amsHistory", "amsTemplates", "amsGroups", "amsConsolePrefill"], (o) => {
+  chrome.storage.local.get(["amsConsole", "amsConsolePrompt", "amsHistory", "amsConsolePrefill"], (o) => {
     const c = (o && o.amsConsole) || {};
     selected = c.selected || {};
+    const firstSelection = !Object.keys(selected).length;
     const pre = o && o.amsConsolePrefill; // popup「打开控制台」带来的当前站（一次性消费）
     if (pre) chrome.storage.local.remove("amsConsolePrefill");
     if (!Object.keys(selected).length) {
@@ -88,25 +95,23 @@ function load() {
       else SITES.forEach((s) => { selected[s.host] = !!s.on; });
     }
     if (c.tier) elTier.value = c.tier;
+    syncTierButtons();
     const prompt = o.amsConsolePrompt != null ? o.amsConsolePrompt : c.prompt;
     if (prompt) elPrompt.value = prompt;
     if (o.amsConsolePrompt == null && c.prompt != null) chrome.storage.local.set({ amsConsolePrompt: c.prompt }); // 旧结构一次性迁移
-    history = (o && o.amsHistory) || []; // Task 4: 历史
-    renderHist();
+    history = (o && o.amsHistory) || [];
     render();
-    const raw = (o && o.amsTemplates) || []; // Task 6: 模板
-    templates = raw.map((x) => (typeof x === "string" ? { name: "", text: x } : x)); // 旧 string[] 迁移
-    renderTemplates();
-    groups = (o && o.amsGroups) || [];
-    renderGroups();
+    if (firstSelection) save(); // 范围伴侣窗从 storage 读取；首次默认选择也必须落盘
+    syncGroupSelect();
   });
 }
 // 排队操作忙碌态：openTile/closeAll/newSession/sendAll 在 bg 走 serializeOp 严格排队，群发中点这些
 // 按钮最长要等 ~22s 才真正执行——零反馈像卡死。禁用到回调返回，兜底定时器防回调丢失永久禁用。
 function busy(btn, ms) {
+  const reset = () => { btn.disabled = false; };
   btn.disabled = true;
-  const timer = setTimeout(() => { btn.disabled = false; }, ms || 30000);
-  return () => { clearTimeout(timer); btn.disabled = false; };
+  const timer = setTimeout(reset, ms || 30000);
+  return () => { clearTimeout(timer); reset(); };
 }
 document.getElementById("tile").addEventListener("click", (e) => {
   const sites = chosen(); if (!sites.length) return;
@@ -136,26 +141,20 @@ document.getElementById("collect").addEventListener("click", () => {
   const question = (lastSend && lastSend.text) || elPrompt.value.trim();
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => copySummary(sites, (resp && resp.results) || [], question));
 });
-document.getElementById("export").addEventListener("click", () => {
-  const sites = chosen(); if (!sites.length) return;
-  const question = (lastSend && lastSend.text) || elPrompt.value.trim();
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "collect", sites }, (resp) => downloadSummary(sites, (resp && resp.results) || [], question));
-});
 document.getElementById("archive").addEventListener("click", () => {
   // 受管归档窗（与伴侣窗同款）：幂等打开、随 console 联动最小化/抬前、closeAll 一起关
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "openArchive" });
-});
-document.getElementById("checkup").addEventListener("click", () => {
-  const sites = chosen(); if (!sites.length) return;
-  ignoreResults = false; // 用户新动作：解除结果忽略态
-  sites.forEach((s) => setDot(s.host, "send", t("con_checking")));
-  armDotTimeouts(sites.map((s) => s.host));
-  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "checkup", sites }, (resp) => applyResults(resp && resp.results));
 });
 document.getElementById("newsession").addEventListener("click", (e) => {
   const sites = chosen(); if (!sites.length) return;
   const free = busy(e.currentTarget);
   chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "newSession", sites }, () => { void chrome.runtime.lastError; free(); });
+});
+document.addEventListener("keydown", (e) => {
+  if (!e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.repeat || e.isComposing) return;
+  const el = document.getElementById({ KeyC: "collect", KeyL: "tile", KeyN: "newsession", KeyP: "prompt", KeyR: "retry" }[e.code]);
+  if (!el) return;
+  e.preventDefault(); el === elPrompt ? el.focus() : el.click();
 });
 document.getElementById("closeall").addEventListener("click", (e) => {
   const free = busy(e.currentTarget);
@@ -165,13 +164,13 @@ document.getElementById("closeall").addEventListener("click", (e) => {
   [...document.querySelectorAll('.chip')].forEach((c) => { c.classList.remove("send", "open", "done", "fail"); c.title = c.dataset.label + " · " + t("con_chipHint"); c.setAttribute("aria-label", c.dataset.label); });
   progress = { total: 0, done: 0 }; updateSendLabel(); lastSend = null; updateRetry(); updateFailSum();
 });
-elTier.addEventListener("change", save);
+elTier.addEventListener("change", () => { syncTierButtons(); save(); });
 elPrompt.addEventListener("input", () => {
   histCursor = -1; elPrompt.title = ""; // 编辑历史条目即成为新草稿，清位置指示
   chrome.storage.local.set({ amsConsolePrompt: elPrompt.value });
 });
 
-// Task 4: Enter 发送 + ↑↓ 历史（历史下拉与模板接线在 library.js）
+// Enter 发送 + ↑↓ 历史（鼠标历史入口在独立编辑窗）
 elPrompt.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.isComposing && !e.shiftKey) { // 输入法合成中不误发
     e.preventDefault(); document.getElementById("send").click(); return;
@@ -208,7 +207,12 @@ document.getElementById("retry").addEventListener("click", (e) => {
 // 伴侣窗编辑 → 经 storage 回填细条输入框（本框未编辑时才更新，防回环）
 chrome.storage.onChanged.addListener((ch, area) => {
   if (area !== "local") return;
-  if (ch.amsHistory) { history = ch.amsHistory.newValue || []; renderHist(); }
+  if (ch.amsHistory) history = ch.amsHistory.newValue || [];
+  if (ch.amsConsole && ch.amsConsole.newValue) {
+    const c = ch.amsConsole.newValue; selected = c.selected || {};
+    if (c.tier != null) elTier.value = c.tier;
+    syncTierButtons(); render(); syncGroupSelect();
+  }
   if (!ch.amsConsolePrompt) return;
   const p = ch.amsConsolePrompt.newValue;
   // "编辑中"须同时窗口持焦：窗口失焦后 activeElement 不重置，单看它会永久挡住回填
@@ -216,7 +220,7 @@ chrome.storage.onChanged.addListener((ch, area) => {
 });
 
 load();
-document.addEventListener("i18n:changed", () => { renderGroups(); renderTemplates(); renderHist(); updateSendLabel(); });
+document.addEventListener("i18n:changed", () => { syncGroupSelect(); updateSendLabel(); });
 applyI18n();
 
 // 可靠抬窗触发：chrome.windows.onFocusChanged 在部分 Windows 环境下不触发、也不唤醒休眠的 SW（实测

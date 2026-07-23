@@ -1,17 +1,22 @@
 /* console/archive.css — 归档只读页（独立 popup，不受 96px 细条约束） */
 body.archive{display:flex;flex-direction:column;height:100vh;margin:0;padding:10px;box-sizing:border-box;
   background:var(--strip-b);color:var(--text);font:13px/1.5 -apple-system,"Segoe UI",sans-serif}
-#ar-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+#ar-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 #ar-head .t{display:flex;align-items:center;gap:5px;font-weight:600;flex:0 0 auto}
-#ar-list{flex:1 1 auto;min-width:0;padding:6px 8px;border:1px solid var(--line);border-radius:7px;
-  background:var(--fill);color:var(--text-2);font-size:12px}
-#ar-list option{background:var(--option-bg);color:var(--text)}
+#ar-status{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-3);font-size:12px;text-align:right}
 #ar-head button{padding:6px 12px;border:1px solid var(--line);border-radius:7px;background:var(--fill);
   color:var(--text);font-size:12px;cursor:pointer;flex:0 0 auto}
 #ar-head button:hover:not(:disabled){background:var(--hover)}
 #ar-head button:disabled{opacity:.45;cursor:default}
 #ar-head button.danger{border-color:rgba(220,38,38,.6);background:rgba(220,38,38,.14);color:#ef4444}
-#ar-detail{flex:1 1 auto;margin:0;padding:14px 16px;border:1px solid var(--line);border-radius:9px;
+#ar-body{display:grid;grid-template-columns:230px minmax(0,1fr);gap:10px;flex:1;min-height:0}
+#ar-list{display:flex;flex-direction:column;gap:4px;min-height:0;padding:5px;border:1px solid var(--line);border-radius:9px;
+  background:var(--fill-2);overflow:auto;scrollbar-width:thin;scrollbar-color:var(--scroll) transparent}
+.ar-item{display:flex;flex-direction:column;align-items:flex-start;height:auto;min-height:54px;padding:8px 9px;text-align:left;white-space:normal}
+.ar-item time{font-size:11px;color:var(--text-3)}
+.ar-item span{display:-webkit-box;width:100%;margin-top:3px;overflow:hidden;-webkit-box-orient:vertical;-webkit-line-clamp:2;color:var(--text-2);line-height:1.35}
+.ar-item[aria-selected="true"]{border-color:var(--active-line);background:var(--active-bg)}
+#ar-detail{min-width:0;margin:0;padding:14px 16px;border:1px solid var(--line);border-radius:9px;
   background:var(--fill);overflow:auto;word-break:break-word;font-size:12.5px;line-height:1.65;
   scrollbar-width:thin;scrollbar-color:var(--scroll) transparent}
 #ar-detail::-webkit-scrollbar{width:10px}

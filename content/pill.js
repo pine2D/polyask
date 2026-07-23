@@ -11,22 +11,25 @@
   const root = host.attachShadow({ mode: "open" });
   root.innerHTML = `
     <style>
-      :host{display:block}
+      :host{display:block;--ease-out:cubic-bezier(0.23,1,0.32,1)}
       .wrap{display:flex;flex-direction:column;align-items:center}
-      .handle{border:0;padding:0;width:36px;height:6px;border-radius:0 0 6px 6px;cursor:pointer;
-        background:rgba(120,120,120,.45);transition:background .2s}
-      .handle:hover{background:rgba(120,120,120,.8)}
+      .handle{position:relative;border:0;padding:0;width:36px;height:24px;cursor:pointer;background:transparent}
+      .handle:before{content:"";position:absolute;inset:0 0 auto;width:36px;height:6px;border-radius:0 0 6px 6px;
+        background:rgba(120,120,120,.45);transition:background .14s ease}
       .pill{display:none;align-items:center;border-radius:999px;overflow:hidden;margin-top:4px;
-        background:rgba(30,30,30,.85);box-shadow:0 2px 10px rgba(0,0,0,.25);
+        border:1px solid rgba(255,255,255,.12);background:rgba(18,22,30,.94);box-shadow:0 4px 16px rgba(0,0,0,.3);
+        backdrop-filter:blur(8px);
         font:13px/1 -apple-system,"Segoe UI",sans-serif;color:#fff;
-        opacity:1;transition:opacity .4s}
-      .pill.idle{opacity:.35}
+        opacity:1;transition:opacity .16s var(--ease-out)}
+      .pill.idle{opacity:.42}
       .pill:hover{opacity:1}
-      .pill button{all:unset;cursor:pointer;padding:7px 14px;white-space:nowrap}
+      .pill button{all:unset;cursor:pointer;padding:7px 14px;white-space:nowrap;transition:transform .12s var(--ease-out)}
       .pill button:hover{background:rgba(255,255,255,.14)}
-      .pill button.active{background:rgba(255,255,255,.22)}
+      .pill button.active{background:rgba(98,89,222,.78)}
       .handle:focus-visible,.pill button:focus-visible{outline:2px solid #fff;outline-offset:2px}
       .sep{width:1px;align-self:stretch;background:rgba(255,255,255,.22)}
+      @media (hover:hover) and (pointer:fine){.handle:hover:before{background:rgba(120,120,120,.8)}.pill button:active{transform:scale(.97)}}
+      @media (prefers-reduced-motion:reduce){.handle:before,.pill,.pill button{transition-duration:0s}.pill button:active{transform:none}}
       /* 模式形态 */
       .wrap[data-mode=hidden]{display:none}
       .wrap[data-mode=always] .handle{display:none}

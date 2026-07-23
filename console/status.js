@@ -97,18 +97,6 @@ function copySummary(sites, results, question) {
     () => flashNote(t("con_collectFail"))
   );
 }
-// 导出 .md 文件：不需要 downloads 权限（createObjectURL + a[download] 走浏览器默认下载）
-function downloadSummary(sites, results, question) {
-  const { md, miss, q } = buildSummary(sites, results, question);
-  archiveSummary(sites, results, q);
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([md], { type: "text/markdown" }));
-  const d = new Date(), p = (n) => String(n).padStart(2, "0"); // 本地时间命名（toISOString 是 UTC，会差出时区）
-  a.download = "polyask-" + d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + "-" + p(d.getHours()) + p(d.getMinutes()) + ".md";
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  flashNote(miss ? t("con_collectDonePart", sites.length, miss) : t("con_exportDone", sites.length));
-}
 // 全部结果回齐后在细条内联显示失败汇总（薄弹窗限制下不用浮层），并经 aria-live 播报给读屏
 function updateFailSum() {
   if (Date.now() < noteUntil) return; // flashNote 展示期内不覆盖

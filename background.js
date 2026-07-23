@@ -4,11 +4,12 @@
 let consoleWinId = null;     // console 弹窗 id（内存缓存）
 let suppressFocusUntil = 0;  // 程序化抬窗(raiseConsole 末尾重聚焦 console)期间忽略 console 页面回报的 focus 事件（时间窗），防递归
 let composeWinId = null;
+let scopeWinId = null;       // 站点范围伴侣窗（失焦即关，不改变 console 高度）
 let archiveWinId = null;     // 归档查看窗（与伴侣窗同款受管：随 console 联动、closeAll 一起关）
 let raiseTimer = null;       // consoleFocused 抬窗去抖句柄（见 scheduleRaise）
 let archiveChain = Promise.resolve(); // 归档追加/删除串行，避免两个页面 get→set 丢更新
 
-importScripts("bg/windows.js", "bg/broadcast.js");
+importScripts("bg/windows.js", "bg/panels.js", "bg/broadcast.js");
 
 function mutateArchive(mutator) {
   const task = archiveChain.then(async () => {
@@ -30,7 +31,7 @@ function addArchive(entry) {
 // 窗口 id 仅本次浏览器会话有效：重启后 id 重排，陈旧登记可能撞上无关 popup（如 OAuth 弹窗）
 // 被误关/误收编——按 id 的操作只验 type 无法防住 popup 撞 popup，故启动时一律清空登记。
 chrome.runtime.onStartup.addListener(() =>
-  chrome.storage.local.remove(["amsWindows", "amsConsoleWin", "amsComposeWin", "amsArchiveWin"])
+  chrome.storage.local.remove(["amsWindows", "amsConsoleWin", "amsComposeWin", "amsScopeWin", "amsArchiveWin"])
 );
 
 // console 获焦 → 延迟 ~180ms 再抬整组工作区。点 console 的「最小化按钮」会先让窗口获焦（→ 本会立刻
@@ -66,8 +67,8 @@ chrome.commands.onCommand.addListener(async (command) => {
   }
 });
 
-// console 关闭 → 关闭 owned 平铺窗口（不动收编的用户窗口）；伴侣窗关闭 → 仅清自身登记。
-// 单监听器承两职：每次任意窗口关闭少跑一次监听器与 storage 读。
+// console 关闭 → 关闭 owned 平铺窗口（不动收编的用户窗口）；各伴侣窗关闭 → 仅清自身登记。
+// 单监听器统一清理窗口登记，避免多监听器重复读取 storage。
 chrome.windows.onRemoved.addListener(async (winId) => {
   const cid = await getConsoleWinId();
   if (cid != null && winId === cid) {
@@ -79,6 +80,8 @@ chrome.windows.onRemoved.addListener(async (winId) => {
   }
   const cmp = await getComposeWinId();
   if (cmp != null && winId === cmp) { composeWinId = null; await chrome.storage.local.remove("amsComposeWin"); return; }
+  const scope = await getScopeWinId();
+  if (scope != null && winId === scope) { scopeWinId = null; await chrome.storage.local.remove("amsScopeWin"); return; }
   const arc = await getArchiveWinId();
   if (arc != null && winId === arc) { archiveWinId = null; await chrome.storage.local.remove("amsArchiveWin"); }
 });
@@ -111,6 +114,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.action === "openConsole") {
     // popup 发起时带当前站 host：console 首次使用（无勾选历史）预勾该站，打通"正看着这个站想群发"的路径
     openConsole(msg.host); return;
+  }
+  if (msg.action === "openScope") {
+    if (raiseTimer != null) { clearTimeout(raiseTimer); raiseTimer = null; }
+    suppressFocusUntil = Date.now() + 600;
+    openScope(msg.anchor); return;
   }
   if (msg.action === "openCompose") { openCompose(msg.anchor); return; }
   if (msg.action === "openArchive") { openArchive(); return; }

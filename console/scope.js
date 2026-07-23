@@ -1,0 +1,133 @@
+let consoleState = {};
+let selected = {};
+let groups = [];
+let checks = {};
+let checking = false;
+const ALL_HOSTS = SITES.map((site) => site.host);
+const elNameRow = document.getElementById("scope-name");
+const elConfirm = document.getElementById("scope-confirm");
+const elManage = document.getElementById("scope-manage");
+const elName = document.getElementById("group-name");
+
+function currentHosts() { return ALL_HOSTS.filter((host) => selected[host]); }
+function persistSelection() {
+  consoleState = { ...consoleState, selected: { ...selected } };
+  chrome.storage.local.set({ amsConsole: consoleState });
+}
+function applyHosts(hosts) {
+  ALL_HOSTS.forEach((host) => { selected[host] = hosts.includes(host); });
+  checks = {}; document.getElementById("scope-live").textContent = "";
+  persistSelection(); renderScope();
+}
+
+// SCOPE_LOGIC_START — scripts/test-background.js 直接执行这段选择逻辑。
+function groupSignature(hosts) { return hosts.slice().sort().join(","); }
+function canSaveGroup(hosts) {
+  if (!hosts.length) return false;
+  const signature = groupSignature(hosts);
+  return ![{ hosts: ALL_HOSTS }, { hosts: [] }, ...groups].some((group) => groupSignature(group.hosts) === signature);
+}
+function setSiteSelected(host, on) {
+  if (!ALL_HOSTS.includes(host)) return false;
+  selected[host] = on; persistSelection(); renderScope(); return true;
+}
+// SCOPE_LOGIC_END
+
+function currentGroupIndex() {
+  const signature = groupSignature(currentHosts());
+  return groups.findIndex((group) => groupSignature(group.hosts) === signature);
+}
+function renderScope() {
+  document.getElementById("scope-count").textContent = t("con_scopeCount", currentHosts().length, SITES.length);
+  const sites = document.getElementById("scope-sites"); sites.replaceChildren();
+  SITES.forEach((site) => {
+    const label = document.createElement("label"); label.className = "scope-site";
+    const input = document.createElement("input"); input.type = "checkbox"; input.checked = !!selected[site.host];
+    input.addEventListener("change", () => { delete checks[site.host]; setSiteSelected(site.host, input.checked); });
+    const name = document.createElement("span"); name.className = "scope-site-name"; name.textContent = site.label;
+    const status = document.createElement("span"); status.className = "scope-state";
+    const check = checks[site.host];
+    if (check) {
+      label.dataset.state = check.state;
+      status.textContent = check.state === "checking" ? "…" : check.state === "ok" ? "✓" : "!";
+      status.setAttribute("aria-label", check.text); label.title = check.text;
+    }
+    label.append(input, name, status); sites.appendChild(label);
+  });
+  const saved = document.getElementById("scope-groups"); saved.replaceChildren();
+  groups.forEach((group) => {
+    const button = document.createElement("button"); button.type = "button"; button.textContent = group.name;
+    button.addEventListener("click", () => applyHosts(group.hosts)); saved.appendChild(button);
+  });
+  document.getElementById("grp-save").disabled = !canSaveGroup(currentHosts());
+  document.getElementById("grp-del").disabled = currentGroupIndex() < 0;
+  document.getElementById("scope-checkup").disabled = checking || !currentHosts().length;
+}
+function showOnly(row) {
+  elManage.hidden = row !== elManage; elNameRow.hidden = row !== elNameRow; elConfirm.hidden = row !== elConfirm;
+}
+function saveGroup() {
+  const name = elName.value.trim();
+  if (!name) { elName.classList.remove("shake"); void elName.offsetWidth; elName.classList.add("shake"); return; }
+  const hosts = currentHosts();
+  if (!canSaveGroup(hosts)) { showOnly(elManage); renderScope(); return; }
+  groups = [...groups.filter((group) => group.name !== name), { name, hosts }];
+  chrome.storage.local.set({ amsGroups: groups });
+  elName.value = ""; showOnly(elManage); renderScope();
+}
+
+document.getElementById("scope-all").addEventListener("click", () => applyHosts(ALL_HOSTS));
+document.getElementById("scope-none").addEventListener("click", () => applyHosts([]));
+const CHECK_ERR_KEYS = { no_window: "con_errNoWindow", not_ready: "con_errNotReady" };
+function checkText(result) {
+  if (result.ok) return t("con_checkupOk");
+  return result.reason || t(CHECK_ERR_KEYS[result.code] || "con_errGeneric");
+}
+document.getElementById("scope-checkup").addEventListener("click", () => {
+  const sites = SITES.filter((site) => selected[site.host]);
+  if (!sites.length || checking) return;
+  checking = true;
+  checks = Object.fromEntries(sites.map((site) => [site.host, { state: "checking", text: t("con_checking") }]));
+  document.getElementById("scope-live").textContent = t("con_checking"); renderScope();
+  chrome.runtime.sendMessage({ source: "AMS_CONSOLE", action: "checkup", sites }, (response) => {
+    const results = (response && response.results) || [];
+    checks = Object.fromEntries(results.map((result) => [result.host, { state: result.ok ? "ok" : "fail", text: checkText(result) }]));
+    checking = false;
+    const ok = results.filter((result) => result.ok).length;
+    document.getElementById("scope-live").textContent = t("scope_checkDone", ok, sites.length - ok);
+    renderScope();
+  });
+});
+document.getElementById("grp-save").addEventListener("click", () => { showOnly(elNameRow); elName.focus(); });
+document.getElementById("group-name-cancel").addEventListener("click", () => { elName.value = ""; showOnly(elManage); });
+elName.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && !event.isComposing) { event.preventDefault(); saveGroup(); }
+  else if (event.key === "Escape") { event.preventDefault(); elName.value = ""; showOnly(elManage); }
+});
+document.getElementById("grp-del").addEventListener("click", () => {
+  const index = currentGroupIndex(); if (index < 0) return;
+  document.getElementById("scope-confirm-text").textContent = t("con_delGroup", groups[index].name);
+  showOnly(elConfirm); document.getElementById("scope-confirm-no").focus();
+});
+document.getElementById("scope-confirm-yes").addEventListener("click", () => {
+  const index = currentGroupIndex(); if (index >= 0) groups = groups.filter((_, i) => i !== index);
+  chrome.storage.local.set({ amsGroups: groups }); showOnly(elManage); renderScope();
+});
+document.getElementById("scope-confirm-no").addEventListener("click", () => showOnly(elManage));
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || event.defaultPrevented) return;
+  if (!elNameRow.hidden || !elConfirm.hidden) showOnly(elManage); else window.close();
+});
+window.addEventListener("blur", () => window.close());
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+  if (changes.amsConsole) { consoleState = changes.amsConsole.newValue || {}; selected = consoleState.selected || {}; }
+  if (changes.amsGroups) groups = changes.amsGroups.newValue || [];
+  if (changes.amsConsole || changes.amsGroups) renderScope();
+});
+chrome.storage.local.get(["amsConsole", "amsGroups"], (value) => {
+  consoleState = value.amsConsole || {}; selected = consoleState.selected || {}; groups = value.amsGroups || [];
+  renderScope();
+});
+document.addEventListener("i18n:changed", renderScope);
+applyI18n();

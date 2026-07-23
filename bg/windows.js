@@ -129,7 +129,7 @@ async function _openConsole(prefillHost) {
   await chrome.storage.local.set({ amsConsoleWin: w.id });
 }
 
-// 伴侣窗：控制面（同 console），绝不进 amsWindows、不被平铺/closeAll/联动触碰。
+// 伴侣编辑窗：控制面（同 console），绝不进 amsWindows；通过专属 id 随工作区联动和关闭。
 // anchor（可选）= console 输入框的视口内 {left,width}：据此把伴侣窗贴 console 底边、与输入框等宽，
 // 制造「输入框向下展开」的错觉。取不到 console 几何则回退居中。
 // in-flight 去重同 openConsole：背靠背两条 openCompose 消息会双开伴侣窗并孤儿化前一个。
@@ -144,21 +144,18 @@ async function _openCompose(anchor) {
   // 仅当确是伴侣 popup 才聚焦并返回；陈旧 id / 撞上日常窗口 → 不碰它、继续往下新建
   if (cid != null && await updateIfPopup(cid, { focused: true, state: "normal" })) return;
   const wa = await consoleWorkArea(); // 贴着 console 所在显示器展开
-  const H = 340;
-  let W = 560;
+  const H = Math.min(460, wa.height);
+  let W = Math.min(760, wa.width);
   let left = wa.left + Math.max(0, Math.floor((wa.width - W) / 2));
   let top = wa.top + Math.max(0, Math.floor((wa.height - H) / 3));
   if (anchor && anchor.width) {
     try {
       const c = await chrome.windows.get(await getConsoleWinId());
       if (c && c.left != null && c.top != null && c.height != null) {
-        W = Math.round(anchor.width);
+        W = Math.min(Math.max(640, Math.round(anchor.width)), wa.width);
         left = Math.round(c.left + anchor.left); // 窗口屏幕左 + 输入框视口内左 ≈ 输入框屏幕左
         top = c.top + c.height;                  // 贴 console 实际底边（c.top 已含 WM 标题栏上移）
         if (left < wa.left) left = wa.left;       // 夹取到工作区，防越界
-        // 宽度下界 320：footer 两按钮 nowrap 放不进更窄的窗（旧下界 80 会裁切按钮，对抗审查批 C）；
-        // 贴屏幕右缘时左移窗口而非压缩宽度
-        W = Math.max(320, Math.min(W, wa.width));
         if (left + W > wa.left + wa.width) left = wa.left + wa.width - W;
         if (top + H > wa.top + wa.height) top = wa.top + wa.height - H;
       }
@@ -263,6 +260,8 @@ async function closeAll() {
   await setWindows({});
   const cmp = await getComposeWinId(); // 伴侣窗/归档窗随平铺一起关（经专属 id；各自 onRemoved 清登记）
   if (cmp != null) await removeIfPopup(cmp);
+  const scope = await getScopeWinId();
+  if (scope != null) await removeIfPopup(scope);
   const arc = await getArchiveWinId();
   if (arc != null) await removeIfPopup(arc);
 }
