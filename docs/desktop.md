@@ -35,10 +35,10 @@
 
 ## 3. 站点运行时注入
 
-`desktop/src/preload/site.ts` 在隔离世界按**固定顺序**同步 require 11 条：
+`desktop/src/preload/site.ts` 在隔离世界按**固定顺序**同步 require 12 条：
 
 ```
-i18n → core → send → upload → md → adapters-intl → adapters-intl2 → adapters-cn → adapters-cn2 → generation → diag
+i18n → core → send → upload → md → adapters-intl → adapters-intl2 → adapters-cn → adapters-cn2 → adapters-cn3 → generation → diag
 ```
 
 - `send.js` 读 `window.__AMS`，必须排在 `core.js` 之后；`generation.js` 与 `diag.js` 必须排在**全部适配器之后**——两者都按已填充的注册表逐 host 挂实现/包装，早了就静默缺席。

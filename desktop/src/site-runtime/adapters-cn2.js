@@ -1,4 +1,4 @@
-// desktop/src/site-runtime/adapters-cn2.js — 国内站点适配器·续（Kimi/元宝/智谱清言）。
+// desktop/src/site-runtime/adapters-cn2.js — 国内站点适配器·续（Kimi/智谱清言；元宝在 adapters-cn3.js）。
 // adapters-cn.js 触及 300 行上限后按站拆分；契约与注意事项同 adapters-cn.js / CLAUDE.md。
 (function () {
   "use strict";
@@ -128,92 +128,6 @@
         const el = els[els.length - 1];
         const mds = [...el.querySelectorAll(".markdown")].filter((m) => !m.closest(".thinking-container"));
         return mds[mds.length - 1] || el;
-      },
-    },
-
-    // 元宝：新版 composer 用 Instant / Thinking / Expert 模式菜单；旧版 Deep Thinking toggle 作为 A/B 回退。
-    "yuanbao.tencent.com": {
-      _modeBtn: function () { return document.querySelector('button[aria-label="Switch model"], button[aria-label="切换模型"]'); },
-      _mode: function () { const b = this._modeBtn(); return b ? (b.textContent || "").trim() : ""; },
-      // 模式标签集。Models 子菜单（Hy4 preview / Hy3 / DeepSeek，真机 2026-08-31）与模式项同为
-      // menuitemradio 且同时在 DOM，候选必须过 _isMode 才允许点——否则档位会被点成模型
-      // （同 ChatGPT 2026-08 那次事故；DeepSeek 那项的描述里就带「deep thinking」字样）。
-      _MODES: /^(thinking|instant|expert|思考|深度思考|即时|快速|专家)/i,
-      // 两层语义校验，缺一不可：① 模型列表那层菜单带 aria-label="Model list"，模式那层没有
-      // aria-label —— 先按容器把模型列表整个排除；② 再要求文本命中模式标签集。
-      // 只做文本校验挡不住「模型取名叫深度思考版」，只做容器校验挡不住站点把模型塞进同一层。
-      _isMode: function (el) {
-        const menu = el.closest ? el.closest('[role="menu"]') : null;
-        if (menu && /model|模型/i.test(menu.getAttribute("aria-label") || "")) return false;
-        return this._MODES.test((el.textContent || "").trim());
-      },
-      _toggle: function () { return document.querySelector('[class*="ThinkSelector"]'); },
-      _isOn: function () {
-        const t = this._toggle();
-        return !!t && /ThinkSelector_selected/.test((t.className || "").toString());
-      },
-      _modeItems: function () { return [...document.querySelectorAll('[role="menuitemradio"]')].filter((el) => this._isMode(el)); },
-      // openMenu 是**切换**语义：菜单已开时再点会把它关掉。真机 2026-09-01：关闭动画期间 menuitemradio
-      // 仍在 DOM，waitFor 照样找得到项、click 却点在正在消失的节点上 → 落空 → 抛「目标模式未生效」。
-      // 所以先看是否已展开，且一次不成要重开一次（同 Claude `_open`、Gemini `_openModelMenu`）。
-      _openModes: async function (b) {
-        if (!this._modeItems().length) openMenu(b);
-        let ok = await waitFor(() => this._modeItems().length || null, 1500);
-        if (!ok) { openMenu(b); ok = await waitFor(() => this._modeItems().length || null, 1500); }
-        if (!ok) { escMenus(); throw new Error("元宝: 模式菜单未展开"); }
-      },
-      _selectMode: async function (re) {
-        const b = this._modeBtn();
-        if (!b) throw new Error("元宝: 模式按钮未找到");
-        if (re.test(this._mode())) return;
-        await this._openModes(b);
-        const item = this._modeItems().find((el) => re.test((el.textContent || "").trim())); // 语义校验在前：模型项一律不可点
-        if (!item) { escMenus(); throw new Error("元宝: 目标模式未找到"); }
-        item.click(); escMenus();
-        // 按钮文本回显有延迟：复读到目标为止再判失败（原来是 500ms 固定等待，贴着实测值没余量）
-        if (!await waitFor(() => re.test(this._mode()) || null, 2000)) throw new Error("元宝: 目标模式未生效");
-      },
-      _set: async function (on) {
-        if (this._modeBtn()) {
-          await this._selectMode(on ? /^(Thinking|思考|深度思考)/i : /^(Instant|即时|快速)/i);
-          return;
-        }
-        const t = this._toggle();
-        if (!t) throw new Error("元宝: Deep Thinking 控件未找到");
-        if (this._isOn() !== on) { t.click(); await sleep(500); }
-        if (this._isOn() !== on) throw new Error("元宝: 深度思考未生效"); // 点击被吞时不许静默成功
-      },
-      diagnose: function () {
-        return [
-          { name: t("diag_modeBtn"), ok: !!(this._modeBtn() || this._toggle()), kind: "control" },
-          { name: t("diag_tierReadable"), ok: this.state() != null, kind: "tier" },
-        ];
-      },
-      state: function () {
-        const mode = this._mode();
-        if (mode) return /^(Thinking|思考|深度思考)/i.test(mode) ? "think" : /^(Instant|即时|快速)/i.test(mode) ? "fast" : null;
-        return this._toggle() ? (this._isOn() ? "think" : "fast") : null;
-      },
-      think: async function () { await this._set(true); },
-      fast: async function () { await this._set(false); },
-      attach: function (files, el, deadline) { return S.dropFiles(el, files, el, deadline); },
-      // 最后一条回答（chrome-dbg 真机审计 2026-07：AI 回答在 .agent-chat__conv--ai__speech_show，
-      // 正文 .hyc-common-markdown，需排除深度思考段 .hyc-component-deepsearch-cot__think 内的同类节点）
-      answer: function () {
-        const els = document.querySelectorAll(".agent-chat__conv--ai__speech_show");
-        if (!els.length) return null;
-        const host = els[els.length - 1];
-        const mds = [...host.querySelectorAll(".hyc-common-markdown")].filter((m) => !m.closest('[class*="cot__think"]'));
-        const pick = mds[mds.length - 1] || host;
-        return pick;
-      },
-      // 新版发送键是 aria-label=Send 的 div；旧版 icon-font 已下线。不可用时落回 Enter+校验兜底。
-      // 注入侧真机实证：元宝 beforeinput 不生效、execCommand 生效（既有回退链覆盖）
-      sendSel: '[aria-label="Send"], [aria-label="发送"]', // 供 diag.js 巡检，与 submit 同步维护
-      submit: function () {
-        const b = document.querySelector('[aria-label="Send"], [aria-label="发送"]');
-        if (!b || /disabled/i.test((b.className || "").toString()) || b.getAttribute("aria-disabled") === "true") return false;
-        clickEl(b);
       },
     },
 

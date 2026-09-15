@@ -49,6 +49,7 @@ require("../site-runtime/adapters-intl.js");
 require("../site-runtime/adapters-intl2.js");
 require("../site-runtime/adapters-cn.js");
 require("../site-runtime/adapters-cn2.js");
+require("../site-runtime/adapters-cn3.js");
 require("../site-runtime/generation.js");
 require("../site-runtime/diag.js");
 

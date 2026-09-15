@@ -46,7 +46,7 @@ PolyAsk 是一个 Electron 桌面应用：把同一问题群发到 9 个真实 A
 bash scripts/verify.sh               # 零依赖仓库卫生：.js/.mjs 语法 + JSON + 300 行 + desktop/src 400 行棘轮 + OAuth 卫生 + 文档/.github 引用 + workflow YAML + 根 scripts 五个跨端测试 + diff --check
 cd desktop && npm test               # Desktop 门禁：tsc --noEmit + tsx --test（test/）+ node --test（scripts/*.test.{js,mjs}，含九站适配器回归）；verify.sh 不跑它
 cd desktop && npm run typecheck      # 与 npm test 首段重叠，CI 单独再跑是刻意的双保险
-cd desktop && npm run package && xvfb-run -a npm run smoke -- --skip-package   # preload 的 11 条 require 仍解析、九站视图挂上
+cd desktop && npm run package && xvfb-run -a npm run smoke -- --skip-package   # preload 的 12 条 require 仍解析、九站视图挂上
 bash scripts/prepare-release.sh auto # 推导版本、晋升 CHANGELOG、同步 Desktop package/lock（只改文件不 commit）；1.0.0 用 major
 bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布（--build-only 只校验源码并提取 Release 正文）
 ```
@@ -54,7 +54,7 @@ bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布
 ## 架构（先在这里定位入口文件）
 
 - **主进程**：`desktop/src/main/index.ts`（装配）→ `view-manager.ts`（站点视图树/状态）、`broadcast.ts`（群发编排、deadline、epoch、Kimi 只读确认）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts`（IPC，全部过 `trustedShell`）。
-- **站点适配**：`desktop/src/site-runtime/{i18n,core,send,upload,md,adapters-intl,adapters-intl2,adapters-cn,adapters-cn2,generation,diag}.js`，classic script、`__AMS` 全局，由 `preload/site.ts` 按这个顺序 require；语言由 `shared/locale.ts` 解析后 `setLang` 单向注入。
+- **站点适配**：`desktop/src/site-runtime/{i18n,core,send,upload,md,adapters-intl,adapters-intl2,adapters-cn,adapters-cn2,adapters-cn3,generation,diag}.js`，classic script、`__AMS` 全局，`preload/site.ts` 按此序 require；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
 - **数据与同步**：`main/database.ts`（SQLite）+ `*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata，schema 1，fixture 在 `desktop/test/fixtures/`）、`data-admin-service.ts`（本机数据管理）。
 - **渲染层**：`desktop/src/renderer/`，所有 IPC 只经 `shell-api.ts` 的 `shell`（测试用 `setShellApi` 注入桩）。
 - **共享契约**：`desktop/src/shared/`（protocol、copy、locale、site-report、ipc-error）。

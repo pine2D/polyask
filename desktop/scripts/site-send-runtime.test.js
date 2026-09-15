@@ -1,20 +1,10 @@
 #!/usr/bin/env node
 "use strict";
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const test = require("node:test");
 const vm = require("node:vm");
 
-const source = (file) => fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8");
-function helpers(document, extra = {}) {
-  const sleep = () => Promise.resolve();
-  const waitFor = async (fn) => fn() || null;
-  const findByText = (selector, re) => [...document.querySelectorAll(selector)]
-    .find((node) => re.test((node.textContent || "").trim())) || null;
-  const S = { waitFor, findByText, openMenu() {}, clickEl(el) { el.click(); }, sleep, escMenus() {}, adapters: {}, ...extra };
-  return { document, t: (key) => key, window: { __AMS: S }, MouseEvent: class { constructor(type) { this.type = type; } }, console };
-}
+const { source, helpers } = require("./lib/site-send-harness");
 
 // F016：注入硬校验原本只包在 contenteditable 分支里，textarea/input 的 native setter 被受控组件回滚时
 // 框仍为空，confirmSubmitted 的「空框 = 已发送」立刻判真 → 一个字没发出去却报绿点（用户无从察觉）。
@@ -106,86 +96,6 @@ test("豆包识别带品牌和版本前缀的模式文案", async () => {
   assert.equal(doubao.state(), "think");
 });
 
-test("Kimi 走工具菜单取 file input 时收尾 escMenus 且等待夹取 deadline，并能确认最后一条用户消息", async () => {
-  let input = null, attached = null, escCount = 0, waited = null;
-  const toolkit = { click() { input = { className: "hidden-input" }; } };
-  const oldUser = { querySelector: () => ({ textContent: "旧问题" }) };
-  const lastUser = { querySelector: () => ({ textContent: "  新问题\n第二行  " }) };
-  const document = {
-    querySelector(selector) {
-      if (selector === ".toolkit-trigger-btn") return toolkit;
-      if (selector === 'input.hidden-input[type="file"]') return input;
-      return null;
-    },
-    querySelectorAll(selector) { return selector === ".chat-content-item-user" ? [oldUser, lastUser] : []; },
-  };
-  const context = helpers(document, {
-    waitFor: async (fn, ms) => { waited = ms; return fn(); },
-    escMenus() { escCount++; },
-    setInputFiles(found, files, el, deadline) { attached = { found, files, el, deadline }; return Promise.resolve(true); },
-    dropFiles() { return Promise.resolve(false); },
-  });
-  vm.runInNewContext(source("adapters-cn2.js"), context);
-  const kimi = context.window.__AMS.adapters["kimi.com"], files = [{ name: "probe.png" }], composer = {};
-  const deadline = Date.now() + 900; // < 1500，等待必须被夹到剩余预算
-  assert.equal(await kimi.attach(files, composer, deadline), true);
-  assert.equal(attached.found, input);
-  assert.equal(escCount, 1, "走 toolkit 分支必须收尾 escMenus，否则罩住输入框");
-  assert.ok(waited > 0 && waited <= 900, "等待必须夹取到 deadline 剩余预算，不是硬编码 1500");
-  assert.equal(kimi.submitted("新问题 第二行"), true);
-  assert.equal(kimi.submitted("别的问题"), false);
-});
-
-test("Kimi 模型名与菜单项文案含零宽字符时，判档和真实 _select 比对都不失效", async () => {
-  const zwsp = String.fromCharCode(0x200b); // 避免在源码里字面写 ​ 转义序列
-  let clickedItem = false;
-  const entry = { classList: { contains: () => false }, click() {},
-    querySelector: (s) => (s === ".name" ? { textContent: "K3" + zwsp } : s === ".current-effort" ? { textContent: "Max" } : null) };
-  const modelItem = { querySelector: (s) => (s === ".name" ? { textContent: "K3" + zwsp } : null), click() { clickedItem = true; } };
-  const document = { querySelector: (s) => (s === ".current-model" ? entry : null),
-    querySelectorAll: (s) => (s === ".model-item" ? [modelItem] : []) };
-  const context = helpers(document);
-  vm.runInNewContext(source("adapters-cn2.js"), context);
-  const kimi = context.window.__AMS.adapters["kimi.com"];
-  assert.equal(kimi.state(), "think", "模型名带零宽字符不该让判档失效");
-  await kimi._select("K3"); // 真实调用，不 stub：菜单项 .name 也带零宽字符
-  assert.equal(clickedItem, true, "菜单项文案带零宽字符时精确等值比对仍要命中并点击");
-});
-
-test("元宝新模式菜单映射 Instant 与 Thinking，并使用语义发送键", async () => {
-  let selected = "Instant", menuOpen = false, sent = false;
-  const trigger = {
-    textContent: selected,
-    click() { menuOpen = true; },
-    getAttribute(name) { return name === "aria-label" ? "Switch model" : null; },
-  };
-  const item = (text) => ({
-    textContent: text,
-    getAttribute(name) { return name === "aria-checked" ? String(selected === text) : null; },
-    click() { selected = text; trigger.textContent = text; menuOpen = false; },
-  });
-  const items = [item("Instant"), item("Thinking"), item("Expert")];
-  const send = { className: "SendButton_sendButton", getAttribute: () => null, click() { sent = true; } };
-  const document = {
-    querySelector(selector) {
-      if (selector === 'button[aria-label="Switch model"], button[aria-label="切换模型"]') return trigger;
-      if (selector === '[aria-label="Send"], [aria-label="发送"]') return send;
-      return null;
-    },
-    querySelectorAll(selector) { return selector === '[role="menuitemradio"]' && menuOpen ? items : []; },
-  };
-  const context = helpers(document, { openMenu: (el) => el.click(), dropFiles: () => Promise.resolve(true) });
-  vm.runInNewContext(source("adapters-cn2.js"), context);
-  const yuanbao = context.window.__AMS.adapters["yuanbao.tencent.com"];
-  assert.equal(yuanbao.state(), "fast");
-  await yuanbao.think();
-  assert.equal(yuanbao.state(), "think");
-  yuanbao.submit();
-  assert.equal(sent, true);
-});
-
-// 切档链路（core.js 的 runModeNow / switchTier）：把 escMenus 的 Escape、toast 文案与适配器调用记在同一条
-// 序列上，就能断言「谁在谁之后发生」。composer 只为让 submitPrompt 消息入口走完全程。
 function coreWithAdapter(adapter) {
   const seq = [], toasts = [], debug = [];
   class FakeEvent { constructor(type, options) { this.type = type; Object.assign(this, options); } }

@@ -116,7 +116,7 @@ test("九站 diagnose 的每条检查都带合法 kind，且恰有一条 reach",
     sleep: () => Promise.resolve(), escMenus() {},
   });
   for (const file of ["adapters-intl.js", "adapters-intl2.js",
-    "adapters-cn.js", "adapters-cn2.js"]) vm.runInNewContext(source(file), ctx);
+    "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js"]) vm.runInNewContext(source(file), ctx);
   vm.runInNewContext(source("diag.js"), ctx);
 
   const hosts = Object.keys(ctx.window.__AMS.adapters);
@@ -136,7 +136,7 @@ test("sendSel 与 submit 的选择子字面量同步（漂移守卫）", () => {
   // 声明处与 submit 内各出现一次 → 同一文件内该字面量至少出现 2 次；
   // 有人只改 submit 的选择子而忘改 sendSel 时，旧字面量只剩 1 次，此测试变红。
   // 豆包有意无 sendSel：其发送键空输入框时不在 DOM（非常驻，真机 2026-08-18），列进巡检会恒红
-  const files = { "adapters-cn.js": ["deepseek.com"], "adapters-cn2.js": ["kimi.com", "yuanbao.tencent.com"] };
+  const files = { "adapters-cn.js": ["deepseek.com"], "adapters-cn2.js": ["kimi.com"], "adapters-cn3.js": ["yuanbao.tencent.com"] };
   for (const [file, keys] of Object.entries(files)) {
     const text = source(file);
     const ctx = context({ querySelector: () => null, querySelectorAll: () => [] }, {}, null);

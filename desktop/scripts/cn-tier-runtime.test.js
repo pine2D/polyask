@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 "use strict";
 
-// site-runtime/adapters-cn2.js 的档位回归（智谱 / 元宝 / Kimi）。2026-08-31 真机改版：
+// site-runtime/adapters-cn2.js（智谱 / Kimi）与 adapters-cn3.js（元宝）的档位回归。2026-08-31 真机改版：
 // 智谱弹层多出「模型段 + 极致档」、元宝多出 Models 子菜单、Kimi 的 escMenus 收不掉根菜单。
-// scripts/test-site-send-runtime.js 只管这一卷的发送/附件语义，档位放这里，两边不重叠。
+// scripts/cn2-send-runtime.test.js 只管这两卷的发送/附件语义，档位放这里，两边不重叠。
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 
-const source = () => fs.readFileSync(path.join(__dirname, "../src/site-runtime/adapters-cn2.js"), "utf8");
+const source = (file = "adapters-cn2.js") => fs.readFileSync(path.join(__dirname, "../src/site-runtime/" + file), "utf8");
 
-function runtime(document, extra) {
+function runtime(document, extra, file) {
   const S = {
     adapters: {}, sleep: async () => {}, escCount: 0, escMenus() { S.escCount++; },
     findByText: (selector, re, root) =>
@@ -25,7 +25,7 @@ function runtime(document, extra) {
   // 事后改 S.openMenu 对它无效（会让断言变成假通过）。
   Object.assign(S, (extra && extra.hooks) || {});
   class FakeEvent { constructor(type, options) { this.type = type; Object.assign(this, options); } }
-  vm.runInNewContext(source(), Object.assign(
+  vm.runInNewContext(source(file), Object.assign(
     { window: { __AMS: S }, t: (key) => key, document, console, MouseEvent: FakeEvent }, extra || {}));
   return S;
 }
@@ -88,48 +88,71 @@ async function glmMenuMustBeClosedByRetrigger() {
   assert.ok(c.S.escCount >= 1, "先走 escMenus，再兜底点触发器");
 }
 
-// —— 元宝：Models 子菜单（Hy4 preview / Hy3 / DeepSeek）与模式项同为 menuitemradio ——
-function yuanbaoCase(mode, hooks) {
+// —— 元宝：「模型/Models」子菜单 + 模式项同为 menuitemradio（真机 2026-09-15：默认 Hy4 preview，且只剩专家模式）——
+function yuanbaoCase(init, hooks) {
   const clicked = [];
-  const state = { mode: mode || "Expert" };
+  const state = Object.assign({ mode: "Expert", model: "Hy4 preview", modelsOpen: false }, init);
   // 真机 2026-08-31：模型列表那层菜单带 aria-label="Model list"，模式那层没有 aria-label
   const modeMenu = { getAttribute: () => null }, modelMenu = { getAttribute: (n) => (n === "aria-label" ? "Model list" : null) };
-  const radio = (text, home) => ({ textContent: text, closest: () => home,
-    click() { clicked.push(text); state.mode = text.split(/(?=[A-Z][a-z])/)[0]; } });
-  const modes = ["InstantInstant answers for everyday tasks", "ThinkingDeep reasoning for tricky problems",
-    "ExpertUse Tools and run tasks"].map((t) => radio(t, modeMenu));
+  const radio = (text, home, pick) => ({ textContent: text, closest: () => home, click() { clicked.push(text); pick(text); } });
+  const allModes = ["InstantInstant answers for everyday tasks", "ThinkingDeep reasoning for tricky problems",
+    "ExpertUse Tools and run tasks"];
+  // Hy4 preview 下站点只给「专家」一项；点模式项只改模式
+  const modes = () => (/^hy4/i.test(state.model) ? allModes.slice(2) : allModes)
+    .map((t) => radio(t, modeMenu, (x) => { state.mode = x.split(/(?=[A-Z][a-z])/)[0]; }));
   // 「深度思考版」是刻意放的诱饵模型：文本命中模式标签集，靠容器（Model list）才能排掉它。
-  // DeepSeek 那项的描述里也带「deep thinking」字样，Hy4 带「Expert mode only」。
+  // DeepSeek 那项的描述里也带「deep thinking」字样，Hy4 带「Expert mode only」。选中 Hy4 preview 站点会自动落到专家。
   const models = ["深度思考版Hy4 的思考特调", "Hy4 previewHandle complex tasks - Expert mode only",
-    "Hy3Recommended for daily use", "DeepSeekSuitable for deep thinking"].map((t) => radio(t, modelMenu));
-  const button = { textContent: "", getAttribute: (name) => (name === "aria-label" ? "Switch model" : null) };
+    "Hy3Recommended for daily use", "DeepSeekSuitable for deep thinking"].map((t) => radio(t, modelMenu, (x) => {
+      state.model = x.replace(/(Handle|Recommended|Suitable|Hy4 的).*$/, "").trim();
+      if (/^hy4/i.test(state.model)) state.mode = "Expert";
+    }));
+  // 子菜单入口：文本 = Models + 当前模型名，点开后模型项才进 DOM（真机靠悬停，桩里用 click 代替）
+  const entry = { click() { clicked.push("Models"); state.modelsOpen = true; } };
+  Object.defineProperty(entry, "textContent", { get: () => "Models" + state.model });
+  const button = { getAttribute: (name) => (name === "aria-label" ? "Switch model" : null) };
   Object.defineProperty(button, "textContent", { get: () => state.mode });
   const document = {
     querySelector: (selector) => (selector.includes("Switch model") ? button : null),
-    querySelectorAll: (selector) => (selector === '[role="menuitemradio"]' ? models.concat(modes) : []),
+    querySelectorAll: (selector) => selector === '[role="menuitemradio"]' ? (state.modelsOpen ? models : []).concat(modes())
+      : selector === '[role="menuitem"]' ? [entry] : [],
   };
-  const S = runtime(document, hooks ? { hooks } : undefined);
+  const S = runtime(document, hooks ? { hooks } : undefined, "adapters-cn3.js");
   return { adapter: S.adapters["yuanbao.tencent.com"], S, clicked, state };
 }
 
-// 模型项排在模式项前面（真机里 Models 子菜单一展开就是这个顺序）：没有语义校验就会点成模型
-async function yuanbaoModeMustNotMatchModelRadios() {
-  const c = yuanbaoCase("Instant");
+// think = 模型 Hy4 preview。从 Hy3+即时出发：只点子菜单入口和 Hy4 preview 那一项，绝不碰诱饵「深度思考版」，
+// 模式由站点自动落到专家，state 复读为 think。
+async function yuanbaoThinkMustPickHy4Preview() {
+  const c = yuanbaoCase({ mode: "Instant", model: "Hy3" });
   await c.adapter.think();
-  assert.deepEqual(c.clicked, ["ThinkingDeep reasoning for tricky problems"], "只能点模式项，绝不能点模型项");
+  assert.deepEqual(c.clicked, ["Models", "Hy4 previewHandle complex tasks - Expert mode only"]);
+  assert.equal(c.state.mode, "Expert");
   assert.equal(c.adapter.state(), "think");
+}
+
+// fast 从默认态（Hy4 preview + 专家）出发：菜单里没有「即时」，必须先把模型切回 Hy3 再选即时；
+// 选即时时模型项仍在 DOM，只能点模式项，不能点模型项（语义校验）。
+async function yuanbaoFastMustLeaveHy4PreviewFirst() {
+  const c = yuanbaoCase({});
+  await c.adapter.fast();
+  assert.deepEqual(c.clicked, ["Models", "Hy3Recommended for daily use", "InstantInstant answers for everyday tasks"]);
+  assert.equal(c.adapter.state(), "fast");
+  // 已在即时：不开菜单、不点任何东西
+  c.clicked.length = 0;
+  await c.adapter.fast();
+  assert.deepEqual(c.clicked, []);
 }
 
 // openMenu 是切换语义：菜单已开时再点就把它关掉。真机 2026-09-01 实测，关闭动画期间
 // menuitemradio 仍在 DOM，于是 waitFor 照样找得到项、click 却点在正在消失的节点上 →
-// 落空 → 抛「目标模式未生效」。修复前这是元宝切档失败的形态。
+// 落空 → 抛「目标模式未生效」。已是 Hy4 preview 时 think 只读入口尾缀，不再点任何项。
 async function yuanbaoMustNotToggleAnAlreadyOpenMenu() {
   let opens = 0;
-  const c = yuanbaoCase("Expert", { openMenu: () => { opens += 1; } });  // 桩里菜单恒可见 = 已经开着
+  const c = yuanbaoCase({}, { openMenu: () => { opens += 1; } });  // 桩里菜单恒可见 = 已经开着
   await c.adapter.think();
-
   assert.equal(opens, 0, "菜单已展开时不得再点触发器——那一点会把它关掉");
-  assert.deepEqual(c.clicked, ["ThinkingDeep reasoning for tricky problems"]);
+  assert.deepEqual(c.clicked, [], "模型已是 Hy4 preview：不点入口也不点模型项");
   assert.equal(c.adapter.state(), "think");
 }
 
@@ -137,7 +160,7 @@ async function yuanbaoMustNotToggleAnAlreadyOpenMenu() {
 // 元宝此前一次不成就抛「目标模式未找到」。
 async function yuanbaoMustRetryOpeningTheModeMenu() {
   let opens = 0, visible = false;
-  const c = yuanbaoCase("Expert", { openMenu: () => { opens += 1; if (opens >= 2) visible = true; } });
+  const c = yuanbaoCase({}, { openMenu: () => { opens += 1; if (opens >= 2) visible = true; } });
   const adapter = c.adapter;
   adapter._modeItems = () => (visible ? [{ textContent: "ThinkingDeep reasoning" }] : []);
   let thrown = null;
@@ -145,6 +168,12 @@ async function yuanbaoMustRetryOpeningTheModeMenu() {
 
   assert.equal(thrown, null, "第一次没展开必须重开一次，而不是直接抛");
   assert.equal(opens, 2, "恰好重试一次");
+}
+
+// 思考（Thinking）不再是预设档：用户手选的合法档位，state 返回 null 而不是猜成 think
+async function yuanbaoThinkingModeIsNotAPreset() {
+  const c = yuanbaoCase({ mode: "Thinking", model: "Hy3" });
+  assert.equal(c.adapter.state(), null);
 }
 
 // —— Kimi：escMenus 只收得掉 effort 子菜单，根菜单要回点入口 ——
@@ -173,13 +202,13 @@ async function kimiRootMenuMustBeClosedByRetrigger() {
 let failed = 0;
 (async () => {
   const tests = [glmThinkMustPreferTopTier, glmThinkMustFallBackToDeep, glmStateMustAcceptBothThinkTiers,
-    glmMenuMustBeClosedByRetrigger, yuanbaoModeMustNotMatchModelRadios,
-    yuanbaoMustNotToggleAnAlreadyOpenMenu, yuanbaoMustRetryOpeningTheModeMenu,
+    glmMenuMustBeClosedByRetrigger, yuanbaoThinkMustPickHy4Preview, yuanbaoFastMustLeaveHy4PreviewFirst,
+    yuanbaoMustNotToggleAnAlreadyOpenMenu, yuanbaoMustRetryOpeningTheModeMenu, yuanbaoThinkingModeIsNotAPreset,
     kimiRootMenuMustBeClosedByRetrigger];
   for (const test of tests) {
     try { await test(); }
     catch (error) { failed++; console.error(error.stack || error); }
   }
   if (failed) process.exitCode = 1;
-  else console.log("✓ 智谱极致档、元宝模式语义校验、Kimi 根菜单收尾兼容");
+  else console.log("✓ 智谱极致档、元宝 Hy4 preview 档位与模式语义校验、Kimi 根菜单收尾兼容");
 })();
