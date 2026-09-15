@@ -171,7 +171,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **模型 radio 常驻菜单**：Advanced 视图（`composer-model-picker-slider-advanced-view`）不必展开也在 DOM，`GPT-5.6 Sol`(checked) / `GPT-5.5` 两项随时可取。`_selectModel` 先直接找，找不到才点 `aria-label="Select model"` 入口；**已 `aria-checked=true` 就直接返回不点**（点了会连带把菜单收掉）。
 - 档位锚点 `_anchor()` 改成**纯选择子** `button.__composer-pill[aria-haspopup="menu"]`（真机实测全页精确 1 个）。**不许再做文本前置校验**：新 UI 的 pill 在菜单开着时是控件名，带文本校验的 `_anchor` 会当场返回 undefined。`diagnose()` 两项因此天然独立——「入口项红」= 按钮真没了，「档位项红」= 标签集漂移或 pill 读不出。
 - `answer()` 取 `[data-turn="assistant"]` 末条 → `.markdown`（旧内层 `[data-message-author-role="assistant"]` 兜底）。`attach` 走 `#upload-photos`。唯一实现 `stop()` 的站（`[data-testid="stop-button"]`，回退 aria-label 含 stop answering/streaming/generating 的按钮）——**目前无调用方**。
-- **改中文档位词前必须先真机确认**：`_OPEN_PILL` 与 `_power()` 里的中文候选（思考强度 / 强度 / 力度）都是直译，未经中文界面真机验证。
+- **中文界面（用户截图 2026-09-15）**：菜单打开时 pill 显示「思考强度」，命中 `_OPEN_PILL`；模型 radio 三项 **「最新」（默认勾选，GPT-6 Astra 别名）/ `GPT-5.6 Sol` / `GPT-5.5`（10 月 14 日下线）**。适配器仍显式选 `GPT-5.6 Sol`，不跟「最新」——它指向谁由 OpenAI 随时改，think/fast 两档要落在同一个已知模型上。`_power()` 里的其余中文候选（强度 / 力度）仍是直译未验证。
 
 ### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl.js`）
 
@@ -189,6 +189,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 ### DeepSeek（`chat.deepseek.com` / 适配器键 `deepseek.com`，`desktop/src/site-runtime/adapters-cn.js`）
 
 - 档位：think = `_selectMode(/Expert|专家/)` + `_setDeepThink(true)`；fast = `_selectMode(/Instant|快速/)` + `_setDeepThink(false)`；另有图片专用档 `thinkImage`/`fastImage` = `_selectMode(/Vision|视觉/)` + DeepThink 开/关（九站唯一实现图片档的站）。
+- **首屏模式 tab 已撤（用户截图 2026-09-15，随 V4.1-Flash 合并）**：空对话 composer 只剩「深度思考」「智能搜索」两个 `.ds-toggle-button`，`_selectMode` 对 radio 缺失本就静默跳过，`thinkImage`/`fastImage` 的 Vision 选择同样落空、只剩 DeepThink 开关生效——radio 分支保留为旧版回退，别删也别扩。
 - **`state()` 优先读常驻 composer 的 DeepThink 开关**（`aria-pressed` true→think / false→fast），开关不在时才回退首屏 radio（`aria-checked` 的那项，`Expert|专家`→think、`Instant|快速`→fast、其余 null）。radio 在首条消息后从 DOM 消失（真机 2026-07-11），只读 radio 会整个对话期恒 null——外壳里的档位标注读不出、巡检误报红、二轮切档失去真实确认。**`diagnose()` 也有意不列这个 radio**，否则聊天中恒红误报。
 - DeepThink 开关锚点：文本含 `deepthink|深度思考` 的 `.ds-toggle-button`，按 `aria-pressed` 幂等；**开关缺失即抛异常**（常驻 composer，静默 return 会让 runMode 误报成功）。点击后**复读 `aria-pressed`**，未生效抛「DeepSeek: DeepThink 未生效」。模式 radio 用 `findByText('[role="radio"]', re)` 且**只能用原生 `el.click()`**（开关走的仍是 `clickEl` 合成序列；「站点拒绝 `isTrusted=false`」这条旧论据其实不成立——`el.click()` 同样是 `isTrusted=false`，要换成原生 click 得先真机验证）。
 - 发送键见发送路径表：图片处理期间只加 `ds-button--disabled` 不设 `aria-disabled`，必须等真正可用（`submit(el, deadline)` 的 deadline 就是为此）。
