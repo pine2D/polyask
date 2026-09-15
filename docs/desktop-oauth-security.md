@@ -23,7 +23,7 @@
 | --- | --- | --- | --- |
 | Desktop 正式版 | Production Desktop Client | GitHub Actions Variable + Secret | 只用于 tag 对应的 Release workflow |
 | Desktop 本地开发/测试 | Development Desktop Client | 被 Git 忽略的 `desktop/resources/oauth.json` 或本机环境变量 | 不得复用 Production Secret |
-| Chrome 扩展（已停用） | Chrome Extension Client | 记录在 v0.25.1 的 `manifest.json`（tag `archive/extension-v0.25.1`） | 与 Desktop Client 分离，不存在 Client Secret。**停用日期：1.0.0 发布当天，见 CHANGELOG** |
+| Chrome 扩展（已停用） | Chrome Extension Client | 记录在 v0.25.1 的 `manifest.json`（tag `archive/extension-v0.25.1`） | 与 Desktop Client 分离，不存在 Client Secret。**已于 2026-09-15（1.0.0 发布当天）在 Google Cloud 删除**（控制台无单独停用开关，删除即停用，30 天内可恢复） |
 
 **扩展客户端为什么不留窗口。** 扩展形态在 1.0.0 终结，这个 Chrome-extension 类型的 OAuth 客户端在发布当天就在 Google Cloud 停用，不保留 30 天过渡期：除本机外没有第二台装着扩展的机器，本机的扩展也会随停维卸载——**没有任何消费者**，窗口只剩风险不剩收益。一个不再维护的授权入口留着就是纯风险面（虽窄：绑定扩展 ID、scope 只有 `drive.appdata`），而且到期停用是仓库外的人工动作、没有任何自动提醒，早停一天少一天。停用顺序是**先卸载本机扩展再停用客户端**，否则会先给自己撞一次 `invalid_client`。
 

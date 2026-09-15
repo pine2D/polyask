@@ -17,7 +17,7 @@
 
 ### 弃用
 
-- 扩展所用的 Chrome-extension 类型 Google OAuth 客户端将在 1.0.0 发布当天停用；桌面应用使用独立的 Desktop 客户端，不受影响
+- 扩展所用的 Chrome-extension 类型 Google OAuth 客户端已于 2026-09-15（1.0.0 发布当天）在 Google Cloud 删除；桌面应用使用独立的 Desktop 客户端，不受影响
 
 ### 新增
 
