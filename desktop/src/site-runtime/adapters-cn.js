@@ -81,7 +81,7 @@
       },
     },
 
-    // 豆包：composer 模式按钮(当前显示当前模式)，点开菜单含 快速/专家/超能模式([role=menuitem])
+    // 豆包：composer 模式按钮(显示当前模式)，菜单两项 [role=menuitem]：「豆包 快速」/「豆包 2.1 Turbo」+专家角标（真机 2026-09-15 复核不变；「超能」仅历史档位，留在 _modeBtn 过滤里兜底）
     "doubao.com": {
       _modeBtn: function () {
         const found = [...document.querySelectorAll("button")].filter((x) => {
