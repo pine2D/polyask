@@ -107,8 +107,9 @@ function yuanbaoCase(init, hooks) {
       state.model = x.replace(/(Handle|Recommended|Suitable|Hy4 的).*$/, "").trim();
       if (/^hy4/i.test(state.model)) state.mode = "Expert";
     }));
-  // 子菜单入口：文本 = Models + 当前模型名，点开后模型项才进 DOM（真机靠悬停，桩里用 click 代替）
-  const entry = { click() { clicked.push("Models"); state.modelsOpen = true; } };
+  // 子菜单入口：文本 = Models + 当前模型名。真机 2026-09-16：只有合成 mousemove 能展开，click 不行——桩里照此建模
+  const entry = { click() { clicked.push("Models:click"); },
+    dispatchEvent(ev) { if (ev.type === "mousemove") { clicked.push("Models:hover"); state.modelsOpen = true; } } };
   Object.defineProperty(entry, "textContent", { get: () => "Models" + state.model });
   const button = { getAttribute: (name) => (name === "aria-label" ? "Switch model" : null) };
   Object.defineProperty(button, "textContent", { get: () => state.mode });
@@ -126,7 +127,7 @@ function yuanbaoCase(init, hooks) {
 async function yuanbaoThinkMustPickHy4Preview() {
   const c = yuanbaoCase({ mode: "Instant", model: "Hy3" });
   await c.adapter.think();
-  assert.deepEqual(c.clicked, ["Models", "Hy4 previewHandle complex tasks - Expert mode only"]);
+  assert.deepEqual(c.clicked, ["Models:hover", "Hy4 previewHandle complex tasks - Expert mode only"]);
   assert.equal(c.state.mode, "Expert");
   assert.equal(c.adapter.state(), "think");
 }
@@ -136,7 +137,7 @@ async function yuanbaoThinkMustPickHy4Preview() {
 async function yuanbaoFastMustLeaveHy4PreviewFirst() {
   const c = yuanbaoCase({});
   await c.adapter.fast();
-  assert.deepEqual(c.clicked, ["Models", "Hy3Recommended for daily use", "InstantInstant answers for everyday tasks"]);
+  assert.deepEqual(c.clicked, ["Models:hover", "Hy3Recommended for daily use", "InstantInstant answers for everyday tasks"]);
   assert.equal(c.adapter.state(), "fast");
   // 已在即时：不开菜单、不点任何东西
   c.clicked.length = 0;

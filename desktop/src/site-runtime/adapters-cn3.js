@@ -69,15 +69,16 @@
           return !!menu && /model|模型/i.test(menu.getAttribute("aria-label") || "");
         });
       },
-      // 子菜单靠悬停展开；合成 hover 不一定触发，所以 hover 后再 click 入口，一次不成重来一次
+      // 子菜单靠悬停展开。入口 button 的 React 处理器只有 onMouseMove / onMouseLeave / onClick（CDP 真机 2026-09-16），
+      // 合成 mousemove（带坐标）能打开，mouseover / pointermove / click / 方向键都打不开；click 留作站点改版时的第二招。
       _openModels: async function (b) {
         await this._openModes(b);
         for (let i = 0; i < 2 && !this._modelItems().length; i++) {
           const entry = this._modelsEntry();
           if (!entry) { escMenus(); throw new Error("元宝: 模型入口未找到"); }
-          try { entry.dispatchEvent(new MouseEvent("mouseover", { bubbles: true })); } catch (e) {}
-          entry.click();
-          await waitFor(() => this._modelItems().length || null, 1500);
+          const r = entry.getBoundingClientRect ? entry.getBoundingClientRect() : { left: 0, top: 0 };
+          try { entry.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: r.left + 4, clientY: r.top + 4 })); } catch (e) {}
+          if (!await waitFor(() => this._modelItems().length || null, 1000)) { entry.click(); await waitFor(() => this._modelItems().length || null, 1000); }
         }
         if (!this._modelItems().length) { escMenus(); throw new Error("元宝: 模型子菜单未展开"); }
       },
@@ -90,7 +91,7 @@
         const item = this._modelItems().find((el) => re.test((el.textContent || "").trim()));
         if (!item) { escMenus(); throw new Error("元宝: 目标模型未找到"); }
         item.click(); await sleep(300);
-        await this._openModes(b); // 选完模型菜单可能收起也可能留着：重开一次再复读入口尾缀，不猜
+        await this._openModes(b); // 真机 2026-09-16：选完模型根菜单留着、子菜单收起、按钮即时回显；仍重开一次兜底，不猜
         if (!await waitFor(() => re.test(this._model()) || null, 2000)) { escMenus(); throw new Error("元宝: 目标模型未生效"); }
       },
       _set: async function (on) {
@@ -104,6 +105,7 @@
           if (/^(Instant|即时|快速)/i.test(this._mode())) return; // 已是即时 → 模型必不是 Hy4 preview，免开菜单
           await this._selectModel(this._FAST_MODEL);
           await this._selectMode(/^(Instant|即时|快速)/i);
+          escMenus(); // 切回 Hy3 时站点会自动恢复上一次的模式（CDP 真机 2026-09-16），_selectMode 可能直接命中返回而菜单还开着
           return;
         }
         const t = this._toggle();

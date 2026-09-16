@@ -69,9 +69,10 @@ test("元宝 think 切到 Hy4 preview（站点自动落专家），并使用语�
   // 模型项：选中 Hy4 preview 后站点只剩专家模式，按钮回显 Expert
   const modelItem = (text) => ({ textContent: text, closest: () => modelMenu, getAttribute: () => null,
     click() { model = text; if (/^Hy4/.test(text)) { selected = "Expert"; trigger.textContent = "Expert"; } } });
-  const entry = { click() {} };
+  let modelsOpen = false;
+  const entry = { click() {}, dispatchEvent(ev) { if (ev.type === "mousemove") modelsOpen = true; } };
   Object.defineProperty(entry, "textContent", { get: () => "Models" + model });
-  const items = [item("Instant"), item("Thinking"), item("Expert"), modelItem("Hy4 preview"), modelItem("Hy3")];
+  const modes = [item("Instant"), item("Thinking"), item("Expert")], models = [modelItem("Hy4 preview"), modelItem("Hy3")];
   const send = { className: "SendButton_sendButton", getAttribute: () => null, click() { sent = true; } };
   const document = {
     querySelector(selector) {
@@ -80,7 +81,7 @@ test("元宝 think 切到 Hy4 preview（站点自动落专家），并使用语�
       return null;
     },
     querySelectorAll(selector) {
-      if (selector === '[role="menuitemradio"]') return menuOpen ? items : [];
+      if (selector === '[role="menuitemradio"]') return menuOpen ? modes.concat(modelsOpen ? models : []) : [];
       return selector === '[role="menuitem"]' && menuOpen ? [entry] : [];
     },
   };
