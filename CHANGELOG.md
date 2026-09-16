@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [1.0.1] - 2026-09-16
+
 ### 变更
 
 - 元宝的深度思考档改为选择模型 **Hy4 preview**（该模型只提供专家模式，站点会自动落到专家）；快速档改为 **Hy3 + 即时**。元宝新会话默认模型已是 Hy4 preview，此前的适配器在默认态找不到「即时」「思考」项，切档必然失败。停在「深度思考」模式时不再显示档位圆点
@@ -738,7 +740,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.0.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/pine2D/polyask/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/pine2D/polyask/compare/v0.25.1...v1.0.0
 [0.25.1]: https://github.com/pine2D/polyask/compare/v0.25.0...v0.25.1
 [0.25.0]: https://github.com/pine2D/polyask/compare/v0.24.1...v0.25.0
