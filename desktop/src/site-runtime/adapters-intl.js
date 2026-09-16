@@ -56,7 +56,10 @@
       },
       // effort 子菜单在模型下拉内；控件缺失一律 throw（2026-08-31 起不再有「静默 return」例外——
       // 控件仍在，只是选择子变了，静默会让 runMode 误报「已切到」并弹假成功 toast）。
-      _setEffort: async function () {
+      // pick = "top"（think：在场最高档）| "bottom"（fast：在场最低档）。effort 是站点级记忆、换模型不重置：
+      // think 过一次再只选 Sonnet 5 会带着 Max 发出去（用户真机 2026-09-16），所以 fast 也必须显式压档。
+      // 最低档复读按点中那一项的首词（Low / 低 / 站点撤掉 Low 后是 Medium），不写死词表；think 仍复读 _THINK（state 同源）。
+      _setEffort: async function (pick) {
         await this._open();
         const trig = this._effortTrigger();
         if (!trig) { escMenus(); throw new Error("Claude: Effort 入口未找到"); }
@@ -66,9 +69,12 @@
           items = await waitFor(() => { const l = this._effortItems(trig); return l.length ? l : null; }, 1500) || [];
         }
         if (!items.length) { escMenus(); throw new Error("Claude: Effort 档位未找到"); }
-        const top = items.reduce((a, b) => (b.rank > a.rank ? b : a));
-        if (top.el.getAttribute("aria-checked") !== "true") { clickEl(top.el); await sleep(450); }
-        const ok = await waitFor(() => this._THINK.test(this._label()), 1200); // 点击被吞时不许静默成功
+        const bottom = pick === "bottom";
+        const want = items.reduce((a, b) => ((bottom ? b.rank < a.rank : b.rank > a.rank) ? b : a));
+        if (want.el.getAttribute("aria-checked") !== "true") { clickEl(want.el); await sleep(450); }
+        const head = ((want.el.textContent || "").trim().match(/^[A-Za-z\u4e00-\u9fff]+/) || [""])[0].replace(/default$/i, "");
+        const re = bottom ? new RegExp(head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : this._THINK;
+        const ok = await waitFor(() => re.test(this._label()), 1200); // 点击被吞时不许静默成功
         escMenus();
         if (!ok) throw new Error("Claude: 目标 effort 未生效");
       },
@@ -88,7 +94,7 @@
       state: function () {
         const t = this._label();
         if (!t) return null;
-        if (/sonnet|haiku/i.test(t)) return "fast";
+        if (/sonnet|haiku/i.test(t)) return this._THINK.test(t) ? null : "fast"; // 快模型带高档 effort 不是预设档（fast 会压到 Low）
         if (!/fable|opus/i.test(t)) return null;
         if (this._THINK.test(t)) return "think";
         if (/\blow\b|低/i.test(t)) return "fast";
@@ -107,9 +113,9 @@
       think: async function () {
         await this._selectModel(/fable\s*5/i); await this._setEffort();
       },
-      // fast 只选 Sonnet 5，使用该模型记忆的默认 effort，避免把思考档的 High 强加给快档。
+      // fast = Sonnet 5 + 在场最低档 effort（Low）。只换模型不压档，上一轮 think 留下的 Max 会原样带过来。
       fast: async function () {
-        await this._selectModel(/sonnet\s*5/i);
+        await this._selectModel(/sonnet\s*5/i); await this._setEffort("bottom");
       },
       attach: function (files, el, deadline) {
         return S.setInputFiles(document.querySelector('input[data-testid="file-upload"]'), files, el, deadline);

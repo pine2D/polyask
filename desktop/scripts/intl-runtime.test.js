@@ -199,6 +199,17 @@ async function claudeEffortMustTakeHighestKnownTier() {
   }
 }
 
+// fast 取在场最低档：effort 是站点级记忆，只换模型不压档会把上一轮 think 的 Max 带给 Sonnet（用户真机 2026-09-16）
+async function claudeFastMustTakeLowestKnownTier() {
+  for (const [tiers, wanted] of [[null, "Low"], [["MediumDefault", "High"], "MediumDefault"], [["低", "中", "高"], "低"]]) {
+    const c = claudeEffortCase({ tiers: tiers });
+    await c.adapter._setEffort("bottom");
+    const picked = c.clicked.filter((el) => c.tiers.includes(el)).map((el) => el.textContent);
+    assert.deepEqual(picked, [wanted], "必须取在场最低档：" + JSON.stringify(tiers));
+    assert.equal(c.S.escCount, 1, "选档后必须 escMenus 收尾");
+  }
+}
+
 // 档位项与模型项同为 menuitemradio：容器不对的「Max Preview」绝不能被当成最高档点下去
 async function claudeEffortMustIgnoreModelRadios() {
   const c = claudeEffortCase({ tiers: [] }); // 子菜单展开了但一个档位都没有
@@ -274,7 +285,7 @@ async function sendMustFallBackToEnterWhenClickIgnored() {
 let failed = 0;
 (async () => {
   const tests = [twentyPixelComposerMustBeFound, claudeModelInMoreMenuMustBeSelected,
-    claudeEffortMustTakeHighestKnownTier, claudeEffortMustIgnoreModelRadios, claudeEffortWithoutTriggerIdMustThrow,
+    claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeLowestKnownTier, claudeEffortMustIgnoreModelRadios, claudeEffortWithoutTriggerIdMustThrow,
     claudeMissingEffortMustThrow, sendMustFallBackToEnterWhenClickIgnored, geminiStateMustFollowModeLabel,
     geminiModelSelectMustCloseItsMenu, geminiThinkingToggleMustBeIdempotent, geminiThinkMustMatchAnyProVersion,
     geminiFastMustMatchAnyFlashButNotLite, geminiMenuMustBeClosedByRetriggerWhenEscFails];
