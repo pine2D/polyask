@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [1.0.2] - 2026-09-16
+
 ### 修复
 
 - Claude 快速档现在会把思考强度压到最低档：此前只切换到 Sonnet 5 而不动强度，上一轮深度思考留下的 Max 会原样带过去，实际以「Sonnet 5 · Max」发送
@@ -744,7 +746,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.0.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/pine2D/polyask/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/pine2D/polyask/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/pine2D/polyask/compare/v0.25.1...v1.0.0
 [0.25.1]: https://github.com/pine2D/polyask/compare/v0.25.0...v0.25.1

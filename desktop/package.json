@@ -1,6 +1,6 @@
 {
   "name": "polyask-desktop",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "productName": "PolyAsk",
   "private": true,
   "description": "PolyAsk cross-platform desktop shell",
