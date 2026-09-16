@@ -32,6 +32,7 @@
 
 - **真机 = 开发态 Electron**：`cd desktop && npm start`。**改动要重启进程才生效**（主进程、preload、站点运行时都在启动时加载），别在跑着的实例上等热更新，那是最常见的「改了没反应」。
 - 复现只认**目标站点视图里的生产 `__AMS`**：站点运行时挂在站点视图的隔离上下文，`__AMS.getState()` / `_isOn()` 是唯一可信断言源。**不要在临时片段里重写正则**——转义会把 `\s` 变成 `\\s`，产生「幽灵失败」（实战吃过亏）。
+- **直接在真实页面上跑真实适配器（CDP，2026-09-16 起首选）**：`cd desktop && npm start -- -- --remote-debugging-port=9223`（`main/index.ts` 只在打包后移除这个开关，开发态可用；同一 userData，站点登录态照用）。`curl -s http://127.0.0.1:9223/json` 拿站点视图的 `webSocketDebuggerUrl`，用 `desktop/node_modules/ws` 发 `Runtime.enable`，从 `Runtime.executionContextCreated` 里取名为 **`Electron Isolated Context`** 的上下文（`auxData.isDefault === false`），在该 `contextId` 上 `Runtime.evaluate`（`awaitPromise`）就能直接调 `window.__AMS.adapters["<host>"].think()` / `.fast()` / `.state()`，返回值带按钮文本与 `[role=menu]` 残留数即是证据。主世界（默认上下文）看不到 `__AMS`，但能 dump DOM、试各种合成事件——元宝模型子菜单「只认 mousemove」就是这样定的。
 - **未挂进视图树的站点视图视口恒 0×0**，`findComposer` 恒返回 null。只对当前页格子里的站点下结论，别拿后台视图的探测结果当证据。
 - **判「掉登录」要用强证据**：可见头像 / 会话历史列表非空、**没有可见的**「登录/Sign in」按钮文本；弱类名匹配（`[class*=login]`）只能当线索——登录弹窗容器常驻 DOM，在水合窗口里探测必误判（曾据此错判 Kimi 掉登录）。另：Kimi 停在非预设档（如 Instant）时 `state()` 按既有语义返回 null，属正常态不是故障。
 - **开发机与用户机不等价**：开发机是 WSL2 + Linux Electron（实测 `devicePixelRatio=1.5`，**不是无缩放**——缩放类量级问题本机可复现；界面英文），用户机是 Windows（缩放比例可能不同、界面可能非英文），layout 数值不同。本机跑通不构成「已修复」的证据。
