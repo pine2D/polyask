@@ -2,11 +2,9 @@
 "use strict";
 
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
 
-const source = (file) => fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8");
+const { source, fakeRuntime } = require("./lib/intl-harness");
 
 function twentyPixelComposerMustBeFound() {
   const composer = { // 19.98 而非 20：页面缩放会让标称 20px 的单行编辑器算出小数高度
@@ -55,23 +53,6 @@ function claudeModelInMoreMenuMustBeSelected() {
     assert.ok(clicked.includes(fable), "Claude 深度思考模型必须能从 More models 子菜单选中");
     assert.equal(S.escCount, 1, "选中模型的成功路径必须 escMenus 收尾");
   });
-}
-
-// helper 语义贴近生产：findByText 走真实选择器、openMenu/clickEl 记录副作用。
-// escMenus 必须是计数器而非空桩——「每个菜单动作自己收尾」是硬约束，空桩让违反者永远绿。
-// waitFor 也必须消耗 timeout：忽略它就分不清 waitFor(fn, 1500) 与无超时调用，短超时用例形同虚设。
-function fakeRuntime(document, clicked, onOpen) {
-  const findByText = (selector, re, root) =>
-    [...(root || document).querySelectorAll(selector)].find((n) => re.test((n.textContent || "").trim())) || null;
-  const runtime = {
-    adapters: {}, findByText, sleep: async () => {}, escCount: 0, escMenus() { runtime.escCount++; },
-    waitFor: async (fn, timeout = 3500, step = 120) => { // 与生产 core.js 同构：轮询到超时才返回 null
-      for (let waited = 0; ; waited += step) { const v = fn(); if (v) return v; if (waited >= timeout) return null; }
-    },
-    openMenu: (el) => onOpen(el),
-    clickEl: (el) => { clicked.push(el); return true; },
-  };
-  return runtime;
 }
 
 // Gemini 是九站里唯一在离线层零适配器覆盖的站；下面三条都用纯 DOM 假对象，不需要真机。
@@ -153,78 +134,6 @@ async function geminiMenuMustBeClosedByRetriggerWhenEscFails() {
   assert.ok(c.clicked.includes(c.button), "兜底动作就是再点一次模型按钮");
 }
 
-// —— Claude effort 子菜单（2026-08-31：effort-menu-trigger / effort-option-* 两个 testid 全没了）——
-function claudeEffortCase(options) {
-  const opts = options || {};
-  const clicked = [];
-  const attr = (map) => ({ getAttribute: (name) => (name in map ? map[name] : null) });
-  const state = { label: "Model: Fable 5 · Medium" };
-  const menu = (lb) => ({ getAttribute: (name) => (name === "aria-labelledby" ? lb : null) });
-  const modelMenu = menu("model-lb"), effortMenu = menu("eff-1");
-  const radio = (text, home, checked) => ({ textContent: text, closest: () => home,
-    getAttribute: (name) => (name === "aria-checked" ? String(!!checked) : null) });
-  // 「Max Preview」是刻意放的诱饵模型：文本命中档位标签集，但不属于 effort 子菜单容器。
-  // 只按文本过滤就会把它当最高档点下去 —— 双重语义校验的第二层就是防它。
-  const models = [radio("Fable 5", modelMenu), radio("Max Preview", modelMenu), radio("Sonnet 5", modelMenu, true)];
-  const tiers = (opts.tiers || ["Low", "MediumDefault", "High", "Extra", "Max"])
-    .map((name) => radio(name, effortMenu));
-  const trigger = Object.assign({ textContent: "EffortMedium", id: opts.id === undefined ? "eff-1" : opts.id }, attr({ "aria-haspopup": "menu" }));
-  let expanded = !!opts.expanded;
-  const document = {
-    querySelector: (selector) => selector === '[data-testid="model-selector-dropdown"]'
-      ? { getAttribute: (name) => (name === "aria-label" ? state.label : null) }
-      : (selector === '[role="menuitemradio"]' ? models[0] : null),
-    querySelectorAll: (selector) => {
-      if (selector === '[role="menuitemradio"]') return expanded ? models.concat(tiers) : models;
-      if (selector === '[role="menuitem"][aria-haspopup="menu"]') return opts.dropEntry ? [] : [trigger];
-      return [];
-    },
-  };
-  const S = fakeRuntime(document, clicked, (el) => { if (el === trigger) expanded = true; });
-  S.clickEl = (el) => { clicked.push(el); state.label = "Model: Fable 5 · " + (el.textContent || ""); return true; };
-  vm.runInNewContext(source("adapters-intl.js"), { window: { __AMS: S }, t: (key) => key, document, console });
-  return { adapter: S.adapters["claude.ai"], S, clicked, tiers, models, state };
-}
-
-// think 取已知序列里在场的最高档；站点减档时自动退到次高档，而不是写死 High
-async function claudeEffortMustTakeHighestKnownTier() {
-  for (const [tiers, wanted] of [[null, "Max"], [["Low", "MediumDefault", "High", "Extra"], "Extra"], [["Low", "High"], "High"],
-    [["低", "中", "高", "超", "极致"], "极致"], [["低", "中", "高", "超"], "超"]]) { // 中文 UI：点到的档名 _THINK 也必须能复读
-    const c = claudeEffortCase({ tiers: tiers });
-    await c.adapter._setEffort();
-    const picked = c.clicked.filter((el) => c.tiers.includes(el)).map((el) => el.textContent);
-    assert.deepEqual(picked, [wanted], "必须取在场最高档：" + JSON.stringify(tiers));
-    assert.equal(c.adapter.state(), "think", "切完必须能被 state() 判成 think");
-    assert.equal(c.S.escCount, 1, "选档后必须 escMenus 收尾");
-  }
-}
-
-// fast 取在场最低档：effort 是站点级记忆，只换模型不压档会把上一轮 think 的 Max 带给 Sonnet（用户真机 2026-09-16）
-async function claudeFastMustTakeLowestKnownTier() {
-  for (const [tiers, wanted] of [[null, "Low"], [["MediumDefault", "High"], "MediumDefault"], [["低", "中", "高"], "低"]]) {
-    const c = claudeEffortCase({ tiers: tiers });
-    await c.adapter._setEffort("bottom");
-    const picked = c.clicked.filter((el) => c.tiers.includes(el)).map((el) => el.textContent);
-    assert.deepEqual(picked, [wanted], "必须取在场最低档：" + JSON.stringify(tiers));
-    assert.equal(c.S.escCount, 1, "选档后必须 escMenus 收尾");
-  }
-}
-
-// 档位项与模型项同为 menuitemradio：容器不对的「Max Preview」绝不能被当成最高档点下去
-async function claudeEffortMustIgnoreModelRadios() {
-  const c = claudeEffortCase({ tiers: [] }); // 子菜单展开了但一个档位都没有
-  await assert.rejects(async () => c.adapter._setEffort());
-  assert.ok(!c.clicked.some((el) => c.models.includes(el)), "绝不能点到模型 radio（含诱饵 Max Preview）");
-}
-
-// 入口没有 id 时双层校验会退化成纯文本匹配，诱饵「Max Preview」就会被当最高档点下去：必须 fail-closed 抛错
-async function claudeEffortWithoutTriggerIdMustThrow() {
-  const c = claudeEffortCase({ id: "" });
-  await assert.rejects(async () => c.adapter._setEffort(), /缺少 id/);
-  assert.ok(!c.clicked.some((el) => c.models.includes(el)), "id 缺失时绝不能点到任何模型 radio（含诱饵 Max Preview）");
-  assert.ok(!c.clicked.some((el) => c.tiers.includes(el)), "id 缺失时也不得点档位项——归属无法校验");
-}
-
 // Gemini 深档模型正则版本无关：Google 升 Pro 当天不能整站抛「未找到模型」（与 fast 的 3.7 Flash 事故对称）
 async function geminiThinkMustMatchAnyProVersion() {
   for (const pro of ["3.1 Pro Advanced reasoning", "3.2 Pro", "4.0 pro"]) {
@@ -233,13 +142,6 @@ async function geminiThinkMustMatchAnyProVersion() {
     assert.ok(c.clicked.includes(c.items[1]), "任意版本号的 Pro 都要能选中：" + pro);
     assert.ok(!c.clicked.includes(c.items[0]) && !c.clicked.includes(c.items[2]), "深档绝不能选到 Flash / Flash-Lite：" + pro);
   }
-}
-
-// 入口整个不见了必须抛 —— 2026-08-31 起撤销「无 effort 入口静默 return」那条例外
-async function claudeMissingEffortMustThrow() {
-  const c = claudeEffortCase({ dropEntry: true });
-  await assert.rejects(async () => c.adapter._setEffort());
-  assert.equal(c.clicked.length, 0, "找不到 effort 入口时不得点击任何项");
 }
 
 // Claude 新版发送键拒绝一切合成点击（真机 2026-08）：点了没生效必须退回 Enter，否则整条群发发不出去
@@ -285,8 +187,7 @@ async function sendMustFallBackToEnterWhenClickIgnored() {
 let failed = 0;
 (async () => {
   const tests = [twentyPixelComposerMustBeFound, claudeModelInMoreMenuMustBeSelected,
-    claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeLowestKnownTier, claudeEffortMustIgnoreModelRadios, claudeEffortWithoutTriggerIdMustThrow,
-    claudeMissingEffortMustThrow, sendMustFallBackToEnterWhenClickIgnored, geminiStateMustFollowModeLabel,
+    sendMustFallBackToEnterWhenClickIgnored, geminiStateMustFollowModeLabel,
     geminiModelSelectMustCloseItsMenu, geminiThinkingToggleMustBeIdempotent, geminiThinkMustMatchAnyProVersion,
     geminiFastMustMatchAnyFlashButNotLite, geminiMenuMustBeClosedByRetriggerWhenEscFails];
   for (const test of tests) {
@@ -294,5 +195,5 @@ let failed = 0;
     catch (error) { failed++; console.error(error.stack || error); }
   }
   if (failed) process.exitCode = 1;
-  else console.log("✓ Claude effort 语义校验（含入口无 id fail-closed）、Gemini 版本无关深/快档与菜单收尾兼容");
+  else console.log("✓ Claude 输入框/子菜单模型/发送回退、Gemini 版本无关深/快档与菜单收尾兼容");
 })();

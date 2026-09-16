@@ -39,7 +39,7 @@ for (const [value, expected] of [
   ["Model: Fable 5 \u00b7 High", "think"],
   ["Model: Fable 5 \u00b7 Low", "fast"],
   ["Model: Fable 5 \u00b7 Medium", null],
-  ["Model: Sonnet 5 \u00b7 Max", null],     // 快模型带高档 effort：既不是 think 也不是预设的 fast（fast 会压到 Low）
+  ["Model: Sonnet 5 \u00b7 Max", null],     // 快模型带高档 effort：既不是 think 也不是预设的 fast（fast 会回到 Medium）
   ["Model: Sonnet 5 \u00b7 Low", "fast"],
   ["Model: Sonnet 5 \u00b7 Medium", "fast"],
   ["Model: Fable 5 High", "think"],
@@ -69,7 +69,7 @@ function modelRegex(hook) {
   return match[1];
 }
 const plainName = (pattern) => pattern.replace(/\\s[*+]/g, " ").replace(/\\b|[\\^$]/g, "").trim();
-for (const [hook, suffix, expected] of [["think", " High", "think"], ["fast", " Low", "fast"]]) {
+for (const [hook, suffix, expected] of [["think", " High", "think"], ["fast", " Medium", "fast"]]) {
   const pattern = modelRegex(hook), name = plainName(pattern);
   assert.match(name, new RegExp(pattern, "i"), `${hook}() 的模型正则 /${pattern}/i 反推不出模型名`);
   label = "Model: " + name + suffix;
