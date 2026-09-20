@@ -97,3 +97,18 @@ test("synthesis selection and request validation reject unsafe or incomplete inp
   assert.equal(validateSynthesisRequest({ archiveId: "a", targetSite: "claude", tier: null, selectedHosts: ["claude.ai", "claude.ai"], instruction: "" }, record), "invalid_request");
   assert.equal(validateSynthesisRequest({ archiveId: "a", targetSite: "claude", tier: null, selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "x".repeat(4_001) }, record), "invalid_request");
 });
+
+test("source references retain archive positions when selection skips an answer", () => {
+  const record = { ...archiveFixture(), results: [
+    { host: "claude.ai", label: "Claude", text: "Omitted answer" },
+    { host: "chatgpt.com", label: "ChatGPT", text: null, code: "no_answer" },
+    { host: "gemini.google.com", label: "Gemini", text: "Partial evidence", code: "answer_truncated" },
+    { host: "kimi.com", label: "Kimi", text: "Other evidence" }
+  ] };
+  const prompt = buildSynthesisPrompt({ record, selectedHosts: ["kimi.com", "gemini.google.com"], instruction: "Quote evidence" });
+  assert.match(prompt, /Source \[S3\]: captured text is truncated/);
+  assert.match(prompt, /Source \[S4\]: completeness not verified/);
+  assert.doesNotMatch(prompt, /Source \[S1\]|Source \[S2\]|Omitted answer/);
+  assert.ok(prompt.indexOf("Source [S3]") < prompt.indexOf("Source [S4]"));
+  assert.match(prompt, /Partial evidence/);
+});

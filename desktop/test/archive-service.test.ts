@@ -108,8 +108,10 @@ test("archive markdown preserves missing-answer placeholders", () => {
     assert.match(markdown, /\*\*来源\*\*: \[Reference\]\(https:\/\/example\.com\/article\)/);
     assert.match(markdown, /## Claude · 深度思考/);
     assert.match(markdown, /\*\*最佳回答\*\*\n\nAnswer/);
-    assert.match(markdown, /## Kimi\n\n> 暂无回答/);
-    assert.match(markdown, /## 综合结果\n\n\*\*目标 AI\*\*: ChatGPT · 快速\n\nCombined answer/);
+    assert.match(markdown, /## Claude · 深度思考\n\n\[S1\]/);
+    assert.match(markdown, /## Kimi\n\n\[S2\]\n\n> 暂无回答/);
+    assert.match(markdown, /## 综合结果\n\n> AI 生成的分析与引文尚未核实/);
+    assert.match(markdown, /\*\*目标 AI\*\*: ChatGPT · 快速\n\nCombined answer/);
   } finally {
     database.close();
   }

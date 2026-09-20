@@ -122,6 +122,8 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 ## 7. 数据边界与本机数据管理
 
+- 引文报告复用辅助综合的 instruction/text 字段和保存替换流程，不新增持久键。`answerSourceId(index)` 从结果快照的原始数组位置生成 `[S1]` 等编号，页面、发送载荷与导出一致；选择子集不重编号。载荷明确截断或完整性未验证，报告预设要求逐字摘录并区分推断；应用不将模型引文标为已验证，也不自动将模型输出解析成可信引用。未来若允许修改/重排原始回答，必须先迁移编号语义。
+
 - 模板删除先在外壳内等待 6 秒（跨页面保留撤销入口），到期才调用原有 tombstone 删除；撤销不写数据库，不新增持久键。等待期间退出应用保留模板。
 
 - 本机库是 `app.getPath("userData")/polyask.sqlite`（Electron 内置 `node:sqlite`），WAL、外键、参数化仓储、事务 outbox。表：`history`、`archives`、`state_items`、`outbox`、`drive_files`、`meta`。

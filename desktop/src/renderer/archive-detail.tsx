@@ -9,6 +9,7 @@ import { ArchiveCompare } from "./archive-compare";
 import { ArchiveSynthesis } from "./archive-synthesis";
 import { CompareIcon, SparklesIcon, StarIcon } from "./icons";
 import { MarkdownPreview } from "./markdown-preview";
+import { answerSourceId } from "../shared/answer-source";
 
 interface ArchiveDetailProps {
   readonly copy: DesktopCopy;
@@ -60,7 +61,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
       </div>
       {comparisonOpen ? <ArchiveCompare copy={copy} results={successfulResults} /> : null}
       <nav className="archive-answer-nav" aria-label={copy.siteViews}>
-        {record.results.map((result, index) => <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`}>{result.label}</a>)}
+        {record.results.map((result, index) => <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`}>{answerSourceId(index)} {result.label}</a>)}
       </nav>
       <div className="archive-answers">
         {record.results.map((result, index) => {
@@ -69,7 +70,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           const tier = result.state === "think" ? ` · ${copy.think}` : result.state === "fast" ? ` · ${copy.fast}` : "";
           return (
             <section className="archive-answer" id={`archive-answer-${index}`} key={`${result.host}:${index}`}>
-              <header><h2>{result.label}{tier}</h2>{successful ? <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button> : null}</header>
+              <header><h2>{answerSourceId(index)} {result.label}{tier}</h2>{successful ? <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button> : null}</header>
               {successful && result.code === "answer_truncated" ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}
               <MarkdownPreview value={successful ? result.text! : `> ${describeCollectionCode(copy, result.code)}`} />
             </section>

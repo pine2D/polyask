@@ -14,6 +14,7 @@ import {
 import { getCopy } from "../shared/copy";
 import { describeCollectionCode } from "../shared/status-copy";
 import { SITES } from "./sites";
+import { answerSourceId } from "../shared/answer-source";
 
 interface ArchiveServiceOptions {
   readonly deviceId: () => string;
@@ -80,9 +81,10 @@ export class ArchiveService {
     if (record.source) {
       markdown.push(`\n**${copy.archiveSource}**: [${markdownText(record.source.title || record.source.url)}](${markdownUrl(record.source.url)})`);
     }
-    for (const result of record.results) {
+    for (const [index, result] of record.results.entries()) {
       const tier = result.state === "think" ? ` · ${copy.think}` : result.state === "fast" ? ` · ${copy.fast}` : "";
       markdown.push(`\n## ${result.label}${tier}`);
+      markdown.push(`\n${answerSourceId(index)}`);
       if (record.winnerHost === result.host && result.text?.trim()) markdown.push(`\n**${copy.archiveBestAnswer}**`);
       markdown.push(`\n${result.text?.trim() || `> ${describeCollectionCode(copy, result.code)}`}`);
       if (result.code === "answer_truncated") markdown.push(`\n> ${copy.answerTruncated}`);
@@ -92,6 +94,7 @@ export class ArchiveService {
       const tier = synthesis.state === "think" ? copy.think : synthesis.state === "fast" ? copy.fast : "";
       const site = SITES.find((candidate) => candidate.host === synthesis.host);
       markdown.push(`\n## ${copy.synthesisSaved}`);
+      markdown.push(`\n> ${copy.citationReportNotice}`);
       markdown.push(`\n**${copy.synthesisTarget}**: ${site?.label ?? synthesis.host}${tier ? ` · ${tier}` : ""}`);
       markdown.push(`\n${synthesis.text}`);
     }

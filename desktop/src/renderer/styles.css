@@ -482,6 +482,9 @@ kbd { opacity: .7; font: 10px system-ui; }
 .synthesis-config fieldset input { width: 14px; height: 14px; margin: 0; accent-color: var(--accent); }
 .synthesis-config fieldset span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .synthesis-config > small { color: var(--muted); font-size: 10px; }
+.citation-preset { justify-self: start; padding: 5px 9px; min-height: 32px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--panel); }
+.citation-preset:hover:not(:disabled) { background: var(--accent-soft); }
+.citation-notice { margin: 6px 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
 .synthesis-config > label, .synthesis-preview { display: grid; gap: 3px; color: var(--muted); font-size: 10px; }
 .synthesis-config select, .synthesis-config textarea, .synthesis-preview textarea { width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 6px; color: inherit; background: #fafafd; }
 .synthesis-config select { height: 30px; padding: 0 6px; }

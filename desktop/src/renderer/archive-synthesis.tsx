@@ -33,11 +33,13 @@ export function ArchiveSynthesis(props: ArchiveSynthesisProps): React.JSX.Elemen
       {record.synthesis ? (
         <div className="synthesis-card saved">
           <header><h2><SparklesIcon />{copy.synthesisSaved}</h2><span>{record.synthesis.host}{record.synthesis.state ? ` · ${record.synthesis.state === "think" ? copy.think : copy.fast}` : ""}</span></header>
+          <p className="citation-notice">{copy.citationReportNotice}</p>
           <MarkdownPreview value={record.synthesis.text} />
         </div>
       ) : null}
       {pending ? (
         <div className="synthesis-card pending">
+          {candidate ? <p className="citation-notice">{copy.citationReportNotice}</p> : null}
           {candidate ? <MarkdownPreview value={candidate.text} /> : <p>{copy.synthesisCollect}</p>}
           {candidate ? (
             <div className="synthesis-confirm">

@@ -6,6 +6,7 @@ import { DesktopDatabase } from "../src/main/database";
 import { SITES } from "../src/main/sites";
 import { SynthesisService } from "../src/main/synthesis-service";
 import type { BroadcastPayload, SiteRunResult } from "../src/shared/protocol";
+import { getCopy } from "../src/shared/copy";
 
 function fixture() {
   const database = DesktopDatabase.open(":memory:");
@@ -25,6 +26,39 @@ function fixture() {
   });
   return { database, archives, record, setNow: (value: number) => { now = value; } };
 }
+
+test("citation report uses the existing collect/save path and exports with original source IDs", async () => {
+  const { database, archives, record } = fixture();
+  const report = 'AI analysis: [S1] "One"; [S2] "Two". Verify manually.';
+  const instruction = getCopy("en").citationReportInstruction;
+  let sends = 0;
+  try {
+    const service = new SynthesisService({
+      sites: SITES, archives, navigate: async () => undefined,
+      send: async request => {
+        sends++;
+        assert.match(request.text, /Source \[S1\]/);
+        assert.match(request.text, /Source \[S2\]/);
+        assert.ok(request.text.endsWith(instruction));
+        return [{site:"claude",ok:true}];
+      },
+      collect: async () => [{site:"claude",host:"claude.ai",label:"Claude",text:report,state:"think"}],
+      showTarget: () => undefined, recordHistory: () => undefined, now: () => 2_000
+    });
+    await service.send({archiveId:record.id,targetSite:"claude",tier:"think",selectedHosts:["claude.ai","chatgpt.com"],instruction});
+    await service.collect();
+    const saved = await service.save(false);
+    assert.equal(sends, 1);
+    assert.equal(saved.synthesis?.text, report);
+    assert.equal(saved.synthesis?.instruction, instruction);
+    assert.deepEqual(saved.results, record.results);
+    const markdown = archives.exportMarkdown(record.id,"en");
+    assert.match(markdown,/## Claude\n\n\[S1\]\n\nOne/);
+    assert.match(markdown,/## ChatGPT\n\n\[S2\]\n\nTwo/);
+    assert.ok(markdown.includes(report));
+    assert.ok(markdown.includes(getCopy("en").citationReportNotice));
+  } finally { database.close(); }
+});
 
 test("synthesis reveals the focused native site before opening a new session and sending once", async () => {
   const { database, archives, record } = fixture();
