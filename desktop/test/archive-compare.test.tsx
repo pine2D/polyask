@@ -54,3 +54,15 @@ test("difference filtering omits shared paragraphs and permits an empty result",
   const mixed = compareAnswerParagraphs("same\n\nunique", "same");
   assert.deepEqual(comparisonParagraphs(mixed.left, true), [{text:"unique",relation:"unique"}]);
 });
+
+test("comparison identifies incomplete input without hiding the captured paragraphs", () => {
+  const copy = getCopy("en");
+  const html = renderToStaticMarkup(<ArchiveCompare copy={copy} results={[
+    { host: "claude.ai", label: "Claude", text: "Partial answer", code: "answer_truncated" },
+    { host: "chatgpt.com", label: "ChatGPT", text: "Full answer" }
+  ]} />);
+  assert.ok(html.includes(copy.answerTruncated));
+  assert.equal(html.split(copy.answerTruncated).length - 1, 1);
+  assert.ok(html.indexOf(copy.answerTruncated) < html.indexOf("Partial answer"));
+  assert.ok(html.includes("Full answer"));
+});

@@ -340,3 +340,18 @@ test("archive deletion confirmation remains bound to one record id", () => {
   assert.equal(deleteConfirmationRemaining({ id: "archive-a", until: 4_000 }, 3_250), 750);
   assert.equal(deleteConfirmationRemaining({ id: "archive-a", until: 4_000 }, 4_500), 0);
 });
+
+test("saved answers keep a visible truncation warning alongside their text", () => {
+  for (const locale of ["en", "zh-CN", "zh-TW"]) {
+    const copy = getCopy(locale);
+    const record = { ...archiveFixture(), results: [
+      { host: "claude.ai", label: "Claude", text: "Captured portion", code: "answer_truncated" }
+    ] };
+    const html = renderArchive({ copy, locale, selected: record, items: [record] });
+    assert.ok(html.includes(copy.answerTruncated));
+    assert.ok(html.includes("Captured portion"));
+    assert.equal(occurrences(html, copy.answerTruncated), 1);
+    const complete = { ...record, results: [{ ...record.results[0], code: undefined }] };
+    assert.ok(!renderArchive({ copy, locale, selected: complete, items: [complete] }).includes(copy.answerTruncated));
+  }
+});

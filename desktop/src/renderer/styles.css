@@ -445,6 +445,7 @@ kbd { opacity: .7; font: 10px system-ui; }
 .archive-answer { margin-top: 8px; padding: 10px 12px; scroll-margin-top: 34px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
 .archive-answer > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .archive-answer h2 { margin: 0; font-size: 14px; }
+.answer-capture-warning { margin: 6px 0; padding-left: 8px; border-left: 3px solid var(--warning); color: inherit; font-size: 12px; line-height: 1.6; }
 .archive-answer > header button { height: 26px; padding: 0 6px; display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); background: transparent; }
 .archive-answer > header button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
 .archive-answer > header button:hover { color: var(--accent); border-color: var(--accent); }

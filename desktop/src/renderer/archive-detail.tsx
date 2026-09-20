@@ -70,6 +70,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           return (
             <section className="archive-answer" id={`archive-answer-${index}`} key={`${result.host}:${index}`}>
               <header><h2>{result.label}{tier}</h2>{successful ? <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button> : null}</header>
+              {successful && result.code === "answer_truncated" ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}
               <MarkdownPreview value={successful ? result.text! : `> ${describeCollectionCode(copy, result.code)}`} />
             </section>
           );

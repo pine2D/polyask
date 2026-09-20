@@ -12,11 +12,13 @@ interface ArchiveCompareProps {
 function ComparisonColumn(props: {
   readonly copy: DesktopCopy;
   readonly label: string;
+  readonly code?: string;
   readonly paragraphs: readonly ComparedParagraph[];
 }): React.JSX.Element {
   return (
     <article className="archive-compare-column">
       <h3>{props.label}</h3>
+      {props.code === "answer_truncated" ? <p className="answer-capture-warning">{props.copy.answerTruncated}</p> : null}
       {!props.paragraphs.length ? <p role="status">{props.copy.noDifferentParagraphs}</p> : null}
       {props.paragraphs.map((paragraph, index) => (
         <div className={`archive-compare-paragraph ${paragraph.relation}`} data-relation={paragraph.relation} key={`${index}:${paragraph.text}`}>
@@ -65,8 +67,8 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
         </label>
       </div>
       <div className="archive-compare-grid">
-        <ComparisonColumn copy={props.copy} label={left?.label ?? ""} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
-        <ComparisonColumn copy={props.copy} label={right?.label ?? ""} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
+        <ComparisonColumn copy={props.copy} label={left?.label ?? ""} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
+        <ComparisonColumn copy={props.copy} label={right?.label ?? ""} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
       </div>
     </section>
   );
