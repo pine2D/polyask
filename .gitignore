@@ -1,8 +1,8 @@
 .DS_Store
 
 # docs/ 默认忽略历史草稿、本地素材与临时方案，仅按文件白名单入库。
-# 白名单包含开发/发布契约、被发布说明引用的报告，以及已确认的产品设计与验收存档。
-# 新增正式文档、mockup 或基线数据时，在对应分组补齐精确路径；不要整体放开 docs/。
+# 白名单仅保留文档索引、开发/发布契约及被发布说明引用的历史报告。
+# 产品调研、设计/实施计划、mockup 和资源采样仅本地保存，不加入白名单。
 # 入库文档引用的本地文件也须入库，scripts/verify.sh 按 git ls-files 检查引用。
 /docs/*
 
@@ -14,17 +14,6 @@
 !/docs/desktop-oauth-security.md
 !/docs/release.md
 !/docs/verify.md
-
-# 产品优化：调研、已确认设计、布局预览与验收数据
-!/docs/product-optimization-2026-09-20.md
-!/docs/product-layout-options-2026-09-20.html
-!/docs/decision-card-options-2026-09-20.html
-!/docs/task-folder-options-2026-09-20.html
-!/docs/task-folders-design-2026-09-20.md
-!/docs/task-folders-plan-2026-09-20.md
-!/docs/backup-restore-options-2026-09-20.html
-!/docs/backup-restore-design-2026-09-20.md
-!/docs/resource-baseline-2026-09-20.json
 
 # 本地工具状态
 .superpowers/

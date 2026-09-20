@@ -63,4 +63,4 @@ bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布
 
 - 提交用 `git-commit` skill（Conventional Commits，可带 AI 署名 trailer）；仓库无 user 配置，用内联身份提交。
 - 持续维护 `CHANGELOG.md` 的「未发布」段，所有用户可感知变更都要记。发版流程见 `docs/release.md`。
-- `docs/` 默认忽略，正式文件须登记 `.gitignore` 精确白名单及 `docs/README.md`。入库文档不得引用未入库文件；`verify.sh` 按 `git ls-files` 检查。
+- `docs/` 默认忽略，公开契约须登记 `.gitignore` 白名单及 `docs/README.md`；设计/实施记录仅本地保存。入库文档不得引用未入库文件；`verify.sh` 按 `git ls-files` 检查。

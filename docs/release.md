@@ -124,7 +124,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 - 按 `docs/desktop-oauth-security.md` 检查 Google Auth Platform 与 Drive API 指标；无法由发版、用户增长或集中测试解释的异常先调查再发布。
 - 在能取得原生机器时，至少运行一次本版 Windows `.exe` 安装包和便携 ZIP，并安装 Linux `.deb` 和两种 macOS 架构包；未完成的原生验收必须写进 Release 限制，不得用 CI 构建成功替代。
 - 核对 Release 资产恰好包含 5 个主包、5 个 `.sha256` 和版本说明；下载后抽查 SHA-256。Windows Squirrel 的 `.nupkg`/`RELEASES` 是更新元数据，当前不作为用户下载资产发布。
-- 按 `git ls-files docs/` 核对全部入库文档，不写死数量。契约文档对照源码维护现状与陷阱；设计稿、方案预览和验收数据保留决策依据，并注明实施状态及验证范围。移除失效规则和重复措辞，不因内容不影响眼前一小时就删除仍有追溯价值的记录。删除或迁移整份文档时，同步修正 `CLAUDE.md`、`README.md` 及其它入库文档中的路径引用；历史 CHANGELOG 的事实记录应保留，涉及路径时修正到仍可追溯的来源。`verify.sh` 会检查悬空文档引用。
+- 按 `git ls-files docs/` 核对全部入库文档，不写死数量。契约文档对照源码维护现状与陷阱；设计稿、方案预览和资源采样按 `.gitignore` 仅本地保留，不加入发布分支；已落实规则及影响交付的验收缺口写进入库契约和验证文档。移除失效规则和重复措辞，不因内容不影响眼前一小时就删除仍有追溯价值的记录。删除或迁移整份文档时，同步修正 `CLAUDE.md`、`README.md` 及其它入库文档中的路径引用；历史 CHANGELOG 的事实记录应保留，涉及路径时修正到仍可追溯的来源。`verify.sh` 会检查悬空文档引用。
 
 ## 用户可见文案
 
