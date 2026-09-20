@@ -1,0 +1,182 @@
+{
+  "format": "polyask-backup",
+  "version": 1,
+  "exportedAt": 1789880400000,
+  "entries": [
+    {
+      "kind": "history",
+      "id": "e14b32daf4a74efca50f73e34574d1bff53f9a59878cdb1161886c6781071abc",
+      "body": {
+        "id": "e14b32daf4a74efca50f73e34574d1bff53f9a59878cdb1161886c6781071abc",
+        "textHash": "e14b32daf4a74efca50f73e34574d1bff53f9a59878cdb1161886c6781071abc",
+        "text": "把下面这段话翻译成英文，并保留 Markdown 格式。",
+        "preview": "把下面这段话翻译成英文，并保留 Markdown 格式。",
+        "createdAt": 1756800005000,
+        "lastUsedAt": 1756800006000,
+        "updatedAt": 1756800006000,
+        "schema": 1
+      }
+    },
+    {
+      "kind": "archive",
+      "id": "archive-a",
+      "body": {
+        "ts": 1756800001000,
+        "text": "为什么天空是蓝色的？",
+        "task": "为什么天空是蓝色的？",
+        "source": null,
+        "results": [
+          {
+            "host": "claude.ai",
+            "label": "Claude",
+            "text": "因为瑞利散射：短波长的蓝光被大气分子散射得更强。",
+            "state": "think",
+            "code": null
+          },
+          {
+            "host": "chatgpt.com",
+            "label": "ChatGPT",
+            "text": null,
+            "state": null,
+            "code": "no_window"
+          },
+          {
+            "host": "gemini.google.com",
+            "label": "Gemini",
+            "text": null,
+            "state": null,
+            "code": "no_answer"
+          },
+          {
+            "host": "www.kimi.com",
+            "label": "Kimi",
+            "text": "太阳光进入大气后，蓝光散射占优。",
+            "state": null,
+            "code": null
+          },
+          {
+            "host": "chat.deepseek.com",
+            "label": "DeepSeek",
+            "text": null,
+            "state": "fast",
+            "code": "timeout"
+          }
+        ],
+        "id": "archive-a",
+        "favorite": false,
+        "tags": [],
+        "note": "",
+        "winnerHost": null,
+        "synthesis": null,
+        "hosts": [
+          "claude.ai",
+          "chatgpt.com",
+          "gemini.google.com",
+          "www.kimi.com",
+          "chat.deepseek.com"
+        ],
+        "resultPreviews": [
+          {
+            "host": "claude.ai",
+            "label": "Claude",
+            "text": "因为瑞利散射：短波长的蓝光被大气分子散射得更强。"
+          },
+          {
+            "host": "www.kimi.com",
+            "label": "Kimi",
+            "text": "太阳光进入大气后，蓝光散射占优。"
+          }
+        ],
+        "createdAt": 1756800001000,
+        "updatedAt": 1756800001000,
+        "searchText": "为什么天空是蓝色的？\nclaude\nchatgpt\ngemini\nkimi\ndeepseek\n因为瑞利散射：短波长的蓝光被大气分子散射得更强。\n太阳光进入大气后，蓝光散射占优。",
+        "schema": 1,
+        "preview": "为什么天空是蓝色的？"
+      }
+    },
+    {
+      "kind": "decision",
+      "id": "decision-a",
+      "body": {
+        "id": "decision-a",
+        "archiveId": "archive-a",
+        "sourceTitle": "Question",
+        "title": "Choice",
+        "conclusion": "Use A",
+        "rationale": "Evidence",
+        "uncertainties": "Cost",
+        "nextStep": "Check",
+        "status": "verify",
+        "evidence": [
+          {
+            "resultIndex": 0,
+            "excerpt": "A is cheaper",
+            "host": "claude.ai",
+            "label": "Claude",
+            "capturedAt": 100
+          }
+        ],
+        "createdAt": 100,
+        "updatedAt": 200,
+        "schema": 2
+      }
+    },
+    {
+      "kind": "folder",
+      "id": "folder-a",
+      "body": {
+        "schema": 3,
+        "id": "folder-a",
+        "name": "Review",
+        "createdAt": 100,
+        "updatedAt": 200
+      }
+    },
+    {
+      "kind": "folderMembership",
+      "id": "8:folder-a:archive:archive-a",
+      "body": {
+        "schema": 3,
+        "id": "8:folder-a:archive:archive-a",
+        "folderId": "folder-a",
+        "targetKind": "archive",
+        "targetId": "archive-a",
+        "createdAt": 100,
+        "updatedAt": 200
+      }
+    },
+    {
+      "kind": "template",
+      "id": "template-a",
+      "body": {
+        "id": "template-a",
+        "name": "Review",
+        "text": "Review this proposal",
+        "updatedAt": 200
+      }
+    },
+    {
+      "kind": "group",
+      "id": "group-a",
+      "body": {
+        "id": "group-a",
+        "name": "Reviewers",
+        "sites": [
+          "chatgpt"
+        ],
+        "updatedAt": 200
+      }
+    },
+    {
+      "kind": "workspace",
+      "id": "workspace",
+      "body": {
+        "selectedSites": [
+          "chatgpt"
+        ],
+        "tier": "think",
+        "updatedAt": 200
+      }
+    }
+  ]
+}

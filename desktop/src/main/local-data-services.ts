@@ -1,3 +1,4 @@
+import { BackupService } from "./backup-service";
 import { TaskFolderService } from "./task-folder-service";
 import { randomUUID } from "node:crypto";
 import type { DesktopDatabase } from "./database";
@@ -18,5 +19,6 @@ export function createLocalDataServices(database: DesktopDatabase) {
   const promptLibrary = new PromptLibraryService(database.state, database.meta, history);
   const decisions = new DecisionService(database.decisions, archives, { deviceId });
   const folders = new TaskFolderService(database.folders, archives, decisions, { deviceId });
-  return { deviceId, archives, history, promptLibrary, decisions, folders };
+  const backup = new BackupService(database, { deviceId });
+  return { deviceId, archives, history, promptLibrary, decisions, folders, backup };
 }

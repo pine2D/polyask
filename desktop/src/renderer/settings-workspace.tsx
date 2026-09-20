@@ -11,6 +11,7 @@ import {
 } from "../shared/sync-diagnostics";
 import type { RuntimeInfo } from "../shared/runtime";
 import { CloseIcon } from "./icons";
+import { BackupCard } from "./backup-workspace";
 import { LocalDataCard } from "./local-data-card";
 import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
@@ -210,6 +211,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             }}
           >{props.copy.syncClear}</button>
         </section>
+        <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
         <LocalDataCard
           copy={props.copy}
           busy={busy}

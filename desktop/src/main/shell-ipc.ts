@@ -1,3 +1,5 @@
+import type { BackupService } from "./backup-service";
+import { registerBackupIpc } from "./backup-ipc";
 import type { TaskFolderService } from "./task-folder-service";
 import { registerTaskFolderIpc } from "./task-folder-ipc";
 import type { DecisionService } from "./decision-service";
@@ -62,6 +64,7 @@ interface ShellIpcOptions {
   readonly archives: ArchiveService;
   readonly decisions: DecisionService;
   readonly folders: TaskFolderService;
+  readonly backup: BackupService;
   readonly history: HistoryService;
   readonly promptLibrary: PromptLibraryService;
   readonly synthesis: SynthesisService;
@@ -137,6 +140,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
     return state;
   };
+  const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
   const disposeSyncIpc = registerSyncIpc({ sync, runtime: options.runtime, trusted: trustedShell });
@@ -366,6 +370,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
 
   return () => {
+    disposeBackupIpc();
     disposeFolderIpc();
     disposeDecisionIpc();
     disposeSyncIpc();

@@ -1,0 +1,45 @@
+.backup-scrim { position: fixed; inset: 0; z-index: 1500; background: #0007; display: grid; place-items: center; padding: 24px; }
+.backup-workspace { width: min(1360px, 100%); height: min(900px, 100%); min-height: 0; background: var(--panel); color: inherit; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 24px 80px #0004; display: flex; flex-direction: column; overflow: hidden; }
+.backup-workspace button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; cursor: pointer; }
+.backup-workspace button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+.backup-workspace button:disabled { opacity: .45; cursor: default; }
+.backup-workspace :is(button,input):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.backup-header, .backup-footer { padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-shrink: 0; }
+.backup-header { border-bottom: 1px solid var(--border); }
+.backup-header h2, .backup-comparison h3 { margin: 0 0 6px; }
+.backup-header p, .backup-footer p { color: var(--muted); margin: 5px 0 0; font-size: 12px; line-height: 1.6; }
+.backup-filters { display: flex; gap: 6px; padding: 12px 24px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.backup-filters button { font-size: 12px; padding: 6px 12px; border-color: transparent; }
+.backup-workspace [aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.backup-body { display: grid; grid-template-columns: 250px minmax(0, 1fr); flex: 1; min-height: 0; }
+.backup-list { overflow: auto; padding: 12px; border-right: 1px solid var(--border); }
+.backup-list button { text-align: left; width: 100%; display: grid; gap: 6px; margin-bottom: 8px; }
+.backup-list button strong { overflow-wrap: anywhere; }
+.backup-list button span, .backup-list button small { font-size: 11px; color: var(--muted); }
+.backup-list button[aria-current="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.backup-comparison { padding: 20px 24px; overflow: auto; min-width: 0; }
+.backup-muted { color: var(--muted); font-size: 12px; }
+.backup-choice { padding: 14px 0; }
+.backup-choice label { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.backup-choice input { accent-color: var(--accent); width: 17px; height: 17px; }
+.backup-choice p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.backup-segments { display: inline-flex; padding: 3px; gap: 3px; border: 1px solid var(--border); border-radius: 10px; }
+.backup-segments button { border-color: transparent; }
+.backup-versions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.backup-versions > section { border: 1px solid var(--border); border-radius: 10px; min-width: 0; padding: 14px; }
+.backup-versions h4 { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
+.backup-data { margin: 0; font-size: 13px; }
+.backup-data > div { margin-bottom: 12px; }
+.backup-data dt { font-size: 11px; color: var(--muted); margin-bottom: 4px; overflow-wrap: anywhere; }
+.backup-data dd { margin: 0; }
+.backup-value { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; margin: 0; }
+.backup-values { padding-left: 20px; }
+.backup-footer { border-top: 1px solid var(--border); }
+.backup-footer > div { max-width: 80%; }
+.backup-footer button { flex-shrink: 0; }
+.backup-workspace button.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.backup-summary { padding: 24px; overflow: auto; flex: 1; }
+.backup-summary p { color: var(--muted); line-height: 1.7; }
+.backup-summary li { padding: 8px 0; overflow-wrap: anywhere; }
+.backup-error { margin: 12px 24px; color: var(--danger); }
+@media (max-width: 850px) { .backup-scrim { padding: 10px; } .backup-body { grid-template-columns: 190px minmax(0, 1fr); } .backup-comparison { padding: 16px; } .backup-versions { grid-template-columns: 1fr; } .backup-footer { gap: 12px; padding: 14px; } }

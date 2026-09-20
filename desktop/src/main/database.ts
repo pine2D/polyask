@@ -106,6 +106,20 @@ export class DesktopDatabase {
     return new DesktopDatabase(database);
   }
 
+  transaction<T>(action: () => T): T { return inTransaction(this.database, action); }
+
+  businessSnapshot(): { table: string; id: string; body: unknown }[] {
+    return ["history", "archives", "decisions", "folders", "folder_memberships", "state_items"].flatMap(table => {
+      const key = table === "state_items" ? "key" : "id";
+      return this.database.prepare(`SELECT ${key} AS id, body FROM ${table} ORDER BY ${key}`).all().flatMap(row => {
+        const id = String(row.id);
+        if (table === "state_items" && id !== "workspace" && !id.startsWith("template:") && !id.startsWith("group:")) return [];
+        try { return [{table, id, body: JSON.parse(String(row.body)) as unknown}]; }
+        catch { throw new Error("backup_invalid"); }
+      });
+    });
+  }
+
   configuration(): { journalMode: string; foreignKeys: boolean; userVersion: number } {
     const journal = this.database.prepare("PRAGMA journal_mode").get() as { journal_mode?: unknown } | undefined;
     const foreign = this.database.prepare("PRAGMA foreign_keys").get() as { foreign_keys?: unknown } | undefined;

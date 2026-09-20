@@ -1,3 +1,4 @@
+import type { BackupPreview, BackupApplyResult } from "../shared/backup";
 import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
 import { contextBridge, ipcRenderer } from "electron";
@@ -43,6 +44,10 @@ export interface PolyAskDesktopApi {
   menuShortcuts(): Promise<MenuShortcut[]>;
   broadcast(request: BroadcastRequest): Promise<SiteRunResult[]>;
   collectAnswers(request: CollectionRequest): Promise<CollectedAnswer[]>;
+  exportBackup(): Promise<boolean>;
+  previewBackup(): Promise<BackupPreview | null>;
+  applyBackup(token: string, selectedKeys: readonly string[]): Promise<BackupApplyResult>;
+  cancelBackup(token: string): Promise<void>;
   listFolders(): Promise<TaskFolder[]>;
   createFolder(name: string): Promise<TaskFolder>;
   renameFolder(id: string, name: string): Promise<TaskFolder>;
@@ -124,6 +129,10 @@ const api: PolyAskDesktopApi = Object.freeze({
   menuShortcuts: () => invoke("polyask:menu-shortcuts"),
   broadcast: (request: BroadcastRequest) => invoke("polyask:broadcast", request),
   collectAnswers: (request: CollectionRequest) => invoke("polyask:collect", request),
+  exportBackup: () => invoke("polyask:backup-export"),
+  previewBackup: () => invoke("polyask:backup-preview"),
+  applyBackup: (token: string, selectedKeys: readonly string[]) => invoke("polyask:backup-apply", { token, selectedKeys }),
+  cancelBackup: (token: string) => invoke("polyask:backup-cancel", token),
   listFolders: () => invoke("polyask:folder-list"),
   createFolder: (name: string) => invoke("polyask:folder-create", name),
   renameFolder: (id: string, name: string) => invoke("polyask:folder-rename", { id, name }),

@@ -9,8 +9,12 @@ export function readJson<T>(row: unknown): T | null {
   catch { return null; }
 }
 
+const transactions = new WeakSet<DatabaseSync>();
+
 export function inTransaction<T>(database: DatabaseSync, task: () => T): T {
+  if (transactions.has(database)) return task();
   database.exec("BEGIN IMMEDIATE");
+  transactions.add(database);
   try {
     const result = task();
     database.exec("COMMIT");
@@ -18,5 +22,5 @@ export function inTransaction<T>(database: DatabaseSync, task: () => T): T {
   } catch (error) {
     database.exec("ROLLBACK");
     throw error;
-  }
+  } finally { transactions.delete(database); }
 }

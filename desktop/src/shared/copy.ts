@@ -1,3 +1,4 @@
+import { BACKUP_COPY } from "./backup-copy";
 import { TASK_FOLDER_COPY } from "./task-folder-copy";
 import { DECISION_COPY } from "./decision-copy";
 import { ARCHIVE_COPY } from "./archive-copy";
@@ -12,6 +13,7 @@ import { WORKSPACE_COPY } from "./workspace-copy";
 
 export const COPY = {
   en: {
+    ...BACKUP_COPY.en,
     ...ARCHIVE_COPY.en,
     ...DECISION_COPY.en,
     ...TASK_FOLDER_COPY.en,
@@ -159,6 +161,7 @@ export const COPY = {
     checkForUpdates: "Check for updates"
   },
   zhCN: {
+    ...BACKUP_COPY.zhCN,
     ...ARCHIVE_COPY.zhCN,
     ...DECISION_COPY.zhCN,
     ...TASK_FOLDER_COPY.zhCN,
@@ -306,6 +309,7 @@ export const COPY = {
     checkForUpdates: "检查更新"
   },
   zhTW: {
+    ...BACKUP_COPY.zhTW,
     ...ARCHIVE_COPY.zhTW,
     ...DECISION_COPY.zhTW,
     ...TASK_FOLDER_COPY.zhTW,
