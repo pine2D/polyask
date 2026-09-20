@@ -2,6 +2,8 @@
 
 本文供 PolyAsk 维护者使用，记录 Google Desktop OAuth 的安全边界、监控基线和事故处置。普通用户需要了解的是授权范围、令牌保存方式和数据流向，不需要承担 Client Secret 的实现细节。
 
+本次源码核对不代表 Google Cloud 或 GitHub Actions 的远端状态已验证；客户端删除日期保留既有人工记录，控制台界面、配额、Secret 数量限制和告警配置仍须在实际操作前核实。轮换、撤销、删除凭据与发布均需对应范围的明确授权，本文不自动授予执行权限。
+
 ## 安全边界
 
 - Desktop 是 OAuth 公开客户端。Google 当前要求 Desktop 客户端在授权码交换和刷新时提交 Client Secret，但该值会随安装包分发，不能用于证明请求来自正版 PolyAsk。
@@ -21,13 +23,11 @@
 
 | 环境 | OAuth Client | 凭据入口 | 约束 |
 | --- | --- | --- | --- |
-| Desktop 正式版 | Production Desktop Client | GitHub Actions Variable + Secret | 只用于 tag 对应的 Release workflow |
+| Desktop 正式版 | Production Desktop Client | GitHub Actions Variable + Secret | 只注入 Release workflow（包括发布前 dry run），不得作为本地开发凭据 |
 | Desktop 本地开发/测试 | Development Desktop Client | 被 Git 忽略的 `desktop/resources/oauth.json` 或本机环境变量 | 不得复用 Production Secret |
-| Chrome 扩展（已停用） | Chrome Extension Client | 记录在 v0.25.1 的 `manifest.json`（tag `archive/extension-v0.25.1`） | 与 Desktop Client 分离，不存在 Client Secret。**已于 2026-09-15（1.0.0 发布当天）在 Google Cloud 删除**（控制台无单独停用开关，删除即停用，30 天内可恢复） |
+| Chrome 扩展（已停用） | Chrome Extension Client | 记录在 v0.25.1 的 `manifest.json`（tag `archive/extension-v0.25.1`） | 与 Desktop Client 分离，不存在 Client Secret。**既有维护记录：2026-09-15（1.0.0 发布当天）在 Google Cloud 删除**（控制台无单独停用开关，删除即停用，30 天内可恢复） |
 
-**扩展客户端为什么不留窗口。** 扩展形态在 1.0.0 终结，这个 Chrome-extension 类型的 OAuth 客户端在发布当天就在 Google Cloud 停用，不保留 30 天过渡期：除本机外没有第二台装着扩展的机器，本机的扩展也会随停维卸载——**没有任何消费者**，窗口只剩风险不剩收益。一个不再维护的授权入口留着就是纯风险面（虽窄：绑定扩展 ID、scope 只有 `drive.appdata`），而且到期停用是仓库外的人工动作、没有任何自动提醒，早停一天少一天。停用顺序是**先卸载本机扩展再停用客户端**，否则会先给自己撞一次 `invalid_client`。
-
-这一行保留在表里是**历史记录**：停用不等于从文档里抹掉，「曾经存在过这个客户端」和它的停用时点都要留档。表格里那条指向扩展清单文件的来源也是全仓仅存的一处提法——文件本身已随扩展删除，Client ID 只能从 tag `archive/extension-v0.25.1` 取回。
+扩展形态在 1.0.0 终结。上述日期及「先卸载本机扩展、再删除客户端」来自既有维护记录，本次未重新访问 Google Cloud 核验，也不据此断言目前没有其它客户端或消费者。扩展清单已从当前树删除，历史 Client ID 可从 tag `archive/extension-v0.25.1` 查阅；无需为文档校对读取或复制其值。
 
 正式客户端平时只保留一个启用的 Secret；第二个只在轮换窗口中启用。Client ID 可以公开，Client Secret 不得进入 Git、CI 日志、问题附件、崩溃报告或诊断快照。正式安装包必须包含它不属于泄露事件，但不得把安装包中的值复制到其它公开渠道。
 
@@ -46,7 +46,7 @@ Google 不提供具体 Secret 的使用日志，也不向普通应用开发者�
 
 进入 **Google Cloud Console → Google Auth Platform → Overview**，查看每日 OAuth 请求、错误和 Token 授予速率。发出新版本后的头几周每周检查一次；平稳后至少每月以及每次发版前检查一次。先保留不少于 14 天的正常基线，再调查无法由发布、用户增长或集中测试解释的阶跃变化。
 
-Overview 指标是项目下所有 OAuth Client 的汇总。扩展客户端停用之后，项目里实际在用的只剩 Production 与 Development 两个 Desktop Client，这两者的流量在 Overview 里仍是合并的；需要把它们彻底分开时只能各放一个 Google Cloud 项目，仅创建不同 Client ID 不能获得 Secret 级归因。
+Overview 指标是项目下所有 OAuth Client 的汇总。按本文的环境隔离约定，Production 与 Development 两个 Desktop Client 若位于同一项目，其流量在 Overview 里仍是合并的；实际启用客户端清单须以控制台为准。需要把它们彻底分开时只能各放一个 Google Cloud 项目，仅创建不同 Client ID 不能获得 Secret 级归因。
 
 ### Google Drive API
 

@@ -2,7 +2,7 @@
 
 改 `desktop/src/site-runtime/core.js` 或任一 `adapters-*.js` 前读这份。**适配器契约全表、加新站点步骤、图片载荷限额、注入/提交/切档/汇总机理、九张站点卡都在这里**；`CLAUDE.md` 只留一句协议摘要（必需成员、只读不开菜单、`false` vs `throw`）。两边说法冲突时以 `CLAUDE.md` 的硬约束为准，然后回来把这份改对。站点运行时之外的边界——进程与视图、注入链在外壳侧的接法、错误码全表与超时预算——在 `docs/desktop.md`。
 
-选择子、模型正则、档位标签随站点改版失效，**代码是唯一权威**；本文记的是「上次真机确认的形态 + 致命坑」。
+选择子、模型正则、档位标签随站点改版失效，**代码是唯一权威**；本文记的是「上次真机确认的形态 + 致命坑」。2026-09-20 本轮仅核对本地源码与测试，模型/菜单的真实页面状态仍以各条取证日期为准，未重新真机验证。
 
 ## 加新站点
 
@@ -13,9 +13,9 @@
 4. 按下方契约表补可选钩子。不补 = 该能力静默降级，不是报错。
 5. 测试：
    - **不用再补断言，要会读它的红**：`scripts/test-site-selection.js`（`verify.sh` 已调）双向对账**两处登记**（`desktop/src/main/sites.ts` 的站点表 + `desktop/src/preload/site.ts` 的 require 列表）——正向查每个 `SITES[].host` 能否被某个 `S.adapters` 键以 `includes` 命中（`pickAdapter` 的真实语义，键是 host 子串不必相等），并逐站校验 `{think, fast, state, diagnose}` 四个必需钩子都在；反向查僵尸适配器键。同一份测试还守 issue 模板的站点下拉与 `scripts/watch-releases.js` 里 `SOURCES.adapter` 引用的分卷路径——**重命名或搬动分卷要一起改**，否则它指向不存在的文件。
-   - 站点实现了 `submit` / `inject` / `attach` 时，才另加 `desktop/scripts/site-send-runtime.test.js`（`adapters-cn.js` 各站）或 `cn2-send-runtime.test.js`（Kimi / 元宝）用例。两份共用 `scripts/lib/site-send-harness.js`，只用 `vm` 执行对应分卷，针对 DeepSeek / 豆包 / Kimi / 元宝 验注入、发送与附件语义，**不是站点登记表**，加站点不改它不会红。**档位切换的回归不放这里**：国际站在 `desktop/scripts/intl-runtime.test.js`（Claude/Gemini）与 `intl2-runtime.test.js`（ChatGPT 滑块），国内站在 `cn-tier-runtime.test.js`（智谱/元宝/Kimi），模型正则另有 `claude-model.test.js` 与 `qwen-adapter.test.js` 两份专项，各份互不重叠。
+   - 站点实现了 `submit` / `inject` / `attach` 时，才另加 `desktop/scripts/site-send-runtime.test.js`（`adapters-cn.js` 各站）或 `cn2-send-runtime.test.js`（Kimi / 元宝）用例。两份共用 `scripts/lib/site-send-harness.js`，只用 `vm` 执行对应分卷，针对 DeepSeek / 豆包 / Kimi / 元宝 验注入、发送与附件语义，**不是站点登记表**，加站点不改它不会红。**档位切换的回归不放这里**：国际站在 `desktop/scripts/intl-runtime.test.js`（Claude/Gemini）与 `intl2-runtime.test.js`（ChatGPT 滑块），国内站在 `cn-tier-runtime.test.js`（智谱/元宝/Kimi），模型正则另有 `claude-model.test.js` 与 `qwen-adapter.test.js` 专项，Claude effort 还有 `claude-effort-runtime.test.js`；各测试按职责分工，部分契约覆盖会重叠。
 
-**适配器注册键是 hostname 子串**：`pickAdapter()` 用 `location.hostname.includes(key)` 匹配，所以 `S.adapters` 的键是 `deepseek.com` / `doubao.com` / `qianwen.com` / `kimi.com`，与 `sites.ts` 的完整 host（`chat.deepseek.com` / `www.doubao.com` / `www.qianwen.com` / `www.kimi.com`）**故意不同**（9 站里有 4 站如此）。照抄 `sites.ts` 的 host 当适配器键会静默匹配不上。子串匹配也意味着同域新子域会被同一适配器接管（如 `platform.deepseek.com`），加子域前先想清楚。
+**适配器注册键是 hostname 子串**：`pickAdapter()` 用 `location.hostname.includes(key)` 匹配，所以 `S.adapters` 的键是 `deepseek.com` / `doubao.com` / `qianwen.com` / `kimi.com`，与 `sites.ts` 的完整 host（`chat.deepseek.com` / `www.doubao.com` / `www.qianwen.com` / `www.kimi.com`）**故意不同**（9 站里有 4 站如此）。使用完整 host 作为键能匹配该 host，但会收窄子域覆盖范围；维护时沿用现有注册键，避免改变匹配语义。子串匹配也意味着同域新子域会被同一适配器接管（如 `platform.deepseek.com`），加子域前先想清楚。
 
 ## 适配器契约（全表）
 
@@ -51,7 +51,7 @@
 | `tier` | 当前档位读不读得出（`state() != null`） | **不代表站点坏了**，见下 |
 | `probe` | 探测本身出错（适配器缺席 / `diagnose` 抛异常） | 适配器层面出问题 |
 
-**为什么 `tier` 单独一档**：各站 `state()` 是**刻意的偏函数**，只认自己 `think()`/`fast()` 能产出的那两档；用户手动停在任何其它合法档位都返回 `null`——千问「Qwen3.7-千问 + 快速」（think 的模型配 fast 的模式）、Kimi「Instant」（非 K3）、元宝「Expert」（工具执行档）都是如此。真机 2026-08-31 实测：九站里这三站因此**常态**被判「发现异常」，反而把真正的改版信号淹掉了。现在 Desktop 的 `buildSiteHealth` 只让非 `tier` 的红项决定可用性，`tier` 红项在详情页显示成「提示」而不是故障。
+**为什么 `tier` 单独一档**：各站 `state()` 是**刻意的偏函数**，按各站可只读获取的证据映射粗档位；用户手动停在非预设组合时可能返回 `null`——千问「Qwen3.7-千问 + 快速」（think 的模型配 fast 的模式）、Kimi「Instant」（非 K3）、当前元宝「Thinking/思考」均如此；也有粗判无法区分的组合，详见各站卡。真机 2026-08-31 曾因这类合法档位**常态**被判「发现异常」，反而把真正的改版信号淹掉了。元宝当时的 Expert 非预设例子已随 2026-09 的映射调整过时，当前 Expert 判 think。现在 Desktop 的 `buildSiteHealth` 只让非 `tier` 的红项决定可用性，`tier` 红项在详情页显示成「提示」而不是故障。
 
 **标签集真漂移时靠九站巡检的 `tier` 红项兜底**：`tier` 被降为「提示」只是不再决定站点可用性，检查项本身照常产出——九站一起把「档位读不出」亮起来，就不是用户手动停档能解释的了。这是自动信号退役后唯一还在的漂移线索，所以详情页不许把 `tier` 项整个藏掉。
 
@@ -163,7 +163,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 ### ChatGPT（`chatgpt.com`，**`desktop/src/site-runtime/adapters-intl2.js`**）
 
-- **本站单独一卷**：`adapters-intl.js` 触及 300 行上限后按站分卷，ChatGPT 移到 `adapters-intl2.js`（Claude / Gemini 留在 `adapters-intl.js`）。分卷的五处登记见本文「加新站点」与文末分卷说明。
+- **本站单独一卷**：`adapters-intl.js` 触及 300 行上限后按站分卷，ChatGPT 移到 `adapters-intl2.js`（Claude / Gemini 留在 `adapters-intl.js`）。分卷登记见本文「加新站点」。
 - 档位：think = `_selectModel(/^GPT-5\.6\s*Sol$/i)` + `_pickEdge(true)`（滑块推到**最右端** = 最高档）；fast = 同模型 + `_pickEdge(false)`（推到最左端）。**不写死档位标签**，站点加减档自适应。`state()`：pill 为空或命中 `_OPEN_PILL`（`thinking effort|思考(强度|力度)?`）→ null（**菜单开着时 pill 显示的是控件名，不是档位，属非终态**）；`_tier()`（先剥版本前缀 `/^(?:gpt-?)?5\.[3456](?:\s*sol)?/i`）命中 `instant|medium|极速|即时|均衡|中` → fast；原始文本命中旧模型 `(?:gpt-?)?5\.[345](?!\d)|\bo3\b` → null（不许冒充 5.6 的 think）；命中 `high|pro|高` → think；其余 null。
 - **2026-08-31 改版：档位从 radio 列表换成一根滑块**。菜单是 Radix popper `[data-testid="composer-intelligence-picker-content"]`，里面**没有任何 `aria-haspopup` 子菜单入口**——旧的 `_openEffort()`/`_tiers()` 因此永远找不到档位列表，think/fast 双双抛错而 `diagnose()` 全绿（本次事故的表象）。现结构：① `[role=menuitem][aria-label="Select model"]`（文本是当前档名）；② `[role=menuitem][aria-label="Power"]`，`aria-keyshortcuts="ArrowLeft ArrowRight"`，内含 `[data-model-reasoning-effort-slider]` 与一个 `[role=slider]`（`aria-valuenow/min/max` = 当前位次 / 0 / 4）。
 - **档位真值只认位次「X of N」，不认档名**：0–3 档的档名不在任何可选中节点上，只出现在 Power 项 `aria-describedby` 指向的朗读文本里（`Pro, 5 of 5.` / `Use Left and Right arrow keys to adjust power.`）。`_level()` 先读 `[role=slider]` 的三个 aria 数值，读不出才回退正则解析那句朗读文本。位次映射（真机实测全表）：0=Instant / 1=Medium / 2=High / 3=Extra High / 4=Pro。
@@ -221,11 +221,11 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **effort 子菜单的 hover 会丢**：菜单开启动画期间合成 hover 丢失，effort 行节点还会被重挂 → **每轮重新取行、重发 hover（循环 4 次）**，不是单次 hover 后干等；点击被吞时末尾复读 `_effort()` 校验，不许静默成功。
 - **K3 档位真机复核（2026-08-31，新开标签验完即关）**：模型项为 `Instant`(checked) / `K3` / `K3 Swarm`；切到 K3 后 `.effort-option` 三项 `Standard` / `High` / `Max`（Max 带「Consumes more credits」）——**现有词表无需改**。K3 下还多出第二个 `.effort-item` 行「Context Length」，合成 hover 打不开它的子菜单、未观察到 `.effort-option` 撞名；即便撞上，末尾复读 `_effort()` 也会拦住错选。
 - **`escMenus()` 只收得掉 effort 子菜单，收不掉模型根菜单**（2026-08-31 真机：Escape 后 `.model-item` 仍可见、入口仍带 `.active`），**再点一次入口才整体关掉**。收尾统一走 `_close()`：`escMenus()` → 入口仍带 `.active` → 再 `click()` 一次入口。`_select` / `_setEffort` / `attach` 的每条出口（含 throw 前）都已改走它。
-- 唯一实现 `submitted(text)` 的站（比对末条 `.chat-content-item-user` 的 `.user-content`，去零宽 + 折叠空白后与原文等值）——Kimi 发送后会重挂页面并断开消息端口。消费端是 `desktop/src/main/broadcast.ts`：`submit_unconfirmed` 时只读探 `wasSubmitted`（固定 1.5s 窗口、独立于群发 deadline——deadline 到点才收到不确定是常态；单次探测 ≤300ms，无应答再问，连续 5 次明确没见到才判「未提交」），**确认「未提交」后是否自动重发一次由模块常量 `POLYASK_KIMI_RESUBMIT` 决定，当前 `false`**——它是模块常量不是设置项，两条真机硬用例（新会话空态、末条是上一轮内容）通过前一律保持关闭，届时也随同一次发版改。`answer()` 取末个 `.chat-content-item-assistant` 内、排除 `.thinking-container` 后的最后一个 `.markdown`。`attach` 用 `input.hidden-input[type="file"]`，没有就先点 `.toolkit-trigger-btn`，再按 deadline 剩余预算夹取等待（`Math.min(1500, deadline-now)`），**无论取到与否都 `escMenus()` 收尾**。**动 Kimi 图片路径前先真机跑一次 `attach`**——最近一次验证时间未记录，别默认它还能用。
+- 唯一实现 `submitted(text)` 的站（比对末条 `.chat-content-item-user` 的 `.user-content`，去零宽 + 折叠空白后与原文等值）——Kimi 发送后会重挂页面并断开消息端口。消费端是 `desktop/src/main/broadcast.ts`：`submit_unconfirmed` 时只读探 `wasSubmitted`（固定 1.5s 窗口、独立于群发 deadline——deadline 到点才收到不确定是常态；单次探测 ≤300ms，无应答再问，连续 5 次明确没见到才判「未提交」），**确认「未提交」后是否自动重发一次由模块常量 `POLYASK_KIMI_RESUBMIT` 决定，当前 `false`**——它是模块常量不是设置项，两条真机硬用例（新会话空态、末条是上一轮内容）通过前一律保持关闭，届时也随同一次发版改。`answer()` 取末个 `.chat-content-item-assistant` 内、排除 `.thinking-container` 后的最后一个 `.markdown`。`attach` 用 `input.hidden-input[type="file"]`，没有就先点 `.toolkit-trigger-btn`，再按 deadline 剩余预算夹取等待（`Math.min(1500, deadline-now)`），**无论取到与否都经 `_close()` 收尾（含 `escMenus()` 和根菜单关闭）**。**动 Kimi 图片路径前先真机跑一次 `attach`**——最近一次验证时间未记录，别默认它还能用。
 
 ### 元宝（`yuanbao.tencent.com`，**`desktop/src/site-runtime/adapters-cn3.js`**）
 
-- **本站单独一卷**：`adapters-cn2.js` 贴着 300 行上限，2026-09-15 加模型子菜单逻辑时把元宝拆到 `adapters-cn3.js`（Kimi / 智谱留在 `cn2`）。
+- **本站单独一卷**：`adapters-cn2.js` 当时贴着 300 行上限，2026-09-15 加模型子菜单逻辑时把元宝拆到 `adapters-cn3.js`（Kimi / 智谱留在 `cn2`）。
 - 档位（用户截图 2026-09-15，中英文界面各一）：composer 的 `button[aria-label="Switch model"]`（中文 `切换模型`）菜单 = **「Models / 模型」子菜单入口 + 模式项**。模式项在 Hy3 下是 Instant / Thinking / Expert（中文「快速回答 / 深度思考 / 专家模式」），**选中 Hy4 preview 时只剩 Expert**（模型描述写明 "Expert mode only"）。**新会话默认模型是 Hy4 preview**。映射 **think = 模型 Hy4 preview**（站点强制专家，无独立思考项；`_set(true)` 选完模型复读按钮到 Expert 才算成功）、**fast = 模型 Hy3 + Instant**（默认态菜单里没有 Instant，`_set(false)` 必须先 `_selectModel(Hy3)` 再 `_selectMode(Instant)`；按钮已是 Instant 时直接返回，不开菜单）。
 - **模型子菜单**：入口是 `[role=menuitem]`，文本 = `Models`/`模型` + 当前模型名（如 `ModelsHy3`），**只在模式菜单开着时存在**，所以 `_model()` 是打开菜单后才可读；子菜单靠悬停展开：入口 `button[role=menuitem][aria-label="Select model"]` 的 React 处理器只有 `onMouseMove` / `onMouseLeave` / `onClick`（CDP 真机 2026-09-16），**只有合成 `mousemove`（带 clientX/Y）能打开**，`mouseover` / `pointermove` / `click` / 方向键 / Enter 都打不开；`_openModels` 先 `mousemove`，没开再 `click` 兜底，一次不成重来一次。选中模型后**根菜单留着、子菜单收起、按钮立即回显**（Hy4 preview → Expert；切回 Hy3 会恢复上一次的模式）。模型项与模式项同为 `[role=menuitemradio]`、同时在 DOM，靠容器 `aria-label="Model list"`（中文候选 `模型列表`，未验证）区分：`_isMode()` 排除该容器、`_modelItems()` 只取该容器，**两层语义校验缺一不可**（只做文本校验挡不住「模型取名叫深度思考版」，只做容器校验挡不住站点把模型塞进同一层）。选完模型后**重开一次菜单复读入口尾缀**确认，不猜菜单收没收。
 - **`state()` 是粗判**：菜单关着读不到模型，只按模式判——Expert/专家 → think（Hy4 preview 强制专家；Hy3+Expert 也会读成 think，那是用户自己停的档）、Instant/即时/快速 → fast、**Thinking/思考 → null**（不再是预设档，同 Kimi Instant / 千问 Qwen3.7+快速）。`switchTier` 每次仍跑一遍幂等适配器，粗判只影响圆点与巡检。

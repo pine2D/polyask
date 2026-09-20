@@ -3,7 +3,7 @@
 本项目所有值得注意的变更都记录在此文件。
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
-版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)并与 `manifest.json` 一致。
+版本号遵循[语义化版本](https://semver.org/lang/zh-CN/)并与 `desktop/package.json` 一致。
 发版时 release workflow 提取对应版本段作为 GitHub Release 说明，缺段落拒发。
 
 ## [未发布]

@@ -96,7 +96,7 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 | `no_view` | `siteUnavailable` | | `invalid_response` | `invalidResponse` |
 | `error` | `siteError` | | `adapter_unavailable` | `adapterUnavailable` |
 
-采集码另走 `describeCollectionCode`：`no_answer` → `noAnswer`、`no_view` / `no_window` → `siteUnavailable`（`no_window` 是 Drive schema 1 线格式里带进来的旧码，语义与 `no_view` 相通）、`not_ready` → `siteNotReady`、`answer_truncated` → `answerTruncated`，其余落 `failed`。辅助综合发送另有 `describeSynthesisSendCode`，多一个 `target_not_selected`。
+采集码另走 `describeCollectionCode`：`no_answer` → `noAnswer`、`no_view` / `no_window` → `siteUnavailable`（`no_window` 是 Drive schema 1 线格式里带进来的旧码，语义与 `no_view` 相通）、`not_ready` → `siteNotReady`、`answer_truncated` → `answerTruncated`，其余落 `failed`。辅助综合发送另有 `describeSynthesisSendCode`，另处理 `target_not_selected` 与 `operation_busy`。
 
 - `describeStatus` **不做运行时白名单校验**：认不得的码按 `phase` 兜底，宁可笼统也不丢消息。
 - `ok:true` 也可以带 `code`（如 `tier_unconfirmed`）：显示为成功 + 警示，不谎报全绿。
@@ -131,9 +131,9 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 - **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删。`DataAdminService` 的「清空历史」「清空结果库」「清空决策卡」「清空任务文件夹」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
 - **「重置全部本机数据」是本应用唯一的物理删除路径**，语义刻意不同：先 `sync.disconnect()` 断开 Drive，再 `database.resetLocalData()` 物理清空八张表并只保留 `meta` 里的 `deviceId`。这里**不能用 tombstone**——tombstone 比云端记录新，重新连接后会赢过云端副本并上传，等于把云端也删了，与「重置不会删除云端数据」的承诺相反。`deviceId` 保留是因为本机在云端的旧 fragment 靠它找回，换掉会让重置后首轮上传把本机不建模的设置键整体丢掉。改这两条语义之前先改用户可见的承诺文案。
 - Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，文件夹和关联实体采用 schema 3，`SUPPORTED_SYNC_SCHEMA = 3` 表达客户端可识别的最高版本；state/history/archive 仍仅接受 schema 1，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
-- **schema 1 的线格式冻结在 `desktop/test/fixtures/schema1-*.json`**（每个文件 `{file, body}`，出自扩展时代的真实实现，代码保留在 tag `archive/extension-v0.25.1`）。**不要重新生成、不要按新校验「修正」它们**：`schema1-wire-format.test.ts` 把全部样本喂进下行链路并要求逐条接收，任何一次校验收紧命中存量形状会先红在那里，而不是在用户的结果库里静默少几条。新增决策卡 schema 2 另增 `schema2-decision*.json`；旧实体仍为 schema 1，冻结样本不变。
+- **schema 1 的线格式冻结在 `desktop/test/fixtures/schema1-*.json`**（每个文件 `{file, body}`，出自扩展时代的真实实现，代码保留在 tag `archive/extension-v0.25.1`）。**不要重新生成、不要按新校验「修正」它们**：`schema1-wire-format.test.ts` 把全部样本喂进下行链路并要求逐条接收，任何一次校验收紧命中存量形状会先红在那里，而不是在用户的结果库里静默少几条。新增决策卡 schema 2 另增 `schema2-decision*.json`，文件夹及关联 schema 3 另增 `schema3-folder*.json`；旧实体仍为 schema 1，冻结样本不变。
 - **两条跨端不变量**（跨设备记录要能互认，改一端就是让另一端拒收）：
-  1. **提问在派发之前无条件入库**——`shell-ipc.ts` 的 `history.record(request.text)` 先于 `coordinator.send`。只有「请求解析失败」「图片站点不支持」这两处 throw 之前的非法请求不入库；**全部站点都失败的提问照样留记录**，这是有意的（用户要能重发）。
+  1. **提问在派发之前无条件入库**——`shell-ipc.ts` 的 `history.record(request.text)` 先于 `coordinator.send`。请求校验、图片站点支持检查、操作互斥及 `collection.beginRun` 的过期轮次检查都在记录之前，被这些检查拒绝的请求不入库；**全部站点都失败的提问照样留记录**，这是有意的（用户要能重发）。
   2. **结果库字段上限按码点计、两端一致**（`shared/archive.ts`）：`title` 512、`instruction` 4000、`note` 4000、`host`/`label`/`winnerHost` 256、预览 `text` 320、`state`/`code` 64、单个 `tag` 32、`tags` 数组 20 项。`title` 与预览**截断**，其余**超限即 throw**。新增字段必须同时进这张表，否则表现为「某台设备的记录同步不过来」。
 - 图片限额：单批最多 4 张 PNG/JPEG、合计不超过 10 MiB（`shared/images.ts` 的 `MAX_IMAGE_COUNT` / `MAX_IMAGE_BYTES`）。**改任何一个数，代码 + 三语词条 + README/docs 叙述的全部落点要一起改**，清单与当前数值以 `scripts/test-image-limits.js` 的对账项和 `docs/adapters.md` 的「图片载荷」为准，别凭记忆列。
 - 便携版：根目录 `portable.json` 识别发行形态，`userData` 与 `sessionData` 都切到同级 `PolyAsk Data`。根目录固定分为可替换的 `App` 与持久的 `PolyAsk Data`，升级只替换 `App`。首次运行才询问是否从系统默认目录复制旧资料，复制走旁路暂存 + 重启后切换，失败保留旧资料；复制出的 profile 获得新的同步 `deviceId`，避免用户回退旧版后两个客户端覆盖同一份云端状态。设置页只拿到裁剪过的版本号与发行形态，不暴露本机用户数据路径。
@@ -142,7 +142,7 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 - 左侧工作区的「站点状态」标签页（命令 `open-site-health`，`Alt+H`）做只读健康检查：**只调 `state`、`diagnose` 等只读契约，不开菜单、不切档、不写输入框、不触发发送**。
 - `diagnose()` 每条检查必须带 `kind`（`shared/site-health.ts` 的 `SiteCheckKind`）：`reach`（到不到得了站点）/ `control`（关键控件在不在）/ `tier`（当前档位读不读得出）/ `probe`。缺省与未知值一律按 `control` 处理（fail-loud），漏标一处只会被归成 `control` 继续误报。
-- **只有非 `tier` 的红项决定站点可用性**（`checks.filter(check => check.kind !== "tier")`）。各站 `state()` 是刻意的偏函数：用户停在任何非预设的合法档位都返回 null，那不是故障。`tier` 红项仍在详情页以提示显示。
+- **只有非 `tier` 的红项决定站点可用性**（`checks.filter(check => check.kind !== "tier")`）。各站 `state()` 是刻意的偏函数：用户停在非预设的合法档位时可能返回 null，那不是故障；部分组合会被粗判归入 think/fast，精确边界见各站卡。`tier` 红项仍在详情页以提示显示。
 - 判定口径：只有站点给出明确登录证据才说「需要登录」，无法可靠判断一律「无法确认」，不拿 URL 或页面外观猜。单站正在发送或重载会破坏当前任务时禁用「重新加载」并说明原因。
 - **可复制诊断报告**（`shared/site-report.ts` 的 `buildSiteReport`）是切除扩展后唯一的结构化报障入口，**不得只可见不可复制**。内容边界：版本 / 发行形态 / 平台 / 显示缩放、每站的 `phase`+`code`+健康结论+`checkedAt`、每条 check 的 `{name, kind, ok}`。**绝不包含对话内容、URL、账号信息**——`check.name` 是本地化的 `diag_*` 词条不是页面文本，站点只写 key 与产品名不写 host。Drive 连接诊断另在设置页，同样走负向泄漏约束的白名单快照。
 
@@ -180,8 +180,8 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 ```bash
 cd desktop
-npm install
-npm test          # 单元 + 契约 + 12 份适配器离线回归（desktop/scripts/*.test.js）
+npm ci
+npm test          # 类型检查 + test/**/*.test.ts(x) + scripts/*.test.{js,mjs}
 npm run typecheck # 与 npm test 首段的 tsc --noEmit 重叠；CI 单独再跑一遍是刻意的双保险
 npm start
 npm run package
@@ -205,6 +205,7 @@ npm run soak -- --minutes=60
 ### 独立决策卡数据契约
 
 - `shared/decision.ts`：DecisionRecord schema 2；标题≤160，结论/理由/待核实/下一步各≤4,000，证据≤9份、resultIndex唯一且0–8、逐字摘录≤4,000。每卡只有一个 archiveId，更新不可改来源；多张卡可引用同条结果。来源显示标题快照≤320、host/label≤256、id/deviceId≤128，均按码点；时间为非负安全整数。
+- 状态只允许 `draft` / `verify` / `final`；`final` 必须有非空结论。标题与 archiveId 必填，证据摘录不能为空；`updatedAt` 不得早于 `createdAt`。
 - 证据只由主进程从保存原文核对并补入 host/label/capturedAt。删除来源后保持独立卡片与原摘录；来源查不到时文案同时说明可能尚未同步，不把“未找到”武断视为已删除。可以修改决策正文和移除证据，不能伪造缺失来源的新摘录。所有删除/清空来源的确认提示说明摘录保留。
 - 新实体 `decision:<id>` 独立 outbox；import 按 updatedAt/deletedAt 与 deviceId 整卡合并，版本与设备完全相同的 tombstone 优先。更新和删除时间单调增加；本机重置删除 decisions 表内容，保留 deviceId，断开 Drive 后执行。
 - 旧客户端读取远端 decision schema 2 会沿用 future-schema 保护停止上传；新版若发现先前跳过的可支持格式则全扫补拉。已有只读锁只能在该文件成功导入或 listing+changes 确认其已删除时清除；文件损坏/下载解析失败不能解锁。持续存在的不支持 state schema 2 会保持只读并重复扫描，正常 decision 补拉后恢复增量。
@@ -212,7 +213,7 @@ npm run soak -- --minutes=60
 ### 任务文件夹契约
 
 - 文件夹为单层，多对多关联结果和决策卡；不复制内容、不自动带入来源。名称去首尾空白，1–80 个 Unicode 码点，禁止控制字符；同名允许，id 区分。结果库采用左侧导航＋混合列表＋原详情，主工具栏保持单行。
-- `shared/task-folder.ts` 定义 schema 3 的 folder / folderMembership。关联以 folderId 长度前缀、targetKind 和 targetId 生成确定性 id；每条关联独立版本，renderer 仅提交本次多选的差异，避免覆盖别的设备新增关联。
+- `shared/task-folder.ts` 定义 schema 3 的 folder / folderMembership。folderId / targetId / deviceId 不超过 128 个 UTF-16 代码单元（`String.length`，不同于名称的码点计数）且不得含控制字符；关联以 folderId 长度前缀、targetKind 和 targetId 生成确定性 id，复合关联 id 不套 128 限额；每条关联独立版本，renderer 仅提交本次多选的差异，避免覆盖别的设备新增关联。
 - 文件夹删除为终态，迟到的重命名不复活。关联按版本时间/deviceId 合并，同版本删除优先；可显式重新加入仍存在的文件夹。删除文件夹及本机已知关联写 tombstone＋outbox，保留结果、决策卡与其他文件夹关联。未知/已删除目标不展示；乱序到达的关联仍保留，待文件夹和目标拉到再显示。
 - Drive 新实体文件名和元数据 id 使用正文 id 的 SHA-256，拉取校验哈希后按原 id 建索引；不放标题和摘录，避免复合或 Unicode id 超出 Drive 属性长度。schema 1/2 冻结 fixture 不改，新增 schema 3 样本。
 - 数据迁移新增两表与索引，清空文件夹保留内容，清空结果或卡片保留文件夹。本机重置清两表，仍先断开 Drive 并保留 deviceId。文件夹界面与多选对话框不新增持久 UI 设置。
@@ -221,6 +222,7 @@ npm run soak -- --minutes=60
 ### 业务备份与恢复契约
 
 - `BackupService` 导出有效 history/archive/decision/folder/folderMembership/template/group/workspace，独立 `polyask-backup` version 1；不包含凭据、Cookie、设备身份、同步游标或 outbox。JSON 上限 32 MiB / 20,000 条。字段白名单及现有实体校验共同拒绝损坏数据，不导入删除指令。
+- 格式冻结样本 `desktop/test/fixtures/backup-format1.json` 覆盖八类业务数据；它独立于 Drive schema 1/2/3。恢复写入使用当前设备身份和递增版本，保留本机 deviceId，不从备份接收设备身份。
 - 原生文件选择仅在主进程进行，可信 shell IPC 不接受渲染层路径；读取限制实际字节数，导出先写同目录临时文件再替换。预览只返回文件名，错误只返回机器码。
 - 预览不写库，冲突默认本机、删除默认跳过；最终显式确认选择。token 绑定全业务快照，期间本机编辑或同步变化使预览失效，必须重新导入。所有写入与 outbox 同一事务，失败全回滚；保留本机与内容相同条目不写入。
 - 文件夹删除为终态，明确恢复使用派生新身份并映射所选关联；重复导入复用已恢复文件夹，不覆盖后续编辑，也不复活再次删除的派生文件夹。缺失依赖的关联在预览提示并跳过，不能隐式恢复未选择的内容。

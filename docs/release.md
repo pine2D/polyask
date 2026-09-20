@@ -13,7 +13,8 @@ bash scripts/prepare-release.sh auto   # 晋升 CHANGELOG，同步 Desktop packa
 bash scripts/verify.sh
 cd desktop && npm test && npm run typecheck && npm audit --omit=dev && node scripts/audit-runtime.mjs
 cd .. && bash scripts/release.sh --build-only   # 本机跑 verify.sh + Release notes 提取 + CHANGELOG 三条校验
-# 2. commit 并 push main
+# 2. 审阅并 commit；获明确发布授权后 push main，等待该提交 CI 成功
+# 3. 在 GitHub 手动执行 Release workflow（dry_run=true），核对全部产物后再推 tag
 bash scripts/release.sh --publish      # 推 v* tag；Release workflow 构建并发布全部资产
 ```
 
@@ -21,7 +22,7 @@ bash scripts/release.sh --publish      # 推 v* tag；Release workflow 构建并
 
 `npm test` 自身第一步就是 `tsc --noEmit`，后面单跑 `npm run typecheck` 是同一件事跑第二遍；留着只为让本机命令行与 CI 的作业名逐条对得上，不是额外覆盖面。
 
-两条 audit 都要跑：`npm audit --omit=dev` 覆盖 react / react-dom / electron-squirrel-startup 这三项真正的运行时 npm 依赖，`node scripts/audit-runtime.mjs` 补上前者结构性看不到的 electron 本身（按 npm 惯例它总是 devDependency，却随每个发行包分发）。CI 的 verify 作业已把两者都接进去，这里是让本机发版前流程口径一致。
+两条 audit 都要跑：`npm audit --omit=dev` 覆盖 react / react-dom / electron-squirrel-startup 这三项真正的运行时 npm 依赖，`node scripts/audit-runtime.mjs` 补上前者结构性看不到的 electron 本身（按 npm 惯例它总是 devDependency，却随每个发行包分发）。CI 的 verify 作业显式运行的是 `audit-runtime.mjs`，只对 Electron 运行时包的 high/critical 公告设门禁；它不替代 `npm audit --omit=dev`。后者仍需按上面的本机发版清单单独执行，不能把 CI 成功视作两项审计都通过。
 
 `--build-only` 是本机与 CI 共用的那条：跑 `scripts/verify.sh`、从 `CHANGELOG.md` 抠出本版段落写进 `dist/release-notes.md`、做三条 CHANGELOG 校验（版本段确有 `- ` 条目、`[未发布]` 比较链接从本次 tag 起算、本版链接存在），最后把固定信任尾段追加进正文。`.github/workflows/ci.yml` 的 verify 作业检出源码后先用 `actions/setup-node` 钉住 `desktop/.nvmrc` 的 Node（当前 24），紧接着就跑它——所以这三条校验每个 PR 都会过一遍，不是只在发版那天才生效。
 
@@ -55,7 +56,7 @@ Release 正文 = `CHANGELOG.md` 对应版本段 + 下面这段固定尾段。
 
 ### 不烧版本号的验证入口（`workflow_dispatch` + `dry_run`）
 
-`.github/workflows/release.yml` 除 `push: tags: ["v*"]` 外还挂了 `workflow_dispatch`，带一个默认 `true` 的 `dry_run` 布尔输入。它会完整走一遍 validate → desktop 四路矩阵 → publish 的汇总核对，只在最后创建 Release 那一步被 `if: inputs.dry_run != true` 挡住。
+`.github/workflows/release.yml` 除 `push: tags: ["v*"]` 外还挂了 `workflow_dispatch`，带一个默认 `true` 的 `dry_run` 布尔输入。它会完整走一遍 validate → desktop 四路矩阵 → publish 的汇总核对，最后创建 Release 的条件是 `inputs.dry_run != true && github.ref_type == 'tag'`：dry run 不发布，手动从分支触发即使关闭 dry run 也不发布。
 
 **推任何 `v*` tag 之前，先在 GitHub 上手动跑一次 `dry_run=true`**，确认三件事：
 
@@ -73,13 +74,15 @@ Windows 代码签名、macOS 签名与公证、应用内自动更新**本次全�
 
 同一批押后的还有「Desktop 本机漂移哨兵」：把站点漂移检测的覆盖率从开发机提升到每个用户，这个论证押在装机量上，而误报一次就直接侵蚀信任。等发布信任基建落地、桌面确实有用户基数之后再评估，不要在零用户时先把它建起来。
 
-## 1.0.0：停维分界版本的发版口径
+## 历史记录：1.0.0 停维分界版本
 
 1.0.0 是产品分界——Desktop 成为唯一发布物、扩展形态终结。工程侧的事实一条不变：仍未签名、仍无自动更新，README 的诚实限制段必须同时在场，不能借版本号暗示成熟度。
 
-- **用 `bash scripts/prepare-release.sh major`，不要用 `auto`。** `auto` 的 rank 表只认 Conventional Commits，而删除扩展的那批提交刻意没带 `!:` 或 `BREAKING CHANGE`，`auto` 只会推出 patch 或 minor。`major` 由 `desktop/package.json` 的当前版本直接算出 `{major + 1}.0.0`。
-- CHANGELOG 段落晋升为 `## [1.0.0]`，底部两条比较链接（`[未发布]` 与 `[1.0.0]`）由 `release.sh` 的三条校验守着。
-- **发版当天**：先确认本机的 Chrome 扩展已经卸载，再到 Google Cloud 停用扩展那个 Chrome-extension 类型的 OAuth 客户端，并把实际停用日期记进 `docs/desktop-oauth-security.md`。顺序不能反，否则自己会先撞一次 `invalid_client`。停用的依据是「已无任何消费者」：没有其它装着扩展的机器，本机也会卸载。
+以下仅解释当时从 0.x 晋升 1.0.0 的决策，不是后续版本的操作清单。当前版本以 `desktop/package.json` 为准；在 1.x 上再次执行 `major` 会进入 2.0.0。
+
+- 当时显式选择 `major`，因为删除扩展的提交未带 `!:` 或 `BREAKING CHANGE`，`auto` 不会据此选择主版本晋升。
+- CHANGELOG 已保留 `1.0.0` 的用户变更与比较链接；后续版本按本页通用流程选择实际需要的级别。
+- 扩展 OAuth 客户端的处置记录见 `docs/desktop-oauth-security.md`。该记录是历史人工操作记录，不能用本机源码检查代替 Google Cloud 现状核实。
 
 ## Windows 便携 ZIP
 
@@ -121,7 +124,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 - 按 `docs/desktop-oauth-security.md` 检查 Google Auth Platform 与 Drive API 指标；无法由发版、用户增长或集中测试解释的异常先调查再发布。
 - 在能取得原生机器时，至少运行一次本版 Windows `.exe` 安装包和便携 ZIP，并安装 Linux `.deb` 和两种 macOS 架构包；未完成的原生验收必须写进 Release 限制，不得用 CI 构建成功替代。
 - 核对 Release 资产恰好包含 5 个主包、5 个 `.sha256` 和版本说明；下载后抽查 SHA-256。Windows Squirrel 的 `.nupkg`/`RELEASES` 是更新元数据，当前不作为用户下载资产发布。
-- **对 `CLAUDE.md` 与全部入库 docs（以 `git ls-files docs/` 为准，当前 6 份）逐条做「一小时测试」**：删掉它，接下来一小时我的行为会变吗？不会就删。重点扫五类——解释性长文、已失效的工具/站点说明、软性叮嘱、偶发流程、同一规则的重复措辞。**入库 docs 一起过，只查常驻文件会让专题文档单向膨胀。** 真删掉一整份 docs 时，`CLAUDE.md`/`README.md`/`CHANGELOG.md`/其它 docs 里指向它的引用要一并删——`verify.sh` 见到悬空引用会直接红。
+- 按 `git ls-files docs/` 核对全部入库文档，不写死数量。契约文档对照源码维护现状与陷阱；设计稿、方案预览和验收数据保留决策依据，并注明实施状态及验证范围。移除失效规则和重复措辞，不因内容不影响眼前一小时就删除仍有追溯价值的记录。删除或迁移整份文档时，同步修正 `CLAUDE.md`、`README.md` 及其它入库文档中的路径引用；历史 CHANGELOG 的事实记录应保留，涉及路径时修正到仍可追溯的来源。`verify.sh` 会检查悬空文档引用。
 
 ## 用户可见文案
 
@@ -134,17 +137,17 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 | 落点 | 覆盖范围 |
 | --- | --- |
 | `desktop/src/shared/copy.ts` | 主表。`en` / `zhCN` / `zhTW` 三档，外壳通用词条直接写在这里，并把下面各分表 `...` 展开合并 |
-| `desktop/src/shared/*-copy.ts` 分表 | 按领域拆的词条：archive / command / data-admin / productivity / prompt-library / sync / synthesis / workspace，各自导出 `{ en, zhCN, zhTW }` 供主表合并 |
+| `desktop/src/shared/*-copy.ts` 分表 | 按领域拆的词条：archive / backup / command / data-admin / decision / productivity / prompt-library / sync / synthesis / task-folder / workspace，各自导出 `{ en, zhCN, zhTW }` 供主表合并 |
 
 `desktop/src/shared/status-copy.ts` **不是**第三张词条表，它是 `SiteCode → keyof DesktopCopy` 的映射（`STATUS_COPY_KEY`），把机器码翻译成主表里的某个键。
 
 - **新增用户可见错误码要动三处**：`desktop/src/shared/protocol.ts` 的 `SITE_CODES` 数组（码的真源）、`status-copy.ts` 的 `STATUS_COPY_KEY`（码 → 文案键）、`copy.ts` 或对应分表的三语词条。漏任一处，`desktop/test/status-copy-coverage.test.ts`（源码里产出的每个码都要有文案、文案表里的每个码都要真有产出方，双向覆盖）与 `desktop/test/copy.test.ts`（三语 key 对齐）会红。错误码全表见 `docs/desktop.md`。
 - **locale 解析只有一份**：`desktop/src/shared/locale.ts` 的 `resolveLocale`，外壳（`copy.ts` 的 `getCopy`）与站点运行时（preload 注入 `__AMS_I18N__.setLang`）共用它。前缀匹配（不是 `includes`）：`zh` / `zh-cn` / `zh-hans` → `zhCN`，`zh-tw` / `zh-hk` / `zh-mo` / `zh-hant` → `zhTW`，未命中的一律落 `en`（**不兜底成简体**）。想改档位映射只改这一处，别在调用点各自判断。
-- **`document.documentElement.lang` 只在一处设置**：`desktop/src/renderer/index.tsx:719`（挂载 React 之前），按 `resolveLocale(navigator.language)` 归一成 `zh-CN` / `zh-TW` / `en`，供 CSS 选择器与读屏使用。
+- **`document.documentElement.lang` 只在一处设置**：`desktop/src/renderer/index.tsx`（挂载 React 之前），按 `resolveLocale(navigator.language)` 归一成 `zh-CN` / `zh-TW` / `en`，供 CSS 选择器与读屏使用。
 - **日期/时间格式化统一走 `desktop/src/shared/format.ts` 的 `formatDateTime(value, locale)`**，locale 由渲染层显式传入（`index.tsx` 的结果库与设置两处都传 `navigator.language`）。调用点不要留空让 `Intl` 取默认 locale，也不要各写一个 `Intl.DateTimeFormat` 配置。
 
 ## Git 惯例
 
 - 发版前**持续维护** `CHANGELOG.md` 的「未发布」分类条目，所有用户可感知变更都要记——`prepare-release.sh` 直接晋升这一段，临发版补写必漏，而且 `release.sh --publish` 会因为「未发布段仍有条目」直接拒绝发布。
 - CHANGELOG 只写**用户可感知**的变更，按用户读得懂的口径写。内部门禁与工具链调整（测试怎么串、行数限制盖到哪些目录）不是安全修复，也不要写成安全修复。
-- 文档只描述**现状与陷阱**；待办一律落 `CHANGELOG.md`「未发布」或代码 `// TODO:`——文档里的待办没人跑，也不会红。
+- 契约文档描述**现状与陷阱**；未实施的计划放在独立设计或待办台账，局部技术债可用代码 `// TODO:`。`CHANGELOG.md`「未发布」只记录**已经实施、尚未发布**的用户可感知变更，不承载未来计划。设计记录须区分方案、已实施项与尚未完成的验收，不能把规划写成现有能力。
