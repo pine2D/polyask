@@ -63,4 +63,4 @@ bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布
 
 - 提交用 `git-commit` skill（Conventional Commits，可带 AI 署名 trailer）；仓库无 user 配置，用内联身份提交。
 - 持续维护 `CHANGELOG.md` 的「未发布」段，所有用户可感知变更都要记。发版流程见 `docs/release.md`。
-- `docs/` 默认 gitignore，只有 `.gitignore` 白名单里那 6 份文档入库；其余 `docs/*.md` 克隆者拿不到——要入库就补白名单，也别在入库文档里引用未入库的路径（`verify.sh` 的文档引用检查按 `git ls-files` 判定，会直接红）。
+- `docs/` 默认 gitignore，仅 `.gitignore` 精确白名单中的契约、设计、预览与验收数据入库；其余本地文件克隆者拿不到——要入库就补白名单，也别在入库文档里引用未入库的路径（`verify.sh` 的文档引用检查按 `git ls-files` 判定，会直接红）。
