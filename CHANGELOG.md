@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.2.0] - 2026-09-20
+
+验收限制：本版已完成 Linux Electron 结果库交互与三语、明暗主题、窗口宽度和缩放回归；五种发行包的原生安装使用、Windows/macOS 原生字体与输入法、真实账号完整任务、Drive 双设备同步与恢复及长时间资源测量尚未完成验收。
+
 ### 变更
 
 - 决策卡优先展示结论，统一阅读与编辑操作；文件夹归属支持搜索并保留隐藏选项的勾选，综合与追问使用统一选择控件。修复缩放时嵌入决策详情被旧双栏样式挤窄的问题。
@@ -802,7 +806,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.1.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/pine2D/polyask/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/pine2D/polyask/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/pine2D/polyask/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/pine2D/polyask/compare/v1.0.0...v1.0.1
