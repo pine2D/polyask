@@ -5,15 +5,16 @@ import { useLibraryPopover } from './library-popover';
 
 export interface LibraryOption { value: string; label: string; disabled?: boolean }
 export function nextEnabledOption(options: readonly LibraryOption[], current: number, direction: 1 | -1): number {
+  const origin = current < 0 ? (direction === 1 ? -1 : 0) : current;
   for (let step = 1; step <= options.length; step++) {
-    const index = (current + direction * step + options.length) % options.length;
+    const index = ((origin + direction * step) % options.length + options.length) % options.length;
     if (!options[index].disabled) return index;
   }
   return -1;
 }
 
-export function LibrarySelect({ label, value, options, onChange, disabled, searchLabel, emptyLabel }: {
-  label: string; value: string; options: readonly LibraryOption[]; onChange: (value: string) => void;
+export function LibrarySelect({ name, label, value, options, onChange, disabled, searchLabel, emptyLabel }: {
+  name?: string; label: string; value: string; options: readonly LibraryOption[]; onChange: (value: string) => void;
   disabled?: boolean; searchLabel?: string; emptyLabel?: string;
 }): React.JSX.Element {
   const popover = useLibraryPopover();
@@ -55,7 +56,7 @@ export function LibrarySelect({ label, value, options, onChange, disabled, searc
     }
   };
   return <>
-    <button type="button" className="library-select" ref={popover.trigger} role="combobox" aria-label={label}
+    <button type="button" className="library-select" name={name} ref={popover.trigger} role="combobox" aria-label={label}
       aria-expanded={popover.open} aria-controls={popover.open ? id : undefined} aria-haspopup="listbox"
       aria-activedescendant={popover.open && active >= 0 && !searchLabel ? `${id}-${active}` : undefined}
       disabled={disabled} onKeyDown={keydown} onClick={() => popover.open ? popover.close() : show()}>

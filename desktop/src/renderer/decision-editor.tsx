@@ -1,6 +1,7 @@
 import type { ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
 import type { DecisionInput, DecisionRecord, DecisionStatus } from "../shared/decision";
+import { LibrarySelect } from "./library-select";
 import { MarkdownPreview } from "./markdown-preview";
 
 export const decisionStatuses: readonly DecisionStatus[] = ["draft", "verify", "final"];
@@ -35,29 +36,30 @@ interface Props {
   readonly editing: boolean;
   readonly busy: boolean;
   readonly onChange: (value: DecisionInput) => void;
+  readonly onOpenLink?: (url: string) => void;
   readonly onOpenSource: () => void;
 }
 
-export function DecisionEditor({ copy, value, saved, source, sourceFailed, editing, busy, onChange, onOpenSource }: Props): React.JSX.Element {
+export function DecisionEditor({ copy, value, saved, source, sourceFailed, editing, busy, onChange, onOpenSource, onOpenLink }: Props): React.JSX.Element {
   const fields = [
     ["conclusion", copy.decisionConclusion], ["rationale", copy.decisionRationale],
     ["uncertainties", copy.decisionUncertainties], ["nextStep", copy.decisionNextStep]
   ] as const;
   const changeExcerpt = (resultIndex: number, excerpt: string) => onChange({ ...value,
     evidence: value.evidence.map((item) => item.resultIndex === resultIndex ? { resultIndex, excerpt } : item) });
-  return <article className="decision-editor">
-    {editing ? <label>{copy.decisionName}<input name="decision-title" value={value.title} disabled={busy} onChange={(event) => onChange({ ...value, title: event.target.value })} /></label> : <h1>{value.title}</h1>}
+  return <article className="decision-editor" data-editing={editing}>
+    {editing ? <label>{copy.decisionName}<input name="decision-title" autoComplete="off" value={value.title} disabled={busy} onChange={(event) => onChange({ ...value, title: event.target.value })} /></label> : <h1>{value.title}</h1>}
     <div className="decision-meta">
-      <label>{copy.decisionStatus}{editing ? <select name="decision-status" disabled={busy} value={value.status} onChange={(event) => onChange({ ...value, status: event.target.value as DecisionStatus })}>
-        {decisionStatuses.map((status) => <option key={status} value={status}>{decisionStatusLabel(copy, status)}</option>)}
-      </select> : <strong>{decisionStatusLabel(copy, value.status)}</strong>}</label>
+      <label>{copy.decisionStatus}{editing ? <LibrarySelect label={copy.decisionStatus} disabled={busy} value={value.status}
+        options={decisionStatuses.map(status => ({ value: status, label: decisionStatusLabel(copy, status) }))}
+        onChange={status => onChange({ ...value, status: status as DecisionStatus })} /> : <strong>{decisionStatusLabel(copy, value.status)}</strong>}</label>
       <p>{copy.decisionManual}</p>
     </div>
+    <div className="decision-fields">{fields.map(([key, label]) => editing ? <label key={key}>{label}<textarea name={`decision-${key}`} autoComplete="off" value={value[key]} disabled={busy} rows={key === "conclusion" ? 4 : 3} onChange={(event) => onChange({ ...value, [key]: event.target.value })} /></label> : <section key={key}><h2>{label}</h2><MarkdownPreview onOpenLink={onOpenLink} value={value[key] || "—"} /></section>)}</div>
     <section className="decision-source">
       <strong>{copy.decisionSource}</strong><p>{source?.task || saved?.sourceTitle || "—"}</p>
       {source ? <button type="button" disabled={busy} onClick={onOpenSource}>{copy.decisionOpenSource}</button> : <p role="status">{source === null ? copy.decisionSourceMissing : sourceFailed ? copy.decisionSourceFailed : copy.decisionSourceLoading}</p>}
     </section>
-    <div className="decision-fields">{fields.map(([key, label]) => editing ? <label key={key}>{label}<textarea name={`decision-${key}`} value={value[key]} disabled={busy} rows={key === "conclusion" ? 4 : 3} onChange={(event) => onChange({ ...value, [key]: event.target.value })} /></label> : <section key={key}><h2>{label}</h2><MarkdownPreview value={value[key] || "—"} /></section>)}</div>
     <section className="decision-evidence"><h2>{copy.decisionEvidence} · {value.evidence.length}/9</h2>
       {value.evidence.map((item) => {
         const evidence = saved?.evidence.find((old) => old.resultIndex === item.resultIndex);

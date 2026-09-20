@@ -1,5 +1,5 @@
 /* Result library: the record is the primary reading surface. */
-.library.folder-workspace { --library-control: 34px; font-size: 14px; font-family: system-ui, "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", "Sarasa UI SC", sans-serif; background: var(--panel); }
+.library.folder-workspace { --muted: #636370; --library-control: 34px; font-size: 14px; font-family: system-ui, "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", "Sarasa UI SC", sans-serif; background: var(--panel); }
 .library .folder-toolbar { min-height: 58px; flex: 0 0 auto; padding: 10px 20px; gap: 20px; flex-wrap: nowrap; }
 .library .folder-toolbar > strong { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 16px; white-space: nowrap; }
 .library-scope { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -87,3 +87,7 @@
   .library[data-pane=detail] .folder-toolbar .folder-back-list { display: inline-flex; }
   .library[data-pane=list] .folder-detail, .library[data-pane=detail] .folder-content-list { display: none; }
 }
+
+.library .folder-detail .archive-body { grid-template-columns: minmax(0, 1fr); }
+
+@media (prefers-color-scheme: dark) { .library.folder-workspace { --muted: #a1a1aa; } }

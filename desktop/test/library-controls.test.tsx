@@ -26,3 +26,9 @@ test('switching content type removes filters that no longer apply', () => {
   assert.deepEqual(changeFolderFilters({ kind: 'decision', status: 'draft' }, { kind: 'archive' }), { kind: 'archive' });
   assert.deepEqual(changeFolderFilters({ folderId: 'work', kind: 'archive', tag: 'x' }, { query: 'hello' }), { folderId: 'work', kind: 'archive', tag: 'x', query: 'hello' });
 });
+
+test('upward navigation starts at the last option after searching', () => {
+  const options = ['a', 'b', 'c'].map(value => ({ value, label: value }));
+  assert.equal(nextEnabledOption(options, -1, -1), 2);
+  assert.equal(nextEnabledOption(options.map(option => ({ ...option, disabled: true })), -1, -1), -1);
+});

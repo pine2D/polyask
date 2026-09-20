@@ -68,3 +68,14 @@ test("global navigation waits for approval and resumes nested actions once witho
   requestDecisionNavigation(() => { changes++; });
   assert.equal(changes, 2);
 });
+
+test('decision reading prioritizes the conclusion and editing uses the shared status selector', () => {
+  const copy = getCopy('en');
+  const value = { ...decisionInput(saved), conclusion: 'Use the readable layout.' };
+  const render = (editing: boolean) => renderToStaticMarkup(<DecisionEditor copy={copy} value={value} saved={saved} source={source} sourceFailed={false}
+    editing={editing} busy={false} onChange={() => undefined} onOpenSource={() => undefined} />);
+  const reading = render(false);
+  assert.ok(reading.indexOf('Use the readable layout.') < reading.indexOf('class="decision-source"'));
+  assert.match(render(true), /role="combobox"/);
+  assert.doesNotMatch(render(true), /<select/);
+});

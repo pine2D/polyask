@@ -6,10 +6,12 @@ import { formatDateTime } from "../shared/format";
 import { DecisionEditor, decisionInput, decisionStatuses, decisionStatusLabel, validDecisionDraft } from "./decision-editor";
 import { ConfirmDialog } from "./confirm-dialog";
 import { registerDecisionNavigationGuard, runApprovedDecisionNavigation } from "./decision-navigation";
+import { LibraryMenu } from "./library-menu";
 import { shell } from "./shell-api";
 
 interface Props {
   readonly embedded?: boolean;
+  readonly onBusy?: (busy: boolean) => void;
   readonly onOrganize?: () => void;
   readonly initialRecord?: DecisionRecord;
   readonly onChanged?: (record?: DecisionRecord) => void;
@@ -24,7 +26,7 @@ const newCard = (source: ArchiveRecord): DecisionInput => ({ archiveId: source.i
   title: [...(source.task || source.text)].slice(0, 160).join(""), conclusion: "", rationale: "",
   uncertainties: "", nextStep: "", status: "draft", evidence: [] });
 
-export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize }: Props): React.JSX.Element {
+export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize, onBusy }: Props): React.JSX.Element {
   const [items, setItems] = useState<DecisionRecord[]>([]);
   const [saved, setSaved] = useState<DecisionRecord | null>(initialRecord ?? null);
   const [value, setValue] = useState<DecisionInput | null>(() => initialSource ? newCard(initialSource) : initialRecord ? decisionInput(initialRecord) : null);
@@ -35,6 +37,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
   const [filter, setFilter] = useState<DecisionStatus | "">("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  useEffect(() => { onBusy?.(busy); return () => onBusy?.(false); }, [busy, onBusy]);
   const [message, setMessage] = useState("");
   const [confirmation, setConfirmation] = useState<{ text: string; action: () => void } | null>(null);
   const [revision, setRevision] = useState(0);
@@ -131,10 +134,20 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
       <main className="archive-detail-pane">
         {value ? <>
           <div className="decision-detail-actions">
-            {onOrganize ? <button type="button" disabled={busy} onClick={onOrganize}>{copy.libraryOrganize}</button> : null}
-            {editing ? <><button type="button" disabled={busy} onClick={save}>{copy.decisionSave}</button><button type="button" disabled={busy} onClick={() => guard(() => { if (saved) { setValue(decisionInput(saved)); setEditing(false); } else clearDetail(); })}>{copy.decisionCancel}</button>{dirty ? <span>{copy.decisionUnsaved}</span> : null}</> : <><button type="button" disabled={busy} onClick={() => setEditing(true)}>{copy.decisionEdit}</button><button type="button" disabled={busy} onClick={exportCard}>{copy.decisionExport}</button><button type="button" disabled={busy} onClick={remove}>{copy.decisionDelete}</button></>}
+            <span className="library-record-kind">{copy.libraryCards}</span>
+            <div className="library-decision-actions">
+              {editing ? <>
+                {dirty ? <span>{copy.decisionUnsaved}</span> : null}
+                <button type="button" disabled={busy} onClick={() => guard(() => { if (saved) { setValue(decisionInput(saved)); setEditing(false); } else clearDetail(); })}>{copy.decisionCancel}</button>
+                <button className="library-primary" type="button" disabled={busy} onClick={save}>{busy ? copy.librarySaving : copy.decisionSave}</button>
+              </> : <>
+                {onOrganize ? <button type="button" disabled={busy} onClick={onOrganize}>{copy.libraryOrganize}</button> : null}
+                <button type="button" disabled={busy} onClick={() => setEditing(true)}>{copy.decisionEdit}</button>
+                <LibraryMenu label={copy.libraryMore} disabled={busy} actions={[{ label: copy.decisionExport, run: exportCard }, { label: copy.decisionDelete, run: remove, danger: true }]} />
+              </>}
+            </div>
           </div>
-          <DecisionEditor copy={copy} value={value} saved={saved} source={source} sourceFailed={sourceFailed} editing={editing} busy={busy} onChange={setValue} onOpenSource={() => guard(() => { if (source) onArchives(source); })} />
+          <DecisionEditor onOpenLink={url => { void run(() => shell.openExternal(url)); }} copy={copy} value={value} saved={saved} source={source} sourceFailed={sourceFailed} editing={editing} busy={busy} onChange={setValue} onOpenSource={() => guard(() => { if (source) onArchives(source); })} />
         </> : <div className="decision-placeholder">{items.length ? copy.decisionPick : copy.decisionEmpty}</div>}
       </main>
     </div>

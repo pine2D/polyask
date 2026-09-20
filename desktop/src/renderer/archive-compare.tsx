@@ -26,7 +26,7 @@ function ComparisonColumn(props: {
       {!props.paragraphs.length ? <p role="status">{props.copy.noDifferentParagraphs}</p> : null}
       {props.paragraphs.map((paragraph, index) => (
         <div className={`archive-compare-paragraph ${paragraph.relation}`} data-relation={paragraph.relation} key={`${index}:${paragraph.text}`}>
-          <span>{paragraph.relation === "shared" ? props.copy.sharedParagraph : props.copy.uniqueParagraph}</span>
+          {props.paragraphs[index - 1]?.relation !== paragraph.relation ? <span>{paragraph.relation === "shared" ? props.copy.sharedParagraph : props.copy.uniqueParagraph}</span> : null}
           <MarkdownPreview value={paragraph.text} onOpenLink={props.onOpenLink} />
         </div>
       ))}
@@ -58,17 +58,19 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
         <p>{props.copy.answerComparisonDescription}</p>
       </header>
       <label className="comparison-filter"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} />{props.copy.onlyDifferences}</label>
-      <div className="archive-compare-selectors">
-        <label>{props.copy.leftAnswer}
-          <LibrarySelect label={props.copy.leftAnswer} value={left?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === right?.host }))} onChange={setLeftHost} />
-        </label>
-        <label>{props.copy.rightAnswer}
-          <LibrarySelect label={props.copy.rightAnswer} value={right?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === left?.host }))} onChange={setRightHost} />
-        </label>
-      </div>
       <div className="archive-compare-grid">
-        <ComparisonColumn onOpenLink={props.onOpenLink} copy={props.copy} label={left?.label ?? ""} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
-        <ComparisonColumn onOpenLink={props.onOpenLink} copy={props.copy} label={right?.label ?? ""} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
+        <section className="archive-compare-side">
+          <label className="archive-compare-picker">{props.copy.leftAnswer}
+            <LibrarySelect label={props.copy.leftAnswer} value={left?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === right?.host }))} onChange={setLeftHost} />
+          </label>
+          <ComparisonColumn onOpenLink={props.onOpenLink} copy={props.copy} label={left?.label ?? ''} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
+        </section>
+        <section className="archive-compare-side">
+          <label className="archive-compare-picker">{props.copy.rightAnswer}
+            <LibrarySelect label={props.copy.rightAnswer} value={right?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === left?.host }))} onChange={setRightHost} />
+          </label>
+          <ComparisonColumn onOpenLink={props.onOpenLink} copy={props.copy} label={right?.label ?? ''} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
+        </section>
       </div>
     </section>
   );

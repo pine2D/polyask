@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { formatCopy } from "../shared/copy";
 import type { DesktopCopy } from '../shared/copy';
 import type { FolderMembershipChange, FolderTarget, TaskFolder } from '../shared/task-folder';
 import { FolderModal } from './folder-modal';
@@ -15,6 +16,8 @@ export function FolderMembershipDialog({ copy, target, folders, onCancel, onSave
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [query, setQuery] = useState('');
+  const visibleFolders = folders.filter(folder => folder.name.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
   const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true;
@@ -30,7 +33,9 @@ export function FolderMembershipDialog({ copy, target, folders, onCancel, onSave
   };
   return <FolderModal copy={copy} title={copy.folderMembership} busy={busy} onCancel={onCancel}>
     <p>{copy.folderMembershipHint}</p>
-    {!original ? <button onClick={() => setRetry(value => value + 1)}>{message ? copy.retryShellLoad : copy.archiveLoading}</button> : folders.length ? <div className="folder-checkboxes">{folders.map(folder => <label key={folder.id}><input type="checkbox" disabled={busy} checked={selected.includes(folder.id)} onChange={event => setSelected(ids => event.target.checked ? [...ids, folder.id] : ids.filter(id => id !== folder.id))} />{folder.name}</label>)}</div> : <p>{copy.folderNoFolders}</p>}
+    <input type="search" name="folder-membership-search" autoComplete="off" aria-label={copy.librarySearchFolders} placeholder={`${copy.librarySearchFolders}…`} value={query} disabled={busy} onChange={event => setQuery(event.target.value)} />
+    <p className="library-selection-count">{formatCopy(copy.librarySelected, { count: selected.length })}</p>
+    {!original ? <button onClick={() => setRetry(value => value + 1)}>{message ? copy.retryShellLoad : copy.archiveLoading}</button> : folders.length ? <div className="folder-checkboxes">{visibleFolders.map(folder => <label key={folder.id}><input type="checkbox" disabled={busy} checked={selected.includes(folder.id)} onChange={event => setSelected(ids => event.target.checked ? [...ids, folder.id] : ids.filter(id => id !== folder.id))} />{folder.name}</label>)}{!visibleFolders.length ? <p>{copy.archiveNoMatches}</p> : null}</div> : <p>{copy.folderNoFolders}</p>}
     <p role="status">{message}</p><div className="confirm-actions"><button disabled={busy} onClick={onCancel}>{copy.cancel}</button><button className="primary" disabled={!original || busy} onClick={() => void save()}>{copy.decisionSave}</button></div>
   </FolderModal>;
 }

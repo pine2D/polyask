@@ -4,6 +4,12 @@
 
 **顺序不能反：先离线（`bash scripts/verify.sh` + `cd desktop && npm test && npm run typecheck`），再真机。** 反过来会得到「真机试通了但 CI 红」的返工。
 
+## 结果库视觉与交互回归
+
+在 `desktop/` 运行 `npm run test:library-ui`；无显示服务器的 Linux 使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:library-ui`。脚本构建生产组件＋隔离内存夹具，使用临时 Electron profile，不读取用户数据库、不连接站点或 Drive。输出路径包含截图与 `report.json`，由脚本每次打印；临时产物留供检查，不入库。
+
+覆盖简中/繁中/英文、明暗主题、960/1280/1600px 的 18 组布局；另以 Electron 鼠标与按键输入检查菜单选项、Escape/Tab 焦点、删除确认、备注保存失败、决策卡未保存保护、文件夹多选搜索、对比容器断点及 150% 缩放。几何断言之外要看截图，尤其决策卡详情是否真正占满可用列。它不替代 Windows/macOS 原生字体、输入法和系统缩放验收。
+
 ## 离线回归
 
 **两条互不重叠的门禁，顺序与职责写死**：`bash scripts/verify.sh` 是零 node_modules 依赖的仓库级卫生（`.js/.mjs` 语法、JSON、`.js` 300 行、`desktop/src` 的 `.ts/.tsx` 400 行棘轮、OAuth 凭据卫生、文档与 `.github` 引用、workflow YAML、根 `scripts/` 的五个跨端测试）；`cd desktop && npm test` 是 Desktop 门禁（首段 `tsc --noEmit`，其后 `tsx --test` 跑 `test/**/*.test.ts(x)`、`node --test` 跑 `scripts/*.test.{js,mjs}`——九站适配器离线回归及打包脚本测试就在后者里）。`verify.sh` 不跑 `npm test`，两条都要过；`npm test` 首段虽已含 typecheck，仍单跑一次 `npm run typecheck`（CI 也分两步，失败点更清楚）。动窗口/视图/preload 的改动另加 `npm run package && xvfb-run -a npm run smoke -- --skip-package`（在 `desktop/` 下运行，先打包当前源码，避免验证旧产物）。

@@ -11,6 +11,7 @@ import {
   SYNTHESIS_PROMPT_LIMIT,
   type SynthesisSendRequest
 } from "../shared/synthesis";
+import { LibrarySelect } from "./library-select";
 import { CloseIcon, SendIcon, SparklesIcon, StopIcon } from "./icons";
 
 interface SynthesisWorkspaceProps {
@@ -64,8 +65,10 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
         </fieldset>}
         <small>{props.copy.synthesisCount.replace("{count}", String(selected.length))}</small>
         {selected.filter((result) => result.code === "answer_truncated").map((result) => <p className="answer-capture-warning" key={result.host}>{answerSourceId(props.record.results.indexOf(result))} {props.copy.answerTruncated}</p>)}
-        <label>{props.copy.synthesisTarget}<select name="synthesis-target" aria-label={props.copy.synthesisTarget} value={targetSite} onChange={(event) => setTargetSite(event.target.value)}><option value="">{props.copy.synthesisTargetMissing}</option>{props.sites.map((site) => <option value={site.key} key={site.key}>{site.label}</option>)}</select></label>
-        <label>{props.copy.synthesisTier}<select name="synthesis-tier" aria-label={props.copy.synthesisTier} value={tier ?? ""} onChange={(event) => setTier(event.target.value === "think" || event.target.value === "fast" ? event.target.value : null)}><option value="">{props.copy.followSite}</option><option value="fast">{props.copy.fast}</option><option value="think">{props.copy.think}</option></select></label>
+        <label>{props.copy.synthesisTarget}<LibrarySelect name="synthesis-target" label={props.copy.synthesisTarget} value={targetSite} disabled={props.busy}
+          options={[{ value: '', label: props.copy.synthesisTargetMissing }, ...props.sites.map(site => ({ value: site.key, label: site.label }))]} onChange={setTargetSite} /></label>
+        <label>{props.copy.synthesisTier}<LibrarySelect name="synthesis-tier" label={props.copy.synthesisTier} value={tier ?? ''} disabled={props.busy}
+          options={[{ value: '', label: props.copy.followSite }, { value: 'fast', label: props.copy.fast }, { value: 'think', label: props.copy.think }]} onChange={value => setTier(value === 'think' || value === 'fast' ? value : null)} /></label>
         <label>{followUp ? props.copy.followUpQuestion : props.copy.synthesisInstruction}<textarea name="synthesis-instruction" autoComplete="off" maxLength={4000} value={instruction} onChange={(event) => setInstruction(event.target.value)} /></label>
         {!followUp ? <button type="button" className="citation-preset" disabled={props.busy} onClick={() => setInstruction(props.copy.citationReportInstruction)}>{props.copy.citationReportPreset}</button> : null}
         <p className="citation-notice">{props.copy.citationReportNotice}</p>

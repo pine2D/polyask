@@ -137,7 +137,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 | 落点 | 覆盖范围 |
 | --- | --- |
 | `desktop/src/shared/copy.ts` | 主表。`en` / `zhCN` / `zhTW` 三档，外壳通用词条直接写在这里，并把下面各分表 `...` 展开合并 |
-| `desktop/src/shared/*-copy.ts` 分表 | 按领域拆的词条：archive / backup / command / data-admin / decision / productivity / prompt-library / sync / synthesis / task-folder / workspace，各自导出 `{ en, zhCN, zhTW }` 供主表合并 |
+| `desktop/src/shared/*-copy.ts` 分表 | 按领域拆的词条：archive / backup / command / data-admin / decision / library / productivity / prompt-library / sync / synthesis / task-folder / workspace，各自导出 `{ en, zhCN, zhTW }` 供主表合并 |
 
 `desktop/src/shared/status-copy.ts` **不是**第三张词条表，它是 `SiteCode → keyof DesktopCopy` 的映射（`STATUS_COPY_KEY`），把机器码翻译成主表里的某个键。
 

@@ -10,7 +10,7 @@ export function safeMarkdownUrl(value: string): string | null {
 /** React escapes raw HTML; only explicit external-link callbacks can navigate. */
 export function markdownInline(value: string, onOpenLink?: (url: string) => void, depth = 0): ReactNode[] {
   if (depth > 8) return [value];
-  const tokens = /(`+)([^`]*?)\1|\*\*([^*]+)\*\*|__([^_]+)__|~~([^~]+)~~|\*([^*\n]+)\*|\[([^\]]+)\]\(([^\s]*(?:\([^\s]*\)[^\s]*)?)\)/g;
+  const tokens = /(`+)([^`]*?)\1|\*\*([^*]+)\*\*|__([^_]+)__|~~([^~]+)~~|\*([^*\n]+)\*|\[([^\[\]\n]+)\]\(([^()\s]*(?:\([^()\s]*\)[^()\s]*)*)\)/g;
   const nodes: ReactNode[] = [];
   let end = 0;
   for (const match of value.matchAll(tokens)) {

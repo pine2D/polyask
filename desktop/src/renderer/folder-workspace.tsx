@@ -27,6 +27,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [tags, setTags] = useState<readonly string[]>([]);
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [focused, setFocused] = useState(false);
@@ -44,9 +45,9 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       setLoading(true);
       Promise.all([shell.listFolders(), shell.searchFolderContents(filters), shell.searchArchives({})]).then(([nextFolders, contents, archives]) => {
         if (request !== epoch.current) return;
-        setFolders(nextFolders); setItems(contents); setTags(archives.tags); setLoading(false); setMessage('');
+        setFolders(nextFolders); setItems(contents); setTags(archives.tags); setLoading(false); setLoadFailed(false); setMessage('');
         setSelected(current => current ? contents.find(item => contentKey(item) === contentKey(current)) ?? null : null);
-      }).catch(() => { if (request === epoch.current) { setLoading(false); setMessage(copy.folderLoadFailed); } });
+      }).catch(() => { if (request === epoch.current) { setLoading(false); setLoadFailed(true); setMessage(copy.folderLoadFailed); } });
     }, filters.query ? 180 : 0);
     return () => { clearTimeout(timer); epoch.current++; };
   }, [filters, revision, copy.folderLoadFailed]);
@@ -61,7 +62,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   }, [props.preferredId]);
   const change = (patch: Partial<FolderFilters>) => navigate(() => { epoch.current++; setFilters(current => changeFolderFilters(current, patch)); setSelected(null); setNewSource(null); setPane('list'); });
   const openArchive = (record?: ArchiveRecord) => navigate(() => { setNewSource(null); if (record) setFilters({ folderId: '' }); setSelected(record ? { kind: 'archive', record } : null); setPane(record ? 'detail' : 'list'); });
-  const changed = (deleted = false) => { if (deleted) setSelected(null); refresh(); };
+  const changed = (deleted = false) => { if (deleted) { setSelected(null); setFocused(false); setPane('list'); } refresh(); };
   const savedArchive = (record: ArchiveRecord) => { setFilters({ folderId: '' }); setSelected({ kind: 'archive', record }); setNewSource(null); setPane('detail'); refresh(); };
   const capture = () => navigate(() => {
     busyRef.current = true; setBusy(true);
@@ -70,6 +71,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   });
   const updateDecision = (record?: DecisionRecord) => {
     if (newSource && record) setFilters({ folderId: '' });
+    if (!record) { setFocused(false); setPane('list'); }
     setNewSource(null); setSelected(record ? { kind: 'decision', record } : null); refresh();
   };
   const organize = () => navigate(() => { if (selected) { setDetailRevision(value => value + 1); setMembership({ kind: selected.kind, id: selected.record.id }); } });
@@ -82,7 +84,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       <div className="library-toolbar-actions">
         <button className="folder-back-navigation" onClick={() => navigate(() => { setFocused(false); setPane('navigation'); })}>{copy.folderTitle}</button>
         <button className="folder-back-list" onClick={() => navigate(() => { setNewSource(null); setPane('list'); })}><BackIcon />{copy.folderBackList}</button>
-        <button className="library-focus" aria-pressed={focused} disabled={!selected && !newSource} title={focused ? copy.libraryBrowse : copy.libraryFocus} aria-label={focused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => setFocused(value => !value)}><FocusIcon /></button>
+        <button className="library-focus" aria-pressed={focused} disabled={!focused && !selected && !newSource} title={focused ? copy.libraryBrowse : copy.libraryFocus} aria-label={focused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => setFocused(value => !value)}><FocusIcon /></button>
         <button disabled={busy} onClick={capture}><ArchiveIcon /><span>{copy.captureArchive}</span></button>
         <button className="library-close" aria-label={copy.closeArchive} title={copy.closeArchive} disabled={busy} onClick={() => navigate(props.onClose)}><CloseIcon /></button>
       </div>
@@ -90,10 +92,10 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     <div className="folder-columns">
       <FolderSidebar copy={copy} folders={folders} selected={filters.folderId ?? ''} onSelect={folderId => change({ folderId })} onChanged={refresh} />
       <LibraryContentList copy={copy} locale={props.locale} items={items} filters={filters} tags={tags} loading={loading}
-        failed={!!message} selectedKey={selected ? contentKey(selected) : null} onChange={change} onRetry={refresh}
+        failed={loadFailed} selectedKey={selected ? contentKey(selected) : null} onChange={change} onRetry={refresh}
         onSelect={item => navigate(() => { setSelected(item); setNewSource(null); setPane('detail'); })} />
       <div className="folder-detail">
-        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
+        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
           : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, source => navigate(() => setNewSource(source)), detailBusy, savedArchive, organize) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{copy.libraryPickHint}</p></div>}
       </div>
     </div>

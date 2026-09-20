@@ -35,3 +35,18 @@ test('fenced code remains verbatim and quotes retain consecutive lines', () => {
   assert.equal((html.match(/<blockquote>/g) ?? []).length, 1);
   assert.match(html, /One\nTwo/);
 });
+
+test('adjacent citations stay separate and parentheses inside URLs remain intact', () => {
+  const html = render('[1](https://one.example/a)[2](https://two.example/b) [topic](https://example.com/wiki/Topic_(detail))');
+  assert.equal((html.match(/<a /g) ?? []).length, 3);
+  assert.match(html, /href="https:\/\/one.example\/a"/);
+  assert.match(html, /href="https:\/\/two.example\/b"/);
+  assert.match(html, /href="https:\/\/example.com\/wiki\/Topic_\(detail\)"/);
+});
+
+test('large unmatched link delimiters stay readable without stalling the shell', () => {
+  const input = '['.repeat(60_000);
+  const start = performance.now();
+  assert.ok(render(input).includes(input));
+  assert.ok(performance.now() - start < 1000, 'an unmatched delimiter run must not cause quadratic backtracking');
+});

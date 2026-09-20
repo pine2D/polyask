@@ -70,10 +70,60 @@
   .library .archive-compare-grid, .library .archive-compare-selectors { gap: 16px; }
   .library .archive-detail { padding: 24px; }
 }
-@container library-detail (max-width: 660px) {
+@container library-detail (max-width: 760px) {
   .library .archive-compare-grid, .library .archive-compare-selectors { grid-template-columns: minmax(0, 1fr); }
   .library .archive-compare-column { max-height: none; }
   .library .archive-detail { padding: 20px; }
   .library .archive-detail h1 { font-size: 21px; }
   .library .library-view-switch { gap: 16px; }
+}
+.library .decision-detail-actions { min-height: 54px; padding: 10px 24px; justify-content: space-between; gap: 12px; }
+.library-decision-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.library .decision-detail-actions button { background: var(--panel); color: inherit; }
+.library .decision-detail-actions .library-primary { color: white; background: #4f46e5; border-color: #4f46e5; }
+.library .decision-editor { max-width: 820px; padding: 28px 32px 64px; }
+.library .decision-editor h1 { font-size: 24px; line-height: 1.5; margin-bottom: 16px; }
+.library .decision-meta { margin: 12px 0 24px; gap: 16px; flex-wrap: wrap; }
+.library .decision-meta label { min-width: 160px; gap: 8px; }
+.library .decision-meta p { line-height: 1.6; }
+.library .decision-meta strong { font-size: 13px; font-weight: 500; color: var(--accent); }
+.library .decision-fields { gap: 28px; margin: 28px 0; }
+.library .decision-fields h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
+.library .decision-fields > section:first-child .markdown-preview { font-size: 18px; line-height: 1.7; }
+.library .decision-editor label { font-size: 13px; gap: 8px; }
+.library .decision-editor input { min-height: 38px; padding: 8px 10px; font-size: 15px; }
+.library .decision-editor textarea { min-height: 104px; padding: 12px; font-size: 15px; line-height: 1.7; }
+.library .decision-source { background: transparent; padding: 16px 0; border: 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 0; font-size: 13px; line-height: 1.7; }
+.library .decision-source > strong { color: var(--muted); font-weight: 500; font-size: 12px; }
+.library .decision-evidence { margin-top: 28px; }
+.library .decision-evidence > h2 { font-size: 15px; }
+.library .decision-excerpt { padding: 16px 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+.library .decision-excerpt blockquote { font-size: 15px; line-height: 1.8; }
+.library .decision-answer summary { cursor: pointer; padding: 8px 0; font-weight: 600; }
+.library .folder-modal { width: min(480px, calc(100vw - 40px)); max-height: calc(100vh - 40px); overflow: auto; font-size: 14px; padding: 24px; }
+.library .folder-modal > p { font-size: 13px; line-height: 1.7; color: var(--muted); }
+.library .folder-modal > input { width: 100%; min-height: 36px; }
+.library .folder-modal .library-selection-count { font-size: 12px; margin: 12px 0; }
+.library .folder-checkboxes { gap: 4px; max-height: 35vh; }
+.library .folder-checkboxes label { min-height: 40px; padding: 8px; border-radius: 6px; overflow-wrap: anywhere; }
+.library .folder-checkboxes label:has(:checked) { background: var(--accent-soft); }
+.library input[type=checkbox] { accent-color: var(--accent); flex-shrink: 0; }
+.library .synthesis-workspace { padding: 24px; gap: 20px; font-size: 14px; }
+.library .synthesis-config { gap: 16px; }
+.library .synthesis-config legend, .library .synthesis-config > label, .library .synthesis-preview { font-size: 13px; gap: 8px; }
+.library .synthesis-config fieldset { gap: 8px; padding: 16px; }
+.library .synthesis-config textarea, .library .synthesis-preview textarea { padding: 12px; font-size: 14px; line-height: 1.7; }
+.library .synthesis-config .library-select { width: 100%; min-width: 0; }
+.library .synthesis-workspace > footer span { font-size: 12px; line-height: 1.6; white-space: normal; }
+@container library-detail (max-width: 760px) {
+  .library .decision-editor { padding: 20px; }
+  .library .decision-detail-actions { padding: 10px 20px; }
+  .library .decision-editor h1 { font-size: 21px; }
+  .library .decision-excerpt header { flex-wrap: wrap; }
+}
+
+.archive-compare-side { min-width: 0; }
+.archive-compare-picker { display: grid; gap: 8px; margin-bottom: 12px; font-size: 12px; color: var(--muted); }
+@media (forced-colors: active) {
+  .library [aria-current=true], .library [aria-pressed=true], .library-popover [aria-selected=true] { outline: 1px solid Highlight; }
 }
