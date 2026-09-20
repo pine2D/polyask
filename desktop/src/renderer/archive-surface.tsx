@@ -119,10 +119,10 @@ export function startArchiveFilterIntent<T>(
 }
 
 export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
-  return <FolderWorkspace {...props} renderArchive={(record, onChanged, onCreateDecision, onBusy, onSavedArchive) => <ArchiveRecordSurface key={record.id} {...props} onBusy={onBusy} onSavedArchive={onSavedArchive} preferredId={record.id} embeddedRecord={record} onChanged={onChanged} onCreateDecision={onCreateDecision} />} />;
+  return <FolderWorkspace {...props} renderArchive={(record, onChanged, onCreateDecision, onBusy, onSavedArchive, onOrganize) => <ArchiveRecordSurface key={record.id} {...props} onOrganize={onOrganize} onBusy={onBusy} onSavedArchive={onSavedArchive} preferredId={record.id} embeddedRecord={record} onChanged={onChanged} onCreateDecision={onCreateDecision} />} />;
 }
 
-function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
+function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; onOrganize: () => void; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
   const [items, setItems] = useState<readonly ArchiveRecord[]>([]);
   const [tags, setTags] = useState<readonly string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -208,6 +208,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
   return (
     <ArchiveWorkspace
       embedded
+      onOrganize={props.onOrganize}
       copy={props.copy}
       onCreateDecision={() => props.onCreateDecision(selected)}
       locale={props.locale}

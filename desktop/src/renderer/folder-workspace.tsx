@@ -6,13 +6,15 @@ import type { ArchiveSurfaceProps } from './archive-surface';
 import { FolderSidebar } from './folder-sidebar';
 import { FolderMembershipDialog } from './folder-membership-dialog';
 import { DecisionWorkspace } from './decision-workspace';
-import { decisionStatuses, decisionStatusLabel } from './decision-editor';
+import { LibraryContentList } from './library-content-list';
+import { changeFolderFilters } from './library-filters';
+import { ArchiveIcon, CloseIcon, FocusIcon, BackIcon } from './icons';
 import { requestDecisionNavigation } from './decision-navigation';
 import { shell } from './shell-api';
 
 const contentKey = (item: FolderContent) => `${item.kind}:${item.record.id}`;
 export function FolderWorkspace(props: ArchiveSurfaceProps & {
-  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void) => React.ReactNode;
+  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: () => void) => React.ReactNode;
 }): React.JSX.Element {
   const { copy } = props;
   const [folders, setFolders] = useState<TaskFolder[]>([]);
@@ -27,6 +29,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [focused, setFocused] = useState(false);
   const [pane, setPane] = useState<'navigation' | 'list' | 'detail'>('list');
   const epoch = useRef(0);
   const intent = useRef(0);
@@ -56,7 +59,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     }).catch(() => { if (active) setMessage(copy.folderLoadFailed); });
     return () => { active = false; };
   }, [props.preferredId]);
-  const change = (patch: Partial<FolderFilters>) => navigate(() => { epoch.current++; setFilters(current => ({ ...current, ...patch })); setSelected(null); setNewSource(null); setPane('list'); });
+  const change = (patch: Partial<FolderFilters>) => navigate(() => { epoch.current++; setFilters(current => changeFolderFilters(current, patch)); setSelected(null); setNewSource(null); setPane('list'); });
   const openArchive = (record?: ArchiveRecord) => navigate(() => { setNewSource(null); if (record) setFilters({ folderId: '' }); setSelected(record ? { kind: 'archive', record } : null); setPane(record ? 'detail' : 'list'); });
   const changed = (deleted = false) => { if (deleted) setSelected(null); refresh(); };
   const savedArchive = (record: ArchiveRecord) => { setFilters({ folderId: '' }); setSelected({ kind: 'archive', record }); setNewSource(null); setPane('detail'); refresh(); };
@@ -69,38 +72,32 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     if (newSource && record) setFilters({ folderId: '' });
     setNewSource(null); setSelected(record ? { kind: 'decision', record } : null); refresh();
   };
-  return <section className="folder-workspace" data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
+  const organize = () => navigate(() => { if (selected) { setDetailRevision(value => value + 1); setMembership({ kind: selected.kind, id: selected.record.id }); } });
+  const folderName = folders.find(folder => folder.id === filters.folderId)?.name
+    ?? (filters.folderId === '__unfiled__' ? copy.folderUnfiled : copy.folderAll);
+  return <section className="folder-workspace library" data-focused={focused} data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
     <header className="folder-toolbar">
-      <strong>{copy.archiveTitle}</strong>
-      <button className="folder-back-navigation" onClick={() => navigate(() => setPane('navigation'))}>{copy.folderBackNavigation}</button>
-      <button className="folder-back-list" onClick={() => navigate(() => { setNewSource(null); setPane('list'); })}>{copy.folderBackList}</button>
-      <button disabled={busy} onClick={capture}>{copy.captureArchive}</button>
-      <button disabled={busy} onClick={() => navigate(props.onClose)}>{copy.closeArchive}</button>
+      <strong><ArchiveIcon />{copy.archiveTitle}</strong>
+      <span className="library-scope" title={folderName}>{folderName}</span>
+      <div className="library-toolbar-actions">
+        <button className="folder-back-navigation" onClick={() => navigate(() => { setFocused(false); setPane('navigation'); })}>{copy.folderTitle}</button>
+        <button className="folder-back-list" onClick={() => navigate(() => { setNewSource(null); setPane('list'); })}><BackIcon />{copy.folderBackList}</button>
+        <button className="library-focus" aria-pressed={focused} disabled={!selected && !newSource} title={focused ? copy.libraryBrowse : copy.libraryFocus} aria-label={focused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => setFocused(value => !value)}><FocusIcon /></button>
+        <button disabled={busy} onClick={capture}><ArchiveIcon /><span>{copy.captureArchive}</span></button>
+        <button className="library-close" aria-label={copy.closeArchive} title={copy.closeArchive} disabled={busy} onClick={() => navigate(props.onClose)}><CloseIcon /></button>
+      </div>
     </header>
     <div className="folder-columns">
       <FolderSidebar copy={copy} folders={folders} selected={filters.folderId ?? ''} onSelect={folderId => change({ folderId })} onChanged={refresh} />
-      <section className="folder-content-list" aria-label={copy.folderAll}>
-        <div className="folder-filters">
-          <input type="search" aria-label={copy.folderSearch} placeholder={copy.folderSearch} value={filters.query ?? ''} onChange={event => change({ query: event.target.value })} />
-          <select aria-label={copy.folderKind} value={filters.kind ?? ''} onChange={event => change({ kind: event.target.value as FolderFilters['kind'] })}><option value="">{copy.folderAll}</option><option value="archive">{copy.folderResults}</option><option value="decision">{copy.decisionTitle}</option></select>
-          {filters.kind !== 'decision' ? <><select aria-label={copy.archiveTags} value={filters.tag ?? ''} onChange={event => change({ tag: event.target.value })}><option value="">{copy.allArchiveTags}</option>{tags.map(tag => <option key={tag}>{tag}</option>)}</select><label><input type="checkbox" checked={!!filters.favorite} onChange={event => change({ favorite: event.target.checked })} />{copy.favoriteArchives}</label></> : null}
-          {filters.kind !== 'archive' ? <select aria-label={copy.decisionStatus} value={filters.status ?? ''} onChange={event => change({ status: event.target.value as FolderFilters['status'] })}><option value="">{copy.decisionAll}</option>{decisionStatuses.map(status => <option key={status} value={status}>{decisionStatusLabel(copy, status)}</option>)}</select> : null}
-        </div>
-        <div className="archive-list">
-          {loading ? <p role="status">{copy.archiveLoading}</p> : items.length ? items.map(item => <button key={contentKey(item)} aria-current={selected && contentKey(selected) === contentKey(item) ? 'true' : undefined} onClick={() => navigate(() => { setSelected(item); setNewSource(null); setPane('detail'); })}>
-            <small>{item.kind === 'archive' ? copy.folderResults : decisionStatusLabel(copy, item.record.status)}</small>
-            <span>{item.kind === 'archive' ? item.record.task || item.record.preview : item.record.title}</span>
-            {item.kind === 'archive' && item.record.tags.length ? <small>{item.record.tags.join(' · ')}</small> : null}
-          </button>) : <p>{copy.folderEmpty}</p>}
-        </div>
-      </section>
+      <LibraryContentList copy={copy} locale={props.locale} items={items} filters={filters} tags={tags} loading={loading}
+        failed={!!message} selectedKey={selected ? contentKey(selected) : null} onChange={change} onRetry={refresh}
+        onSelect={item => navigate(() => { setSelected(item); setNewSource(null); setPane('detail'); })} />
       <div className="folder-detail">
-        {selected && !newSource ? <div className="folder-detail-heading"><button onClick={() => navigate(() => { setDetailRevision(value => value + 1); setMembership({ kind: selected.kind, id: selected.record.id }); })}>{copy.folderMembership}</button></div> : null}
-        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded copy={copy} locale={props.locale} initialSource={newSource} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
-          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, source => navigate(() => setNewSource(source)), detailBusy, savedArchive) : <p className="decision-placeholder">{copy.folderEmpty}</p>}
+        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
+          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, source => navigate(() => setNewSource(source)), detailBusy, savedArchive, organize) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{copy.libraryPickHint}</p></div>}
       </div>
     </div>
-    <div className="archive-status" role="status">{message}{message ? <button onClick={refresh}>{copy.retryShellLoad}</button> : null}</div>
+    {message ? <div className="archive-status" role="status">{message}<button onClick={refresh}>{copy.retryShellLoad}</button></div> : null}
     {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={membership} folders={folders} onCancel={() => setMembership(null)} onSaved={() => { setMembership(null); refresh(); }} /> : null}
   </section>;
 }

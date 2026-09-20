@@ -1,22 +1,21 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
 import type { PendingSynthesis, SynthesisCandidate } from "../shared/synthesis";
 import { formatDateTime } from "../shared/format";
 import { ArchiveDetail } from "./archive-detail";
-import { deleteConfirmationRemaining, deleteIntent, type ArmedArchiveDelete } from "./archive-delete";
+import { ConfirmDialog } from './confirm-dialog';
+import { LibraryMenu } from './library-menu';
 import {
   ArchiveIcon,
   CloseIcon,
-  CopyIcon,
-  DownloadIcon,
-  StarIcon,
-  TrashIcon
+  StarIcon
 } from "./icons";
 
 interface ArchiveWorkspaceProps {
   readonly embedded?: boolean;
+  readonly onOrganize?: () => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly items: readonly ArchiveRecord[];
@@ -56,24 +55,16 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const emptyText = props.query || props.favoriteOnly || props.selectedTag
     ? copy.archiveNoMatches
     : copy.archiveEmpty;
-  const [armed, setArmed] = useState<ArmedArchiveDelete | null>(null);
-  useEffect(() => setArmed(null), [selected?.id]);
-  useEffect(() => {
-    if (!armed) return undefined;
-    const timer = window.setTimeout(() => {
-      setArmed((current) => current === armed ? null : current);
-    }, deleteConfirmationRemaining(armed, Date.now()));
-    return () => window.clearTimeout(timer);
-  }, [armed]);
-  const requestDelete = () => {
-    if (!selected) return;
-    const intent = deleteIntent(armed, selected.id, Date.now());
-    setArmed(intent.armed);
-    if (intent.action === "delete") props.onDelete(selected.id);
-  };
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const actions = [
+    { label: copy.copyArchive, run: props.onCopy },
+    { label: copy.exportArchive, run: props.onExport },
+    { label: copy.deleteArchive, run: () => setConfirmDelete(selected?.id ?? null), danger: true }
+  ];
   return (
     <section className="archive-workspace" aria-label={copy.archiveTitle} aria-busy={props.busy}>
       <header className="archive-toolbar">
+        {props.embedded ? <span className="library-record-kind">{copy.folderResults}</span> : null}
         {!props.embedded ? <div className="decision-tabs"><strong><ArchiveIcon />{copy.archiveTitle}</strong>{props.onDecisions ? <button type="button" disabled={props.busy} onClick={props.onDecisions}>{copy.decisionTitle}</button> : null}</div> : null}
         {!props.embedded ? <div className="archive-filters">
           <input type="search" name="archive-search" autoComplete="off" value={props.query} placeholder={copy.archiveSearch} aria-label={copy.archiveSearch} disabled={props.busy} onChange={(event) => props.onQueryChange(event.target.value)} />
@@ -85,10 +76,9 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
         </div> : null}
         <div className="archive-actions">
           {!props.embedded ? <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button> : null}
-          <button type="button" title={copy.copyArchive} aria-label={copy.copyArchive} disabled={!selected || props.busy} onClick={props.onCopy}><CopyIcon /></button>
-          <button type="button" title={copy.exportArchive} aria-label={copy.exportArchive} disabled={!selected || props.busy} onClick={props.onExport}><DownloadIcon /></button>
-          <button type="button" className={armed?.id === selected?.id ? "danger" : ""} title={armed?.id === selected?.id ? copy.confirmDeleteArchive : copy.deleteArchive} aria-label={armed?.id === selected?.id ? copy.confirmDeleteArchive : copy.deleteArchive} disabled={!selected || props.busy} onClick={requestDelete}><TrashIcon /></button>
-          <button type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button>
+          {props.onOrganize ? <button className="library-organize" type="button" disabled={props.busy} onClick={props.onOrganize}>{copy.libraryOrganize}</button> : null}
+          <LibraryMenu label={copy.libraryMore} disabled={!selected || props.busy} actions={actions} />
+          {!props.embedded ? <button type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
         </div>
       </header>
       <div className="archive-body">
@@ -112,7 +102,10 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           {props.detailOverride ?? (selected ? <ArchiveDetail onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onFollowUp={props.onFollowUp} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
         </main>
       </div>
-      <div className="archive-status" role="status" aria-live="polite">{armed?.id === selected?.id ? copy.confirmDeleteArchive : props.status}</div>
+      <div className="archive-status" role="status" aria-live="polite">{props.status}</div>
+      {confirmDelete === selected?.id && selected ? <ConfirmDialog copy={copy} title={copy.deleteArchive} message={copy.confirmDeleteArchive}
+        confirmLabel={copy.deleteArchive} cancelLabel={copy.cancel} onCancel={() => setConfirmDelete(null)}
+        onConfirm={() => { setConfirmDelete(null); props.onDelete(selected.id); }} /> : null}
     </section>
   );
 }

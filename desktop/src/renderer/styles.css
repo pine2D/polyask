@@ -1,6 +1,7 @@
 @import "./backup.css";
 @import "./task-folder.css";
 @import "./decision.css";
+@import "./library.css";
 
 :root {
   color-scheme: light dark;

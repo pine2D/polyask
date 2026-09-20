@@ -318,9 +318,8 @@ test("archive workspace exposes dense search, filters, actions and answer metada
   assert.match(html, /aria-pressed="true"/);
   assert.match(html, /aria-current="true"/);
   assert.match(html, /Capture current answers/);
-  assert.match(html, /Copy Markdown/);
-  assert.match(html, /Export Markdown/);
-  assert.match(html, /Delete result/);
+  assert.match(html, /aria-label="More actions"/);
+  assert.match(html, /aria-haspopup="menu"/);
   assert.match(html, /maxLength="4000"/);
   assert.match(html, /aria-label="Unmark best"/);
   assert.match(html, /Rayleigh scattering/);
@@ -354,4 +353,10 @@ test("saved answers keep a visible truncation warning alongside their text", () 
     const complete = { ...record, results: [{ ...record.results[0], code: undefined }] };
     assert.ok(!renderArchive({ copy, locale, selected: complete, items: [complete] }).includes(copy.answerTruncated));
   }
+});
+
+ test("embedded results leave the only close control to the library shell", () => {
+  const html = renderArchive({ embedded: true, selected: archiveFixture() });
+  assert.doesNotMatch(html, /aria-label="Close result library"/);
+  assert.match(html, /aria-label="More actions"/);
 });
