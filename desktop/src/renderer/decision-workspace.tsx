@@ -9,6 +9,9 @@ import { registerDecisionNavigationGuard, runApprovedDecisionNavigation } from "
 import { shell } from "./shell-api";
 
 interface Props {
+  readonly embedded?: boolean;
+  readonly initialRecord?: DecisionRecord;
+  readonly onChanged?: (record?: DecisionRecord) => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly initialSource: ArchiveRecord | null;
@@ -20,10 +23,10 @@ const newCard = (source: ArchiveRecord): DecisionInput => ({ archiveId: source.i
   title: [...(source.task || source.text)].slice(0, 160).join(""), conclusion: "", rationale: "",
   uncertainties: "", nextStep: "", status: "draft", evidence: [] });
 
-export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onClose }: Props): React.JSX.Element {
+export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onClose, embedded, initialRecord, onChanged }: Props): React.JSX.Element {
   const [items, setItems] = useState<DecisionRecord[]>([]);
-  const [saved, setSaved] = useState<DecisionRecord | null>(null);
-  const [value, setValue] = useState<DecisionInput | null>(() => initialSource ? newCard(initialSource) : null);
+  const [saved, setSaved] = useState<DecisionRecord | null>(initialRecord ?? null);
+  const [value, setValue] = useState<DecisionInput | null>(() => initialSource ? newCard(initialSource) : initialRecord ? decisionInput(initialRecord) : null);
   const [editing, setEditing] = useState(!!initialSource);
   const [source, setSource] = useState<ArchiveRecord | null | undefined>(initialSource ?? undefined);
   const [sourceFailed, setSourceFailed] = useState(false);
@@ -46,6 +49,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
     if (dirty) setConfirmation({ text: copy.decisionDiscard, action }); else action();
   }), [dirty, copy.decisionDiscard]);
   useEffect(() => {
+    if (embedded) return;
     const epoch = ++searchEpoch.current;
     const timer = setTimeout(() => {
       setLoading(true);
@@ -86,14 +90,14 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
     void run(async () => {
       const record = saved ? await shell.updateDecision(saved.id, value) : await shell.createDecision(value);
       setSaved(record); setValue(decisionInput(record)); setEditing(false); setRevision((count) => count + 1);
-      setMessage(copy.decisionSaved);
+      setMessage(copy.decisionSaved); onChanged?.(record);
     });
   };
   const clearDetail = () => { setSaved(null); setValue(null); setEditing(false); setMessage(""); };
   const remove = () => {
     if (!saved) return;
     setConfirmation({ text: copy.decisionDeleteConfirm, action: () => { void run(async () => {
-      await shell.deleteDecision(saved.id); clearDetail(); setRevision((count) => count + 1);
+      await shell.deleteDecision(saved.id); clearDetail(); onChanged?.(); setRevision((count) => count + 1);
     }); } });
   };
   const exportCard = () => { if (saved) void run(async () => {
@@ -103,7 +107,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }); };
   return <section className="archive-workspace decision-workspace" aria-label={copy.decisionTitle} aria-busy={busy}>
-    <header className="archive-toolbar decision-toolbar">
+    {!embedded ? <header className="archive-toolbar decision-toolbar">
       <nav className="decision-tabs" aria-label={copy.archiveTitle}>
         <button type="button" disabled={busy} onClick={() => guard(() => onArchives())}>{copy.decisionArchives}</button>
         <button type="button" aria-current="page">{copy.decisionTitle}</button>
@@ -115,14 +119,14 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
         </select>
       </div>
       <button type="button" disabled={busy} onClick={() => guard(onClose)}>{copy.closeArchive}</button>
-    </header>
+    </header> : null}
     <div className="archive-body">
-      <aside className="archive-list" aria-label={copy.decisionTitle}>
+      {!embedded ? <aside className="archive-list" aria-label={copy.decisionTitle}>
         {loading ? <p role="status">{copy.archiveLoading}</p> : !items.length ? <p>{copy.decisionEmpty}</p> : items.map((record) => <button type="button" key={record.id} aria-current={saved?.id === record.id ? "true" : undefined} disabled={busy} onClick={() => select(record)}>
           <time dateTime={new Date(record.updatedAt).toISOString()}>{formatDateTime(record.updatedAt, locale)}</time>
           <span>{record.title}</span><small>{decisionStatusLabel(copy, record.status)} · {record.sourceTitle}</small>
         </button>)}
-      </aside>
+      </aside> : null}
       <main className="archive-detail-pane">
         {value ? <>
           <div className="decision-detail-actions">

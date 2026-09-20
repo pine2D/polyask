@@ -126,11 +126,11 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 - 模板删除先在外壳内等待 6 秒（跨页面保留撤销入口），到期才调用原有 tombstone 删除；撤销不写数据库，不新增持久键。等待期间退出应用保留模板。
 
-- 本机库是 `app.getPath("userData")/polyask.sqlite`（Electron 内置 `node:sqlite`），WAL、外键、参数化仓储、事务 outbox。SQLite user_version=2，增量新增 decisions 表，不改旧记录。表：`history`、`archives`、`decisions`、`state_items`、`outbox`、`drive_files`、`meta`。
+- 本机库是 `app.getPath("userData")/polyask.sqlite`（Electron 内置 `node:sqlite`），WAL、外键、参数化仓储、事务 outbox。SQLite user_version=3，增量新增 folders / folder_memberships 表，不改旧记录。表：`history`、`archives`、`decisions`、`folders`、`folder_memberships`、`state_items`、`outbox`、`drive_files`、`meta`。
 - **界面状态不进数据库也不进同步**：窗口范围、最大化、布局模式、当前页、每页聚焦站点写在同目录的 `desktop-ui-state.json`（`ui-state-store.ts`，防抖 + 临时文件原子替换，损坏回退默认值、不阻止启动）。恢复时把窗口限制到当前显示器可见区域；页数因选站变化时把当前页夹到有效范围。不恢复抽屉、命令面板、确认框、发送中等瞬时状态。
-- **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删。`DataAdminService` 的「清空历史」「清空结果库」「清空决策卡」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
-- **「重置全部本机数据」是本应用唯一的物理删除路径**，语义刻意不同：先 `sync.disconnect()` 断开 Drive，再 `database.resetLocalData()` 物理清空六张表并只保留 `meta` 里的 `deviceId`。这里**不能用 tombstone**——tombstone 比云端记录新，重新连接后会赢过云端副本并上传，等于把云端也删了，与「重置不会删除云端数据」的承诺相反。`deviceId` 保留是因为本机在云端的旧 fragment 靠它找回，换掉会让重置后首轮上传把本机不建模的设置键整体丢掉。改这两条语义之前先改用户可见的承诺文案。
-- Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，`SUPPORTED_SYNC_SCHEMA = 2` 表达客户端可识别的最高版本；state/history/archive 仍仅接受 schema 1，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
+- **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删。`DataAdminService` 的「清空历史」「清空结果库」「清空决策卡」「清空任务文件夹」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
+- **「重置全部本机数据」是本应用唯一的物理删除路径**，语义刻意不同：先 `sync.disconnect()` 断开 Drive，再 `database.resetLocalData()` 物理清空八张表并只保留 `meta` 里的 `deviceId`。这里**不能用 tombstone**——tombstone 比云端记录新，重新连接后会赢过云端副本并上传，等于把云端也删了，与「重置不会删除云端数据」的承诺相反。`deviceId` 保留是因为本机在云端的旧 fragment 靠它找回，换掉会让重置后首轮上传把本机不建模的设置键整体丢掉。改这两条语义之前先改用户可见的承诺文案。
+- Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，文件夹和关联实体采用 schema 3，`SUPPORTED_SYNC_SCHEMA = 3` 表达客户端可识别的最高版本；state/history/archive 仍仅接受 schema 1，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
 - **schema 1 的线格式冻结在 `desktop/test/fixtures/schema1-*.json`**（每个文件 `{file, body}`，出自扩展时代的真实实现，代码保留在 tag `archive/extension-v0.25.1`）。**不要重新生成、不要按新校验「修正」它们**：`schema1-wire-format.test.ts` 把全部样本喂进下行链路并要求逐条接收，任何一次校验收紧命中存量形状会先红在那里，而不是在用户的结果库里静默少几条。新增决策卡 schema 2 另增 `schema2-decision*.json`；旧实体仍为 schema 1，冻结样本不变。
 - **两条跨端不变量**（跨设备记录要能互认，改一端就是让另一端拒收）：
   1. **提问在派发之前无条件入库**——`shell-ipc.ts` 的 `history.record(request.text)` 先于 `coordinator.send`。只有「请求解析失败」「图片站点不支持」这两处 throw 之前的非法请求不入库；**全部站点都失败的提问照样留记录**，这是有意的（用户要能重发）。
@@ -208,4 +208,12 @@ npm run soak -- --minutes=60
 - 证据只由主进程从保存原文核对并补入 host/label/capturedAt。删除来源后保持独立卡片与原摘录；来源查不到时文案同时说明可能尚未同步，不把“未找到”武断视为已删除。可以修改决策正文和移除证据，不能伪造缺失来源的新摘录。所有删除/清空来源的确认提示说明摘录保留。
 - 新实体 `decision:<id>` 独立 outbox；import 按 updatedAt/deletedAt 与 deviceId 整卡合并，版本与设备完全相同的 tombstone 优先。更新和删除时间单调增加；本机重置删除 decisions 表内容，保留 deviceId，断开 Drive 后执行。
 - 旧客户端读取远端 decision schema 2 会沿用 future-schema 保护停止上传；新版若发现先前跳过的可支持格式则全扫补拉。已有只读锁只能在该文件成功导入或 listing+changes 确认其已删除时清除；文件损坏/下载解析失败不能解锁。持续存在的不支持 state schema 2 会保持只读并重复扫描，正常 decision 补拉后恢复增量。
+
+### 任务文件夹契约
+
+- 文件夹为单层，多对多关联结果和决策卡；不复制内容、不自动带入来源。名称去首尾空白，1–80 个 Unicode 码点，禁止控制字符；同名允许，id 区分。结果库采用左侧导航＋混合列表＋原详情，主工具栏保持单行。
+- `shared/task-folder.ts` 定义 schema 3 的 folder / folderMembership。关联以 folderId 长度前缀、targetKind 和 targetId 生成确定性 id；每条关联独立版本，renderer 仅提交本次多选的差异，避免覆盖别的设备新增关联。
+- 文件夹删除为终态，迟到的重命名不复活。关联按版本时间/deviceId 合并，同版本删除优先；可显式重新加入仍存在的文件夹。删除文件夹及本机已知关联写 tombstone＋outbox，保留结果、决策卡与其他文件夹关联。未知/已删除目标不展示；乱序到达的关联仍保留，待文件夹和目标拉到再显示。
+- Drive 新实体文件名和元数据 id 使用正文 id 的 SHA-256，拉取校验哈希后按原 id 建索引；不放标题和摘录，避免复合或 Unicode id 超出 Drive 属性长度。schema 1/2 冻结 fixture 不改，新增 schema 3 样本。
+- 数据迁移新增两表与索引，清空文件夹保留内容，清空结果或卡片保留文件夹。本机重置清两表，仍先断开 Drive 并保留 deviceId。文件夹界面与多选对话框不新增持久 UI 设置。
 - UI 搜索覆盖正文和摘录；编辑为显式保存，失败保留内存草稿。工作区切换和全局命令经过未保存确认；确认默认取消、Escape关闭、焦点圈定。应用异常退出不承诺恢复尚未保存的编辑。导出为单卡 Markdown，不等同于可恢复备份。

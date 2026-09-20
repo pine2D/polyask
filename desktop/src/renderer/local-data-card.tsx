@@ -5,7 +5,7 @@ import type { SyncStatus } from "../shared/sync";
 import { ConfirmDialog } from "./confirm-dialog";
 import { shell } from "./shell-api";
 
-type LocalDataAction = "history" | "archives" | "decisions" | "reset";
+type LocalDataAction = "history" | "archives" | "decisions" | "folders" | "reset";
 
 interface LocalDataCardProps {
   readonly copy: DesktopCopy;
@@ -21,6 +21,7 @@ const CONFIRM_COPY: Record<LocalDataAction, { readonly title: keyof DesktopCopy;
   history: { title: "clearHistoryConfirmTitle", message: "clearHistoryConfirmMessage" },
   archives: { title: "clearArchivesConfirmTitle", message: "clearArchivesConfirmMessage" },
   decisions: { title: "clearDecisionsConfirmTitle", message: "clearDecisionsConfirmMessage" },
+  folders: { title: "clearFoldersConfirmTitle", message: "clearFoldersConfirmMessage" },
   reset: { title: "resetLocalConfirmTitle", message: "resetLocalConfirmMessage" }
 };
 
@@ -37,6 +38,8 @@ export function LocalDataCard(props: LocalDataCardProps): React.JSX.Element {
         props.onFeedback(formatCopy(props.copy.localDataArchivesCleared, { count: await shell.clearArchives() }));
       } else if (action === "decisions") {
         props.onFeedback(formatCopy(props.copy.localDataDecisionsCleared, { count: await shell.clearDecisions() }));
+      } else if (action === "folders") {
+        props.onFeedback(formatCopy(props.copy.localDataFoldersCleared, { count: await shell.clearFolders() }));
       } else {
         props.onStatus(await shell.resetLocalData());
         props.onReset?.();
@@ -57,6 +60,7 @@ export function LocalDataCard(props: LocalDataCardProps): React.JSX.Element {
         <button type="button" disabled={props.busy} onClick={() => setPending("history")}>{props.copy.clearHistoryAction}</button>
         <button type="button" disabled={props.busy} onClick={() => setPending("archives")}>{props.copy.clearArchivesAction}</button>
         <button type="button" disabled={props.busy} onClick={() => setPending("decisions")}>{props.copy.clearDecisionsAction}</button>
+        <button type="button" disabled={props.busy} onClick={() => setPending("folders")}>{props.copy.clearFoldersAction}</button>
         <button type="button" disabled={props.busy} onClick={() => setPending("reset")}>{props.copy.resetLocalAction}</button>
       </div>
       <p className="sync-privacy">{props.copy.localDataCloudUntouched}</p>

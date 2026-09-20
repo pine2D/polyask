@@ -16,6 +16,7 @@ import {
 } from "./icons";
 
 interface ArchiveWorkspaceProps {
+  readonly embedded?: boolean;
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly items: readonly ArchiveRecord[];
@@ -73,17 +74,17 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   return (
     <section className="archive-workspace" aria-label={copy.archiveTitle} aria-busy={props.busy}>
       <header className="archive-toolbar">
-        <div className="decision-tabs"><strong><ArchiveIcon />{copy.archiveTitle}</strong>{props.onDecisions ? <button type="button" disabled={props.busy} onClick={props.onDecisions}>{copy.decisionTitle}</button> : null}</div>
-        <div className="archive-filters">
+        {!props.embedded ? <div className="decision-tabs"><strong><ArchiveIcon />{copy.archiveTitle}</strong>{props.onDecisions ? <button type="button" disabled={props.busy} onClick={props.onDecisions}>{copy.decisionTitle}</button> : null}</div> : null}
+        {!props.embedded ? <div className="archive-filters">
           <input type="search" name="archive-search" autoComplete="off" value={props.query} placeholder={copy.archiveSearch} aria-label={copy.archiveSearch} disabled={props.busy} onChange={(event) => props.onQueryChange(event.target.value)} />
           <button type="button" className={props.favoriteOnly ? "active" : ""} title={copy.favoriteArchives} aria-label={copy.favoriteArchives} aria-pressed={props.favoriteOnly} disabled={props.busy} onClick={() => props.onFavoriteFilterChange(!props.favoriteOnly)}><StarIcon /></button>
           <select name="archive-tag-filter" value={props.selectedTag} aria-label={copy.archiveTags} disabled={props.busy} onChange={(event) => props.onTagChange(event.target.value)}>
             <option value="">{copy.allArchiveTags}</option>
             {props.tags.map((tag) => <option value={tag} key={tag}>{tag}</option>)}
           </select>
-        </div>
+        </div> : null}
         <div className="archive-actions">
-          <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button>
+          {!props.embedded ? <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button> : null}
           <button type="button" title={copy.copyArchive} aria-label={copy.copyArchive} disabled={!selected || props.busy} onClick={props.onCopy}><CopyIcon /></button>
           <button type="button" title={copy.exportArchive} aria-label={copy.exportArchive} disabled={!selected || props.busy} onClick={props.onExport}><DownloadIcon /></button>
           <button type="button" className={armed?.id === selected?.id ? "danger" : ""} title={armed?.id === selected?.id ? copy.confirmDeleteArchive : copy.deleteArchive} aria-label={armed?.id === selected?.id ? copy.confirmDeleteArchive : copy.deleteArchive} disabled={!selected || props.busy} onClick={requestDelete}><TrashIcon /></button>
@@ -91,7 +92,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
         </div>
       </header>
       <div className="archive-body">
-        <aside className="archive-list" aria-label={copy.archiveTitle}>
+        {!props.embedded ? <aside className="archive-list" aria-label={copy.archiveTitle}>
           {props.loading || !props.items.length ? (
             <div className="archive-empty" role="status">
               {props.loading ? copy.archiveLoading : emptyText}
@@ -106,7 +107,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
               </button>
             ))
           )}
-        </aside>
+        </aside> : null}
         <main className="archive-detail-pane">
           {props.detailOverride ?? (selected ? <ArchiveDetail onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onFollowUp={props.onFollowUp} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
         </main>

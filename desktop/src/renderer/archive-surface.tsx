@@ -6,13 +6,13 @@ import type { DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import { describeSynthesisSendCode, errorCode } from "../shared/status-copy";
 import type { PendingSynthesis, SynthesisCandidate, SynthesisSendRequest } from "../shared/synthesis";
-import { DecisionWorkspace } from "./decision-workspace";
+import { FolderWorkspace } from "./folder-workspace";
 import { ArchiveWorkspace } from "./archive-workspace";
 import { SerialActions, type ActionFailure } from "./serial-actions";
 import { SynthesisWorkspace } from "./synthesis-workspace";
 import { shell } from "./shell-api";
 
-interface ArchiveSurfaceProps {
+export interface ArchiveSurfaceProps {
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly onClose: () => void;
@@ -119,8 +119,10 @@ export function startArchiveFilterIntent<T>(
 }
 
 export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
-  const [decisionsOpen, setDecisionsOpen] = useState(false);
-  const [decisionSource, setDecisionSource] = useState<ArchiveRecord | null>(null);
+  return <FolderWorkspace {...props} renderArchive={(record, onChanged, onCreateDecision, onBusy, onSavedArchive) => <ArchiveRecordSurface key={record.id} {...props} onBusy={onBusy} onSavedArchive={onSavedArchive} preferredId={record.id} embeddedRecord={record} onChanged={onChanged} onCreateDecision={onCreateDecision} />} />;
+}
+
+function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
   const [items, setItems] = useState<readonly ArchiveRecord[]>([]);
   const [tags, setTags] = useState<readonly string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -130,6 +132,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  useEffect(() => { props.onBusy(busy); return () => props.onBusy(false); }, [busy, props.onBusy]);
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
   const requestEpoch = useRef<ReturnType<typeof createArchiveRequestEpoch> | null>(null);
@@ -165,7 +168,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
     );
   }
   if (!actionQueue.current) actionQueue.current = new SerialActions(setBusy, setStatus);
-  const selected = items.find((item) => item.id === selectedId) ?? items[0] ?? null;
+  const selected = items.find((item) => item.id === props.embeddedRecord.id) ?? props.embeddedRecord;
   const load = refresh.current;
 
   useEffect(() => {
@@ -198,24 +201,15 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
   const patch = (value: ArchivePatch) => { void run(async () => {
     if (!selected) return;
     const record = await shell.updateArchive(selected.id, value);
-    await load(record.id);
+    await load(record.id); props.onChanged();
   }, props.copy.archiveSaveFailed); };
 
-  if (decisionsOpen) return <DecisionWorkspace copy={props.copy} locale={props.locale} initialSource={decisionSource} onClose={props.onClose} onArchives={(source) => {
-    setDecisionsOpen(false); setDecisionSource(null);
-    if (source) {
-      currentFilters.current = { query: "", favorite: false, tag: "" };
-      setQuery(""); setFavoriteOnly(false); setSelectedTag(""); setSynthesisId(null);
-      setItems((current) => [source, ...current.filter((item) => item.id !== source.id)]);
-      setSelectedId(source.id); void load(source.id);
-    }
-  }} />;
 
   return (
     <ArchiveWorkspace
+      embedded
       copy={props.copy}
-      onDecisions={() => { setDecisionSource(null); setDecisionsOpen(true); }}
-      onCreateDecision={() => { if (selected) { setDecisionSource(selected); setDecisionsOpen(true); } }}
+      onCreateDecision={() => props.onCreateDecision(selected)}
       locale={props.locale}
       items={items}
       selected={selected}
@@ -234,7 +228,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
       onSelect={setSelectedId}
       onCapture={() => { void run(async () => {
         const record = await props.onCapture();
-        await load(record.id);
+        props.onSavedArchive(record);
         setStatus(props.copy.archiveSaved);
       }, props.copy.archiveCollectFailed); }}
       onCopy={() => { void run(async () => {
@@ -248,7 +242,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
       }, props.copy.archiveSaveFailed); }}
       onDelete={(id) => { void run(async () => {
         await shell.deleteArchive(id);
-        await load();
+        await load(); props.onChanged(true);
       }, props.copy.archiveSaveFailed); }}
       onPatch={patch}
       onOpenSource={(url) => { void run(() => shell.openExternal(url), props.copy.archiveLoadFailed); }}
@@ -260,7 +254,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}
       onSaveSynthesis={(replaceExisting) => { void run(async () => {
         const record = await props.onSaveSynthesis(replaceExisting);
-        await load(record.id);
+        props.onSavedArchive(record);
         setStatus(props.copy.synthesisSavedDone);
       }, props.copy.archiveSaveFailed); }}
     />
