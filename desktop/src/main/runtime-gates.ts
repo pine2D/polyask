@@ -75,8 +75,10 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
     completion = setTimeout(finish, durationFromEnvironment());
   }
   const record = (event: StabilityEventInput) => {
+    // Normal runs have no report consumer; retaining events would grow for the window's lifetime.
+    if (!reportPath) return;
     const recorded = monitor.record(event);
-    if (reportPath) appendJson(reportPath, recorded);
+    appendJson(reportPath, recorded);
   };
   window.on("unresponsive", () => record({ type: "unresponsive", code: "shell" }));
   window.webContents.on("render-process-gone", (_event, details) => {
