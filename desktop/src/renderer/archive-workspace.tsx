@@ -28,6 +28,8 @@ interface ArchiveWorkspaceProps {
   readonly loading: boolean;
   readonly busy: boolean;
   readonly status: string;
+  readonly onDecisions?: () => void;
+  readonly onCreateDecision?: () => void;
   readonly onClose: () => void;
   readonly onQueryChange: (value: string) => void;
   readonly onFavoriteFilterChange: (value: boolean) => void;
@@ -71,7 +73,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   return (
     <section className="archive-workspace" aria-label={copy.archiveTitle} aria-busy={props.busy}>
       <header className="archive-toolbar">
-        <strong><ArchiveIcon />{copy.archiveTitle}</strong>
+        <div className="decision-tabs"><strong><ArchiveIcon />{copy.archiveTitle}</strong>{props.onDecisions ? <button type="button" disabled={props.busy} onClick={props.onDecisions}>{copy.decisionTitle}</button> : null}</div>
         <div className="archive-filters">
           <input type="search" name="archive-search" autoComplete="off" value={props.query} placeholder={copy.archiveSearch} aria-label={copy.archiveSearch} disabled={props.busy} onChange={(event) => props.onQueryChange(event.target.value)} />
           <button type="button" className={props.favoriteOnly ? "active" : ""} title={copy.favoriteArchives} aria-label={copy.favoriteArchives} aria-pressed={props.favoriteOnly} disabled={props.busy} onClick={() => props.onFavoriteFilterChange(!props.favoriteOnly)}><StarIcon /></button>
@@ -106,10 +108,10 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           )}
         </aside>
         <main className="archive-detail-pane">
-          {props.detailOverride ?? (selected ? <ArchiveDetail initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onFollowUp={props.onFollowUp} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
+          {props.detailOverride ?? (selected ? <ArchiveDetail onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onFollowUp={props.onFollowUp} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
         </main>
       </div>
-      <div className="archive-status" role="status" aria-live="polite">{props.status}</div>
+      <div className="archive-status" role="status" aria-live="polite">{armed?.id === selected?.id ? copy.confirmDeleteArchive : props.status}</div>
     </section>
   );
 }

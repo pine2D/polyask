@@ -6,6 +6,7 @@ import type { DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import { describeSynthesisSendCode, errorCode } from "../shared/status-copy";
 import type { PendingSynthesis, SynthesisCandidate, SynthesisSendRequest } from "../shared/synthesis";
+import { DecisionWorkspace } from "./decision-workspace";
 import { ArchiveWorkspace } from "./archive-workspace";
 import { SerialActions, type ActionFailure } from "./serial-actions";
 import { SynthesisWorkspace } from "./synthesis-workspace";
@@ -118,6 +119,8 @@ export function startArchiveFilterIntent<T>(
 }
 
 export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
+  const [decisionsOpen, setDecisionsOpen] = useState(false);
+  const [decisionSource, setDecisionSource] = useState<ArchiveRecord | null>(null);
   const [items, setItems] = useState<readonly ArchiveRecord[]>([]);
   const [tags, setTags] = useState<readonly string[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -198,9 +201,21 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
     await load(record.id);
   }, props.copy.archiveSaveFailed); };
 
+  if (decisionsOpen) return <DecisionWorkspace copy={props.copy} locale={props.locale} initialSource={decisionSource} onClose={props.onClose} onArchives={(source) => {
+    setDecisionsOpen(false); setDecisionSource(null);
+    if (source) {
+      currentFilters.current = { query: "", favorite: false, tag: "" };
+      setQuery(""); setFavoriteOnly(false); setSelectedTag(""); setSynthesisId(null);
+      setItems((current) => [source, ...current.filter((item) => item.id !== source.id)]);
+      setSelectedId(source.id); void load(source.id);
+    }
+  }} />;
+
   return (
     <ArchiveWorkspace
       copy={props.copy}
+      onDecisions={() => { setDecisionSource(null); setDecisionsOpen(true); }}
+      onCreateDecision={() => { if (selected) { setDecisionSource(selected); setDecisionsOpen(true); } }}
       locale={props.locale}
       items={items}
       selected={selected}

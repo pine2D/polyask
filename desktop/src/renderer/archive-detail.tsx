@@ -21,6 +21,7 @@ interface ArchiveDetailProps {
   readonly pendingSynthesis: PendingSynthesis | null;
   readonly synthesisCandidate: SynthesisCandidate | null;
   readonly busy: boolean;
+  readonly onCreateDecision?: () => void;
   readonly onSynthesize: () => void;
   readonly onFollowUp?: (host: string) => void;
   readonly onCollectSynthesis: () => void;
@@ -56,6 +57,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           <button type="button" className={record.favorite ? "active" : ""} title={favoriteLabel} aria-label={favoriteLabel} aria-pressed={record.favorite} onClick={() => props.onPatch({ favorite: !record.favorite })}><StarIcon /></button>
         </div>
       </header>
+      {props.onCreateDecision ? <button className="decision-create" type="button" disabled={props.busy} onClick={props.onCreateDecision}>{copy.decisionCreate}</button> : null}
       <div className="archive-fields">
         <label>{copy.archiveTags}<input name="archive-tags" autoComplete="off" value={tags} onChange={(event) => setTags(event.target.value)} onBlur={saveTags} onKeyDown={(event) => { if (event.key === "Enter") saveTags(); }} /></label>
         <label>{copy.archiveNote}<textarea name="archive-note" autoComplete="off" maxLength={4000} value={note} onChange={(event) => setNote(event.target.value)} onBlur={() => props.onPatch({ note })} /></label>

@@ -2,7 +2,7 @@ export const SYNC_COPY = {
   en: {
     settings: "Settings",
     syncTitle: "Google Drive sync",
-    syncDescription: "Sync site scope, groups, prompt history and saved results through PolyAsk's private Drive app folder.",
+    syncDescription: "Sync site scope, groups, prompt history, templates, saved results and decision cards through PolyAsk's private Drive app folder. After syncing decision cards, older devices need an update to resume sync.",
     syncConnected: "Connected",
     syncDisconnected: "Not connected",
     syncPending: "{count} pending",
@@ -79,7 +79,7 @@ export const SYNC_COPY = {
   zhCN: {
     settings: "设置",
     syncTitle: "Google Drive 同步",
-    syncDescription: "通过 PolyAsk 的 Drive 应用专属目录同步站点范围、分组、提问历史和结果库。",
+    syncDescription: "通过 PolyAsk 的 Drive 应用专属目录同步站点范围、分组、提问历史、模板、结果库和决策卡。同步决策卡后，旧版设备需升级才能恢复同步。",
     syncConnected: "已连接",
     syncDisconnected: "未连接",
     syncPending: "{count} 项待同步",
@@ -156,7 +156,7 @@ export const SYNC_COPY = {
   zhTW: {
     settings: "設定",
     syncTitle: "Google Drive 同步",
-    syncDescription: "透過 PolyAsk 的 Drive 應用程式專屬資料夾同步網站範圍、群組、提問記錄與結果庫。",
+    syncDescription: "透過 PolyAsk 的 Drive 應用程式專屬資料夾同步網站範圍、群組、提問記錄、範本、結果庫與決策卡。同步決策卡後，舊版裝置須升級才能恢復同步。",
     syncConnected: "已連線",
     syncDisconnected: "未連線",
     syncPending: "{count} 項待同步",
