@@ -1,0 +1,21 @@
+{
+  "file": {
+    "id": "membership-file-a",
+    "appProperties": {
+      "app": "polyask",
+      "schema": "3",
+      "kind": "folderMembership",
+      "id": "3dc4af5cb90f749e12bb5c2d2d873134be386f39feed7980192651210239087f"
+    }
+  },
+  "body": {
+    "schema": 3,
+    "id": "8:folder-a:archive:archive-a",
+    "folderId": "folder-a",
+    "targetKind": "archive",
+    "targetId": "archive-a",
+    "createdAt": 100,
+    "updatedAt": 200,
+    "deviceId": "device-a"
+  }
+}

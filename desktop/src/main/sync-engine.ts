@@ -1,5 +1,7 @@
+import { createHash } from "node:crypto";
 import type { StoredArchive } from "../shared/archive";
 import type { StoredDecision } from "../shared/decision";
+import type { StoredTaskFolder, StoredFolderMembership } from "../shared/task-folder";
 import type { RuntimeInfo } from "../shared/runtime";
 import { createSyncDiagnosticSnapshot, type SyncDiagnosticSnapshot } from "../shared/sync-diagnostics";
 import {
@@ -191,7 +193,7 @@ export class SyncEngine {
     for (;;) {
       const ready = this.options.repository.ready(this.now());
       if (!ready.length) return waiting;
-      ready.sort((left, right) => ({ state: 0, history: 1, archive: 2, decision: 3 }[left.kind] - ({ state: 0, history: 1, archive: 2, decision: 3 }[right.kind])));
+      ready.sort((left, right) => ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5 }[left.kind] - ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5 }[right.kind])));
       // state 正文是本机整份 fragment、与出箱条数无关：一轮只上传一次，然后把本轮全部 state 项逐条 complete。
       // 出箱行本身不折叠（database.test.ts 明写 outbox 按 key 各留一行），折叠只发生在这里。
       const stateOperations = ready.filter((operation) => operation.kind === "state");
@@ -220,7 +222,7 @@ export class SyncEngine {
     let key = operation.key;
     let name: string;
     let properties: Record<string, string>;
-    let body: StateFragment | StoredHistory | StoredArchive | StoredDecision;
+    let body: StateFragment | StoredHistory | StoredArchive | StoredDecision | StoredTaskFolder | StoredFolderMembership;
     if (operation.kind === "state") {
       key = `state:${deviceId}`;
       name = `state-${deviceId}.json`;
@@ -244,6 +246,14 @@ export class SyncEngine {
       key = `decision:${record.id}`;
       name = `decision-${record.id}.json`;
       properties = { app: "polyask", schema: "2", kind: "decision", id: record.id, deleted: "deletedAt" in record ? "1" : "0" };
+      body = record;
+    } else if ((operation.kind === "folder" || operation.kind === "folderMembership") && operation.entityId) {
+      const record = operation.kind === "folder" ? this.options.repository.folder(operation.entityId) : this.options.repository.folderMembership(operation.entityId);
+      if (!record) { this.options.repository.complete(operation.key, operation.revision); return; }
+      key = `${operation.kind}:${record.id}`;
+      const wireId = createHash("sha256").update(record.id).digest("hex");
+      name = `${operation.kind}-${wireId}.json`;
+      properties = { app: "polyask", schema: "3", kind: operation.kind, id: wireId, deleted: "deletedAt" in record ? "1" : "0" };
       body = record;
     } else { this.options.repository.complete(operation.key, operation.revision); return; }
     const existing = this.options.repository.findDriveFile(key);

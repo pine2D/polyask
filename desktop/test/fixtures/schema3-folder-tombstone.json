@@ -1,0 +1,20 @@
+{
+  "file": {
+    "id": "folder-file-a",
+    "appProperties": {
+      "app": "polyask",
+      "schema": "3",
+      "kind": "folder",
+      "id": "a9ebc0768bdf54af5896a682bfb5c1fe9c0997be9e8840b8346264fae51bec38",
+      "deleted": "1"
+    }
+  },
+  "body": {
+    "schema": 3,
+    "id": "folder-a",
+    "createdAt": 100,
+    "updatedAt": 300,
+    "deletedAt": 300,
+    "deviceId": "device-a"
+  }
+}

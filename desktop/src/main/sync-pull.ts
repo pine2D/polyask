@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   mergeStateFragments,
   SYNC_SCHEMA,
@@ -106,13 +107,13 @@ export class SyncPull {
   ): Promise<void> {
     const props = file.appProperties ?? {};
     if (props.app !== "polyask") return;
-    const expectedSchema = props.kind === "decision" ? 2 : SYNC_SCHEMA;
+    const expectedSchema = (props.kind === "folder" || props.kind === "folderMembership") ? 3 : props.kind === "decision" ? 2 : SYNC_SCHEMA;
     if (Number(props.schema) > expectedSchema) {
       future.set(file.id, Number(props.schema));
       this.repository.deleteDriveFile(file.id);
       return;
     }
-    const key = logicalKey(file);
+    let key = logicalKey(file);
     if (!key || Number(props.schema) !== expectedSchema) {
       this.noteCorrupt(file.id);
       return;
@@ -153,6 +154,13 @@ export class SyncPull {
     }
     if (props.kind === "decision") {
       valid = (body as { id?: unknown }).id === props.id && this.repository.importDecision(body);
+    }
+    if (props.kind === "folder" || props.kind === "folderMembership") {
+      const id = (body as { id?: unknown }).id;
+      const identityMatches = typeof id === "string" && createHash("sha256").update(id).digest("hex") === props.id;
+      valid = identityMatches && (props.kind === "folder" ? this.repository.importFolder(body) : this.repository.importFolderMembership(body));
+      // Index by the original logical identity, so later local edits reuse this file.
+      if (valid) key = `${props.kind}:${id}`;
     }
     if (!valid) {
       this.noteCorrupt(file.id);
@@ -196,5 +204,6 @@ function logicalKey(file: DriveFile): string | null {
   if (props.kind === "history" && props.device) return `history:${props.id}:${props.device}`;
   if (props.kind === "archive") return `archive:${props.id}`;
   if (props.kind === "decision") return `decision:${props.id}`;
+  if (props.kind === "folder" || props.kind === "folderMembership") return `${props.kind}:${props.id}`;
   return null;
 }

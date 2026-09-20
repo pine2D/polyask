@@ -18,7 +18,8 @@ const CHANNELS = [
   "polyask:clear-history",
   "polyask:clear-archives",
   "polyask:reset-local",
-  "polyask:clear-decisions"
+  "polyask:clear-decisions",
+  "polyask:clear-folders"
 ] as const;
 
 export function registerDataAdminIpc(options: DataAdminIpcOptions): () => void {
@@ -41,6 +42,10 @@ export function registerDataAdminIpc(options: DataAdminIpcOptions): () => void {
   ipcMain.handle(CHANNELS[3], (event) => {
     if (!options.trusted(event)) throw new Error("untrusted_sender");
     return options.admin.clearDecisions();
+  });
+  ipcMain.handle(CHANNELS[4], (event) => {
+    if (!options.trusted(event)) throw new Error("untrusted_sender");
+    return options.admin.clearFolders();
   });
   // macOS 关窗后 activate 会重建窗口并重新注册，漏注销一条就 ipcMain.handle 重复注册直接抛错。
   return () => {

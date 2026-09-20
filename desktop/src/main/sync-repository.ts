@@ -6,6 +6,7 @@ import {
   type StoredArchive
 } from "../shared/archive";
 import { isStoredDecision, type StoredDecision } from "../shared/decision";
+import { isStoredTaskFolder, isStoredFolderMembership, type StoredTaskFolder, type StoredFolderMembership } from "../shared/task-folder";
 import { SITE_KEYS, type SiteKey } from "../shared/contracts";
 import type { Tier } from "../shared/protocol";
 import {
@@ -191,6 +192,38 @@ export class SyncRepository {
     return true;
   }
 
+  importFolder(value: unknown): boolean {
+    if (!isStoredTaskFolder(value)) return false;
+    const current = this.database.folders.get(value.id);
+    // Deletion is terminal; otherwise the deterministic version winner prevails.
+    // Republish a local winner if a concurrent writer overwrote the shared file.
+    const order = current ? compareSyncVersion(value, current) : 1;
+    const sameState = current && ("deletedAt" in current) === ("deletedAt" in value);
+    if (current && (("deletedAt" in current && !("deletedAt" in value)) || (sameState && order < 0))) {
+      this.database.outbox.enqueue({ key: `folder:${current.id}`, kind: "folder", entityId: current.id, nextAt: 0, attempt: 0 });
+      return true;
+    }
+    if (sameState && order === 0) return true;
+    this.database.folders.put(value, false);
+    return true;
+  }
+
+  importFolderMembership(value: unknown): boolean {
+    if (!isStoredFolderMembership(value)) return false;
+    const current = this.database.folders.getMembership(value.id);
+    const order = current ? compareSyncVersion(value, current) : 1;
+    if (current && (order < 0 || (order === 0 && "deletedAt" in current && !("deletedAt" in value)))) {
+      this.database.outbox.enqueue({ key: `folderMembership:${current.id}`, kind: "folderMembership", entityId: current.id, nextAt: 0, attempt: 0 });
+      return true;
+    }
+    if (current && order === 0 && (!("deletedAt" in value) || "deletedAt" in current)) return true;
+    // Keep orphan links: targets/folders can arrive later. Rendering filters deletions.
+    this.database.folders.putMembership(value, false);
+    return true;
+  }
+
+  folder(id: string): StoredTaskFolder | null { return this.database.folders.get(id); }
+  folderMembership(id: string): StoredFolderMembership | null { return this.database.folders.getMembership(id); }
   decision(id: string): StoredDecision | null { return this.database.decisions.get(id); }
   history(id: string): StoredHistory | null { return this.database.history.get(id); }
   archive(id: string): StoredArchive | null { return this.database.archives.get(id); }

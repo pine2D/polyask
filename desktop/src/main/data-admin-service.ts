@@ -57,6 +57,14 @@ export class DataAdminService {
     return cleared;
   }
 
+  clearFolders(): number {
+    const folders = this.options.database.folders.list();
+    this.options.database.folders.transaction(() => {
+      for (const folder of folders) this.options.database.folders.delete(folder.id, this.now(), this.options.deviceId());
+    });
+    return folders.length;
+  }
+
   async resetLocal(): Promise<SyncStatus> {
     await this.options.sync.disconnect();
     this.options.database.resetLocalData();

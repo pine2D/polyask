@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { TaskFolderRepository } from "./task-folder-repository";
 import { DecisionRepository } from "./decision-repository";
 import { ArchiveRepository } from "./archive-repository";
 import { HistoryRepository } from "./history-repository";
@@ -11,7 +12,7 @@ import { OutboxRepository } from "./outbox-repository";
 import { inTransaction } from "./repository-utils";
 import { StateRepository } from "./state-repository";
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function migrate(database: DatabaseSync): void {
   database.exec("PRAGMA foreign_keys = ON");
@@ -40,6 +41,12 @@ function migrate(database: DatabaseSync): void {
       deleted_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS decisions_sort ON decisions(sort_time DESC, id);
+    CREATE TABLE IF NOT EXISTS folders (id TEXT PRIMARY KEY, body TEXT NOT NULL, deleted_at INTEGER);
+    CREATE TABLE IF NOT EXISTS folder_memberships (
+      id TEXT PRIMARY KEY, folder_id TEXT NOT NULL, target_kind TEXT NOT NULL, target_id TEXT NOT NULL, body TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS membership_folder ON folder_memberships(folder_id);
+    CREATE INDEX IF NOT EXISTS membership_target ON folder_memberships(target_kind, target_id);
     CREATE TABLE IF NOT EXISTS state_items (
       key TEXT PRIMARY KEY,
       body TEXT NOT NULL,
@@ -75,6 +82,7 @@ export class DesktopDatabase {
   readonly history: HistoryRepository;
   readonly archives: ArchiveRepository;
   readonly decisions: DecisionRepository;
+  readonly folders: TaskFolderRepository;
   readonly state: StateRepository;
   readonly driveFiles: DriveFileRepository;
   readonly meta: MetaRepository;
@@ -85,6 +93,7 @@ export class DesktopDatabase {
     this.history = new HistoryRepository(database, this.outbox);
     this.archives = new ArchiveRepository(database, this.outbox);
     this.decisions = new DecisionRepository(database, this.outbox);
+    this.folders = new TaskFolderRepository(database, this.outbox);
     this.state = new StateRepository(database, this.outbox);
     this.driveFiles = new DriveFileRepository(database);
     this.meta = new MetaRepository(database);
@@ -111,7 +120,7 @@ export class DesktopDatabase {
   // 本机重置唯一的物理删除路径：只清本机，云端由重新连接后的全量拉取恢复。deviceId 保留（见 DataAdminService）。
   resetLocalData(): void {
     inTransaction(this.database, () => {
-      for (const table of ["history", "archives", "decisions", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
+      for (const table of ["history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");
     });
     // DELETE 只把页挂进 freelist，提问与回答明文仍留在 .sqlite / WAL 里；重置的承诺是「本机清空」，收缩一次。

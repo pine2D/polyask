@@ -1,3 +1,4 @@
+import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
 import { contextBridge, ipcRenderer } from "electron";
 
@@ -42,6 +43,14 @@ export interface PolyAskDesktopApi {
   menuShortcuts(): Promise<MenuShortcut[]>;
   broadcast(request: BroadcastRequest): Promise<SiteRunResult[]>;
   collectAnswers(request: CollectionRequest): Promise<CollectedAnswer[]>;
+  listFolders(): Promise<TaskFolder[]>;
+  createFolder(name: string): Promise<TaskFolder>;
+  renameFolder(id: string, name: string): Promise<TaskFolder>;
+  deleteFolder(id: string): Promise<void>;
+  searchFolderContents(filters: FolderFilters): Promise<FolderContent[]>;
+  folderMemberships(target: FolderTarget): Promise<string[]>;
+  patchFolderMemberships(target: FolderTarget, changes: readonly FolderMembershipChange[]): Promise<string[]>;
+  clearFolders(): Promise<number>;
   searchDecisions(filters: DecisionFilters): Promise<DecisionRecord[]>;
   getDecision(id: string): Promise<DecisionRecord | null>;
   createDecision(input: DecisionInput): Promise<DecisionRecord>;
@@ -115,6 +124,14 @@ const api: PolyAskDesktopApi = Object.freeze({
   menuShortcuts: () => invoke("polyask:menu-shortcuts"),
   broadcast: (request: BroadcastRequest) => invoke("polyask:broadcast", request),
   collectAnswers: (request: CollectionRequest) => invoke("polyask:collect", request),
+  listFolders: () => invoke("polyask:folder-list"),
+  createFolder: (name: string) => invoke("polyask:folder-create", name),
+  renameFolder: (id: string, name: string) => invoke("polyask:folder-rename", { id, name }),
+  deleteFolder: (id: string) => invoke("polyask:folder-delete", id),
+  searchFolderContents: (filters: FolderFilters) => invoke("polyask:folder-search", filters),
+  folderMemberships: (target: FolderTarget) => invoke("polyask:folder-memberships", target),
+  patchFolderMemberships: (target: FolderTarget, changes: readonly FolderMembershipChange[]) => invoke("polyask:folder-memberships-patch", { target, changes }),
+  clearFolders: () => invoke("polyask:clear-folders"),
   searchDecisions: (filters: DecisionFilters) => invoke("polyask:decision-search", filters),
   getDecision: (id: string) => invoke("polyask:decision-get", id),
   createDecision: (input: DecisionInput) => invoke("polyask:decision-create", input),

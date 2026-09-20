@@ -6,14 +6,14 @@ import test from "node:test";
 import { DatabaseSync } from "node:sqlite";
 
 import { DesktopDatabase } from "../src/main/database";
-import { archiveFixture } from "./fixtures";
+import { archiveFixture, readSource } from "./fixtures";
 
 test("desktop database enables WAL and preserves archive tombstones across reopen", () => {
   const directory = mkdtempSync(join(tmpdir(), "polyask-database-"));
   const path = join(directory, "polyask.sqlite");
   try {
     const first = DesktopDatabase.open(path);
-    assert.deepEqual(first.configuration(), { journalMode: "wal", foreignKeys: true, userVersion: 2 });
+    assert.deepEqual(first.configuration(), { journalMode: "wal", foreignKeys: true, userVersion: 3 });
     first.archives.put(archiveFixture());
     first.archives.delete("archive-a", 2_000, "device-b");
     assert.equal(first.outbox.count(), 1);
@@ -126,11 +126,32 @@ test("decision migration preserves a schema 1 database and its archived JSON ver
     old.prepare("INSERT INTO meta VALUES(?,?)").run("deviceId",JSON.stringify("old-device"));
     old.close();
     const migrated=DesktopDatabase.open(path);
-    assert.equal(migrated.configuration().userVersion,2);
+    assert.equal(migrated.configuration().userVersion,3);
     assert.deepEqual(migrated.archives.get(archive.id),archive);
     assert.equal(migrated.meta.get("deviceId"),"old-device");
     assert.deepEqual(migrated.decisions.list(),[]);
     assert.equal(migrated.outbox.count(),0);
     migrated.close();
   }finally{rmSync(directory,{recursive:true,force:true});}
+});
+
+test("folder migration preserves schema 2 decision bodies and device identity",()=>{
+  const directory=mkdtempSync(join(tmpdir(),"polyask-v2-folders-"));
+  const path=join(directory,"old.sqlite");
+  try {
+    const decision=JSON.parse(readSource("test/fixtures/schema2-decision.json")).body;
+    const old=new DatabaseSync(path);
+    old.exec("CREATE TABLE decisions(id TEXT PRIMARY KEY,body TEXT NOT NULL,sort_time INTEGER NOT NULL,deleted_at INTEGER); CREATE TABLE meta(key TEXT PRIMARY KEY,body TEXT NOT NULL); PRAGMA user_version=2");
+    old.prepare("INSERT INTO decisions VALUES(?,?,?,NULL)").run(decision.id,JSON.stringify(decision),decision.updatedAt);
+    old.prepare("INSERT INTO meta VALUES(?,?)").run("deviceId",JSON.stringify("old-device"));
+    old.close();
+    const migrated=DesktopDatabase.open(path);
+    assert.equal(migrated.configuration().userVersion,3);
+    assert.deepEqual(migrated.decisions.get(decision.id),decision);
+    assert.deepEqual(migrated.folders.list(),[]);
+    assert.deepEqual(migrated.folders.listMemberships(),[]);
+    assert.equal(migrated.meta.get("deviceId"),"old-device");
+    assert.equal(migrated.outbox.count(),0);
+    migrated.close();
+  } finally {rmSync(directory,{recursive:true,force:true});}
 });
