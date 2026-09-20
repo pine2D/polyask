@@ -37,3 +37,10 @@ export function clearDraft(storage: Storage): boolean {
   try { storage.removeItem(PROMPT_DRAFT_KEY); return true; }
   catch { return false; }
 }
+
+export class DraftRevision {
+  private revision = 0;
+  get current(): number { return this.revision; }
+  edit(): void { this.revision += 1; }
+  isCurrent(revision: number): boolean { return revision === this.revision; }
+}

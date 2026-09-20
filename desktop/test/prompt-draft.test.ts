@@ -32,8 +32,20 @@ test("malformed or oversized draft storage is ignored", () => {
 
 test("the app restores drafts locally and clears only after a confirmed send", () => {
   const app = readSource("src/renderer/index.tsx");
-  assert.match(app, /loadDraft\(window\.localStorage\)/);
-  assert.match(app, /saveDraft\(window\.localStorage, text\)/);
+  const hook = readSource("src/renderer/use-prompt-draft.ts");
+  assert.match(hook, /loadDraft\(window\.localStorage\)/);
+  assert.match(hook, /saveDraft\(window\.localStorage, text\)/);
   assert.match(app, /completed[\s\S]{0,300}result\.ok/);
   assert.match(app, /clearDraft\(window\.localStorage\)/);
+});
+
+test("a completed send clears only the exact unedited draft revision", async () => {
+  const { DraftRevision } = await import("../src/renderer/prompt-draft");
+  const draft = new DraftRevision();
+  const sending = draft.current;
+  assert.equal(draft.isCurrent(sending), true);
+  draft.edit();
+  assert.equal(draft.isCurrent(sending), false, "typing the next question must protect it");
+  draft.edit();
+  assert.equal(draft.isCurrent(sending), false, "even editing back to the same text is a new draft");
 });

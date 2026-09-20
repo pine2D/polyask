@@ -35,3 +35,14 @@ test("page tabs move focus without activating until Enter or Space", () => {
   assert.equal(pageTabKeyAction("ArrowRight", 0, 1), null);
   assert.equal(pageTabKeyAction("Escape", 0, 2), null);
 });
+
+test("palette keys preserve native buttons and IME composition", async () => {
+  const { paletteKeyAction } = await import("../src/renderer/keyboard");
+  assert.equal(paletteKeyAction("Enter", false, false), null);
+  assert.equal(paletteKeyAction("Enter", true, true), null);
+  assert.equal(paletteKeyAction("Escape", true, true), null);
+  assert.equal(paletteKeyAction("Enter", false, true), "execute");
+  assert.equal(paletteKeyAction("ArrowDown", false, true), "next");
+  assert.equal(paletteKeyAction("ArrowUp", false, true), "previous");
+  assert.equal(paletteKeyAction("Escape", false, false), "close");
+});

@@ -42,7 +42,8 @@ import {
 } from "./display-preferences";
 import { ImagePicker } from "./image-picker";
 import { PageTabs } from "./page-tabs";
-import { clearDraft, loadDraft, saveDraft } from "./prompt-draft";
+import { clearDraft } from "./prompt-draft";
+import { usePromptDraft } from "./use-prompt-draft";
 import { useFeedback } from "./use-feedback";
 import { usePresence } from "./presence";
 import { SiteFrames } from "./site-frames";
@@ -113,7 +114,7 @@ function App(): React.JSX.Element {
   const [health, setHealth] = useState<Partial<Record<string, SiteHealth>>>({});
   const [healthChecking, setHealthChecking] = useState(false);
   const [layout, setLayout] = useState<LayoutState>(INITIAL_LAYOUT);
-  const [text, setText] = useState(() => loadDraft(window.localStorage).text);
+  const { text, setText, revision: draftRevision, clearSent } = usePromptDraft();
   const [auxiliaryBusy, setAuxiliaryBusy] = useState(false);
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
@@ -235,7 +236,6 @@ function App(): React.JSX.Element {
 
   const composerExpanded = promptExpanded || imageTrayOpen;
   useEffect(() => shell.setComposerExpanded(composerExpanded), [composerExpanded]);
-  useEffect(() => { saveDraft(window.localStorage, text); }, [text]);
   useEffect(() => {
     saveCompletionNotifications(window.localStorage, completionNotifications);
     shell.setCompletionNotifications(completionNotifications);
@@ -283,6 +283,7 @@ function App(): React.JSX.Element {
 
   const submit = async (): Promise<void> => {
     const prompt = text.trim();
+    const sentRevision = draftRevision.current;
     if (!prompt || selected.size === 0 || runState !== "idle") return;
     await actionLock.current!.run(async () => {
       if (imageWarning) {
@@ -299,8 +300,7 @@ function App(): React.JSX.Element {
         images
       });
       if (completed && [...completed.results.values()].some((result) => result.ok)) {
-        clearDraft(window.localStorage);
-        setText("");
+        clearSent(sentRevision);
       }
     });
   };

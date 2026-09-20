@@ -7,7 +7,7 @@ import type { PromptLibraryState } from "../shared/prompt-library";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { CloseIcon } from "./icons";
 import { commandItems, menuShortcutItems, searchCommands, type PaletteCommand, type PaletteGroup } from "./command-search";
-import { pageTabKeyAction } from "./keyboard";
+import { pageTabKeyAction, paletteKeyAction } from "./keyboard";
 import { PromptLibrary } from "./prompt-library";
 
 export type CommandPaletteMode = "commands" | "library" | "shortcuts";
@@ -82,21 +82,13 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
     else if (item.commandId) props.onExecute(item.commandId);
   };
   const onKeyDown = (event: React.KeyboardEvent): void => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      props.onClose();
-    } else if (props.mode === "library") {
-      return;
-    } else if (event.key === "ArrowDown" && visible.length) {
-      event.preventDefault();
-      setActiveIndex((activeIndex + 1) % visible.length);
-    } else if (event.key === "ArrowUp" && visible.length) {
-      event.preventDefault();
-      setActiveIndex((activeIndex - 1 + visible.length) % visible.length);
-    } else if (event.key === "Enter") {
-      event.preventDefault();
-      run(visible[activeIndex]);
-    }
+    const action = paletteKeyAction(event.key, event.nativeEvent.isComposing,
+      props.mode === "commands" && event.target === inputRef.current);
+    if (!action) return;
+    event.preventDefault();
+    if (action === "close") props.onClose();
+    else if (action === "execute") run(visible[activeIndex]);
+    else if (visible.length) setActiveIndex((activeIndex + (action === "next" ? 1 : -1) + visible.length) % visible.length);
   };
   const onTabKeyDown = (event: React.KeyboardEvent, index: number): void => {
     const action = pageTabKeyAction(event.key, index, PALETTE_MODES.length);
@@ -165,6 +157,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
               className={index === activeIndex ? "active" : ""}
               key={item.id}
               onMouseEnter={() => setActiveIndex(index)}
+              onFocus={() => setActiveIndex(index)}
               onClick={() => run(item)}
             >
               <span><strong>{item.label}</strong><small>{groupLabel(props.copy, item.group)}</small></span>

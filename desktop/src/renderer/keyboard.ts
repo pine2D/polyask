@@ -29,3 +29,16 @@ export function pageTabKeyAction(
   const offset = key === "ArrowRight" ? 1 : -1;
   return { focus: (current + offset + count) % count, activate: false };
 }
+
+export function paletteKeyAction(
+  key: string,
+  isComposing: boolean,
+  inSearch: boolean
+): "close" | "next" | "previous" | "execute" | null {
+  if (isComposing) return null;
+  if (key === "Escape") return "close";
+  if (!inSearch) return null;
+  if (key === "ArrowDown") return "next";
+  if (key === "ArrowUp") return "previous";
+  return key === "Enter" ? "execute" : null;
+}
