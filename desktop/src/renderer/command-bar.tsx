@@ -1,6 +1,6 @@
 import type { ReactNode, RefObject } from "react";
 
-import type { DesktopCopy } from "../shared/copy";
+import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
 import { ChevronDownIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
@@ -52,6 +52,8 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
     { value: "think", label: props.copy.think, icon: "think", glyph: <DeepThinkIcon /> }
   ] as const;
   const busy = props.runState !== "idle" || props.auxiliaryBusy;
+  const sendLabel = formatCopy(props.selectedCount === 1 ? props.copy.sendToOneSite : props.copy.sendToSites, { count: props.selectedCount });
+  const cancelLabel = props.runState === "cancelling" ? props.copy.cancelling : props.copy.cancel;
 
   return (
     <header className={`command-bar${props.pageControl ? " has-pages" : ""}${props.expanded ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
@@ -108,9 +110,9 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       </div>
       {props.imageControl}
       {props.runState !== "idle" ? (
-        <button type="button" className="cancel primary-action priority-p0" disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{props.runState === "cancelling" ? props.copy.cancelling : props.copy.cancel}</span></button>
+        <button type="button" className="cancel primary-action priority-p0" title={cancelLabel} aria-label={cancelLabel} disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{cancelLabel}</span></button>
       ) : (
-        <button type="button" className="send primary-action priority-p0" title={props.sendBlockedReason ?? undefined} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
+        <button type="button" className="send primary-action priority-p0" title={props.sendBlockedReason ?? sendLabel} aria-label={sendLabel} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><span className="send-count" aria-hidden="true">{props.selectedCount}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}
       <WorkspaceActions onCompare={props.onCompare} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} />
     </header>
