@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.1.0] - 2026-09-20
+
+升级提示：使用 Drive 同步的设备请全部升级到 v1.1.0；旧版检测到决策卡或文件夹的新同步格式后会停止写入，升级后恢复同步。
+
+验收限制：真实 Drive 双设备同步与恢复、真实账号完整任务、长时间资源测量，以及本版 Windows 安装版/便携版、Linux deb 和两种 macOS 包的原生安装使用验收尚未完成。自动化测试与构建检查不替代这些验收。
+
 ### 变更
 
 - 保持单行命令栏，发送按钮显示目标站点数，窄窗口也可见；发送与取消按钮补齐读屏名称。中小窗口收起比较按钮文字，为提问框留出空间。
@@ -788,7 +794,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.0.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/pine2D/polyask/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/pine2D/polyask/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/pine2D/polyask/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/pine2D/polyask/compare/v0.25.1...v1.0.0
