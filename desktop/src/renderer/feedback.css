@@ -10,3 +10,6 @@
 .site-retry:disabled { opacity: .5; }
 .surface-stage, .command-surface { height: calc(100% - var(--feedback-height, 32px)); }
 .workspace-drawer { bottom: var(--feedback-height, 32px); }
+
+.comparison-filter { display: flex; align-items: center; gap: 6px; min-height: 28px; font-size: 12px; }
+.compare-trigger { display: flex; align-items: center; gap: 4px; }

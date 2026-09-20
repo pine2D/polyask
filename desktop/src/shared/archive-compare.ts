@@ -31,3 +31,7 @@ export function compareAnswerParagraphs(left: string, right: string): AnswerPara
     }))
   };
 }
+
+export function comparisonParagraphs(paragraphs: readonly ComparedParagraph[], differencesOnly: boolean): readonly ComparedParagraph[] {
+  return differencesOnly ? paragraphs.filter((paragraph) => paragraph.relation === "unique") : paragraphs;
+}

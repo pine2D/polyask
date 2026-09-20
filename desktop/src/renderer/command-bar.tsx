@@ -3,7 +3,7 @@ import type { ReactNode, RefObject } from "react";
 import type { DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
-import { ChevronDownIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
+import { ChevronDownIcon, CompareIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
 import { commandKeyAction } from "./keyboard";
 import type { WorkspacePanelTab } from "./workspace-panel-state";
 import { WorkspaceActions } from "./workspace-actions";
@@ -17,6 +17,7 @@ interface CommandBarProps {
   readonly tier: Tier;
   readonly runState: RunState;
   readonly auxiliaryBusy: boolean;
+  readonly automaticFocus?: boolean;
   readonly layoutMode: "overview" | "focus";
   readonly selectedCount: number;
   readonly failureCount: number;
@@ -33,6 +34,7 @@ interface CommandBarProps {
   readonly expanded: boolean;
   readonly onTextChange: (value: string) => void;
   readonly onSubmit: () => void;
+  readonly onCompare?: () => void;
   readonly onCancel: () => void;
   readonly onTierChange: (value: Tier) => void;
   readonly onLayoutChange: (value: "overview" | "focus") => void;
@@ -65,7 +67,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       </div>
       <div className="mode-switch priority-p0" aria-label={props.copy.layoutLabel}>
         <button type="button" title={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
-        <button type="button" title={props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
+        <button type="button" title={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
       </div>
       {props.pageControl}
       <textarea
@@ -110,6 +112,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       ) : (
         <button type="button" className="send primary-action priority-p0" title={props.sendBlockedReason ?? undefined} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}
+      {props.onCompare ? <button type="button" className="compare-trigger" title={props.copy.collectCompare} aria-label={props.copy.collectCompare} disabled={busy} onClick={props.onCompare}><CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span></button> : null}
       <WorkspaceActions copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} />
     </header>
   );

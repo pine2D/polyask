@@ -23,3 +23,16 @@ test("native site views reserve the feedback bar in either density and composer 
     for (const {bounds} of layout.placements) assert.ok(bounds.y + bounds.height <= 800 - WORKSPACE_FEEDBACK_HEIGHT);
   }
 });
+
+test("an intentional overview falls back to focus when reserved space is too small", () => {
+  const layout = computeWorkspaceLayout({ width:800,height:450,density:"compact",composerExpanded:false,drawerOpen:false,requestedMode:"overview",focused:"claude",overviewOrder:["claude","kimi","chatgpt","gemini"],focusOrder:["claude","kimi","chatgpt","gemini"] });
+  assert.equal(layout.mode, "focus");
+});
+
+test("page tabs name the sites in their tooltip and accessible label", async () => {
+  const { PageTabs } = await import("../src/renderer/page-tabs");
+  const { SITES } = await import("../src/main/sites");
+  const html = renderToStaticMarkup(<PageTabs copy={getCopy("en")} sites={SITES} selectedSites={SITES.map((site) => site.key)} statuses={{}} page={0} inputMethod="pointer" onPageChange={() => {}} />);
+  assert.match(html, /title="Claude · ChatGPT · Gemini"/);
+  assert.match(html, /aria-label="[^"]*Claude · ChatGPT · Gemini"/);
+});

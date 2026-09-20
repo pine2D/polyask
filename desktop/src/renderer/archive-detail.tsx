@@ -13,6 +13,7 @@ import { MarkdownPreview } from "./markdown-preview";
 interface ArchiveDetailProps {
   readonly copy: DesktopCopy;
   readonly locale: string;
+  readonly initialComparisonOpen?: boolean;
   readonly record: ArchiveRecord;
   readonly onPatch: (patch: ArchivePatch) => void;
   readonly onOpenSource: (url: string) => void;
@@ -28,9 +29,9 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const { copy, record } = props;
   const [tags, setTags] = useState(record.tags.join(", "));
   const [note, setNote] = useState(record.note);
-  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [comparisonOpen, setComparisonOpen] = useState(!!props.initialComparisonOpen);
   useEffect(() => { setTags(record.tags.join(", ")); setNote(record.note); }, [record]);
-  useEffect(() => { setComparisonOpen(false); }, [record.id]);
+  useEffect(() => { setComparisonOpen(!!props.initialComparisonOpen); }, [record.id, props.initialComparisonOpen]);
   const saveTags = () => props.onPatch({
     tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean)
   });

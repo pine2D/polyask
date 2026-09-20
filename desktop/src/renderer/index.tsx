@@ -100,6 +100,7 @@ function App(): React.JSX.Element {
   const bootstrapStarted = useRef(false);
   const sitesRef = useRef<readonly SiteDefinition[]>([]);
   const layoutPage = useRef(0);
+  const automaticFocus = useRef(false);
   const requestedPage = useRef<{ readonly page: number; readonly inputMethod: "keyboard" | "pointer" } | null>(null);
   const actionLock = useRef<ExclusiveActionLock | null>(null);
   const commandActions = useRef<CommandActions>({});
@@ -122,6 +123,7 @@ function App(): React.JSX.Element {
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
   const [surface, setSurface] = useState<DesktopSurface>("sites");
+  const [comparisonId, setComparisonId] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] = useState<"overview" | "drive-diagnostics">("overview");
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(INITIAL_SYNC);
@@ -221,6 +223,8 @@ function App(): React.JSX.Element {
         requestedPage.current = null;
         layoutPage.current = next.page;
       }
+      if (next.automaticFocus && !automaticFocus.current) setAnnouncement(copy.layoutAutoFocus);
+      automaticFocus.current = !!next.automaticFocus;
       setLayout(next);
     });
     const offDisplay = shell.onDisplayPreferences(acceptDisplayPreferences);
@@ -350,6 +354,14 @@ function App(): React.JSX.Element {
       changeSurface("archive");
     } catch { setAnnouncement(copy.synthesisCollectFailed); }
   });
+  const collectAndCompare = async (): Promise<void> => runAuxiliary(async () => {
+    try {
+      const record = await archiveCapture.capture();
+      setComparisonId(record.id);
+      changeSurface("archive");
+      setAnnouncement(record.results.filter((answer) => answer.text?.trim()).length >= 2 ? copy.archiveSaved : copy.compareNeedsAnswers);
+    } catch { setAnnouncement(copy.archiveCollectFailed); }
+  });
   const startNewSession = async (): Promise<void> => {
     if (pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     const selectedSites = [...selected];
@@ -381,7 +393,7 @@ function App(): React.JSX.Element {
   };
   const showMoreMenu = async (): Promise<void> => {
     const moreIds: readonly CommandId[] = [
-      "retry-failed", "collect-answers", "open-archive", "collect-synthesis",
+      "retry-failed", "collect-compare", "collect-answers", "open-archive", "collect-synthesis",
       "next-unfinished", "next-failed", "new-session", "check-updates",
       "open-command-palette", "open-shortcuts", "open-settings"
     ];
@@ -455,7 +467,8 @@ function App(): React.JSX.Element {
     "set-think": () => { changeSurface("sites"); void workspaceFlow.changeTier("think"); },
     "set-fast": () => { changeSurface("sites"); void workspaceFlow.changeTier("fast"); },
     ...(selected.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
-    "open-archive": () => changeSurface("archive"),
+    "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
+    "open-archive": () => { setComparisonId(null); changeSurface("archive"); },
     ...(synthesis.pending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
     ...(broadcast.failureCount + broadcast.cancelledCount > 0 ? {
       "retry-failed": () => { changeSurface("sites"); void actionLock.current!.run(broadcast.retry); }
@@ -522,7 +535,7 @@ function App(): React.JSX.Element {
   };
 
   if (surface === "archive") {
-    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} preferredId={synthesis.pending?.archiveId ?? null} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={sendSynthesisFromArchive} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
+    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={comparisonId} preferredId={comparisonId ?? synthesis.pending?.archiveId ?? null} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={sendSynthesisFromArchive} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
     return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { clearDraft(window.localStorage); setText(""); }} onClose={() => changeSurface("sites")} /></div>;
@@ -576,6 +589,7 @@ function App(): React.JSX.Element {
         runState={synthesis.runState !== "idle" ? synthesis.runState : runState}
         auxiliaryBusy={auxiliaryBusy}
         layoutMode={layout.mode}
+        automaticFocus={layout.automaticFocus}
         selectedCount={selected.size}
         failureCount={broadcast.failureCount}
         cancelledCount={broadcast.cancelledCount}
@@ -585,6 +599,7 @@ function App(): React.JSX.Element {
         pageControl={layout.pageCount > 1 ? (
           <PageTabs
             copy={copy}
+            sites={sites}
             selectedSites={workspace.selectedSites}
             statuses={statuses}
             page={layout.page}
@@ -618,6 +633,7 @@ function App(): React.JSX.Element {
         isMac={navigator.userAgent.includes("Mac")}
         expanded={composerExpanded}
         onTextChange={setText}
+        onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
         onSubmit={() => void submit()}
         onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}
         onTierChange={workspaceFlow.changeTier}

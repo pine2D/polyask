@@ -1,5 +1,10 @@
 export const ARCHIVE_COPY = {
   en: {
+    collectCompare: "Capture and compare",
+    onlyDifferences: "Only show different paragraphs",
+    noDifferentParagraphs: "No different paragraphs in this answer.",
+    compareNeedsAnswers: "Saved the capture. At least two answers with text are needed to compare.",
+
     archiveQuestion: "Question",
     archiveSource: "Source",
     archiveBestAnswer: "Best answer",
@@ -43,6 +48,11 @@ export const ARCHIVE_COPY = {
     archiveCapturedAt: "Captured {time}"
   },
   zhCN: {
+    collectCompare: "采集并比较",
+    onlyDifferences: "只看不同段落",
+    noDifferentParagraphs: "这份回答没有不同段落。",
+    compareNeedsAnswers: "已保存采集结果，至少需要两份有正文的回答才能比较。",
+
     archiveQuestion: "问题",
     archiveSource: "来源",
     archiveBestAnswer: "最佳回答",
@@ -86,6 +96,11 @@ export const ARCHIVE_COPY = {
     archiveCapturedAt: "采集于 {time}"
   },
   zhTW: {
+    collectCompare: "擷取並比較",
+    onlyDifferences: "只看不同段落",
+    noDifferentParagraphs: "這份回答沒有不同段落。",
+    compareNeedsAnswers: "已儲存擷取結果，至少需要兩份有正文的回答才能比較。",
+
     archiveQuestion: "問題",
     archiveSource: "來源",
     archiveBestAnswer: "最佳回答",

@@ -1,3 +1,9 @@
+// Consecutive probes that read no state (renderer busy, adapter without a
+// generation hook, view momentarily off-site) before monitoring gives up. A
+// single miss must never end the watch: that stranded whole runs on "submitted".
+export const GENERATION_MISS_LIMIT = 5;
+export const GENERATION_PROBE_INTERVAL = 900;
+
 import type { SiteKey } from "../shared/contracts";
 import type { GenerationState, SitePhase } from "../shared/protocol";
 

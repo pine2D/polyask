@@ -19,6 +19,7 @@ interface ArchiveSurfaceProps {
   readonly sites: readonly SiteDefinition[];
   readonly synthesisSites: readonly SiteDefinition[];
   readonly defaultTier: Tier;
+  readonly comparisonId?: string | null;
   readonly preferredId: string | null;
   readonly pendingSynthesis: PendingSynthesis | null;
   readonly synthesisCandidate: SynthesisCandidate | null;
@@ -202,6 +203,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
       locale={props.locale}
       items={items}
       selected={selected}
+      comparisonId={props.comparisonId}
       tags={tags}
       query={query}
       favoriteOnly={favoriteOnly}

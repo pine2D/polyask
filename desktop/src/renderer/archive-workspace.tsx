@@ -19,6 +19,7 @@ interface ArchiveWorkspaceProps {
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly items: readonly ArchiveRecord[];
+  readonly comparisonId?: string | null;
   readonly selected: ArchiveRecord | null;
   readonly tags: readonly string[];
   readonly query: string;
@@ -104,7 +105,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           )}
         </aside>
         <main className="archive-detail-pane">
-          {props.detailOverride ?? (selected ? <ArchiveDetail copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
+          {props.detailOverride ?? (selected ? <ArchiveDetail initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
         </main>
       </div>
       <div className="archive-status" role="status" aria-live="polite">{props.status}</div>

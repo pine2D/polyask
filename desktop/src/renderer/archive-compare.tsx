@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import type { ArchiveResult } from "../shared/archive";
-import { compareAnswerParagraphs, type ComparedParagraph } from "../shared/archive-compare";
+import { compareAnswerParagraphs, comparisonParagraphs, type ComparedParagraph } from "../shared/archive-compare";
 import type { DesktopCopy } from "../shared/copy";
 
 interface ArchiveCompareProps {
@@ -17,6 +17,7 @@ function ComparisonColumn(props: {
   return (
     <article className="archive-compare-column">
       <h3>{props.label}</h3>
+      {!props.paragraphs.length ? <p role="status">{props.copy.noDifferentParagraphs}</p> : null}
       {props.paragraphs.map((paragraph, index) => (
         <div className={`archive-compare-paragraph ${paragraph.relation}`} data-relation={paragraph.relation} key={`${index}:${paragraph.text}`}>
           <span>{paragraph.relation === "shared" ? props.copy.sharedParagraph : props.copy.uniqueParagraph}</span>
@@ -28,6 +29,7 @@ function ComparisonColumn(props: {
 }
 
 export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
+  const [differencesOnly, setDifferencesOnly] = useState(false);
   const results = props.results.filter((result) => !!result.text?.trim());
   const resultKey = results.map((result) => result.host).join("\n");
   const [leftHost, setLeftHost] = useState(results[0]?.host ?? "");
@@ -49,6 +51,7 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
         <h2 id="archive-compare-title">{props.copy.answerComparison}</h2>
         <p>{props.copy.answerComparisonDescription}</p>
       </header>
+      <label className="comparison-filter"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} />{props.copy.onlyDifferences}</label>
       <div className="archive-compare-selectors">
         <label>{props.copy.leftAnswer}
           <select name="compare-left" value={left?.host ?? ""} onChange={(event) => setLeftHost(event.target.value)}>
@@ -62,8 +65,8 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
         </label>
       </div>
       <div className="archive-compare-grid">
-        <ComparisonColumn copy={props.copy} label={left?.label ?? ""} paragraphs={comparison.left} />
-        <ComparisonColumn copy={props.copy} label={right?.label ?? ""} paragraphs={comparison.right} />
+        <ComparisonColumn copy={props.copy} label={left?.label ?? ""} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
+        <ComparisonColumn copy={props.copy} label={right?.label ?? ""} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
       </div>
     </section>
   );

@@ -16,6 +16,7 @@ export type CommandId =
   | "focus-prompt"
   | "set-think"
   | "set-fast"
+  | "collect-compare"
   | "collect-answers"
   | "open-archive"
   | "collect-synthesis"
@@ -68,6 +69,7 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "focus-prompt", labelKey: "focusPromptMenu", group: "compose", accelerator: "Alt+Q" },
   { id: "set-think", labelKey: "chooseThinkMode", group: "compose", accelerator: "Alt+T" },
   { id: "set-fast", labelKey: "chooseFastMode", group: "compose", accelerator: "Alt+Y" },
+  { id: "collect-compare", labelKey: "collectCompare", group: "results" },
   { id: "collect-answers", labelKey: "collectAnswers", group: "results", accelerator: "Alt+C" },
   { id: "open-archive", labelKey: "openArchive", group: "results" },
   { id: "collect-synthesis", labelKey: "synthesisCollect", group: "results" },

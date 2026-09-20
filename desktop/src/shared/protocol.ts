@@ -189,6 +189,7 @@ export interface SiteHistoryState {
 }
 
 export interface LayoutState {
+  readonly automaticFocus?: boolean;
   readonly mode: "overview" | "focus";
   readonly focused: SiteKey;
   readonly page: number;

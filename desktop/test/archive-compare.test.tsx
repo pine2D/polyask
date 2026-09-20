@@ -45,3 +45,12 @@ test("answer comparison renders two explicit choices without rankings", () => {
   assert.match(html, /仅此回答/);
   assert.doesNotMatch(html, /评分|更好|最佳/);
 });
+
+test("difference filtering omits shared paragraphs and permits an empty result", async () => {
+  const { comparisonParagraphs } = await import("../src/shared/archive-compare");
+  const same = compareAnswerParagraphs("same", "same");
+  assert.deepEqual(comparisonParagraphs(same.left, true), []);
+  assert.deepEqual(comparisonParagraphs(same.left, false), same.left);
+  const mixed = compareAnswerParagraphs("same\n\nunique", "same");
+  assert.deepEqual(comparisonParagraphs(mixed.left, true), [{text:"unique",relation:"unique"}]);
+});

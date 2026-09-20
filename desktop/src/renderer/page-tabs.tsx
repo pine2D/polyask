@@ -1,6 +1,6 @@
 import { useRef } from "react";
 
-import type { SiteKey } from "../shared/contracts";
+import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteStatus } from "../shared/protocol";
 import { paginateSiteKeys } from "../shared/site-pages";
@@ -8,6 +8,7 @@ import { pageTabKeyAction } from "./keyboard";
 
 interface PageTabsProps {
   readonly copy: DesktopCopy;
+  readonly sites?: readonly SiteDefinition[];
   readonly selectedSites: readonly SiteKey[];
   readonly statuses: Readonly<Record<string, SiteStatus>>;
   readonly page: number;
@@ -48,13 +49,15 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
           complete ? formatCopy(props.copy.sitePageComplete, { count: complete }) : "",
           failed ? formatCopy(props.copy.sitePageFailed, { count: failed }) : ""
         ].filter(Boolean).join(", ");
+        const siteLabels = sites.map((key) => props.sites?.find((site) => site.key === key)?.label ?? key).join(" · ");
         const selected = index === props.page;
         return (
           <button
             type="button"
             id={`site-page-tab-${index}`}
             role="tab"
-            aria-label={label}
+            title={siteLabels}
+            aria-label={`${label}: ${siteLabels}`}
             aria-selected={selected}
             aria-controls={`site-page-panel-${index}`}
             tabIndex={selected ? 0 : -1}
