@@ -15,7 +15,7 @@ function render(overrides: Partial<ComponentProps<typeof CommandBar>> = {}) {
     syncStatus={{ state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true }}
     isMac={false} expanded={false} onTextChange={noop} onSubmit={noop} onCancel={noop}
     onTierChange={noop} onLayoutChange={noop} onExpandedChange={noop} onOpenPanel={noop}
-    onShowGroupMenu={noop} onOpenMore={noop} onPasteImages={noop} {...overrides}
+    onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onPasteImages={noop} {...overrides}
   />);
 }
 

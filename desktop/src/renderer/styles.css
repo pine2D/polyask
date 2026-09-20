@@ -571,7 +571,7 @@ kbd { opacity: .7; font: 10px system-ui; }
   button:not(:disabled):active { transform: scale(.97); transition: transform 140ms var(--ease-out); }
 }
 @media (max-width: 1400px) {
-  .mode-switch .priority-p1, .compare-trigger .priority-p1, .summary, kbd { display: none; }
+  .mode-switch .priority-p1, .workspace-actions .priority-p1, .summary, kbd { display: none; }
   .scope-label-full { display: none; }
   .scope-label-compact { display: inline; }
 }

@@ -1,6 +1,6 @@
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SyncStatus } from "../shared/sync";
-import { CompareIcon, MoreIcon } from "./icons";
+import { ArchiveIcon, CompareIcon, MoreIcon } from "./icons";
 import { describeSync, syncNeedsAttention } from "./sync-status";
 
 interface WorkspaceActionsProps {
@@ -11,6 +11,7 @@ interface WorkspaceActionsProps {
   readonly synthesisPending: boolean;
   readonly syncStatus: SyncStatus;
   readonly onCompare?: () => void;
+  readonly onOpenArchive: () => void;
   readonly onOpenMore: () => void;
 }
 
@@ -36,6 +37,10 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
         aria-label={props.copy.collectCompare} disabled={props.disabled} onClick={props.onCompare}>
         <CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span>
       </button> : null}
+      <button type="button" className="archive-trigger" title={props.copy.openArchive}
+        aria-label={props.copy.openArchive} disabled={props.disabled} onClick={props.onOpenArchive}>
+        <ArchiveIcon /><span className="priority-p1">{props.copy.archiveTitle}</span>
+      </button>
       <button
         type="button"
         className={syncAttention ? `more-trigger sync-attention sync-${props.syncStatus.state}` : "more-trigger"}

@@ -42,6 +42,7 @@ interface CommandBarProps {
   readonly onOpenPanel: (tab: WorkspacePanelTab) => void;
   readonly onShowGroupMenu: () => void;
   readonly onOpenMore: () => void;
+  readonly onOpenArchive: () => void;
   readonly onPasteImages: (files: readonly File[]) => void;
 }
 
@@ -114,7 +115,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       ) : (
         <button type="button" className="send primary-action priority-p0" title={props.sendBlockedReason ?? sendLabel} aria-label={sendLabel} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><span className="send-count" aria-hidden="true">{props.selectedCount}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}
-      <WorkspaceActions onCompare={props.onCompare} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} />
+      <WorkspaceActions onCompare={props.onCompare} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} onOpenArchive={props.onOpenArchive} />
     </header>
   );
 }

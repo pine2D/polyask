@@ -274,7 +274,7 @@ test("command bar renders one compact command surface with stateful controls", (
       onExpandedChange={noop}
       onOpenPanel={noop}
       onShowGroupMenu={noop}
-      onOpenMore={noop}
+      onOpenMore={noop} onOpenArchive={noop}
       onPasteImages={noop}
     />
   );
@@ -335,7 +335,7 @@ test("command bar begins with adjacent workspace and health entries", () => {
     onExpandedChange: noop,
     onOpenPanel: noop,
     onShowGroupMenu: noop,
-    onOpenMore: noop,
+    onOpenMore: noop, onOpenArchive: noop,
     onPasteImages: noop
   }));
 
@@ -376,7 +376,7 @@ test("command bar surfaces actionable sync state without consuming toolbar width
       onExpandedChange={noop}
       onOpenPanel={noop}
       onShowGroupMenu={noop}
-      onOpenMore={noop}
+      onOpenMore={noop} onOpenArchive={noop}
       onPasteImages={noop}
     />
   );
@@ -393,7 +393,7 @@ test("workspace actions summarize pending attention on one More entry", () => {
     disabled: false,
     synthesisPending: false,
     syncStatus: { state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true } as const,
-    onOpenMore: noop
+    onOpenMore: noop, onOpenArchive: noop
   };
   const attentionHtml = renderToStaticMarkup(
     <WorkspaceActions {...base} failureCount={1} cancelledCount={1} synthesisPending />
@@ -403,7 +403,8 @@ test("workspace actions summarize pending attention on one More entry", () => {
   );
 
   assert.match(attentionHtml, /data-attention-count="3"/);
-  assert.equal([...attentionHtml.matchAll(/aria-label="/g)].length, 1, "唯一一个 More 入口不应重复渲染 aria-label");
+  assert.equal([...attentionHtml.matchAll(/aria-label="More actions/g)].length, 1, "唯一一个 More 入口不应重复渲染 aria-label");
+  assert.match(idleHtml, /class="archive-trigger"[^>]*aria-label="Open result library"/);
   assert.match(attentionHtml, /aria-label="More actions: Retry 2 failed or cancelled sites"/, "attentionCount 必须并入 aria-label（F166），不能只落进不可访问的 data 属性");
   assert.doesNotMatch(idleHtml, /data-attention-count/);
 });
@@ -416,7 +417,7 @@ test("workspace actions retry label switches with failure/cancelled mix", () => 
     disabled: false,
     synthesisPending: false,
     syncStatus: { state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true } as const,
-    onOpenMore: noop
+    onOpenMore: noop, onOpenArchive: noop
   };
   const failedOnly = renderToStaticMarkup(<WorkspaceActions {...base} failureCount={2} cancelledCount={0} />);
   const cancelledOnly = renderToStaticMarkup(<WorkspaceActions {...base} failureCount={0} cancelledCount={3} />);

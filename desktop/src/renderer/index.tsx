@@ -395,13 +395,12 @@ function App(): React.JSX.Element {
   };
   const showMoreMenu = async (): Promise<void> => {
     const moreIds: readonly CommandId[] = [
-      "retry-failed", "collect-compare", "collect-answers", "open-archive", "collect-synthesis",
+      "retry-failed", "collect-compare", "collect-answers", "collect-synthesis",
       "next-unfinished", "next-failed", "new-session", "check-updates",
       "open-command-palette", "open-shortcuts", "open-getting-started", "open-settings"
     ];
-    const commands = moreIds.filter((id) => !!commandActions.current[id]);
     try {
-      const command = await shell.showCommandMenu(commands);
+      const command = await shell.showCommandMenu(moreIds.filter((id) => !!commandActions.current[id]));
       if (command) executeCommand(command, commandActions.current);
     } catch {
       setAnnouncement(copy.workspaceActionFailed);
@@ -641,6 +640,7 @@ function App(): React.JSX.Element {
         onOpenPanel={(tab) => openPanel(tab, "pointer")}
         onShowGroupMenu={() => { void showGroupMenu(); }}
         onOpenMore={() => { void showMoreMenu(); }}
+        onOpenArchive={() => executeCommand("open-archive", commandActions.current)}
         onPasteImages={(files) => { void imageSelection.choose(files); }}
       />
       {drawerPresent ? (
