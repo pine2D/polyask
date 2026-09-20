@@ -1,6 +1,7 @@
 import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
+import { MORE_MENU_IDS } from "../shared/more-menu";
 import { COMMANDS, type CommandId } from "../shared/commands";
 import type { SiteDefinition } from "../shared/contracts";
 import type { CommandActions } from "./command-dispatcher";
@@ -394,13 +395,8 @@ function App(): React.JSX.Element {
     }
   };
   const showMoreMenu = async (): Promise<void> => {
-    const moreIds: readonly CommandId[] = [
-      "retry-failed", "collect-compare", "collect-answers", "collect-synthesis",
-      "next-unfinished", "next-failed", "new-session", "check-updates",
-      "open-command-palette", "open-shortcuts", "open-getting-started", "open-settings"
-    ];
     try {
-      const command = await shell.showCommandMenu(moreIds.filter((id) => !!commandActions.current[id]));
+      const command = await shell.showCommandMenu(MORE_MENU_IDS.filter((id) => !!commandActions.current[id]));
       if (command) executeCommand(command, commandActions.current);
     } catch {
       setAnnouncement(copy.workspaceActionFailed);
@@ -597,6 +593,7 @@ function App(): React.JSX.Element {
         pageControl={layout.pageCount > 1 ? (
           <PageTabs
             copy={copy}
+            isMac={navigator.userAgent.includes("Mac")}
             sites={sites}
             selectedSites={workspace.selectedSites}
             statuses={statuses}
@@ -641,6 +638,7 @@ function App(): React.JSX.Element {
         onShowGroupMenu={() => { void showGroupMenu(); }}
         onOpenMore={() => { void showMoreMenu(); }}
         onOpenArchive={() => executeCommand("open-archive", commandActions.current)}
+        onRetry={() => executeCommand("retry-failed", commandActions.current)}
         onPasteImages={(files) => { void imageSelection.choose(files); }}
       />
       {drawerPresent ? (

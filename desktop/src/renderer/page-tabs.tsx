@@ -5,9 +5,11 @@ import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteStatus } from "../shared/protocol";
 import { paginateSiteKeys } from "../shared/site-pages";
 import { pageTabKeyAction } from "./keyboard";
+import { commandHint } from "./command-hint";
 
 interface PageTabsProps {
   readonly copy: DesktopCopy;
+  readonly isMac?: boolean;
   readonly sites?: readonly SiteDefinition[];
   readonly selectedSites: readonly SiteKey[];
   readonly statuses: Readonly<Record<string, SiteStatus>>;
@@ -56,7 +58,7 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
             type="button"
             id={`site-page-tab-${index}`}
             role="tab"
-            title={siteLabels}
+            title={commandHint(siteLabels, index === 0 ? "show-page-1" : index === 1 ? "show-page-2" : "show-page-3", props.isMac)}
             aria-label={`${label}: ${siteLabels}`}
             aria-selected={selected}
             aria-controls={`site-page-panel-${index}`}

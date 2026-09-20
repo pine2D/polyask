@@ -15,7 +15,7 @@ function render(overrides: Partial<ComponentProps<typeof CommandBar>> = {}) {
     syncStatus={{ state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true }}
     isMac={false} expanded={false} onTextChange={noop} onSubmit={noop} onCancel={noop}
     onTierChange={noop} onLayoutChange={noop} onExpandedChange={noop} onOpenPanel={noop}
-    onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onPasteImages={noop} {...overrides}
+    onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onRetry={noop} onPasteImages={noop} {...overrides}
   />);
 }
 
@@ -42,4 +42,16 @@ test("cancel and cancelling retain accessible names without send counts", () => 
     assert.ok(html.includes(`aria-label="${runState === "sending" ? "Cancel" : "Cancelling…"}"`));
     assert.doesNotMatch(html, /class="send-count"/);
   }
+});
+
+test("comparison stays discoverable before answers are ready and while sending", () => {
+  assert.match(render(), /class="compare-trigger"[^>]*aria-disabled="true"/);
+  assert.match(render({ onCompare: noop }), /class="compare-trigger"[^>]*aria-disabled="false"/);
+  assert.match(render({ onCompare: noop, runState: "sending" }), /class="compare-trigger"[^>]*aria-disabled="true"/);
+});
+
+test("retry is directly available only for failed or cancelled work and disabled during sending", () => {
+  assert.doesNotMatch(render(), /class="retry-trigger"/);
+  assert.match(render({ failureCount: 2, cancelledCount: 1 }), /class="retry-trigger"[^>]*aria-label="Retry 3 failed or cancelled sites"/);
+  assert.match(render({ failureCount: 1, runState: "sending" }), /class="retry-trigger"[^>]*disabled=""/);
 });

@@ -1,6 +1,8 @@
+import { useId } from "react";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SyncStatus } from "../shared/sync";
-import { ArchiveIcon, CompareIcon, MoreIcon } from "./icons";
+import { ArchiveIcon, CompareIcon, MoreIcon, ReloadIcon } from "./icons";
+import { commandHint } from "./command-hint";
 import { describeSync, syncNeedsAttention } from "./sync-status";
 
 interface WorkspaceActionsProps {
@@ -11,32 +13,39 @@ interface WorkspaceActionsProps {
   readonly synthesisPending: boolean;
   readonly syncStatus: SyncStatus;
   readonly onCompare?: () => void;
+  readonly onRetry: () => void;
+  readonly isMac?: boolean;
   readonly onOpenArchive: () => void;
   readonly onOpenMore: () => void;
 }
 
-// F166：attentionCount 此前只落进 data-attention-count（视觉），没有任何一条路径读它——可访问名和
-// 悬停提示对失败/已取消站点的堆积始终静默。这里把重试相关的计数并回 aria-label/title，且按
-// failureCount/cancelledCount 的组合选择更贴切的三选一文案，而不是笼统的「更多操作」。
+// F166：重试数量同时显示在按钮正文与可访问名中；更多菜单仅提示剩余待办。
 export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Element {
+  const compareHintId = useId();
+  const compareBlocked = props.disabled ? props.copy.compareBusy : !props.onCompare ? props.copy.compareNeedsAnswers : null;
   const syncAttention = syncNeedsAttention(props.syncStatus);
   const retryCount = props.failureCount + props.cancelledCount;
-  const attentionCount = retryCount + (props.synthesisPending ? 1 : 0) + (syncAttention ? 1 : 0);
+  const attentionCount = (props.synthesisPending ? 1 : 0) + (syncAttention ? 1 : 0);
   const retryLabel = !retryCount ? null
     : props.failureCount && props.cancelledCount ? formatCopy(props.copy.retryFailedOrCancelledSites, { count: retryCount })
     : props.cancelledCount ? formatCopy(props.copy.retryCancelledSites, { count: retryCount })
     : formatCopy(props.copy.retryFailedSites, { count: retryCount });
   const label = syncAttention
     ? `${props.copy.moreActions}: ${describeSync(props.copy, props.syncStatus)}`
-    : retryLabel
-    ? `${props.copy.moreActions}: ${retryLabel}`
     : props.copy.moreActions;
   return (
     <div className="workspace-actions priority-p0">
-      {props.onCompare ? <button type="button" className="compare-trigger" title={props.copy.collectCompare}
-        aria-label={props.copy.collectCompare} disabled={props.disabled} onClick={props.onCompare}>
-        <CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span>
+      {retryLabel ? <button type="button" className="retry-trigger"
+        title={commandHint(retryLabel, "retry-failed", props.isMac)} aria-label={retryLabel}
+        disabled={props.disabled} onClick={props.onRetry}>
+        <ReloadIcon /><span>{props.copy.retryCompact} · {retryCount}</span>
       </button> : null}
+      <button type="button" className="compare-trigger" title={compareBlocked ?? props.copy.collectCompare}
+        aria-label={props.copy.collectCompare} aria-disabled={!!compareBlocked}
+        aria-describedby={compareBlocked ? compareHintId : undefined} onClick={compareBlocked ? undefined : props.onCompare}>
+        <CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span>
+      </button>
+      {compareBlocked ? <span id={compareHintId} className="sr-only">{compareBlocked}</span> : null}
       <button type="button" className="archive-trigger" title={props.copy.openArchive}
         aria-label={props.copy.openArchive} disabled={props.disabled} onClick={props.onOpenArchive}>
         <ArchiveIcon /><span className="priority-p1">{props.copy.archiveTitle}</span>

@@ -274,7 +274,7 @@ test("command bar renders one compact command surface with stateful controls", (
       onExpandedChange={noop}
       onOpenPanel={noop}
       onShowGroupMenu={noop}
-      onOpenMore={noop} onOpenArchive={noop}
+      onOpenMore={noop} onOpenArchive={noop} onRetry={noop}
       onPasteImages={noop}
     />
   );
@@ -290,7 +290,7 @@ test("command bar renders one compact command surface with stateful controls", (
   assert.equal([...html.matchAll(/data-tier-icon=/g)].length, 3);
   for (const label of ["Use site setting", "Fast", "Deep thinking"]) {
     assert.match(html, new RegExp(`aria-label="${label}"`));
-    assert.match(html, new RegExp(`title="${label}"`));
+    assert.match(html, new RegExp(`title="${label}[^"]*"`));
     assert.equal([...html.matchAll(new RegExp(label, "g"))].length, 2);
   }
   assert.doesNotMatch(html, /<small>AI Answers<\/small>/);
@@ -335,7 +335,7 @@ test("command bar begins with adjacent workspace and health entries", () => {
     onExpandedChange: noop,
     onOpenPanel: noop,
     onShowGroupMenu: noop,
-    onOpenMore: noop, onOpenArchive: noop,
+    onOpenMore: noop, onOpenArchive: noop, onRetry: noop,
     onPasteImages: noop
   }));
 
@@ -376,7 +376,7 @@ test("command bar surfaces actionable sync state without consuming toolbar width
       onExpandedChange={noop}
       onOpenPanel={noop}
       onShowGroupMenu={noop}
-      onOpenMore={noop} onOpenArchive={noop}
+      onOpenMore={noop} onOpenArchive={noop} onRetry={noop}
       onPasteImages={noop}
     />
   );
@@ -393,7 +393,7 @@ test("workspace actions summarize pending attention on one More entry", () => {
     disabled: false,
     synthesisPending: false,
     syncStatus: { state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true } as const,
-    onOpenMore: noop, onOpenArchive: noop
+    onOpenMore: noop, onOpenArchive: noop, onRetry: noop
   };
   const attentionHtml = renderToStaticMarkup(
     <WorkspaceActions {...base} failureCount={1} cancelledCount={1} synthesisPending />
@@ -402,10 +402,10 @@ test("workspace actions summarize pending attention on one More entry", () => {
     <WorkspaceActions {...base} failureCount={0} cancelledCount={0} />
   );
 
-  assert.match(attentionHtml, /data-attention-count="3"/);
+  assert.match(attentionHtml, /data-attention-count="1"/);
   assert.equal([...attentionHtml.matchAll(/aria-label="More actions/g)].length, 1, "唯一一个 More 入口不应重复渲染 aria-label");
   assert.match(idleHtml, /class="archive-trigger"[^>]*aria-label="Open result library"/);
-  assert.match(attentionHtml, /aria-label="More actions: Retry 2 failed or cancelled sites"/, "attentionCount 必须并入 aria-label（F166），不能只落进不可访问的 data 属性");
+  assert.match(attentionHtml, /aria-label="Retry 2 failed or cancelled sites"/, "重试数量必须出现在独立按钮的可访问名中");
   assert.doesNotMatch(idleHtml, /data-attention-count/);
 });
 
@@ -417,15 +417,15 @@ test("workspace actions retry label switches with failure/cancelled mix", () => 
     disabled: false,
     synthesisPending: false,
     syncStatus: { state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true } as const,
-    onOpenMore: noop, onOpenArchive: noop
+    onOpenMore: noop, onOpenArchive: noop, onRetry: noop
   };
   const failedOnly = renderToStaticMarkup(<WorkspaceActions {...base} failureCount={2} cancelledCount={0} />);
   const cancelledOnly = renderToStaticMarkup(<WorkspaceActions {...base} failureCount={0} cancelledCount={3} />);
   const mixed = renderToStaticMarkup(<WorkspaceActions {...base} failureCount={1} cancelledCount={2} />);
 
-  assert.match(failedOnly, /aria-label="More actions: Retry 2 failed sites"/);
-  assert.match(cancelledOnly, /aria-label="More actions: Retry 3 cancelled sites"/);
-  assert.match(mixed, /aria-label="More actions: Retry 3 failed or cancelled sites"/);
+  assert.match(failedOnly, /aria-label="Retry 2 failed sites"/);
+  assert.match(cancelledOnly, /aria-label="Retry 3 cancelled sites"/);
+  assert.match(mixed, /aria-label="Retry 3 failed or cancelled sites"/);
 });
 
 test("image picker stays icon-first and exposes removable previews and scope warning", () => {

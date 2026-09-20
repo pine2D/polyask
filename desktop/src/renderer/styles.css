@@ -201,7 +201,9 @@ button { cursor: default; }
   justify-content: center; gap: 3px; border: 0; border-radius: 5px; color: var(--muted); background: transparent;
 }
 .workspace-actions > button.active, .workspace-actions > button:hover { color: var(--accent); background: var(--panel); }
-.workspace-actions > button:disabled { opacity: .4; }
+.workspace-actions > button:disabled, .workspace-actions > button[aria-disabled="true"] { opacity: .4; }
+.workspace-actions > button[aria-disabled="true"] { cursor: default; color: var(--muted); background: transparent; }
+.workspace-actions > button.retry-trigger { color: var(--danger); white-space: nowrap; }
 .workspace-actions .summary { margin: 0 5px 0 2px; }
 .workspace-actions > button.sync-attention { position: relative; }
 .workspace-actions > button.sync-attention::after {

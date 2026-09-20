@@ -4,6 +4,7 @@ import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
 import { ChevronDownIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
+import { commandHint } from "./command-hint";
 import { commandKeyAction } from "./keyboard";
 import type { WorkspacePanelTab } from "./workspace-panel-state";
 import { WorkspaceActions } from "./workspace-actions";
@@ -35,6 +36,7 @@ interface CommandBarProps {
   readonly onTextChange: (value: string) => void;
   readonly onSubmit: () => void;
   readonly onCompare?: () => void;
+  readonly onRetry: () => void;
   readonly onCancel: () => void;
   readonly onTierChange: (value: Tier) => void;
   readonly onLayoutChange: (value: "overview" | "focus") => void;
@@ -60,13 +62,13 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
     <header className={`command-bar${props.pageControl ? " has-pages" : ""}${props.expanded ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
       <div className="workspace-entry priority-p0">
         <div className="scope-split">
-          <button type="button" className="scope-main" title={props.scopeLabel} aria-label={props.scopeLabel} aria-expanded={props.panelTab === "sites"} aria-controls="workspace-panel" onClick={() => props.onOpenPanel("sites")}>
+          <button type="button" className="scope-main" title={commandHint(props.scopeLabel, "open-sites", props.isMac)} aria-label={props.scopeLabel} aria-expanded={props.panelTab === "sites"} aria-controls="workspace-panel" onClick={() => props.onOpenPanel("sites")}>
             <span className="scope-label-full">{props.scopeLabel}</span>
             <span className="scope-label-compact">{props.copy.sitesCompact} · {props.selectedCount}</span>
           </button>
           <button type="button" className="scope-menu" title={props.copy.chooseSavedGroup} aria-label={props.copy.chooseSavedGroup} aria-haspopup="menu" onClick={props.onShowGroupMenu}><ChevronDownIcon /></button>
         </div>
-        <button type="button" className={props.panelTab === "health" ? "health-trigger active" : "health-trigger"} title={props.copy.siteHealth} aria-label={props.copy.siteHealth} aria-pressed={props.panelTab === "health"} aria-controls="workspace-panel" data-health-attention={props.healthAttention || undefined} onClick={() => props.onOpenPanel("health")}><HealthIcon /></button>
+        <button type="button" className={props.panelTab === "health" ? "health-trigger active" : "health-trigger"} title={commandHint(props.copy.siteHealth, "open-site-health", props.isMac)} aria-label={props.copy.siteHealth} aria-pressed={props.panelTab === "health"} aria-controls="workspace-panel" data-health-attention={props.healthAttention || undefined} onClick={() => props.onOpenPanel("health")}><HealthIcon /></button>
       </div>
       <div className="mode-switch priority-p0" aria-label={props.copy.layoutLabel}>
         <button type="button" title={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
@@ -102,11 +104,12 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
           }
         }}
         placeholder={props.copy.promptPlaceholder}
+        title={commandHint(props.copy.promptLabel, "focus-prompt", props.isMac)}
         aria-label={props.copy.promptLabel}
       />
       <div className="tier-switch priority-p0" aria-label={props.copy.tierLabel}>
         {tierOptions.map(({ value, label, icon, glyph }) => (
-          <button type="button" key={icon} title={label} aria-label={label} aria-pressed={props.tier === value} data-tier-icon={icon} className={props.tier === value ? "active" : ""} onClick={() => props.onTierChange(value)}>{glyph}</button>
+          <button type="button" key={icon} title={value === null ? label : commandHint(label, value === "think" ? "set-think" : "set-fast", props.isMac)} aria-label={label} aria-pressed={props.tier === value} data-tier-icon={icon} className={props.tier === value ? "active" : ""} onClick={() => props.onTierChange(value)}>{glyph}</button>
         ))}
       </div>
       {props.imageControl}
@@ -115,7 +118,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       ) : (
         <button type="button" className="send primary-action priority-p0" title={props.sendBlockedReason ?? sendLabel} aria-label={sendLabel} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><span className="send-count" aria-hidden="true">{props.selectedCount}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}
-      <WorkspaceActions onCompare={props.onCompare} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} onOpenArchive={props.onOpenArchive} />
+      <WorkspaceActions onCompare={props.onCompare} onRetry={props.onRetry} isMac={props.isMac} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} onOpenArchive={props.onOpenArchive} />
     </header>
   );
 }
