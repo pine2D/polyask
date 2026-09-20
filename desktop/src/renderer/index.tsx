@@ -43,6 +43,7 @@ import {
 import { ImagePicker } from "./image-picker";
 import { PageTabs } from "./page-tabs";
 import { clearDraft } from "./prompt-draft";
+import { useTemplateDeletion } from "./use-template-deletion";
 import { usePromptDraft } from "./use-prompt-draft";
 import { FeedbackProvider } from "./feedback-provider";
 import { failedRunSites, cancelledRunSites } from "./broadcast-run";
@@ -129,6 +130,7 @@ function App(): React.JSX.Element {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(INITIAL_SYNC);
   const [runtime, setRuntime] = useState<RuntimeInfo>(INITIAL_RUNTIME);
   const [promptLibrary, setPromptLibrary] = useState<PromptLibraryState>(INITIAL_LIBRARY);
+  const templateDeletion = useTemplateDeletion(promptLibrary, setPromptLibrary, copy);
   const [completionNotifications, setCompletionNotifications] = useState(() =>
     loadCompletionNotifications(window.localStorage)
   );
@@ -547,7 +549,7 @@ function App(): React.JSX.Element {
         commands={availableCommands}
             menuShortcuts={menuShortcuts}
         groups={workspace.groups}
-        library={promptLibrary}
+        library={templateDeletion.library}
         draft={text}
         isMac={navigator.userAgent.includes("Mac")}
         mode={commandMode}
@@ -566,14 +568,10 @@ function App(): React.JSX.Element {
         }}
         onSaveTemplate={(input) => {
           void shell.savePromptTemplate(input)
-            .then(setPromptLibrary)
+            .then((library) => { setPromptLibrary(library); setAnnouncement(copy.templateSaved, true, true); })
             .catch(() => setAnnouncement(copy.promptLibrarySaveFailed));
         }}
-        onDeleteTemplate={(id) => {
-          void shell.deletePromptTemplate(id)
-            .then(setPromptLibrary)
-            .catch(() => setAnnouncement(copy.promptLibraryDeleteFailed));
-        }}
+        onDeleteTemplate={templateDeletion.request}
         onClose={() => changeSurface("sites")}
       />
     );

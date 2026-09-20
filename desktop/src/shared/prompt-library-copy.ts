@@ -1,5 +1,11 @@
 export const PROMPT_LIBRARY_COPY = {
   en: {
+    templateDeletePending: "Template will be deleted in 6 seconds. You can undo below.",
+    undoTemplateDelete: "Undo deletion ({count})",
+    templateDeleteUndone: "Template deletion undone",
+    templateSaved: "Prompt template saved",
+    templateDeleted: "Prompt template deleted",
+
     promptLibrary: "Prompt library",
     showPromptLibrary: "Prompt library",
     promptLibrarySearch: "Search templates and recent prompts",
@@ -13,6 +19,12 @@ export const PROMPT_LIBRARY_COPY = {
     promptLibraryDeleteFailed: "Could not delete the prompt template",
   },
   zhCN: {
+    templateDeletePending: "模板将在 6 秒后删除，可在下方撤销。",
+    undoTemplateDelete: "撤销删除（{count}）",
+    templateDeleteUndone: "已撤销模板删除",
+    templateSaved: "提问模板已保存",
+    templateDeleted: "提问模板已删除",
+
     promptLibrary: "提问库",
     showPromptLibrary: "提问库",
     promptLibrarySearch: "搜索模板和最近提问",
@@ -26,6 +38,12 @@ export const PROMPT_LIBRARY_COPY = {
     promptLibraryDeleteFailed: "无法删除提问模板",
   },
   zhTW: {
+    templateDeletePending: "範本將在 6 秒後刪除，可在下方復原。",
+    undoTemplateDelete: "復原刪除（{count}）",
+    templateDeleteUndone: "已復原範本刪除",
+    templateSaved: "提問範本已儲存",
+    templateDeleted: "提問範本已刪除",
+
     promptLibrary: "提問庫",
     showPromptLibrary: "提問庫",
     promptLibrarySearch: "搜尋範本和最近提問",

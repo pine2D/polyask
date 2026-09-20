@@ -2,7 +2,10 @@ import { createContext, useCallback, useContext, useEffect, useState, type React
 import type { DesktopCopy } from "../shared/copy";
 import { WORKSPACE_FEEDBACK_HEIGHT } from "../shared/display";
 
+interface FeedbackAction { readonly label: string; readonly run: () => void; }
+
 interface FeedbackState {
+  readonly setUndoAction: (action: FeedbackAction | null) => void;
   readonly announcement: string;
   readonly announcementSeq: number;
   readonly announce: (text: string, visible?: boolean, transient?: boolean) => void;
@@ -10,6 +13,7 @@ interface FeedbackState {
 const FeedbackContext = createContext<FeedbackState | null>(null);
 
 export function FeedbackProvider({ children, copy }: { children: ReactNode; copy: DesktopCopy }): React.JSX.Element {
+  const [undoAction, setUndoAction] = useState<FeedbackAction | null>(null);
   const [announced, setAnnounced] = useState({ text: "", seq: 0 });
   const [notice, setNotice] = useState({ text: "", seq: 0, transient: false });
   const announce = useCallback((text: string, visible = true, transient = false): void => {
@@ -22,11 +26,12 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
     return () => clearTimeout(timer);
   }, [notice]);
   useEffect(() => { document.documentElement.style.setProperty("--feedback-height", `${WORKSPACE_FEEDBACK_HEIGHT}px`); }, []);
-  return <FeedbackContext.Provider value={{ announcement: announced.text, announcementSeq: announced.seq, announce }}>
+  return <FeedbackContext.Provider value={{ announcement: announced.text, announcementSeq: announced.seq, announce, setUndoAction }}>
     {children}
     <div className="sr-only" aria-live="polite" aria-atomic="true" key={announced.seq}>{announced.text}</div>
     <footer className="feedback-bar" style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
       <span title={notice.text}>{notice.text || copy.feedbackReady}</span>
+      {undoAction ? <button type="button" onClick={undoAction.run}>{undoAction.label}</button> : null}
       {notice.text ? <button type="button" onClick={() => setNotice((current) => ({ ...current, text: "" }))}>{copy.dismissFeedback}</button> : null}
     </footer>
   </FeedbackContext.Provider>;

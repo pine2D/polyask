@@ -121,6 +121,8 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 ## 7. 数据边界与本机数据管理
 
+- 模板删除先在外壳内等待 6 秒（跨页面保留撤销入口），到期才调用原有 tombstone 删除；撤销不写数据库，不新增持久键。等待期间退出应用保留模板。
+
 - 本机库是 `app.getPath("userData")/polyask.sqlite`（Electron 内置 `node:sqlite`），WAL、外键、参数化仓储、事务 outbox。表：`history`、`archives`、`state_items`、`outbox`、`drive_files`、`meta`。
 - **界面状态不进数据库也不进同步**：窗口范围、最大化、布局模式、当前页、每页聚焦站点写在同目录的 `desktop-ui-state.json`（`ui-state-store.ts`，防抖 + 临时文件原子替换，损坏回退默认值、不阻止启动）。恢复时把窗口限制到当前显示器可见区域；页数因选站变化时把当前页夹到有效范围。不恢复抽屉、命令面板、确认框、发送中等瞬时状态。
 - **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删。`DataAdminService` 的「清空历史」「清空结果库」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
