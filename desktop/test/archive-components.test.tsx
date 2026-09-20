@@ -93,7 +93,7 @@ test("markdown preview flushes bullet lists at block boundaries without parsing 
     "<ul><li>Before heading</li></ul>",
     "<h3>Heading</h3>",
     "<ul><li>Before quote</li></ul>",
-    "<blockquote>Quote</blockquote>",
+    "<blockquote><p>Quote</p></blockquote>",
     "<ul><li>Before code</li></ul>",
     "<pre><code>- Code bullet</code></pre>",
     "<ul><li>At end</li></ul>"

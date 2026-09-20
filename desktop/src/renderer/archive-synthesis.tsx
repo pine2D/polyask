@@ -7,6 +7,7 @@ import { SparklesIcon } from "./icons";
 import { MarkdownPreview } from "./markdown-preview";
 
 interface ArchiveSynthesisProps {
+  readonly onOpenLink?: (url: string) => void;
   readonly copy: DesktopCopy;
   readonly record: ArchiveRecord;
   readonly pending: PendingSynthesis | null;
@@ -34,13 +35,13 @@ export function ArchiveSynthesis(props: ArchiveSynthesisProps): React.JSX.Elemen
         <div className="synthesis-card saved">
           <header><h2><SparklesIcon />{copy.synthesisSaved}</h2><span>{record.synthesis.host}{record.synthesis.state ? ` · ${record.synthesis.state === "think" ? copy.think : copy.fast}` : ""}</span></header>
           <p className="citation-notice">{copy.citationReportNotice}</p>
-          <MarkdownPreview value={record.synthesis.text} />
+          <MarkdownPreview onOpenLink={props.onOpenLink} value={record.synthesis.text} />
         </div>
       ) : null}
       {pending ? (
         <div className="synthesis-card pending">
           {candidate ? <p className="citation-notice">{copy.citationReportNotice}</p> : null}
-          {candidate ? <MarkdownPreview value={candidate.text} /> : <p>{copy.synthesisCollect}</p>}
+          {candidate ? <MarkdownPreview onOpenLink={props.onOpenLink} value={candidate.text} /> : <p>{copy.synthesisCollect}</p>}
           {candidate ? (
             <div className="synthesis-confirm">
               {replaceArmed ? <><span>{copy.synthesisReplaceConfirm}</span><button type="button" disabled={props.busy} onClick={() => setReplaceArmed(false)}>{copy.cancelDelete}</button></> : null}

@@ -39,8 +39,8 @@ test("answer comparison renders two explicit choices without rankings", () => {
 
   assert.match(html, /回答对照/);
   assert.match(html, /仅按完全相同的段落标记/);
-  assert.match(html, /name="compare-left"/);
-  assert.match(html, /name="compare-right"/);
+  assert.match(html, /aria-label="左侧回答"/);
+  assert.match(html, /aria-label="右侧回答"/);
   assert.match(html, /共同段落/);
   assert.match(html, /仅此回答/);
   assert.doesNotMatch(html, /评分|更好|最佳/);

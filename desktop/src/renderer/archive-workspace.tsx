@@ -39,6 +39,7 @@ interface ArchiveWorkspaceProps {
   readonly onCopy: () => void;
   readonly onExport: () => void;
   readonly onDelete: (id: string) => void;
+  readonly onSaveMetadata?: (patch: ArchivePatch) => Promise<boolean>;
   readonly onPatch: (patch: ArchivePatch) => void;
   readonly onOpenSource: (url: string) => void;
   readonly pendingSynthesis: PendingSynthesis | null;
@@ -99,7 +100,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           )}
         </aside> : null}
         <main className="archive-detail-pane">
-          {props.detailOverride ?? (selected ? <ArchiveDetail onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onFollowUp={props.onFollowUp} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
+          {props.detailOverride ?? (selected ? <ArchiveDetail onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onFollowUp={props.onFollowUp} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
         </main>
       </div>
       <div className="archive-status" role="status" aria-live="polite">{props.status}</div>

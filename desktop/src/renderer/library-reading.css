@@ -1,0 +1,79 @@
+.library .archive-detail { max-width: 820px; padding: 28px 32px 64px; }
+.library .archive-detail[data-view=compare] { max-width: none; }
+.library .archive-detail h1 { font-size: 24px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; text-wrap: pretty; }
+.library .archive-detail-heading { gap: 16px; }
+.library .archive-detail-heading time { margin-top: 10px; font-size: 12px; line-height: 1.6; }
+.library .archive-source { font-size: 12px; line-height: 1.6; margin-top: 6px; }
+.library-record-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.library .library-record-actions button, .library .library-metadata-actions button { min-height: 34px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: inherit; }
+.library .library-record-actions button:first-child { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.archive-metadata { margin: 20px 0 12px; padding: 12px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.archive-metadata summary { font-size: 12px; line-height: 1.6; color: var(--muted); cursor: pointer; overflow-wrap: anywhere; }
+.library-metadata-preview { margin-left: 12px; }
+.archive-metadata summary small { margin-left: 8px; color: var(--warning); }
+.library .archive-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 16px 0 12px; }
+.library .archive-fields label { font-size: 12px; color: inherit; gap: 6px; }
+.library .archive-fields input { min-height: 36px; font-size: 14px; }
+.library .archive-fields textarea { min-height: 88px; padding: 8px 10px; font-size: 14px; line-height: 1.7; }
+.library-metadata-actions { display: flex; gap: 8px; }
+.library-view-switch { display: flex; align-items: center; gap: 20px; border-bottom: 1px solid var(--border); margin: 16px 0 20px; }
+.library .library-view-switch button { display: inline-flex; align-items: center; gap: 6px; padding: 12px 0; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-size: 14px; white-space: nowrap; }
+.library .library-view-switch button[aria-pressed=true] { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.library-view-switch button > span { padding: 1px 5px; font-size: 11px; border-radius: 4px; background: var(--accent-soft); }
+.library .archive-answer-nav { padding: 8px 0 12px; gap: 6px; background: var(--panel); }
+.library .archive-answer-nav a { padding: 5px 8px; border-radius: 5px; font-size: 12px; }
+.library .archive-answer-nav a:hover { color: var(--accent); border-color: var(--accent); }
+.library .archive-answer { padding: 24px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; scroll-margin-top: 54px; }
+.library .archive-answer > header { align-items: start; flex-wrap: wrap; gap: 12px; }
+.library .archive-answer h2 { font-size: 16px; line-height: 1.6; }
+.library .archive-answer > header button, .library .archive-answer > button { min-height: 30px; height: auto; padding: 4px 8px; font-size: 12px; line-height: 1.5; }
+.library .archive-answer > button { margin: 10px 0; }
+.library .markdown-preview { font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.markdown-preview > :first-child { margin-top: 0; }
+.library .markdown-preview p { margin: 12px 0; }
+.library .markdown-preview h3 { margin: 24px 0 10px; font-size: 20px; line-height: 1.5; }
+.library .markdown-preview h4 { margin: 20px 0 8px; font-size: 17px; line-height: 1.6; }
+.library .markdown-preview h5, .library .markdown-preview h6 { margin: 16px 0 6px; font-size: 16px; }
+.library .markdown-preview ul, .library .markdown-preview ol { padding-left: 1.6em; margin: 12px 0; }
+.library .markdown-preview li { margin: 6px 0; }
+.library .markdown-preview li > ul, .library .markdown-preview li > ol { margin: 4px 0; }
+.library .markdown-preview blockquote { margin: 16px 0; padding: 4px 0 4px 16px; border-left: 3px solid var(--border); color: inherit; }
+.library .markdown-preview blockquote p { margin: 4px 0; }
+.markdown-preview a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.markdown-preview :not(pre) > code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--panel) 90%, var(--muted)); font-size: .88em; }
+.library .markdown-preview pre { padding: 16px; margin: 16px 0; line-height: 1.7; font-size: 13px; white-space: pre; }
+.markdown-table { max-width: 100%; overflow-x: auto; margin: 16px 0; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; }
+.markdown-table table { width: 100%; border-collapse: collapse; font-size: .9em; }
+.markdown-table th, .markdown-table td { min-width: 100px; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.markdown-table th { font-weight: 600; background: color-mix(in srgb, var(--panel) 94%, var(--muted)); }
+.markdown-table tr:last-child td { border-bottom: 0; }
+.markdown-preview hr { margin: 24px 0; border: 0; border-top: 1px solid var(--border); }
+.library .archive-compare { margin: 0; padding: 0; border: 0; border-radius: 0; }
+.library .archive-compare > header h2 { font-size: 16px; margin-bottom: 8px; }
+.library .archive-compare > header p { line-height: 1.7; font-size: 12px; }
+.library .comparison-filter { display: inline-flex; gap: 8px; align-items: center; margin: 16px 0 4px; font-size: 13px; }
+.library .comparison-filter input { accent-color: var(--accent); }
+.library .archive-compare-selectors, .library .archive-compare-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 16px; }
+.library .archive-compare-selectors label { font-size: 12px; gap: 8px; min-width: 0; }
+.library .archive-compare-column { max-height: 70vh; overflow: auto; overscroll-behavior: contain; padding: 2px 8px 16px 2px; }
+.library .archive-compare-column > h3 { position: sticky; top: 0; margin: 0; padding: 10px 0; background: var(--panel); font-size: 14px; z-index: 1; }
+.library .archive-compare-paragraph { padding: 14px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+.library .archive-compare-paragraph.shared { background: color-mix(in srgb, var(--panel) 65%, var(--accent-soft)); padding: 12px; border-radius: 6px; }
+.library .archive-compare-paragraph > span { display: block; font-size: 11px; font-weight: 400; margin-bottom: 8px; }
+.library .archive-compare-paragraph .markdown-preview { font-size: 15px; line-height: 1.8; }
+.library .archive-synthesis { padding: 0; margin: 0; border: 0; }
+.library .synthesis-card { padding: 0; border: 0; box-shadow: none; }
+.library .synthesis-card header { flex-wrap: wrap; gap: 8px; }
+.library .synthesis-card header span { font-size: 12px; }
+.library .citation-notice { margin: 16px 0; }
+@container library-detail (max-width: 820px) {
+  .library .archive-compare-grid, .library .archive-compare-selectors { gap: 16px; }
+  .library .archive-detail { padding: 24px; }
+}
+@container library-detail (max-width: 660px) {
+  .library .archive-compare-grid, .library .archive-compare-selectors { grid-template-columns: minmax(0, 1fr); }
+  .library .archive-compare-column { max-height: none; }
+  .library .archive-detail { padding: 20px; }
+  .library .archive-detail h1 { font-size: 21px; }
+  .library .library-view-switch { gap: 16px; }
+}

@@ -10,6 +10,7 @@ import { FolderWorkspace } from "./folder-workspace";
 import { ArchiveWorkspace } from "./archive-workspace";
 import { SerialActions, type ActionFailure } from "./serial-actions";
 import { SynthesisWorkspace } from "./synthesis-workspace";
+import { requestDecisionNavigation } from "./decision-navigation";
 import { shell } from "./shell-api";
 
 export interface ArchiveSurfaceProps {
@@ -123,86 +124,27 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
 }
 
 function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; onOrganize: () => void; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
-  const [items, setItems] = useState<readonly ArchiveRecord[]>([]);
-  const [tags, setTags] = useState<readonly string[]>([]);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [favoriteOnly, setFavoriteOnly] = useState(false);
-  const [selectedTag, setSelectedTag] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(props.embeddedRecord);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState("");
-  useEffect(() => { props.onBusy(busy); return () => props.onBusy(false); }, [busy, props.onBusy]);
+  const [status, setStatus] = useState('');
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
-  const requestEpoch = useRef<ReturnType<typeof createArchiveRequestEpoch> | null>(null);
-  const consumedPreferredId = useRef<string | null>(null);
-  const currentFilters = useRef<ArchiveFilters>({ query: "", favorite: false, tag: "" });
-  const refresh = useRef<ReturnType<typeof createArchiveRefresh> | null>(null);
   const actionQueue = useRef<SerialActions | null>(null);
-  if (!requestEpoch.current) requestEpoch.current = createArchiveRequestEpoch();
-  if (!refresh.current) {
-    refresh.current = createArchiveRefresh(
-      requestEpoch.current,
-      () => currentFilters.current,
-      {
-        search: (filters) => shell.searchArchives(filters),
-        setLoading,
-        apply: (result, preferredId) => {
-          setItems(result.items);
-          setTags(result.tags);
-          setSelectedId((current) => {
-            const preferred = preferredId ?? current;
-            return result.items.some((item) => item.id === preferred)
-              ? preferred!
-              : result.items[0]?.id ?? null;
-          });
-          setStatus("");
-          setLoading(false);
-        },
-        fail: () => {
-          setStatus(props.copy.archiveLoadFailed);
-          setLoading(false);
-        }
-      }
-    );
-  }
   if (!actionQueue.current) actionQueue.current = new SerialActions(setBusy, setStatus);
-  const selected = items.find((item) => item.id === props.embeddedRecord.id) ?? props.embeddedRecord;
-  const load = refresh.current;
+  useEffect(() => setSelected(props.embeddedRecord), [props.embeddedRecord]);
+  useEffect(() => { props.onBusy(busy); return () => props.onBusy(false); }, [busy, props.onBusy]);
+  const run = (action: () => Promise<void>, failure: ActionFailure): Promise<void> => actionQueue.current!.run(action, failure);
+  const markdown = () => shell.archiveMarkdown(selected.id, props.locale);
+  const savePatch = async (value: ArchivePatch): Promise<boolean> => {
+    let saved = false;
+    await run(async () => {
+      const record = await shell.updateArchive(selected.id, value);
+      setSelected(record); props.onChanged(); setStatus(props.copy.librarySaved); saved = true;
+    }, props.copy.archiveSaveFailed);
+    return saved;
+  };
+  const patch = (value: ArchivePatch) => { void savePatch(value); };
 
-  useEffect(() => {
-    const { target, consumed } = resolveFilterRefreshTarget(props.preferredId, consumedPreferredId.current);
-    const timer = setTimeout(() => {
-      consumedPreferredId.current = consumed;
-      void load(target);
-    }, query ? 180 : 0);
-    return () => clearTimeout(timer);
-  }, [favoriteOnly, load, props.preferredId, query, selectedTag]);
-
-  const run = (action: () => Promise<void>, failure: ActionFailure): Promise<void> =>
-    actionQueue.current!.run(action, failure);
-  const changeQuery = (value: string) => {
-    currentFilters.current = { ...currentFilters.current, query: value };
-    startArchiveFilterIntent(requestEpoch.current!, setQuery, value, setLoading, setStatus);
-  };
-  const changeFavoriteOnly = (value: boolean) => {
-    currentFilters.current = { ...currentFilters.current, favorite: value };
-    startArchiveFilterIntent(requestEpoch.current!, setFavoriteOnly, value, setLoading, setStatus);
-  };
-  const changeSelectedTag = (value: string) => {
-    currentFilters.current = { ...currentFilters.current, tag: value };
-    startArchiveFilterIntent(requestEpoch.current!, setSelectedTag, value, setLoading, setStatus);
-  };
-  const markdown = async (): Promise<string> => {
-    if (!selected) throw new Error("no_archive");
-    return shell.archiveMarkdown(selected.id, props.locale);
-  };
-  const patch = (value: ArchivePatch) => { void run(async () => {
-    if (!selected) return;
-    const record = await shell.updateArchive(selected.id, value);
-    await load(record.id); props.onChanged();
-  }, props.copy.archiveSaveFailed); };
 
 
   return (
@@ -212,21 +154,21 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       copy={props.copy}
       onCreateDecision={() => props.onCreateDecision(selected)}
       locale={props.locale}
-      items={items}
+      items={[selected]}
       selected={selected}
       comparisonId={props.comparisonId}
-      tags={tags}
-      query={query}
-      favoriteOnly={favoriteOnly}
-      selectedTag={selectedTag}
-      loading={loading}
+      tags={selected.tags}
+      query=""
+      favoriteOnly={false}
+      selectedTag=""
+      loading={false}
       busy={busy}
       status={status}
       onClose={props.onClose}
-      onQueryChange={changeQuery}
-      onFavoriteFilterChange={changeFavoriteOnly}
-      onTagChange={changeSelectedTag}
-      onSelect={setSelectedId}
+      onQueryChange={() => undefined}
+      onFavoriteFilterChange={() => undefined}
+      onTagChange={() => undefined}
+      onSelect={() => undefined}
       onCapture={() => { void run(async () => {
         const record = await props.onCapture();
         props.onSavedArchive(record);
@@ -243,15 +185,16 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       }, props.copy.archiveSaveFailed); }}
       onDelete={(id) => { void run(async () => {
         await shell.deleteArchive(id);
-        await load(); props.onChanged(true);
+        props.onChanged(true);
       }, props.copy.archiveSaveFailed); }}
       onPatch={patch}
+      onSaveMetadata={savePatch}
       onOpenSource={(url) => { void run(() => shell.openExternal(url), props.copy.archiveLoadFailed); }}
       pendingSynthesis={props.pendingSynthesis}
       synthesisCandidate={props.synthesisCandidate}
       detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
-      onSynthesize={() => { setFollowUpHost(undefined); if (selected) setSynthesisId(selected.id); }}
-      onFollowUp={(host) => { if (selected) { setFollowUpHost(host); setSynthesisId(selected.id); } }}
+      onSynthesize={() => requestDecisionNavigation(() => { setFollowUpHost(undefined); setSynthesisId(selected.id); })}
+      onFollowUp={(host) => requestDecisionNavigation(() => { setFollowUpHost(host); setSynthesisId(selected.id); })}
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}
       onSaveSynthesis={(replaceExisting) => { void run(async () => {
         const record = await props.onSaveSynthesis(replaceExisting);

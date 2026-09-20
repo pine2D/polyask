@@ -9,6 +9,7 @@ test("desktop forms expose stable names and disable browser autofill where it is
     renderer("command-bar.tsx"),
     renderer("archive-workspace.tsx"),
     renderer("archive-detail.tsx"),
+    renderer("archive-metadata.tsx"),
     renderer("synthesis-workspace.tsx"),
     renderer("settings-workspace.tsx"),
     renderer("workspace-drawer.tsx"),
