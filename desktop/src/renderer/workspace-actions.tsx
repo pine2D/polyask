@@ -1,6 +1,6 @@
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SyncStatus } from "../shared/sync";
-import { MoreIcon } from "./icons";
+import { CompareIcon, MoreIcon } from "./icons";
 import { describeSync, syncNeedsAttention } from "./sync-status";
 
 interface WorkspaceActionsProps {
@@ -10,6 +10,7 @@ interface WorkspaceActionsProps {
   readonly cancelledCount: number;
   readonly synthesisPending: boolean;
   readonly syncStatus: SyncStatus;
+  readonly onCompare?: () => void;
   readonly onOpenMore: () => void;
 }
 
@@ -31,6 +32,10 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
     : props.copy.moreActions;
   return (
     <div className="workspace-actions priority-p0">
+      {props.onCompare ? <button type="button" className="compare-trigger" title={props.copy.collectCompare}
+        aria-label={props.copy.collectCompare} disabled={props.disabled} onClick={props.onCompare}>
+        <CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span>
+      </button> : null}
       <button
         type="button"
         className={syncAttention ? `more-trigger sync-attention sync-${props.syncStatus.state}` : "more-trigger"}

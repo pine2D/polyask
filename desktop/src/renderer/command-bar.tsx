@@ -3,7 +3,7 @@ import type { ReactNode, RefObject } from "react";
 import type { DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
-import { ChevronDownIcon, CompareIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
+import { ChevronDownIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
 import { commandKeyAction } from "./keyboard";
 import type { WorkspacePanelTab } from "./workspace-panel-state";
 import { WorkspaceActions } from "./workspace-actions";
@@ -112,8 +112,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       ) : (
         <button type="button" className="send primary-action priority-p0" title={props.sendBlockedReason ?? undefined} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}
-      {props.onCompare ? <button type="button" className="compare-trigger" title={props.copy.collectCompare} aria-label={props.copy.collectCompare} disabled={busy} onClick={props.onCompare}><CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span></button> : null}
-      <WorkspaceActions copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} />
+      <WorkspaceActions onCompare={props.onCompare} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} />
     </header>
   );
 }
