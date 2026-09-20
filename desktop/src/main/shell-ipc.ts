@@ -6,6 +6,7 @@ import {
   type WebFrameMain
 } from "electron";
 
+import { OperationGate } from "../shared/operation-gate";
 import { applicationMenuShortcuts } from "./menu-shortcuts";
 import { SITE_KEYS, type SiteKey } from "../shared/contracts";
 import type { DesktopCopy } from "../shared/copy";
@@ -114,6 +115,7 @@ function strictId(value: unknown): string {
 
 export function registerShellIpc(options: ShellIpcOptions): () => void {
   const { window, manager, workspace, coordinator, synthesisCoordinator, collection, archives, history, promptLibrary, synthesis, sync } = options;
+  const operationGate = new OperationGate();
   const trustedShell = (event: ShellIpcEvent) =>
     event.sender.id === window.webContents.id &&
     event.senderFrame?.parent === null &&
@@ -168,26 +170,28 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (request.images.length && unsupportedImageSites(request.sites, SITES).length) {
       throw new Error("image_sites_unsupported");
     }
-    // beginRun first: a stale retry throws before generation monitoring is touched.
-    collection.beginRun(request.runId, request.sites);
-    manager.beginGenerationRun(request.runId, request.sites);
-    // Recorded before dispatch, matching the extension (console/console.js pushes
-    // history ahead of sendAll): a question the user actually asked belongs in the
-    // library even when every site fails.
-    history.record(request.text);
-    publishPromptLibrary();
-    for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
-    const results = await coordinator.send(
-      request,
-      (site, command, signal) => manager.sendCommand(site, command, signal),
-      request.images.length ? 90_000 : 44_000,
-      (result) => {
-        manager.markStatus(statusForResult(result.site, result));
-        if (result.ok) manager.watchGeneration(request.runId, result.site);
-      },
-      { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
-    );
-    return results;
+    return operationGate.run(async () => {
+      // beginRun first: a stale retry throws before generation monitoring is touched.
+      collection.beginRun(request.runId, request.sites);
+      manager.beginGenerationRun(request.runId, request.sites);
+      // Recorded before dispatch, matching the extension (console/console.js pushes
+      // history ahead of sendAll): a question the user actually asked belongs in the
+      // library even when every site fails.
+      history.record(request.text);
+      publishPromptLibrary();
+      for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
+      const results = await coordinator.send(
+        request,
+        (site, command, signal) => manager.sendCommand(site, command, signal),
+        request.images.length ? 90_000 : 44_000,
+        (result) => {
+          manager.markStatus(statusForResult(result.site, result));
+          if (result.ok) manager.watchGeneration(request.runId, result.site);
+        },
+        { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
+      );
+      return results;
+    });
   });
   ipcMain.handle("polyask:collect", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
@@ -225,7 +229,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.handle("polyask:synthesis-send", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
-    return synthesis.send(value);
+    return operationGate.run(() => synthesis.send(value));
   });
   ipcMain.handle("polyask:synthesis-collect", (event) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
@@ -263,7 +267,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.handle("polyask:new-session", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
-    return workspace.newSession(value);
+    return operationGate.run(() => workspace.newSession(value));
   });
   ipcMain.handle("polyask:show-group-menu", (event) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");

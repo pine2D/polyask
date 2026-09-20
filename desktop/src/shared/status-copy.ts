@@ -67,6 +67,7 @@ export function describeCollectionCode(copy: DesktopCopy, code?: string): string
 
 export function describeSynthesisSendCode(copy: DesktopCopy, code?: string): string {
   switch (code) {
+    case "operation_busy": return copy.operationBusy;
     case "submit_unconfirmed": return copy.submitUnconfirmed;
     case "tier_unconfirmed": return copy.tierUnconfirmed;
     case "composer_not_found": return copy.composerNotFound;

@@ -52,6 +52,8 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 ## 4. 群发链路与超时预算
 
+- 普通群发、辅助综合发送、新建会话共享主进程 `OperationGate`；上一个操作未结算时拒绝新操作（IPC `operation_busy`），取消后也须等旧请求结算才能释放。渲染层辅助综合同时占用外壳操作锁并显示取消状态。
+
 `renderer` → `polyask:broadcast`（`shell-ipc.ts`）→ `BroadcastCoordinator.send`（`broadcast.ts`）→ `ViewManager.sendCommand` → `SiteCommandChannel` → site preload → 站点运行时。
 
 - **`deadline` 是绝对时间戳**，在 `broadcast.ts` 一次算出（`now() + max(1, timeoutMs)`）并原样放进每站命令，全链路透传、只读不重算。循环等待与 ≥1s 的固定等待一律夹取。

@@ -115,7 +115,7 @@ function App(): React.JSX.Element {
   const [healthChecking, setHealthChecking] = useState(false);
   const [layout, setLayout] = useState<LayoutState>(INITIAL_LAYOUT);
   const { text, setText, revision: draftRevision, clearSent } = usePromptDraft();
-  const [auxiliaryBusy, setAuxiliaryBusy] = useState(false);
+  const [auxiliaryWorkBusy, setAuxiliaryBusy] = useState(false);
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
   const [surface, setSurface] = useState<DesktopSurface>("sites");
@@ -146,7 +146,8 @@ function App(): React.JSX.Element {
   const changeDrawerOpen = (value: boolean): void => {
     changePanelState(value ? openWorkspacePanel("sites", "pointer") : null);
   };
-  const synthesis = useSynthesisFlow();
+  const synthesis = useSynthesisFlow(actionLock.current!);
+  const auxiliaryBusy = auxiliaryWorkBusy || synthesis.runState !== "idle";
   const archiveCapture = useArchiveCapture({ sites, selected, prompt: text });
   const broadcast = useBroadcastFlow(
     () => setAnnouncement(copy.failed),
@@ -154,7 +155,7 @@ function App(): React.JSX.Element {
     archiveCapture.invalidate
   );
   const { runState } = broadcast;
-  const imageSelection = useImageSelection(copy, runState === "idle", setAnnouncement);
+  const imageSelection = useImageSelection(copy, runState === "idle" && !auxiliaryBusy, setAnnouncement);
   const { images, open: imageTrayOpen } = imageSelection;
   const acceptDisplayPreferences = (value: DisplayPreferences): void => {
     applyDisplayPreferences(
@@ -504,11 +505,11 @@ function App(): React.JSX.Element {
   // （未挂进视图树的 WebContentsView 视口恒 0×0，findComposer 恒 null，走满 44s 才报 timeout），
   // 所以必须先切回 sites 再发；切走后归档面板已卸载，失败只能靠 announcement 通报。
   const sendSynthesisFromArchive = async (request: SynthesisSendRequest): Promise<void> => {
-    broadcast.invalidate();
-    archiveCapture.invalidate();
-    changeSurface("sites");
     try {
-      await synthesis.send(request);
+      await synthesis.send(request, () => {
+        broadcast.invalidate();
+        changeSurface("sites");
+      });
       setAnnouncement(copy.synthesisSent);
     } catch (error) {
       setAnnouncement(describeSynthesisSendCode(copy, errorCode(error)));
@@ -568,7 +569,7 @@ function App(): React.JSX.Element {
         promptRef={promptRef}
         text={text}
         tier={workspace.tier}
-        runState={runState}
+        runState={synthesis.runState !== "idle" ? synthesis.runState : runState}
         auxiliaryBusy={auxiliaryBusy}
         layoutMode={layout.mode}
         selectedCount={selected.size}
@@ -597,7 +598,7 @@ function App(): React.JSX.Element {
             copy={copy}
             images={images}
             open={imageTrayOpen}
-            disabled={runState !== "idle"}
+            disabled={runState !== "idle" || auxiliaryBusy}
             warning={imageWarning}
             warningCount={unsupportedSites.length}
             error={imageSelection.error}
@@ -614,7 +615,7 @@ function App(): React.JSX.Element {
         expanded={composerExpanded}
         onTextChange={setText}
         onSubmit={() => void submit()}
-        onCancel={broadcast.cancel}
+        onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}
         onTierChange={workspaceFlow.changeTier}
         onLayoutChange={setMode}
         onExpandedChange={setPromptExpanded}
