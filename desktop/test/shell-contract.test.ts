@@ -488,7 +488,8 @@ test("prompt templates and recent history use a trusted synchronized library bri
   assert.match(preload, /savePromptTemplate/);
   assert.match(preload, /deletePromptTemplate/);
   assert.match(preload, /onPromptLibrary/);
-  assert.match(main, /PromptLibraryService/);
+  assert.match(main, /createLocalDataServices\(database\)/);
+  assert.match(readSource("src/main/local-data-services.ts"), /new PromptLibraryService\(database.state, database.meta, history\)/);
 });
 
 test("completion notifications are boolean-only and update checks open the official release page", () => {

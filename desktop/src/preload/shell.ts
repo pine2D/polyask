@@ -1,3 +1,4 @@
+import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
 import { contextBridge, ipcRenderer } from "electron";
 
 import { ipcErrorCode } from "../shared/ipc-error";
@@ -41,6 +42,12 @@ export interface PolyAskDesktopApi {
   menuShortcuts(): Promise<MenuShortcut[]>;
   broadcast(request: BroadcastRequest): Promise<SiteRunResult[]>;
   collectAnswers(request: CollectionRequest): Promise<CollectedAnswer[]>;
+  searchDecisions(filters: DecisionFilters): Promise<DecisionRecord[]>;
+  getDecision(id: string): Promise<DecisionRecord | null>;
+  createDecision(input: DecisionInput): Promise<DecisionRecord>;
+  updateDecision(id: string, input: DecisionInput): Promise<DecisionRecord>;
+  deleteDecision(id: string): Promise<void>;
+  decisionMarkdown(id: string, locale: string): Promise<string>;
   searchArchives(filters: ArchiveFilters): Promise<ArchiveSearchResult>;
   getArchive(id: string): Promise<ArchiveRecord | null>;
   addArchive(input: ArchiveInput): Promise<ArchiveRecord>;
@@ -81,6 +88,7 @@ export interface PolyAskDesktopApi {
   reloadSite(site: SiteKey, ignoreCache?: boolean): Promise<boolean>;
   clearSiteData(site: SiteKey): Promise<boolean>;
   clearHistory(): Promise<number>;
+  clearDecisions(): Promise<number>;
   clearArchives(): Promise<number>;
   resetLocalData(): Promise<SyncStatus>;
   onStatus(listener: (status: SiteStatus) => void): () => void;
@@ -107,6 +115,12 @@ const api: PolyAskDesktopApi = Object.freeze({
   menuShortcuts: () => invoke("polyask:menu-shortcuts"),
   broadcast: (request: BroadcastRequest) => invoke("polyask:broadcast", request),
   collectAnswers: (request: CollectionRequest) => invoke("polyask:collect", request),
+  searchDecisions: (filters: DecisionFilters) => invoke("polyask:decision-search", filters),
+  getDecision: (id: string) => invoke("polyask:decision-get", id),
+  createDecision: (input: DecisionInput) => invoke("polyask:decision-create", input),
+  updateDecision: (id: string, input: DecisionInput) => invoke("polyask:decision-update", { id, input }),
+  deleteDecision: (id: string) => invoke("polyask:decision-delete", id),
+  decisionMarkdown: (id: string, locale: string) => invoke("polyask:decision-markdown", { id, locale }),
   searchArchives: (filters: ArchiveFilters) => invoke("polyask:archive-search", filters),
   getArchive: (id: string) => invoke("polyask:archive-get", id),
   addArchive: (input: ArchiveInput) => invoke("polyask:archive-add", input),
@@ -150,6 +164,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   reloadSite: (site: SiteKey, ignoreCache?: boolean) => invoke("polyask:reload-site", site, ignoreCache),
   clearSiteData: (site: SiteKey) => invoke("polyask:clear-site-data", site),
   clearHistory: () => invoke("polyask:clear-history"),
+  clearDecisions: () => invoke("polyask:clear-decisions"),
   clearArchives: () => invoke("polyask:clear-archives"),
   resetLocalData: () => invoke("polyask:reset-local"),
   onStatus: (listener: (status: SiteStatus) => void) => subscribe("polyask:site-status", listener),

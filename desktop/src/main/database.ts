@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { DecisionRepository } from "./decision-repository";
 import { ArchiveRepository } from "./archive-repository";
 import { HistoryRepository } from "./history-repository";
 import { DriveFileRepository } from "./drive-file-repository";
@@ -10,7 +11,7 @@ import { OutboxRepository } from "./outbox-repository";
 import { inTransaction } from "./repository-utils";
 import { StateRepository } from "./state-repository";
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 function migrate(database: DatabaseSync): void {
   database.exec("PRAGMA foreign_keys = ON");
@@ -32,6 +33,13 @@ function migrate(database: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS archives_sort ON archives(sort_time DESC, id);
     CREATE INDEX IF NOT EXISTS archives_deleted ON archives(deleted_at);
+    CREATE TABLE IF NOT EXISTS decisions (
+      id TEXT PRIMARY KEY,
+      body TEXT NOT NULL,
+      sort_time INTEGER NOT NULL,
+      deleted_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS decisions_sort ON decisions(sort_time DESC, id);
     CREATE TABLE IF NOT EXISTS state_items (
       key TEXT PRIMARY KEY,
       body TEXT NOT NULL,
@@ -66,6 +74,7 @@ export class DesktopDatabase {
   readonly outbox: OutboxRepository;
   readonly history: HistoryRepository;
   readonly archives: ArchiveRepository;
+  readonly decisions: DecisionRepository;
   readonly state: StateRepository;
   readonly driveFiles: DriveFileRepository;
   readonly meta: MetaRepository;
@@ -75,6 +84,7 @@ export class DesktopDatabase {
     this.outbox = new OutboxRepository(database);
     this.history = new HistoryRepository(database, this.outbox);
     this.archives = new ArchiveRepository(database, this.outbox);
+    this.decisions = new DecisionRepository(database, this.outbox);
     this.state = new StateRepository(database, this.outbox);
     this.driveFiles = new DriveFileRepository(database);
     this.meta = new MetaRepository(database);
@@ -101,7 +111,7 @@ export class DesktopDatabase {
   // 本机重置唯一的物理删除路径：只清本机，云端由重新连接后的全量拉取恢复。deviceId 保留（见 DataAdminService）。
   resetLocalData(): void {
     inTransaction(this.database, () => {
-      for (const table of ["history", "archives", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
+      for (const table of ["history", "archives", "decisions", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");
     });
     // DELETE 只把页挂进 freelist，提问与回答明文仍留在 .sqlite / WAL 里；重置的承诺是「本机清空」，收缩一次。

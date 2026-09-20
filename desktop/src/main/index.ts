@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createLocalDataServices } from "./local-data-services";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -31,13 +31,10 @@ import type { SyncStatus } from "../shared/sync";
 import type { RuntimeInfo } from "../shared/runtime";
 import type { PromptLibraryState } from "../shared/prompt-library";
 import type { WorkspaceState } from "../shared/workspace";
-import { ArchiveService } from "./archive-service";
 import { BroadcastCoordinator } from "./broadcast";
 import { CollectionService } from "./collection-service";
 import { CompletionNotifier } from "./completion-notifier";
 import { DesktopDatabase } from "./database";
-import { HistoryService } from "./history-service";
-import { PromptLibraryService } from "./prompt-library-service";
 import {
   applyPortableImportIdentity,
   finalizePortableDataImport,
@@ -369,15 +366,7 @@ async function createWindow(): Promise<void> {
     (site, deadline) => manager.collect(site, deadline)
   );
   collectionForWorkspace = collection;
-  const deviceId = () => {
-    const stored = database.meta.get<unknown>("deviceId");
-    if (typeof stored === "string" && stored) return stored;
-    return database.meta.put("deviceId", randomUUID());
-  };
-  deviceId();
-  const archives = new ArchiveService(database.archives, { deviceId });
-  const history = new HistoryService(database.history, { deviceId });
-  const promptLibrary = new PromptLibraryService(database.state, database.meta, history);
+  const { deviceId, archives, history, promptLibrary, decisions } = createLocalDataServices(database);
   const synthesis = new SynthesisService({
     sites: SITES,
     archives,
@@ -423,6 +412,7 @@ async function createWindow(): Promise<void> {
     synthesisCoordinator,
     collection,
     archives,
+    decisions,
     history,
     promptLibrary,
     synthesis,

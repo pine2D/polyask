@@ -1,3 +1,4 @@
+import { DECISION_COPY } from "./decision-copy";
 import { ARCHIVE_COPY } from "./archive-copy";
 import { COMMAND_COPY } from "./command-copy";
 import { DATA_ADMIN_COPY } from "./data-admin-copy";
@@ -11,6 +12,7 @@ import { WORKSPACE_COPY } from "./workspace-copy";
 export const COPY = {
   en: {
     ...ARCHIVE_COPY.en,
+    ...DECISION_COPY.en,
     ...COMMAND_COPY.en,
     ...PROMPT_LIBRARY_COPY.en,
     ...PRODUCTIVITY_COPY.en,
@@ -156,6 +158,7 @@ export const COPY = {
   },
   zhCN: {
     ...ARCHIVE_COPY.zhCN,
+    ...DECISION_COPY.zhCN,
     ...COMMAND_COPY.zhCN,
     ...PROMPT_LIBRARY_COPY.zhCN,
     ...PRODUCTIVITY_COPY.zhCN,
@@ -301,6 +304,7 @@ export const COPY = {
   },
   zhTW: {
     ...ARCHIVE_COPY.zhTW,
+    ...DECISION_COPY.zhTW,
     ...COMMAND_COPY.zhTW,
     ...PROMPT_LIBRARY_COPY.zhTW,
     ...PRODUCTIVITY_COPY.zhTW,

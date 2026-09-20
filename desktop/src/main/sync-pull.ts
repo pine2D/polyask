@@ -1,6 +1,7 @@
 import {
   mergeStateFragments,
   SYNC_SCHEMA,
+  SUPPORTED_SYNC_SCHEMA,
   type StateFragment
 } from "../shared/sync";
 import type { DriveChange, DriveFile } from "./drive-client";
@@ -30,7 +31,11 @@ export class SyncPull {
 
   async run(signal: AbortSignal): Promise<void> {
     this.roundCorrupt = 0;
-    const token = this.repository.config().pageToken;
+    const config = this.repository.config();
+    // Old binaries preserve unknown config fields, so a capability marker cannot prove
+    // these skipped files were downloaded. Replay until each file is read or removed.
+    const replay = [...this.storedFutureFiles().values()].some((schema) => schema <= SUPPORTED_SYNC_SCHEMA);
+    const token = replay ? undefined : config.pageToken;
     try {
       if (token) await this.incremental(token, signal);
       else await this.fullScan(signal);
@@ -44,7 +49,7 @@ export class SyncPull {
   private async fullScan(signal: AbortSignal): Promise<void> {
     const startToken = await this.drive.getStartToken(signal);
     const states: StateMap = {};
-    const future: FutureFiles = new Map();
+    const future = this.storedFutureFiles();
     const seen = new Set<string>();
     for (const file of await this.drive.listFiles(signal)) {
       seen.add(file.id);
@@ -55,6 +60,9 @@ export class SyncPull {
     for (const indexed of this.repository.driveFiles()) {
       if (!seen.has(indexed.id)) this.repository.deleteDriveFile(indexed.id);
     }
+    // A failed download is not proof of compatibility; only a successful read or
+    // absence from both the listing and its subsequent changes releases the lock.
+    for (const fileId of future.keys()) if (!seen.has(fileId)) future.delete(fileId);
     this.applyStates(states, future);
     this.repository.saveConfig({ pageToken: changes.newStartPageToken ?? startToken });
   }
@@ -98,13 +106,14 @@ export class SyncPull {
   ): Promise<void> {
     const props = file.appProperties ?? {};
     if (props.app !== "polyask") return;
-    if (Number(props.schema) > SYNC_SCHEMA) {
+    const expectedSchema = props.kind === "decision" ? 2 : SYNC_SCHEMA;
+    if (Number(props.schema) > expectedSchema) {
       future.set(file.id, Number(props.schema));
       this.repository.deleteDriveFile(file.id);
       return;
     }
     const key = logicalKey(file);
-    if (!key || Number(props.schema) !== SYNC_SCHEMA) {
+    if (!key || Number(props.schema) !== expectedSchema) {
       this.noteCorrupt(file.id);
       return;
     }
@@ -123,9 +132,13 @@ export class SyncPull {
       }
       throw error;
     }
-    if (body && typeof body === "object" && Number((body as { schema?: unknown }).schema) > SYNC_SCHEMA) {
+    if (body && typeof body === "object" && Number((body as { schema?: unknown }).schema) > expectedSchema) {
       future.set(file.id, Number((body as { schema?: unknown }).schema));
       this.repository.deleteDriveFile(file.id);
+      return;
+    }
+    if (!body || typeof body !== "object" || (body as { schema?: unknown }).schema !== expectedSchema) {
+      this.noteCorrupt(file.id);
       return;
     }
     let valid = false;
@@ -138,6 +151,9 @@ export class SyncPull {
     } else if (props.kind === "archive" && body && typeof body === "object") {
       valid = (body as { id?: unknown }).id === props.id && this.repository.importArchive(body);
     }
+    if (props.kind === "decision") {
+      valid = (body as { id?: unknown }).id === props.id && this.repository.importDecision(body);
+    }
     if (!valid) {
       this.noteCorrupt(file.id);
       return;
@@ -146,8 +162,7 @@ export class SyncPull {
     this.repository.putDriveFile(file, key, seenAt);
   }
 
-  // 未来 schema 只读锁：记住每个触发只读的文件及其 schema。文件被删（差集清空）即解锁；本机 SYNC_SCHEMA
-  // 升级追平（记下的 schema 不再大于它）也解锁，不需要全量重扫。语义照抄自扩展时代的实现（tag archive/extension-v0.25.1 的 bg/sync-model.js futureFiles）。
+  // Unsupported files remain locked until a successful replay or remote removal.
   private storedFutureFiles(): FutureFiles {
     const config = this.repository.config();
     const future: FutureFiles = new Map();
@@ -158,7 +173,7 @@ export class SyncPull {
 
   private applyStates(states: StateMap, future: FutureFiles): void {
     const merged = this.repository.applyStateFragments(states);
-    const readOnly = [...future.values()].some((schema) => schema > SYNC_SCHEMA) || merged.readOnly;
+    const readOnly = future.size > 0 || merged.readOnly;
     this.repository.saveConfig({
       readOnly,
       errorCount: this.roundCorrupt + merged.corrupt,
@@ -180,5 +195,6 @@ function logicalKey(file: DriveFile): string | null {
   if (props.kind === "state") return `state:${props.id}`;
   if (props.kind === "history" && props.device) return `history:${props.id}:${props.device}`;
   if (props.kind === "archive") return `archive:${props.id}`;
+  if (props.kind === "decision") return `decision:${props.id}`;
   return null;
 }

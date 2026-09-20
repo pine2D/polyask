@@ -49,6 +49,14 @@ export class DataAdminService {
     return cleared;
   }
 
+  clearDecisions(): number {
+    let cleared = 0;
+    for (const record of this.options.database.decisions.list()) {
+      if (this.options.database.decisions.delete(record.id, this.now(), this.options.deviceId())) cleared += 1;
+    }
+    return cleared;
+  }
+
   async resetLocal(): Promise<SyncStatus> {
     await this.options.sync.disconnect();
     this.options.database.resetLocalData();

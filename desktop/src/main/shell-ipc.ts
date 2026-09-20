@@ -1,3 +1,5 @@
+import type { DecisionService } from "./decision-service";
+import { registerDecisionIpc } from "./decision-ipc";
 import {
   ipcMain,
   shell as electronShell,
@@ -56,6 +58,7 @@ interface ShellIpcOptions {
   readonly synthesisCoordinator: BroadcastCoordinator;
   readonly collection: CollectionService;
   readonly archives: ArchiveService;
+  readonly decisions: DecisionService;
   readonly history: HistoryService;
   readonly promptLibrary: PromptLibraryService;
   readonly synthesis: SynthesisService;
@@ -131,6 +134,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
     return state;
   };
+  const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
   const disposeSyncIpc = registerSyncIpc({ sync, runtime: options.runtime, trusted: trustedShell });
   const disposeSiteHealthIpc = registerSiteHealthIpc({ manager, trusted: trustedShell });
   const disposeDataAdminIpc = registerDataAdminIpc({
@@ -358,6 +362,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
 
   return () => {
+    disposeDecisionIpc();
     disposeSyncIpc();
     disposeSiteHealthIpc();
     disposeDataAdminIpc();

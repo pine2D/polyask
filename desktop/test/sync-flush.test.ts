@@ -91,7 +91,7 @@ test("a legacy futureFileIds list keeps the lock and is rewritten as futureFiles
   repository.saveConfig({ readOnly: true, pageToken: "token", futureFileIds: ["legacy"] });
   const drive: SyncDrive = {
     getStartToken: async () => "start",
-    listFiles: async () => [],
+    listFiles: async () => [{ id: "legacy", appProperties: { app: "polyask", kind: "state", schema: "2", id: "legacy" } }],
     listChanges: async () => ({ changes: [], newStartPageToken: "next" }),
     download: async () => null,
     upsert: async () => { throw new Error("must_not_upload"); },

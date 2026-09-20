@@ -1,0 +1,53 @@
+export const DECISION_COPY = {
+  en: {
+    decisionConfirm: "Confirm", decisionPick: "Select a decision card to view its details.", decisionTitle: "Decision cards", decisionArchives: "Saved results", decisionCreate: "Create decision card",
+    decisionName: "Title", decisionConclusion: "Conclusion", decisionRationale: "Rationale",
+    decisionUncertainties: "Uncertainties", decisionNextStep: "Next step", decisionEvidence: "Evidence",
+    decisionDraft: "Draft", decisionVerify: "To verify", decisionFinal: "Final", decisionStatus: "Status",
+    decisionAll: "All statuses", decisionSearch: "Search decision cards…", decisionEmpty: "No decision cards found. Create one from a saved result.",
+    decisionSave: "Save", decisionCancel: "Cancel", decisionEdit: "Edit", decisionDelete: "Delete card",
+    decisionDeleteConfirm: "Delete this decision card?", decisionDiscard: "Discard unsaved changes?",
+    decisionSource: "Source result", decisionSourceMissing: "Source result unavailable (deleted or not yet synced) · saved excerpts retained",
+    decisionSourceLoading: "Checking source…", decisionSourceFailed: "Could not load the source result",
+    decisionOpenSource: "Open saved source", decisionAddEvidence: "Add excerpt", decisionRemoveEvidence: "Remove excerpt",
+    decisionEvidenceHint: "Paste an exact excerpt from this answer (up to 4,000 characters).",
+    decisionValidation: "Enter a title (up to 160 characters). Fields and excerpts allow 4,000 characters. Final cards need a conclusion; excerpts must match the source exactly.",
+    decisionSaved: "Decision card saved", decisionFailed: "Could not complete this action. Your edits are retained.",
+    decisionManual: "Written and verified by you. Changing status does not verify the content.",
+    decisionNew: "New decision card", decisionExport: "Export Markdown", decisionUnsaved: "Unsaved changes"
+  },
+  zhCN: {
+    decisionConfirm: "确认", decisionPick: "选择一张决策卡查看详情。", decisionTitle: "决策卡", decisionArchives: "归档结果", decisionCreate: "创建决策卡",
+    decisionName: "标题", decisionConclusion: "结论", decisionRationale: "判断理由",
+    decisionUncertainties: "待确认事项", decisionNextStep: "下一步", decisionEvidence: "证据摘录",
+    decisionDraft: "草稿", decisionVerify: "待验证", decisionFinal: "已定稿", decisionStatus: "状态",
+    decisionAll: "全部状态", decisionSearch: "搜索决策卡…", decisionEmpty: "暂无匹配的决策卡。可从归档结果创建。",
+    decisionSave: "保存", decisionCancel: "取消", decisionEdit: "编辑", decisionDelete: "删除决策卡",
+    decisionDeleteConfirm: "确认删除这张决策卡？", decisionDiscard: "放弃尚未保存的修改？",
+    decisionSource: "来源归档", decisionSourceMissing: "来源归档不可用（已删除或尚未同步）· 已保存的摘录仍保留",
+    decisionSourceLoading: "正在检查来源…", decisionSourceFailed: "无法读取来源归档",
+    decisionOpenSource: "查看来源归档", decisionAddEvidence: "添加摘录", decisionRemoveEvidence: "移除摘录",
+    decisionEvidenceHint: "粘贴这条回答中的原文片段（最多 4,000 字）。",
+    decisionValidation: "请填写标题（最多 160 字）。各正文和摘录最多 4,000 字；定稿须填写结论，摘录须与来源原文完全一致。",
+    decisionSaved: "决策卡已保存", decisionFailed: "操作未完成，编辑内容已保留。",
+    decisionManual: "由你手动整理与核实。修改状态不会自动验证内容。",
+    decisionNew: "新建决策卡", decisionExport: "导出 Markdown", decisionUnsaved: "尚未保存"
+  },
+  zhTW: {
+    decisionConfirm: "確認", decisionPick: "選擇一張決策卡查看詳情。", decisionTitle: "決策卡", decisionArchives: "封存結果", decisionCreate: "建立決策卡",
+    decisionName: "標題", decisionConclusion: "結論", decisionRationale: "判斷理由",
+    decisionUncertainties: "待確認事項", decisionNextStep: "下一步", decisionEvidence: "證據摘錄",
+    decisionDraft: "草稿", decisionVerify: "待驗證", decisionFinal: "已定稿", decisionStatus: "狀態",
+    decisionAll: "全部狀態", decisionSearch: "搜尋決策卡…", decisionEmpty: "暫無符合的決策卡。可從封存結果建立。",
+    decisionSave: "儲存", decisionCancel: "取消", decisionEdit: "編輯", decisionDelete: "刪除決策卡",
+    decisionDeleteConfirm: "確定刪除這張決策卡？", decisionDiscard: "捨棄尚未儲存的修改？",
+    decisionSource: "來源封存", decisionSourceMissing: "來源封存無法使用（已刪除或尚未同步）· 已儲存的摘錄仍保留",
+    decisionSourceLoading: "正在檢查來源…", decisionSourceFailed: "無法讀取來源封存",
+    decisionOpenSource: "查看來源封存", decisionAddEvidence: "新增摘錄", decisionRemoveEvidence: "移除摘錄",
+    decisionEvidenceHint: "貼上這則回答中的原文片段（最多 4,000 字）。",
+    decisionValidation: "請填寫標題（最多 160 字）。各內文與摘錄最多 4,000 字；定稿須填寫結論，摘錄須與來源原文完全一致。",
+    decisionSaved: "決策卡已儲存", decisionFailed: "操作未完成，編輯內容已保留。",
+    decisionManual: "由你手動整理與核實。修改狀態不會自動驗證內容。",
+    decisionNew: "新增決策卡", decisionExport: "匯出 Markdown", decisionUnsaved: "尚未儲存"
+  }
+};

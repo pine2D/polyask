@@ -1,0 +1,21 @@
+{
+  "file": {
+    "id": "decision-decision-a",
+    "name": "decision-decision-a.json",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "decision",
+      "schema": "2",
+      "id": "decision-a",
+      "deleted": "1"
+    }
+  },
+  "body": {
+    "id": "decision-a",
+    "createdAt": 100,
+    "updatedAt": 300,
+    "deletedAt": 300,
+    "deviceId": "remote",
+    "schema": 2
+  }
+}

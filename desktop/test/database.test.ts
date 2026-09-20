@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { DatabaseSync } from "node:sqlite";
 
 import { DesktopDatabase } from "../src/main/database";
 import { archiveFixture } from "./fixtures";
@@ -12,7 +13,7 @@ test("desktop database enables WAL and preserves archive tombstones across reope
   const path = join(directory, "polyask.sqlite");
   try {
     const first = DesktopDatabase.open(path);
-    assert.deepEqual(first.configuration(), { journalMode: "wal", foreignKeys: true, userVersion: 1 });
+    assert.deepEqual(first.configuration(), { journalMode: "wal", foreignKeys: true, userVersion: 2 });
     first.archives.put(archiveFixture());
     first.archives.delete("archive-a", 2_000, "device-b");
     assert.equal(first.outbox.count(), 1);
@@ -111,4 +112,25 @@ test("a copied profile rekeys pending history without taking over the old Drive 
   } finally {
     database.close();
   }
+});
+
+
+test("decision migration preserves a schema 1 database and its archived JSON verbatim",()=>{
+  const directory=mkdtempSync(join(tmpdir(),"polyask-v1-migration-"));
+  const path=join(directory,"old.sqlite");
+  try{
+    const old=new DatabaseSync(path);
+    old.exec("CREATE TABLE archives(id TEXT PRIMARY KEY,body TEXT NOT NULL,sort_time INTEGER NOT NULL,deleted_at INTEGER); CREATE TABLE meta(key TEXT PRIMARY KEY,body TEXT NOT NULL); PRAGMA user_version=1");
+    const archive=archiveFixture();
+    old.prepare("INSERT INTO archives VALUES(?,?,?,NULL)").run(archive.id,JSON.stringify(archive),archive.createdAt);
+    old.prepare("INSERT INTO meta VALUES(?,?)").run("deviceId",JSON.stringify("old-device"));
+    old.close();
+    const migrated=DesktopDatabase.open(path);
+    assert.equal(migrated.configuration().userVersion,2);
+    assert.deepEqual(migrated.archives.get(archive.id),archive);
+    assert.equal(migrated.meta.get("deviceId"),"old-device");
+    assert.deepEqual(migrated.decisions.list(),[]);
+    assert.equal(migrated.outbox.count(),0);
+    migrated.close();
+  }finally{rmSync(directory,{recursive:true,force:true});}
 });

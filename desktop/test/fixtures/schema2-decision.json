@@ -1,0 +1,37 @@
+{
+  "file": {
+    "id": "decision-decision-a",
+    "name": "decision-decision-a.json",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "decision",
+      "schema": "2",
+      "id": "decision-a",
+      "deleted": "0"
+    }
+  },
+  "body": {
+    "id": "decision-a",
+    "archiveId": "archive-a",
+    "sourceTitle": "Question",
+    "title": "Choice",
+    "conclusion": "Use A",
+    "rationale": "Evidence",
+    "uncertainties": "Cost",
+    "nextStep": "Check",
+    "status": "verify",
+    "evidence": [
+      {
+        "resultIndex": 0,
+        "excerpt": "A is cheaper",
+        "host": "claude.ai",
+        "label": "Claude",
+        "capturedAt": 100
+      }
+    ],
+    "createdAt": 100,
+    "updatedAt": 200,
+    "deviceId": "device-a",
+    "schema": 2
+  }
+}

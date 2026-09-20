@@ -5,6 +5,7 @@ import {
   type ArchiveTombstone,
   type StoredArchive
 } from "../shared/archive";
+import { isStoredDecision, type StoredDecision } from "../shared/decision";
 import { SITE_KEYS, type SiteKey } from "../shared/contracts";
 import type { Tier } from "../shared/protocol";
 import {
@@ -43,7 +44,7 @@ export interface SyncConfig {
   readonly clearRunning?: boolean;
   readonly clearProgress?: number;
   readonly tokenStored?: boolean;
-  /** 触发只读锁的远端文件及其 schema；任一 schema > SYNC_SCHEMA 即锁定，本机追平后自动解锁。 */
+  /** 触发只读锁的远端文件及其 schema；本机升级后重扫再解除。 */
   readonly futureFiles?: Readonly<Record<string, number>>;
   /** 旧版只存 fileId 列表、不知道 schema；读到时按 SYNC_SCHEMA+1 兜底，写回时改存 futureFiles。 */
   readonly futureFileIds?: readonly string[];
@@ -181,6 +182,16 @@ export class SyncRepository {
     return true;
   }
 
+  importDecision(value: unknown): boolean {
+    if (!isStoredDecision(value)) return false;
+    const current = this.database.decisions.get(value.id);
+    const order = current ? compareSyncVersion(value, current) : 1;
+    if (current && (order < 0 || (order === 0 && (!("deletedAt" in value) || "deletedAt" in current)))) return true;
+    this.database.decisions.put(value, false);
+    return true;
+  }
+
+  decision(id: string): StoredDecision | null { return this.database.decisions.get(id); }
   history(id: string): StoredHistory | null { return this.database.history.get(id); }
   archive(id: string): StoredArchive | null { return this.database.archives.get(id); }
   enqueue(operation: OutboxOperation) { return this.database.outbox.enqueue(operation); }

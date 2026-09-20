@@ -1,4 +1,6 @@
 export const SYNC_SCHEMA = 1;
+/** Decision records use schema 2; legacy entity wire formats remain schema 1. */
+export const SUPPORTED_SYNC_SCHEMA = 2;
 export const CLEAR_REMOTE_CONFIRMATION = "DELETE";
 
 export interface HistoryRecord {
@@ -25,7 +27,7 @@ export interface HistoryTombstone {
 }
 
 export type StoredHistory = HistoryRecord | HistoryTombstone;
-export type SyncEntityKind = "history" | "archive" | "state";
+export type SyncEntityKind = "history" | "archive" | "state" | "decision";
 
 export type SyncState = "idle" | "syncing" | "offline" | "auth" | "blocked" | "waiting" | "schema" | "error";
 
