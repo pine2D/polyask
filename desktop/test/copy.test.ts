@@ -439,9 +439,11 @@ test("formatCopy can substitute every placeholder that appears in any locale tab
   for (const locale of ["en", "zh-CN", "zh-TW"]) {
     const copy = getCopy(locale) as unknown as Record<string, string>;
     for (const [key, value] of Object.entries(copy)) {
-      const tokens = [...value.matchAll(/\{([A-Za-z_]+)\}/g)].map((m) => m[1]);
+      // 双花括号属于用户填写的模板变量，由 prompt-variables.test.ts 验证。
+      const uiValue = value.replace(/\{\{[^{}\r\n]+\}\}/g, "");
+      const tokens = [...uiValue.matchAll(/\{([A-Za-z_]+)\}/g)].map((m) => m[1]);
       if (!tokens.length) continue;
-      const rendered = formatCopy(value, Object.fromEntries(tokens.map((token) => [token, "X"])));
+      const rendered = formatCopy(uiValue, Object.fromEntries(tokens.map((token) => [token, "X"])));
       assert.doesNotMatch(rendered, /\{[A-Za-z_]+\}/, `${locale}.${key} 的占位符没有被 formatCopy 替换：${rendered}`);
     }
   }

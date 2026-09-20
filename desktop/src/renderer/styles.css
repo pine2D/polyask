@@ -596,3 +596,12 @@ kbd { opacity: .7; font: 10px system-ui; }
   .archive-filters input, .archive-filters select, .archive-fields input, .archive-fields textarea, .archive-compare-selectors select { background: #19191d; }
   .synthesis-config select, .synthesis-config textarea, .synthesis-preview textarea { background: #19191d; }
 }
+.prompt-library [hidden] { display: none; }
+.prompt-library:has(.prompt-variable-editor) { grid-template-rows: minmax(0, 1fr); }
+.template-variable-hint, .prompt-variable-editor p { margin: 8px 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.prompt-variable-editor { padding: 8px; display: grid; gap: 10px; }
+.prompt-variable-editor label { display: grid; gap: 5px; font-size: 12px; }
+.prompt-variable-editor textarea { width: 100%; padding: 8px; resize: vertical; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: inherit; font: inherit; line-height: 1.6; }
+.prompt-variable-editor button { justify-self: start; padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
+.prompt-variable-editor button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.prompt-variable-editor button:disabled { opacity: .42; }
