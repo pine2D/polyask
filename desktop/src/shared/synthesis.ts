@@ -10,6 +10,7 @@ export interface SynthesisSendRequest {
   readonly targetSite: SiteKey;
   readonly tier: Tier;
   readonly selectedHosts: readonly string[];
+  readonly excerpt?: string;
   readonly instruction: string;
 }
 
@@ -37,6 +38,7 @@ export type SynthesisValidationCode =
 interface PromptInput {
   readonly record: ArchiveRecord;
   readonly selectedHosts: readonly string[];
+  readonly excerpt?: string;
   readonly instruction: string;
 }
 
@@ -61,12 +63,12 @@ function fenceMarker(guarded: readonly string[]): string {
 }
 
 export function buildSynthesisPrompt(input: PromptInput): string {
-  const task = clean(input.record.task || input.record.text);
+  const task = clean(input.excerpt !== undefined ? input.record.text : input.record.task || input.record.text);
   const title = clean(input.record.source?.title);
   const url = clean(input.record.source?.url);
   const instruction = clean(input.instruction);
   const answers = selectedSynthesisAnswers(input.record.results, input.selectedHosts);
-  const marker = fenceMarker([task, instruction, title, url, ...answers.map((result) => String(result.text ?? ""))]);
+  const marker = fenceMarker([task, instruction, title, url, input.excerpt ?? "", ...answers.map((result) => String(result.text ?? ""))]);
   const parts = [`# Task\n${task}`];
   if (title || url) parts.push(`# Source\n${[title, url].filter(Boolean).join("\n")}`);
   parts.push(
@@ -75,9 +77,10 @@ export function buildSynthesisPrompt(input: PromptInput): string {
   for (const result of answers) {
     const source = answerSourceId(input.record.results.indexOf(result));
     const completeness = result.code === "answer_truncated" ? "captured text is truncated" : "completeness not verified";
-    parts.push(`Source ${source}: ${completeness}\n## ${result.label || result.host} (${result.state || "unknown"})\n--- answer start · ${marker} ---\n${result.text}\n--- answer end · ${marker} ---`);
+    parts.push(`Source ${source}: ${completeness}\n## ${result.label || result.host} (${result.state || "unknown"})\n--- answer start · ${marker} ---\n${input.excerpt ?? result.text}\n--- answer end · ${marker} ---`);
   }
-  parts.push(`# Synthesis request\n${instruction}`);
+  if (input.excerpt !== undefined) parts.push("The source above is only an excerpt, not the complete answer. Do not infer disagreement or missing evidence from omitted text.");
+  parts.push(`# ${input.excerpt !== undefined ? "Follow-up" : "Synthesis"} request\n${instruction}`);
   return parts.join("\n\n");
 }
 
@@ -94,7 +97,11 @@ export function validateSynthesisRequest(
     input.selectedHosts.some((host) => typeof host !== "string" || !host || host.length > 256) ||
     new Set(input.selectedHosts).size !== input.selectedHosts.length) return "invalid_request";
   if (typeof input.targetSite !== "string" || !SITE_KEYS.includes(input.targetSite as SiteKey)) return "target_missing";
-  if (selectedSynthesisAnswers(record.results, input.selectedHosts).length < 2) return "not_enough_answers";
-  const prompt = buildSynthesisPrompt({ record, selectedHosts: input.selectedHosts, instruction: input.instruction });
+  const answers = selectedSynthesisAnswers(record.results, input.selectedHosts);
+  if (input.excerpt !== undefined) {
+    if (typeof input.excerpt !== "string" || !input.excerpt.trim() || !input.instruction.trim() ||
+      input.selectedHosts.length !== 1 || answers.length !== 1 || !answers[0].text!.includes(input.excerpt)) return "invalid_request";
+  } else if (answers.length < 2) return "not_enough_answers";
+  const prompt = buildSynthesisPrompt({ record, selectedHosts: input.selectedHosts, instruction: input.instruction, excerpt: input.excerpt });
   return [...prompt].length > SYNTHESIS_PROMPT_LIMIT ? "too_long" : null;
 }

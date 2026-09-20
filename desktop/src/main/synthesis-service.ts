@@ -68,7 +68,8 @@ export class SynthesisService {
     const text = buildSynthesisPrompt({
       record,
       selectedHosts: request.selectedHosts,
-      instruction: request.instruction
+      instruction: request.instruction,
+      excerpt: request.excerpt
     });
     this.options.beforeSend?.();
     this.activeController?.abort();

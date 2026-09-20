@@ -127,6 +127,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState("");
+  const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
   const requestEpoch = useRef<ReturnType<typeof createArchiveRequestEpoch> | null>(null);
   const consumedPreferredId = useRef<string | null>(null);
@@ -238,8 +239,9 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
       onOpenSource={(url) => { void run(() => shell.openExternal(url), props.copy.archiveLoadFailed); }}
       pendingSynthesis={props.pendingSynthesis}
       synthesisCandidate={props.synthesisCandidate}
-      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
-      onSynthesize={() => { if (selected) setSynthesisId(selected.id); }}
+      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
+      onSynthesize={() => { setFollowUpHost(undefined); if (selected) setSynthesisId(selected.id); }}
+      onFollowUp={(host) => { if (selected) { setFollowUpHost(host); setSynthesisId(selected.id); } }}
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}
       onSaveSynthesis={(replaceExisting) => { void run(async () => {
         const record = await props.onSaveSynthesis(replaceExisting);

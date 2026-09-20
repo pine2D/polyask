@@ -455,9 +455,9 @@ kbd { opacity: .7; font: 10px system-ui; }
 .archive-answer > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .archive-answer h2 { margin: 0; font-size: 14px; }
 .answer-capture-warning { margin: 6px 0; padding-left: 8px; border-left: 3px solid var(--warning); color: inherit; font-size: 12px; line-height: 1.6; }
-.archive-answer > header button { height: 26px; padding: 0 6px; display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); background: transparent; }
+.archive-answer > header button, .archive-answer > button { height: 26px; padding: 0 6px; display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--border); border-radius: 5px; color: var(--muted); background: transparent; }
 .archive-answer > header button[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
-.archive-answer > header button:hover { color: var(--accent); border-color: var(--accent); }
+.archive-answer > header button:hover, .archive-answer > button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .archive-synthesis { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
 .synthesis-card { margin-top: 6px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
 .synthesis-card.pending { border-color: color-mix(in srgb, var(--accent) 55%, var(--border)); background: var(--accent-soft); }

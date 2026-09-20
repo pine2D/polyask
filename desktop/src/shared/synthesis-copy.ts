@@ -1,5 +1,14 @@
 export const SYNTHESIS_COPY = {
   en: {
+    followUpAction: "Follow up on this answer",
+    followUpTitle: "Targeted follow-up",
+    followUpOriginal: "Saved original (copy an excerpt)",
+    followUpExcerpt: "Verbatim excerpt",
+    followUpQuestion: "Follow-up question",
+    followUpSend: "Send follow-up",
+    followUpHint: "Opens a new conversation at the chosen site with the original question and excerpt. Use “Collect synthesis” afterward; saving uses the synthesis slot and replacing an existing result requires confirmation. Original answers are kept.",
+    followUpInvalid: "Paste an exact excerpt from the saved original, enter a question, and choose a target.",
+    followUpSent: "Follow-up submitted. Wait for the answer, then use Collect synthesis.",
     synthesisAction: "Synthesize selected answers",
     synthesisTitle: "Assisted synthesis",
     synthesisAnswers: "Candidate answers",
@@ -32,6 +41,15 @@ export const SYNTHESIS_COPY = {
     synthesisCancel: "Back to result"
   },
   zhCN: {
+    followUpAction: "追问这份回答",
+    followUpTitle: "单站定向追问",
+    followUpOriginal: "已保存原文（可复制摘录）",
+    followUpExcerpt: "逐字摘录",
+    followUpQuestion: "追问问题",
+    followUpSend: "发送追问",
+    followUpHint: "将在所选站点打开新会话，带上原问题与摘录。回答后使用“采集综合”；保存沿用综合位置，替换已有结果仍需确认。原始回答会保留。",
+    followUpInvalid: "请从保存原文中复制逐字摘录，填写追问并选择目标站点。",
+    followUpSent: "追问已提交。等待回答后，可使用“采集综合”。",
     synthesisAction: "综合所选回答",
     synthesisTitle: "辅助综合",
     synthesisAnswers: "候选回答",
@@ -64,6 +82,15 @@ export const SYNTHESIS_COPY = {
     synthesisCancel: "返回结果"
   },
   zhTW: {
+    followUpAction: "追問這份答案",
+    followUpTitle: "單站定向追問",
+    followUpOriginal: "已儲存原文（可複製摘錄）",
+    followUpExcerpt: "逐字摘錄",
+    followUpQuestion: "追問問題",
+    followUpSend: "傳送追問",
+    followUpHint: "將在所選網站開啟新對話，帶上原問題與摘錄。回答後使用「擷取綜合」；儲存沿用綜合位置，取代既有結果仍須確認。原始答案會保留。",
+    followUpInvalid: "請從儲存原文中複製逐字摘錄，填寫追問並選擇目標網站。",
+    followUpSent: "追問已提交。等待回答後，可使用「擷取綜合」。",
     synthesisAction: "綜合所選答案",
     synthesisTitle: "輔助綜合",
     synthesisAnswers: "候選答案",

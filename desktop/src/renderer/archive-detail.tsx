@@ -22,6 +22,7 @@ interface ArchiveDetailProps {
   readonly synthesisCandidate: SynthesisCandidate | null;
   readonly busy: boolean;
   readonly onSynthesize: () => void;
+  readonly onFollowUp?: (host: string) => void;
   readonly onCollectSynthesis: () => void;
   readonly onSaveSynthesis: (replaceExisting: boolean) => void;
 }
@@ -71,6 +72,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           return (
             <section className="archive-answer" id={`archive-answer-${index}`} key={`${result.host}:${index}`}>
               <header><h2>{answerSourceId(index)} {result.label}{tier}</h2>{successful ? <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button> : null}</header>
+              {successful && props.onFollowUp ? <button type="button" disabled={props.busy} onClick={() => props.onFollowUp?.(result.host)}>{copy.followUpAction}</button> : null}
               {successful && result.code === "answer_truncated" ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}
               <MarkdownPreview value={successful ? result.text! : `> ${describeCollectionCode(copy, result.code)}`} />
             </section>

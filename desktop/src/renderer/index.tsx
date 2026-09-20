@@ -530,7 +530,7 @@ function App(): React.JSX.Element {
         broadcast.invalidate();
         changeSurface("sites");
       });
-      setAnnouncement(copy.synthesisSent);
+      setAnnouncement(request.excerpt !== undefined ? copy.followUpSent : copy.synthesisSent);
     } catch (error) {
       setAnnouncement(describeSynthesisSendCode(copy, errorCode(error)));
       throw error;

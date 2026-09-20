@@ -293,3 +293,40 @@ test("synthesis collection requires a current answer and replacement confirmatio
     database.close();
   }
 });
+
+test("follow-up validates before navigation and sends once to one selected site, retaining originals", async () => {
+  const {database,archives,record}=fixture();
+  const sends: BroadcastPayload[]=[];
+  let navigations=0;
+  let accepted=false;
+  try {
+    const service=new SynthesisService({sites:SITES,archives,
+      navigate:async()=>{navigations++;},showTarget:()=>undefined,recordHistory:()=>undefined,
+      targetAvailable:site=>site==="claude",
+      send:async request=>{sends.push(request);return [{site:"claude",ok:accepted,code:accepted?undefined:"submit_unconfirmed"}];},
+      collect:async()=>[{site:"claude",host:"claude.ai",label:"Claude",text:"Follow-up answer"}]
+    });
+    const request={archiveId:record.id,targetSite:"claude",tier:null,selectedHosts:["chatgpt.com"],excerpt:"Two",instruction:"Explain this"};
+    await assert.rejects(service.send({...request,excerpt:"forged"}),/invalid_request/);
+    await assert.rejects(service.send({...request,targetSite:"gemini"}),/target_not_selected/);
+    assert.equal(navigations,0);
+    const uncertain=await service.send(request);
+    assert.equal(uncertain.result.code,"submit_unconfirmed");
+    assert.equal(uncertain.pending,null);
+    assert.equal(sends.length,1);
+    accepted=true;
+    await service.send(request);
+    assert.equal(sends.length,2); // 第二次是显式调用，未自动重发。
+    assert.deepEqual(sends[1].sites,["claude"]);
+    assert.match(sends[1].text,/Source \[S2\]/);
+    assert.match(sends[1].text,/# Follow-up request\nExplain this/);
+    await service.collect();
+    const saved=await service.save(false);
+    assert.equal(saved.synthesis?.text,"Follow-up answer");
+    assert.deepEqual(saved.results,record.results);
+    await service.send(request);
+    await service.collect();
+    await assert.rejects(service.save(false),/replace_confirmation_required/);
+    assert.deepEqual((await service.save(true)).results,record.results);
+  } finally {database.close();}
+});
