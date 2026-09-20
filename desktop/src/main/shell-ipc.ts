@@ -303,8 +303,9 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     manager.setDrawerOpen(value);
   });
   ipcMain.on("polyask:set-surface", (event, value: unknown) => {
-    if (!trustedShell(event) || !["sites", "archive", "settings", "commands"].includes(String(value))) return;
+    if (!trustedShell(event) || !["sites", "archive", "settings", "commands", "confirmation"].includes(String(value))) return;
     manager.setSurface(value as DesktopSurface);
+    if (value === "confirmation") window.webContents.focus();
   });
   ipcMain.on("polyask:set-layout", (event, value: unknown) => {
     if (!trustedShell(event) || !value || typeof value !== "object") return;

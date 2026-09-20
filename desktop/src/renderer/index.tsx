@@ -28,6 +28,7 @@ import { BootstrapStateView } from "./bootstrap-state";
 import { ExclusiveActionLock } from "./broadcast-flow-state";
 import { CommandBar } from "./command-bar";
 import { ConfirmDialog } from "./confirm-dialog";
+import { confirmNewSession, type PendingSessionConfirmation } from "./session-confirmation";
 import { CommandPalette, type CommandPaletteMode } from "./command-palette";
 import { executeCommand } from "./command-dispatcher";
 import {
@@ -107,8 +108,7 @@ function App(): React.JSX.Element {
   const [siteHistory, setSiteHistory] = useState<Record<string, SiteHistoryState>>({});
   // Alt+N 的确认改用应用内弹层（原生 dialog.showMessageBox 与本应用外观格格不入）。
   // 存 resolve 而不是布尔：调用方仍是 `await` 的形态，业务逻辑不必改写成回调。
-  const [pendingNewSession, setPendingNewSession] = useState<
-    { readonly count: number; readonly decide: (ok: boolean) => void } | null>(null);
+  const [pendingNewSession, setPendingNewSession] = useState<PendingSessionConfirmation | null>(null);
   const [statuses, setStatuses] = useState<Record<string, SiteStatus>>({});
   const [health, setHealth] = useState<Partial<Record<string, SiteHealth>>>({});
   const [healthChecking, setHealthChecking] = useState(false);
@@ -346,11 +346,10 @@ function App(): React.JSX.Element {
     } catch { setAnnouncement(copy.synthesisCollectFailed); }
   });
   const startNewSession = async (): Promise<void> => {
+    if (pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     const selectedSites = [...selected];
     if (!selectedSites.length) return;
-    const approved = await new Promise<boolean>((resolve) => {
-      setPendingNewSession({ count: selectedSites.length, decide: resolve });
-    });
+    const approved = await confirmNewSession(selectedSites.length, setPendingNewSession, changeSurface);
     if (!approved) return;
     await runAuxiliary(async () => {
       broadcast.invalidate();
@@ -420,7 +419,7 @@ function App(): React.JSX.Element {
       .catch(() => setAnnouncement(copy.updatePageFailed));
   };
 
-  commandActions.current = {
+  commandActions.current = pendingNewSession ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
     "open-sites": () => {
       openPanel("sites", "keyboard");
@@ -458,7 +457,7 @@ function App(): React.JSX.Element {
     } : {}),
     ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
     ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
-    ...(selected.size > 0 ? { "new-session": () => { changeSurface("sites"); void startNewSession(); } } : {}),
+    ...(selected.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
     "open-settings": () => {
       setSettingsSection("overview");
       changeSurface("settings");
@@ -707,8 +706,8 @@ function App(): React.JSX.Element {
           message={formatCopy(copy.newSessionConfirmMessage, { count: pendingNewSession.count })}
           confirmLabel={copy.newSessionConfirmAction}
           cancelLabel={copy.newSessionKeepCurrent}
-          onConfirm={() => { pendingNewSession.decide(true); setPendingNewSession(null); }}
-          onCancel={() => { pendingNewSession.decide(false); setPendingNewSession(null); }}
+          onConfirm={() => pendingNewSession.decide(true)}
+          onCancel={() => pendingNewSession.decide(false)}
         />
       )}
     </main>
