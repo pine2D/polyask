@@ -78,6 +78,15 @@ button { cursor: default; }
 }
 .command-search input:focus-visible { border-color: var(--accent); }
 .command-subtitle { margin: 0; padding: 10px 13px 8px; color: var(--muted); }
+.getting-started { min-height: 0; grid-row: 2 / -1; padding: 16px 22px; overflow: auto; }
+.getting-started p { margin: 6px 0 10px; line-height: 1.7; }
+.getting-started ol { margin: 16px 0; padding-left: 24px; }
+.getting-started-step { padding: 0 0 16px 6px; }
+.getting-started-step::marker { color: var(--accent); font-weight: 650; }
+.getting-started-step h2 { margin: 0; font-size: 15px; }
+.getting-started-step button { min-height: 32px; padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--panel); }
+.getting-started-step button:hover { background: var(--accent-soft); }
+.getting-started-note { color: var(--muted); font-size: 12px; }
 .command-results { min-height: 120px; padding: 2px 8px 8px; overflow: auto; }
 .command-results > button {
   width: 100%; min-height: 44px; padding: 6px 9px; display: flex; align-items: center;

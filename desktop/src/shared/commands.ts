@@ -25,6 +25,7 @@ export type CommandId =
   | "open-settings"
   | "open-drive-diagnostics"
   | "open-shortcuts"
+  | "open-getting-started"
   | "next-unfinished"
   | "next-failed"
   | "check-updates";
@@ -78,6 +79,7 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "open-settings", labelKey: "settings", group: "app", accelerator: "Control+,", macAccelerator: "Command+," },
   { id: "open-drive-diagnostics", labelKey: "openDriveDiagnostics", group: "app" },
   { id: "open-shortcuts", labelKey: "keyboardShortcuts", group: "app" },
+  { id: "open-getting-started", labelKey: "gettingStarted", group: "app" },
   { id: "next-unfinished", labelKey: "nextUnfinished", group: "results" },
   { id: "next-failed", labelKey: "nextFailed", group: "results" },
   { id: "check-updates", labelKey: "checkForUpdates", group: "app" }

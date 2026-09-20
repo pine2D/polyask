@@ -397,7 +397,7 @@ function App(): React.JSX.Element {
     const moreIds: readonly CommandId[] = [
       "retry-failed", "collect-compare", "collect-answers", "open-archive", "collect-synthesis",
       "next-unfinished", "next-failed", "new-session", "check-updates",
-      "open-command-palette", "open-shortcuts", "open-settings"
+      "open-command-palette", "open-shortcuts", "open-getting-started", "open-settings"
     ];
     const commands = moreIds.filter((id) => !!commandActions.current[id]);
     try {
@@ -487,6 +487,7 @@ function App(): React.JSX.Element {
       changeSurface("settings");
     },
     "open-shortcuts": () => openCommandSurface("shortcuts"),
+    "open-getting-started": () => openCommandSurface("guide"),
     "check-updates": checkForUpdates
   };
   const availableCommands = COMMANDS.filter((command) => !!commandActions.current[command.id]);

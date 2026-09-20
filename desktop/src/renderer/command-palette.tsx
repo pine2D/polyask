@@ -9,9 +9,11 @@ import { CloseIcon } from "./icons";
 import { commandItems, menuShortcutItems, searchCommands, type PaletteCommand, type PaletteGroup } from "./command-search";
 import { pageTabKeyAction, paletteKeyAction } from "./keyboard";
 import { PromptLibrary } from "./prompt-library";
+import { GettingStarted } from "./getting-started";
 
-export type CommandPaletteMode = "commands" | "library" | "shortcuts";
-const PALETTE_MODES: readonly CommandPaletteMode[] = ["commands", "library", "shortcuts"];
+export type CommandPaletteMode = "commands" | "library" | "shortcuts" | "guide";
+const PALETTE_MODES: readonly CommandPaletteMode[] = ["commands", "library", "shortcuts", "guide"];
+const MODE_LABEL_KEYS = { commands: "commandPalette", library: "promptLibrary", shortcuts: "keyboardShortcuts", guide: "gettingStarted" } as const;
 
 interface CommandPaletteProps {
   readonly copy: DesktopCopy;
@@ -70,7 +72,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   useEffect(() => {
     if (props.mode === "commands") inputRef.current?.focus();
     else panelRef.current?.focus();
-  }, []);
+  }, [props.mode]);
   useEffect(() => setActiveIndex(0), [query, props.mode]);
   useEffect(() => {
     document.getElementById(`command-option-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
@@ -100,7 +102,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   };
 
   return (
-    <main className="command-surface" aria-label={props.mode === "commands" ? props.copy.commandPalette : props.mode === "library" ? props.copy.promptLibrary : props.copy.keyboardShortcuts} aria-keyshortcuts="Escape" onKeyDown={onKeyDown}>
+    <main className="command-surface" aria-label={props.copy[MODE_LABEL_KEYS[props.mode]]} aria-keyshortcuts="Escape" onKeyDown={onKeyDown}>
       <section className="command-palette" ref={panelRef} tabIndex={-1}>
         <header>
           <div className="command-view-tabs" role="tablist">
@@ -110,13 +112,13 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
                 id={`command-tab-${mode}`}
                 role="tab"
                 aria-selected={props.mode === mode}
-                aria-controls={mode === "library" ? "prompt-library-panel" : "command-results"}
+                aria-controls={mode === "guide" ? "getting-started-panel" : mode === "library" ? "prompt-library-panel" : "command-results"}
                 tabIndex={props.mode === mode ? 0 : -1}
                 ref={(element) => { tabRefs.current[index] = element; }}
                 key={mode}
                 onClick={() => props.onModeChange(mode)}
                 onKeyDown={(event) => onTabKeyDown(event, index)}
-              >{mode === "commands" ? props.copy.showCommands : mode === "library" ? props.copy.showPromptLibrary : props.copy.keyboardShortcuts}</button>
+              >{mode === "commands" ? props.copy.showCommands : mode === "library" ? props.copy.showPromptLibrary : props.copy[MODE_LABEL_KEYS[mode]]}</button>
             ))}
           </div>
           <button type="button" className="command-close" title={props.copy.closeCommandPalette} aria-label={props.copy.closeCommandPalette} onClick={props.onClose}><CloseIcon /></button>
@@ -139,7 +141,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
             />
           </label>
         ) : props.mode === "shortcuts" ? <p className="command-subtitle">{props.copy.shortcutReferenceHint}</p> : null}
-        {props.mode === "library" ? <PromptLibrary
+        {props.mode === "guide" ? <GettingStarted copy={props.copy} commands={props.commands} onExecute={props.onExecute} /> : props.mode === "library" ? <PromptLibrary
           copy={props.copy}
           draft={props.draft}
           templates={props.library.templates}
