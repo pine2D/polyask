@@ -1,5 +1,11 @@
 export const PRODUCTIVITY_COPY = {
   en: {
+    feedbackReady: "Ready · Select sites, then ask a question",
+    dismissFeedback: "Dismiss",
+    broadcastSummary: "Send results: {ok} sent · {failed} failed · {cancelled} cancelled",
+    retrySite: "Retry {site}",
+    retryUnconfirmed: "Submission is uncertain. Check this site before retrying.",
+
     completionNotifications: "Answer status notifications",
     completionNotificationsDescription: "Show a system notification when an answer finishes or fails while PolyAsk is in the background. Notifications never include prompts or answers.",
     localPreference: "Saved only on this device",
@@ -11,6 +17,12 @@ export const PRODUCTIVITY_COPY = {
     updatePageFailed: "Could not open the PolyAsk release page",
   },
   zhCN: {
+    feedbackReady: "就绪 · 选择站点后即可提问",
+    dismissFeedback: "关闭提示",
+    broadcastSummary: "发送结果：已发送 {ok} · 失败 {failed} · 取消 {cancelled}",
+    retrySite: "重试 {site}",
+    retryUnconfirmed: "发送结果尚未确认，请先检查该站点再决定是否重试。",
+
     completionNotifications: "回答状态通知",
     completionNotificationsDescription: "PolyAsk 位于后台时，在回答完成或失败后显示系统通知。通知不会包含提问或回答正文。",
     localPreference: "仅保存在这台设备",
@@ -22,6 +34,12 @@ export const PRODUCTIVITY_COPY = {
     updatePageFailed: "无法打开 PolyAsk 版本页面",
   },
   zhTW: {
+    feedbackReady: "就緒 · 選取網站後即可提問",
+    dismissFeedback: "關閉提示",
+    broadcastSummary: "傳送結果：已傳送 {ok} · 失敗 {failed} · 取消 {cancelled}",
+    retrySite: "重試 {site}",
+    retryUnconfirmed: "傳送結果尚未確認，請先檢查該網站再決定是否重試。",
+
     completionNotifications: "回答狀態通知",
     completionNotificationsDescription: "PolyAsk 位於背景時，在回答完成或失敗後顯示系統通知。通知不會包含提問或回答正文。",
     localPreference: "僅儲存在這部裝置",

@@ -2,6 +2,7 @@ import type { WebContentsView } from "electron";
 
 import type { SiteKey, ViewBounds, ViewPlacement } from "../shared/contracts";
 import {
+  WORKSPACE_FEEDBACK_HEIGHT,
   metricsForDensity,
   shellHeightForComposer,
   zoomForSite,
@@ -62,7 +63,7 @@ export function computeWorkspaceLayout(input: WorkspaceLayoutInput): WorkspaceLa
     x: metrics.edgeGap,
     y: shellHeight,
     width: Math.max(1, input.width - metrics.edgeGap * 2),
-    height: Math.max(1, input.height - shellHeight - metrics.edgeGap)
+    height: Math.max(1, input.height - shellHeight - metrics.edgeGap - WORKSPACE_FEEDBACK_HEIGHT)
   };
   const area = reserveWorkspaceArea(
     baseArea,

@@ -1,3 +1,5 @@
+export const WORKSPACE_FEEDBACK_HEIGHT = 32;
+
 export type Density = "compact" | "comfortable";
 export type SiteScale = 0.9 | 1;
 

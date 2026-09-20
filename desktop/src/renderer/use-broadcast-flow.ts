@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 
+import type { SiteKey } from "../shared/contracts";
 import type { BroadcastPayload, BroadcastRequest } from "../shared/protocol";
 import {
   cancelledRunSites,
@@ -20,13 +21,15 @@ import { shell } from "./shell-api";
 export function useBroadcastFlow(
   announce: () => void,
   remember: (run: BroadcastRun) => void,
-  forget: () => void
+  forget: () => void,
+  report: (run: BroadcastRun) => void
 ): {
   readonly send: (payload: BroadcastPayload) => Promise<BroadcastRun | null>;
-  readonly retry: () => Promise<BroadcastRun | null>;
+  readonly retry: (site?: SiteKey) => Promise<BroadcastRun | null>;
   readonly cancel: () => void;
   readonly invalidate: () => void;
   readonly runState: RunState;
+  readonly retrySites: readonly SiteKey[];
   readonly failureCount: number;
   readonly cancelledCount: number;
 } {
@@ -55,6 +58,7 @@ export function useBroadcastFlow(
         if (!state.commit(operation, completed)) return null;
         setRun(state.run);
         remember(completed);
+        report(completed);
         return completed;
       } catch {
         if (state.isCurrent(operation)) announce();
@@ -63,9 +67,9 @@ export function useBroadcastFlow(
     }, () => setRunState(state.runState));
   };
 
-  const retry = async (): Promise<BroadcastRun | null> => {
+  const retry = async (site?: SiteKey): Promise<BroadcastRun | null> => {
     const current = state.run;
-    const request = current && retryRequest(current);
+    const request = current && retryRequest(current, site);
     if (!current || !request) return null;
     return runWithBroadcastLock(state, false, async (operation) => {
       syncState();
@@ -74,6 +78,7 @@ export function useBroadcastFlow(
         if (!state.commit(operation, merged)) return null;
         setRun(state.run);
         remember(merged);
+        report(merged);
         return merged;
       } catch {
         if (state.isCurrent(operation)) announce();
@@ -97,6 +102,7 @@ export function useBroadcastFlow(
     cancel,
     invalidate,
     runState,
+    retrySites: run ? retryRequest(run)?.sites ?? [] : [],
     failureCount: run ? failedRunSites(run).length : 0,
     cancelledCount: run ? cancelledRunSites(run).length : 0
   };

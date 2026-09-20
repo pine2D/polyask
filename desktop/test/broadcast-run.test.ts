@@ -268,3 +268,10 @@ test("renderer action lock admits only one reentrant new-session action", async 
   releaseSession();
   await first;
 });
+
+test("an explicit single-site retry retains the frozen payload and never retries a successful site", () => {
+  const request: BroadcastRequest = { runId: "one", text: "original", tier: "think", sites: ["claude", "kimi", "gemini"], images: [] };
+  const run = completeRun(request, [{site:"claude",ok:true},{site:"kimi",ok:false,code:"submit_unconfirmed"},{site:"gemini",ok:false,code:"timeout"}]);
+  assert.deepEqual(retryRequest(run, "kimi"), {...request,sites:["kimi"]});
+  assert.equal(retryRequest(run, "claude"), null);
+});

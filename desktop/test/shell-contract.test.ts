@@ -11,7 +11,8 @@ test("shell segmented controls expose state and site changes use a live region",
   const app = readSource("src/renderer/index.tsx");
   const commandBar = readSource("src/renderer/command-bar.tsx");
   assert.match(commandBar, /aria-pressed=/);
-  assert.match(app, /aria-live="polite"/);
+  assert.match(app, /<FeedbackProvider/);
+  assert.match(readSource("src/renderer/feedback-provider.tsx"), /aria-live="polite"/);
 });
 
 test("production cancel recreates only the pending site view", () => {

@@ -19,6 +19,9 @@ interface SiteFramesProps {
   readonly onFocus: (site: SiteKey) => void;
   readonly onReload: (site: SiteKey) => void;
   readonly history: Record<string, SiteHistoryState>;
+  readonly retrySites?: readonly SiteKey[];
+  readonly retryDisabled?: boolean;
+  readonly onRetry?: (site: SiteKey) => void;
   readonly onBack: (site: SiteKey) => void;
 }
 
@@ -62,6 +65,9 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
                 <span className="answer-rail priority-p0" title={statusText} aria-hidden="true" />
                 <span className="tile-status-sr sr-only">{statusText}</span>
                 {attentionText && <span className="site-state priority-p0" title={statusText}>{attentionText}</span>}
+                {props.retrySites?.includes(site.key) ? <button type="button" className="site-retry" disabled={props.retryDisabled}
+                  title={status.code === "submit_unconfirmed" ? copy.retryUnconfirmed : formatCopy(copy.retrySite, { site: site.label })}
+                  aria-label={formatCopy(copy.retrySite, { site: site.label })} onClick={() => props.onRetry?.(site.key)}>{copy.retryFailedCommand}</button> : null}
                 <span className="tile-actions priority-p2">
                   {/* 点了回答里的站内链接之后此前完全没有退路——唯一脱身办法是「新会话」，会丢掉当前对话。
                       只在该站真有历史可退时才出现，免得摆一个点了没反应的按钮。 */}

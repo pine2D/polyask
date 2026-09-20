@@ -19,7 +19,7 @@ import { describeStatus, describeSynthesisSendCode, errorCode } from "../shared/
 import type { SyncStatus } from "../shared/sync";
 import type { RuntimeInfo } from "../shared/runtime";
 import type { SiteHealth } from "../shared/site-health";
-import { buildSiteReport } from "../shared/site-report";
+import { siteHealthActions } from "./site-health-actions";
 import type { PromptLibraryState } from "../shared/prompt-library";
 import type { SynthesisSendRequest } from "../shared/synthesis";
 import { ArchiveSurface } from "./archive-surface";
@@ -44,6 +44,8 @@ import { ImagePicker } from "./image-picker";
 import { PageTabs } from "./page-tabs";
 import { clearDraft } from "./prompt-draft";
 import { usePromptDraft } from "./use-prompt-draft";
+import { FeedbackProvider } from "./feedback-provider";
+import { failedRunSites, cancelledRunSites } from "./broadcast-run";
 import { useFeedback } from "./use-feedback";
 import { usePresence } from "./presence";
 import { SiteFrames } from "./site-frames";
@@ -66,6 +68,7 @@ import { shell } from "./shell-api";
 import "./styles.css";
 import "./settings.css";
 import "./accessibility.css";
+import "./feedback.css";
 
 // TODO(size-ratchet)：723 行，目标 ≤400——抽出命令表装配（buildCommands）、站点健康动作（reload/hard-reload/clear/copy-report）
 // 与辅助综合/结果库流三块；App 只留状态编排与渲染分支。
@@ -127,7 +130,7 @@ function App(): React.JSX.Element {
   const [completionNotifications, setCompletionNotifications] = useState(() =>
     loadCompletionNotifications(window.localStorage)
   );
-  const { announcement, announcementSeq, announce: setAnnouncement, healthFeedback, noteHealth } = useFeedback();
+  const { announcement, announce: setAnnouncement, healthFeedback, noteHealth } = useFeedback();
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
   const drawerOpen = panelState !== null;
   if (panelState) lastOpenPanel.current = panelState;
@@ -152,7 +155,8 @@ function App(): React.JSX.Element {
   const broadcast = useBroadcastFlow(
     () => setAnnouncement(copy.failed),
     archiveCapture.remember,
-    archiveCapture.invalidate
+    archiveCapture.invalidate,
+    (run) => setAnnouncement(formatCopy(copy.broadcastSummary, { ok: [...run.results.values()].filter((result) => result.ok).length, failed: failedRunSites(run).length, cancelled: cancelledRunSites(run).length }))
   );
   const { runState } = broadcast;
   const imageSelection = useImageSelection(copy, runState === "idle" && !auxiliaryBusy, setAnnouncement);
@@ -205,7 +209,7 @@ function App(): React.JSX.Element {
         });
       }
       const label = sitesRef.current.find((site) => site.key === status.site)?.label ?? status.site;
-      setAnnouncement(`${label}: ${describeStatus(copy, status)}`);
+      setAnnouncement(`${label}: ${describeStatus(copy, status)}`, false);
     });
     const offLayout = shell.onLayout((next) => {
       if (next.page !== layoutPage.current) {
@@ -335,7 +339,7 @@ function App(): React.JSX.Element {
       const record = await archiveCapture.capture();
       const markdown = await shell.archiveMarkdown(record.id, navigator.language);
       await navigator.clipboard.writeText(markdown);
-      setAnnouncement(copy.archiveCollected);
+      setAnnouncement(copy.archiveCollected, true, true);
     } catch {
       setAnnouncement(copy.archiveCollectFailed);
     }
@@ -624,7 +628,6 @@ function App(): React.JSX.Element {
         onOpenMore={() => { void showMoreMenu(); }}
         onPasteImages={(files) => { void imageSelection.choose(files); }}
       />
-      <div className="sr-only" aria-live="polite" key={announcementSeq}>{announcement}</div>
       {drawerPresent ? (
         <WorkspaceDrawer
           copy={copy}
@@ -645,46 +648,7 @@ function App(): React.JSX.Element {
             changePanelState(null);
             setMode("focus", site);
           }}
-          onReloadSite={(site) => {
-            void shell.reloadSite(site).then((ok) => {
-              const definition = sites.find((candidate) => candidate.key === site);
-              noteHealth(ok
-                ? formatCopy(copy.healthReloaded, { site: definition?.label ?? site })
-                : formatCopy(copy.healthReloadRejected, { site: definition?.label ?? site }));
-              if (ok) setHealth((current) => ({ ...current, [site]: { site, state: "unknown", checks: [] } }));
-            }).catch(() => noteHealth(copy.workspaceActionFailed));
-          }}
-          onHardReloadSite={(site) => {
-            void shell.reloadSite(site, true).then((ok) => {
-              const definition = sites.find((candidate) => candidate.key === site);
-              noteHealth(ok
-                ? formatCopy(copy.healthReloaded, { site: definition?.label ?? site })
-                : formatCopy(copy.healthReloadRejected, { site: definition?.label ?? site }));
-              if (ok) setHealth((current) => ({ ...current, [site]: { site, state: "unknown", checks: [] } }));
-            }).catch(() => noteHealth(copy.workspaceActionFailed));
-          }}
-          onClearSiteData={(site) => {
-            void shell.clearSiteData(site).then((ok) => {
-              const definition = sites.find((candidate) => candidate.key === site);
-              noteHealth(ok
-                ? formatCopy(copy.healthReloaded, { site: definition?.label ?? site })
-                : formatCopy(copy.healthReloadRejected, { site: definition?.label ?? site }));
-              if (ok) setHealth((current) => ({ ...current, [site]: { site, state: "unknown", checks: [] } }));
-            }).catch(() => noteHealth(copy.workspaceActionFailed));
-          }}
-          onCopyHealthReport={() => {
-            const report = buildSiteReport({
-              version: runtime.version,
-              distribution: runtime.distribution,
-              platform: navigator.platform,
-              scale: window.devicePixelRatio,
-              sites: sites.filter((site) => selected.has(site.key)),
-              statuses,
-              health,
-              now: Date.now()
-            });
-            navigator.clipboard.writeText(report).then(() => noteHealth(copy.healthReportCopied), () => noteHealth(copy.healthReportCopyFailed));
-          }}
+          {...siteHealthActions({ copy, sites, selected, runtime, statuses, health, setHealth, noteHealth })}
           healthFeedback={healthFeedback}
         />
       ) : null}
@@ -697,6 +661,9 @@ function App(): React.JSX.Element {
         onToggle={workspaceFlow.toggleSite}
         onFocus={(site) => setMode("focus", site)}
         onReload={(site) => { void shell.reloadSite(site); }}
+        retrySites={broadcast.retrySites}
+        retryDisabled={runState !== "idle" || auxiliaryBusy}
+        onRetry={(site) => { void actionLock.current!.run(() => broadcast.retry(site)); }}
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
@@ -719,4 +686,4 @@ document.documentElement.lang = resolveLocale(navigator.language) === "zhCN"
   ? "zh-CN"
   : resolveLocale(navigator.language) === "zhTW" ? "zh-TW" : "en";
 document.title = getCopy(navigator.language).appTitle;
-createRoot(document.getElementById("root")!).render(<StrictMode><App /></StrictMode>);
+createRoot(document.getElementById("root")!).render(<StrictMode><FeedbackProvider copy={getCopy(navigator.language)}><App /></FeedbackProvider></StrictMode>);

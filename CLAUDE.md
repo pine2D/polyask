@@ -30,7 +30,7 @@ PolyAsk 是一个 Electron 桌面应用：把同一问题群发到 9 个真实 A
 - **切档控件缺失一律 `throw`，不要静默 `return`**——静默 return 会让 `runMode` 误报「已切到」。例外只有 3 处（DeepSeek 首屏 radio、Gemini 两处），全部写死在适配器里；加新例外前先读 `docs/adapters.md` 的例外清单。
 - **站点 UI 三条通用规则**（反例见 `docs/adapters.md`）：① 控件在下沉到二级子菜单，默认「顶层找不到 → 展开子菜单 → 再找」；② 同一 role 可能承载不同语义的列表，取列表必须校验语义，否则「最高档」被点成末位模型；③ **每个菜单动作自己 `escMenus()` 收尾**。
 - **群发取消（epoch）**：`broadcast.ts` 的 `epoch`。新写的长流程必须在每个 `await` 后核对 epoch，否则用户取消了、主进程还在往站点输入框里打字；`AbortSignal` 不替代 epoch 核对。
-- **站点视图内不产用户可见反馈**：site-runtime 的 `toast` 是 no-op，切档结果/失败原因走外壳状态通道与 `index.tsx:626` / `bootstrap-state.tsx:37` 两处 sr-only `aria-live`（圆点变色对读屏不可见，这是唯一进度通道，不可删）。
+- **站点视图内不产用户可见反馈**：site-runtime 的 `toast` 是 no-op，切档结果/失败原因走外壳状态通道与 `feedback-provider.tsx` / `bootstrap-state.tsx` 两处 sr-only `aria-live`（圆点变色对读屏不可见，这是唯一进度通道，不可删）。
 - **站点诊断报告是唯一的结构化报障入口**：`Alt+H` 的「复制诊断报告」（`shared/site-report.ts`）只含版本/系统/缩放/各站阶段码/逐项 check 的 `name-kind-ok`，**不得只可见不可复制，不得混入对话内容或网址**。
 - **新增持久化键要同时登记**：SQLite 仓库（`main/*-repository.ts`）、同步投影（`sync-repository.ts`）、本机重置（`database.ts` 的 `resetLocalData`）、线格式 fixture（`desktop/test/fixtures/` 只增不改）。漏一处，同步/重置/回填会静默失效。
 - **图片限额改任何一个数**，落点以 `scripts/test-image-limits.js` 的对账项与 `docs/adapters.md`「图片载荷」为准，别凭记忆列。

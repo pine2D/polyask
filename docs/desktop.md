@@ -108,6 +108,8 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 ## 6. 布局与密度
 
+- 全页面共享底部反馈条（`WORKSPACE_FEEDBACK_HEIGHT = 32` CSS px）；主进程布局减去同一高度，避免原生站点遮挡。后台站点轮询只播报、不覆盖用户操作提示。群发汇总保留到用户关闭或下一项操作，复制成功提示 6 秒后收起。
+
 - 单页最多 4 个站点（`shared/site-pages.ts` 的 `SITE_PAGE_SIZE = 4`）。1–4 站动态排布，5–9 站按 3+2、3+3、4+3、4+4、3+3+3 均衡分页，避免只有一站的末页。换页只改叠放次序与 bounds，不销毁、不重载、不中断生成与滚动位置。
 - Overview（总览）是等权比较视图；Focus 是主次阅读视图，次要站点仍是实时可交互的 `WebContentsView`，不得降级成截图或状态卡。Overview 永远恢复固定产品顺序；Focus 记住每页最近主站。
 - 几何：Overview 1 站铺满、2 站左右、3 站三分、4 站 2×2；Focus 1 站铺满、2 站约 2:1、3–4 站左主右次。请求 Overview 但格宽 `<380` 或高 `<210` CSS px 时自动落 Focus（`main/layout.ts` 的 `GRID_TILE_MIN_WIDTH` / `GRID_TILE_MIN_HEIGHT`，按当前页实际站点数算）。

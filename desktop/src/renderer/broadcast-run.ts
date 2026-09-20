@@ -45,8 +45,8 @@ export function cancelledRunSites(run: BroadcastRun): SiteKey[] {
   });
 }
 
-export function retryRequest(run: BroadcastRun): BroadcastRequest | null {
-  const sites = run.request.sites.filter((site) => run.results.get(site)?.ok === false);
+export function retryRequest(run: BroadcastRun, onlySite?: SiteKey): BroadcastRequest | null {
+  const sites = run.request.sites.filter((site) => (!onlySite || site === onlySite) && run.results.get(site)?.ok === false);
   return sites.length ? { ...run.request, sites } : null;
 }
 
