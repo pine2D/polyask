@@ -172,3 +172,13 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 - 修复前 B/C/D 探测保留失败事实：首轮单图可用，连续两图曾出现豆包已发送但未采集、元宝提交未确认；最终结果不将这些失败改写为通过。
 - Gemini 正常打开后仍重定向到 Google `/sorry/index`，需用户人工完成验证。未绕过验证，也未将此环境阻塞报告为已修复。真实 Drive 双设备及 Windows/macOS 原生验收仍未执行。
 - 本轮门禁：649 项 TypeScript/React 与 81 项运行时测试通过；类型检查、verify.sh、Linux package 和 smoke（shell=1、sites=9、attached=9）通过。原资料目录数据库与 Cookies 的大小及修改时间保持不变。
+
+
+### 2026-09-21 Gemini 恢复访问后的专项复测
+
+用户反馈恢复可访问后，重新启动同一隔离开发资料；页面正常进入 gemini.google.com，未跳转 Google 验证页。本轮未修改运行时代码，也未绕过站点验证。
+
+- 生产群发快速档 G、思考档 H 均返回 ok；本地历史分别保存对应合成标记的完整正文与会话地址，完成状态仍保守标记未知。
+- 使用可信键盘事件执行原站 Redo → Try again，页面出现 Previous version / Next version 控件并显示新回答；G 的旧副本已有冻结时间且正文仍等于原标记。
+- 先新建会话离开，再通过历史 previewQuestion → restoreQuestion 恢复 G：返回 opened，真实页面中 G/H 两轮问题及回答均可见；历史提问数量不变，没有重新发送。
+- 因此此前 Gemini 验证页阻塞的快速档、重生成及历史恢复项目已补验通过。该结论仅适用于本轮隔离 Linux 开发态，不保证 Google 验证页不会再次出现；真实 Drive 双设备、切换第二套账号及 Windows/macOS 原生验收仍未完成。
