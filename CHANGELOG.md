@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [1.4.0] - 2026-09-21
+
 ### 新增
 
 - 顶部提问框增加提问历史入口：按每次发送记录参与站点，支持搜索、按日期浏览、查看各次尝试的回答副本，以及恢复已保存地址的原站会话；再次提问只填入草稿，不会自动发送。
@@ -834,7 +836,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.3.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/pine2D/polyask/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/pine2D/polyask/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/pine2D/polyask/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/pine2D/polyask/compare/v1.0.2...v1.1.0
