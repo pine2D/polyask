@@ -122,3 +122,10 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
   - **kind `snapshot` 方法论**：changelog 记录「发布了什么」，但 PolyAsk 真正关心的是「选择器现在长什么样」——两者不总是同步（公告可能没提 UI 变化，UI 变化也可能没有公告）。帮助中心一类「怎么选 / 模式说明」页往往是当前状态的一手快照，比 changelog 更贴合这个需求。`parseSnapshot` 只产 1 条 entry，正文（锁定 `<article>` 容器，防止抓进导航/侧栏噪音）摘要不变则不重复开单，摘要一变就当新条目——首轮自动登记为基线，不需要人工预置。目前只有 kimi 有这类页面；其余站点若发现同类「状态说明」页，同样值得优先于 changelog 纳入。
   - **历史联网结论（2026-08，本次未重新联网核实）**：元宝 / 千问（qianwen.com）/ 豆包官网都是需登录的 React SPA，纯 GET 拿不到渲染后 DOM，UI 变化只能靠巡检 diagnose 与真实群发失败信号兜底；腾讯混元「研究动态」页同样是 SPA（内容是模型动态、不是元宝产品本身），2026-08 复核仍无 RSS 或可穿透的 GET 路径，评估后未纳入哨兵——需要时得走渲染穿透而非本脚本的纯 GET；豆包无任何一手可轮询信号，只能靠真机巡检。openai 官方消费端页面（`openai.com/products/release-notes/`、`help.openai.com/en/articles/6825453-chatgpt-release-notes`）2026-08 复核仍对本环境返回 403（多种 UA 一致），维持现状不纳入。
 - **用户报障出口**：`Alt+H` 站点状态里的「复制诊断报告」——内容是版本 / 系统 / 显示缩放、各站的 `phase` 与 `code`、以及逐项 check 的 `name`-`kind`-`ok`，**不含对话内容与网址**；配 `.github/ISSUE_TEMPLATE/site-breakage.yml`（按上面的四问预置问题）。
+
+
+## 提问历史验收
+
+自动化覆盖 SQLite version 4、schema 4 上下行、备份格式 2/旧格式读取、终态删除、选择性恢复、归属 token、重复文本、草稿复用与 UI 结构。针对性命令：`cd desktop && node --import tsx --test --test-isolation=none test/question-*.test.ts test/question-*.test.tsx`；运行时：`node --test --test-isolation=none scripts/question-history-runtime.test.js`。
+
+开发态须逐站检查新会话、已有会话连续两轮、相同提问、流式期间保存、瞬间完成、网页直接追问、登录重定向及地址恢复。另测打开副本期间原站视口保持正尺寸、切换页后生成继续、关闭/重启后副本仍可读。测试资料应标明合成数据；检查截图不能代替消息归属证据。Drive 用两台授权测试设备验收新增、删除、迟到副本与旧客户端 schema 保护，不向未授权账户上传测试内容。

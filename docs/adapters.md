@@ -257,3 +257,10 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 ## 待办
 
 - **`think` / `fast` 尚未接 `deadline`（已知偏离「deadline 全链路透传」这条硬约束）**：`core.js` 的 `runModeNow` 调适配器是 `await a[action]()` **零参**——九站适配器里只有 `adapters-cn.js`（DeepSeek 等发送键）与 `adapters-cn2.js`（Kimi 取 file input）两处做了夹取，且都在 submit / attach 路径上，**切档路径 0 处**。实测 Kimi 单次 `think()` 最坏约 12.6s、`runModeNow` 两轮重试合计约 26s，而 `switchTier` 的预算是 `min(10000, deadline - now)` 且**只在适配器返回之后**才比对——超时是事后发现，不是中途打断。要补就把 `deadline` 作为参数透传进 `think`/`fast`（契约表的签名要同步改），别让适配器各自去读全局。
+
+
+## 逐次提问的只读副本
+
+`history.js` 保存提交前的用户消息基线与本轮 token；`history-adapters.js` 为九站注册只读 `historyTurn()` 候选定位器。DOM 插入时绑定唯一新增的匹配用户轮次，只有其后的回答节点才能进入快照；空基线还要求观察到新用户节点插入，出现多个新轮次则停止。旧 token、脱离文档的基线、随后网页追问、回答节点替换，以及已观察完成后的重新生成/正文替换均拒绝串入旧记录。沿用已有 `answer()` 的 Markdown 正文提取；不打开菜单、不改变模型、失败不阻塞提交。未观察到生成过程的快速回答标记为完成状态未知，不由静止文字推断完整。
+
+**待真实账号验收**：新增用户消息选择子及 `question-navigation.ts` 的九站会话路径当前是候选规则，不代表已完成九站实测。无法匹配时降级为无副本/无会话地址；不得扩大为任意同域 URL。ChatGPT/Gemini 思考段排除仍需真实页面复核。冻结 fixture 和 VM 测试只能证明代码分支，不能证明页面契约。
