@@ -1,3 +1,4 @@
+import { isStoredQuestion, isStoredQuestionAnswer } from "../shared/question-history";
 import { createHash } from "node:crypto";
 
 import {
@@ -221,6 +222,17 @@ export class SyncRepository {
     this.database.folders.putMembership(value, false);
     return true;
   }
+
+  importQuestion(value: unknown): boolean {
+    if (!isStoredQuestion(value)) return false;
+    try { this.database.questions.put(value, false); return true; } catch { return false; }
+  }
+  importQuestionAnswer(value: unknown): boolean {
+    if (!isStoredQuestionAnswer(value)) return false;
+    try { this.database.questions.putAnswer(value, false); return true; } catch { return false; }
+  }
+  question(id: string) { return this.database.questions.get(id); }
+  questionAnswer(id: string) { return this.database.questions.getAnswer(id); }
 
   folder(id: string): StoredTaskFolder | null { return this.database.folders.get(id); }
   folderMembership(id: string): StoredFolderMembership | null { return this.database.folders.getMembership(id); }

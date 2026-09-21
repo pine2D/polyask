@@ -1,5 +1,6 @@
 export const BACKUP_COPY = {
   en: {
+    backupKindQuestion: "Question history", backupKindQuestionAnswer: "Saved answers", backupQuestionRemap: "Restore as a new history record. Select its saved answers separately.",
     backupFieldAnswers: "Answers", backupFieldSource: "Source", backupFieldSite: "Site", backupFieldExcerpt: "Excerpt", backupFieldSites: "Sites", backupFieldTier: "Tier", backupFieldId: "Record ID", backupFieldSchema: "Format version", backupFieldPreview: "Preview", backupFieldSynthesis: "Synthesis", backupFieldInstruction: "Instruction", backupFieldTime: "Saved time", backupFieldUrl: "Source URL", backupFieldKind: "Type", backupFieldCode: "Status code", backupFieldTruncated: "Truncated", backupFieldIndex: "Answer number", backupFieldFavorite: "Favorite", backupFieldFolder: "Folder ID", backupFieldTarget: "Content ID", backupFieldHash: "Content fingerprint",
     backupTitle: "Backup & restore", backupDescription: "Export your saved work, or review a backup before merging it into this device. Site sign-ins and credentials are excluded.",
     backupExport: "Export backup", backupImport: "Choose backup", backupExported: "Backup exported", backupReview: "Review backup", backupLocal: "On this device", backupIncoming: "In the backup",
@@ -10,6 +11,7 @@ export const BACKUP_COPY = {
     backupKindHistory: "Questions", backupKindArchive: "Saved results", backupKindDecision: "Decision cards", backupKindFolder: "Folders", backupKindMembership: "Folder links", backupKindState: "Templates & preferences", backupDetails: "Business data", backupFieldValue: "Value"
   },
   zhCN: {
+    backupKindQuestion: "提问历史", backupKindQuestionAnswer: "回答副本", backupQuestionRemap: "恢复为一条新的提问记录，请同时选择需要恢复的回答副本。",
     backupFieldAnswers: "回答", backupFieldSource: "来源", backupFieldSite: "站点", backupFieldExcerpt: "摘录", backupFieldSites: "站点范围", backupFieldTier: "档位", backupFieldId: "记录标识", backupFieldSchema: "格式版本", backupFieldPreview: "摘要", backupFieldSynthesis: "辅助综合", backupFieldInstruction: "指令", backupFieldTime: "保存时间", backupFieldUrl: "来源网址", backupFieldKind: "类型", backupFieldCode: "状态码", backupFieldTruncated: "是否截断", backupFieldIndex: "回答序号", backupFieldFavorite: "收藏", backupFieldFolder: "文件夹标识", backupFieldTarget: "内容标识", backupFieldHash: "内容指纹",
     backupTitle: "备份与恢复", backupDescription: "导出业务数据，或先核对备份再合并到本机。不包含站点登录及凭据。", backupExport: "导出备份", backupImport: "选择备份", backupExported: "备份已导出", backupReview: "核对备份", backupLocal: "本机版本", backupIncoming: "备份版本",
     backupKeepLocal: "保留本机", backupUseIncoming: "使用备份", backupRestoreDeleted: "恢复这条已删除内容", backupInclude: "导入此条", backupSame: "内容相同 · 无需改动", backupNew: "新增", backupConflict: "冲突", backupDeleted: "本机已删除", backupAll: "全部条目",
@@ -18,6 +20,7 @@ export const BACKUP_COPY = {
     backupKindHistory: "提问历史", backupKindArchive: "保存结果", backupKindDecision: "决策卡", backupKindFolder: "文件夹", backupKindMembership: "归属关系", backupKindState: "模板与偏好", backupDetails: "业务数据", backupFieldValue: "内容"
   },
   zhTW: {
+    backupKindQuestion: "提問歷史", backupKindQuestionAnswer: "回答副本", backupQuestionRemap: "恢復為一筆新的提問記錄，請同時選擇需要恢復的回答副本。",
     backupFieldAnswers: "回答", backupFieldSource: "來源", backupFieldSite: "網站", backupFieldExcerpt: "摘錄", backupFieldSites: "網站範圍", backupFieldTier: "檔位", backupFieldId: "紀錄識別碼", backupFieldSchema: "格式版本", backupFieldPreview: "摘要", backupFieldSynthesis: "輔助綜合", backupFieldInstruction: "指令", backupFieldTime: "儲存時間", backupFieldUrl: "來源網址", backupFieldKind: "類型", backupFieldCode: "狀態碼", backupFieldTruncated: "是否截斷", backupFieldIndex: "回答編號", backupFieldFavorite: "收藏", backupFieldFolder: "資料夾識別碼", backupFieldTarget: "內容識別碼", backupFieldHash: "內容指紋",
     backupTitle: "備份與還原", backupDescription: "匯出業務資料，或先核對備份再合併到本機。不包含網站登入及憑證。", backupExport: "匯出備份", backupImport: "選擇備份", backupExported: "備份已匯出", backupReview: "核對備份", backupLocal: "本機版本", backupIncoming: "備份版本",
     backupKeepLocal: "保留本機", backupUseIncoming: "使用備份", backupRestoreDeleted: "還原這筆已刪除內容", backupInclude: "匯入此筆", backupSame: "內容相同 · 無須變更", backupNew: "新增", backupConflict: "衝突", backupDeleted: "本機已刪除", backupAll: "全部項目",

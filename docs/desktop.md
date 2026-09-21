@@ -234,3 +234,9 @@ npm run soak -- --minutes=60
 - `POLYASK_SOAK_REPORT` 显式启用时，runtime-gates 才累计稳定性事件并采样 `app.getAppMetrics()`；普通运行不保留无消费者的事件数组。站点状态反馈及诊断快照独立于该记录器。
 - soak 第一笔发生在启动期间，CPU 初次读取为零，不代表空闲；后续样本为两次读取之间的用量。各进程工作集相加不是去重后的独占物理内存，启动期增长不能直接判定为泄漏。
 - 性能优化保留已选站点页面会话与现有发送/生成行为；后台休眠、自动释放仍需单独产品决策和真机验证。
+
+### 提问历史存储与同步基础
+
+逐次提问采用独立 `question` 和 `questionAnswer`（每站每次尝试）schema 4，SQLite version 4 新增 questions/question_answers。相同文字不同发送不合并，重试保留独立尝试；自动副本上限 200,000 码点，不改变手动采集上限。父子删除为终态 tombstone + outbox，迟到子记录遇已删除父立即转为 tombstone；本机重置清新两表且保留 deviceId。旧文字 history 仍为 schema 1。
+
+Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或会话 URL；最高支持 schema 4，旧实体保持原格式。业务备份导出 version 2、兼容读取 version 1；子记录依赖父记录，缺依赖不能静默恢复。恢复已删除提问派生新身份并映射选中的副本，重复导入不复活再次删除的内容。

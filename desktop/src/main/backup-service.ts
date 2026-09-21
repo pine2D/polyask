@@ -1,3 +1,4 @@
+import { questionAnswerId } from "./question-repository";
 import { createHash, randomUUID } from "node:crypto";
 import type { BackupApplyResult, BackupDocument, BackupEntry, BackupKind, BackupPreview, BackupPreviewItem } from "../shared/backup";
 import { folderMembershipId } from "../shared/task-folder";
@@ -12,7 +13,7 @@ interface Plan {
 const keyOf = (entry: Pick<BackupEntry, "kind" | "id">) => `${entry.kind}:${entry.id}`;
 const active = (body: Body | null | undefined) => !!body && !("deletedAt" in body);
 const restoredFolderId = (id: string, deletedAt: unknown) => `restore-${createHash("sha256").update(JSON.stringify([id, deletedAt])).digest("hex").slice(0, 40)}`;
-const tableKind: Record<string, BackupKind> = { history: "history", archives: "archive", decisions: "decision", folders: "folder", folder_memberships: "folderMembership" };
+const tableKind: Record<string, BackupKind> = { questions: "question", question_answers: "questionAnswer", history: "history", archives: "archive", decisions: "decision", folders: "folder", folder_memberships: "folderMembership" };
 export class BackupService {
   private readonly plans = new Map<string, Plan>();
   constructor(private readonly database: DesktopDatabase, private readonly options: {
@@ -35,9 +36,10 @@ export class BackupService {
       if (!active(body))
         continue;
       const split = key.indexOf(":"), kind = key.slice(0, split) as BackupKind, id = key.slice(split + 1);
+      if (kind === "questionAnswer" && !active(this.database.questions.get(body.questionId))) continue;
       entries.push({ kind, id, body: projectBody(kind, body) });
     }
-    return validateBackup({ format: "polyask-backup", version: 1, exportedAt: this.now(), entries });
+    return validateBackup({ format: "polyask-backup", version: 2, exportedAt: this.now(), entries });
   }
   preview(value: unknown): BackupPreview {
     const document = validateBackup(value), snapshot = this.snapshot();
@@ -60,6 +62,17 @@ export class BackupService {
       let note: BackupPreviewItem["note"];
       let blocked = false;
       let requires: string[] = [];
+      if (e.kind === "question" && status === "deleted") {
+        note = "question_new_identity";
+        const mapped = snapshot.get(`question:${restoredFolderId(e.id, local!.deletedAt)}`);
+        blocked = !!mapped && !active(mapped);
+      }
+      if (e.kind === "questionAnswer") {
+        const dependency = `question:${e.body.questionId}`;
+        requires = active(snapshot.get(dependency)) ? [] : [dependency];
+        if (requires.length) note = "dependency_required";
+        blocked = !active(snapshot.get(dependency)) && !documentKeys.has(dependency);
+      }
       if (e.kind === "folder" && status === "deleted") {
         const mapped = snapshot.get(`folder:${restoredFolderId(e.id, local!.deletedAt)}`);
         note = active(mapped) ? "folder_reused" : "folder_new_identity";
@@ -95,9 +108,9 @@ export class BackupService {
         this.plans.delete(token);
         throw new Error("backup_stale");
       }
-      const selected = new Set(selectedKeys), folderMap = new Map<string, string>();
+      const selected = new Set(selectedKeys), folderMap = new Map<string, string>(), questionMap = new Map<string, string>();
       let imported = 0;
-      const ordered = [...plan.document.entries].sort((a, b) => Number(a.kind === "folderMembership") - Number(b.kind === "folderMembership"));
+      const ordered = [...plan.document.entries].sort((a, b) => Number(a.kind === "folderMembership" || a.kind === "questionAnswer") - Number(b.kind === "folderMembership" || b.kind === "questionAnswer"));
       for (const e of ordered) {
         if (!selected.has(keyOf(e)))
           continue;
@@ -109,6 +122,19 @@ export class BackupService {
           // Never revive the mapped folder if the user later deleted it too.
           if (snapshot.has(`folder:${body.id}`))
             continue;
+        }
+        if (e.kind === "question" && original && !active(original)) {
+          body.id = restoredFolderId(e.id, original.deletedAt);
+          questionMap.set(e.id, body.id);
+          if (snapshot.has(`question:${body.id}`)) continue;
+        }
+        if (e.kind === "questionAnswer") {
+          body.questionId = questionMap.get(body.questionId) ?? body.questionId;
+          body.id = questionAnswerId(body.questionId, body.site, body.attempt);
+          if (!active(snapshot.get(`question:${body.questionId}`))) continue;
+          const target = snapshot.get(`questionAnswer:${body.id}`);
+          if (target && !active(target)) continue;
+          if (body.sealedAt === null) { body.capture = "interrupted"; body.sealedAt = Math.max(this.now(), body.createdAt); }
         }
         if (e.kind === "folderMembership") {
           body.folderId = folderMap.get(body.folderId) ?? body.folderId;
@@ -137,6 +163,8 @@ export class BackupService {
   }
   private put(kind: BackupKind, id: string, body: Body): void {
     switch (kind) {
+      case "question": this.database.questions.put(body as any); break;
+      case "questionAnswer": this.database.questions.putAnswer(body as any); break;
       case "history":
         this.database.history.put(body as any);
         break;

@@ -10,11 +10,12 @@ export function eligibleBackupSelection(items: readonly BackupPreviewItem[], sel
 }
 
 export function backupKind(copy: DesktopCopy, kind: string): string {
-  const keys: Record<string, keyof DesktopCopy> = { history: "backupKindHistory", archive: "backupKindArchive", decision: "backupKindDecision", folder: "backupKindFolder", folderMembership: "backupKindMembership", state: "backupKindState", template: "backupKindTemplate", group: "backupKindGroup", workspace: "backupKindWorkspace" };
+  const keys: Record<string, keyof DesktopCopy> = { question: "backupKindQuestion", questionAnswer: "backupKindQuestionAnswer", history: "backupKindHistory", archive: "backupKindArchive", decision: "backupKindDecision", folder: "backupKindFolder", folderMembership: "backupKindMembership", state: "backupKindState", template: "backupKindTemplate", group: "backupKindGroup", workspace: "backupKindWorkspace" };
   return copy[keys[kind] ?? "backupDetails"];
 }
 
 const FIELD_KEYS: Record<string, keyof DesktopCopy> = {
+  questionId: "backupFieldId", site: "backupFieldSite", attempt: "backupFieldIndex", submission: "decisionStatus", capture: "decisionStatus", submissionCode: "backupFieldCode", captureCode: "backupFieldCode", answerMarkdown: "backupFieldAnswers", conversationUrl: "backupFieldUrl", requestedTier: "backupFieldTier", inputImageCount: "backupFieldIndex", sealedAt: "backupFieldTime",
   task: "archiveQuestion", text: "backupFieldValue", title: "decisionName", name: "decisionName", conclusion: "decisionConclusion", rationale: "decisionRationale", uncertainties: "decisionUncertainties", nextStep: "decisionNextStep", evidence: "decisionEvidence", status: "decisionStatus", note: "archiveNote", tags: "archiveTags",
   results: "backupFieldAnswers", source: "backupFieldSource", host: "backupFieldSite", label: "decisionName", excerpt: "backupFieldExcerpt", sites: "backupFieldSites", selectedSites: "backupFieldSites", tier: "backupFieldTier", id: "backupFieldId", schema: "backupFieldSchema", preview: "backupFieldPreview", resultPreviews: "backupFieldPreview", synthesis: "backupFieldSynthesis", instruction: "backupFieldInstruction", capturedAt: "backupFieldTime", createdAt: "backupFieldTime", updatedAt: "backupFieldTime", lastUsedAt: "backupFieldTime", ts: "backupFieldTime", url: "backupFieldUrl", kind: "backupFieldKind", targetKind: "backupFieldKind", code: "backupFieldCode", state: "decisionStatus", truncated: "backupFieldTruncated", resultIndex: "backupFieldIndex", favorite: "backupFieldFavorite", folderId: "backupFieldFolder", targetId: "backupFieldTarget", archiveId: "decisionSource", sourceTitle: "decisionSource", hosts: "backupFieldSites", winnerHost: "archiveBestAnswer", textHash: "backupFieldHash", searchText: "backupFieldPreview"
 };
@@ -37,6 +38,7 @@ export function BackupComparison({ item, copy, selected, onSelect }: {
           <button type="button" aria-pressed={!selected} onClick={() => onSelect(false)}>{copy.backupKeepLocal}</button>
           <button type="button" aria-pressed={selected} onClick={() => onSelect(true)}>{copy.backupUseIncoming}</button>
         </div> : <label><input type="checkbox" checked={selected} onChange={(event) => onSelect(event.target.checked)} />{item.note === "folder_reused" ? copy.backupReuseFolder : item.status === "deleted" ? copy.backupRestoreDeleted : copy.backupInclude}</label>}
+      {item.note === "question_new_identity" ? <p>{copy.backupQuestionRemap}</p> : null}
       {item.note === "folder_reused" ? <p>{copy.backupFolderReused}</p> : null}
       {item.note === "folder_new_identity" ? <p>{copy.backupFolderRemap}</p> : null}
       {item.note === "dependency_required" && !item.blocked ? <p>{copy.backupDependency}</p> : null}

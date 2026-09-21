@@ -1,0 +1,30 @@
+{
+  "file": {
+    "id": "fixture-questionAnswer",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "questionAnswer",
+      "schema": "4",
+      "id": "09afb1bdb6202ecb2a71b8b93737d3cea21a7bc01956d7339a942511dcb47a5e"
+    }
+  },
+  "body": {
+    "schema": 4,
+    "id": "1f9e2bcc39e3d50cb1bba7e3cd223d2b0f574bdcbda8ea08a2d8abe693625180",
+    "questionId": "question-fixture",
+    "site": "claude",
+    "attempt": 1,
+    "createdAt": 10,
+    "updatedAt": 20,
+    "deviceId": "fixture-device",
+    "submission": "submitted",
+    "submissionCode": null,
+    "conversationUrl": null,
+    "answerMarkdown": "Saved answer.",
+    "capture": "complete",
+    "captureCode": null,
+    "capturedAt": 20,
+    "truncated": false,
+    "sealedAt": 20
+  }
+}

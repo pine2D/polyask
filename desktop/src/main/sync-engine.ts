@@ -1,3 +1,4 @@
+import type { StoredQuestion, StoredQuestionAnswer } from "../shared/question-history";
 import { createHash } from "node:crypto";
 import type { StoredArchive } from "../shared/archive";
 import type { StoredDecision } from "../shared/decision";
@@ -222,7 +223,7 @@ export class SyncEngine {
     let key = operation.key;
     let name: string;
     let properties: Record<string, string>;
-    let body: StateFragment | StoredHistory | StoredArchive | StoredDecision | StoredTaskFolder | StoredFolderMembership;
+    let body: StoredQuestion | StoredQuestionAnswer | StateFragment | StoredHistory | StoredArchive | StoredDecision | StoredTaskFolder | StoredFolderMembership;
     if (operation.kind === "state") {
       key = `state:${deviceId}`;
       name = `state-${deviceId}.json`;
@@ -246,6 +247,14 @@ export class SyncEngine {
       key = `decision:${record.id}`;
       name = `decision-${record.id}.json`;
       properties = { app: "polyask", schema: "2", kind: "decision", id: record.id, deleted: "deletedAt" in record ? "1" : "0" };
+      body = record;
+    } else if ((operation.kind === "question" || operation.kind === "questionAnswer") && operation.entityId) {
+      const record = operation.kind === "question" ? this.options.repository.question(operation.entityId) : this.options.repository.questionAnswer(operation.entityId);
+      if (!record) { this.options.repository.complete(operation.key, operation.revision); return; }
+      key = `${operation.kind}:${record.id}`;
+      const wireId = createHash("sha256").update(record.id).digest("hex");
+      name = `${operation.kind}-${wireId}.json`;
+      properties = { app: "polyask", schema: "4", kind: operation.kind, id: wireId, deleted: "deletedAt" in record ? "1" : "0" };
       body = record;
     } else if ((operation.kind === "folder" || operation.kind === "folderMembership") && operation.entityId) {
       const record = operation.kind === "folder" ? this.options.repository.folder(operation.entityId) : this.options.repository.folderMembership(operation.entityId);

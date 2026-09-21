@@ -1,0 +1,24 @@
+{
+  "file": {
+    "id": "fixture-question",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "question",
+      "schema": "4",
+      "id": "23549bf497060ad14c670705917fd197ff2fef6c4df92303d8a10d989e4f431d"
+    }
+  },
+  "body": {
+    "schema": 4,
+    "id": "question-fixture",
+    "text": "What did we ask?",
+    "sites": [
+      "claude"
+    ],
+    "requestedTier": null,
+    "inputImageCount": 0,
+    "createdAt": 10,
+    "updatedAt": 10,
+    "deviceId": "fixture-device"
+  }
+}

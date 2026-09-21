@@ -44,7 +44,7 @@ test("backup includes more than the history screen limit and ignores tombstones"
 test("backup validates size, count, malformed data, selected keys and cancellation",()=>{
  const db=DesktopDatabase.open(":memory:");try {
  const service=new BackupService(db,{deviceId:()=>"local"});
- assert.throws(()=>service.preview({...wrap([]),version:2}),/backup_version/);
+ assert.throws(()=>service.preview({...wrap([]),version:3}),/backup_version/);
  assert.throws(()=>service.preview(wrap(Array.from({length:20001},()=>({})))),/backup_invalid/);
  assert.throws(()=>service.preview({...wrap([]),padding:"x".repeat(BACKUP_MAX_BYTES)}),/backup_too_large/);
  assert.throws(()=>service.preview(wrap([{kind:"workspace",id:"workspace",body:{selectedSites:["future"],tier:null,updatedAt:1}}])),/backup_invalid/);

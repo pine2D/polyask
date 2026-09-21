@@ -22,3 +22,9 @@
 - `backup-format1.json`：八类业务数据备份，`format: "polyask-backup"` / `version: 1`；不是 Drive 同步封装，不含设备身份。
 
 `shared/sync.ts` 的 `SYNC_SCHEMA = 1` 继续用于旧 history/archive/state，`SUPPORTED_SYNC_SCHEMA = 3` 是客户端识别上限。决策卡和文件夹使用各自实体格式；已有样本始终保留，由对应 wire-format、同步和备份测试校验。
+
+## 提问历史 schema 4 与备份 v2
+
+- `schema4-question.json` / `schema4-questionAnswer.json`：逐次提问与独立站点尝试；Drive 元数据 ID 为正文 ID 的 SHA-256，不附正文或 URL 预览。
+- `backup-format2.json`：包含新两类实体的业务备份；仍支持读取冻结的 version 1。
+- 当前识别上限为 `SUPPORTED_SYNC_SCHEMA = 4`，旧实体格式保持不变。

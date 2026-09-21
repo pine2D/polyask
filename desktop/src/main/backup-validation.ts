@@ -1,3 +1,4 @@
+import { isStoredQuestion, isStoredQuestionAnswer } from "../shared/question-history";
 import { createHash } from "node:crypto";
 import { isArchiveRecord } from "../shared/archive";
 import { BACKUP_KINDS, BACKUP_MAX_BYTES, BACKUP_MAX_ENTRIES, type BackupDocument, type BackupEntry, type BackupKind } from "../shared/backup";
@@ -8,6 +9,8 @@ import { isHistoryRecord, validSyncTime } from "../shared/sync";
 import { isStoredFolderMembership, isStoredTaskFolder } from "../shared/task-folder";
 type Body = Record<string, any>;
 const fields: Record<BackupKind, string[]> = {
+  question: ["id", "text", "sites", "requestedTier", "inputImageCount", "createdAt", "updatedAt", "schema"],
+  questionAnswer: ["id", "questionId", "site", "attempt", "createdAt", "updatedAt", "schema", "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt"],
   history: ["id", "textHash", "text", "preview", "createdAt", "lastUsedAt", "updatedAt", "schema"],
   archive: ["id", "text", "task", "source", "results", "favorite", "tags", "note", "winnerHost", "synthesis", "hosts", "resultPreviews", "searchText", "preview", "createdAt", "updatedAt", "ts", "schema"],
   decision: ["id", "archiveId", "title", "sourceTitle", "conclusion", "rationale", "uncertainties", "nextStep", "status", "evidence", "createdAt", "updatedAt", "schema"],
@@ -42,6 +45,8 @@ export function projectBody(kind: BackupKind, value: unknown): Body {
   if (kind !== "workspace")
     ok = ok && idValid(b.id);
   switch (kind) {
+    case "question": ok = ok && isStoredQuestion(stored); break;
+    case "questionAnswer": ok = ok && isStoredQuestionAnswer(stored); break;
     case "history":
       ok = ok && isHistoryRecord(stored) && createHash("sha256").update(b.text).digest("hex") === b.id;
       break;
@@ -83,7 +88,7 @@ export function validateBackup(value: unknown): BackupDocument {
     throw new Error("backup_too_large");
   if (!object(value) || value.format !== "polyask-backup")
     throw new Error("backup_invalid");
-  if (value.version !== 1)
+  if (value.version !== 1 && value.version !== 2)
     throw new Error("backup_version");
   if (!validSyncTime(value.exportedAt) || !Array.isArray(value.entries) || value.entries.length > BACKUP_MAX_ENTRIES)
     throw new Error("backup_invalid");
@@ -91,6 +96,7 @@ export function validateBackup(value: unknown): BackupDocument {
   const entries: BackupEntry[] = value.entries.map((e: unknown) => {
     if (!object(e) || !BACKUP_KINDS.includes(e.kind) || !idValid(e.id))
       throw new Error("backup_invalid");
+    if (value.version === 1 && (e.kind === "question" || e.kind === "questionAnswer")) throw new Error("backup_version");
     const kind = e.kind as BackupKind, key = `${kind}:${e.id}`;
     if (seen.has(key))
       throw new Error("backup_invalid");
@@ -100,7 +106,7 @@ export function validateBackup(value: unknown): BackupDocument {
       throw new Error("backup_invalid");
     return { kind, id: e.id, body };
   });
-  return JSON.parse(JSON.stringify({ format: "polyask-backup", version: 1, exportedAt: value.exportedAt, entries }));
+  return JSON.parse(JSON.stringify({ format: "polyask-backup", version: value.version, exportedAt: value.exportedAt, entries }));
 }
 export function comparison(body: Readonly<Record<string, unknown>>): Body {
   return Object.fromEntries(Object.entries(body).filter(([k]) => !["deviceId", "updatedAt", "createdAt", "lastUsedAt", "ts"].includes(k)));
