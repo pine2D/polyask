@@ -56,3 +56,22 @@ test('a pre-reset token cannot write after the same IDs are imported again', () 
     assert.equal(db.questions.answers(q.id)[0].answerMarkdown, null);
   } finally { db.close(); }
 });
+test("owned answer progress keeps unknown completion capture alive within one fixed budget", () => {
+  const db = DesktopDatabase.open(":memory:");
+  let now = 1000;
+  const history = new QuestionHistoryService(db.questions, { deviceId: () => "local", now: () => now });
+  try {
+    const q = history.begin(request("progress"))!;
+    const token = history.token("claude")!;
+    history.result("progress", { site: "claude", ok: true });
+    now = 5000;
+    history.accept("claude", { token, owned: true, text: "First", generation: null });
+    now = 60_000;
+    history.accept("claude", { token, owned: true, text: "First and more", generation: null });
+    assert.equal(db.questions.answers(q.id)[0].sealedAt, null);
+    now = 910_000;
+    history.accept("claude", { token, owned: true, text: "Final", generation: null });
+    assert.notEqual(db.questions.answers(q.id)[0].sealedAt, null);
+    assert.equal(db.questions.answers(q.id)[0].capture, "unknown");
+  } finally { db.close(); }
+});

@@ -101,7 +101,7 @@ export class QuestionHistoryService {
         }
         return;
       }
-      if (v.generation === "generating") { if (!e.generating) e.deadline = now + 15 * 60_000; e.generating = true; e.completions = 0; }
+      if (v.generation === "generating" || (v.text && v.text !== current.answerMarkdown)) { if (!e.generating) e.deadline = now + 15 * 60_000; e.generating = true; e.completions = 0; }
       else if (v.generation === "complete" && e.generating) e.completions++;
       else if (v.generation === "idle") e.completions = 0;
       const complete = e.completions >= 3;

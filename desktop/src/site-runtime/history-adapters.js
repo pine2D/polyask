@@ -9,10 +9,17 @@
     "gemini.google.com": "user-query",
     "deepseek.com": ".ds-message",
     "doubao.com": "[data-message-id]",
-    "qianwen.com": ".question-common-card",
+    "qianwen.com": ".question-text-card",
     "kimi.com": ".chat-content-item-user",
     "yuanbao.tencent.com": ".agent-chat__list__item--human",
-    "chatglm.cn": ".question-content"
+    "chatglm.cn": ".conversation.question .question-txt"
+  };
+  const answerRoots = {
+    "claude.ai": ".font-claude-response", "chatgpt.com": '[data-turn="assistant"]',
+    "gemini.google.com": "model-response", "deepseek.com": ".ds-message",
+    "doubao.com": "[data-message-id]", "qianwen.com": ".answer-common-card",
+    "kimi.com": ".chat-content-item-assistant", "yuanbao.tencent.com": ".agent-chat__list__item--ai",
+    "chatglm.cn": ".answer-content"
   };
   const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || null;
   for (const [host, selector] of Object.entries(users)) {
@@ -20,7 +27,7 @@
     if (!a || typeof a.answer !== "function") continue;
     a.historyTurn = function () {
       let nodes = [...document.querySelectorAll(selector)];
-      if (host === "deepseek.com") nodes = nodes.filter(node => !node.querySelector(".ds-markdown"));
+      if (host === "deepseek.com") nodes = nodes.filter(node => node.querySelector(".ds-collapsible-text") && !node.querySelector(".ds-markdown"));
       if (host === "doubao.com") nodes = nodes.filter(node => node.matches('[class*="justify-end"]') || node.querySelector('[class*="justify-end"]'));
       nodes = nodes.filter(node => !nodes.some(parent => parent !== node && parent.contains(node)));
       const user = nodes.at(-1);
@@ -33,7 +40,11 @@
         if ((order & 1) || !(order & 4) || user.contains(answer)) answer = null;
       }
       const textNode = host === "kimi.com" ? user.querySelector(".user-content") || user : user;
-      return { user, userCount: nodes.length, answer, text: textNode.innerText || textNode.textContent || "", userKey: key(user), answerKey: key(answer) };
+      const text = host === "gemini.google.com"
+        ? [...user.querySelectorAll(".query-text-line")].map(node => node.innerText || node.textContent || "").join("\n")
+        : textNode.innerText || textNode.textContent || "";
+      const answerRoot = answer?.closest?.(answerRoots[host]) || answer;
+      return { user, userCount: nodes.length, answer, answerRoot, text, userKey: key(user), answerKey: key(answerRoot) };
     };
   }
 }());

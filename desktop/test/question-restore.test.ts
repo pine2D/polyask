@@ -60,3 +60,10 @@ test('restoring one attempt uses the workspace canonical site order', async () =
   try { assert.equal((await restore.restore(restore.preview('q-a', questionAnswerFixture().id).token, true))[0].state, 'opened'); }
   finally { db.close(); }
 });
+
+test("verified Yuanbao and ChatGLM conversation routes retain only their identity", () => {
+  assert.equal(safeQuestionUrl("yuanbao", "https://yuanbao.tencent.com/chat/abcdefghij/klmnopqrstu?tracking=1"), "https://yuanbao.tencent.com/chat/abcdefghij/klmnopqrstu");
+  assert.equal(safeQuestionUrl("chatglm", "https://chatglm.cn/main/alltoolsdetail?lang=zh&cid=0123456789abcdef01234567&tracking=1"), "https://chatglm.cn/main/alltoolsdetail?cid=0123456789abcdef01234567");
+  assert.equal(safeQuestionUrl("chatglm", "https://chatglm.cn/main/alltoolsdetail?cid=bad"), null);
+  assert.equal(safeQuestionUrl("chatglm", "https://chatglm.cn/main/alltoolsdetail?cid=0123456789abcdef01234567&cid=abcdef0123456789abcdef01"), null);
+});

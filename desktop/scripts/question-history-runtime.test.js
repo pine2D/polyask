@@ -4,12 +4,15 @@ const vm = require("node:vm");
 const fs = require("node:fs");
 const path = require("node:path");
 function setup() {
-  let turn = null, mutated = () => {};
+  let turn = null, mutated = () => {}, now = 1000;
+  const listeners = new Map();
+  const events = { addEventListener: (name, f) => listeners.set(name, f), removeEventListener: name => listeners.delete(name) };
   const adapter = { historyTurn: () => turn, generation: () => "generating" };
   const S = { adapters: { "example.test": adapter }, toMarkdown: node => node.text };
-  const context = { setTimeout: () => 1, clearTimeout: () => {}, document: { documentElement: {} }, MutationObserver: class { constructor(callback) { mutated = callback; } observe() {} disconnect() {} }, window: { __AMS: S }, location: { hostname: "example.test", href: "https://example.test/chat/one" } };
+  const context = { URL, Date: { now: () => now }, setTimeout: () => 1, clearTimeout: () => {}, document: { ...events, documentElement: {} }, MutationObserver: class { constructor(callback) { mutated = callback; } observe() {} disconnect() {} }, window: { ...events, __AMS: S }, location: { hostname: "example.test", href: "https://example.test/chat/one" } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime/history.js"), "utf8"), context);
-  return { S, set: value => { turn = value; }, insert: value => { turn = value; mutated([{ addedNodes: [value.user] }]); } };
+  return { S, activate: () => listeners.get('pointerdown')?.({ isTrusted: true, composedPath: () => [{ matches: () => true }] }),
+    input: () => listeners.get('beforeinput')?.({type:'beforeinput',isTrusted:true}), navigate: href => { context.location.href = href; }, popstate: () => listeners.get('popstate')?.({}), advance: ms => { now += ms; }, set: value => { turn = value; }, insert: value => { turn = value; mutated([{ addedNodes: [value.user] }]); } };
 }
 const node = (text) => ({ text, isConnected: true });
 test("history capture refuses old answers and binds only a new matching user turn", () => {
@@ -50,7 +53,7 @@ test('a same-text manual follow-up before the first poll is not the submitted tu
   s.set({ user: node('Question'), text: 'Question', answer: node('Manual follow-up'), userCount: 3 });
   assert.equal(s.S.history.snapshot('token').owned, false);
 });
-test('a completed answer cannot be replaced by regeneration in the same DOM node', () => {
+test('a trusted regeneration activation freezes the last safe answer before DOM replacement', () => {
   const s = setup();
   s.set({ user: node('Earlier'), text: 'Earlier', userCount: 1 });
   s.S.adapters['example.test'].generation = () => 'complete';
@@ -58,6 +61,134 @@ test('a completed answer cannot be replaced by regeneration in the same DOM node
   const answer = node('Original');
   s.set({ user: node('Question'), text: 'Question', answer, userCount: 2 });
   assert.equal(s.S.history.snapshot('token').text, 'Original');
+  s.activate();
   answer.text = 'Regenerated';
+  assert.equal(s.S.history.snapshot('token').text, 'Original');
+  assert.equal(s.S.history.snapshot('token').ended, true);
+});
+
+test('heuristic completion during streaming does not freeze the first token', () => {
+  const s = setup();
+  s.S.adapters['example.test'].generation = () => 'complete';
+  s.S.history.begin('token', 'Question');
+  const answer = node('');
+  s.insert({ user: node('Question'), text: 'Question', answer, userCount: 1 });
+  answer.text = 'First';
+  assert.equal(s.S.history.snapshot('token').text, 'First');
+  s.advance(5000); answer.text = 'First and rest';
+  const next = s.S.history.snapshot('token');
+  assert.equal(next.owned, true);
+  assert.equal(next.text, 'First and rest');
+  assert.notEqual(next.generation, 'complete');
+});
+test('streaming may replace markdown children inside the same owned answer container', () => {
+  const s = setup(), root = node('Container'), u = node('Question');
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: u, text: 'Question', answer: node('First'), answerRoot: root, userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'First');
+  s.set({ user: u, text: 'Question', answer: node('Full answer'), answerRoot: root, userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'Full answer');
+  s.set({ user: u, text: 'Question', answer: node('Other'), answerRoot: node('Other container'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').owned, false);
+});
+test('a detached optimistic user may remount before the first answer, without allowing an extra turn', () => {
+  const s = setup(), optimistic = node('Question');
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: optimistic, text: 'Question', userCount: 1 });
+  optimistic.isConnected = false;
+  s.set({ user: node('Question'), text: 'Question', answer: node('Server answer'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'Server answer');
+  s.set({ user: node('Question'), text: 'Question', answer: node('Manual follow-up'), userCount: 2 });
+  assert.equal(s.S.history.snapshot('token').owned, false);
+});
+test('empty answer skeleton does not lock the eventual answer container', () => {
+  const s = setup(), u = node('Question');
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: u, text: 'Question', answer: node(''), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').owned, true);
+  s.set({ user: u, text: 'Question', answer: node('Final text'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'Final text');
+});
+test('owned thinking phase reports generation before a markdown answer exists', () => {
+  const s = setup();
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: node('Question'), text: 'Question', answer: null, userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').generation, 'generating');
+});
+
+test('a long streaming pause never proves completion', () => {
+  const s = setup(), answer = node('First');
+  s.S.adapters['example.test'].generation = () => 'complete';
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: node('Question'), text: 'Question', answer, userCount: 1 });
+  s.S.history.snapshot('token'); s.advance(30_000);
+  assert.notEqual(s.S.history.snapshot('token').generation, 'complete');
+  answer.text = 'First and remaining stream';
+  assert.equal(s.S.history.snapshot('token').text, 'First and remaining stream');
+});
+test('optimistic remount cannot adopt a same-text old conversation on another route', () => {
+  const s = setup(), optimistic = node('Question');
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: optimistic, text: 'Question', userCount: 1 });
+  optimistic.isConnected = false;
+  s.navigate('https://example.test/chat/old');
+  s.set({ user: node('Question'), text: 'Question', answer: node('Old answer'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').owned, false);
+});
+test('history back ends an optimistic capture even before its initial conversation URL', () => {
+  const s = setup(); s.navigate('https://example.test/');
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: node('Question'), text: 'Question', userCount: 1 });
+  s.popstate();
+  assert.equal(s.S.history.snapshot('token').owned, false);
+});
+test('Yuanbao agent landing may acquire its first conversation segment', () => {
+  const s = setup(); s.navigate('https://yuanbao.tencent.com/chat/abcdefghij');
+  s.S.history.begin('token', 'Question');
+  s.navigate('https://yuanbao.tencent.com/chat/abcdefghij/klmnopqrstu');
+  s.insert({ user: node('Question'), text: 'Question', answer: node('New'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'New');
+});
+test('bootstrap conversation redirects cannot lock a route before the submitted turn exists', () => {
+  const s = setup(); s.navigate('https://example.test/');
+  s.S.history.begin('token', 'Question');
+  s.navigate('https://example.test/chat/pending');
+  assert.equal(s.S.history.snapshot('token').owned, false);
+  s.navigate('https://example.test/chat/final');
+  s.insert({ user: node('Question'), text: 'Question', answer: node('New answer'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'New answer');
+});
+test('user navigation before binding cannot adopt an old matching turn', () => {
+  const s = setup(); s.navigate('https://example.test/');
+  s.S.history.begin('token', 'Question');
+  s.activate();
+  s.navigate('https://example.test/chat/old');
+  s.insert({ user: node('Question'), text: 'Question', answer: node('Old'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').owned, false);
+});
+
+test('ChatGPT provisional WEB route may settle once to its server conversation', () => {
+  const s = setup(); s.navigate('https://chatgpt.com/');
+  s.S.history.begin('token', 'Question');
+  s.navigate('https://chatgpt.com/c/WEB:01234567-89ab-cdef-0123-456789abcdef');
+  const u = node('Question');
+  s.insert({ user: u, text: 'Question', userCount: 1 });
+  s.navigate('https://chatgpt.com/c/01234567-89ab-cdef-0123-456789abcdef');
+  s.set({ user: u, text: 'Question', answer: node('New'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'New');
+  s.navigate('https://chatgpt.com/c/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
+  assert.equal(s.S.history.snapshot('token').owned, false);
+});
+test('native composer injection before the user turn exists is not a manual follow-up', () => {
+  const s = setup(); s.S.history.begin('token', 'Question');
+  s.input();
+  s.insert({ user: node('Question'), text: 'Question', answer: node('New'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'New');
+});
+test('history back before binding cannot adopt a same-text previous conversation', () => {
+  const s = setup(); s.navigate('https://example.test/');
+  s.S.history.begin('token', 'Question');
+  s.navigate('https://example.test/chat/old'); s.popstate();
+  s.insert({ user: node('Question'), text: 'Question', answer: node('Old'), userCount: 1 });
   assert.equal(s.S.history.snapshot('token').owned, false);
 });
