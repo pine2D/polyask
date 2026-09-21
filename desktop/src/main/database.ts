@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { QuestionRepository } from "./question-repository";
 import { TaskFolderRepository } from "./task-folder-repository";
 import { DecisionRepository } from "./decision-repository";
 import { ArchiveRepository } from "./archive-repository";
@@ -12,12 +13,16 @@ import { OutboxRepository } from "./outbox-repository";
 import { inTransaction } from "./repository-utils";
 import { StateRepository } from "./state-repository";
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function migrate(database: DatabaseSync): void {
   database.exec("PRAGMA foreign_keys = ON");
   database.exec("PRAGMA journal_mode = WAL");
   database.exec(`
+    CREATE TABLE IF NOT EXISTS questions (id TEXT PRIMARY KEY, body TEXT NOT NULL, sort_time INTEGER NOT NULL, deleted_at INTEGER);
+    CREATE INDEX IF NOT EXISTS question_sort ON questions(sort_time DESC, id);
+    CREATE TABLE IF NOT EXISTS question_answers (id TEXT PRIMARY KEY, question_id TEXT NOT NULL, site TEXT NOT NULL, attempt INTEGER NOT NULL, body TEXT NOT NULL, deleted_at INTEGER);
+    CREATE UNIQUE INDEX IF NOT EXISTS answer_attempt ON question_answers(question_id,site,attempt);
     CREATE TABLE IF NOT EXISTS history (
       id TEXT PRIMARY KEY,
       body TEXT NOT NULL,
@@ -80,6 +85,7 @@ function migrate(database: DatabaseSync): void {
 export class DesktopDatabase {
   readonly outbox: OutboxRepository;
   readonly history: HistoryRepository;
+  readonly questions: QuestionRepository;
   readonly archives: ArchiveRepository;
   readonly decisions: DecisionRepository;
   readonly folders: TaskFolderRepository;
@@ -90,6 +96,7 @@ export class DesktopDatabase {
 
   private constructor(private readonly database: DatabaseSync) {
     this.outbox = new OutboxRepository(database);
+    this.questions = new QuestionRepository(database, this.outbox);
     this.history = new HistoryRepository(database, this.outbox);
     this.archives = new ArchiveRepository(database, this.outbox);
     this.decisions = new DecisionRepository(database, this.outbox);
@@ -109,7 +116,7 @@ export class DesktopDatabase {
   transaction<T>(action: () => T): T { return inTransaction(this.database, action); }
 
   businessSnapshot(): { table: string; id: string; body: unknown }[] {
-    return ["history", "archives", "decisions", "folders", "folder_memberships", "state_items"].flatMap(table => {
+    return ["questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items"].flatMap(table => {
       const key = table === "state_items" ? "key" : "id";
       return this.database.prepare(`SELECT ${key} AS id, body FROM ${table} ORDER BY ${key}`).all().flatMap(row => {
         const id = String(row.id);
@@ -134,7 +141,7 @@ export class DesktopDatabase {
   // 本机重置唯一的物理删除路径：只清本机，云端由重新连接后的全量拉取恢复。deviceId 保留（见 DataAdminService）。
   resetLocalData(): void {
     inTransaction(this.database, () => {
-      for (const table of ["history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
+      for (const table of ["questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");
     });
     // DELETE 只把页挂进 freelist，提问与回答明文仍留在 .sqlite / WAL 里；重置的承诺是「本机清空」，收缩一次。

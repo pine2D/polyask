@@ -28,7 +28,7 @@ export class DataAdminService {
   }
 
   clearHistory(): number {
-    let cleared = 0;
+    let cleared = this.options.database.questions.clear(this.now(), this.options.deviceId());
     // list() 单次最多 100 条且不含 tombstone：逐批 tombstone 到列表为空，不另写 SQL。
     for (;;) {
       const batch = this.options.database.history.list(100);

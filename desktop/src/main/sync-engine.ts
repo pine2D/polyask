@@ -193,7 +193,7 @@ export class SyncEngine {
     for (;;) {
       const ready = this.options.repository.ready(this.now());
       if (!ready.length) return waiting;
-      ready.sort((left, right) => ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5 }[left.kind] - ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5 }[right.kind])));
+      ready.sort((left, right) => ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 }[left.kind] - ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 }[right.kind])));
       // state 正文是本机整份 fragment、与出箱条数无关：一轮只上传一次，然后把本轮全部 state 项逐条 complete。
       // 出箱行本身不折叠（database.test.ts 明写 outbox 按 key 各留一行），折叠只发生在这里。
       const stateOperations = ready.filter((operation) => operation.kind === "state");

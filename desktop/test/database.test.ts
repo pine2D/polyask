@@ -13,7 +13,7 @@ test("desktop database enables WAL and preserves archive tombstones across reope
   const path = join(directory, "polyask.sqlite");
   try {
     const first = DesktopDatabase.open(path);
-    assert.deepEqual(first.configuration(), { journalMode: "wal", foreignKeys: true, userVersion: 3 });
+    assert.deepEqual(first.configuration(), { journalMode: "wal", foreignKeys: true, userVersion: 4 });
     first.archives.put(archiveFixture());
     first.archives.delete("archive-a", 2_000, "device-b");
     assert.equal(first.outbox.count(), 1);
@@ -126,7 +126,7 @@ test("decision migration preserves a schema 1 database and its archived JSON ver
     old.prepare("INSERT INTO meta VALUES(?,?)").run("deviceId",JSON.stringify("old-device"));
     old.close();
     const migrated=DesktopDatabase.open(path);
-    assert.equal(migrated.configuration().userVersion,3);
+    assert.equal(migrated.configuration().userVersion,4);
     assert.deepEqual(migrated.archives.get(archive.id),archive);
     assert.equal(migrated.meta.get("deviceId"),"old-device");
     assert.deepEqual(migrated.decisions.list(),[]);
@@ -146,7 +146,7 @@ test("folder migration preserves schema 2 decision bodies and device identity",(
     old.prepare("INSERT INTO meta VALUES(?,?)").run("deviceId",JSON.stringify("old-device"));
     old.close();
     const migrated=DesktopDatabase.open(path);
-    assert.equal(migrated.configuration().userVersion,3);
+    assert.equal(migrated.configuration().userVersion,4);
     assert.deepEqual(migrated.decisions.get(decision.id),decision);
     assert.deepEqual(migrated.folders.list(),[]);
     assert.deepEqual(migrated.folders.listMemberships(),[]);

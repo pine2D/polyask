@@ -27,7 +27,7 @@ export interface HistoryTombstone {
 }
 
 export type StoredHistory = HistoryRecord | HistoryTombstone;
-export type SyncEntityKind = "history" | "archive" | "state" | "decision" | "folder" | "folderMembership";
+export type SyncEntityKind = "history" | "archive" | "state" | "decision" | "folder" | "folderMembership" | "question" | "questionAnswer";
 
 export type SyncState = "idle" | "syncing" | "offline" | "auth" | "blocked" | "waiting" | "schema" | "error";
 
