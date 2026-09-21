@@ -366,7 +366,7 @@ async function createWindow(): Promise<void> {
     (site, deadline) => manager.collect(site, deadline)
   );
   collectionForWorkspace = collection;
-  const { deviceId, archives, history, promptLibrary, decisions, folders, backup } = createLocalDataServices(database);
+  const { deviceId, archives, history, promptLibrary, decisions, folders, backup, questions } = createLocalDataServices(database);
   const synthesis = new SynthesisService({
     sites: SITES,
     archives,
@@ -410,7 +410,7 @@ async function createWindow(): Promise<void> {
     workspace,
     coordinator,
     synthesisCoordinator,
-    collection,
+    collection, questions,
     archives,
     decisions, folders, backup,
     history,

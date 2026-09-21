@@ -1,3 +1,6 @@
+import { registerQuestionHistoryIpc } from "./question-history-ipc";
+import { QuestionCaptureService } from "./question-capture-service";
+import type { QuestionHistoryService } from "./question-history-service";
 import type { BackupService } from "./backup-service";
 import { registerBackupIpc } from "./backup-ipc";
 import type { TaskFolderService } from "./task-folder-service";
@@ -66,6 +69,7 @@ interface ShellIpcOptions {
   readonly folders: TaskFolderService;
   readonly backup: BackupService;
   readonly history: HistoryService;
+  readonly questions: QuestionHistoryService;
   readonly promptLibrary: PromptLibraryService;
   readonly synthesis: SynthesisService;
   readonly sync: SyncEngine;
@@ -125,6 +129,7 @@ function strictId(value: unknown): string {
 export function registerShellIpc(options: ShellIpcOptions): () => void {
   const { window, manager, workspace, coordinator, synthesisCoordinator, collection, archives, history, promptLibrary, synthesis, sync } = options;
   const operationGate = new OperationGate();
+  const capture = new QuestionCaptureService(options.questions, (site, token, deadline) => manager.historyAccess.snapshot(site, token, deadline));
   const trustedShell = (event: ShellIpcEvent) =>
     event.sender.id === window.webContents.id &&
     event.senderFrame?.parent === null &&
@@ -140,6 +145,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
     return state;
   };
+  const disposeQuestionIpc = registerQuestionHistoryIpc({ questions: options.questions, manager, workspace, gate: operationGate, window, trusted: trustedShell, publishWorkspace });
   const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
@@ -190,13 +196,16 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       // history ahead of sendAll): a question the user actually asked belongs in the
       // library even when every site fails.
       history.record(request.text);
+      options.questions.begin(request);
       publishPromptLibrary();
       for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
       const results = await coordinator.send(
         request,
-        (site, command, signal) => manager.sendCommand(site, command, signal),
+        (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: options.questions.token(site) }, signal),
         request.images.length ? 90_000 : 44_000,
         (result) => {
+          options.questions.result(request.runId, result);
+          capture.start();
           manager.markStatus(statusForResult(result.site, result));
           if (result.ok) manager.watchGeneration(request.runId, result.site);
         },
@@ -302,6 +311,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.on("polyask:cancel", (event) => {
     if (trustedShell(event)) {
+      options.questions.cancel();
       coordinator.cancel();
       // Cancel reaches both dispatch paths; the synthesis coordinator is separate
       // from the broadcast one and would otherwise keep typing into a site.
@@ -370,6 +380,8 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
 
   return () => {
+    disposeQuestionIpc();
+    capture.dispose();
     disposeBackupIpc();
     disposeFolderIpc();
     disposeDecisionIpc();

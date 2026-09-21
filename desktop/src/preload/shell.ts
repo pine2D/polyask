@@ -1,3 +1,5 @@
+import type { QuestionDetail, QuestionPage, QuestionFilters } from "../shared/question-history";
+import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
 import type { BackupPreview, BackupApplyResult } from "../shared/backup";
 import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
@@ -40,6 +42,13 @@ import type {
 } from "../shared/synthesis";
 
 export interface PolyAskDesktopApi {
+  listQuestions(filters: QuestionFilters): Promise<QuestionPage>;
+  getQuestion(id: string): Promise<QuestionDetail | null>;
+  previewQuestion(questionId: string, answerId?: string): Promise<QuestionRestorePreview>;
+  restoreQuestion(token: string, confirmed: boolean): Promise<QuestionRestoreResult[]>;
+  cancelQuestionRestore(): Promise<void>;
+  deleteQuestion(id: string): Promise<boolean>;
+  onQuestionSaveFailed(listener: () => void): () => void;
   bootstrap(): Promise<BootstrapState>;
   menuShortcuts(): Promise<MenuShortcut[]>;
   broadcast(request: BroadcastRequest): Promise<SiteRunResult[]>;
@@ -125,6 +134,13 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  listQuestions: (filters: QuestionFilters) => invoke("polyask:question-list", filters),
+  getQuestion: (id: string) => invoke("polyask:question-get", id),
+  previewQuestion: (questionId: string, answerId?: string) => invoke("polyask:question-preview", { questionId, answerId }),
+  restoreQuestion: (token: string, confirmed: boolean) => invoke("polyask:question-restore", { token, confirmed }),
+  cancelQuestionRestore: () => invoke("polyask:question-cancel"),
+  deleteQuestion: (id: string) => invoke("polyask:question-delete", id),
+  onQuestionSaveFailed: (listener: () => void) => subscribe("polyask:question-save-failed", listener),
   bootstrap: () => invoke("polyask:bootstrap"),
   menuShortcuts: () => invoke("polyask:menu-shortcuts"),
   broadcast: (request: BroadcastRequest) => invoke("polyask:broadcast", request),

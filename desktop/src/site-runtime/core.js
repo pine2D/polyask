@@ -274,6 +274,7 @@
               tierOk = await switchTier(tier, tierMs, !!imageMode); await sleep(200);
             }
             if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
+            try { window.__AMS.history?.begin(msg.historyToken, msg.text); } catch (_) {}
             const r = await submitPromptNow(msg.text || "", deadline, images);
             if (r.ok && !tierOk) r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿
             return Object.assign({ host: location.hostname }, r);

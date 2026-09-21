@@ -1,3 +1,4 @@
+import type { HistorySnapshot, HistorySnapshotCommand } from "./question-capture";
 import {
   SITE_KEYS,
   type SiteDefinition,
@@ -42,6 +43,7 @@ export interface NewSessionSiteResult {
 }
 
 export interface SubmitSiteCommand {
+  readonly historyToken?: string;
   readonly source: "AMS";
   readonly cmd: "submitPrompt";
   readonly text: string;
@@ -80,7 +82,7 @@ export interface WasSubmittedSiteCommand {
   readonly deadline: number;
 }
 
-export type SiteCommand = SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand;
+export type SiteCommand = HistorySnapshotCommand | SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand;
 
 export interface SiteSubmittedResponse {
   readonly supported: boolean;
@@ -131,7 +133,7 @@ export interface CollectedAnswer {
   readonly code?: string;
 }
 
-export type SiteCommandResponse = SiteResult | SiteCollectionResult | SiteDiagnosticResponse | SiteGenerationResponse | SiteSubmittedResponse;
+export type SiteCommandResponse = HistorySnapshot | SiteResult | SiteCollectionResult | SiteDiagnosticResponse | SiteGenerationResponse | SiteSubmittedResponse;
 
 export interface CollectionRequest {
   readonly sites: readonly SiteKey[];

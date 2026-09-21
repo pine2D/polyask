@@ -1,3 +1,4 @@
+import { SiteHistoryAccess } from "./site-history-access";
 import {
   BrowserWindow,
   WebContentsView,
@@ -345,17 +346,12 @@ export class ViewManager {
     return Promise.all(sites.map((site) => this.checkSiteHealth(site)));
   }
 
-  async navigate(site: SiteKey, url: string): Promise<void> {
-    const definition = SITES.find((candidate) => candidate.key === site);
-    const view = this.views.get(site);
-    if (!definition || definition.url !== url || !view || view.webContents.isDestroyed()) {
-      throw new Error("invalid_navigation");
-    }
+  readonly historyAccess = new SiteHistoryAccess(site => this.views.get(site), this.commands, site => {
     this.invalidateGeneration(site);
     this.runStatus.delete(site);
     this.updatePageStatus({ site, phase: "loading" });
-    await view.webContents.loadURL(url);
-  }
+  });
+  async navigate(site: SiteKey, url: string): Promise<void> { await this.historyAccess.navigate(site, url, true); }
 
   markStatus(status: SiteStatus): void {
     this.runStatus.set(status.site, statusWithUnread(status, this.isSiteVisible(status.site)));

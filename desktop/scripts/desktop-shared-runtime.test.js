@@ -148,7 +148,7 @@ function diagMustResolveTranslationAcrossModuleBoundary() {
 // preload 注入的完整顺序链：i18n 先于一切；core 先于 send/upload/md（它们读 window.__AMS）；
 // 五卷适配器先于 generation/diag（后两者包装 __AMS.adapters）。新开一卷适配器要在这里登记位置。
 const PRELOAD_CHAIN = Object.freeze(["i18n", "core", "send", "upload", "md", "adapters-intl", "adapters-intl2",
-  "adapters-cn", "adapters-cn2", "adapters-cn3", "generation", "diag"].map((name) => `${SITE_RUNTIME}/${name}.js`));
+  "adapters-cn", "adapters-cn2", "adapters-cn3", "generation", "history", "history-adapters", "diag"].map((name) => `${SITE_RUNTIME}/${name}.js`));
 
 // 自洽锚点：preload 的 require 列表 ↔ 磁盘上的 site-runtime/*.js 双向覆盖 + 完整顺序链。
 // 扩展已删除，这一条就是注入清单与顺序的真源。

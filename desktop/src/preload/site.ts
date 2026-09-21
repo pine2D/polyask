@@ -1,3 +1,4 @@
+import { normalizeHistorySnapshot } from "../shared/question-capture";
 import { ipcRenderer } from "electron";
 
 import type {
@@ -51,6 +52,8 @@ require("../site-runtime/adapters-cn.js");
 require("../site-runtime/adapters-cn2.js");
 require("../site-runtime/adapters-cn3.js");
 require("../site-runtime/generation.js");
+require("../site-runtime/history.js");
+require("../site-runtime/history-adapters.js");
 require("../site-runtime/diag.js");
 
 (globalThis as typeof globalThis & { __AMS_I18N__?: { setLang?: (lang: string) => void } })
@@ -112,6 +115,11 @@ function readGeneration(): SiteGenerationResponse {
 }
 
 function dispatch(command: SiteCommand): Promise<SiteCommandResponse> {
+  if (command.cmd === "historySnapshot") {
+    const runtime = (globalThis as typeof globalThis & { __AMS?: { history?: { snapshot: (token: string) => unknown } } }).__AMS;
+    try { return Promise.resolve(normalizeHistorySnapshot(runtime?.history?.snapshot(command.token), command.token)); }
+    catch { return Promise.resolve({ token: command.token, owned: false }); }
+  }
   if (command.cmd === "generation") return Promise.resolve(readGeneration());
   // wasSubmitted 的每一个失败出口都是「不支持」：超时、无适配器、异常、形状不对，一律不能被读成「确认未提交」。
   const probing = command.cmd === "wasSubmitted";

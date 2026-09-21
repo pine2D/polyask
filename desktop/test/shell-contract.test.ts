@@ -317,7 +317,7 @@ test("a retried run keeps watching the sites that are still generating", () => {
 test("navigation retires generation monitoring for that site only", () => {
   const manager = readSource("src/main/view-manager.ts");
   const navigate = manager.slice(
-    manager.indexOf("async navigate(site: SiteKey"),
+    manager.indexOf("readonly historyAccess ="),
     manager.indexOf("markStatus(status: SiteStatus)")
   );
   assert.match(navigate, /this\.invalidateGeneration\(site\)/);
