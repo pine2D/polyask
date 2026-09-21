@@ -75,3 +75,44 @@ test("owned answer progress keeps unknown completion capture alive within one fi
     assert.equal(db.questions.answers(q.id)[0].capture, "unknown");
   } finally { db.close(); }
 });
+
+test('an owned turn with no answer becomes unavailable when its capture budget expires', () => {
+  const db = DesktopDatabase.open(':memory:');
+  let now = 1000;
+  const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => now });
+  try {
+    const q = history.begin(request('empty'))!;
+    history.result('empty', { site: 'claude', ok: true });
+    const token = history.token('claude')!;
+    now += 60_000;
+    history.accept('claude', { token, owned: true, generation: null });
+    const a = db.questions.answers(q.id)[0];
+    assert.ok(a.sealedAt);
+    assert.equal(a.capture, 'unavailable');
+    assert.equal(history.targets().length, 0);
+  } finally { db.close(); }
+});
+
+test('thought-only generation extends once, expires unavailable and rejects late answers', () => {
+  const db = DesktopDatabase.open(':memory:');
+  let now = 1000;
+  const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => now });
+  try {
+    const q = history.begin(request('thinking'))!;
+    history.result('thinking', { site: 'claude', ok: true });
+    const token = history.token('claude')!;
+    now += 5000;
+    history.accept('claude', { token, owned: true, generation: 'generating' });
+    now += 60_000;
+    history.accept('claude', { token, owned: true, generation: 'generating' });
+    assert.equal(db.questions.answers(q.id)[0].sealedAt, null);
+    assert.equal(history.targets().length, 1);
+    now += 15 * 60_000;
+    history.accept('claude', { token, owned: true, generation: 'generating' });
+    const sealed = db.questions.answers(q.id)[0];
+    assert.equal(sealed.capture, 'unavailable');
+    assert.ok(sealed.sealedAt);
+    history.accept('claude', { token, owned: true, text: 'Late', generation: null });
+    assert.deepEqual(db.questions.answers(q.id)[0], sealed);
+  } finally { db.close(); }
+});

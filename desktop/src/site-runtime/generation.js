@@ -17,7 +17,7 @@
     "qianwen.com": '[aria-label*="stop" i],[aria-label*="停止"]',
     "kimi.com": '.stop-button,[class*="stop-button"],[aria-label*="stop" i],[aria-label*="停止"]',
     "yuanbao.tencent.com": '[aria-label="Stop"],[aria-label="停止"]',
-    "chatglm.cn": '.stop-button,[aria-label*="stop" i],[aria-label*="停止"]',
+    "chatglm.cn": '.enter.searching,.stop-button,[aria-label*="stop" i],[aria-label*="停止"]',
   };
 
   function visibleNearComposer(el) {

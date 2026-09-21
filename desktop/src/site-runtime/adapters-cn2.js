@@ -199,14 +199,15 @@
       },
       fast: async function () { await this._pick("快速", false); },
       // 智谱 input 忽略扩展派发的 input/change，且无可复用预览节点；留空明确报 unsupported。
-      // 最后一条回答（真机审计锚点 2026-07：.answer-content；排除隐藏思考段后取末尾正文）
+      // 2026-09-21 真机：正文/代码分成多个 markdown-body，共用 answer-content-wrap。
+      // 只返回正文容器；只有思考段时返回 null，不能回退到含思考的整条消息。
       answer: function () {
         const els = document.querySelectorAll(".answer-content");
         if (!els.length) return null;
         const el = els[els.length - 1];
         const mds = [...el.querySelectorAll(".markdown-body")]
           .filter((m) => !m.closest(".text-advance-thinking-content"));
-        return mds[mds.length - 1] || el;
+        return mds[0]?.closest(".answer-content-wrap") || mds[0] || null;
       },
     },
   });

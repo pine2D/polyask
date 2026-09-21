@@ -96,3 +96,9 @@ test("generation wrapper is idempotent", () => {
   vm.runInNewContext(source(), context);
   assert.equal(adapter.generation, first);
 });
+
+test('ChatGLM searching control keeps thought-only turns generating', () => {
+  const stop = { selectors: ['.enter.searching'], getBoundingClientRect: () => rect(620) };
+  assert.equal(run('chatglm.cn', { answer: () => null }, [stop]).generation(), 'generating');
+  assert.equal(run('chatglm.cn', { answer: () => null }).generation(), 'idle');
+});

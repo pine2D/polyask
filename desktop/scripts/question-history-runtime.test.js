@@ -3,15 +3,15 @@ const test = require("node:test");
 const vm = require("node:vm");
 const fs = require("node:fs");
 const path = require("node:path");
-function setup() {
+function setup(host = "example.test") {
   let turn = null, mutated = () => {}, now = 1000;
   const listeners = new Map();
   const events = { addEventListener: (name, f) => listeners.set(name, f), removeEventListener: name => listeners.delete(name) };
   const adapter = { historyTurn: () => turn, generation: () => "generating" };
-  const S = { adapters: { "example.test": adapter }, toMarkdown: node => node.text };
-  const context = { URL, Date: { now: () => now }, setTimeout: () => 1, clearTimeout: () => {}, document: { ...events, documentElement: {} }, MutationObserver: class { constructor(callback) { mutated = callback; } observe() {} disconnect() {} }, window: { ...events, __AMS: S }, location: { hostname: "example.test", href: "https://example.test/chat/one" } };
+  const S = { adapters: { [host]: adapter }, toMarkdown: node => node.text };
+  const context = { URL, getComputedStyle: node => ({ cursor: node.cursor || "auto" }), Date: { now: () => now }, setTimeout: () => 1, clearTimeout: () => {}, document: { ...events, documentElement: {} }, MutationObserver: class { constructor(callback) { mutated = callback; } observe() {} disconnect() {} }, window: { ...events, __AMS: S }, location: { hostname: host, href: `https://${host}/chat/one` } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime/history.js"), "utf8"), context);
-  return { S, activate: () => listeners.get('pointerdown')?.({ isTrusted: true, composedPath: () => [{ matches: () => true }] }),
+  return { S, customActivate: cursor => listeners.get('pointerdown')?.({ isTrusted: true, composedPath: () => [{ nodeType: 1, cursor, matches: () => false }] }), activate: () => listeners.get('pointerdown')?.({ isTrusted: true, composedPath: () => [{ matches: () => true }] }),
     input: () => listeners.get('beforeinput')?.({type:'beforeinput',isTrusted:true}), navigate: href => { context.location.href = href; }, popstate: () => listeners.get('popstate')?.({}), advance: ms => { now += ms; }, set: value => { turn = value; }, insert: value => { turn = value; mutated([{ addedNodes: [value.user] }]); } };
 }
 const node = (text) => ({ text, isConnected: true });
@@ -191,4 +191,50 @@ test('history back before binding cannot adopt a same-text previous conversation
   s.navigate('https://example.test/chat/old'); s.popstate();
   s.insert({ user: node('Question'), text: 'Question', answer: node('Old'), userCount: 1 });
   assert.equal(s.S.history.snapshot('token').owned, false);
+});
+
+test('custom pointer controls freeze copies while ordinary text selection does not', () => {
+  const s = setup(), answer = node('Original');
+  s.S.history.begin('token', 'Question');
+  s.insert({ user: node('Question'), text: 'Question', answer, userCount: 1 });
+  s.S.history.snapshot('token');
+  s.customActivate('text'); answer.text = 'Continued';
+  assert.equal(s.S.history.snapshot('token').text, 'Continued');
+  s.customActivate('pointer'); answer.text = 'Regenerated';
+  assert.equal(s.S.history.snapshot('token').text, 'Continued');
+  assert.equal(s.S.history.snapshot('token').ended, true);
+});
+test('Kimi first turn may migrate once before the answer with the identical connected user', () => {
+  const s = setup('www.kimi.com'), user = node('Question');
+  s.navigate('https://www.kimi.com/'); s.S.history.begin('token', 'Question');
+  s.navigate('https://www.kimi.com/chat/temporary');
+  s.insert({ user, text: 'Question', userCount: 1 });
+  s.navigate('https://www.kimi.com/chat/server');
+  s.set({ user, text: 'Question', answer: node('Correct'), userCount: 1 });
+  const result = s.S.history.snapshot('token');
+  assert.equal(result.text, 'Correct');
+  assert.equal(result.url, 'https://www.kimi.com/chat/server');
+  s.navigate('https://www.kimi.com/chat/other');
+  assert.equal(s.S.history.snapshot('token').owned, false);
+});
+test('Kimi migration excludes existing conversations, detached turns and browser navigation', () => {
+  for (const mode of ['existing', 'detached', 'popstate', 'second-migration', 'answered']) {
+    const s = setup('www.kimi.com'), user = node('Question');
+    if (mode !== 'existing') s.navigate('https://www.kimi.com/');
+    s.S.history.begin('token', 'Question');
+    s.navigate('https://www.kimi.com/chat/one');
+    s.insert({ user, text: 'Question', userCount: 1 });
+    if (mode === 'detached') user.isConnected = false;
+    if (mode === 'popstate') s.popstate();
+    if (mode === 'answered') {
+      s.set({ user, text: 'Question', answer: node('Original'), userCount: 1 });
+      s.S.history.snapshot('token');
+    }
+    s.navigate('https://www.kimi.com/chat/two');
+    if (mode === 'second-migration') {
+      s.S.history.snapshot('token'); s.navigate('https://www.kimi.com/chat/three');
+    }
+    s.set({ user: mode === 'detached' ? node('Question') : user, text: 'Question', answer: node('Wrong'), userCount: 1 });
+    assert.equal(s.S.history.snapshot('token').owned, false, mode);
+  }
 });

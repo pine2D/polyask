@@ -108,7 +108,7 @@ export class QuestionHistoryService {
       const sealed = complete || !!v.ended || now >= e.deadline;
       const text = v.text?.trim() ? v.text : current.answerMarkdown;
       const truncated = v.truncated ?? current.truncated;
-      const capture = complete && text && !truncated ? "complete" : text ? (v.generation === "generating" || truncated ? "partial" : "unknown") : "waiting";
+      const capture = complete && text && !truncated ? "complete" : text ? (v.generation === "generating" || truncated ? "partial" : "unknown") : sealed ? "unavailable" : "waiting";
       const conversationUrl = v.url ? this.options.safeUrl?.(site, v.url) ?? null : current.conversationUrl;
       const next: QuestionAnswerRecord = { ...current, answerMarkdown: text, conversationUrl, capture,
         capturedAt: v.text ? now : current.capturedAt, truncated, sealedAt: sealed ? now : null, updatedAt: now };

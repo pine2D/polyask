@@ -19,9 +19,18 @@
     return { id: url.origin + url.pathname + (cid ? "?cid=" + cid : ""),
       home: !cid && ((url.hostname === "chatgpt.com" && /^\/c\/WEB:[a-zA-Z0-9_-]+$/.test(url.pathname)) || (url.hostname === "yuanbao.tencent.com" && /^\/chat\/[^/]+\/?$/.test(url.pathname)) || /^\/(?:new|app|agent|chat\/?|main\/alltoolsdetail)?$/.test(url.pathname)) };
   }
-  function checkRoute(e) {
+  function checkRoute(e, turn) {
     const current = route();
-    if (e.routeId && e.routeId !== current.id) { stop(e); return false; }
+    if (e.routeId && e.routeId !== current.id) {
+      // Kimi replaces its first optimistic chat URL before the server answer.
+      // Only the very same connected first user can authorize this single migration.
+      const migrating = e.canMigrate && !e.migrated && !e.answer && e.user?.isConnected && e.user === turn?.user
+        && turn.userCount === 1 && normalize(turn.text) === e.text
+        && /^https:\/\/(?:www\.)?kimi\.com\/chat\/[^/]+$/.test(e.routeId)
+        && /^https:\/\/(?:www\.)?kimi\.com\/chat\/[^/]+$/.test(current.id);
+      if (!migrating) { stop(e); return false; }
+      e.routeId = current.id; e.migrated = true;
+    }
     return true;
   }
   function watchInteraction(e, a) {
@@ -35,7 +44,8 @@
     const activate = event => {
       if (!event.isTrusted || (event.type === "beforeinput" && !e.user)) return;
       if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
-      const control = event.composedPath?.().some(node => node.matches?.('button,a,[role="button"],[role="menuitem"]'));
+      const control = event.composedPath?.().some(node => node.matches?.('button,a,[role="button"],[role="menuitem"]')
+        || (node.nodeType === 1 && getComputedStyle(node).cursor === "pointer"));
       if (!e.answer || control || event.type === "beforeinput") freeze();
     };
     for (const name of ["pointerdown", "click", "keydown", "beforeinput"]) {
@@ -47,7 +57,7 @@
     }
   }
   function bind(e, turn) {
-    if (e.ended || !checkRoute(e) || !turn?.user) return false;
+    if (e.ended || !checkRoute(e, turn) || !turn?.user) return false;
     const expected = (e.baseline?.userCount ?? 0) + 1;
     // More than one new turn means a follow-up occurred before capture; never pick its last answer.
     if (!Number.isSafeInteger(turn.userCount) || turn.userCount !== expected) {
@@ -94,7 +104,9 @@
         const baseline = a.historyTurn();
         if (baseline?.user && !Number.isSafeInteger(baseline.userCount)) return;
         const current = entry = { token, text: normalize(text), baseline, user: null, answer: null, userKey: null,
-          answerKey: null, routeId: route().home ? null : route().id, finalSnapshot: null, listeners: [], ended: false, inserted: [], observer: null, timer: null };
+          answerKey: null, routeId: route().home ? null : route().id,
+          canMigrate: /^(?:www\.)?kimi\.com$/.test(location.hostname) && route().home && !baseline?.user,
+          migrated: false, finalSnapshot: null, listeners: [], ended: false, inserted: [], observer: null, timer: null };
         watchInteraction(current, a);
         if (typeof MutationObserver === "function") {
           current.observer = new MutationObserver(records => {
