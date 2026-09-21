@@ -1,3 +1,4 @@
+import { historyPanelWidth, raiseHistoryShell } from "./question-layout";
 import { SiteHistoryAccess } from "./site-history-access";
 import {
   BrowserWindow,
@@ -247,10 +248,11 @@ export class ViewManager {
 
   setSurface(value: DesktopSurface): void {
     if (this.surface === value || this.window.isDestroyed()) return;
-    if (this.surface === "sites") {
+    if (value !== "question-history" && (this.surface === "sites" || this.surface === "question-history")) {
       for (const site of [...this.attached]) this.detach(site);
     }
     this.surface = value;
+    if (value === "question-history") raiseHistoryShell(this.window);
     if (value === "sites") {
       this.reconcileViews();
       this.clearVisibleUnread();
@@ -350,7 +352,7 @@ export class ViewManager {
     this.invalidateGeneration(site);
     this.runStatus.delete(site);
     this.updatePageStatus({ site, phase: "loading" });
-  });
+  }, () => this.layout());
   async navigate(site: SiteKey, url: string): Promise<void> { await this.historyAccess.navigate(site, url, true); }
 
   markStatus(status: SiteStatus): void {
@@ -598,7 +600,7 @@ export class ViewManager {
     this.page = current.page;
     this.pageCount = current.pageCount;
     const next = computeWorkspaceLayout({
-      width: cssWidth,
+      width: cssWidth - historyPanelWidth(cssWidth, this.historyAccess.panelOpen),
       height: cssHeight,
       density: this.display.density,
       composerExpanded: this.composerExpanded,

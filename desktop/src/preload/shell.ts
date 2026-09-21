@@ -1,4 +1,4 @@
-import type { QuestionDetail, QuestionPage, QuestionFilters } from "../shared/question-history";
+import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
 import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
 import type { BackupPreview, BackupApplyResult } from "../shared/backup";
 import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
@@ -42,8 +42,10 @@ import type {
 } from "../shared/synthesis";
 
 export interface PolyAskDesktopApi {
+  setQuestionPanel(open: boolean): Promise<void>;
+  listLegacyQuestions(filters?: QuestionFilters): Promise<QuestionLegacyPage>;
   listQuestions(filters: QuestionFilters): Promise<QuestionPage>;
-  getQuestion(id: string): Promise<QuestionDetail | null>;
+  getQuestion(id: string, answerId?: string): Promise<QuestionDetail | null>;
   previewQuestion(questionId: string, answerId?: string): Promise<QuestionRestorePreview>;
   restoreQuestion(token: string, confirmed: boolean): Promise<QuestionRestoreResult[]>;
   cancelQuestionRestore(): Promise<void>;
@@ -134,8 +136,10 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  setQuestionPanel: (open: boolean) => invoke("polyask:question-panel", open),
+  listLegacyQuestions: (filters?: QuestionFilters) => invoke("polyask:question-legacy", filters),
   listQuestions: (filters: QuestionFilters) => invoke("polyask:question-list", filters),
-  getQuestion: (id: string) => invoke("polyask:question-get", id),
+  getQuestion: (id: string, answerId?: string) => invoke("polyask:question-get", { questionId: id, answerId }),
   previewQuestion: (questionId: string, answerId?: string) => invoke("polyask:question-preview", { questionId, answerId }),
   restoreQuestion: (token: string, confirmed: boolean) => invoke("polyask:question-restore", { token, confirmed }),
   cancelQuestionRestore: () => invoke("polyask:question-cancel"),

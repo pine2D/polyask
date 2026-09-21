@@ -145,7 +145,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
     return state;
   };
-  const disposeQuestionIpc = registerQuestionHistoryIpc({ questions: options.questions, manager, workspace, gate: operationGate, window, trusted: trustedShell, publishWorkspace });
+  const disposeQuestionIpc = registerQuestionHistoryIpc({ flush: sites => capture.flush(sites), questions: options.questions, manager, workspace, gate: operationGate, window, trusted: trustedShell, publishWorkspace });
   const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
@@ -195,7 +195,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       // Recorded before dispatch, matching the extension (console/console.js pushes
       // history ahead of sendAll): a question the user actually asked belongs in the
       // library even when every site fails.
-      history.record(request.text);
+      try { history.record(request.text); } catch { /* History storage must not block sending. */ }
       options.questions.begin(request);
       publishPromptLibrary();
       for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
@@ -329,7 +329,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     manager.setDrawerOpen(value);
   });
   ipcMain.on("polyask:set-surface", (event, value: unknown) => {
-    if (!trustedShell(event) || !["sites", "archive", "settings", "commands", "confirmation"].includes(String(value))) return;
+    if (!trustedShell(event) || !["sites", "archive", "settings", "commands", "confirmation", "question-history"].includes(String(value))) return;
     manager.setSurface(value as DesktopSurface);
     if (value === "confirmation") window.webContents.focus();
   });

@@ -1,3 +1,4 @@
+import { MIN_SITE_COLUMN_WIDTH } from "../shared/display";
 import type {
   LayoutOptions,
   SiteKey,
@@ -17,7 +18,7 @@ interface Track {
   readonly size: number;
 }
 
-const GRID_TILE_MIN_WIDTH = 380;
+const GRID_TILE_MIN_WIDTH = MIN_SITE_COLUMN_WIDTH;
 const GRID_TILE_MIN_HEIGHT = 210;
 
 export function resolveLayoutMode(

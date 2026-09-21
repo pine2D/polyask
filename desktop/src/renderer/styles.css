@@ -149,10 +149,10 @@ button { cursor: default; }
 .bootstrap-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .command-bar {
   position: relative; z-index: 2; width: 100%; height: var(--shell-height); padding: var(--space-1);
-  display: grid; grid-template-columns: auto auto minmax(200px, 1fr) auto auto auto auto;
+  display: grid; grid-template-columns: auto auto minmax(200px, 1fr) auto auto auto auto auto;
   align-items: center; gap: var(--space-1); border-bottom: 1px solid var(--border); background: var(--panel);
 }
-.command-bar.has-pages { grid-template-columns: auto auto auto minmax(200px, 1fr) auto auto auto auto; }
+.command-bar.has-pages { grid-template-columns: auto auto auto minmax(200px, 1fr) auto auto auto auto auto; }
 .command-bar.is-expanded { height: var(--composer-expanded-height); align-items: start; }
 .command-bar > * { min-width: 0; }
 .workspace-entry { height: var(--control-height); display: flex; align-items: stretch; gap: 3px; }

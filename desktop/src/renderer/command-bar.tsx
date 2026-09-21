@@ -34,6 +34,8 @@ interface CommandBarProps {
   readonly isMac: boolean;
   readonly expanded: boolean;
   readonly onTextChange: (value: string) => void;
+  readonly onOpenHistory?: () => void;
+  readonly historyOpen?: boolean;
   readonly onSubmit: () => void;
   readonly onCompare?: () => void;
   readonly onRetry: () => void;
@@ -107,6 +109,9 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
         title={commandHint(props.copy.promptLabel, "focus-prompt", props.isMac)}
         aria-label={props.copy.promptLabel}
       />
+      <button type="button" className="question-trigger" title={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 6.5V12l3.5 2" /></svg>
+      </button>
       <div className="tier-switch priority-p0" aria-label={props.copy.tierLabel}>
         {tierOptions.map(({ value, label, icon, glyph }) => (
           <button type="button" key={icon} title={value === null ? label : commandHint(label, value === "think" ? "set-think" : "set-fast", props.isMac)} aria-label={label} aria-pressed={props.tier === value} data-tier-icon={icon} className={props.tier === value ? "active" : ""} onClick={() => props.onTierChange(value)}>{glyph}</button>

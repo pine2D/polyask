@@ -1,3 +1,4 @@
+import { QuestionHistory } from "./question-history";
 import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -125,6 +126,7 @@ function App(): React.JSX.Element {
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
   const [surface, setSurface] = useState<DesktopSurface>("sites");
+  const [questionHistoryOpen, setQuestionHistoryOpen] = useState(false);
   const [comparisonId, setComparisonId] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] = useState<"overview" | "drive-diagnostics">("overview");
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
@@ -143,6 +145,7 @@ function App(): React.JSX.Element {
   const workspaceFlow = useWorkspaceFlow(sites, copy.workspaceActionFailed, setAnnouncement);
   const { workspace, selected } = workspaceFlow;
   const changePanelState = (value: WorkspacePanelState): void => {
+    if (value) setQuestionHistoryOpen(false);
     setPanelState(value);
     shell.setDrawerOpen(value !== null);
   };
@@ -324,6 +327,7 @@ function App(): React.JSX.Element {
 
   const changeSurface = (value: DesktopSurface): void => {
     if (value !== "sites") {
+      setQuestionHistoryOpen(false);
       imageSelection.invalidateAndClose();
       setPromptExpanded(false);
       if (drawerOpen) changeDrawerOpen(false);
@@ -466,6 +470,7 @@ function App(): React.JSX.Element {
     "set-fast": () => { changeSurface("sites"); void workspaceFlow.changeTier("fast"); },
     ...(selected.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
     "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
+    "open-question-history": () => { changeSurface("sites"); changePanelState(null); setQuestionHistoryOpen(true); },
     "open-archive": () => { setComparisonId(null); changeSurface("archive"); },
     ...(synthesis.pending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
     ...(broadcast.failureCount + broadcast.cancelledCount > 0 ? {
@@ -638,6 +643,8 @@ function App(): React.JSX.Element {
         onOpenPanel={(tab) => openPanel(tab, "pointer")}
         onShowGroupMenu={() => { void showGroupMenu(); }}
         onOpenMore={() => { void showMoreMenu(); }}
+        historyOpen={questionHistoryOpen}
+        onOpenHistory={() => questionHistoryOpen ? setQuestionHistoryOpen(false) : executeCommand("open-question-history", commandActions.current)}
         onOpenArchive={() => executeCommand("open-archive", commandActions.current)}
         onRetry={() => executeCommand("retry-failed", commandActions.current)}
         onPasteImages={(files) => { void imageSelection.choose(files); }}
@@ -681,6 +688,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
+      <QuestionHistory open={questionHistoryOpen} copy={copy} sites={sites} draft={text} busy={runState !== "idle" || auxiliaryBusy} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={() => setQuestionHistoryOpen(false)} onDraft={value => { setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
       {pendingNewSession && (
         <ConfirmDialog
           copy={copy}

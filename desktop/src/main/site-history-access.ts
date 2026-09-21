@@ -6,9 +6,11 @@ import type { SiteCommandChannel } from "./site-command-channel";
 import { SITES } from "./sites";
 
 export class SiteHistoryAccess {
+  panelOpen = false;
+  setPanelOpen(value: boolean): void { this.panelOpen = value; this.relayout(); }
   constructor(private readonly view: (site: SiteKey) => WebContentsView | undefined,
     private readonly commands: SiteCommandChannel,
-    private readonly beforeNavigate: (site: SiteKey) => void) {}
+    private readonly beforeNavigate: (site: SiteKey) => void, private readonly relayout: () => void = () => {}) {}
   context(site: SiteKey): { id: number; url: string } | null {
     const contents = this.view(site)?.webContents;
     return contents && !contents.isDestroyed() ? { id: contents.id, url: contents.getURL() } : null;

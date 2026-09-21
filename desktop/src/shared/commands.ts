@@ -18,6 +18,7 @@ export type CommandId =
   | "set-fast"
   | "collect-compare"
   | "collect-answers"
+  | "open-question-history"
   | "open-archive"
   | "collect-synthesis"
   | "retry-failed"
@@ -72,6 +73,7 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "set-fast", labelKey: "chooseFastMode", group: "compose", accelerator: "Alt+Y" },
   { id: "collect-compare", labelKey: "collectCompare", group: "results" },
   { id: "collect-answers", labelKey: "collectAnswers", group: "results", accelerator: "Alt+C" },
+  { id: "open-question-history", labelKey: "questionHistory", group: "navigate" },
   { id: "open-archive", labelKey: "openArchive", group: "results" },
   { id: "collect-synthesis", labelKey: "synthesisCollect", group: "results" },
   { id: "retry-failed", labelKey: "retryFailedCommand", group: "results", accelerator: "Alt+R" },

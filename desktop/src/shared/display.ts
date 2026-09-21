@@ -1,3 +1,4 @@
+export const MIN_SITE_COLUMN_WIDTH = 380;
 export const WORKSPACE_FEEDBACK_HEIGHT = 32;
 
 export type Density = "compact" | "comfortable";

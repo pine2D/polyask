@@ -14,16 +14,17 @@ export class QuestionCaptureService {
     this.timer = setTimeout(() => { this.timer = null; void this.tick(); }, 5_000);
     this.timer.unref();
   }
-  async tick(): Promise<void> {
+  async flush(sites: readonly SiteKey[]): Promise<void> { await this.tick(Date.now() + 2_500, sites); }
+  async tick(deadline = Infinity, sites?: readonly SiteKey[]): Promise<void> {
     if (this.running) return;
     this.running = true;
-    const epoch = this.epoch, queue = this.history.targets();
+    const epoch = this.epoch, queue = this.history.targets().filter(e => !sites || sites.includes(e.site));
     try {
       const worker = async () => {
-        while (queue.length && epoch === this.epoch) {
+        while (queue.length && epoch === this.epoch && Date.now() < deadline) {
           const entry = queue.shift()!;
           try {
-            const result = await this.read(entry.site, entry.token, Date.now() + 2_500);
+            const result = await this.read(entry.site, entry.token, Math.min(deadline, Date.now() + 2_500));
             if (epoch === this.epoch) this.history.accept(entry.site, result);
           } catch {
             if (epoch === this.epoch) this.history.accept(entry.site, { token: entry.token, owned: false });

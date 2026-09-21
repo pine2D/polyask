@@ -93,7 +93,10 @@ export class QuestionHistoryService {
       const now = Math.max(this.now(), current.updatedAt + 1);
       const v = normalizeHistorySnapshot(snapshot, e.token);
       if (!v.owned) {
-        if (v.ended || now >= e.deadline) this.cancel([site]);
+        if (v.ended || now >= e.deadline) {
+          this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: current.answerMarkdown ? "interrupted" : "unavailable" });
+          this.active.delete(site);
+        }
         return;
       }
       if (v.generation === "generating") { if (!e.generating) e.deadline = now + 15 * 60_000; e.generating = true; e.completions = 0; }
@@ -119,7 +122,7 @@ export class QuestionHistoryService {
       this.active.delete(site);
       if (!current) return;
       const now = Math.max(this.now(), current.updatedAt + 1);
-      this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: "interrupted" });
+      this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: "interrupted", submission: current.submission === "pending" ? "cancelled" : current.submission });
     }, undefined);
   }
 }
