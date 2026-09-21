@@ -128,7 +128,40 @@
       },
       think: async function () { await this._set(true); },
       fast: async function () { await this._set(false); },
-      attach: function (files, el, deadline) { return S.dropFiles(el, files, el, deadline); },
+      attach: async function (files, el, deadline) {
+        const end = Number(deadline) || Date.now() + 15000;
+        const boundedWait = async find => {
+          const limit = Math.min(end, Date.now() + 1500);
+          while (Date.now() < limit) {
+            const node = find();
+            if (Date.now() >= end) return null;
+            if (node) return node;
+            await sleep(Math.min(120, Math.max(0, limit - Date.now())));
+          }
+          return null;
+        };
+        if (Date.now() >= end) return false;
+        const selector = 'input[type="file"][accept*="png"]';
+        let input = document.querySelector(selector);
+        const add = document.querySelector('button[aria-label="Add"],button[aria-label="添加"]');
+        if (!add && !input) return S.dropFiles(el, files, el, deadline); // 旧版仍支持拖放。
+        // 新版保留 input，但每次必须通过菜单重新激活上传处理器。
+        if (add) {
+          // 菜单项会创建 input 并 click；自动上传已有文件，不应再弹系统选择窗。
+          const preventPicker = event => { if (event.target?.matches?.('input[type="file"]')) event.preventDefault(); };
+          document.addEventListener("click", preventPicker, true);
+          try {
+            if (Date.now() >= end) return false;
+            add.click();
+            const item = await boundedWait(() => [...document.querySelectorAll('[role="menuitem"]')]
+              .find(node => /^(Upload Image|上传图片)$/i.test((node.textContent || "").trim())));
+            if (!item || Date.now() >= end) return false;
+            item.click();
+            input = await boundedWait(() => document.querySelector(selector));
+          } finally { document.removeEventListener("click", preventPicker, true); escMenus(); }
+        }
+        return input && Date.now() < end ? S.setInputFiles(input, files, el, deadline) : false;
+      },
       // 最后一条回答（chrome-dbg 真机审计 2026-07：AI 回答在 .agent-chat__conv--ai__speech_show，
       // 正文 .hyc-common-markdown，需排除深度思考段 .hyc-component-deepsearch-cot__think 内的同类节点）
       answer: function () {

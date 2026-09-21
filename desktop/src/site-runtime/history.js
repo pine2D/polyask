@@ -59,15 +59,20 @@
   function bind(e, turn) {
     if (e.ended || !checkRoute(e, turn) || !turn?.user) return false;
     const expected = (e.baseline?.userCount ?? 0) + 1;
+    // Doubao virtualizes older DOM. Stable immediate-predecessor identity proves
+    // adjacency even when the baseline node was recycled; route/text checks remain.
+    const adjacent = /^(?:www\.)?doubao\.com$/.test(location.hostname)
+      && !!e.baseline?.userKey && turn.previousUserKey === e.baseline.userKey
+      && !!turn.userKey && turn.userKey !== e.baseline.userKey;
     // More than one new turn means a follow-up occurred before capture; never pick its last answer.
-    if (!Number.isSafeInteger(turn.userCount) || turn.userCount !== expected) {
+    if (!Number.isSafeInteger(turn.userCount) || (!adjacent && turn.userCount !== expected)) {
       if (turn.userCount > expected || e.user) stop(e);
       return false;
     }
     if (normalize(turn.text) !== e.text) { if (e.user) stop(e); return false; }
     if (!e.user) {
       const old = e.baseline;
-      if (old?.user && (same(old.user, old.userKey, turn.user, turn.userKey) || !old.user.isConnected)) return false;
+      if (old?.user && (same(old.user, old.userKey, turn.user, turn.userKey) || (!old.user.isConnected && !adjacent))) return false;
       if (!old?.user && !e.inserted.some(node => node === turn.user || node.contains?.(turn.user))) return false;
       e.user = turn.user; e.userKey = turn.userKey || null; e.inserted = [];
     } else if (!same(e.user, e.userKey, turn.user, turn.userKey)) {

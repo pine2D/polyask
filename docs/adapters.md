@@ -36,7 +36,7 @@
 | `stop()` | | `async` | 仅 ChatGPT。**全仓无调用方，当前是死代码**——要么外壳补 UI（如「停止全部」），要么删 |
 | `sendSel` | | 字符串 | 发送键选择子，**仅 DeepSeek/Kimi/元宝 3 站声明**（都需要站点级点击且锚点常驻），供 `desktop/src/site-runtime/diag.js` 巡检做只读存在性检查。**与本站 `submit` 的选择子同步维护**——`desktop/scripts/diag-runtime.test.js` 按字面量对账，脱钩会红。豆包**有意不声明**：其发送键空输入框时不在 DOM（非常驻，真机 2026-08-18），列进巡检会恒红 |
 
-**能力由钩子决定，不由清单决定**：`answer()` 决定该站能否进「汇总复制」（九站全实现）；`attach()` 决定能否收图（6 站实现：Claude / ChatGPT / DeepSeek / 豆包 / Kimi 走 `S.setInputFiles`，元宝走 `S.dropFiles`；Gemini / 千问 / 智谱**有意不实现**，真机实测三站都拒绝合成 drop/paste/change，报 `attachment_unsupported` 是正确行为）。这 6 站必须与 `desktop/src/main/sites.ts` 里 `image: true` 的 6 站完全一致。
+**能力由钩子决定，不由清单决定**：`answer()` 决定该站能否进「汇总复制」（九站全实现）；`attach()` 决定能否收图（6 站实现：Claude / ChatGPT / DeepSeek / 豆包 / Kimi / 元宝走 `S.setInputFiles`，元宝保留旧版拖放回退；Gemini / 千问 / 智谱**有意不实现**，真机实测三站都拒绝合成 drop/paste/change，报 `attachment_unsupported` 是正确行为）。这 6 站必须与 `desktop/src/main/sites.ts` 里 `image: true` 的 6 站完全一致。
 
 **巡检通用检查（`desktop/src/site-runtime/diag.js`）**：在全部适配器分卷之后注入，按已填充的注册表统一包装每站 `diagnose()`，前置两条只读检查——「输入框」（`findComposer()`，九站全部）与「发送键」（仅声明了 `sendSel` 的站）。新站/新分卷自动获得，无需自己写这两条；**有意不做全站发送键检查**：ChatGPT 等站空输入框时发送键被语音键替换，通用检查会在巡检（输入框常为空）时恒红误报。新开适配器分卷（如 `adapters-cn3.js`）在 `desktop/src/preload/site.ts` 里 require 时**必须排在 `desktop/src/site-runtime/diag.js` 之前**，否则该卷站点拿不到通用检查（注册晚于包装，静默缺席不报错）。
 
@@ -230,7 +230,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **模型子菜单**：入口是 `[role=menuitem]`，文本 = `Models`/`模型` + 当前模型名（如 `ModelsHy3`），**只在模式菜单开着时存在**，所以 `_model()` 是打开菜单后才可读；子菜单靠悬停展开：入口 `button[role=menuitem][aria-label="Select model"]` 的 React 处理器只有 `onMouseMove` / `onMouseLeave` / `onClick`（CDP 真机 2026-09-16），**只有合成 `mousemove`（带 clientX/Y）能打开**，`mouseover` / `pointermove` / `click` / 方向键 / Enter 都打不开；`_openModels` 先 `mousemove`，没开再 `click` 兜底，一次不成重来一次。选中模型后**根菜单留着、子菜单收起、按钮立即回显**（Hy4 preview → Expert；切回 Hy3 会恢复上一次的模式）。模型项与模式项同为 `[role=menuitemradio]`、同时在 DOM，靠容器 `aria-label="Model list"`（中文候选 `模型列表`，未验证）区分：`_isMode()` 排除该容器、`_modelItems()` 只取该容器，**两层语义校验缺一不可**（只做文本校验挡不住「模型取名叫深度思考版」，只做容器校验挡不住站点把模型塞进同一层）。选完模型后**重开一次菜单复读入口尾缀**确认，不猜菜单收没收。
 - **`state()` 是粗判**：菜单关着读不到模型，只按模式判——Expert/专家 → think（Hy4 preview 强制专家；Hy3+Expert 也会读成 think，那是用户自己停的档）、Instant/即时/快速 → fast、**Thinking/思考 → null**（不再是预设档，同 Kimi Instant / 千问 Qwen3.7+快速）。`switchTier` 每次仍跑一遍幂等适配器，粗判只影响圆点与巡检。
 - 旧版 `[class*="ThinkSelector"]` 深度思考 toggle 仍作为 A/B 回退（只有新版模式按钮整个不存在时才走），开态判据为 className 含 `ThinkSelector_selected`；点击后**同样复读 `_isOn()`**，未生效抛「元宝: 深度思考未生效」——新版分支本就有复读，旧版此前是全站唯一遗漏的静默成功路径。新版发送键是非 button 的 `[aria-label="Send"]`（中文回退 `[aria-label="发送"]`），disabled 时返回 false；旧 `.icon-send` 已下线。
-- `inject` 无（真机实证 `beforeinput` 不生效、`execCommand` 生效，由 core 既有回退链覆盖）。`answer()` 取末个 `.agent-chat__conv--ai__speech_show` 内、排除 `[class*="cot__think"]` 后的最后一个 `.hyc-common-markdown`（**不排除就把思考全文混进汇总复制**）。`attach` 是九站唯一走 `S.dropFiles(el, files, el, deadline)` 拖放路径的站。
+- `inject` 无（真机实证 `beforeinput` 不生效、`execCommand` 生效，由 core 既有回退链覆盖）。`answer()` 取末个 `.agent-chat__conv--ai__speech_show` 内、排除 `[class*="cot__think"]` 后的最后一个 `.hyc-common-markdown`（**不排除就把思考全文混进汇总复制**）。`attach` 新版每次都打开 Add/添加 → Upload Image/上传图片，临时阻止 input.click 的系统选择窗，再经 `S.setInputFiles` 上传已有文件。旧 input 虽仍连接，第二次直接上传不会进入站点附件区；重新打开菜单会激活其处理器。等待菜单与 input 各最多 1.5s，轮询与最终上传均受绝对 deadline 约束；finally 移除监听并关菜单。旧版没有 Add 按钮时复用 input，无 input 才回退 `S.dropFiles`。2026-09-21 登录开发态生产群发已确认完整菜单创建、关菜单、上传链成功。
 
 ### 智谱（`chatglm.cn`，UI 标签「智谱」，站点全名智谱清言，`desktop/src/site-runtime/adapters-cn2.js`）
 
@@ -270,3 +270,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址：仅空首屏的第一轮、同一个仍连接的用户节点、文本及轮次数匹配、尚无正文时，允许一次该路径间迁移；已有会话、节点替换、第二次迁移和浏览器导航仍终止归属。智谱正文/代码拆在多个 `.markdown-body`，返回其独立 `.answer-content-wrap`，排除 `.text-advance-thinking-content`；只有思考段时返回 null。其真实生成控件为输入框旁 `.enter.searching`，不能漏认而让纯思考在 45 秒后停止采集。
 
 **验收边界**：九站已取得登录页面结构和合成提交证据，但不等于九站所有路径通过。新会话、已有会话、相同文本、网页直接追问与重新生成须分别核对。ChatGPT/Gemini 思考段排除仍待复核；VM 测试只能证明代码分支。当前逐站结果与未闭合项见 docs/verify.md。
+
+豆包图片提问会连续渲染图片气泡和文字气泡；历史归属将连续图片气泡与紧随文字计作一轮，遇到 AI 回答或文字即结束分组。不能直接忽略图片气泡：独立图片追问仍须增加轮数，阻止旧提问继续采集。
+
+豆包虚拟列表会移除早期用户气泡并重建节点；仅在同路由、精确提问文本、不同的新消息 ID、当前逻辑轮次的前驱 ID 等于发送前末轮 ID 时，允许 DOM 轮数缩减及基线节点回收。其它站仍要求原有计数与连接条件；同文后续追问及换会话不获授权。

@@ -26,10 +26,24 @@
     const a = S.adapters[host];
     if (!a || typeof a.answer !== "function") continue;
     a.historyTurn = function () {
-      let nodes = [...document.querySelectorAll(selector)];
-      if (host === "deepseek.com") nodes = nodes.filter(node => node.querySelector(".ds-collapsible-text") && !node.querySelector(".ds-markdown"));
-      if (host === "doubao.com") nodes = nodes.filter(node => node.matches('[class*="justify-end"]') || node.querySelector('[class*="justify-end"]'));
+      let nodes = [...document.querySelectorAll(selector)], userCount, previousUserKey;
       nodes = nodes.filter(node => !nodes.some(parent => parent !== node && parent.contains(node)));
+      if (host === "deepseek.com") nodes = nodes.filter(node => node.querySelector(".ds-collapsible-text") && !node.querySelector(".ds-markdown"));
+      if (host === "doubao.com") {
+        // One image prompt renders as consecutive image-only bubbles then its text.
+        // An assistant response or a text bubble ends the group: never merge follow-ups.
+        let attachment = false; userCount = 0;
+        const turns = [];
+        nodes = nodes.filter(node => {
+          const isUser = node.matches('[class*="justify-end"]') || node.querySelector('[class*="justify-end"]');
+          if (!isUser) { attachment = false; return false; }
+          if (!attachment) { userCount++; turns.push(node); }
+          else turns[turns.length - 1] = node;
+          attachment = !(node.innerText || node.textContent || "").trim() && !!node.querySelector("img");
+          return true;
+        });
+        previousUserKey = key(turns.at(-2));
+      }
       const user = nodes.at(-1);
       if (!user?.isConnected) return { user: null, userCount: 0 };
       let answer = this.answer();
@@ -44,7 +58,7 @@
         ? [...user.querySelectorAll(".query-text-line")].map(node => node.innerText || node.textContent || "").join("\n")
         : textNode.innerText || textNode.textContent || "";
       const answerRoot = answer?.closest?.(answerRoots[host]) || answer;
-      return { user, userCount: nodes.length, answer, answerRoot, text, userKey: key(user), answerKey: key(answerRoot) };
+      return { user, userCount: userCount ?? nodes.length, previousUserKey, answer, answerRoot, text, userKey: key(user), answerKey: key(answerRoot) };
     };
   }
 }());

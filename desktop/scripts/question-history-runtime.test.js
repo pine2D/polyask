@@ -238,3 +238,30 @@ test('Kimi migration excludes existing conversations, detached turns and browser
     assert.equal(s.S.history.snapshot('token').owned, false, mode);
   }
 });
+
+test('Doubao virtualized baseline binds only an adjacent stable new user key', () => {
+  const s = setup('doubao.com'), old = node('Earlier');
+  s.set({user:old,userKey:'old',text:'Earlier',userCount:4});
+  s.S.history.begin('token','Question'); old.isConnected=false;
+  s.insert({user:node('Question'),userKey:'new',previousUserKey:'old',text:'Question',userCount:2,answer:node('Right')});
+  assert.equal(s.S.history.snapshot('token').text,'Right');
+  s.insert({user:node('Question'),userKey:'followup',previousUserKey:'new',text:'Question',userCount:2,answer:node('Wrong')});
+  assert.equal(s.S.history.snapshot('token').owned,false);
+});
+test('Doubao virtualized adjacency never authorizes a different conversation', () => {
+  const s=setup('doubao.com'), old=node('Earlier');
+  s.set({user:old,userKey:'old',text:'Earlier',userCount:4});
+  s.S.history.begin('token','Question');old.isConnected=false;
+  s.navigate('https://doubao.com/chat/other');
+  s.insert({user:node('Question'),userKey:'new',previousUserKey:'old',text:'Question',userCount:2,answer:node('Wrong')});
+  assert.equal(s.S.history.snapshot('token').owned,false);
+});
+test('Doubao recycled baseline without matching predecessor cannot bind', () => {
+  for (const previousUserKey of [undefined, 'other']) {
+    const s=setup('doubao.com'), old=node('Earlier');
+    s.set({user:old,userKey:'old',text:'Earlier',userCount:4});
+    s.S.history.begin('token','Question');old.isConnected=false;
+    s.insert({user:node('Question'),userKey:'new',previousUserKey,text:'Question',userCount:2,answer:node('Wrong')});
+    assert.equal(s.S.history.snapshot('token').owned,false);
+  }
+});
