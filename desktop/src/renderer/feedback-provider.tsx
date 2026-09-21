@@ -9,6 +9,7 @@ interface FeedbackState {
   readonly announcement: string;
   readonly announcementSeq: number;
   readonly announce: (text: string, visible?: boolean, transient?: boolean) => void;
+  readonly clearNotice: (text: string) => void;
 }
 const FeedbackContext = createContext<FeedbackState | null>(null);
 
@@ -20,13 +21,16 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
     setAnnounced((current) => ({ text, seq: current.seq + 1 }));
     if (visible) setNotice((current) => ({ text, seq: current.seq + 1, transient }));
   }, []);
+  const clearNotice = useCallback((text: string): void => {
+    setNotice((current) => current.text === text ? { ...current, text: "" } : current);
+  }, []);
   useEffect(() => {
     if (!notice.transient) return;
     const timer = setTimeout(() => setNotice((current) => current.seq === notice.seq ? { ...current, text: "" } : current), 6000);
     return () => clearTimeout(timer);
   }, [notice]);
   useEffect(() => { document.documentElement.style.setProperty("--feedback-height", `${WORKSPACE_FEEDBACK_HEIGHT}px`); }, []);
-  return <FeedbackContext.Provider value={{ announcement: announced.text, announcementSeq: announced.seq, announce, setUndoAction }}>
+  return <FeedbackContext.Provider value={{ announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction }}>
     {children}
     <div className="sr-only" aria-live="polite" aria-atomic="true" key={announced.seq}>{announced.text}</div>
     <footer className="feedback-bar" style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>

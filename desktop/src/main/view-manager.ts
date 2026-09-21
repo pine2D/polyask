@@ -139,6 +139,7 @@ export class ViewManager {
     this.reconcileViews();
     this.layout();
     window.on("resize", () => this.layout());
+    window.on("restore", () => this.layout());
     window.webContents.on("zoom-changed", () => setTimeout(() => this.layout(), 0));
     window.on("closed", () => this.dispose());
   }
@@ -590,8 +591,10 @@ export class ViewManager {
   }
 
   private layout(): void {
-    if (this.window.isDestroyed() || this.surface !== "sites") return;
+    if (this.window.isDestroyed() || this.surface !== "sites" || this.window.isMinimized()) return;
     const [width, height] = this.window.getContentSize();
+    // Windows maximized → minimized emits resize at 0×0; keep live page viewports intact.
+    if (width <= 0 || height <= 0) return;
     const zoom = Math.max(0.25, this.window.webContents.getZoomFactor());
     const cssWidth = Math.floor(width / zoom);
     const cssHeight = Math.floor(height / zoom);

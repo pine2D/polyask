@@ -5,6 +5,7 @@ import { app, type BrowserWindow } from "electron";
 
 import type { LayoutState } from "../shared/protocol";
 import { buildDiagnosticSnapshot, type DiagnosticSiteInput } from "./diagnostics";
+import { startWindowTrace } from "./window-trace";
 import {
   StabilityMonitor,
   type StabilityEventInput,
@@ -51,6 +52,7 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
   let interval: NodeJS.Timeout | null = null;
   let completion: NodeJS.Timeout | null = null;
   let finished = false;
+  let stopWindowTrace = () => {};
 
   const takeSample = () => {
     const sample = monitor.sample(metrics());
@@ -88,6 +90,8 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
   return {
     record,
     writeDiagnostic: (source) => {
+      stopWindowTrace();
+      stopWindowTrace = startWindowTrace(window, source);
       if (!diagnosticPath) return;
       mkdirSync(dirname(diagnosticPath), { recursive: true });
       const snapshot = buildDiagnosticSnapshot({
@@ -98,6 +102,7 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
       writeFileSync(diagnosticPath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
     },
     dispose: () => {
+      stopWindowTrace();
       if (interval) clearInterval(interval);
       if (completion) clearTimeout(completion);
     }

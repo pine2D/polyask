@@ -135,7 +135,7 @@ function App(): React.JSX.Element {
   const [completionNotifications, setCompletionNotifications] = useState(() =>
     loadCompletionNotifications(window.localStorage)
   );
-  const { announcement, announce: setAnnouncement, healthFeedback, noteHealth } = useFeedback();
+  const { announcement, announce: setAnnouncement, clearNotice, healthFeedback, noteHealth } = useFeedback();
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
   const drawerOpen = panelState !== null;
   if (panelState) lastOpenPanel.current = panelState;
@@ -227,6 +227,7 @@ function App(): React.JSX.Element {
         layoutPage.current = next.page;
       }
       if (next.automaticFocus && !automaticFocus.current) setAnnouncement(copy.layoutAutoFocus);
+      if (!next.automaticFocus) clearNotice(copy.layoutAutoFocus);
       automaticFocus.current = !!next.automaticFocus;
       setLayout(next);
     });

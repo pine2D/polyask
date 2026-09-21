@@ -51,6 +51,8 @@
 
 ## 工具
 
+- 窗口恢复取证：启动前设置 `POLYASK_WINDOW_TRACE` 为**尚不存在**的本地 `.jsonl` 路径。`window-trace.ts` 从外壳就绪后记录 minimize/restore/maximize/resize 等事件、窗口尺寸/缩放、当前布局、站点视图 bounds/缩放/加载状态，并在 restore 后 0/50/250/1000ms 追加快照。首条含版本、GPU 功能状态及显示器缩放，不含网址、对话或账号信息。最多 2 分钟或 4096 条；写盘失败/背压停止采样，不影响应用。默认不建文件、不挂监听；不替代 Alt+H 的站点诊断报告。采样改变时序的可能性仍需考虑，日志只能证明尺寸/事件，不能单独证明画面没有闪动。
+
 - `xvfb-run -a npm run smoke -- --skip-package`——真实 Electron 起一次，断言 shell=1、九站全部 attached 且 bounds > 0、同一 session 分区、sandbox + contextIsolation + 无 nodeIntegration。它是「preload 的 require 链仍解析」的唯一离线证据（打包期断链在别处不暴露）。
 - `npm run soak -- --minutes=<n>`——长跑稳定性；`node scripts/audit-runtime.mjs`（在 `desktop/` 下跑）——Electron 本体的运行时依赖审计，`npm audit --omit=dev` 结构性看不到它（electron 按 npm 惯例永远是 devDependency）。
 - `cd desktop && npm run configure-oauth`——用 Development Desktop Client 写出本地 `desktop/resources/oauth.json`，是涉 Drive 真机项的前置（凭据表见 `docs/desktop-oauth-security.md`）。

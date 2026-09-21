@@ -18,6 +18,7 @@ function harness(report = false) {
       if (name === "node:fs") return { mkdirSync() {}, writeFileSync() {}, appendFileSync: (_path: string, value: string) => writes.push(value) };
       if (name === "node:path") return { dirname: () => "/tmp" };
       if (name === "./diagnostics") return { buildDiagnosticSnapshot: () => ({ ok: true }) };
+      if (name === "./window-trace") return { startWindowTrace: () => () => {} };
       assert.equal(name, "./stability-monitor");
       return { StabilityMonitor: class {
         record(event: unknown) { retainedEvents++; return event; }
