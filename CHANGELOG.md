@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.3.0] - 2026-09-21
+
+验收限制：已完成 Linux Electron 顶部栏交互与三语、明暗主题、窗口宽度和界面密度检查；Windows/macOS 原生菜单外观、五种发行包的原生安装使用、真实账号完整任务及 Drive 双设备同步尚未完成验收。
+
 ### 变更
 
 - 顶部栏直接显示失败或取消任务的重试入口及数量；比较按钮保持常驻，不可用时说明原因。更多菜单按采集、会话、帮助与设置分组，站点选择、状态、档位、提问框和分页补齐快捷键提示。
@@ -811,7 +815,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.2.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/pine2D/polyask/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/pine2D/polyask/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/pine2D/polyask/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/pine2D/polyask/compare/v1.0.1...v1.0.2
