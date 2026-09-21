@@ -6,11 +6,11 @@ import type { QuestionAnswerRecord, QuestionRecord } from "../shared/question-hi
 import { QuestionRepository, questionAnswerId } from "./question-repository";
 
 interface CaptureEntry {
-  runId: string; token: string; answerId: string; questionId: string;
+  lifecycle: number; runId: string; token: string; answerId: string; questionId: string;
   started: number; deadline: number; generating: boolean; completions: number; ready: boolean;
 }
 export class QuestionHistoryService {
-  private lastRun: { runId: string; id: string } | null = null;
+  private lastRun: { lifecycle: number; runId: string; id: string } | null = null;
   private readonly active = new Map<SiteKey, CaptureEntry>();
   private reportFailure: (() => void) | null = null;
   constructor(readonly repository: QuestionRepository, private readonly options: {
@@ -24,6 +24,7 @@ export class QuestionHistoryService {
   }
   begin(request: BroadcastRequest): QuestionRecord | null {
     return this.guarded(() => {
+      if (this.lastRun?.runId === request.runId && this.lastRun.lifecycle !== this.repository.lifecycle) return null;
       const existing = this.lastRun?.runId === request.runId ? this.repository.get(this.lastRun.id) : null;
       if (this.lastRun?.runId === request.runId && !existing) return null;
       if (existing && ("deletedAt" in existing || existing.text !== request.text || request.sites.some(s => !existing.sites.includes(s)))) return null;
@@ -45,26 +46,27 @@ export class QuestionHistoryService {
             createdAt: now, updatedAt: now, deviceId: this.options.deviceId(),
             submission: "pending", submissionCode: null, conversationUrl: null, answerMarkdown: null,
             capture: "waiting", captureCode: null, capturedAt: null, truncated: false, sealedAt: null });
-          pending.set(site, { runId: request.runId, token: randomUUID(), answerId, questionId: record.id,
+          pending.set(site, { lifecycle: this.repository.lifecycle, runId: request.runId, token: randomUUID(), answerId, questionId: record.id,
             started: now, deadline: now + 45_000, generating: false, completions: 0, ready: false });
         }
       });
-      this.lastRun = { runId: request.runId, id: record.id };
+      this.lastRun = { lifecycle: this.repository.lifecycle, runId: request.runId, id: record.id };
       for (const [site, entry] of pending) this.active.set(site, entry);
       return record;
     }, null);
   }
-  token(site: SiteKey): string | undefined { return this.active.get(site)?.token; }
+  token(site: SiteKey): string | undefined { const e = this.active.get(site); return e?.lifecycle === this.repository.lifecycle ? e.token : undefined; }
   delete(id: string): boolean {
     for (const [site, entry] of this.active) if (entry.questionId === id) this.active.delete(site);
     return this.repository.delete(id, this.now(), this.options.deviceId());
   }
   targets(): { site: SiteKey; token: string }[] {
-    return [...this.active].filter(([, e]) => e.ready).map(([site, e]) => ({ site, token: e.token }));
+    return [...this.active].filter(([, e]) => e.ready && e.lifecycle === this.repository.lifecycle).map(([site, e]) => ({ site, token: e.token }));
   }
   private current(site: SiteKey): QuestionAnswerRecord | null {
     const e = this.active.get(site);
     if (!e) return null;
+    if (e.lifecycle !== this.repository.lifecycle) { this.active.delete(site); return null; }
     const q = this.repository.get(e.questionId), a = this.repository.getAnswer(e.answerId);
     if (!q || "deletedAt" in q || !a || "deletedAt" in a || a.sealedAt !== null) { this.active.delete(site); return null; }
     return a;

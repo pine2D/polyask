@@ -45,3 +45,14 @@ test("history database failures report separately without throwing into the send
   assert.equal(history.begin(request("run-a")), null);
   assert.equal(failures, 1);
 });
+test('a pre-reset token cannot write after the same IDs are imported again', () => {
+  const db = DesktopDatabase.open(':memory:');
+  const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local' });
+  try {
+    const q = history.begin(request('run-reset'))!; history.result('run-reset', { site: 'claude', ok: true });
+    const token = history.token('claude')!, a = db.questions.answers(q.id)[0];
+    db.resetLocalData(); db.questions.put(q, false); db.questions.putAnswer(a, false);
+    history.accept('claude', { token, owned: true, text: 'Late pre-reset answer' });
+    assert.equal(db.questions.answers(q.id)[0].answerMarkdown, null);
+  } finally { db.close(); }
+});

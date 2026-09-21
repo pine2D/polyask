@@ -15,9 +15,9 @@ export class SiteHistoryAccess {
     const contents = this.view(site)?.webContents;
     return contents && !contents.isDestroyed() ? { id: contents.id, url: contents.getURL() } : null;
   }
-  stop(site: SiteKey): void {
+  stop(site: SiteKey, contentsId?: number): void {
     const contents = this.view(site)?.webContents;
-    if (contents && !contents.isDestroyed()) contents.stop();
+    if (contents && !contents.isDestroyed() && (contentsId === undefined || contents.id === contentsId)) contents.stop();
   }
   async snapshot(site: SiteKey, token: string, deadline: number) {
     const contents = this.view(site)?.webContents;

@@ -1,3 +1,4 @@
+import { questionHistorySurface } from "./question-history-model";
 import { QuestionHistoryLegacy } from "./question-history-legacy";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
@@ -13,8 +14,9 @@ import { shell } from './shell-api';
 import './question-history.css';
 
 type Confirmation = { title: string; message: string; label: string; run: () => void };
-export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClose, onDraft }: {
+export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClose, onDraft, onBlockingChange }: {
   open: boolean; copy: DesktopCopy; sites: readonly SiteDefinition[]; draft: string; busy: boolean;
+  onBlockingChange: (value: boolean) => void;
   onOpen: () => void; onClose: () => void; onDraft: (text: string) => void;
 }): React.JSX.Element | null {
   const { announce, setUndoAction } = useGlobalFeedback();
@@ -30,6 +32,7 @@ export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClos
   const panel = useRef<HTMLElement>(null), opener = useRef<HTMLElement | null>(null);
   const full = narrow || !!detail || !!confirmation || restoring;
   const disabled = busy || restoring;
+  useEffect(() => { onBlockingChange(!!confirmation || restoring); return () => onBlockingChange(false); }, [confirmation, restoring, onBlockingChange]);
   const closeRef = useRef(onClose); closeRef.current = onClose;
   useEffect(() => shell.onQuestionSaveFailed(() => announce(copy.questionSaveFailed)), [copy, announce]);
   useEffect(() => {
@@ -43,9 +46,10 @@ export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClos
     return () => { sequence.current++; detailSequence.current++; (document.querySelector<HTMLButtonElement>(".question-trigger") ?? opener.current)?.focus(); };
   }, [open]);
   useEffect(() => {
-    if (!open) { shell.setSurface('sites'); setDetail(null); setConfirmation(null); return; }
+    const surface = questionHistorySurface(open, full);
+    if (!surface) { setDetail(null); setConfirmation(null); return; }
     void shell.setQuestionPanel(!full).catch(() => announce(copy.questionFailed));
-    shell.setSurface(full ? 'question-history' : 'sites');
+    shell.setSurface(surface);
     return () => { void shell.setQuestionPanel(false).catch(() => {}); };
   }, [open, full, copy, announce]);
   useEffect(() => {
@@ -90,7 +94,7 @@ export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClos
     try {
       const result = await shell.getQuestion(id, answerId);
       if (request !== detailSequence.current) return;
-      if (!result) { setError(copy.questionLoadFailed); return; }
+      if (!result) { setDetail(null); setError(copy.questionDeleted); announce(copy.questionDeleted); void load(); return; }
       setDetail(result);
     } catch { if (request === detailSequence.current) setError(copy.questionLoadFailed); }
   };
@@ -146,7 +150,7 @@ export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClos
       <button type="button" aria-label={copy.questionClose} title={copy.questionClose} onClick={onClose}><CloseIcon /></button>
     </header>
     {restoring && <div role="status" className="question-notice">{copy.questionBusy} <button type="button" onClick={() => { void shell.cancelQuestionRestore(); }}>{copy.cancel}</button></div>}
-    {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { void load(); }}>{copy.questionRetry}</button></div>}
+    {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(); }}>{copy.questionRetry}</button></div>}
     {detail ? <QuestionHistoryReader detail={detail} copy={copy} sites={sites} busy={disabled} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.text)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} /> : <>
       <div className="question-search"><input ref={input} type="search" value={query} onChange={e => setQuery(e.target.value)} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
       <div className="question-scroll" aria-busy={loading}>

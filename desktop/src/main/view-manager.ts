@@ -1,4 +1,4 @@
-import { historyPanelWidth, raiseHistoryShell } from "./question-layout";
+import { historyPanelWidth, coverSitesForHistory } from "./question-layout";
 import { SiteHistoryAccess } from "./site-history-access";
 import {
   BrowserWindow,
@@ -248,11 +248,11 @@ export class ViewManager {
 
   setSurface(value: DesktopSurface): void {
     if (this.surface === value || this.window.isDestroyed()) return;
-    if (value !== "question-history" && (this.surface === "sites" || this.surface === "question-history")) {
+    if (value !== "question-history" && value !== "sites" && (this.surface === "sites" || this.surface === "question-history")) {
       for (const site of [...this.attached]) this.detach(site);
     }
     this.surface = value;
-    if (value === "question-history") raiseHistoryShell(this.window);
+    coverSitesForHistory(this.window, value === "question-history");
     if (value === "sites") {
       this.reconcileViews();
       this.clearVisibleUnread();

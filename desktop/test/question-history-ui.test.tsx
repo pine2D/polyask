@@ -30,3 +30,9 @@ test('reader presents uncertain completion and image limitations without claimin
   const now = new Date(2026, 8, 21, 0, 1).getTime();
   assert.equal(questionDay(now - 120000, now, copy), copy.questionYesterday);
 });
+test('inactive history never overrides a new-session confirmation surface', async () => {
+  const { questionHistorySurface } = await import('../src/renderer/question-history-model');
+  assert.equal(questionHistorySurface(false, false), null);
+  assert.equal(questionHistorySurface(true, true), 'question-history');
+  assert.equal(questionHistorySurface(true, false), 'sites');
+});

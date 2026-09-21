@@ -1,3 +1,4 @@
+import type { DesktopSurface } from "../shared/protocol";
 import type { DesktopCopy } from '../shared/copy';
 import type { QuestionAnswerRecord } from '../shared/question-history';
 export function questionDay(time: number, now: number, copy: DesktopCopy): string {
@@ -12,4 +13,8 @@ export function answerState(answer: Pick<QuestionAnswerRecord, 'submission' | 'c
   const capture = { waiting: copy.questionStateWaiting, partial: copy.questionStatePartial, complete: copy.questionStateComplete,
     unknown: copy.questionStateUnknown, unavailable: copy.questionStateUnavailable, interrupted: copy.questionStateInterrupted }[answer.capture];
   return answer.submission === 'unconfirmed' ? `${copy.questionSubmissionUnconfirmed} · ${capture}` : capture;
+}
+
+export function questionHistorySurface(open: boolean, full: boolean): DesktopSurface | null {
+  return open ? full ? "question-history" : "sites" : null;
 }

@@ -25,6 +25,8 @@ function answerTombstone(record: QuestionAnswerIdentity, now: number, deviceId: 
 }
 
 export class QuestionRepository {
+  lifecycle = 0;
+  invalidateLifecycle(): void { this.lifecycle++; }
   constructor(private readonly db: DatabaseSync, private readonly outbox: OutboxRepository) {}
   get(id: string): StoredQuestion | null {
     return readJson<StoredQuestion>(this.db.prepare("SELECT body FROM questions WHERE id = ?").get(id));

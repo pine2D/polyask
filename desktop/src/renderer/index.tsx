@@ -127,6 +127,8 @@ function App(): React.JSX.Element {
   const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
   const [surface, setSurface] = useState<DesktopSurface>("sites");
   const [questionHistoryOpen, setQuestionHistoryOpen] = useState(false);
+  const [questionHistoryBlocking, setQuestionHistoryBlocking] = useState(false);
+  const closeQuestionHistory = (): void => { setQuestionHistoryOpen(false); shell.setSurface("sites"); };
   const [comparisonId, setComparisonId] = useState<string | null>(null);
   const [settingsSection, setSettingsSection] = useState<"overview" | "drive-diagnostics">("overview");
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
@@ -438,7 +440,7 @@ function App(): React.JSX.Element {
       .catch(() => setAnnouncement(copy.updatePageFailed));
   };
 
-  commandActions.current = pendingNewSession ? {} : {
+  commandActions.current = pendingNewSession || questionHistoryBlocking ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
     "open-sites": () => {
       openPanel("sites", "keyboard");
@@ -644,7 +646,7 @@ function App(): React.JSX.Element {
         onShowGroupMenu={() => { void showGroupMenu(); }}
         onOpenMore={() => { void showMoreMenu(); }}
         historyOpen={questionHistoryOpen}
-        onOpenHistory={() => questionHistoryOpen ? setQuestionHistoryOpen(false) : executeCommand("open-question-history", commandActions.current)}
+        onOpenHistory={() => questionHistoryOpen ? closeQuestionHistory() : executeCommand("open-question-history", commandActions.current)}
         onOpenArchive={() => executeCommand("open-archive", commandActions.current)}
         onRetry={() => executeCommand("retry-failed", commandActions.current)}
         onPasteImages={(files) => { void imageSelection.choose(files); }}
@@ -688,7 +690,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <QuestionHistory open={questionHistoryOpen} copy={copy} sites={sites} draft={text} busy={runState !== "idle" || auxiliaryBusy} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={() => setQuestionHistoryOpen(false)} onDraft={value => { setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      <QuestionHistory onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} busy={runState !== "idle" || auxiliaryBusy} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
       {pendingNewSession && (
         <ConfirmDialog
           copy={copy}

@@ -19,7 +19,7 @@ export function registerQuestionHistoryIpc(options: {
     select: sites => { manager.setSurface("sites"); workspace.setSelection(sites); options.publishWorkspace(); manager.setSurface("question-history"); },
     context: site => manager.historyAccess.context(site),
     navigate: (site, url) => manager.historyAccess.navigate(site, url),
-    stop: site => manager.historyAccess.stop(site),
+    stop: (site, contentsId) => manager.historyAccess.stop(site, contentsId),
     beforeNavigate: async sites => { await options.flush(sites); questions.cancel(sites); }
   });
   const id = (v: unknown): string => { if (!questionIdValid(v)) throw new Error("invalid_question"); return v; };

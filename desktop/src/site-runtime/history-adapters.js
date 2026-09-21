@@ -22,8 +22,9 @@
       let nodes = [...document.querySelectorAll(selector)];
       if (host === "deepseek.com") nodes = nodes.filter(node => !node.querySelector(".ds-markdown"));
       if (host === "doubao.com") nodes = nodes.filter(node => node.matches('[class*="justify-end"]') || node.querySelector('[class*="justify-end"]'));
+      nodes = nodes.filter(node => !nodes.some(parent => parent !== node && parent.contains(node)));
       const user = nodes.at(-1);
-      if (!user?.isConnected) return null;
+      if (!user?.isConnected) return { user: null, userCount: 0 };
       let answer = this.answer();
       // Disconnected/string answers cannot demonstrate their position in the conversation.
       if (!answer?.isConnected || typeof user.compareDocumentPosition !== "function") answer = null;
@@ -32,7 +33,7 @@
         if ((order & 1) || !(order & 4) || user.contains(answer)) answer = null;
       }
       const textNode = host === "kimi.com" ? user.querySelector(".user-content") || user : user;
-      return { user, answer, text: textNode.innerText || textNode.textContent || "", userKey: key(user), answerKey: key(answer) };
+      return { user, userCount: nodes.length, answer, text: textNode.innerText || textNode.textContent || "", userKey: key(user), answerKey: key(answer) };
     };
   }
 }());

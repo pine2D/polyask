@@ -140,6 +140,7 @@ export class DesktopDatabase {
 
   // 本机重置唯一的物理删除路径：只清本机，云端由重新连接后的全量拉取恢复。deviceId 保留（见 DataAdminService）。
   resetLocalData(): void {
+    this.questions.invalidateLifecycle();
     inTransaction(this.database, () => {
       for (const table of ["questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");

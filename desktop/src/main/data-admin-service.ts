@@ -66,6 +66,7 @@ export class DataAdminService {
   }
 
   async resetLocal(): Promise<SyncStatus> {
+    this.options.database.questions.invalidateLifecycle();
     await this.options.sync.disconnect();
     this.options.database.resetLocalData();
     return this.options.sync.status();

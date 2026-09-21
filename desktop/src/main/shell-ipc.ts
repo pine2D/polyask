@@ -197,7 +197,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       // library even when every site fails.
       try { history.record(request.text); } catch { /* History storage must not block sending. */ }
       options.questions.begin(request);
-      publishPromptLibrary();
+      try { publishPromptLibrary(); } catch { /* A history read failure must not cancel dispatch. */ }
       for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
       const results = await coordinator.send(
         request,
