@@ -1,3 +1,4 @@
+import type { PromptHistoryItem } from "./prompt-library";
 import { SITE_KEYS, type SiteKey } from "./contracts";
 import { MAX_IMAGE_COUNT } from "./images";
 import type { Tier } from "./protocol";
@@ -45,19 +46,22 @@ export interface QuestionSummary extends QuestionRecord {
   readonly answers: readonly Omit<QuestionAnswerRecord, "answerMarkdown">[];
 }
 export interface QuestionFilters { readonly query?: string; readonly cursor?: string; readonly limit?: number }
+export interface QuestionLegacyPage { readonly items: readonly PromptHistoryItem[]; readonly cursor: string | null }
 export interface QuestionPage { readonly items: readonly QuestionSummary[]; readonly cursor: string | null }
-export interface QuestionDetail { readonly question: QuestionRecord; readonly answers: readonly QuestionAnswerRecord[] }
+export interface QuestionDetail { readonly loadedAnswerId?: string | null; readonly question: QuestionRecord; readonly answers: readonly QuestionAnswerRecord[] }
 
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
 export const questionIdValid = (v: unknown): v is string => typeof v === "string" && !!v.trim() && v.length <= 128 && !/[\x00-\x1f\x7f]/.test(v);
+const VERSION_KEYS = ["schema", "id", "createdAt", "updatedAt", "deviceId"];
+const only = (v: Record<string, unknown>, keys: readonly string[]) => Object.keys(v).every(k => keys.includes(k));
 function version(v: Record<string, unknown>): boolean {
   return v.schema === QUESTION_SCHEMA && questionIdValid(v.id) && questionIdValid(v.deviceId) &&
     validSyncTime(v.createdAt) && validSyncTime(v.updatedAt) && v.updatedAt >= v.createdAt;
 }
 export function isStoredQuestion(v: unknown): v is StoredQuestion {
   if (!object(v) || !version(v)) return false;
-  if ("deletedAt" in v) return validSyncTime(v.deletedAt) && v.deletedAt >= Number(v.createdAt);
-  return typeof v.text === "string" && !!v.text.trim() && v.text.length <= 100_000 &&
+  if ("deletedAt" in v) return only(v, [...VERSION_KEYS, "deletedAt"]) && validSyncTime(v.deletedAt) && v.deletedAt >= Number(v.createdAt);
+  return only(v, [...VERSION_KEYS, "text", "sites", "requestedTier", "inputImageCount"]) && typeof v.text === "string" && !!v.text.trim() && v.text.length <= 100_000 &&
     Array.isArray(v.sites) && v.sites.length > 0 && v.sites.length <= SITE_KEYS.length &&
     new Set(v.sites).size === v.sites.length && v.sites.every(site => SITE_KEYS.includes(site)) &&
     (v.requestedTier === null || v.requestedTier === "fast" || v.requestedTier === "think") &&
@@ -67,7 +71,9 @@ const code = (v: unknown) => v === null || (typeof v === "string" && /^[a-z][a-z
 export function isStoredQuestionAnswer(v: unknown): v is StoredQuestionAnswer {
   if (!object(v) || !version(v) || !questionIdValid(v.questionId) || !SITE_KEYS.includes(v.site as SiteKey) ||
     !Number.isSafeInteger(v.attempt) || Number(v.attempt) < 1) return false;
-  if ("deletedAt" in v) return validSyncTime(v.deletedAt) && v.deletedAt >= Number(v.createdAt);
+  const identity = [...VERSION_KEYS, "questionId", "site", "attempt"];
+  if ("deletedAt" in v) return only(v, [...identity, "deletedAt"]) && validSyncTime(v.deletedAt) && v.deletedAt >= Number(v.createdAt);
+  if (!only(v, [...identity, "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt"])) return false;
   if (!["pending", "submitted", "failed", "unconfirmed", "cancelled"].includes(String(v.submission)) ||
     !["waiting", "partial", "complete", "unknown", "unavailable", "interrupted"].includes(String(v.capture)) ||
     !code(v.submissionCode) || !code(v.captureCode) || typeof v.truncated !== "boolean") return false;

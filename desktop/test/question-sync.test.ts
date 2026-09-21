@@ -108,3 +108,32 @@ test("backup restores deleted questions under a stable new identity with their s
     assert.equal(db.questions.search().items.length, 0);
   } finally { db.close(); }
 });
+
+test('backup of a deleted child requires a cloned parent and never revives its tombstone', () => {
+  const db = DesktopDatabase.open(':memory:');
+  try {
+    const q = questionFixture(), a = questionAnswerFixture();
+    db.questions.put(q); db.questions.putAnswer(a);
+    const service = new BackupService(db, { deviceId: () => 'local', now: () => 100 });
+    const document = service.export();
+    db.questions.putAnswer({ schema: 4, id: a.id, questionId: a.questionId, site: a.site, attempt: a.attempt, createdAt: 10, updatedAt: 30, deletedAt: 30, deviceId: 'local' });
+    const preview = service.preview(document);
+    assert.deepEqual(preview.items.find(i => i.kind === 'questionAnswer')?.requires, ['question:q-a']);
+    assert.equal(service.apply(preview.token, preview.items.map(i => i.key)).imported, 2);
+    assert.ok('deletedAt' in db.questions.getAnswer(a.id)!);
+    const clone = db.questions.search().items.find(i => i.id !== q.id)!;
+    assert.equal(db.questions.answers(clone.id)[0].answerMarkdown, a.answerMarkdown);
+  } finally { db.close(); }
+});
+test('explicit backup conflict selection replaces a sealed copy and reports actual imports', () => {
+  const db = DesktopDatabase.open(':memory:');
+  try {
+    db.questions.put(questionFixture()); db.questions.putAnswer(questionAnswerFixture());
+    const service = new BackupService(db, { deviceId: () => 'local', now: () => 100 });
+    const document = service.export();
+    const changed = { ...document, entries: document.entries.map(e => e.kind === 'questionAnswer' ? { ...e, body: { ...e.body, answerMarkdown: 'Chosen backup answer' } } : e) };
+    const preview = service.preview(changed);
+    assert.equal(service.apply(preview.token, preview.items.map(i => i.key)).imported, 1);
+    assert.equal(db.questions.answers('q-a')[0].answerMarkdown, 'Chosen backup answer');
+  } finally { db.close(); }
+});

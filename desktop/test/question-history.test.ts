@@ -72,3 +72,38 @@ test("malformed records and foreign answer identities never enter the database o
     assert.equal(db.outbox.count(), 0);
   } finally { db.close(); }
 });
+
+test("imported answers strip unsafe navigation targets and private query parameters", () => {
+  const db = DesktopDatabase.open(':memory:');
+  try {
+    db.questions.put(question());
+    db.questions.putAnswer({ ...answer(), conversationUrl: 'https://evil.example/chat/abcdefgh?token=secret' }, false);
+    assert.equal(db.questions.answers('q-a')[0].conversationUrl, null);
+    db.questions.putAnswer({ ...answer(2), conversationUrl: 'https://claude.ai/chat/abcdefgh?token=secret#fragment' }, false);
+    assert.equal(db.questions.answers('q-a')[1].conversationUrl, 'https://claude.ai/chat/abcdefgh');
+  } finally { db.close(); }
+});
+test("terminal deletion converges on the newest deletion version in either arrival order", () => {
+  const db = DesktopDatabase.open(':memory:');
+  try {
+    db.questions.put(question()); db.questions.delete('q-a', 30, 'device-b');
+    const deleted = db.questions.get('q-a')!;
+    db.questions.put({ ...deleted, updatedAt: 20, deletedAt: 20 } as never, false);
+    assert.equal(db.questions.get('q-a')!.updatedAt, 30);
+  } finally { db.close(); }
+});
+test('details return only the selected attempt body while lists contain no answer bodies', () => {
+  const db = DesktopDatabase.open(':memory:');
+  try {
+    db.questions.put(question()); db.questions.putAnswer(answer()); db.questions.putAnswer(answer(2));
+    const initial = db.questions.detail('q-a')!;
+    assert.equal(initial.loadedAnswerId, answer(2).id);
+    assert.equal(initial.answers[0].answerMarkdown, null);
+    assert.equal(initial.answers[1].answerMarkdown, '已保存回答');
+    const chosen = db.questions.detail('q-a', answer().id)!;
+    assert.equal(chosen.answers[0].answerMarkdown, '已保存回答');
+    assert.equal(chosen.answers[1].answerMarkdown, null);
+    assert.ok(db.questions.search().items[0].answers.every(a => !('answerMarkdown' in a)));
+    assert.equal(db.questions.search().items[0].savedSites, 1);
+  } finally { db.close(); }
+});

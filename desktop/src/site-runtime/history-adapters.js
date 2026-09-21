@@ -5,7 +5,7 @@
   if (!S?.adapters) return;
   const users = {
     "claude.ai": '[data-testid="user-message"]',
-    "chatgpt.com": '[data-message-author-role="user"]',
+    "chatgpt.com": '[data-turn="user"], [data-message-author-role="user"]',
     "gemini.google.com": "user-query",
     "deepseek.com": ".ds-message",
     "doubao.com": "[data-message-id]",

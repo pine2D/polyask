@@ -11,13 +11,23 @@
   S.history = {
     begin(token, text) {
       if (!token || entry?.token === token) return;
+      entry?.observer?.disconnect();
       entry = null;
       try {
         const a = adapter();
         if (typeof a?.historyTurn !== "function") return;
         const baseline = a.historyTurn();
         entry = { token, text: normalize(text), baseline, user: null, answer: null, userKey: null,
-          answerKey: null, completed: false, ended: false };
+          answerKey: null, completed: false, ended: false, inserted: [], observer: null };
+        if (!baseline?.user && typeof MutationObserver === "function") {
+          const current = entry;
+          entry.observer = new MutationObserver(records => {
+            for (const record of records) for (const node of record.addedNodes) {
+              if (current.inserted.length < 500) current.inserted.push(node);
+            }
+          });
+          entry.observer.observe(document.documentElement, { childList: true, subtree: true });
+        }
       } catch (_) { entry = null; }
     },
     snapshot(token) {
@@ -33,6 +43,8 @@
         if (!entry.user) {
           const old = entry.baseline;
           if (old?.user && (same(old.user, old.userKey, turn.user, turn.userKey) || !old.user.isConnected)) return empty;
+          if (!old?.user && !entry.inserted.some(node => node === turn.user || node.contains?.(turn.user))) return empty;
+          entry.observer?.disconnect(); entry.inserted = [];
           entry.user = turn.user; entry.userKey = turn.userKey || null;
         } else if (!same(entry.user, entry.userKey, turn.user, turn.userKey)) {
           entry.ended = true; return { ...empty, ended: true };

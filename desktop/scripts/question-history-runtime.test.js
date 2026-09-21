@@ -4,12 +4,12 @@ const vm = require("node:vm");
 const fs = require("node:fs");
 const path = require("node:path");
 function setup() {
-  let turn = null;
+  let turn = null, mutated = () => {};
   const adapter = { historyTurn: () => turn, generation: () => "generating" };
   const S = { adapters: { "example.test": adapter }, toMarkdown: node => node.text };
-  const context = { window: { __AMS: S }, location: { hostname: "example.test", href: "https://example.test/chat/one" } };
+  const context = { document: { documentElement: {} }, MutationObserver: class { constructor(callback) { mutated = callback; } observe() {} disconnect() {} }, window: { __AMS: S }, location: { hostname: "example.test", href: "https://example.test/chat/one" } };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime/history.js"), "utf8"), context);
-  return { S, set: value => { turn = value; } };
+  return { S, set: value => { turn = value; }, insert: value => { turn = value; mutated([{ addedNodes: [value.user] }]); } };
 }
 const node = (text) => ({ text, isConnected: true });
 test("history capture refuses old answers and binds only a new matching user turn", () => {
@@ -32,8 +32,14 @@ test("detached baseline and later manual follow-ups fail closed", () => {
   assert.equal(s.S.history.snapshot("token").owned, false);
   s.set(null); s.S.history.begin("second", "Question");
   const user = node("Question");
-  s.set({ user, answer: node("Right"), text: "Question" });
+  s.insert({ user, answer: node("Right"), text: "Question" });
   assert.equal(s.S.history.snapshot("second").text, "Right");
   s.set({ user: node("Next"), answer: node("Wrong"), text: "Next" });
   assert.equal(s.S.history.snapshot("second").ended, true);
+});
+test('an empty baseline without an observed new user insertion cannot bind an old matching turn', () => {
+  const s = setup();
+  s.S.history.begin('token', 'Question');
+  s.set({ user: node('Question'), answer: node('Old'), text: 'Question' });
+  assert.equal(s.S.history.snapshot('token').owned, false);
 });
