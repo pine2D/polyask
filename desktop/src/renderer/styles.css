@@ -260,13 +260,13 @@ kbd { opacity: .7; font: 10px system-ui; }
 .page-tab-badge:not(.unread):not(.sending):not(.generating) { opacity: .58; }
 
 .image-picker { position: relative; height: var(--control-height); display: flex; align-items: center; gap: 2px; }
-.image-trigger, .image-warning button, .image-error button {
+.question-trigger, .image-trigger, .image-warning button, .image-error button {
   min-width: var(--control-height); height: var(--control-height); padding: 0; display: inline-flex;
   align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--border); border-radius: 7px;
   color: var(--muted); background: #f0f1f5;
 }
-.image-trigger.active { color: var(--accent); background: var(--accent-soft); }
-.image-trigger:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.question-trigger[aria-expanded="true"], .image-trigger.active { color: var(--accent); background: var(--accent-soft); }
+.question-trigger:hover, .image-trigger:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .image-trigger:disabled { opacity: .4; }
 .image-count, .image-warning span { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .image-warning button, .image-error button { min-width: var(--target-size); width: var(--target-size); border-color: var(--warning); color: var(--warning); background: transparent; }
@@ -595,7 +595,7 @@ kbd { opacity: .7; font: 10px system-ui; }
     --border: #38383f; --panel: #222226; --muted: #a1a1aa;
   }
   .app-shell, .command-surface { background: #17171a; }
-  .mode-switch, .tier-switch, .page-tabs, .workspace-actions, .image-trigger, .scope-split, .health-trigger, .workspace-tabs { background: #19191d; }
+  .mode-switch, .tier-switch, .page-tabs, .workspace-actions, .question-trigger, .image-trigger, .scope-split, .health-trigger, .workspace-tabs { background: #19191d; }
   .mode-switch button.active, .tier-switch button.active { color: #f4f4f5; }
   .command-bar textarea { background: #19191d; }
   .command-search input { background: #19191d; }

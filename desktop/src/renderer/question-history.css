@@ -1,6 +1,3 @@
-.question-trigger { width: var(--target-size); height: var(--target-size); display: grid; place-items: center; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 6px; }
-.question-trigger:hover, .question-trigger[aria-expanded="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--border); }
-.question-trigger svg { width: 18px; height: 18px; }
 .question-history { position: fixed; z-index: 5; right: 0; top: var(--shell-height); bottom: var(--feedback-height, 32px); display: flex; flex-direction: column; color: var(--text); background: var(--panel); border-left: 1px solid var(--border); box-shadow: -4px 0 18px #1118270a; }
 .is-composer-expanded .question-history { top: var(--composer-expanded-height); }
 .question-history.is-full { top: 0; left: 0; width: auto; border: 0; z-index: 10; }

@@ -3,7 +3,7 @@ import type { ReactNode, RefObject } from "react";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
-import { ChevronDownIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
+import { ChevronDownIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
 import { commandHint } from "./command-hint";
 import { commandKeyAction } from "./keyboard";
 import type { WorkspacePanelTab } from "./workspace-panel-state";
@@ -110,7 +110,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
         aria-label={props.copy.promptLabel}
       />
       <button type="button" className="question-trigger" title={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 6.5V12l3.5 2" /></svg>
+        <HistoryIcon />
       </button>
       <div className="tier-switch priority-p0" aria-label={props.copy.tierLabel}>
         {tierOptions.map(({ value, label, icon, glyph }) => (
