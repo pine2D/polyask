@@ -3,7 +3,7 @@ import type { Tier } from "./protocol";
 import { validSyncTime } from "./sync";
 
 export const GROUP_NAME_LIMIT = 80;
-export type ScopePresetKey = "all" | "clear" | "image" | "intl" | "domestic";
+export type ScopePresetKey = "all" | "clear" | "intl" | "domestic";
 
 export interface ActiveWorkspaceGroup {
   readonly id: string;
@@ -53,7 +53,6 @@ export function workspacePresets(
   return {
     all: sites.map((site) => site.key),
     clear: [],
-    image: sites.filter((site) => site.image).map((site) => site.key),
     intl: sites.filter((site) => site.intl).map((site) => site.key),
     domestic: sites.filter((site) => !site.intl).map((site) => site.key)
   };

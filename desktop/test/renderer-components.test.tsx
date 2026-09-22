@@ -504,7 +504,7 @@ test("workspace drawer exposes compact presets, continuous selection and bound g
   assert.match(html, /^<aside id="workspace-panel"/);
   assert.equal([...html.matchAll(/role="tab"/g)].length, 2);
   assert.equal([...html.matchAll(/role="tabpanel"/g)].length, 1);
-  assert.equal([...html.matchAll(/class="scope-preset"/g)].length, 5);
+  assert.equal([...html.matchAll(/class="scope-preset"/g)].length, 4);
   assert.equal([...html.matchAll(/type="checkbox"/g)].length, 9);
   assert.match(html, /aria-label="Delete Research"/);
   assert.match(html, /data-group-id="research"/);

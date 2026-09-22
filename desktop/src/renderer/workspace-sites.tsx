@@ -29,7 +29,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
   const selectedSites = props.sites.map((site) => site.key).filter((site) => props.selected.has(site));
   const selectedSignature = groupSignature(selectedSites);
   const reservedSignatures = new Set(
-    [choices.all, choices.image, choices.intl, choices.domestic].map(groupSignature)
+    [choices.all, choices.intl, choices.domestic].map(groupSignature)
   );
   const duplicate = props.groups.some((group) => groupSignature(group.sites) === selectedSignature);
   const saveHint = selectedSites.length === 0
@@ -40,7 +40,6 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
   const presets = [
     [props.copy.allSites, choices.all],
     [props.copy.clearSites, choices.clear],
-    [props.copy.imageSites, choices.image],
     [props.copy.intlSites, choices.intl],
     [props.copy.domesticSites, choices.domestic]
   ] as const;
