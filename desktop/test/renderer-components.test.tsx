@@ -699,9 +699,10 @@ test("site frames expose answer-generation terminal states without verbose chrom
   );
   assert.match(html, /class="tile-frame phase-generating"/);
   assert.match(html, /class="tile-frame phase-complete"/);
-  assert.match(html, /class="answer-rail priority-p0" data-hint="Answering"/);
-  assert.match(html, /class="answer-rail priority-p0" data-hint="Answer complete"/);
-  assert.doesNotMatch(html, /class="site-state priority-p0"[^>]*>Answer/);
+  assert.match(html, /class="site-status-dot priority-p0" data-hint="Answering"/);
+  assert.match(html, /class="site-status-dot priority-p0" data-hint="Answer complete"/);
+  assert.match(html, /class="site-state priority-p0"[^>]*>Answering</);
+  assert.doesNotMatch(html, /class="site-state priority-p0"[^>]*>Answer complete</);
 });
 
 test("page tabs stay hidden while selected-site state catches up with layout state", () => {

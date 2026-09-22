@@ -1,6 +1,7 @@
 @import "./backup.css";
 @import "./workspace.css";
 @import "./selection.css";
+@import "./site-frames.css";
 @import "./task-folder.css";
 @import "./decision.css";
 @import "./library.css";
@@ -424,58 +425,11 @@ kbd { opacity: .7; font: 10px system-ui; }
 .markdown-preview li { margin: 2px 0; }
 .archive-status { padding: 2px 8px; overflow: hidden; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; background: var(--panel); }
 
-.tile-layer { position: fixed; inset: 0; pointer-events: none; }
-.tile-frame {
-  position: absolute; pointer-events: none; border: 1px solid var(--border); border-radius: 4px 4px 2px 2px;
-  background: var(--panel); overflow: hidden;
-}
-.tile-header {
-  height: calc(var(--tile-header-height) - 1px); padding: 0 3px; display: flex; align-items: center;
-  gap: var(--space-1); pointer-events: auto;
-}
-.site-select {
-  position: relative; min-width: 82px; min-height: var(--target-size); padding: 0 4px; display: flex; align-items: center; gap: 6px;
-  border-radius: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer;
-}
-.site-select:hover { background: var(--hover-soft); }
-.site-select:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
-.site-select span { overflow: hidden; text-overflow: ellipsis; }
-.answer-rail { height: 2px; flex: 1; border-radius: 1px; background: var(--border); }
-.site-state {
-  max-width: 112px; overflow: hidden; text-align: right; color: var(--muted); font-size: 12px;
-  text-overflow: ellipsis; white-space: nowrap;
-}
-.tile-header button {
-  width: var(--target-size); height: var(--target-size); padding: 0; display: grid; place-items: center;
-  border: 0; border-radius: 4px; color: var(--muted); background: transparent;
-  transition: transform 140ms var(--ease-out), color 120ms ease, background-color 120ms ease;
-}
-.tile-header button:hover { color: var(--accent); background: var(--accent-soft); }
-.tile-actions {
-  width: 0; display: flex; flex: 0 0 auto; overflow: hidden; opacity: 0; pointer-events: none;
-  transition: opacity 120ms ease;
-}
-.tile-frame:hover .tile-actions, .tile-frame:focus-within .tile-actions {
-  width: calc(var(--target-size) * 2); opacity: 1; pointer-events: auto;
-}
-.phase-sending .answer-rail { background: var(--accent); animation: pulse 1.2s var(--ease-in-out) infinite; }
-.phase-submitted .answer-rail { background: var(--success); }
-.phase-generating .answer-rail { background: var(--accent); }
-.phase-complete .answer-rail { background: var(--success); }
-.phase-warning .answer-rail { background: var(--warning); }
-.phase-warning .site-state { color: var(--warning); }
-.phase-cancelled .answer-rail { background: var(--muted); }
-.phase-failed .answer-rail, .phase-crashed .answer-rail { background: var(--danger); }
-.phase-failed .site-state, .phase-crashed .site-state { color: var(--danger); }
-
-@keyframes pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) {
-  .phase-sending .answer-rail { animation: none; }
   button:not(:disabled) { transition: color 100ms ease, background-color 100ms ease, border-color 100ms ease, opacity 100ms ease; }
   button:not(:disabled):active { transform: none; }
   .page-tab-indicator { transition: none; }
   .workspace-drawer, .image-tray, .surface-stage { transform: none; transition: opacity 100ms ease; }
-  .tile-actions { transition: opacity 100ms ease; }
 }
 @media (hover: hover) and (pointer: fine) {
   .page-tabs button:hover { color: var(--accent); }
@@ -496,9 +450,6 @@ kbd { opacity: .7; font: 10px system-ui; }
 }
 @media (max-width: 860px) {
   .archive-compare-selectors, .archive-compare-grid { grid-template-columns: 1fr; }
-}
-@media (pointer: coarse) {
-  .tile-actions { width: calc(var(--target-size) * 2); opacity: 1; pointer-events: auto; }
 }
 @media (prefers-color-scheme: dark) {
   :root {

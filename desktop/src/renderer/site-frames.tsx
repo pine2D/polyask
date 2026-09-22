@@ -45,7 +45,9 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
           };
           if (!site) return null;
           const statusText = describeStatus(copy, status);
-          const attentionText = visibleStatus(copy, status);
+          const loading = status.phase === "loading";
+          const attentionText = visibleStatus(copy, status) ??
+            (["loading", "sending", "generating"].includes(status.phase) ? statusText : null);
           const reloadBlocked = !siteReloadAllowed(status.phase);
           return (
             <article
@@ -61,9 +63,9 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
               <div className="tile-header">
                 <label className="site-select priority-p0" data-selected={selected.has(site.key)} data-hint={formatCopy(copy.selectSite, { site: site.label })}>
                   <input className="sr-only" type="checkbox" name="sites" value={site.key} checked={selected.has(site.key)} onChange={() => onToggle(site.key)} />
-                  <span>{site.label}</span><SelectionMark />
+                  <SelectionMark /><span className="site-name">{site.label}</span>
                 </label>
-                <span className="answer-rail priority-p0" data-hint={statusText} aria-hidden="true" />
+                <span className="site-status-dot priority-p0" data-hint={statusText} aria-hidden="true" />
                 <span className="tile-status-sr sr-only">{statusText}</span>
                 {attentionText && <span className="site-state priority-p0" data-hint={statusText}>{attentionText}</span>}
                 {props.retrySites?.includes(site.key) ? <button type="button" className="site-retry" disabled={props.retryDisabled}
@@ -79,6 +81,7 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
                   <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? copy.healthReloadBlocked : formatCopy(copy.reloadSite, { site: site.label })} aria-label={formatCopy(copy.reloadSite, { site: site.label })} onClick={() => onReload(site.key)}><ReloadIcon /></button>
                 </span>
               </div>
+              {loading && <div className="site-load-progress" role="progressbar" aria-label={`${site.label} · ${copy.loading}`}><span /></div>}
             </article>
           );
         })}
