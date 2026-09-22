@@ -24,7 +24,7 @@ test("desktop forms expose stable names and disable browser autofill where it is
 test("image previews reserve geometry and dense long lists skip offscreen rendering", () => {
   const picker = renderer("image-picker.tsx");
   const css = renderer("styles.css");
-  assert.match(picker, /<img[^>]+width=\{52\}[^>]+height=\{40\}/);
+  assert.match(picker, /<img[^>]+width=\{[1-9]\d*\}[^>]+height=\{[1-9]\d*\}/);
   assert.match(css, /content-visibility:\s*auto/);
   assert.match(css, /contain-intrinsic-size:\s*68px/);
 });
@@ -57,14 +57,11 @@ test("main-menu page changes are announced while renderer-requested changes stay
   assert.match(app, /requestedPage\.current = null/);
 });
 
-test("anchored overlays retain a closing state long enough for interruptible transitions", () => {
+test("workspace drawers retain a closing state long enough for interruptible transitions", () => {
   const app = renderer("index.tsx");
   const drawer = renderer("workspace-drawer.tsx");
-  const picker = renderer("image-picker.tsx");
   assert.match(app, /usePresence\(drawerOpen/);
   assert.match(drawer, /data-state=\{props\.open \? "open" : "closed"\}/);
-  assert.match(picker, /usePresence\(trayOpen, 140\)/);
-  assert.match(picker, /data-state=\{trayOpen \? "open" : "closed"\}/);
 });
 
 test("occasional full-workspace surfaces enter without animating native site bounds", () => {

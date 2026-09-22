@@ -452,14 +452,20 @@ test("image picker stays icon-first and exposes removable previews and scope war
   assert.match(html, /aria-label="Manage 2 images"/);
   assert.equal([...html.matchAll(/class="image-preview"/g)].length, 2);
   assert.match(html, /aria-label="Remove one.png"/);
+  assert.match(html, /class="image-filename"[^>]*>one.png</);
+  assert.match(html, /<span>Replace images<\/span>/);
   assert.match(html, /aria-label="Adjust site scope: 1 unsupported"/);
   assert.match(html, /role="alert"/);
 });
 
-test("a closing image tray is removed from focus and the accessibility tree", () => {
-  const source = readSource("src/renderer/image-picker.tsx");
-  assert.match(source, /aria-hidden=\{trayOpen \? undefined : true\}/);
-  assert.match(source, /inert=\{!trayOpen\}/);
+test("closed attachments leave no hidden controls in the tab order", () => {
+  const html = renderToStaticMarkup(<ImagePicker copy={getCopy("en")}
+    images={[{ name: "one.png", type: "image/png", size: 8, dataUrl: "data:image/png;base64,iVBORw0KGgo=" }]}
+    open={false} disabled={false} warning={null} warningCount={0} error={null}
+    onOpenChange={noop} onFiles={noop} onRemove={noop} onAdjustScope={noop} />);
+  assert.doesNotMatch(html, /id="image-tray"/);
+  assert.doesNotMatch(html, /aria-label="Remove/);
+  assert.match(html, /aria-expanded="false"/);
 });
 
 test("workspace drawer exposes compact presets, continuous selection and bound group deletion", () => {

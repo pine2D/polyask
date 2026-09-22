@@ -138,6 +138,7 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 - **两条跨端不变量**（跨设备记录要能互认，改一端就是让另一端拒收）：
   1. **提问在派发之前无条件入库**——`shell-ipc.ts` 的 `history.record(request.text)` 先于 `coordinator.send`。请求校验、图片站点支持检查、操作互斥及 `collection.beginRun` 的过期轮次检查都在记录之前，被这些检查拒绝的请求不入库；**全部站点都失败的提问照样留记录**，这是有意的（用户要能重发）。
   2. **结果库字段上限按码点计、两端一致**（`shared/archive.ts`）：`title` 512、`instruction` 4000、`note` 4000、`host`/`label`/`winnerHost` 256、预览 `text` 320、`state`/`code` 64、单个 `tag` 32、`tags` 数组 20 项。`title` 与预览**截断**，其余**超限即 throw**。新增字段必须同时进这张表，否则表现为「某台设备的记录同步不过来」。
+- 图片管理使用已预留的展开区域，在提问控件下方独立成行，不覆盖输入框或原生站点；保留完整缩略图、文件名与独立删除按钮，更换为整批替换。关闭附件栏立即移除控件，按钮关闭或在附件内按 Escape 后焦点返回管理入口。
 - 图片限额：单批最多 4 张 PNG/JPEG、合计不超过 10 MiB（`shared/images.ts` 的 `MAX_IMAGE_COUNT` / `MAX_IMAGE_BYTES`）。**改任何一个数，代码 + 三语词条 + README/docs 叙述的全部落点要一起改**，清单与当前数值以 `scripts/test-image-limits.js` 的对账项和 `docs/adapters.md` 的「图片载荷」为准，别凭记忆列。
 - 便携版：根目录 `portable.json` 识别发行形态，`userData` 与 `sessionData` 都切到同级 `PolyAsk Data`。根目录固定分为可替换的 `App` 与持久的 `PolyAsk Data`，升级只替换 `App`。首次运行才询问是否从系统默认目录复制旧资料，复制走旁路暂存 + 重启后切换，失败保留旧资料；复制出的 profile 获得新的同步 `deviceId`，避免用户回退旧版后两个客户端覆盖同一份云端状态。设置页只拿到裁剪过的版本号与发行形态，不暴露本机用户数据路径。
 

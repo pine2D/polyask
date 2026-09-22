@@ -2,6 +2,7 @@
 @import "./workspace.css";
 @import "./selection.css";
 @import "./site-frames.css";
+@import "./image-picker.css";
 @import "./task-folder.css";
 @import "./decision.css";
 @import "./library.css";
@@ -266,7 +267,7 @@ kbd { opacity: .7; font: 10px system-ui; }
 .page-tab-badge.failed { background: var(--danger); }
 .page-tab-badge:not(.unread):not(.sending):not(.generating) { opacity: .58; }
 
-.image-picker { position: relative; height: var(--control-height); display: flex; align-items: center; gap: 2px; }
+.image-picker { position: static; height: var(--control-height); display: flex; align-items: center; gap: 2px; }
 .question-trigger, .image-trigger, .image-warning button, .image-error button {
   min-width: var(--control-height); height: var(--control-height); padding: 0; display: inline-flex;
   align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--border); border-radius: 7px;
@@ -278,24 +279,6 @@ kbd { opacity: .7; font: 10px system-ui; }
 .image-count, .image-warning span { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .image-warning button, .image-error button { min-width: var(--target-size); width: var(--target-size); border-color: var(--warning); color: var(--warning); background: transparent; }
 .image-error button { border-color: var(--danger); color: var(--danger); }
-.image-tray {
-  position: absolute; z-index: 5; top: calc(var(--control-height) + 3px); right: 0; width: 292px;
-  padding: 4px; border: 1px solid var(--border); border-radius: 7px; background: var(--panel); box-shadow: 0 3px 10px #1118271f;
-  transform-origin: top right; transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
-}
-.image-tray[data-state="closed"] { opacity: 0; transform: scale(.95); transition-duration: 140ms; pointer-events: none; }
-@starting-style { .image-tray[data-state="open"] { opacity: 0; transform: scale(.95); } }
-.image-tray-heading { height: 20px; display: grid; grid-template-columns: minmax(0, 1fr) 24px 24px; align-items: center; gap: 2px; }
-.image-tray-heading > span { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.image-tray-heading button, .image-preview button { padding: 0; display: grid; place-items: center; border: 0; border-radius: 4px; color: var(--muted); background: transparent; }
-.image-tray-heading button { width: 24px; height: 20px; }
-.image-tray-heading button:hover, .image-preview button:hover { color: var(--accent); background: var(--accent-soft); }
-.image-previews { height: 40px; display: flex; gap: 4px; }
-.image-preview { position: relative; width: 52px; height: 40px; overflow: hidden; border: 1px solid var(--border); border-radius: 5px; background: #f4f5f8; }
-.image-preview img { width: 100%; height: 100%; object-fit: cover; }
-.image-preview button { position: absolute; top: 1px; right: 1px; width: 18px; height: 18px; color: white; background: #18181bcc; }
-.image-tray p { margin: 2px 0 0; overflow: hidden; color: var(--warning); font-size: 10px; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.image-tray p[role="alert"] { color: var(--danger); }
 
 /* 应用内确认层，取代系统原生弹框（外观与本应用其余部分统一）。压在站点视图之上，
    所以 scrim 必须挡住指针事件，否则误点会打到底下的站点页面。 */
@@ -429,7 +412,7 @@ kbd { opacity: .7; font: 10px system-ui; }
   button:not(:disabled) { transition: color 100ms ease, background-color 100ms ease, border-color 100ms ease, opacity 100ms ease; }
   button:not(:disabled):active { transform: none; }
   .page-tab-indicator { transition: none; }
-  .workspace-drawer, .image-tray, .surface-stage { transform: none; transition: opacity 100ms ease; }
+  .workspace-drawer, .surface-stage { transform: none; transition: opacity 100ms ease; }
 }
 @media (hover: hover) and (pointer: fine) {
   .page-tabs button:hover { color: var(--accent); }

@@ -1,0 +1,39 @@
+/* 附件使用主进程已预留的展开区域，与提问框分行，不跨进原生站点视图。 */
+.command-bar.is-expanded:has(.image-tray) textarea { height: var(--control-height); }
+.image-tray {
+  --attachment-row-height: 40px;
+  position: absolute; top: var(--shell-height); left: var(--space-1); right: var(--space-1);
+  height: calc(var(--composer-expanded-height) - var(--shell-height) - var(--space-1));
+  display: grid; grid-template-columns: 144px minmax(0, 1fr) var(--target-size);
+  grid-template-rows: var(--attachment-row-height); align-content: center; align-items: center; gap: 2px 12px;
+  padding: 2px 8px; border-top: 1px solid var(--border); background: var(--panel);
+}
+.image-tray-heading { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0; }
+.image-tray-heading > span { color: var(--muted); font-size: 12px; line-height: 16px; }
+.image-tray button {
+  min-width: var(--target-size); min-height: var(--target-size); padding: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  border: 0; border-radius: 4px; color: var(--muted); background: transparent;
+}
+.image-tray .image-replace { padding: 0 4px; margin-left: -4px; font-size: 12px; color: inherit; }
+.image-previews { min-width: 0; display: flex; gap: 8px; overflow-x: auto; }
+.image-preview {
+  min-width: 0; max-width: 220px; flex: 1; height: var(--attachment-row-height); padding: 2px 4px 2px 2px;
+  display: flex; align-items: center; gap: 8px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--panel);
+}
+.image-preview img { width: 48px; height: calc(var(--attachment-row-height) - 6px); flex-shrink: 0; object-fit: contain; border-radius: 3px; background: var(--hover-soft); }
+.image-filename { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.image-preview button { flex-shrink: 0; }
+.image-tray p {
+  grid-column: 2 / -1; margin: 0; overflow: hidden; color: var(--warning);
+  font-size: 12px; line-height: 16px; text-overflow: ellipsis; white-space: nowrap;
+}
+.image-tray p[role="alert"] { color: var(--danger); }
+.image-tray button:disabled { opacity: .4; }
+@media (hover: hover) and (pointer: fine) {
+  .image-tray button:hover:not(:disabled) { color: var(--accent); background: var(--hover-soft); }
+  .image-preview button:hover:not(:disabled) { color: var(--danger); }
+}
+
+:root[data-density="comfortable"] .image-tray { --attachment-row-height: 48px; }

@@ -7,8 +7,7 @@ import {
   type DesktopImage,
   type ImageInputError
 } from "../shared/images";
-import { CloseIcon, ImagePlusIcon, WarningIcon } from "./icons";
-import { usePresence } from "./presence";
+import { CloseIcon, ImagePlusIcon, ReplaceImagesIcon, WarningIcon } from "./icons";
 
 interface ImagePickerProps {
   readonly copy: DesktopCopy;
@@ -56,18 +55,23 @@ export async function readDesktopImages(files: readonly File[]): Promise<ImageRe
 
 export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const trayRef = useRef<HTMLDivElement>(null);
   const count = props.images.length;
   const trayOpen = props.open && count > 0;
-  const trayPresent = usePresence(trayOpen, 140);
   const manageLabel = formatCopy(props.copy.manageImages, { count });
   useEffect(() => {
     if (!props.open) return;
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") props.onOpenChange(false); };
+    const close = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (trayRef.current?.contains(document.activeElement)) triggerRef.current?.focus();
+      props.onOpenChange(false);
+    };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [props.onOpenChange, props.open]);
   const choose = () => {
-    if (!inputRef.current) return;
+    if (props.disabled || !inputRef.current) return;
     inputRef.current.value = "";
     inputRef.current.click();
   };
@@ -87,6 +91,7 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
         }}
       />
       <button
+        ref={triggerRef}
         type="button"
         className={count ? "image-trigger active" : "image-trigger"}
         data-hint={count ? manageLabel : props.copy.addImages}
@@ -114,21 +119,22 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
           </button>
         </div>
       ) : null}
-      {trayPresent ? (
-        <div id="image-tray" className="image-tray" role="group" aria-label={manageLabel} aria-hidden={trayOpen ? undefined : true} inert={!trayOpen} data-state={trayOpen ? "open" : "closed"}>
+      {trayOpen ? (
+        <div ref={trayRef} id="image-tray" className="image-tray" role="group" aria-label={manageLabel}>
           <div className="image-tray-heading">
             <span>{manageLabel}</span>
-            <button type="button" data-hint={props.copy.replaceImages} aria-label={props.copy.replaceImages} onClick={choose}><ImagePlusIcon /></button>
-            <button type="button" data-hint={props.copy.closeImages} aria-label={props.copy.closeImages} onClick={() => props.onOpenChange(false)}><CloseIcon /></button>
+            <button type="button" className="image-replace" disabled={props.disabled} onClick={choose}><ReplaceImagesIcon /><span>{props.copy.replaceImages}</span></button>
           </div>
           <div className="image-previews">
             {props.images.map((image, index) => (
               <div className="image-preview" key={`${image.name}:${index}`}>
-                <img src={image.dataUrl} alt={image.name} width={52} height={40} />
-                <button type="button" data-hint={formatCopy(props.copy.removeImage, { name: image.name })} aria-label={formatCopy(props.copy.removeImage, { name: image.name })} onClick={() => props.onRemove(index)}><CloseIcon /></button>
+                <img src={image.dataUrl} alt="" width={48} height={40} />
+                <span className="image-filename" data-hint={image.name}>{image.name}</span>
+                <button type="button" disabled={props.disabled} data-hint={formatCopy(props.copy.removeImage, { name: image.name })} aria-label={formatCopy(props.copy.removeImage, { name: image.name })} onClick={() => { props.onRemove(index); triggerRef.current?.focus(); }}><CloseIcon /></button>
               </div>
             ))}
           </div>
+          <button type="button" className="image-tray-close" data-hint={props.copy.closeImages} aria-label={props.copy.closeImages} onClick={() => { props.onOpenChange(false); triggerRef.current?.focus(); }}><CloseIcon /></button>
           {props.error || props.warning ? <p role={props.error ? "alert" : undefined}>{props.error ?? props.warning}</p> : null}
         </div>
       ) : null}
