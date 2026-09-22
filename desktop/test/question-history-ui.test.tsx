@@ -36,3 +36,14 @@ test('inactive history never overrides a new-session confirmation surface', asyn
   assert.equal(questionHistorySurface(true, true), 'question-history');
   assert.equal(questionHistorySurface(true, false), 'sites');
 });
+test('reusing history warns about replacing attachments even when draft text is unchanged', async () => {
+  const { questionReaskWarning } = await import('../src/renderer/question-history-model');
+  assert.equal(questionReaskWarning('same', 0, 'same', 0, copy), '');
+  assert.match(questionReaskWarning('same', 1, 'same', 0, copy), /移除当前草稿中的附件/);
+  assert.match(questionReaskWarning('', 0, 'image question', 4, copy), /4 张图片.*重新添加/);
+  const q = { ...questionFixture(), inputImageCount: 4, savedSites: 0, answers: [] };
+  const html = renderToStaticMarkup(<QuestionHistoryList copy={copy} sites={[]} busy={false} items={[q]}
+    onRestore={noop} onRead={noop} onReask={noop} onDelete={noop} />);
+  assert.match(html, /4 张图片/);
+  assert.match(html, /不保存或同步原图/);
+});

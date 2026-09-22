@@ -74,14 +74,14 @@
 | 站点 | 路径 | 关键选择子 / 说明 |
 | --- | --- | --- |
 | Claude | core 通用链 | 无 `submit`；发送键锚点是 `button[data-testid="chat-input-send"]`（同族 `chat-input` / `chat-input-attach` 一并核实，真机 2026-08-31），原生 `btn.click()` 一点就发。其 `aria-label="Send message"` 由 react-intl 产出、随界面语言变，**只作现象描述，不可当锚点**。注入后约 80ms 解禁（core 等 250ms，余量充足）|
-| ChatGPT | core 通用链 | 无 `submit`（先试 `send`/`发送` 标签按钮，点不动再 Enter） |
+| ChatGPT | core 通用链 | 无 `submit`（优先 `send`/`发送` 标签按钮，无可用按钮才用 Enter） |
 | Gemini | core 通用链 | 无 `submit` |
 | DeepSeek | `submit(el, deadline)` | `[role="button"].ds-button--primary.ds-button--circle` 取最后一个，`waitFor` 到既无 `ds-button--disabled` 类也无 `aria-disabled="true"` 才原生 `click()`；超时（deadline 剩余，无 deadline 则 10s）返回 false |
 | 豆包 | `submit()` | `#flow-end-msg-send`；缺失或 disabled/aria-disabled/data-disabled 为真时返回 false 落回通用链（textarea Enter 可发） |
 | 千问 | core 通用链 | 无 `submit`；受控编辑器靠合成 `beforeinput` 注入 |
 | Kimi | `submit()` | `.send-button-container`（无 role 的 div，Enter 只插换行）；用 `clickEl(b)` 合成 pointer 序列 + `detail:1` 拟真，**不是原生 `click()`** |
 | 元宝 | `submit()` | `[aria-label="Send"], [aria-label="发送"]`（非 button），排除 disabled 后用 `clickEl()` |
-| 智谱 | core 通用链 / Enter | 无 `submit`；通用链先试 `send`/`发送` 标签按钮，点不动才发 Enter（textarea 可发） |
+| 智谱 | core 通用链 / Enter | 无 `submit`；通用链优先 `send`/`发送` 标签按钮，无可用按钮才发 Enter（textarea 可发） |
 
 Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点按钮 vs 合成 Enter），只有 Claude 有真机结论；其余三站代码里没有站点级证据，别断言。
 
@@ -125,6 +125,10 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 ## 图片载荷（`desktop/src/site-runtime/upload.js`）
 
 最多 **4 张**、仅 `image/png` 与 `image/jpeg`、单批总计 **≤10 MiB**（`MAX_BYTES`）。`dataUrl` 要过严格 base64 正则 + 解码后长度必须等于声明 `size` + PNG/JPEG 魔数校验 + `createImageBitmap` 真解码，任一不过报 `image_invalid`；`desktop/src/shared/images.ts` 的 `validateImageFiles` / `validateImages` 在**选图当下**先做一轮张数 / 类型 / 总大小 + base64 + 魔数校验（早于 `upload.js`，让用户当场知道选错了），**但不做 `createImageBitmap` 真解码**——那一层只在注入侧，两处数值必须一致。附件就绪靠「composer 锚点附近可见节点快照 diff + 400ms 稳定 + `role=alert` 错误文案检测」判定，**不是 sleep 等**；未给 deadline 时默认 15s 上限。
+
+2026-09-22 修正：独立预览按叶节点计数，保留相同图片 URL 的重数，不将父容器算作额外附件。检查祖先透明度，移除旧的 5 秒忙碌放行规则；DeepSeek 的残留 spinner 实际位于透明祖先内。千问和 Kimi 横向附件条按条带锚定，计入滚动区内的附件。重试仅复用同批、同节点、内容未变且已确认的附件；Kimi/千问/Gemini 附件区和表单内检测到刷新后保留的原生附件时同样拦截；残留的不完整或不同附件返回 `attachment_conflict`，由用户清除后重试。提交确认后丢弃运行期凭据，不持久保存图片。
+
+通用发送链一旦发出按钮或 Enter 动作，只读等待提交确认，不再交替点击/Enter 补发；无法确认原样返回 `submit_unconfirmed`。没有可用按钮时才选择 Enter。
 
 **这三个数字有七处落点，改一个就要全改**（`scripts/test-image-limits.js` 逐处按锚点对账，抠不到锚点即红，不静默跳过）：
 

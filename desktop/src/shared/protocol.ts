@@ -171,6 +171,7 @@ export const SITE_CODES = [
   "attachment_failed",
   "attachment_timeout",
   "attachment_action_required",
+  "attachment_conflict",
   "invalid_response",
   "error",
   "adapter_unavailable"

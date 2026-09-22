@@ -96,12 +96,13 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 | `inject_failed` | `injectFailed` | | `attachment_action_required` | `attachmentActionRequired` |
 | `no_view` | `siteUnavailable` | | `invalid_response` | `invalidResponse` |
 | `error` | `siteError` | | `adapter_unavailable` | `adapterUnavailable` |
+| `attachment_conflict` | `attachmentConflict` | | | |
 
 采集码另走 `describeCollectionCode`：`no_answer` → `noAnswer`、`no_view` / `no_window` → `siteUnavailable`（`no_window` 是 Drive schema 1 线格式里带进来的旧码，语义与 `no_view` 相通）、`not_ready` → `siteNotReady`、`answer_truncated` → `answerTruncated`，其余落 `failed`。辅助综合发送另有 `describeSynthesisSendCode`，另处理 `target_not_selected` 与 `operation_busy`。
 
 - `describeStatus` **不做运行时白名单校验**：认不得的码按 `phase` 兜底，宁可笼统也不丢消息。
 - `ok:true` 也可以带 `code`（如 `tier_unconfirmed`）：显示为成功 + 警示，不谎报全绿。
-- `attachment_action_required` 是适配器 `attach()` 的契约码，由 `site-runtime/upload.js` 透传字符串返回值；当前没有适配器产出，契约保留，已在覆盖测试里登记豁免。
+- `attachment_action_required` 由适配器要求用户完成登录或站点附件操作时产出；`attachment_conflict` → `attachmentConflict` 表示上次尝试遗留的附件无法安全复用，需在站点移除后重试。
 - **新增可见码要同时改三处**：`SITE_CODES`（或 `describeCollectionCode` 的 `case`）、`STATUS_COPY_KEY`、`copy.ts` 的三语。漏一处 `desktop/test/status-copy-coverage.test.ts` 会红——它做双向对账：源码里产出的每个码必须有文案，文案表里的每个码必须真有产出方，例外要在 `PRODUCED_WITHOUT_COPY` / `COPY_WITHOUT_PRODUCER` 里写明理由。
 - IPC 抛出的裸码经 `ipcRenderer.invoke` 会被 Electron 包成 `Error invoking remote method '…': Error: <code>`，**唯一还原点是 `shared/ipc-error.ts` 的 `ipcErrorCode`**；不剥前缀，渲染层写好的三语文案永远不可达。
 - 同步失败码另有一套：`main/sync-failures.ts` 的 `classifySyncFailure` 是唯一映射点，新增 reason 必须同步 `shared/sync-diagnostics.ts` 的 `SAFE_REASONS`（不进白名单就不会出现在报障报告里）、`renderer/sync-status.ts` 的 `describeSync`、`copy.ts` 三语。
@@ -248,3 +249,5 @@ Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或
 提问历史 IPC 由 `question-history-ipc.ts` 注册并验证外壳身份；renderer 不接受任意导航地址，恢复只提交记录 ID / 尝试 ID，再用主进程生成的一次性预览令牌执行。实际导航前再次核对记录、站点选择及视图身份，受 OperationGate 保护；最多两站并发、单站 15s、总计 30s，缺地址不导航首页。快照轮询每 5s 启动，最多两个只读探针并发，探针 2.5s；初始观察 45s，首次观测到生成或已归属正文时延长一次至 15min，后续进度不再顺延，切换会话前尽力在 2.5s 内保存。中间副本入 outbox 延后 30s，封存或首次文本立即可上传。运行时不把停止键缺失或正文静止当完成证据，无法正向确认结束的副本保留“完成状态未知”。
 
 右侧历史面板宽 360 CSS px，与左侧面板互斥。共享最小站点列宽决定窄窗全页；阅读副本/确认操作时原位置隐藏原生站点视图，保持挂载、正尺寸与既有禁用后台节流设置，退出恢复可见性（BrowserWindow 默认外壳不是可重排子视图）。历史卡片点击始终读取副本；恢复原站走独立按钮，忙碌时仅保留阅读和复制等只读操作。结果库 surface 会 detach 站点视图，因此其顶部入口仍在发送/辅助操作期间禁用并说明原因。列表只传摘要和尝试元数据，正文仅按选中尝试读取；旧文字历史独立查询分页，顶部提问库的最近文字行为保持不变。错误提示由三语 `question-copy.ts` 提供。
+
+历史再问只恢复文字，原图片不入库或同步；详情和列表显示请求附图数量（不等同于成功发送数量）。恢复带图问题或替换有附件的草稿须提示确认，并清除当前草稿附件与尚未完成的选图读取，防止与历史文字混用。

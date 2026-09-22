@@ -1,4 +1,4 @@
-import { questionHistorySurface } from "./question-history-model";
+import { questionReaskWarning, questionHistorySurface } from "./question-history-model";
 import { QuestionHistoryLegacy } from "./question-history-legacy";
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
@@ -14,8 +14,8 @@ import { shell } from './shell-api';
 import './question-history.css';
 
 type Confirmation = { title: string; message: string; label: string; run: () => void };
-export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClose, onDraft, onBlockingChange }: {
-  open: boolean; copy: DesktopCopy; sites: readonly SiteDefinition[]; draft: string; busy: boolean;
+export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0, busy, onOpen, onClose, onDraft, onBlockingChange }: {
+  open: boolean; copy: DesktopCopy; sites: readonly SiteDefinition[]; draft: string; draftImageCount?: number; busy: boolean;
   onBlockingChange: (value: boolean) => void;
   onOpen: () => void; onClose: () => void; onDraft: (text: string) => void;
 }): React.JSX.Element | null {
@@ -111,9 +111,10 @@ export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClos
     if (detail) panel.current?.querySelector<HTMLButtonElement>('.question-header button')?.focus();
     else input.current?.focus();
   }, [open, detail?.question.id]);
-  const reask = (text: string) => {
+  const reask = (text: string, imageCount = 0) => {
     const apply = () => { onDraft(text); setConfirmation(null); setDetail(null); onClose(); };
-    if (draft.trim() && draft !== text) setConfirmation({ title: copy.questionDraftTitle, message: copy.questionDraftWarning, label: copy.questionReask, run: apply });
+    const warning = questionReaskWarning(draft, draftImageCount, text, imageCount, copy);
+    if (warning) setConfirmation({ title: copy.questionDraftTitle, message: warning, label: copy.questionReask, run: apply });
     else apply();
   };
   const remove = (id: string) => setConfirmation({ title: copy.questionDeleteTitle, message: copy.questionDeleteWarning, label: copy.questionDelete, run: () => {
@@ -151,7 +152,7 @@ export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClos
     </header>
     {restoring && <div role="status" className="question-notice">{copy.questionBusy} <button type="button" onClick={() => { void shell.cancelQuestionRestore(); }}>{copy.cancel}</button></div>}
     {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(); }}>{copy.questionRetry}</button></div>}
-    {detail ? <QuestionHistoryReader detail={detail} copy={copy} sites={sites} busy={disabled} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.text)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} /> : <>
+    {detail ? <QuestionHistoryReader detail={detail} copy={copy} sites={sites} busy={disabled} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} /> : <>
       <div className="question-search"><input ref={input} type="search" value={query} onChange={e => setQuery(e.target.value)} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
       <div className="question-scroll" aria-busy={loading}>
         {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}

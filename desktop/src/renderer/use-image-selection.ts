@@ -29,6 +29,7 @@ export function useImageSelection(
   readonly setOpen: (value: boolean) => void;
   readonly choose: (files: readonly File[]) => Promise<void>;
   readonly remove: (index: number) => void;
+  readonly clear: () => void;
   readonly invalidateAndClose: () => void;
 } {
   const epoch = useRef(0);
@@ -64,5 +65,6 @@ export function useImageSelection(
     epoch.current += 1;
     setOpen(false);
   };
-  return { images, error, open, setOpen, choose, remove, invalidateAndClose };
+  const clear = () => { invalidateAndClose(); setImages([]); setError(null); };
+  return { images, error, open, setOpen, choose, remove, clear, invalidateAndClose };
 }

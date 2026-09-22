@@ -1,5 +1,5 @@
 import type { DesktopSurface } from "../shared/protocol";
-import type { DesktopCopy } from '../shared/copy';
+import { formatCopy, type DesktopCopy } from '../shared/copy';
 import type { QuestionAnswerRecord } from '../shared/question-history';
 export function questionDay(time: number, now: number, copy: DesktopCopy): string {
   const day = (value: number) => new Date(value).toLocaleDateString();
@@ -17,4 +17,12 @@ export function answerState(answer: Pick<QuestionAnswerRecord, 'submission' | 'c
 
 export function questionHistorySurface(open: boolean, full: boolean): DesktopSurface | null {
   return open ? full ? "question-history" : "sites" : null;
+}
+
+export function questionReaskWarning(draft: string, draftImages: number, text: string, images: number, copy: DesktopCopy): string {
+  const messages: string[] = [];
+  if (draft.trim() && draft !== text) messages.push(copy.questionDraftWarning);
+  if (draftImages > 0) messages.push(copy.questionClearImages);
+  if (images > 0) messages.push(formatCopy(copy.questionReattach, { count: images }));
+  return messages.join('\n');
 }

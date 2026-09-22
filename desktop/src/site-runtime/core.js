@@ -133,18 +133,15 @@
           return (await confirmSubmitted(before, confirmUntil)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
       } catch (e) { return { ok: false, code: "error", reason: String((e && e.message) || e) }; }
     }
-    // 通用提交优先原生发送按钮，无可用按钮再发 Enter；所有路径都用 confirmSubmitted 防假成功。
-    // 发送键定位在 desktop/src/site-runtime/send.js（纵向锚点取裁剪祖先、横向择近、跳过不可用项，两个真机坑记在那里）；
-    // 该文件缺席时退化成纯 Enter 兜底。expired() 是尾段闸门：尾段最坏在绝对截止线后 6s 才走完，而那时
-    // 后台早已结算成 submit_unconfirmed——「告知未确认之后消息又真的发出去」最坏。只挡动作，不缩短确认
-    // 窗口（缩窗口不阻止迟到发送，只会把「贴线点了、确认到了」的成功例误转成失败）。
-    const sendBtn = () => (window.__AMS.sendBtn ? window.__AMS.sendBtn(el) : null);
-    const expired = () => !!deadline && Date.now() >= deadline; const _txtBefore = readText(el); let btn = sendBtn();
-    // 点击只给 3s 确认：带图时 confirmUntil 是 90s 绝对截止线，在这里等满会把下面的 Enter 回退整个吃掉
-    if (btn && !btn.disabled && !expired()) { btn.click(); if (await confirmSubmitted(_txtBefore, Date.now() + 3000)) return { ok: true }; }
-    if (!expired()) ["keydown", "keypress", "keyup"].forEach((t) => el.dispatchEvent(new KeyboardEvent(t, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true })));
-    await sleep(150); btn = sendBtn(); if (btn && !btn.disabled && !expired()) btn.click(); // Enter 没发出去且按钮可用 → 原生点
-    return (await confirmSubmitted(_txtBefore, confirmUntil)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
+    // 发送键定位在 send.js：纵向锚定输入区，横向择近，排除侧栏里的同名按钮。
+    // 每次动作前检查绝对截止时间，防止主进程已报超时后才迟到发送。
+    const btn = window.__AMS.sendBtn ? window.__AMS.sendBtn(el) : null;
+    if (deadline && Date.now() >= deadline) return { ok: false, code: "timeout" };
+    const before = readText(el);
+    // 一旦发出提交动作，只读等待确认；不能用 Enter/第二次点击“补发”不确定的提交。
+    if (btn && !btn.disabled && btn.getAttribute?.("aria-disabled") !== "true") btn.click();
+    else ["keydown", "keypress", "keyup"].forEach((type) => el.dispatchEvent(new KeyboardEvent(type, { key: "Enter", code: "Enter", keyCode: 13, which: 13, bubbles: true, cancelable: true })));
+    return (await confirmSubmitted(before, confirmUntil)) ? { ok: true } : { ok: false, code: "submit_unconfirmed" };
   }
 
   // 提交后输入框可能异步清空或重挂；每轮重取活节点，空或不再等于原文才算成功。
@@ -155,7 +152,7 @@
       const composer = findComposer();
       if (!composer) continue;
       const cur = readText(composer);
-      if (!cur || cur !== before) return true;
+      if (!cur || cur !== before) { window.__AMS.clearUploadReceipt?.(); return true; }
     }
     return false;
   }

@@ -144,8 +144,8 @@ async function geminiThinkMustMatchAnyProVersion() {
   }
 }
 
-// Claude 新版发送键拒绝一切合成点击（真机 2026-08）：点了没生效必须退回 Enter，否则整条群发发不出去
-async function sendMustFallBackToEnterWhenClickIgnored() {
+// 按钮点击不确定时不再自动补发；保留侧栏假发送键的定位回归。
+async function uncertainClickMustNotFallBackToEnter() {
   let composerText = "", clicks = 0;
   const composer = {
     tagName: "DIV", focus() {},
@@ -179,15 +179,15 @@ async function sendMustFallBackToEnterWhenClickIgnored() {
   vm.runInNewContext(source("core.js"), context);
   vm.runInNewContext(source("send.js"), context);
   const result = await context.window.__AMS.submitPrompt("hello", 0);
-  assert.equal(result.ok, true, "发送键点不动时必须退回 Enter 并确认提交成功");
-  assert.ok(clicks >= 1, "回退前仍应先尝试原生发送键");
+  assert.equal(result.code, "submit_unconfirmed", "点击未确认时交给用户重试，不能擅自再发 Enter");
+  assert.equal(clicks, 1, "只发出一次提交动作");
   assert.equal(sidebarClicks, 0, "绝不能点侧栏那个同样匹配、但远离输入框的假发送键");
 }
 
 let failed = 0;
 (async () => {
   const tests = [twentyPixelComposerMustBeFound, claudeModelInMoreMenuMustBeSelected,
-    sendMustFallBackToEnterWhenClickIgnored, geminiStateMustFollowModeLabel,
+    uncertainClickMustNotFallBackToEnter, geminiStateMustFollowModeLabel,
     geminiModelSelectMustCloseItsMenu, geminiThinkingToggleMustBeIdempotent, geminiThinkMustMatchAnyProVersion,
     geminiFastMustMatchAnyFlashButNotLite, geminiMenuMustBeClosedByRetriggerWhenEscFails];
   for (const test of tests) {
@@ -195,5 +195,5 @@ let failed = 0;
     catch (error) { failed++; console.error(error.stack || error); }
   }
   if (failed) process.exitCode = 1;
-  else console.log("✓ Claude 输入框/子菜单模型/发送回退、Gemini 版本无关深/快档与菜单收尾兼容");
+  else console.log("✓ Claude 输入框/子菜单模型/提交确认、Gemini 版本无关深/快档与菜单收尾兼容");
 })();

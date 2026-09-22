@@ -40,10 +40,16 @@
   function visibleNear(el, anchor) {
     if (!anchor || !el || typeof el.getBoundingClientRect !== "function") return false;
     try {
-      const r = el.getBoundingClientRect(), s = getComputedStyle(el);
-      return r.width > 0 && r.height > 0 && s.display !== "none" && s.visibility !== "hidden" &&
-        s.opacity !== "0" && r.right >= anchor.left && r.left <= anchor.right &&
-        r.bottom >= anchor.top && r.top <= anchor.bottom;
+      const r = el.getBoundingClientRect();
+      for (let node = el; node; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        if (style.display === "none" || style.visibility === "hidden" || style.opacity === "0") return false;
+      }
+      // 横向滚动附件条中的图片仍是附件；锚定附件条，不能只数屏幕里露出的缩略图。
+      const strip = el.closest && el.closest('[data-chat-input-top-content], [data-testid="input-attachment-list"]');
+      const box = strip ? strip.getBoundingClientRect() : r;
+      return r.width > 0 && r.height > 0 && box.right >= anchor.left && box.left <= anchor.right &&
+        box.bottom >= anchor.top && box.top <= anchor.bottom;
     } catch (e) { return false; }
   }
   function attr(el, name) {
@@ -64,35 +70,41 @@
     const label = [attr(el, "aria-label"), attr(el, "title"), attr(el, "alt"), (el.textContent || "").trim().slice(0, 120)].join("|");
     const visual = /^(IMG|CANVAS)$/.test(el.tagName || "") && r.width >= 40 && r.height >= 40;
     const container = /attach|upload|preview/i.test(cls) && (child || /\.(png|jpe?g)\b/i.test(label) || /^url\(/i.test(bg));
-    if (!visual && !container) return "";
+    if ((!visual && !container) || /^data:image\/svg/i.test(el.src || "")) return "";
     return [
       el.tagName || "", el.src || attr(el, "src"), attr(el, "aria-label"), attr(el, "title"), attr(el, "alt"),
       cls, (el.textContent || "").trim().slice(0, 120), bg,
     ].join("|");
   }
   function snapshot(anchor) {
-    const tokens = new Set([...document.querySelectorAll(CANDIDATES)]
-      .filter((el) => visibleNear(el, anchor)).map(token).filter(Boolean));
+    const candidates = [...document.querySelectorAll(CANDIDATES)]
+      .filter((el) => visibleNear(el, anchor) && token(el));
+    // 只计独立预览：父容器和子图片不能各算一张。同源图片保留重数，不能用 Set 去重。
+    const nodes = candidates.filter(el => !candidates.some(other => other !== el && el.contains && el.contains(other)));
+    const tokens = nodes.map(token);
     const busy = [...document.querySelectorAll('[role="progressbar"],[aria-busy="true"],[class*="loading"],[class*="spinner"]')]
-      .some((el) => visibleNear(el, anchor));
+      .some((el) => el !== document.body && el !== document.documentElement && visibleNear(el, anchor));
     const errors = new Set([...document.querySelectorAll('[role="alert"]')].filter((el) => {
       if (!visibleNear(el, anchor)) return false;
       return /upload|image|file|图片|文件|格式|大小|失败/i.test(el.textContent || "");
     }).map(errToken));
-    return { tokens, busy, errors };
+    return { tokens, nodes, busy, errors };
+  }
+  function addedTokens(current, before) {
+    const remaining = [...before.tokens];
+    return current.tokens.filter(value => {
+      const index = remaining.indexOf(value);
+      if (index < 0) return true;
+      remaining.splice(index, 1); return false;
+    });
   }
   async function waitAttachments(anchor, before, deadline, fileNames) {
     let candidate = "", since = 0;
-    const t0 = Date.now();
     while (Date.now() < deadline) {
       const current = snapshot(anchor);
       if ([...current.errors].some((value) => !before.errors.has(value))) return false;
-      const added = [...current.tokens].filter((value) => !before.tokens.has(value));
-      const named = fileNames.every((name) => added.some((value) => value.includes(name)));
-      // busy 最多压制 5s：DeepSeek 传完后仍常驻一个 .ds-loading（真机 2026-08-14），老条件
-      // (!current.busy || before.busy) 会一路等到超时返回 attachment_timeout，文字压根来不及注入。
-      const blocked = current.busy && !before.busy && Date.now() - t0 < 5000;
-      if ((named || added.length >= fileNames.length) && !blocked) {
+      const added = addedTokens(current, before);
+      if (added.length >= fileNames.length && !current.busy) {
         const signature = added.sort().join("\n");
         if (signature !== candidate) { candidate = signature; since = Date.now(); }
         else if (Date.now() - since >= 400) return true;
@@ -128,6 +140,8 @@
     } catch (e) { return false; }
     return waitAttachments(anchor, before, Number(deadline) || Date.now() + 15000, files.map((file) => file.name));
   }
+  let receipt = null;
+  const clearUploadReceipt = () => { receipt = null; };
   async function uploadImages(payloads, adapter, composer, deadline) {
     if (!Array.isArray(payloads) || !payloads.length || payloads.length > MAX_COUNT)
       return { ok: false, code: "image_invalid" };
@@ -138,13 +152,36 @@
       return { ok: false, code: "attachment_unsupported" };
     const end = Number(deadline) || Date.now() + 15000;
     if (Date.now() >= end) return { ok: false, code: "attachment_timeout" };
+    const anchor = anchorRect(composer), before = snapshot(anchor);
+    if (receipt && receipt.url === location.href) {
+      const remaining = addedTokens(before, receipt.before);
+      if (remaining.length) {
+        const same = payloads.length === receipt.payloads.length && payloads.every((p, i) =>
+          p.name === receipt.payloads[i].name && p.dataUrl === receipt.payloads[i].dataUrl);
+        const unchanged = receipt.nodes.length === payloads.length && receipt.nodes.every(node => before.nodes.includes(node));
+        if (receipt.ok && same && unchanged && !before.busy && before.errors.size === 0 &&
+            remaining.slice().sort().join("\n") === receipt.signature) return { ok: true };
+        return { ok: false, code: "attachment_conflict" };
+      }
+    }
+    // 部分站点把原生草稿留到刷新后；没有本次运行期凭据时，不能把旧附件混进新问题。
+    const draftRegions = '[data-chat-input-top-content], [data-testid="input-attachment-list"], .attachment-preview-wrapper';
+    const retained = before.nodes.some(node => node.closest?.(draftRegions) || node.closest?.('form')?.contains(composer));
+    // 入场动画可能让整个编辑器透明，但原生附件模型已存在；拦截不能依赖可见性。
+    const pending = document.querySelectorAll('[data-testid="input-attachment-list"] .image-thumbnail').length > 0;
+    if (retained || pending) return { ok: false, code: "attachment_conflict" };
+    receipt = { url: location.href, before, payloads: payloads.slice(), ok: false, nodes: [], signature: "" };
     try {
       const ok = await adapter.attach(files, composer, end);
+      const after = snapshot(anchor);
+      receipt.nodes = after.nodes.filter(node => !before.nodes.includes(node));
+      receipt.signature = addedTokens(after, before).sort().join("\n");
+      receipt.ok = ok === true;
       if (typeof ok === "string") return { ok: false, code: ok };
       if (ok) return { ok: true };
       return { ok: false, code: Date.now() >= end ? "attachment_timeout" : "attachment_failed" };
     } catch (e) { return { ok: false, code: "attachment_failed" }; }
   }
 
-  Object.assign(S, { uploadImages, setInputFiles, dropFiles });
+  Object.assign(S, { uploadImages, setInputFiles, dropFiles, clearUploadReceipt });
 })();

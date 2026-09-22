@@ -17,6 +17,7 @@ const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
   attachment_failed: "attachmentFailed",
   attachment_timeout: "attachmentTimedOut",
   attachment_action_required: "attachmentActionRequired",
+  attachment_conflict: "attachmentConflict",
   invalid_response: "invalidResponse",
   error: "siteError",
   adapter_unavailable: "adapterUnavailable"

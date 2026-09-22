@@ -32,7 +32,7 @@ function setup(entries: ReturnType<typeof envelope>[] = []) {
 test("question and answer sync round-trip with schema 4 and no text metadata", async () => {
   const source = setup();
   try {
-    source.database.questions.put(questionFixture());
+    source.database.questions.put({ ...questionFixture(), inputImageCount: 4 });
     source.database.questions.putAnswer(questionAnswerFixture());
     assert.equal((await source.engine.syncNow()).readOnly, false);
     assert.equal(source.uploads.length, 2);
@@ -40,7 +40,11 @@ test("question and answer sync round-trip with schema 4 and no text metadata", a
     const receiver = setup([...source.uploads].reverse());
     try {
       assert.equal((await receiver.engine.syncNow()).readOnly, false);
-      assert.equal(receiver.database.questions.search().items.length, 1);
+      const questions = receiver.database.questions.search().items;
+      assert.equal(questions.length, 1);
+      assert.equal(questions[0].inputImageCount, 4);
+      assert.equal('images' in questions[0], false, '原图不属于当前历史同步格式');
+      assert.equal('attachments' in questions[0], false);
       assert.equal(receiver.database.questions.answers("q-a")[0].answerMarkdown, "Saved answer");
     } finally {receiver.database.close();}
   } finally {source.database.close();}

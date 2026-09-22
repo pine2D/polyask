@@ -106,6 +106,16 @@ async function delayedImageSubmissionMustUseDeadline() {
   assert.equal(result.ok, true, "图片提交确认应使用剩余截止时间，避免已发送却误报失败");
 }
 
+async function uncertainButtonMustNotClickAgain() {
+  const h = loadCore(); let clicks = 0, enters = 0;
+  h.current().dispatchEvent = e => { if (e.key === "Enter") enters++; };
+  h.S.sendBtn = () => ({ disabled: false, click() { clicks++; } });
+  const result = await h.S.submitPrompt("one attempt", h.now() + 8000, []);
+  assert.equal(result.code, "submit_unconfirmed");
+  assert.equal(clicks, 1);
+  assert.equal(enters, 0, "不确定的按钮提交后不得再用 Enter 补发");
+}
+
 async function geminiMissingControlsRequireAction() {
   const S = {
     adapters: {}, waitFor: async (fn) => fn(), findByText: () => null, openMenu() {},
@@ -154,6 +164,7 @@ async function deepSeekMustWaitForSendButton() {
 }
 
 (async () => {
+  await uncertainButtonMustNotClickAgain();
   await composerRemountMustNotUploadTwice();
   console.log("✓ composer 重挂后每站只上传一次");
   await failedAttachmentMustNotInjectText();

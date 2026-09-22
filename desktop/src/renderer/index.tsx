@@ -690,7 +690,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <QuestionHistory onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} busy={runState !== "idle" || auxiliaryBusy} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      <QuestionHistory onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
       {pendingNewSession && (
         <ConfirmDialog
           copy={copy}
