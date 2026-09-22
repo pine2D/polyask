@@ -3,7 +3,7 @@ import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteStatus } from "../shared/protocol";
 import { siteReloadAllowed, summarizeSiteHealth, type SiteHealth, type SiteHealthState } from "../shared/site-health";
 import { describeStatus } from "../shared/status-copy";
-import { BackIcon, FocusIcon, ReloadIcon, TrashIcon } from "./icons";
+import { BackIcon, ChevronDownIcon, CopyIcon, FocusIcon, ReloadIcon, TrashIcon } from "./icons";
 
 interface SiteHealthPanelProps {
   readonly copy: DesktopCopy;
@@ -61,7 +61,7 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
     return (
       <section className="site-status-detail">
         <button type="button" className="detail-back" onClick={props.onBack}><BackIcon />{props.copy.backToSiteStatus}</button>
-        <h2>{detailSite.label}</h2>
+        <div className="health-detail-heading"><h2>{detailSite.label}</h2><span className="health-state" data-health-state={current.state}>{stateLabel(props.copy, current.state)}</span></div>
         <dl className="health-facts">
           <div><dt>{props.copy.healthPageStatus}</dt><dd>{pageLabel(props.copy, current, status)}</dd></div>
           <div><dt>{props.copy.healthAvailability}</dt><dd data-health-state={current.state}>{stateLabel(props.copy, current.state)}</dd></div>
@@ -77,12 +77,14 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
           </ul>
         ) : <p>{props.copy.healthNoChecks}</p>}
         <div className="health-actions">
-          <button type="button" disabled={props.checking} onClick={() => props.onCheck([detailSite.key])}>{props.checking ? props.copy.checkingSiteHealth : props.copy.checkAgain}</button>
+          <button type="button" disabled={props.checking} onClick={() => props.onCheck([detailSite.key])}><ReloadIcon />{props.checking ? props.copy.checkingSiteHealth : props.copy.checkAgain}</button>
           <button type="button" onClick={() => props.onFocus(detailSite.key)}><FocusIcon />{props.copy.healthFocusSite}</button>
+          <button type="button" onClick={props.onCopyReport}><CopyIcon />{props.copy.healthCopyReport}</button>
+        </div>
+        <div className="health-actions health-recovery">
           <button type="button" disabled={reloadBlocked} title={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.reloadSite, { site: detailSite.label })} onClick={() => props.onReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.reloadSite, { site: detailSite.label })}</button>
           <button type="button" disabled={reloadBlocked} title={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.hardReloadSite, { site: detailSite.label })} onClick={() => props.onHardReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.hardReloadSite, { site: detailSite.label })}</button>
           <button type="button" disabled={reloadBlocked} title={reloadBlocked ? props.copy.healthReloadBlocked : props.copy.clearSiteCacheHint} onClick={() => props.onClearData(detailSite.key)}><TrashIcon />{formatCopy(props.copy.clearSiteCache, { site: detailSite.label })}</button>
-          <button type="button" onClick={props.onCopyReport}>{props.copy.healthCopyReport}</button>
         </div>
         {reloadBlocked ? <p className="health-blocked">{props.copy.healthReloadBlocked}</p> : null}
         <p className="health-feedback" role="status" aria-live="polite">{props.feedback ?? ""}</p>
@@ -93,9 +95,16 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
   return (
     <section className="site-status-overview" aria-label={props.copy.siteStatusSummary}>
       <div className="health-summary">
-        <p>{formatCopy(props.copy.healthScopeSummary, { ...summary })}</p>
-        <button type="button" disabled={props.checking || !props.sites.length} onClick={() => props.onCheck(props.sites.map((site) => site.key))}>{props.checking ? props.copy.checkingSiteHealth : props.copy.checkAgain}</button>
-        <button type="button" disabled={!props.sites.length} onClick={props.onCopyReport}>{props.copy.healthCopyReport}</button>
+        <p className="sr-only">{formatCopy(props.copy.healthScopeSummary, { ...summary })}</p>
+        <dl className="health-totals" aria-hidden="true">
+          {([['ready', summary.ready], ['sign-in', summary.signIn], ['error', summary.error], ['unknown', summary.unknown]] as const).map(([state, count]) => (
+            <div key={state} data-summary-state={state}><dt>{stateLabel(props.copy, state)}</dt><dd>{count}</dd></div>
+          ))}
+        </dl>
+      </div>
+      <div className="health-toolbar">
+        <button type="button" disabled={props.checking || !props.sites.length} onClick={() => props.onCheck(props.sites.map((site) => site.key))}><ReloadIcon />{props.checking ? props.copy.checkingSiteHealth : props.copy.checkAgain}</button>
+        <button type="button" disabled={!props.sites.length} title={props.copy.healthCopyReport} aria-label={props.copy.healthCopyReport} onClick={props.onCopyReport}><CopyIcon />{props.copy.healthCopyReportCompact}</button>
       </div>
       {props.sites.length ? (
         <div className="site-status-list">
@@ -103,8 +112,8 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
             const current = props.health[site.key] ?? { site: site.key, state: "unknown" as const, checks: [] };
             return (
               <button type="button" key={site.key} data-health-state={current.state} onClick={() => props.onDetail(site.key)}>
-                <span><strong>{site.label}</strong><small>{props.copy.healthLatestSend}：{recentLabel(props.copy, current)}</small></span>
-                <em>{stateLabel(props.copy, current.state)}</em>
+                <span className="health-site-copy"><strong>{site.label}</strong><small title={recentLabel(props.copy, current)}>{props.copy.healthLatestSend}：{recentLabel(props.copy, current)}</small></span>
+                <em className="health-state">{stateLabel(props.copy, current.state)}</em><ChevronDownIcon />
               </button>
             );
           })}

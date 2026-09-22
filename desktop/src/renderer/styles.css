@@ -1,4 +1,5 @@
 @import "./backup.css";
+@import "./workspace.css";
 @import "./task-folder.css";
 @import "./decision.css";
 @import "./library.css";
@@ -290,63 +291,6 @@ kbd { opacity: .7; font: 10px system-ui; }
 .image-tray p { margin: 2px 0 0; overflow: hidden; color: var(--warning); font-size: 10px; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .image-tray p[role="alert"] { color: var(--danger); }
 
-.workspace-drawer {
-  position: fixed; z-index: 3; top: var(--shell-height); bottom: 0; left: 0; width: var(--drawer-width);
-  padding: var(--space-2); overflow: auto; border-right: 1px solid var(--border); background: var(--panel);
-  transition: transform 200ms var(--ease-drawer), opacity 200ms var(--ease-out);
-}
-.workspace-drawer[data-state="closed"] { opacity: 0; transform: translateX(-100%); pointer-events: none; }
-.workspace-drawer[data-input-method="keyboard"] { transition-duration: 0ms; }
-@starting-style { .workspace-drawer[data-state="open"] { opacity: 0; transform: translateX(-100%); } }
-.app-shell.is-composer-expanded .workspace-drawer { top: var(--composer-expanded-height); }
-.drawer-heading { height: 28px; display: flex; align-items: center; justify-content: space-between; }
-.drawer-heading strong { font-size: 12px; }
-.drawer-heading button, .group-row > button:last-child, .group-save button {
-  width: 28px; height: 28px; padding: 0; display: grid; place-items: center;
-  border: 0; border-radius: 5px; color: var(--muted); background: transparent;
-}
-.drawer-heading button:hover, .group-row > button:last-child:hover, .group-save button:hover {
-  color: var(--accent); background: var(--accent-soft);
-}
-.workspace-tabs { height: 32px; padding: 2px; display: grid; grid-template-columns: 1fr 1fr; gap: 2px; border: 1px solid var(--border); border-radius: 7px; background: #f0f1f5; }
-.workspace-tabs button { min-width: 0; padding: 0 5px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-size: 11px; }
-.workspace-tabs button[aria-selected="true"] { color: var(--accent); background: var(--panel); }
-.health-summary { margin: 8px 2px 5px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 5px; }
-.health-summary p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.4; }
-.health-summary button, .health-actions button {
-  min-height: 27px; padding: 0 7px; border: 1px solid var(--border); border-radius: 5px;
-  color: inherit; background: transparent;
-}
-.health-summary button:hover:not(:disabled), .health-actions button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
-.health-summary button:disabled, .health-actions button:disabled { opacity: .45; }
-.site-status-list { display: grid; gap: 2px; }
-.site-status-list button { min-height: 42px; padding: 4px 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px; text-align: left; border: 0; border-radius: 6px; color: inherit; background: transparent; }
-.site-status-list button:hover { background: var(--accent-soft); }
-.site-status-list span { min-width: 0; display: grid; gap: 2px; }
-.site-status-list strong, .site-status-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.site-status-list small { color: var(--muted); font-size: 9px; font-weight: 400; }
-.site-status-list em { color: var(--muted); font-size: 10px; font-style: normal; }
-.site-status-list button[data-health-state="ready"] em { color: var(--success); }
-.site-status-list button[data-health-state="sign-in"] em { color: var(--warning); }
-.site-status-list button[data-health-state="error"] em { color: var(--danger); }
-.site-status-detail { margin-top: 8px; }
-.site-status-detail h2 { margin: 10px 2px 4px; font-size: 14px; }
-.site-status-detail h3 { margin: 10px 2px 4px; color: var(--muted); font-size: 10px; }
-.site-status-detail p { margin: 4px 2px; color: var(--muted); font-size: 10px; }
-.health-facts { margin: 7px 2px; display: grid; gap: 4px; }
-.health-facts div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 5px; }
-.health-facts dt { color: var(--muted); }
-.health-facts dd { margin: 0; overflow-wrap: anywhere; }
-.health-facts dd[data-health-state="ready"] { color: var(--success); }
-.health-facts dd[data-health-state="sign-in"] { color: var(--warning); }
-.health-facts dd[data-health-state="error"] { color: var(--danger); }
-.health-checks { margin: 0; padding: 0; display: grid; gap: 2px; list-style: none; }
-.health-checks li { min-height: 28px; padding: 4px 6px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 5px; border-radius: 5px; background: #f7f7fa; }
-.health-checks span { overflow-wrap: anywhere; }
-.health-checks small { color: var(--success); }
-.health-checks li[data-ok="false"] small { color: var(--danger); }
-/* 档位读不出不是故障（各站 state() 是刻意的偏函数），用提示色而非危险色，见 shared/site-health.ts */
-.health-checks li[data-ok="advisory"] small { color: var(--warning); }
 /* 应用内确认层，取代系统原生弹框（外观与本应用其余部分统一）。压在站点视图之上，
    所以 scrim 必须挡住指针事件，否则误点会打到底下的站点页面。 */
 .confirm-scrim {
@@ -370,45 +314,6 @@ kbd { opacity: .7; font: 10px system-ui; }
 .confirm-dialog .confirm-actions button:hover { color: var(--accent); border-color: var(--accent); background: transparent; }
 .confirm-dialog .confirm-actions button.primary { border-color: var(--accent); color: #fff; background: var(--accent); }
 .confirm-dialog .confirm-actions button.primary:hover { color: #fff; background: var(--accent); filter: brightness(.92); }
-.health-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px; }
-.health-actions button { display: inline-flex; align-items: center; gap: 3px; }
-.health-blocked { color: var(--warning) !important; }
-.health-feedback { margin: 8px 5px 0 !important; min-height: 1.4em; color: var(--muted); font-size: 11px; }
-.health-feedback:empty { margin: 0 !important; min-height: 0; }
-.health-empty { margin: 18px 5px !important; text-align: center; }
-.detail-back { min-height: 28px; padding: 0 6px; display: inline-flex; align-items: center; gap: 3px; border: 0; border-radius: 5px; color: var(--muted); background: transparent; }
-.detail-back:hover { color: var(--accent); background: var(--accent-soft); }
-.scope-presets { display: flex; flex-wrap: wrap; gap: 4px; margin: 4px 0 8px; }
-.scope-preset {
-  min-height: 26px; padding: 0 7px; border: 1px solid var(--border); border-radius: 999px;
-  color: inherit; background: #f7f7fa;
-}
-.scope-preset:hover { border-color: var(--accent); color: var(--accent); }
-.drawer-section { margin-top: 8px; }
-.drawer-section h2 { margin: 0 0 5px; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
-.site-checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
-.site-checklist label {
-  min-width: 0; height: 26px; padding: 0 4px; display: flex; align-items: center; gap: 5px;
-  border-radius: 5px; overflow: hidden;
-}
-.site-checklist label:hover { background: var(--accent-soft); }
-.site-checklist input { width: 14px; height: 14px; margin: 0; flex: 0 0 auto; accent-color: var(--accent); }
-.site-checklist span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.group-section > p { margin: 4px 0; color: var(--muted); font-size: 11px; }
-.group-list { display: grid; gap: 2px; }
-.group-row { height: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 28px; align-items: center; }
-.group-apply { height: 28px; padding: 0 5px; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; border: 0; border-radius: 5px; color: inherit; background: transparent; }
-.group-apply:hover { background: var(--accent-soft); }
-.group-confirm { min-height: 30px; display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 3px; }
-.group-confirm span { overflow: hidden; color: var(--danger); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.group-confirm button { height: 26px; padding: 0 6px; border: 1px solid var(--border); border-radius: 5px; color: inherit; background: transparent; }
-.group-confirm button.danger { border-color: var(--danger); color: var(--danger); }
-.group-save { margin-top: 5px; display: grid; grid-template-columns: minmax(0, 1fr) 28px; gap: 3px; }
-.group-save input { min-width: 0; padding: 0 7px; border: 1px solid var(--border); border-radius: 5px; color: inherit; background: #fafafd; }
-.group-save input:focus-visible { border-color: var(--accent); }
-.group-save button { border: 1px solid var(--border); }
-.group-save button:disabled { opacity: .4; }
-.group-save-hint { grid-column: 1 / -1; min-height: 12px; overflow: hidden; color: var(--muted); font-size: 10px; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
 
 .archive-workspace { position: fixed; z-index: 10; inset: 0; display: grid; grid-template-rows: 44px minmax(0, 1fr) 22px; background: #f4f5f8; }
 .archive-toolbar { padding: 4px 6px; display: grid; grid-template-columns: auto minmax(220px, 1fr) auto; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); background: var(--panel); }
@@ -595,11 +500,10 @@ kbd { opacity: .7; font: 10px system-ui; }
     --border: #38383f; --panel: #222226; --muted: #a1a1aa;
   }
   .app-shell, .command-surface { background: #17171a; }
-  .mode-switch, .tier-switch, .page-tabs, .workspace-actions, .question-trigger, .image-trigger, .scope-split, .health-trigger, .workspace-tabs { background: #19191d; }
+  .mode-switch, .tier-switch, .page-tabs, .workspace-actions, .question-trigger, .image-trigger, .scope-split, .health-trigger { background: #19191d; }
   .mode-switch button.active, .tier-switch button.active { color: #f4f4f5; }
   .command-bar textarea { background: #19191d; }
   .command-search input { background: #19191d; }
-  .scope-preset, .group-save input, .health-checks li { background: #19191d; }
   .archive-workspace, .archive-answer-nav { background: #17171a; }
   .archive-filters input, .archive-filters select, .archive-fields input, .archive-fields textarea, .archive-compare-selectors select { background: #19191d; }
   .synthesis-config select, .synthesis-config textarea, .synthesis-preview textarea { background: #19191d; }

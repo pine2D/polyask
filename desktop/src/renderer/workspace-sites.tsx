@@ -52,24 +52,28 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
 
   return (
     <div className="workspace-sites">
-      <div className="scope-presets" aria-label={props.copy.scope}>
-        {presets.map(([label, presetSites]) => (
-          <button type="button" className="scope-preset" key={label} onClick={() => props.onSelectionChange(presetSites)}>{label}</button>
-        ))}
-      </div>
+      <section className="drawer-section scope-section" aria-label={props.copy.scope}>
+        <div className="drawer-section-heading"><h2>{props.copy.scope}</h2></div>
+        <div className="scope-presets" aria-label={props.copy.scope}>
+          {presets.map(([label, presetSites]) => (
+            <button type="button" className="scope-preset" aria-pressed={groupSignature(presetSites) === selectedSignature} key={label} onClick={() => props.onSelectionChange(presetSites)}>{label}</button>
+          ))}
+        </div>
+      </section>
       <section className="drawer-section">
-        <h2>{props.copy.selectedSites}</h2>
+        <div className="drawer-section-heading"><h2>{props.copy.selectSites}</h2><span>{formatCopy(props.copy.selectedSummary, { selected: selectedSites.length, total: props.sites.length })}</span></div>
         <div className="site-checklist">
           {props.sites.map((site) => (
-            <label key={site.key}>
-              <input type="checkbox" name="scope-sites" value={site.key} checked={props.selected.has(site.key)} onChange={() => toggleSite(site.key)} />
+            <label key={site.key} data-selected={props.selected.has(site.key)}>
+              <input className="sr-only" type="checkbox" name="scope-sites" value={site.key} checked={props.selected.has(site.key)} onChange={() => toggleSite(site.key)} />
               <span>{site.label}</span>
+              <svg className="site-selection-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 8 2.5 2.5L12 5" /></svg>
             </label>
           ))}
         </div>
       </section>
       <section className="drawer-section group-section">
-        <h2>{props.copy.savedGroups}</h2>
+        <div className="drawer-section-heading"><h2>{props.copy.savedGroups}</h2><span>{props.groups.length}</span></div>
         {props.groups.length === 0 ? <p>{props.copy.noSavedGroups}</p> : (
           <div className="group-list">
             {props.groups.map((group) => pendingDeleteId === group.id ? (
@@ -80,7 +84,10 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
               </div>
             ) : (
               <div className="group-row" data-group-id={group.id} key={group.id}>
-                <button type="button" className="group-apply" onClick={() => props.onSelectionChange(group.sites)}>{group.name}</button>
+                <button type="button" className="group-apply" title={group.name} aria-pressed={groupSignature(group.sites) === selectedSignature} onClick={() => props.onSelectionChange(group.sites)}>
+                  <strong>{group.name}</strong>
+                  <small>{props.sites.filter((site) => group.sites.includes(site.key)).map((site) => site.label).join(" · ")}</small>
+                </button>
                 <button type="button" title={formatCopy(props.copy.deleteGroup, { group: group.name })} aria-label={formatCopy(props.copy.deleteGroup, { group: group.name })} onClick={() => setPendingDeleteId(group.id)}><TrashIcon /></button>
               </div>
             ))}

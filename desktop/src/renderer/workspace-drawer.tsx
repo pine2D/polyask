@@ -72,13 +72,15 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps): React.JSX.Element 
       data-state={props.open ? "open" : "closed"}
       data-input-method={props.state.inputMethod}
     >
-      <div className="drawer-heading">
-        <strong>{props.copy.workbench}</strong>
-        <button type="button" title={props.copy.closeWorkbench} aria-label={props.copy.closeWorkbench} onClick={() => props.onStateChange(null)}><CloseIcon /></button>
-      </div>
-      <div className="workspace-tabs" role="tablist" aria-label={props.copy.workbench}>
-        <button id="workspace-sites-tab" type="button" role="tab" aria-selected={props.state.tab === "sites"} aria-controls="workspace-sites-panel" tabIndex={props.state.tab === "sites" ? 0 : -1} ref={(element) => { tabRefs.current[0] = element; }} onClick={() => selectTab("sites")} onKeyDown={(event) => onTabKeyDown(event, 0)}><ScopeIcon />{props.copy.sitesAndGroups}</button>
-        <button id="workspace-health-tab" type="button" role="tab" aria-selected={props.state.tab === "health"} aria-controls="workspace-health-panel" tabIndex={props.state.tab === "health" ? 0 : -1} ref={(element) => { tabRefs.current[1] = element; }} onClick={() => selectTab("health")} onKeyDown={(event) => onTabKeyDown(event, 1)}><HealthIcon />{props.copy.siteHealth}</button>
+      <div className="workspace-drawer-header">
+        <div className="drawer-heading">
+          <strong>{props.copy.workbench}</strong>
+          <button type="button" title={props.copy.closeWorkbench} aria-label={props.copy.closeWorkbench} onClick={() => props.onStateChange(null)}><CloseIcon /></button>
+        </div>
+        <div className="workspace-tabs" role="tablist" aria-label={props.copy.workbench}>
+          <button id="workspace-sites-tab" type="button" role="tab" aria-selected={props.state.tab === "sites"} aria-controls="workspace-sites-panel" tabIndex={props.state.tab === "sites" ? 0 : -1} ref={(element) => { tabRefs.current[0] = element; }} onClick={() => selectTab("sites")} onKeyDown={(event) => onTabKeyDown(event, 0)}><ScopeIcon />{props.copy.sitesAndGroups}</button>
+          <button id="workspace-health-tab" type="button" role="tab" aria-selected={props.state.tab === "health"} aria-controls="workspace-health-panel" tabIndex={props.state.tab === "health" ? 0 : -1} ref={(element) => { tabRefs.current[1] = element; }} onClick={() => selectTab("health")} onKeyDown={(event) => onTabKeyDown(event, 1)}><HealthIcon />{props.copy.siteHealth}</button>
+        </div>
       </div>
       {props.state.tab === "sites" ? (
         <div id="workspace-sites-panel" role="tabpanel" aria-labelledby="workspace-sites-tab"><WorkspaceSites {...props} /></div>
