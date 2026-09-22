@@ -33,8 +33,8 @@ test("page tabs name the sites in their tooltip and accessible label", async () 
   const { PageTabs } = await import("../src/renderer/page-tabs");
   const { SITES } = await import("../src/main/sites");
   const html = renderToStaticMarkup(<PageTabs copy={getCopy("en")} sites={SITES} selectedSites={SITES.map((site) => site.key)} statuses={{}} page={0} inputMethod="pointer" onPageChange={() => {}} />);
-  assert.match(html, /data-hint="Claude · ChatGPT · Gemini \(Alt\+1\)"/);
-  assert.match(html, /aria-label="[^"]*Claude · ChatGPT · Gemini"/);
+  assert.match(html, /data-hint="[^"]*Claude:[^"]*ChatGPT:[^"]*Gemini:/);
+  assert.match(html, /aria-label="[^"]*Claude:[^"]*ChatGPT:[^"]*Gemini:/);
 });
 
 test("comparison and More share one toolbar grid cell", async () => {

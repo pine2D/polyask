@@ -637,8 +637,8 @@ test("page tabs expose compact ranges, manual activation, and off-page status", 
       copy={getCopy("en")}
       selectedSites={SITES.slice(0, 8).map((site) => site.key)}
       statuses={{
-        gemini: { site: "gemini", phase: "sending" },
-        yuanbao: { site: "yuanbao", phase: "failed", code: "submit_unconfirmed" }
+        gemini: { site: "gemini", phase: "sending", submission: { runId: "r", state: "sending" } },
+        yuanbao: { site: "yuanbao", phase: "failed", code: "submit_unconfirmed", submission: { runId: "r", state: "unconfirmed" } }
       }}
       page={0}
       inputMethod="pointer"
@@ -648,8 +648,8 @@ test("page tabs expose compact ranges, manual activation, and off-page status", 
 
   assert.match(html, /^<div class="page-tabs" role="tablist" aria-label="Site pages"[^>]*>/);
   assert.equal([...html.matchAll(/role="tab"/g)].length, 2);
-  assert.match(html, /aria-label="Page 1, sites 1–4, 1 sending: claude · chatgpt · gemini · deepseek"/);
-  assert.match(html, /aria-label="Page 2, sites 5–8, 1 failed: doubao · qianwen · kimi · yuanbao"/);
+  assert.match(html, /aria-label="Page 1, sites 1–4, 1 sending/);
+  assert.match(html, /aria-label="Page 2, sites 5–8, 1 unconfirmed/);
   assert.match(html, /aria-selected="true"[^>]*tabindex="0"/);
   assert.match(html, /aria-selected="false"[^>]*tabindex="-1"/);
   assert.match(html, /data-input-method="pointer"/);
@@ -663,20 +663,20 @@ test("page tabs distinguish generating, completed, and failed background work wi
       copy={getCopy("zh-CN")}
       selectedSites={SITES.slice(0, 8).map((site) => site.key)}
       statuses={{
-        claude: { site: "claude", phase: "generating" },
-        gemini: { site: "gemini", phase: "complete", unread: true },
-        yuanbao: { site: "yuanbao", phase: "failed", code: "submit_unconfirmed", unread: true }
+        claude: { site: "claude", phase: "generating", submission: { runId: "r", state: "sent" } },
+        gemini: { site: "gemini", phase: "complete", unread: true, submission: { runId: "r", state: "sent" } },
+        yuanbao: { site: "yuanbao", phase: "failed", code: "attachment_failed", unread: true, submission: { runId: "r", state: "failed" } }
       }}
       page={0}
       inputMethod="keyboard"
       onPageChange={noop}
     />
   );
-  assert.match(html, /aria-label="第 1 页，站点 1–4, 1 个正在回答, 1 个已完成: claude · chatgpt · gemini · deepseek"/);
-  assert.match(html, /aria-label="第 2 页，站点 5–8, 1 个失败: doubao · qianwen · kimi · yuanbao"/);
-  assert.match(html, /class="page-tab-badge generating"/);
-  assert.match(html, /class="page-tab-badge complete unread"/);
-  assert.match(html, /class="page-tab-badge failed unread"/);
+  assert.match(html, /aria-label="第 1 页，站点 1–4, 2 个已发送/);
+  assert.match(html, /aria-label="第 2 页，站点 5–8, 1 个失败/);
+  assert.doesNotMatch(html, /class="page-tab-badge generating"/);
+  assert.match(html, /class="page-tab-badge sent"/);
+  assert.match(html, /class="page-tab-badge failed"/);
   assert.match(html, /data-input-method="keyboard"/);
   assert.match(html, /aria-selected="true"[^>]*tabindex="0"/);
 });

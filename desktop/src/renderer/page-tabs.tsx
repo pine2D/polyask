@@ -5,6 +5,7 @@ import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteStatus } from "../shared/protocol";
 import { paginateSiteKeys } from "../shared/site-pages";
 import { pageTabKeyAction } from "./keyboard";
+import { pageSubmissionSummary, pageSiteDetail } from "./page-submission";
 import { commandHint } from "./command-hint";
 
 interface PageTabsProps {
@@ -35,31 +36,19 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
         const start = nextStart;
         nextStart += sites.length;
         const range = `${start}–${start + sites.length - 1}`;
-        const pageStatuses = sites.map((site) => props.statuses[site]).filter(Boolean);
-        const sending = pageStatuses.filter((status) => status.phase === "sending").length;
-        const generating = pageStatuses.filter((status) => status.phase === "generating").length;
-        const complete = pageStatuses.filter((status) => status.phase === "complete").length;
-        const failed = pageStatuses.filter((status) => status.phase === "failed" || status.phase === "crashed").length;
-        const unreadComplete = pageStatuses.some((status) => status.phase === "complete" && status.unread);
-        const unreadFailed = pageStatuses.some((status) =>
-          (status.phase === "failed" || status.phase === "crashed") && status.unread
-        );
-        const label = [
-          formatCopy(props.copy.sitePageLabel, { page: index + 1, range }),
-          sending ? formatCopy(props.copy.sitePageSending, { count: sending }) : "",
-          generating ? formatCopy(props.copy.sitePageGenerating, { count: generating }) : "",
-          complete ? formatCopy(props.copy.sitePageComplete, { count: complete }) : "",
-          failed ? formatCopy(props.copy.sitePageFailed, { count: failed }) : ""
-        ].filter(Boolean).join(", ");
-        const siteLabels = sites.map((key) => props.sites?.find((site) => site.key === key)?.label ?? key).join(" · ");
+        const badges = pageSubmissionSummary(sites, props.statuses, props.copy);
+        const label = [formatCopy(props.copy.sitePageLabel, { page: index + 1, range }), ...badges.map(b => b.label)].join(", ");
+        const details = sites.map(key => pageSiteDetail(
+          props.sites?.find(site => site.key === key)?.label ?? key, props.statuses[key], props.copy
+        )).join("; ");
         const selected = index === props.page;
         return (
           <button
             type="button"
             id={`site-page-tab-${index}`}
             role="tab"
-            data-hint={commandHint(siteLabels, index === 0 ? "show-page-1" : index === 1 ? "show-page-2" : "show-page-3", props.isMac)}
-            aria-label={`${label}: ${siteLabels}`}
+            data-hint={commandHint(`${label}. ${details}`, index === 0 ? "show-page-1" : index === 1 ? "show-page-2" : "show-page-3", props.isMac)}
+            aria-label={`${label}. ${details}`}
             aria-selected={selected}
             aria-controls={`site-page-panel-${index}`}
             tabIndex={selected ? 0 : -1}
@@ -76,10 +65,9 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
             }}
           >
             <span>{range}</span>
-            {sending ? <i className="page-tab-badge sending" aria-hidden="true">{sending}</i> : null}
-            {generating ? <i className="page-tab-badge generating" aria-hidden="true">{generating}</i> : null}
-            {complete ? <i className={`page-tab-badge complete${unreadComplete ? " unread" : ""}`} aria-hidden="true">{complete}</i> : null}
-            {failed ? <i className={`page-tab-badge failed${unreadFailed ? " unread" : ""}`} aria-hidden="true">{failed}</i> : null}
+            {badges.map(badge => <i key={badge.state} className={`page-tab-badge ${badge.state}`} aria-hidden="true">
+              <span>{badge.symbol}</span>{badge.count}
+            </i>)}
           </button>
         );
       })}

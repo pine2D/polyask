@@ -178,7 +178,14 @@ export const SITE_CODES = [
 ] as const;
 export type SiteCode = (typeof SITE_CODES)[number];
 
+export interface SubmissionStatus {
+  readonly runId: string;
+  readonly state: "sending" | "sent" | "failed" | "unconfirmed" | "cancelled";
+  readonly code?: string;
+}
+
 export interface SiteStatus {
+  readonly submission?: SubmissionStatus;
   readonly site: SiteKey;
   readonly phase: SitePhase;
   readonly code?: string;

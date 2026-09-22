@@ -44,7 +44,7 @@ import { registerSiteHealthIpc } from "./site-health-ipc";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { showCommandMenu, showGroupMenu } from "./native-menus";
 import { SITES } from "./sites";
-import { statusForResult } from "./status";
+import { statusForResult, statusForSending } from "./status";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
 
@@ -198,7 +198,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       try { history.record(request.text); } catch { /* History storage must not block sending. */ }
       options.questions.begin(request);
       try { publishPromptLibrary(); } catch { /* A history read failure must not cancel dispatch. */ }
-      for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
+      for (const site of request.sites) manager.markStatus(statusForSending(site, request.runId));
       const results = await coordinator.send(
         request,
         (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: options.questions.token(site) }, signal),
@@ -206,7 +206,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
         (result) => {
           options.questions.result(request.runId, result);
           capture.start();
-          manager.markStatus(statusForResult(result.site, result));
+          manager.markStatus(statusForResult(result.site, result, request.runId));
           if (result.ok) manager.watchGeneration(request.runId, result.site);
         },
         { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }

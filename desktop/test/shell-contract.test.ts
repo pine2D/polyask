@@ -309,7 +309,7 @@ test("a retried run keeps watching the sites that are still generating", () => {
     manager.indexOf("beginGenerationRun(runId: string"),
     manager.indexOf("watchGeneration(runId: string")
   );
-  assert.match(begin, /const resumed = this\.generation\.begin\(runId, sites\)/);
+  assert.match(begin, /const resumed = beginSubmissionRun\(this\.generation\.begin\(runId, sites\)/);
   assert.match(begin, /if \(resumed\) for \(const site of sites\) this\.clearGenerationTracking\(site\)/);
   assert.doesNotMatch(begin, /cancelGenerationRun\(\)/);
 });

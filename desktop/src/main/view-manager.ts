@@ -54,7 +54,7 @@ import { navigationDisposition } from "./navigation";
 import { SiteCommandChannel } from "./site-command-channel";
 import { createSiteView, diagnosticSitesForViews } from "./site-view";
 import { SITES } from "./sites";
-import { effectiveStatus, markStatusRead, statusWithUnread } from "./status";
+import { beginSubmissionRun, preserveSubmission, effectiveStatus, markStatusRead, statusWithUnread } from "./status";
 import type { StabilityEventInput } from "./stability-monitor";
 import { applyWorkspaceLayout, computeWorkspaceLayout } from "./workspace-layout";
 import { reconcileVisibleSiteKeys, stackOrder } from "./view-visibility";
@@ -356,7 +356,7 @@ export class ViewManager {
   async navigate(site: SiteKey, url: string): Promise<void> { await this.historyAccess.navigate(site, url, true); }
 
   markStatus(status: SiteStatus): void {
-    this.runStatus.set(status.site, statusWithUnread(status, this.isSiteVisible(status.site)));
+    this.runStatus.set(status.site, statusWithUnread(preserveSubmission(this.runStatus.get(status.site), status), this.isSiteVisible(status.site)));
     this.onStatus(this.currentStatus(status.site));
   }
 
@@ -364,7 +364,7 @@ export class ViewManager {
   // sites still streaming keep their timer, deadline and observed flag. A new run
   // id (or a retry after cancel) resets every site.
   beginGenerationRun(runId: string, sites: readonly SiteKey[]): void {
-    const resumed = this.generation.begin(runId, sites);
+    const resumed = beginSubmissionRun(this.generation.begin(runId, sites), this.runStatus, site => this.onStatus(this.currentStatus(site)));
     if (resumed) for (const site of sites) this.clearGenerationTracking(site);
     else this.clearGenerationTracking();
   }
