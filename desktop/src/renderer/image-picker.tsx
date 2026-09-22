@@ -93,9 +93,9 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
       <button
         ref={triggerRef}
         type="button"
-        className={count ? "image-trigger active" : "image-trigger"}
-        data-hint={count ? manageLabel : props.copy.addImages}
-        aria-label={count ? manageLabel : props.copy.addImages}
+        className={`image-trigger${count ? " active" : ""}${props.warning || props.error ? " has-attention" : ""}`}
+        data-hint={props.error ?? props.warning ?? (count ? manageLabel : props.copy.addImages)}
+        aria-label={props.warning || props.error ? `${count ? manageLabel : props.copy.addImages}: ${props.error ?? props.warning}` : count ? manageLabel : props.copy.addImages}
         aria-pressed={count > 0}
         aria-expanded={count ? props.open : undefined}
         aria-controls={count ? "image-tray" : undefined}
@@ -104,23 +104,11 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
         onClick={() => count ? props.onOpenChange(!props.open) : choose()}
       >
         <ImagePlusIcon />{count ? <span className="image-count">{count}</span> : null}
+        {props.warning || props.error ? <span className="image-attention-dot" aria-hidden="true" /> : null}
       </button>
-      {props.warning ? (
-        <div className="image-warning" role="alert">
-          <button type="button" data-hint={props.warning} aria-label={formatCopy(props.copy.adjustImageScope, { count: props.warningCount })} onClick={props.onAdjustScope}>
-            <WarningIcon /><span>{props.warningCount}</span>
-          </button>
-        </div>
-      ) : null}
-      {props.error ? (
-        <div className="image-error" role="alert">
-          <button type="button" data-hint={props.error} aria-label={props.error} onClick={() => count ? props.onOpenChange(true) : choose()}>
-            <WarningIcon />
-          </button>
-        </div>
-      ) : null}
+      {props.warning || props.error ? <span className="sr-only" role="alert">{props.error ?? props.warning}</span> : null}
       {trayOpen ? (
-        <div ref={trayRef} id="image-tray" className="image-tray" role="group" aria-label={manageLabel}>
+        <div ref={trayRef} id="image-tray" className="image-tray" role="region" aria-label={manageLabel}>
           <div className="image-tray-heading">
             <span>{manageLabel}</span>
             <button type="button" className="image-replace" disabled={props.disabled} onClick={choose}><ReplaceImagesIcon /><span>{props.copy.replaceImages}</span></button>
@@ -134,8 +122,8 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
               </div>
             ))}
           </div>
-          <button type="button" className="image-tray-close" data-hint={props.copy.closeImages} aria-label={props.copy.closeImages} onClick={() => { props.onOpenChange(false); triggerRef.current?.focus(); }}><CloseIcon /></button>
-          {props.error || props.warning ? <p role={props.error ? "alert" : undefined}>{props.error ?? props.warning}</p> : null}
+          <button type="button" className="panel-close image-tray-close" data-hint={props.copy.closeImages} aria-label={props.copy.closeImages} onClick={() => { props.onOpenChange(false); triggerRef.current?.focus(); }}><CloseIcon /></button>
+          {props.error || props.warning ? <div className="image-scope-notice"><WarningIcon /><p>{props.error ?? props.warning}</p>{props.warning ? <button type="button" onClick={props.onAdjustScope}>{formatCopy(props.copy.adjustImageScope, { count: props.warningCount })}</button> : null}</div> : null}
         </div>
       ) : null}
     </div>

@@ -147,7 +147,7 @@ export function QuestionHistory({ open, copy, sites, draft, busy, onOpen, onClos
   return <aside ref={panel} className={`question-history${full ? ' is-full' : ''}`} style={{ width: full ? undefined : QUESTION_PANEL_WIDTH }} aria-label={copy.questionHistory}>
     <header className="question-header"><h1>{detail ? copy.questionCopies : copy.questionHistory}</h1>
       {detail && <button type="button" onClick={() => setDetail(null)}>{copy.questionBack}</button>}
-      <button type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} onClick={onClose}><CloseIcon /></button>
+      <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} onClick={onClose}><CloseIcon /></button>
     </header>
     {restoring && <div role="status" className="question-notice">{copy.questionBusy} <button type="button" onClick={() => { void shell.cancelQuestionRestore(); }}>{copy.cancel}</button></div>}
     {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(); }}>{copy.questionRetry}</button></div>}

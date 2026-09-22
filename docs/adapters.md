@@ -36,7 +36,7 @@
 | `stop()` | | `async` | 仅 ChatGPT。**全仓无调用方，当前是死代码**——要么外壳补 UI（如「停止全部」），要么删 |
 | `sendSel` | | 字符串 | 发送键选择子，**仅 DeepSeek/Kimi/元宝 3 站声明**（都需要站点级点击且锚点常驻），供 `desktop/src/site-runtime/diag.js` 巡检做只读存在性检查。**与本站 `submit` 的选择子同步维护**——`desktop/scripts/diag-runtime.test.js` 按字面量对账，脱钩会红。豆包**有意不声明**：其发送键空输入框时不在 DOM（非常驻，真机 2026-08-18），列进巡检会恒红 |
 
-**能力由钩子决定，不由清单决定**：`answer()` 决定该站能否进「汇总复制」（九站全实现）；`attach()` 决定能否收图（6 站实现：Claude / ChatGPT / DeepSeek / 豆包 / Kimi / 元宝走 `S.setInputFiles`，元宝保留旧版拖放回退；Gemini / 千问 / 智谱**有意不实现**，真机实测三站都拒绝合成 drop/paste/change，报 `attachment_unsupported` 是正确行为）。这 6 站必须与 `desktop/src/main/sites.ts` 里 `image: true` 的 6 站完全一致。
+**能力由钩子决定，不由清单决定**：`answer()` 决定该站能否进「汇总复制」（九站全实现）；`attach()` 决定能否收图（九站均实现，与 `main/sites.ts` 的 `image: true` 对账）。各站使用聊天附件专用 input 和 `S.setInputFiles` 的只读完成判据；元宝保留旧版拖放回退。2026-09-22 复核 Gemini / 千问 / 智谱：之前“拒绝合成事件”的结论已过时，根因分别是菜单延迟创建图片输入、Radix 要求 PointerEvent、误用失效的旧图片输入。
 
 **巡检通用检查（`desktop/src/site-runtime/diag.js`）**：在全部适配器分卷之后注入，按已填充的注册表统一包装每站 `diagnose()`，前置两条只读检查——「输入框」（`findComposer()`，九站全部）与「发送键」（仅声明了 `sendSel` 的站）。新站/新分卷自动获得，无需自己写这两条；**有意不做全站发送键检查**：ChatGPT 等站空输入框时发送键被语音键替换，通用检查会在巡检（输入框常为空）时恒红误报。新开适配器分卷（如 `adapters-cn3.js`）在 `desktop/src/preload/site.ts` 里 require 时**必须排在 `desktop/src/site-runtime/diag.js` 之前**，否则该卷站点拿不到通用检查（注册晚于包装，静默缺席不报错）。
 
@@ -183,7 +183,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **`_MI` 必须过 `_items()` 只取可见项**（2026-08-14 真机）：页面常驻一个隐藏的导出菜单（`gv-pm-saved-export-menu gv-hidden`，含 JSON / Markdown 两个 `[role=menuitem]`）。老写法 `if (!document.querySelector(this._MI)) openMenu(btn)` 因此恒判「菜单已展开」，**模型按钮从来没被点开过**，随后在 `[JSON, Markdown]` 里找 Flash 自然抛「未找到模型」。开菜单改用 `aria-expanded !== "true" || !this._items().length` 判定，找项一律走 `this._find(re)`。
 - **`state()` 按模式名判粗档位，不是复合条件**：aria-label 现为 `Open mode picker, currently <Mode>`（切到深度思考后是 `currently Pro Extended`）。判定顺序是 `flash` → fast，否则 `\bpro\b|extended|扩展` → think，其余 null——aria-label 不报 Extended thinking 开关状态，所以不能拿它证明思考已开；`think()` 仍会幂等地把 Extended thinking 一并打开。
 - `_setThinking` 双布局：当前布局是模型菜单里的直达开关（按 `.selected` 类或 `aria-checked` 幂等点击）；旧布局走 `/thinking level|思考(等级|程度)?/i` 嵌套子菜单，最多重开子菜单（`openMenu(trig)` 指针序列，**不是 hover**——重发 hover 那招是 Kimi 的，两站机理不同别互抄）并重取目标项 6 轮，命中后先 `focus()` + Enter keydown 再 `clickEl`。**子菜单在但目标等级缺失必须抛「Gemini: 思考等级选项未找到」**；整段子菜单缺席才算合法静默跳过。
-- **有意不实现 `attach`**（Gemini 忽略合成 drop，附件菜单要求可信点击且不保留 file input）。`answer()` 取末个 `message-content` → `.markdown`，回退整块。
+- `attach` 先展开 Upload & tools，再取无 capture 的 `image/*` 输入并等待附件确认，finally 关菜单。`answer()` 取末个 `message-content` → `.markdown`，回退整块。
 - 中文界面报「切不动」时，先真机核对「扩展」这个标签再改正则——英文 Extended 已真机确认，中文是直译候选。真机探测坑（同 URL 双 page target；**批量重载站点视图可能触发 Google「unusual traffic」验证码插页**）见 `docs/verify.md`「探测坑」。
 
 ### DeepSeek（`chat.deepseek.com` / 适配器键 `deepseek.com`，`desktop/src/site-runtime/adapters-cn.js`）
@@ -210,7 +210,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - 模型触发器 `_trigger()`：先找 `[aria-haspopup="dialog"]` 且文本含 `Qwen3` 的节点；找不到回退按可见文本找最内层（文本以 Qwen3 开头、长度 ≤25、子节点 ≤3 的 div/button/span 取最后一个）——**`aria-haspopup` 由前端延迟水合**，新加载页一段时间内只有纯文本节点。
 - **`_selectModel` 必须先读后点**：触发器自身的常驻文本会骗过「菜单已开」判定，leaf 又抓到触发器本身，点下去反而打开模型对话框（真机 2026-07-21：fast/think 同模型时每次切档都踩中，靠 Escape 兜底，慢且脆弱）。选中项要沿 `parentElement` 上溯最多 5 层找带 onclick / `role=option|menuitem` / `LI` 的可点祖先，都没有才点 leaf。结尾**复读 `_trigger()` 校验**，文本仍不命中目标正则就抛「千问: 模型未生效」——点击被站点吞掉时静默成功就是一个假绿点。可见性过滤与对话框容器收窄尚未做（要动先真机）。
 - 思考按钮 `_thinkBtn()`：优先可见的 `button[aria-haspopup="menu"]` 且 aria-label/文本命中 `/^(快速|思考研究|Fast|Thinking Research)$/i`；回退到内部 span 或自身文本为 `/^(思考|Thinking)$/i` 的旧版裸按钮。`_setThink(on)` 先读后点，新版派发 pointerdown 后在可见 `[role="menuitemcheckbox"]` 里原生 click 目标项，收尾复读校验，未生效抛「千问: 思考开关未生效」；按钮缺失即抛（常驻 composer）。**三条路径（选项未找到 / 成功点击后 / 复读失败前）都各自 `escMenus()` 收尾**，残留菜单会罩住输入框让随后的注入点空。
-- 受控编辑器，走 core 的 `beforeinput` 注入。`answer()` 取末个 `.answer-common-card` 内、排除祖先 `[class*="thinkingContent"]` 后的最后一个 `.qk-markdown`（思考段与正文同为 `.qk-markdown`，祖先类名带 CSS-module 哈希后缀）。**有意不实现 `attach`**（动态 input 需可信菜单点击，合成 drop/paste 被忽略，2026-07-23 真机）。
+- 受控编辑器，走 core 的 `beforeinput` 注入。`answer()` 取末个 `.answer-common-card` 内、排除祖先 `[class*="thinkingContent"]` 后的最后一个 `.qk-markdown`（思考段与正文同为 `.qk-markdown`，祖先类名带 CSS-module 哈希后缀）。`attach` 使用 PointerEvent 展开附件菜单，再选上传图片创建动态 input；不使用 drop/paste，finally 关菜单。
 
 ### Kimi（`www.kimi.com` / 键 `kimi.com`，`desktop/src/site-runtime/adapters-cn2.js`）
 
@@ -241,7 +241,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - 选档序列（chrome-dbg 实测）：hover + click `.think-mode-trigger` 开弹层 → `sleep 350` →（档位档）hover `.think-mode-item.has-submenu` → `sleep 300` → 原生 click 目标项 → `sleep 500` + `_close()` → **复读只读判据 `_selected(name)`**，未命中抛「智谱: 档位未生效」。触发器缺失直接抛；目标项未找到时先 `_close()` 再抛。`_hover()` 需连发 pointerenter/mouseenter/pointerover/mouseover 四种事件。
 - **脆弱点（必读）**：合成 hover 在真机上**并不真的展开子菜单**（档位项 rect 恒 0），只是靠 `.click()` 仍能触发 Vue handler 才碰巧能用。收尾的 `_selected()` 复读是唯一防线，**别把它删了**；哪天站点改成「不可见就不响应点击」，这里会立刻整档失效。
 - **`escMenus()` 对本站无效**（2026-08-31 真机：Escape 关不掉 el-tooltip 弹层），**再点一次触发器才收**。收尾走 `_close()`：`escMenus()` → 仍开（按 `.think-mode-item` 的 rect 判）→ hover + click 触发器。弹层不关会罩住输入框让注入点空。
-- 无 `submit`，靠通用链（先试标签按钮，实际靠 Enter，textarea 可发）。`answer()` 取末个 `.answer-content` 内、排除 `.text-advance-thinking-content` 后的最后一个 `.markdown-body`。**有意不实现 `attach`**（站点 input 忽略脚本派发的 input/change，且无可复用预览节点）。
+- 无 `submit`，靠通用链（先试标签按钮，实际靠 Enter，textarea 可发）。`answer()` 取末个 `.answer-content` 内、排除 `.text-advance-thinking-content` 后的最后一个 `.markdown-body`。`attach` 使用 `.upload-demo input.el-upload__input[type="file"]` 的聊天区本地文件入口；不使用旧 `.img-input` 或头像 input，支持整批图片并沿用绝对 deadline。
 - **加载极重**：水合期（~30s）连站点命令都无响应，安定后正常。真机验证要新开站点视图 + 长等待。
 
 ## 站点改版应对剧本（修复流水线）
@@ -274,3 +274,10 @@ Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址：仅空首�
 豆包图片提问会连续渲染图片气泡和文字气泡；历史归属将连续图片气泡与紧随文字计作一轮，遇到 AI 回答或文字即结束分组。不能直接忽略图片气泡：独立图片追问仍须增加轮数，阻止旧提问继续采集。
 
 豆包虚拟列表会移除早期用户气泡并重建节点；仅在同路由、精确提问文本、不同的新消息 ID、当前逻辑轮次的前驱 ID 等于发送前末轮 ID 时，允许 DOM 轮数缩减及基线节点回收。其它站仍要求原有计数与连接条件；同文后续追问及换会话不获授权。
+
+### 九站图片能力复核（2026-09-22）
+
+- Gemini：展开 Upload & tools 菜单，取 `accept="image/*"` 且没有 capture 的图片 input；支持多文件，finally 关菜单。缺入口返回 `attachment_action_required`（登录、额度等站点要求由用户处理）。
+- 千问：添加附件通过 PointerEvent 的 pointerdown/up（pointerType=mouse）打开；选“上传图片”才会创建 `accept*=image/` 输入，捕获 file click 防止弹出系统选择器。每次重新走菜单；finally 移除监听并关菜单，所有等待夹取 deadline。
+- 智谱：本地文件选择的 `.upload-demo` 承载新聊天附件入口；旧 `.img-input` 虽接收 files，却不触发当前附件流程。
+- 开发态已用无个人信息的测试图验证上述三站与 Kimi 的附件确认；不把“附件确认”视为完整回答质量或所有账号额度的保证。

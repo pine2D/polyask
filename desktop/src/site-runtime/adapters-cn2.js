@@ -142,6 +142,12 @@
     // 触发 Vue handler 才碰巧能用 —— 收尾的 _selected() 复读是唯一防线，别把它删了。
     // state 只读：读 .think-mode-item 的 selected 类（弹层关闭时菜单项仍在 DOM，不开菜单）。
     "chatglm.cn": {
+      attach: function (files, el, deadline) {
+        // .img-input 是旧入口；头像也有 file input，只使用聊天区本地文件选择。
+        if (Date.now() >= deadline) return false;
+        const input = document.querySelector('.upload-demo input.el-upload__input[type="file"]');
+        return input ? S.setInputFiles(input, files, el, deadline) : false;
+      },
       _TIERS: ["极致", "深度"], // think 目标，由强到弱：站点撤掉「极致」时降级点「深度」
       _trigger: function () { return document.querySelector(".think-mode-trigger"); },
       _hover: function (el) {

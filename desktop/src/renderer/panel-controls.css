@@ -1,0 +1,17 @@
+/* 关闭是同一种辅助动作，不随所在面板改变轮廓和反馈。 */
+button.panel-close.panel-close {
+  width: var(--target-size); height: var(--target-size); min-height: var(--target-size);
+  flex-shrink: 0; display: inline-grid; place-items: center; padding: 0;
+  border: 0; border-radius: 6px; color: var(--muted); background: transparent;
+  box-shadow: none; transition: color 120ms ease, background-color 120ms ease;
+}
+button.panel-close.panel-close svg { width: 16px; height: 16px; flex-shrink: 0; }
+button.panel-close.panel-close:disabled { opacity: .4; cursor: default; }
+button.panel-close.panel-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.workspace-actions .compare-trigger, .workspace-actions .archive-trigger {
+  width: var(--control-height); min-width: var(--control-height); padding: 0; justify-content: center;
+}
+.workspace-actions > button svg { flex-shrink: 0; }
+@media (hover: hover) and (pointer: fine) {
+  button.panel-close.panel-close:hover:not(:disabled) { color: inherit; background: var(--hover-soft); }
+}

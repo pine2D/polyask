@@ -30,7 +30,7 @@ test("desktop keeps the stable product order", () => {
 test("site capabilities support scope presets without renderer-owned host lists", () => {
   assert.deepEqual(
     SITES.filter((site) => site.image).map((site) => site.key),
-    ["claude", "chatgpt", "deepseek", "doubao", "kimi", "yuanbao"]
+    ["claude", "chatgpt", "gemini", "deepseek", "doubao", "qianwen", "kimi", "yuanbao", "chatglm"]
   );
   assert.deepEqual(
     SITES.filter((site) => site.intl).map((site) => site.key),

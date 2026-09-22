@@ -70,7 +70,7 @@ test("occasional full-workspace surfaces enter without animating native site bou
   assert.match(app, /className="surface-stage"/);
   assert.match(app, /className={`app-shell\$\{/);
   assert.doesNotMatch(app, /app-shell surface-stage/);
-  assert.match(css, /\.surface-stage[\s\S]*transition:\s*opacity 180ms var\(--ease-out\), transform 220ms var\(--ease-out\)/);
+  assert.match(css, /\.surface-stage[\s\S]*transition:\s*opacity 160ms var\(--ease-out\)/);
   assert.match(css, /@starting-style\s*{\s*\.surface-stage/);
   assert.doesNotMatch(css, /webcontents|web-contents/i);
 });

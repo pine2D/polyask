@@ -124,6 +124,22 @@
     },
 
     "gemini.google.com": {
+      attach: async function (files, el, deadline) {
+        if (Date.now() >= deadline) return false;
+        const selector = 'input[type="file"][accept="image/*"]:not([capture])';
+        let input = document.querySelector(selector);
+        try {
+          if (!input) {
+            const add = [...document.querySelectorAll("button")].find(node =>
+              /upload.*tools|上传.*工具|上傳.*工具|添加文件/i.test(node.getAttribute("aria-label") || ""));
+            if (!add) return "attachment_action_required";
+            add.click();
+            input = await waitFor(() => document.querySelector(selector), Math.min(1500, Math.max(0, deadline - Date.now())));
+          }
+          if (!input || Date.now() >= deadline) return false;
+          return await S.setInputFiles(input, files, el, deadline);
+        } finally { escMenus(); }
+      },
       _MI: "button.mat-mdc-menu-item, [role=menuitem]",
       // 只认可见项：页面常驻隐藏的导出菜单（`gv-pm-saved-export-menu gv-hidden` 的 JSON/Markdown 也是
       // [role=menuitem]），拿它当「菜单已展开」会让模型按钮永远不被点开（真机 2026-08-14）。

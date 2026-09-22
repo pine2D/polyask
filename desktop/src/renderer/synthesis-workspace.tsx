@@ -47,7 +47,7 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
     <section className="synthesis-workspace" aria-label={title}>
       <header>
         <strong><SparklesIcon />{title}</strong>
-        <button type="button" title={props.busy ? props.copy.cancel : props.copy.synthesisCancel} aria-label={props.busy ? props.copy.cancel : props.copy.synthesisCancel} onClick={props.onCancel}>{props.busy ? <StopIcon /> : <CloseIcon />}</button>
+        <button className="panel-close" type="button" title={props.busy ? props.copy.cancel : props.copy.synthesisCancel} aria-label={props.busy ? props.copy.cancel : props.copy.synthesisCancel} onClick={props.onCancel}>{props.busy ? <StopIcon /> : <CloseIcon />}</button>
       </header>
       <div className="synthesis-config">
         {followUp ? <>

@@ -106,7 +106,7 @@ async function delayedImageSubmissionMustUseDeadline() {
   assert.equal(result.ok, true, "图片提交确认应使用剩余截止时间，避免已发送却误报失败");
 }
 
-async function geminiMustFailFastAsUnsupported() {
+async function geminiMissingControlsRequireAction() {
   const S = {
     adapters: {}, waitFor: async (fn) => fn(), findByText: () => null, openMenu() {},
     clickEl() {}, sleep: async () => {}, escMenus() {},
@@ -116,7 +116,7 @@ async function geminiMustFailFastAsUnsupported() {
     document: { querySelector: () => null, querySelectorAll: () => [] },
   };
   vm.runInNewContext(fs.readFileSync(path.join(ROOT, "adapters-intl.js"), "utf8"), context);
-  assert.equal(S.adapters["gemini.google.com"].attach, undefined);
+  assert.equal(await S.adapters["gemini.google.com"].attach([{}], {}, Date.now() + 500), "attachment_action_required");
 }
 
 async function deepSeekMustWaitForSendButton() {
@@ -162,8 +162,8 @@ async function deepSeekMustWaitForSendButton() {
   console.log("✓ 图片提交确认沿用整次发送截止时间");
   await unrelatedDomMustNotConfirmUpload();
   console.log("✓ 无关 DOM 变化不会确认附件成功");
-  await geminiMustFailFastAsUnsupported();
-  console.log("✓ Gemini 不再等待无效的合成上传");
+  await geminiMissingControlsRequireAction();
+  console.log("✓ Gemini 缺上传入口时返回人工处理码");
   await deepSeekMustWaitForSendButton();
   console.log("✓ DeepSeek 图片处理完成后才点击发送键");
   console.log("[image-runtime] 关键失败路径通过");

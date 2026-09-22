@@ -79,7 +79,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           {!props.embedded ? <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button> : null}
           {props.onOrganize ? <button className="library-organize" type="button" disabled={props.busy} onClick={props.onOrganize}>{copy.libraryOrganize}</button> : null}
           <LibraryMenu label={copy.libraryMore} disabled={!selected || props.busy} actions={actions} />
-          {!props.embedded ? <button type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
+          {!props.embedded ? <button className="panel-close" type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
         </div>
       </header>
       <div className="archive-body">

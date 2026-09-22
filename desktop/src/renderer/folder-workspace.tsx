@@ -86,7 +86,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         <button className="folder-back-list" onClick={() => navigate(() => { setNewSource(null); setPane('list'); })}><BackIcon />{copy.folderBackList}</button>
         <button className="library-focus" aria-pressed={focused} disabled={!focused && !selected && !newSource} title={focused ? copy.libraryBrowse : copy.libraryFocus} aria-label={focused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => setFocused(value => !value)}><FocusIcon /></button>
         <button disabled={busy} onClick={capture}><ArchiveIcon /><span>{copy.captureArchive}</span></button>
-        <button className="library-close" aria-label={copy.closeArchive} title={copy.closeArchive} disabled={busy} onClick={() => navigate(props.onClose)}><CloseIcon /></button>
+        <button className="panel-close library-close" aria-label={copy.closeArchive} title={copy.closeArchive} disabled={busy} onClick={() => navigate(props.onClose)}><CloseIcon /></button>
       </div>
     </header>
     <div className="folder-columns">

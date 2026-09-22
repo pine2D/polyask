@@ -449,12 +449,13 @@ test("image picker stays icon-first and exposes removable previews and scope war
   );
 
   assert.match(html, /data-image-count="2"/);
-  assert.match(html, /aria-label="Manage 2 images"/);
+  assert.match(html, /aria-label="Manage 2 images/);
   assert.equal([...html.matchAll(/class="image-preview"/g)].length, 2);
   assert.match(html, /aria-label="Remove one.png"/);
   assert.match(html, /class="image-filename"[^>]*>one.png</);
   assert.match(html, /<span>Replace images<\/span>/);
-  assert.match(html, /aria-label="Adjust site scope: 1 unsupported"/);
+  assert.match(html, />Adjust site scope: 1 unsupported<\/button>/);
+  assert.doesNotMatch(html, /class="image-warning"/);
   assert.match(html, /role="alert"/);
 });
 

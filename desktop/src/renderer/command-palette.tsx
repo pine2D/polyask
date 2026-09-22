@@ -121,7 +121,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
               >{mode === "commands" ? props.copy.showCommands : mode === "library" ? props.copy.showPromptLibrary : props.copy[MODE_LABEL_KEYS[mode]]}</button>
             ))}
           </div>
-          <button type="button" className="command-close" title={props.copy.closeCommandPalette} aria-label={props.copy.closeCommandPalette} onClick={props.onClose}><CloseIcon /></button>
+          <button type="button" className="panel-close command-close" title={props.copy.closeCommandPalette} aria-label={props.copy.closeCommandPalette} onClick={props.onClose}><CloseIcon /></button>
         </header>
         {props.mode === "commands" ? (
           <label className="command-search">

@@ -150,7 +150,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             mode: props.runtime.distribution === "portable" ? props.copy.portableMode : props.copy.installedMode
           })}</span>
         </div>
-        <button type="button" title={props.copy.closeSettings} aria-label={props.copy.closeSettings} disabled={closeLocked} onClick={props.onClose}><CloseIcon /></button>
+        <button className="panel-close" type="button" title={props.copy.closeSettings} aria-label={props.copy.closeSettings} disabled={closeLocked} onClick={props.onClose}><CloseIcon /></button>
       </header>
       <div className="settings-body">
         <section className="settings-card sync-overview" aria-labelledby="sync-title">

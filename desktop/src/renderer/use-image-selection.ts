@@ -49,7 +49,7 @@ export function useImageSelection(
     }
     setImages(result.images);
     setError(null);
-    setOpen(true);
+    setOpen(false);
     announce(formatCopy(copy.imagesReady, { count: result.images.length }));
   };
   const remove = (index: number) => {

@@ -61,7 +61,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
       >
         <header>
           <h2 id="confirm-title">{props.title}</h2>
-          <button type="button" className="confirm-close" title={props.cancelLabel} aria-label={props.cancelLabel} onClick={props.onCancel}><CloseIcon /></button>
+          <button type="button" className="panel-close confirm-close" title={props.cancelLabel} aria-label={props.cancelLabel} onClick={props.onCancel}><CloseIcon /></button>
         </header>
         <p id="confirm-message">{props.message}</p>
         <div className="confirm-actions">

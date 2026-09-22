@@ -143,13 +143,12 @@ function App(): React.JSX.Element {
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
   const drawerOpen = panelState !== null;
   if (panelState) lastOpenPanel.current = panelState;
-  const drawerPresent = usePresence(drawerOpen, 200);
+  const drawerPresent = usePresence(drawerOpen, 160);
   const workspaceFlow = useWorkspaceFlow(sites, copy.workspaceActionFailed, setAnnouncement);
   const { workspace, selected } = workspaceFlow;
   const changePanelState = (value: WorkspacePanelState): void => {
-    if (value) setQuestionHistoryOpen(false);
+    if (value) { setQuestionHistoryOpen(false); imageSelection.setOpen(false); }
     setPanelState(value);
-    shell.setDrawerOpen(value !== null);
   };
   const openPanel = (tab: WorkspacePanelTab, inputMethod: "pointer" | "keyboard"): void => {
     changeSurface("sites");
@@ -252,7 +251,8 @@ function App(): React.JSX.Element {
     };
   }, [copy]);
 
-  const composerExpanded = promptExpanded || imageTrayOpen;
+  const composerExpanded = promptExpanded;
+  useEffect(() => shell.setDrawerOpen(drawerPresent || imageTrayOpen), [drawerPresent, imageTrayOpen]);
   useEffect(() => shell.setComposerExpanded(composerExpanded), [composerExpanded]);
   useEffect(() => {
     saveCompletionNotifications(window.localStorage, completionNotifications);
@@ -472,7 +472,7 @@ function App(): React.JSX.Element {
     "set-fast": () => { changeSurface("sites"); void workspaceFlow.changeTier("fast"); },
     ...(selected.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
     "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
-    "open-question-history": () => { changeSurface("sites"); changePanelState(null); setQuestionHistoryOpen(true); },
+    "open-question-history": () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionHistoryOpen(true); },
     "open-archive": () => { setComparisonId(null); changeSurface("archive"); },
     ...(synthesis.pending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
     ...(broadcast.failureCount + broadcast.cancelledCount > 0 ? {
@@ -624,7 +624,7 @@ function App(): React.JSX.Element {
             warning={imageWarning}
             warningCount={unsupportedSites.length}
             error={imageSelection.error}
-            onOpenChange={imageSelection.setOpen}
+            onOpenChange={(open) => { if (open) { changeSurface("sites"); changePanelState(null); setQuestionHistoryOpen(false); } imageSelection.setOpen(open); }}
             onFiles={(files) => { void imageSelection.choose(files); }}
             onRemove={imageSelection.remove}
             onAdjustScope={() => { imageSelection.setOpen(false); changeDrawerOpen(true); }}

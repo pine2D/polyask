@@ -75,7 +75,7 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps): React.JSX.Element 
       <div className="workspace-drawer-header">
         <div className="drawer-heading">
           <strong>{props.copy.workbench}</strong>
-          <button type="button" data-hint={props.copy.closeWorkbench} aria-label={props.copy.closeWorkbench} onClick={() => props.onStateChange(null)}><CloseIcon /></button>
+          <button className="panel-close" type="button" data-hint={props.copy.closeWorkbench} aria-label={props.copy.closeWorkbench} onClick={() => props.onStateChange(null)}><CloseIcon /></button>
         </div>
         <div className="workspace-tabs" role="tablist" aria-label={props.copy.workbench}>
           <button id="workspace-sites-tab" type="button" role="tab" aria-selected={props.state.tab === "sites"} aria-controls="workspace-sites-panel" tabIndex={props.state.tab === "sites" ? 0 : -1} ref={(element) => { tabRefs.current[0] = element; }} onClick={() => selectTab("sites")} onKeyDown={(event) => onTabKeyDown(event, 0)}><ScopeIcon />{props.copy.sitesAndGroups}</button>

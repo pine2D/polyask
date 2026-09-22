@@ -63,6 +63,6 @@ test("renderer file metadata fails fast before reading large payloads", () => {
 test("desktop derives unsupported image sites from the authoritative registry", () => {
   assert.deepEqual(
     unsupportedImageSites(["claude", "gemini", "qianwen", "chatglm"], SITES),
-    ["gemini", "qianwen", "chatglm"]
+    []
   );
 });

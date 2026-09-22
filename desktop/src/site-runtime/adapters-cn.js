@@ -144,6 +144,26 @@
 
     // 千问：think=Qwen3.7-千问+思考研究，fast=Qwen3.8-Max+快速；兼容旧版裸思考按钮。
     "qianwen.com": {
+      attach: async function (files, el, deadline) {
+        if (Date.now() >= deadline) return false;
+        const add = document.querySelector('button[aria-label="添加附件"],button[aria-label="Add attachment"],button[aria-label="Add attachments"]');
+        if (!add) return false;
+        const blockPicker = event => { if (event.target?.matches?.('input[type="file"]')) event.preventDefault(); };
+        document.addEventListener("click", blockPicker, true);
+        try {
+          // Radix 新版要求 PointerEvent.pointerType；通用 MouseEvent 序列不会展开。
+          for (const type of ["pointerdown", "pointerup"]) add.dispatchEvent(new PointerEvent(type, {
+            bubbles: true, cancelable: true, pointerType: "mouse", button: 0, buttons: type === "pointerdown" ? 1 : 0
+          }));
+          const item = await waitFor(() => [...document.querySelectorAll('[role="menuitem"]')]
+            .find(node => /^(上传图片|上傳圖片|Upload images?)$/i.test((node.textContent || "").trim())), Math.min(1500, Math.max(0, deadline - Date.now())));
+          if (!item || Date.now() >= deadline) return false;
+          item.click();
+          const input = await waitFor(() => document.querySelector('input[type="file"][accept*="image/"]'), Math.min(1500, Math.max(0, deadline - Date.now())));
+          if (!input || Date.now() >= deadline) return false;
+          return await S.setInputFiles(input, files, el, deadline);
+        } finally { document.removeEventListener("click", blockPicker, true); escMenus(); }
+      },
       // 模型下拉触发器：aria-haspopup 属性由前端延迟水合，新加载页面一段时间内只有纯文本节点，
       // 先按 aria 找，找不到退回按可见文本找最内层节点（click 冒泡可达真正持有 handler 的祖先）
       _trigger: function () {
