@@ -36,24 +36,24 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
   return (
     <div className="workspace-actions priority-p0">
       {retryLabel ? <button type="button" className="retry-trigger"
-        title={commandHint(retryLabel, "retry-failed", props.isMac)} aria-label={retryLabel}
+        data-hint={commandHint(retryLabel, "retry-failed", props.isMac)} aria-label={retryLabel}
         disabled={props.disabled} onClick={props.onRetry}>
         <ReloadIcon /><span>{props.copy.retryCompact} · {retryCount}</span>
       </button> : null}
-      <button type="button" className="compare-trigger" title={compareBlocked ?? props.copy.collectCompare}
+      <button type="button" className="compare-trigger" data-hint={compareBlocked ?? props.copy.collectCompare}
         aria-label={props.copy.collectCompare} aria-disabled={!!compareBlocked}
         aria-describedby={compareBlocked ? compareHintId : undefined} onClick={compareBlocked ? undefined : props.onCompare}>
         <CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span>
       </button>
       {compareBlocked ? <span id={compareHintId} className="sr-only">{compareBlocked}</span> : null}
-      <button type="button" className="archive-trigger" title={props.copy.openArchive}
-        aria-label={props.copy.openArchive} disabled={props.disabled} onClick={props.onOpenArchive}>
+      <button type="button" className="archive-trigger" data-hint={props.disabled ? props.copy.archiveBusy : props.copy.openArchive}
+        aria-label={props.copy.openArchive} aria-disabled={props.disabled} onClick={props.disabled ? undefined : props.onOpenArchive}>
         <ArchiveIcon /><span className="priority-p1">{props.copy.archiveTitle}</span>
       </button>
       <button
         type="button"
         className={syncAttention ? `more-trigger sync-attention sync-${props.syncStatus.state}` : "more-trigger"}
-        title={label}
+        data-hint={label}
         aria-label={label}
         aria-haspopup="menu"
         data-attention-count={attentionCount || undefined}

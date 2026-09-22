@@ -21,7 +21,7 @@ export function QuestionHistoryReader({ detail, copy, sites, busy, onLoadAnswer,
       <h2>{detail.question.text}</h2>
       {detail.question.inputImageCount > 0 && <p>{formatCopy(copy.questionImages, { count: detail.question.inputImageCount })}</p>}
       <div className="question-actions">
-        <button type="button" className="primary" disabled={busy || !detail.answers.some(a => a.conversationUrl)} onClick={() => onRestore()}>{copy.questionRestore}</button>
+        <button type="button" className="primary" data-hint={busy ? copy.questionReadOnlyBusy : copy.questionRestore} disabled={busy || !detail.answers.some(a => a.conversationUrl)} onClick={() => onRestore()}>{copy.questionRestore}</button>
         <button type="button" disabled={busy} onClick={onReask}>{copy.questionReask}</button>
         <button type="button" disabled={busy} onClick={onDelete}>{copy.questionDelete}</button>
       </div>
@@ -40,7 +40,7 @@ export function QuestionHistoryReader({ detail, copy, sites, busy, onLoadAnswer,
       <p className="question-note">{copy.questionSnapshotNote}</p>
       {answer?.truncated && <p role="note">{copy.questionTruncated}</p>}
       <div className="question-actions">
-        <button type="button" disabled={busy || !answer?.conversationUrl} onClick={() => onRestore(answer?.id)}>{copy.questionRestore}</button>
+        <button type="button" disabled={busy || !answer?.conversationUrl} data-hint={busy ? copy.questionReadOnlyBusy : !answer?.conversationUrl ? copy.questionMissing : copy.questionRestore} onClick={() => onRestore(answer?.id)}>{copy.questionRestore}</button>
         <button type="button" disabled={!answer?.answerMarkdown} onClick={() => {
           void navigator.clipboard.writeText(answer?.answerMarkdown ?? '').then(() => onAnnounce(copy.questionCopied)).catch(() => onAnnounce(copy.questionFailed));
         }}>{copy.questionCopy}</button>

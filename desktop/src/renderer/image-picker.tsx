@@ -89,7 +89,7 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
       <button
         type="button"
         className={count ? "image-trigger active" : "image-trigger"}
-        title={count ? manageLabel : props.copy.addImages}
+        data-hint={count ? manageLabel : props.copy.addImages}
         aria-label={count ? manageLabel : props.copy.addImages}
         aria-pressed={count > 0}
         aria-expanded={count ? props.open : undefined}
@@ -102,14 +102,14 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
       </button>
       {props.warning ? (
         <div className="image-warning" role="alert">
-          <button type="button" title={props.warning} aria-label={formatCopy(props.copy.adjustImageScope, { count: props.warningCount })} onClick={props.onAdjustScope}>
+          <button type="button" data-hint={props.warning} aria-label={formatCopy(props.copy.adjustImageScope, { count: props.warningCount })} onClick={props.onAdjustScope}>
             <WarningIcon /><span>{props.warningCount}</span>
           </button>
         </div>
       ) : null}
       {props.error ? (
         <div className="image-error" role="alert">
-          <button type="button" title={props.error} aria-label={props.error} onClick={() => count ? props.onOpenChange(true) : choose()}>
+          <button type="button" data-hint={props.error} aria-label={props.error} onClick={() => count ? props.onOpenChange(true) : choose()}>
             <WarningIcon />
           </button>
         </div>
@@ -118,14 +118,14 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
         <div id="image-tray" className="image-tray" role="group" aria-label={manageLabel} aria-hidden={trayOpen ? undefined : true} inert={!trayOpen} data-state={trayOpen ? "open" : "closed"}>
           <div className="image-tray-heading">
             <span>{manageLabel}</span>
-            <button type="button" title={props.copy.replaceImages} aria-label={props.copy.replaceImages} onClick={choose}><ImagePlusIcon /></button>
-            <button type="button" title={props.copy.closeImages} aria-label={props.copy.closeImages} onClick={() => props.onOpenChange(false)}><CloseIcon /></button>
+            <button type="button" data-hint={props.copy.replaceImages} aria-label={props.copy.replaceImages} onClick={choose}><ImagePlusIcon /></button>
+            <button type="button" data-hint={props.copy.closeImages} aria-label={props.copy.closeImages} onClick={() => props.onOpenChange(false)}><CloseIcon /></button>
           </div>
           <div className="image-previews">
             {props.images.map((image, index) => (
               <div className="image-preview" key={`${image.name}:${index}`}>
                 <img src={image.dataUrl} alt={image.name} width={52} height={40} />
-                <button type="button" title={formatCopy(props.copy.removeImage, { name: image.name })} aria-label={formatCopy(props.copy.removeImage, { name: image.name })} onClick={() => props.onRemove(index)}><CloseIcon /></button>
+                <button type="button" data-hint={formatCopy(props.copy.removeImage, { name: image.name })} aria-label={formatCopy(props.copy.removeImage, { name: image.name })} onClick={() => props.onRemove(index)}><CloseIcon /></button>
               </div>
             ))}
           </div>

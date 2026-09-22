@@ -8,6 +8,7 @@ import {
   type ActiveWorkspaceGroup
 } from "../shared/workspace";
 import { SaveIcon, TrashIcon } from "./icons";
+import { SelectionMark } from "./selection-mark";
 
 interface WorkspaceSitesProps {
   readonly copy: DesktopCopy;
@@ -67,7 +68,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
             <label key={site.key} data-selected={props.selected.has(site.key)}>
               <input className="sr-only" type="checkbox" name="scope-sites" value={site.key} checked={props.selected.has(site.key)} onChange={() => toggleSite(site.key)} />
               <span>{site.label}</span>
-              <svg className="site-selection-mark" viewBox="0 0 16 16" aria-hidden="true"><path d="m4 8 2.5 2.5L12 5" /></svg>
+              <SelectionMark />
             </label>
           ))}
         </div>
@@ -84,11 +85,11 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
               </div>
             ) : (
               <div className="group-row" data-group-id={group.id} key={group.id}>
-                <button type="button" className="group-apply" title={group.name} aria-pressed={groupSignature(group.sites) === selectedSignature} onClick={() => props.onSelectionChange(group.sites)}>
+                <button type="button" className="group-apply" data-hint={group.name} aria-pressed={groupSignature(group.sites) === selectedSignature} onClick={() => props.onSelectionChange(group.sites)}>
                   <strong>{group.name}</strong>
                   <small>{props.sites.filter((site) => group.sites.includes(site.key)).map((site) => site.label).join(" · ")}</small>
                 </button>
-                <button type="button" title={formatCopy(props.copy.deleteGroup, { group: group.name })} aria-label={formatCopy(props.copy.deleteGroup, { group: group.name })} onClick={() => setPendingDeleteId(group.id)}><TrashIcon /></button>
+                <button type="button" data-hint={formatCopy(props.copy.deleteGroup, { group: group.name })} aria-label={formatCopy(props.copy.deleteGroup, { group: group.name })} onClick={() => setPendingDeleteId(group.id)}><TrashIcon /></button>
               </div>
             ))}
           </div>
@@ -101,7 +102,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
           void props.onSaveGroup(trimmed).then((saved) => { if (saved) setName(""); }).finally(() => setSaving(false));
         }}>
           <input name="group-name" autoComplete="off" value={name} maxLength={80} aria-describedby="group-save-hint" aria-label={props.copy.groupNamePlaceholder} placeholder={props.copy.groupNamePlaceholder} onChange={(event) => setName(event.target.value)} />
-          <button type="submit" title={saveHint || props.copy.saveGroup} aria-label={props.copy.saveGroup} disabled={!name.trim() || !!saveHint || saving}><SaveIcon /></button>
+          <button type="submit" data-hint={saveHint || props.copy.saveGroup} aria-label={props.copy.saveGroup} disabled={!name.trim() || !!saveHint || saving}><SaveIcon /></button>
           <span id="group-save-hint" className="group-save-hint" role="status">{saving ? props.copy.groupSaving : saveHint}</span>
         </form>
       </section>

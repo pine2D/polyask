@@ -1,5 +1,6 @@
 export const QUESTION_COPY = {
   en: {
+    questionReadOnlyBusy: 'An operation is in progress. You can read saved copies; opening original conversations is temporarily unavailable.',
     questionMenu: 'More actions', questionDelete: 'Delete', questionClose: 'Close history', questionRetry: 'Retry',
     questionHistory: 'Question history', questionSearch: 'Search questions…', questionEmpty: 'Your next question will appear here.',
     questionNoResults: 'No matching questions.', questionLoadFailed: 'Could not load question history. Try again.',
@@ -20,6 +21,7 @@ export const QUESTION_COPY = {
     questionLegacy: 'Older text history', questionLegacyNote: 'Older entries contain question text only. Selecting one fills your draft.'
   },
   zhCN: {
+    questionReadOnlyBusy: '当前操作进行中，可以查看已保存的副本；暂时不能打开原站会话。',
     questionMenu: '更多操作', questionDelete: '删除', questionClose: '关闭历史', questionRetry: '重试',
     questionHistory: '提问历史', questionSearch: '搜索提问…', questionEmpty: '下一次提问会自动记录在这里。',
     questionNoResults: '没有找到匹配的提问。', questionLoadFailed: '提问历史读取失败，请重试。',
@@ -40,6 +42,7 @@ export const QUESTION_COPY = {
     questionLegacy: '旧版文字历史', questionLegacyNote: '旧记录仅保留提问文字，点击可填入草稿。'
   },
   zhTW: {
+    questionReadOnlyBusy: '目前操作進行中，可以查看已儲存的副本；暫時無法開啟原站對話。',
     questionMenu: '更多操作', questionDelete: '刪除', questionClose: '關閉歷史', questionRetry: '重試',
     questionHistory: '提問歷史', questionSearch: '搜尋提問…', questionEmpty: '下一次提問會自動記錄在這裡。',
     questionNoResults: '沒有找到符合的提問。', questionLoadFailed: '提問歷史讀取失敗，請重試。',

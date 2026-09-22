@@ -1,5 +1,6 @@
 @import "./backup.css";
 @import "./workspace.css";
+@import "./selection.css";
 @import "./task-folder.css";
 @import "./decision.css";
 @import "./library.css";
@@ -12,6 +13,8 @@
   background: #f4f5f8;
   --accent: #4f46e5;
   --accent-soft: #eeedff;
+  --selection-soft: color-mix(in srgb, var(--accent) 5%, var(--panel));
+  --hover-soft: color-mix(in srgb, var(--muted) 7%, var(--panel));
   --border: #d8dae2;
   --panel: #ffffff;
   --muted: #71717a;
@@ -157,7 +160,7 @@ button { cursor: default; }
 .command-bar.is-expanded { height: var(--composer-expanded-height); align-items: start; }
 .command-bar > * { min-width: 0; }
 .workspace-entry { height: var(--control-height); display: flex; align-items: stretch; gap: 3px; }
-.scope-split { max-width: 172px; display: grid; grid-template-columns: minmax(0, 1fr) var(--target-size); border: 1px solid var(--border); border-radius: 7px; background: #f0f1f5; }
+.scope-split { max-width: 172px; display: grid; grid-template-columns: minmax(0, 1fr) var(--target-size); border: 1px solid var(--border); border-radius: 7px; background: transparent; }
 .scope-split button, .health-trigger {
   min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; border: 0;
   color: var(--muted); background: transparent;
@@ -166,15 +169,16 @@ button { cursor: default; }
 .scope-menu { padding: 0 !important; border-left: 1px solid var(--border) !important; display: grid; place-items: center; }
 .scope-label-full, .scope-label-compact { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scope-label-compact { display: none; }
-.health-trigger { position: relative; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 7px; background: #f0f1f5; }
-.scope-split button:hover, .health-trigger:hover, .health-trigger.active { color: var(--accent); background: var(--panel); }
+.health-trigger { position: relative; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 7px; background: transparent; }
+.scope-split button:hover, .health-trigger:hover { background: var(--hover-soft); }
+.health-trigger.active, .scope-split:has(.scope-main[aria-expanded="true"]) { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
 .health-trigger[data-health-attention]::after {
   position: absolute; top: 3px; right: 3px; width: 6px; height: 6px;
   border: 1px solid var(--panel); border-radius: 50%; background: var(--danger); content: "";
 }
 .mode-switch, .tier-switch {
-  height: var(--control-height); display: flex; padding: 2px; border: 1px solid var(--border);
-  border-radius: 7px; background: #f0f1f5;
+  height: var(--control-height); display: flex; padding: 2px; border: 1px solid transparent;
+  border-radius: 7px; background: var(--hover-soft);
 }
 .mode-switch button, .tier-switch button {
   min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; display: inline-flex;
@@ -183,7 +187,7 @@ button { cursor: default; }
   transition: transform 140ms var(--ease-out), color 120ms ease, background-color 120ms ease;
 }
 .mode-switch button.active, .tier-switch button.active {
-  color: #242036; background: var(--panel); box-shadow: 0 1px 2px #11182718;
+  color: inherit; background: var(--panel); box-shadow: 0 1px 2px #11182718, inset 0 0 0 1px var(--border);
 }
 .command-bar textarea {
   width: 100%; height: var(--control-height); resize: none; padding: 5px 8px; border: 1px solid var(--border);
@@ -191,17 +195,18 @@ button { cursor: default; }
 }
 .command-bar.is-expanded textarea { height: calc(var(--composer-expanded-height) - var(--space-2)); }
 .command-bar textarea:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent); }
-.mode-switch button:hover, .tier-switch button:hover { color: var(--accent); background: var(--panel); }
+.mode-switch button:hover:not(.active), .tier-switch button:hover:not(.active) { color: inherit; background: var(--panel); }
 .summary { max-width: 112px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-actions {
-  height: var(--control-height); display: flex; align-items: center;
-  border: 1px solid var(--border); border-radius: 7px; background: #f0f1f5;
+  height: var(--control-height); display: flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 8px;
+  border-left: 1px solid var(--border); background: transparent;
 }
 .workspace-actions > button {
   min-width: var(--target-size); height: 100%; padding: 0 6px; display: inline-flex; align-items: center;
   justify-content: center; gap: 3px; border: 0; border-radius: 5px; color: var(--muted); background: transparent;
 }
-.workspace-actions > button.active, .workspace-actions > button:hover { color: var(--accent); background: var(--panel); }
+.workspace-actions > button:hover { background: var(--hover-soft); }
+.workspace-actions > button.active { color: var(--accent); background: var(--selection-soft); }
 .workspace-actions > button:disabled, .workspace-actions > button[aria-disabled="true"] { opacity: .4; }
 .workspace-actions > button[aria-disabled="true"] { cursor: default; color: var(--muted); background: transparent; }
 .workspace-actions > button.retry-trigger { color: var(--danger); white-space: nowrap; }
@@ -264,10 +269,10 @@ kbd { opacity: .7; font: 10px system-ui; }
 .question-trigger, .image-trigger, .image-warning button, .image-error button {
   min-width: var(--control-height); height: var(--control-height); padding: 0; display: inline-flex;
   align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--border); border-radius: 7px;
-  color: var(--muted); background: #f0f1f5;
+  color: var(--muted); background: transparent;
 }
-.question-trigger[aria-expanded="true"], .image-trigger.active { color: var(--accent); background: var(--accent-soft); }
-.question-trigger:hover, .image-trigger:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.question-trigger[aria-expanded="true"], .image-trigger.active { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
+.question-trigger:hover, .image-trigger:hover:not(:disabled) { background: var(--hover-soft); }
 .image-trigger:disabled { opacity: .4; }
 .image-count, .image-warning span { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .image-warning button, .image-error button { min-width: var(--target-size); width: var(--target-size); border-color: var(--warning); color: var(--warning); background: transparent; }
@@ -429,14 +434,15 @@ kbd { opacity: .7; font: 10px system-ui; }
   gap: var(--space-1); pointer-events: auto;
 }
 .site-select {
-  min-width: 82px; display: flex; align-items: center; gap: var(--space-1); overflow: hidden;
-  font-size: 11px; font-weight: 640; white-space: nowrap;
+  position: relative; min-width: 82px; min-height: var(--target-size); padding: 0 4px; display: flex; align-items: center; gap: 6px;
+  border-radius: 5px; font-size: 12px; font-weight: 600; white-space: nowrap; cursor: pointer;
 }
-.site-select input { width: 14px; height: 14px; margin: 0; flex: 0 0 auto; accent-color: var(--accent); }
+.site-select:hover { background: var(--hover-soft); }
+.site-select:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
 .site-select span { overflow: hidden; text-overflow: ellipsis; }
 .answer-rail { height: 2px; flex: 1; border-radius: 1px; background: var(--border); }
 .site-state {
-  max-width: 112px; overflow: hidden; text-align: right; color: var(--muted); font-size: 10px;
+  max-width: 112px; overflow: hidden; text-align: right; color: var(--muted); font-size: 12px;
   text-overflow: ellipsis; white-space: nowrap;
 }
 .tile-header button {
@@ -500,7 +506,7 @@ kbd { opacity: .7; font: 10px system-ui; }
     --border: #38383f; --panel: #222226; --muted: #a1a1aa;
   }
   .app-shell, .command-surface { background: #17171a; }
-  .mode-switch, .tier-switch, .page-tabs, .workspace-actions, .question-trigger, .image-trigger, .scope-split, .health-trigger { background: #19191d; }
+  .page-tabs { background: #19191d; }
   .mode-switch button.active, .tier-switch button.active { color: #f4f4f5; }
   .command-bar textarea { background: #19191d; }
   .command-search input { background: #19191d; }

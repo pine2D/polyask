@@ -64,17 +64,17 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
     <header className={`command-bar${props.pageControl ? " has-pages" : ""}${props.expanded ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
       <div className="workspace-entry priority-p0">
         <div className="scope-split">
-          <button type="button" className="scope-main" title={commandHint(props.scopeLabel, "open-sites", props.isMac)} aria-label={props.scopeLabel} aria-expanded={props.panelTab === "sites"} aria-controls="workspace-panel" onClick={() => props.onOpenPanel("sites")}>
+          <button type="button" className="scope-main" data-hint={commandHint(props.scopeLabel, "open-sites", props.isMac)} aria-label={props.scopeLabel} aria-expanded={props.panelTab === "sites"} aria-controls="workspace-panel" onClick={() => props.onOpenPanel("sites")}>
             <span className="scope-label-full">{props.scopeLabel}</span>
             <span className="scope-label-compact">{props.copy.sitesCompact} · {props.selectedCount}</span>
           </button>
-          <button type="button" className="scope-menu" title={props.copy.chooseSavedGroup} aria-label={props.copy.chooseSavedGroup} aria-haspopup="menu" onClick={props.onShowGroupMenu}><ChevronDownIcon /></button>
+          <button type="button" className="scope-menu" data-hint={props.copy.chooseSavedGroup} aria-label={props.copy.chooseSavedGroup} aria-haspopup="menu" onClick={props.onShowGroupMenu}><ChevronDownIcon /></button>
         </div>
-        <button type="button" className={props.panelTab === "health" ? "health-trigger active" : "health-trigger"} title={commandHint(props.copy.siteHealth, "open-site-health", props.isMac)} aria-label={props.copy.siteHealth} aria-pressed={props.panelTab === "health"} aria-controls="workspace-panel" data-health-attention={props.healthAttention || undefined} onClick={() => props.onOpenPanel("health")}><HealthIcon /></button>
+        <button type="button" className={props.panelTab === "health" ? "health-trigger active" : "health-trigger"} data-hint={commandHint(props.copy.siteHealth, "open-site-health", props.isMac)} aria-label={props.copy.siteHealth} aria-pressed={props.panelTab === "health"} aria-controls="workspace-panel" data-health-attention={props.healthAttention || undefined} onClick={() => props.onOpenPanel("health")}><HealthIcon /></button>
       </div>
       <div className="mode-switch priority-p0" aria-label={props.copy.layoutLabel}>
-        <button type="button" title={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
-        <button type="button" title={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
+        <button type="button" data-hint={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
+        <button type="button" data-hint={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
       </div>
       {props.pageControl}
       <textarea
@@ -106,22 +106,22 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
           }
         }}
         placeholder={props.copy.promptPlaceholder}
-        title={commandHint(props.copy.promptLabel, "focus-prompt", props.isMac)}
+        data-hint={commandHint(props.copy.promptLabel, "focus-prompt", props.isMac)}
         aria-label={props.copy.promptLabel}
       />
-      <button type="button" className="question-trigger" title={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
+      <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
         <HistoryIcon />
       </button>
       <div className="tier-switch priority-p0" aria-label={props.copy.tierLabel}>
         {tierOptions.map(({ value, label, icon, glyph }) => (
-          <button type="button" key={icon} title={value === null ? label : commandHint(label, value === "think" ? "set-think" : "set-fast", props.isMac)} aria-label={label} aria-pressed={props.tier === value} data-tier-icon={icon} className={props.tier === value ? "active" : ""} onClick={() => props.onTierChange(value)}>{glyph}</button>
+          <button type="button" key={icon} data-hint={value === null ? label : commandHint(label, value === "think" ? "set-think" : "set-fast", props.isMac)} aria-label={label} aria-pressed={props.tier === value} data-tier-icon={icon} className={props.tier === value ? "active" : ""} onClick={() => props.onTierChange(value)}>{glyph}</button>
         ))}
       </div>
       {props.imageControl}
       {props.runState !== "idle" ? (
-        <button type="button" className="cancel primary-action priority-p0" title={cancelLabel} aria-label={cancelLabel} disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{cancelLabel}</span></button>
+        <button type="button" className="cancel primary-action priority-p0" data-hint={cancelLabel} aria-label={cancelLabel} disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{cancelLabel}</span></button>
       ) : (
-        <button type="button" className="send primary-action priority-p0" title={props.sendBlockedReason ?? sendLabel} aria-label={sendLabel} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><span className="send-count" aria-hidden="true">{props.selectedCount}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
+        <button type="button" className="send primary-action priority-p0" data-hint={props.sendBlockedReason ?? sendLabel} aria-label={sendLabel} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><span className="send-count" aria-hidden="true">{props.selectedCount}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}
       <WorkspaceActions onCompare={props.onCompare} onRetry={props.onRetry} isMac={props.isMac} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} onOpenArchive={props.onOpenArchive} />
     </header>

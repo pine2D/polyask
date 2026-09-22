@@ -58,7 +58,7 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
             type="button"
             id={`site-page-tab-${index}`}
             role="tab"
-            title={commandHint(siteLabels, index === 0 ? "show-page-1" : index === 1 ? "show-page-2" : "show-page-3", props.isMac)}
+            data-hint={commandHint(siteLabels, index === 0 ? "show-page-1" : index === 1 ? "show-page-2" : "show-page-3", props.isMac)}
             aria-label={`${label}: ${siteLabels}`}
             aria-selected={selected}
             aria-controls={`site-page-panel-${index}`}

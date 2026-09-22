@@ -2,6 +2,7 @@ export const WORKSPACE_COPY = {
   en: {
     retryCompact: "Retry",
     compareNeedsAnswers: "Wait for at least two selected sites to finish answering before comparing.",
+    archiveBusy: "Wait for the current operation to finish before opening the result library. Saved question copies remain available in history.",
     compareBusy: "Comparison is unavailable while another operation is running.",
     selectedSummary: "{selected} / {total} selected",
     sendingSummary: "Sending to {count} sites",
@@ -150,6 +151,7 @@ export const WORKSPACE_COPY = {
     healthReloadRejected: "{site} 正在工作，暂时不能重新加载",
     healthCopyReport: "复制站点诊断报告",
     healthCopyReportCompact: "复制报告",
+    archiveBusy: "当前操作结束后可打开结果库；现在仍可在提问历史中查看已保存的副本。",
     healthReportCopied: "已复制站点诊断报告",
     healthReportCopyFailed: "无法复制站点诊断报告",
     hardReloadSite: "强制重新加载 {site}（忽略缓存）",
@@ -231,6 +233,7 @@ export const WORKSPACE_COPY = {
     healthReloadRejected: "{site} 正在工作，暫時無法重新載入",
     healthCopyReport: "複製網站診斷報告",
     healthCopyReportCompact: "複製報告",
+    archiveBusy: "目前操作結束後可開啟結果庫；目前仍可在提問歷史中查看已儲存的副本。",
     healthReportCopied: "已複製網站診斷報告",
     healthReportCopyFailed: "無法複製網站診斷報告",
     hardReloadSite: "強制重新載入 {site}（忽略快取）",

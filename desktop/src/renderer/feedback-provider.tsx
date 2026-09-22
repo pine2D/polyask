@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import type { DesktopCopy } from "../shared/copy";
+import { useControlHint } from "./control-hints";
 import { WORKSPACE_FEEDBACK_HEIGHT } from "../shared/display";
 
 interface FeedbackAction { readonly label: string; readonly run: () => void; }
@@ -14,9 +15,11 @@ interface FeedbackState {
 const FeedbackContext = createContext<FeedbackState | null>(null);
 
 export function FeedbackProvider({ children, copy }: { children: ReactNode; copy: DesktopCopy }): React.JSX.Element {
+  const hintId = useId();
   const [undoAction, setUndoAction] = useState<FeedbackAction | null>(null);
   const [announced, setAnnounced] = useState({ text: "", seq: 0 });
   const [notice, setNotice] = useState({ text: "", seq: 0, transient: false });
+  const hint = useControlHint(hintId, notice.seq);
   const announce = useCallback((text: string, visible = true, transient = false): void => {
     setAnnounced((current) => ({ text, seq: current.seq + 1 }));
     if (visible) setNotice((current) => ({ text, seq: current.seq + 1, transient }));
@@ -33,8 +36,8 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
   return <FeedbackContext.Provider value={{ announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction }}>
     {children}
     <div className="sr-only" aria-live="polite" aria-atomic="true" key={announced.seq}>{announced.text}</div>
-    <footer className="feedback-bar" style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
-      <span title={notice.text}>{notice.text || copy.feedbackReady}</span>
+    <footer className="feedback-bar" data-hint-visible={!!hint} style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
+      <span id={hintId} role={hint ? "tooltip" : undefined} title={hint || notice.text}>{hint || notice.text || copy.feedbackReady}</span>
       {undoAction ? <button type="button" onClick={undoAction.run}>{undoAction.label}</button> : null}
       {notice.text ? <button type="button" onClick={() => setNotice((current) => ({ ...current, text: "" }))}>{copy.dismissFeedback}</button> : null}
     </footer>

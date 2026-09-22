@@ -1,0 +1,8 @@
+.selection-mark { width: 16px; height: 16px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 50%; fill: none; }
+.selection-mark path { stroke: transparent; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+[data-selected="true"] > .selection-mark { border-color: var(--accent); background: var(--accent); }
+[data-selected="true"] > .selection-mark path { stroke: var(--panel); }
+@media (forced-colors: active) {
+  [data-selected="true"] > .selection-mark { forced-color-adjust: none; background: Highlight; border-color: Highlight; }
+  [data-selected="true"] > .selection-mark path { stroke: HighlightText; }
+}

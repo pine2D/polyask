@@ -8,6 +8,7 @@ import type {
 import { siteReloadAllowed } from "../shared/site-health";
 import { describeStatus, visibleStatus } from "../shared/status-copy";
 import { BackIcon, FocusIcon, ReloadIcon } from "./icons";
+import { SelectionMark } from "./selection-mark";
 
 interface SiteFramesProps {
   readonly copy: DesktopCopy;
@@ -58,24 +59,24 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
               }}
             >
               <div className="tile-header">
-                <label className="site-select priority-p0" title={formatCopy(copy.selectSite, { site: site.label })}>
-                  <input type="checkbox" name="sites" value={site.key} checked={selected.has(site.key)} onChange={() => onToggle(site.key)} />
-                  <span>{site.label}</span>
+                <label className="site-select priority-p0" data-selected={selected.has(site.key)} data-hint={formatCopy(copy.selectSite, { site: site.label })}>
+                  <input className="sr-only" type="checkbox" name="sites" value={site.key} checked={selected.has(site.key)} onChange={() => onToggle(site.key)} />
+                  <span>{site.label}</span><SelectionMark />
                 </label>
-                <span className="answer-rail priority-p0" title={statusText} aria-hidden="true" />
+                <span className="answer-rail priority-p0" data-hint={statusText} aria-hidden="true" />
                 <span className="tile-status-sr sr-only">{statusText}</span>
-                {attentionText && <span className="site-state priority-p0" title={statusText}>{attentionText}</span>}
+                {attentionText && <span className="site-state priority-p0" data-hint={statusText}>{attentionText}</span>}
                 {props.retrySites?.includes(site.key) ? <button type="button" className="site-retry" disabled={props.retryDisabled}
-                  title={status.code === "submit_unconfirmed" ? copy.retryUnconfirmed : formatCopy(copy.retrySite, { site: site.label })}
+                  data-hint={status.code === "submit_unconfirmed" ? copy.retryUnconfirmed : formatCopy(copy.retrySite, { site: site.label })}
                   aria-label={formatCopy(copy.retrySite, { site: site.label })} onClick={() => props.onRetry?.(site.key)}>{copy.retryFailedCommand}</button> : null}
                 <span className="tile-actions priority-p2">
                   {/* 点了回答里的站内链接之后此前完全没有退路——唯一脱身办法是「新会话」，会丢掉当前对话。
                       只在该站真有历史可退时才出现，免得摆一个点了没反应的按钮。 */}
                   {history[site.key]?.back && (
-                    <button type="button" title={formatCopy(copy.siteBack, { site: site.label })} aria-label={formatCopy(copy.siteBack, { site: site.label })} onClick={() => onBack(site.key)}><BackIcon /></button>
+                    <button type="button" data-hint={formatCopy(copy.siteBack, { site: site.label })} aria-label={formatCopy(copy.siteBack, { site: site.label })} onClick={() => onBack(site.key)}><BackIcon /></button>
                   )}
-                  <button type="button" title={formatCopy(copy.focusSite, { site: site.label })} aria-label={formatCopy(copy.focusSite, { site: site.label })} onClick={() => onFocus(site.key)}><FocusIcon /></button>
-                  <button type="button" disabled={reloadBlocked} title={reloadBlocked ? copy.healthReloadBlocked : formatCopy(copy.reloadSite, { site: site.label })} aria-label={formatCopy(copy.reloadSite, { site: site.label })} onClick={() => onReload(site.key)}><ReloadIcon /></button>
+                  <button type="button" data-hint={formatCopy(copy.focusSite, { site: site.label })} aria-label={formatCopy(copy.focusSite, { site: site.label })} onClick={() => onFocus(site.key)}><FocusIcon /></button>
+                  <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? copy.healthReloadBlocked : formatCopy(copy.reloadSite, { site: site.label })} aria-label={formatCopy(copy.reloadSite, { site: site.label })} onClick={() => onReload(site.key)}><ReloadIcon /></button>
                 </span>
               </div>
             </article>

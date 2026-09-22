@@ -290,7 +290,7 @@ test("command bar renders one compact command surface with stateful controls", (
   assert.equal([...html.matchAll(/data-tier-icon=/g)].length, 3);
   for (const label of ["Use site setting", "Fast", "Deep thinking"]) {
     assert.match(html, new RegExp(`aria-label="${label}"`));
-    assert.match(html, new RegExp(`title="${label}[^"]*"`));
+    assert.match(html, new RegExp(`data-hint="${label}[^"]*"`));
     assert.equal([...html.matchAll(new RegExp(label, "g"))].length, 2);
   }
   assert.doesNotMatch(html, /<small>AI Answers<\/small>/);
@@ -554,7 +554,7 @@ test("site reload is disabled while a send is active", () => {
     />
   );
   assert.match(html, /<button type="button" disabled=""[^>]*aria-label="Reload Claude"/);
-  assert.match(html, /title="Reload is unavailable while this site is working"/);
+  assert.match(html, /data-hint="Reload is unavailable while this site is working"/);
 });
 
 test("site frames render only the active selected page with accessible actions", () => {
@@ -589,7 +589,7 @@ test("site frames render only the active selected page with accessible actions",
   assert.match(html, /class="site-select priority-p0"/);
 });
 
-test("site frames visibly distinguish stable failure codes and retain full titles", () => {
+test("site frames visibly distinguish stable failure codes and retain full control hints", () => {
   const sites = SITES.filter((site) => site.key === "claude" || site.key === "gemini");
   const placements: LayoutState["placements"] = sites.map((site, index) => ({
     key: site.key,
@@ -616,11 +616,11 @@ test("site frames visibly distinguish stable failure codes and retain full title
   assert.equal([...html.matchAll(/<article class="tile-frame/g)].length, 2);
   assert.match(
     html,
-    /<span class="site-state priority-p0" title="Whether it was sent is unconfirmed">Whether it was sent is unconfirmed<\/span>/
+    /<span class="site-state priority-p0" data-hint="Whether it was sent is unconfirmed">Whether it was sent is unconfirmed<\/span>/
   );
   assert.match(
     html,
-    /<span class="site-state priority-p0" title="Prompt box not found">Prompt box not found<\/span>/
+    /<span class="site-state priority-p0" data-hint="Prompt box not found">Prompt box not found<\/span>/
   );
 });
 
@@ -699,8 +699,8 @@ test("site frames expose answer-generation terminal states without verbose chrom
   );
   assert.match(html, /class="tile-frame phase-generating"/);
   assert.match(html, /class="tile-frame phase-complete"/);
-  assert.match(html, /class="answer-rail priority-p0" title="Answering"/);
-  assert.match(html, /class="answer-rail priority-p0" title="Answer complete"/);
+  assert.match(html, /class="answer-rail priority-p0" data-hint="Answering"/);
+  assert.match(html, /class="answer-rail priority-p0" data-hint="Answer complete"/);
   assert.doesNotMatch(html, /class="site-state priority-p0"[^>]*>Answer/);
 });
 

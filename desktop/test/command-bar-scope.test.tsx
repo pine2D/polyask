@@ -23,7 +23,7 @@ test("send has a localized scope name even when narrow layouts hide its text", (
   for (const [locale, name] of [["en", "Send to 3 sites"], ["zh-CN", "发送至 3 个站点"], ["zh-TW", "傳送至 3 個網站"]]) {
     const html = render({ copy: getCopy(locale) });
     assert.ok(html.includes(`aria-label="${name}"`));
-    assert.ok(html.includes(`title="${name}"`));
+    assert.ok(html.includes(`data-hint="${name}"`));
     assert.match(html, /class="send-count"[^>]*>3<\/span>/);
   }
   assert.match(render({ selectedCount: 1 }), /aria-label="Send to 1 site"/);
@@ -32,7 +32,7 @@ test("send has a localized scope name even when narrow layouts hide its text", (
 
 test("blocked sending keeps the reason separate from the action name", () => {
   const html = render({ sendBlockedReason: "Unsupported image sites" });
-  assert.match(html, /class="send [^"]*"[^>]*title="Unsupported image sites"[^>]*aria-label="Send to 3 sites"[^>]*disabled=""/);
+  assert.match(html, /class="send [^"]*"[^>]*data-hint="Unsupported image sites"[^>]*aria-label="Send to 3 sites"[^>]*disabled=""/);
   assert.match(render({ selectedCount: 0 }), /class="send [^"]*"[^>]*disabled=""/);
 });
 
@@ -54,4 +54,11 @@ test("retry is directly available only for failed or cancelled work and disabled
   assert.doesNotMatch(render(), /class="retry-trigger"/);
   assert.match(render({ failureCount: 2, cancelledCount: 1 }), /class="retry-trigger"[^>]*aria-label="Retry 3 failed or cancelled sites"/);
   assert.match(render({ failureCount: 1, runState: "sending" }), /class="retry-trigger"[^>]*disabled=""/);
+});
+
+
+test("busy archive entry explains the restriction and history stays available", () => {
+  const html = render({ runState: "sending" });
+  assert.match(html, /class="archive-trigger"[^>]*data-hint="[^"]+"[^>]*aria-disabled="true"/);
+  assert.doesNotMatch(html, /class="question-trigger"[^>]*disabled/);
 });

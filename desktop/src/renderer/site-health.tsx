@@ -82,9 +82,9 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
           <button type="button" onClick={props.onCopyReport}><CopyIcon />{props.copy.healthCopyReport}</button>
         </div>
         <div className="health-actions health-recovery">
-          <button type="button" disabled={reloadBlocked} title={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.reloadSite, { site: detailSite.label })} onClick={() => props.onReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.reloadSite, { site: detailSite.label })}</button>
-          <button type="button" disabled={reloadBlocked} title={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.hardReloadSite, { site: detailSite.label })} onClick={() => props.onHardReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.hardReloadSite, { site: detailSite.label })}</button>
-          <button type="button" disabled={reloadBlocked} title={reloadBlocked ? props.copy.healthReloadBlocked : props.copy.clearSiteCacheHint} onClick={() => props.onClearData(detailSite.key)}><TrashIcon />{formatCopy(props.copy.clearSiteCache, { site: detailSite.label })}</button>
+          <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.reloadSite, { site: detailSite.label })} onClick={() => props.onReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.reloadSite, { site: detailSite.label })}</button>
+          <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.hardReloadSite, { site: detailSite.label })} onClick={() => props.onHardReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.hardReloadSite, { site: detailSite.label })}</button>
+          <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? props.copy.healthReloadBlocked : props.copy.clearSiteCacheHint} onClick={() => props.onClearData(detailSite.key)}><TrashIcon />{formatCopy(props.copy.clearSiteCache, { site: detailSite.label })}</button>
         </div>
         {reloadBlocked ? <p className="health-blocked">{props.copy.healthReloadBlocked}</p> : null}
         <p className="health-feedback" role="status" aria-live="polite">{props.feedback ?? ""}</p>
@@ -104,7 +104,7 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
       </div>
       <div className="health-toolbar">
         <button type="button" disabled={props.checking || !props.sites.length} onClick={() => props.onCheck(props.sites.map((site) => site.key))}><ReloadIcon />{props.checking ? props.copy.checkingSiteHealth : props.copy.checkAgain}</button>
-        <button type="button" disabled={!props.sites.length} title={props.copy.healthCopyReport} aria-label={props.copy.healthCopyReport} onClick={props.onCopyReport}><CopyIcon />{props.copy.healthCopyReportCompact}</button>
+        <button type="button" disabled={!props.sites.length} data-hint={props.copy.healthCopyReport} aria-label={props.copy.healthCopyReport} onClick={props.onCopyReport}><CopyIcon />{props.copy.healthCopyReportCompact}</button>
       </div>
       {props.sites.length ? (
         <div className="site-status-list">
@@ -112,7 +112,7 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
             const current = props.health[site.key] ?? { site: site.key, state: "unknown" as const, checks: [] };
             return (
               <button type="button" key={site.key} data-health-state={current.state} onClick={() => props.onDetail(site.key)}>
-                <span className="health-site-copy"><strong>{site.label}</strong><small title={recentLabel(props.copy, current)}>{props.copy.healthLatestSend}：{recentLabel(props.copy, current)}</small></span>
+                <span className="health-site-copy"><strong>{site.label}</strong><small data-hint={recentLabel(props.copy, current)}>{props.copy.healthLatestSend}：{recentLabel(props.copy, current)}</small></span>
                 <em className="health-state">{stateLabel(props.copy, current.state)}</em><ChevronDownIcon />
               </button>
             );

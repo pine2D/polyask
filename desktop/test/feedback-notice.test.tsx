@@ -23,9 +23,11 @@ function feedback() {
         if (!(index in states)) states[index] = initial;
         return [states[index], (update: any) => { states[index] = typeof update === "function" ? update(states[index]) : update; }];
       },
+      useId: () => "hint-test",
       useCallback: (fn: unknown) => fn,
       useEffect: () => {}
     };
+    if (name === "./control-hints") return { useControlHint: () => "" };
     if (name === "../shared/display") return { WORKSPACE_FEEDBACK_HEIGHT: 32 };
     return require(name);
   } });

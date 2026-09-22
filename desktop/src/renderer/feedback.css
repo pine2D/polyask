@@ -6,10 +6,12 @@
 .feedback-bar > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .feedback-bar > button { flex-shrink: 0; min-height: 24px; border: 0; border-radius: 4px; color: var(--muted); background: transparent; }
 .feedback-bar > button:hover { color: var(--accent); background: var(--accent-soft); }
-.site-retry { flex-shrink: 0; min-height: 24px; padding: 0 5px; border: 0; border-radius: 4px; color: var(--accent); background: var(--accent-soft); font-size: 10px; }
+.site-retry { flex-shrink: 0; min-height: 24px; padding: 0 5px; border: 0; border-radius: 4px; color: var(--accent); background: var(--accent-soft); font-size: 12px; }
 .site-retry:disabled { opacity: .5; }
 .surface-stage, .command-surface { height: calc(100% - var(--feedback-height, 32px)); }
 .workspace-drawer { bottom: var(--feedback-height, 32px); }
 
 .comparison-filter { display: flex; align-items: center; gap: 6px; min-height: 28px; font-size: 12px; }
 .compare-trigger { display: flex; align-items: center; gap: 4px; }
+
+.feedback-bar[data-hint-visible="true"] > span { color: var(--muted); white-space: normal; line-height: 14px; max-height: 28px; }
