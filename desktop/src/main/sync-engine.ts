@@ -48,6 +48,13 @@ export class SyncEngine {
   private readonly now: () => number;
   private chain: Promise<unknown> = Promise.resolve();
   private localTimer: ReturnType<typeof setTimeout> | null = null;
+  private localDue = 0;
+  private uploadRetryAt = 0;
+  private runRetryAt = 0;
+  private runRetryAttempt = 0;
+  private generation = 0;
+  private stopped = false;
+  private disconnecting = false;
   private periodicTimer: ReturnType<typeof setInterval> | null = null;
   private disposeOutbox: (() => void) | null = null;
   private activeController: AbortController | null = null;
@@ -58,6 +65,7 @@ export class SyncEngine {
 
   start(): void {
     if (this.disposeOutbox) return;
+    this.stopped = false;
     const config = this.options.repository.config();
     if (!config.connected && config.state === "syncing") {
       this.options.repository.saveConfig({ state: "idle", reason: undefined });
@@ -74,7 +82,8 @@ export class SyncEngine {
   }
 
   dispose(): void {
-    this.activeController?.abort();
+    this.stopped = true;
+    this.cancelScheduled();
     this.disposeOutbox?.();
     this.disposeOutbox = null;
     if (this.localTimer) clearTimeout(this.localTimer);
@@ -104,11 +113,14 @@ export class SyncEngine {
   }
 
   connect(): Promise<SyncStatus> {
+    const generation = this.generation;
     return this.serialize(async () => {
+      if (this.stopped || this.disconnecting || generation !== this.generation) return this.status();
       if (!this.options.auth.configured()) return this.setStatus("blocked", { reason: "oauth_not_configured" });
       try {
         this.setStatus("syncing", { reason: "oauth" });
         await this.options.auth.connect();
+        if (this.stopped || this.disconnecting || generation !== this.generation) return this.status();
         this.options.repository.saveConfig({ tokenStored: true });
         this.options.repository.enqueue({ key: "state", kind: "state", nextAt: 0, attempt: 0 });
         return await this.run("drive_check", true);
@@ -117,18 +129,23 @@ export class SyncEngine {
   }
 
   syncNow(reason = "manual"): Promise<SyncStatus> {
-    if (!this.options.repository.config().connected) return Promise.resolve(this.publish());
-    return this.serialize(() => this.run(reason));
+    if (this.stopped || this.disconnecting || !this.options.repository.config().connected) return Promise.resolve(this.status());
+    const generation = this.generation;
+    return this.serialize(() => generation === this.generation && !this.stopped && !this.disconnecting
+      ? this.run(reason) : Promise.resolve(this.status()));
   }
 
   disconnect(): Promise<SyncStatus> {
-    this.activeController?.abort();
-    return this.serialize(() => this.finishDisconnect());
+    this.disconnecting = true;
+    this.cancelScheduled();
+    return this.serialize(() => this.finishDisconnect()).finally(() => { this.disconnecting = false; });
   }
 
   clearRemote(): Promise<SyncStatus> {
-    this.activeController?.abort();
+    this.cancelScheduled();
+    const generation = this.generation;
     return this.serialize(async () => {
+      if (this.stopped || this.disconnecting || generation !== this.generation) return this.status();
       const config = this.options.repository.config();
       if (!config.connected) return this.setStatus("auth");
       const base = config.clearProgress ?? 0;
@@ -154,6 +171,8 @@ export class SyncEngine {
 
   /** Revoking may fail on its own; it is reported as a reason, never as a stuck state. */
   private async finishDisconnect(patch: Record<string, unknown> = {}): Promise<SyncStatus> {
+    this.cancelScheduled();
+    this.uploadRetryAt = this.runRetryAt = this.runRetryAttempt = 0;
     let failed = false;
     try { await this.options.auth.disconnect(); } catch { failed = true; }
     this.options.repository.clearDriveFiles();
@@ -168,6 +187,12 @@ export class SyncEngine {
     const config = this.options.repository.config();
     if (!config.connected && !establishingConnection) return this.status();
     if (config.clearRunning) return this.setStatus(config.state, { reason: "clear_pending" });
+    if (!establishingConnection && reason !== "manual" && this.now() < this.runRetryAt) {
+      this.scheduleLocal();
+      return this.status();
+    }
+    if (this.localTimer) clearTimeout(this.localTimer);
+    this.localTimer = null;
     this.activeController?.abort();
     const controller = new AbortController();
     this.activeController = controller;
@@ -179,21 +204,41 @@ export class SyncEngine {
         this.now,
         this.options.onWorkspaceChanged
       ).run(controller.signal);
-      const waiting = await this.flush(controller.signal);
+      controller.signal.throwIfAborted();
+      await this.flush(controller.signal);
+      controller.signal.throwIfAborted();
+      const waiting = this.options.repository.pending() > 0;
       const next = this.options.repository.config();
-      return this.setStatus(next.readOnly ? "schema" : waiting ? "waiting" : "idle", {
+      const status = this.setStatus(next.readOnly ? "schema" : waiting ? "waiting" : "idle", {
         connected: true, lastSuccessAt: this.now(), reason: undefined
       });
-    } catch (error) { return this.fail(error, establishingConnection ? "drive" : "sync"); }
+      this.runRetryAt = this.runRetryAttempt = 0;
+      this.scheduleLocal();
+      return status;
+    } catch (error) {
+      if (controller.signal.aborted) return this.status();
+      const status = this.fail(error, establishingConnection ? "drive" : "sync");
+      if (this.localTimer) clearTimeout(this.localTimer);
+      this.localTimer = null;
+      const code = (error as { code?: string; message?: string }).code ?? (error as Error).message;
+      if (["rate_limited", "server_error", "network_error", "network_timeout"].includes(code ?? "") || error instanceof TypeError) {
+        const hint = (error as { retryAfter?: number }).retryAfter;
+        const delay = Math.max(5_000, retryDelay(++this.runRetryAttempt),
+          typeof hint === "number" && Number.isFinite(hint) && hint > 0 ? hint : 0);
+        this.runRetryAt = this.now() + delay;
+        this.scheduleLocal();
+      }
+      return status;
+    }
     finally { if (this.activeController === controller) this.activeController = null; }
   }
 
-  private async flush(signal: AbortSignal): Promise<boolean> {
-    if (this.options.repository.config().readOnly) return false;
-    let waiting = false;
+  private async flush(signal: AbortSignal): Promise<void> {
+    if (this.options.repository.config().readOnly || this.now() < this.uploadRetryAt) return;
     for (;;) {
+      signal.throwIfAborted();
       const ready = this.options.repository.ready(this.now());
-      if (!ready.length) return waiting;
+      if (!ready.length) return;
       ready.sort((left, right) => ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 }[left.kind] - ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 }[right.kind])));
       // state 正文是本机整份 fragment、与出箱条数无关：一轮只上传一次，然后把本轮全部 state 项逐条 complete。
       // 出箱行本身不折叠（database.test.ts 明写 outbox 按 key 各留一行），折叠只发生在这里。
@@ -201,6 +246,7 @@ export class SyncEngine {
       const batches = [...(stateOperations.length ? [stateOperations] : []), ...ready.filter((operation) => operation.kind !== "state").map((operation) => [operation])];
       for (const batch of batches) {
         try {
+          signal.throwIfAborted();
           await this.upload(batch[0], signal);
           for (const folded of batch.slice(1)) this.options.repository.complete(folded.key, folded.revision);
         } catch (error) {
@@ -211,8 +257,10 @@ export class SyncEngine {
           // 整批同一 attempt 与 nextAt：折叠的 state 行若各自抖动退避，下一轮会拆成 N 次一模一样的整份上传。
           const attempt = Math.max(...batch.map((operation) => operation.attempt)) + 1;
           const nextAt = this.now() + Math.max(retryDelay(attempt), typeof hint === "number" && hint > 0 ? hint : 0);
-          for (const operation of batch) this.options.repository.enqueue({ ...operation, attempt, nextAt });
-          waiting = true;
+          this.uploadRetryAt = Math.max(this.uploadRetryAt, nextAt);
+          for (const operation of batch) this.options.repository.retry({ ...operation, attempt, nextAt });
+          // Backoff covers every batch, including revisions written during this upload.
+          return;
         }
       }
     }
@@ -267,6 +315,7 @@ export class SyncEngine {
     } else { this.options.repository.complete(operation.key, operation.revision); return; }
     const existing = this.options.repository.findDriveFile(key);
     const saved = await this.options.drive.upsert(existing?.id ?? null, name, properties, body, signal);
+    signal.throwIfAborted();
     if (!saved.id) throw Object.assign(new Error("invalid_response"), { code: "invalid_response" });
     this.options.repository.putDriveFile(saved, key, this.now());
     this.options.repository.complete(operation.key, operation.revision);
@@ -288,10 +337,30 @@ export class SyncEngine {
     return status;
   }
 
-  private scheduleLocal(): void {
-    if (!this.options.repository.config().connected) return;
+  private cancelScheduled(): void {
+    this.generation++;
+    this.activeController?.abort();
     if (this.localTimer) clearTimeout(this.localTimer);
-    this.localTimer = setTimeout(() => { this.localTimer = null; void this.syncNow("local-change"); }, 3_000);
+    this.localTimer = null;
+  }
+
+  private scheduleLocal(): void {
+    const config = this.options.repository.config();
+    if (this.stopped || this.disconnecting || !this.disposeOutbox || !config.connected || config.readOnly || config.clearRunning) return;
+    if (["auth", "blocked", "schema"].includes(config.state)) return;
+    const nextAt = this.options.repository.nextAt();
+    if (nextAt === null) return;
+    const now = this.now();
+    const due = Math.max(this.runRetryAt, this.uploadRetryAt, nextAt > now ? nextAt : now + 3_000);
+    // Keep an earlier wake-up: continuous edits cannot starve due work.
+    if (this.localTimer && this.localDue <= due) return;
+    if (this.localTimer) clearTimeout(this.localTimer);
+    this.localDue = due;
+    this.localTimer = setTimeout(() => {
+      this.localTimer = null;
+      void this.syncNow("outbox");
+    }, Math.min(due - now, 2_147_483_647));
+    this.localTimer.unref?.();
   }
 
   private serialize<T>(task: () => Promise<T>): Promise<T> {

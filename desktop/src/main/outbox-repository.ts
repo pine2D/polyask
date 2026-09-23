@@ -77,6 +77,17 @@ export class OutboxRepository {
     });
   }
 
+  nextAt(): number | null {
+    const row = this.database.prepare("SELECT MIN(next_at) AS nextAt FROM outbox").get() as { nextAt: number | null };
+    return row.nextAt;
+  }
+
+  /** Backoff is not a local edit, and must never replace a newer revision. */
+  retry(operation: OutboxOperation & { readonly revision: number }): void {
+    this.database.prepare("UPDATE outbox SET body = ?, next_at = ? WHERE key = ? AND revision = ?")
+      .run(JSON.stringify(operation), operation.nextAt, operation.key, operation.revision);
+  }
+
   complete(key: string, revision: number): boolean {
     return this.database.prepare("DELETE FROM outbox WHERE key = ? AND revision = ?").run(key, revision).changes === 1;
   }

@@ -240,6 +240,8 @@ export class SyncRepository {
   history(id: string): StoredHistory | null { return this.database.history.get(id); }
   archive(id: string): StoredArchive | null { return this.database.archives.get(id); }
   enqueue(operation: OutboxOperation) { return this.database.outbox.enqueue(operation); }
+  nextAt() { return this.database.outbox.nextAt(); }
+  retry(operation: OutboxOperation & { readonly revision: number }) { this.database.outbox.retry(operation); }
   ready(now: number) { return this.database.outbox.ready(now); }
   complete(key: string, revision: number): boolean { return this.database.outbox.complete(key, revision); }
   pending(): number { return this.database.outbox.count(); }
