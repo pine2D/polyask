@@ -27,7 +27,22 @@ app.whenReady().then(async () => {
     await run(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); e.focus(); Object.getOwnPropertyDescriptor(e.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype,'value').set.call(e,${JSON.stringify(value)}); e.dispatchEvent(new Event('input',{bubbles:true})); })()`);
     await pause(60);
   };
-  const shot = async name => writeFileSync(join(output, `${name}.png`), (await win.webContents.capturePage()).toPNG());
+  const shot = async name => {
+    // DOM geometry can be ready before Chromium has submitted its first frame.
+    // Wait for fonts and paint opportunities, then reject a single-colour capture.
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await run('document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))');
+      const image = await win.webContents.capturePage();
+      const pixels = image.toBitmap();
+      const background = pixels.length >= 4 ? pixels.readUInt32LE(0) & 0xffffff : 0;
+      let painted = false;
+      for (let offset = 0; offset + 4 <= pixels.length; offset += 64) {
+        if ((pixels.readUInt32LE(offset) & 0xffffff) !== background) { painted = true; break; }
+      }
+      if (painted) { writeFileSync(join(output, `${name}.png`), image.toPNG()); return; }
+    }
+    throw new Error(`Screenshot stayed blank after five rendered frames: ${name}`);
+  };
   const geometry = async () => run(`(() => {
     const selectors=['.folder-toolbar','.folder-content-list','.folder-detail','.archive-detail','.decision-editor'];
     return selectors.flatMap(selector=>[...document.querySelectorAll(selector)].filter(e=>e.getClientRects().length).map(e=>({selector,width:e.clientWidth,scroll:e.scrollWidth,right:e.getBoundingClientRect().right,viewport:innerWidth})));
@@ -60,7 +75,7 @@ app.whenReady().then(async () => {
   await wait('!!document.querySelector(".library-popover input")');
   await fill('.library-popover input', '长');
   await key('Up');
-  assert.equal(await run('document.querySelectorAll("[role=option][data-active=true]").length'), 1);
+  await wait('document.querySelectorAll("[role=option][data-active=true]").length === 1');
   await shot('tag-menu');
   await key('Escape');
   assert.equal(await run('!!document.querySelector(".library-popover")'), false);
@@ -136,8 +151,13 @@ app.whenReady().then(async () => {
   assert.ok(await run('document.querySelector(".archive-detail-pane").getBoundingClientRect().width >= document.querySelector(".folder-detail").getBoundingClientRect().width - 2'), 'embedded decision must use the entire detail width at zoom');
   await shot('zoom-150');
   win.webContents.setZoomFactor(1);
+  // Zoom changes reach the renderer asynchronously. Do not use coordinates from
+  // the old scaled layout for the next native mouse click.
+  await wait(`window.innerWidth === ${win.getContentSize()[0]}`);
+  await run('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
   // Empty and failed searches retain a usable search field and recover on retry.
   await click('.library-segments button:first-child');
+  await wait('document.querySelector(".library-segments button:first-child").getAttribute("aria-pressed") === "true"');
   await fill('[name=library-search]', 'no-matching-record');
   await wait('document.querySelectorAll(".archive-list > button").length === 0 && !document.querySelector(".archive-list[aria-busy=true]")');
   assert.equal(await run('document.activeElement.name'), 'library-search');
