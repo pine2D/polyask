@@ -1,6 +1,6 @@
 import { questionReaskWarning, questionHistorySurface } from "./question-history-model";
 import { QuestionHistoryLegacy } from "./question-history-legacy";
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import type { SiteDefinition } from '../shared/contracts';
 import type { QuestionDetail, QuestionPage } from '../shared/question-history';
@@ -12,6 +12,7 @@ import { QuestionHistoryList } from './question-history-list';
 import { QuestionHistoryReader } from './question-history-reader';
 import { shell } from './shell-api';
 import './question-history.css';
+import { refreshQuestionPages } from './question-history-refresh';
 
 type Confirmation = { title: string; message: string; label: string; run: () => void };
 export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0, busy, onOpen, onClose, onDraft, onBlockingChange }: {
@@ -29,6 +30,18 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
   const [restoring, setRestoring] = useState(false);
   const [narrow, setNarrow] = useState(() => window.innerWidth < QUESTION_PANEL_BREAKPOINT);
   const sequence = useRef(0), detailSequence = useRef(0), input = useRef<HTMLInputElement>(null);
+  const listPending = useRef(0), detailPending = useRef(0);
+  const pageRef = useRef(page); pageRef.current = page;
+  const scroll = useRef<HTMLDivElement>(null);
+  const anchor = useRef<{ id: string; top: number } | null>(null);
+  const leaveDetail = useCallback(() => { detailSequence.current++; detailPending.current = 0; setDetail(null); }, []);
+  const close = () => { leaveDetail(); sequence.current++; listPending.current = 0; closeRef.current(); };
+  useLayoutEffect(() => {
+    const saved = anchor.current; anchor.current = null;
+    if (!saved || !scroll.current) return;
+    const node = [...scroll.current.querySelectorAll<HTMLElement>('[data-question-id]')].find(n => n.dataset.questionId === saved.id);
+    if (node) scroll.current.scrollTop += node.getBoundingClientRect().top - saved.top;
+  }, [page]);
   const panel = useRef<HTMLElement>(null), opener = useRef<HTMLElement | null>(null);
   const full = narrow || !!detail || !!confirmation || restoring;
   const disabled = busy || restoring;
@@ -43,11 +56,11 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
     if (!open) return;
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     input.current?.focus();
-    return () => { sequence.current++; detailSequence.current++; (document.querySelector<HTMLButtonElement>(".question-trigger") ?? opener.current)?.focus(); };
+    return () => { sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; (document.querySelector<HTMLButtonElement>(".question-trigger") ?? opener.current)?.focus(); };
   }, [open]);
   useEffect(() => {
     const surface = questionHistorySurface(open, full);
-    if (!surface) { setDetail(null); setConfirmation(null); return; }
+    if (!surface) { leaveDetail(); setConfirmation(null); return; }
     void shell.setQuestionPanel(!full).catch(() => announce(copy.questionFailed));
     shell.setSurface(surface);
     return () => { void shell.setQuestionPanel(false).catch(() => {}); };
@@ -59,8 +72,8 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
         const menu = panel.current?.querySelector<HTMLDetailsElement>('details[open]');
         e.preventDefault(); e.stopImmediatePropagation();
         if (menu) { menu.open = false; menu.querySelector('summary')?.focus(); }
-        else if (detail) setDetail(null);
-        else closeRef.current();
+        else if (detail) leaveDetail();
+        else close();
       }
       if (e.key === 'Tab' && full) {
         const nodes = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input, select, summary, [tabindex="0"]');
@@ -72,37 +85,49 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
     };
     window.addEventListener('keydown', key, true); return () => window.removeEventListener('keydown', key, true);
   }, [open, detail, confirmation, full]);
-  const load = useCallback(async (cursor?: string) => {
+  const load = useCallback(async (cursor?: string, refresh = false) => {
+    if (refresh && listPending.current) return;
     const request = ++sequence.current;
+    listPending.current = request;
     setLoading(true); setError('');
     try {
-      const result = await shell.listQuestions({ query, cursor, limit: 50 });
-      if (request !== sequence.current) return;
+      const result = refresh
+        ? await refreshQuestionPages(filters => shell.listQuestions(filters), query, pageRef.current, () => request === sequence.current)
+        : await shell.listQuestions({ query, cursor, limit: 50 });
+      if (!result || request !== sequence.current) return;
+      if (refresh && scroll.current) {
+        const top = scroll.current.getBoundingClientRect().top;
+        const node = [...scroll.current.querySelectorAll<HTMLElement>('[data-question-id]')].find(n => n.getBoundingClientRect().bottom > top);
+        if (node) anchor.current = { id: node.dataset.questionId!, top: node.getBoundingClientRect().top };
+      }
       setPage(old => ({ items: cursor ? [...old.items, ...result.items.filter(q => !old.items.some(a => a.id === q.id))] : result.items, cursor: result.cursor }));
     } catch { if (request === sequence.current) setError(copy.questionLoadFailed); }
-    finally { if (request === sequence.current) setLoading(false); }
+    finally { if (listPending.current === request) listPending.current = 0; if (request === sequence.current) setLoading(false); }
   }, [query, copy]);
   useEffect(() => {
     if (!open) return;
     sequence.current++;
     const timer = setTimeout(() => { void load(); }, 200);
-    return () => { clearTimeout(timer); sequence.current++; };
+    return () => { clearTimeout(timer); sequence.current++; listPending.current = 0; };
   }, [open, load]);
-  const read = async (id: string, answerId?: string) => {
+  const read = async (id: string, answerId?: string, refresh = false) => {
+    if (refresh && detailPending.current) return;
     const request = ++detailSequence.current;
+    detailPending.current = request;
     setError('');
     try {
       const result = await shell.getQuestion(id, answerId);
       if (request !== detailSequence.current) return;
-      if (!result) { setDetail(null); setError(copy.questionDeleted); announce(copy.questionDeleted); void load(); return; }
+      if (!result) { leaveDetail(); setError(copy.questionDeleted); announce(copy.questionDeleted); void load(undefined, true); return; }
       setDetail(result);
     } catch { if (request === detailSequence.current) setError(copy.questionLoadFailed); }
+    finally { if (detailPending.current === request) detailPending.current = 0; }
   };
   useEffect(() => {
     if (!open || confirmation || restoring) return;
     const timer = setInterval(() => {
-      if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined);
-      else if (page.items.length <= 50) void load();
+      if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined, true);
+      else void load(undefined, true);
     }, 5_000);
     return () => clearInterval(timer);
   }, [open, detail?.question.id, detail?.loadedAnswerId, confirmation, restoring, load, page.items.length]);
@@ -112,49 +137,58 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
     else input.current?.focus();
   }, [open, detail?.question.id]);
   const reask = (text: string, imageCount = 0) => {
-    const apply = () => { onDraft(text); setConfirmation(null); setDetail(null); onClose(); };
+    const apply = () => { onDraft(text); setConfirmation(null); close(); };
     const warning = questionReaskWarning(draft, draftImageCount, text, imageCount, copy);
     if (warning) setConfirmation({ title: copy.questionDraftTitle, message: warning, label: copy.questionReask, run: apply });
     else apply();
   };
   const remove = (id: string) => setConfirmation({ title: copy.questionDeleteTitle, message: copy.questionDeleteWarning, label: copy.questionDelete, run: () => {
-    setConfirmation(null);
-    void shell.deleteQuestion(id).then(() => { if (detail?.question.id === id) setDetail(null); void load(); announce(copy.questionDeleted); }).catch(() => setError(copy.questionFailed));
+    detailSequence.current++; detailPending.current = 0;
+    void shell.deleteQuestion(id).then(() => {
+      if (detail?.question.id === id) leaveDetail();
+      sequence.current++; listPending.current = 0;
+      void load(undefined, true); announce(copy.questionDeleted);
+    }).catch(() => setError(copy.questionFailed)).finally(() => setConfirmation(null));
   } });
   const restore = async (id: string, answerId?: string) => {
     if (disabled) return;
+    const request = ++detailSequence.current; detailPending.current = request;
     setError('');
     try {
       const preview = await shell.previewQuestion(id, answerId);
+      if (request !== detailSequence.current) return;
       const execute = async () => {
+        if (request !== detailSequence.current) return;
         setConfirmation(null); setRestoring(true); announce(copy.questionBusy);
         setUndoAction({ label: copy.cancel, run: () => { void shell.cancelQuestionRestore(); } });
         try {
           const result = await shell.restoreQuestion(preview.token, true);
+          if (request !== detailSequence.current) return;
           const labels = { opened: copy.questionOpened, already_open: copy.questionAlreadyOpen, missing_url: copy.questionNoUrl,
             failed: copy.questionOpenFailed, timeout: copy.questionTimeout, cancelled: copy.questionCancelled };
           announce(result.map(r => `${sites.find(s => s.key === r.site)?.label ?? r.site}: ${labels[r.state]}`).join(' · '));
           setUndoAction({ label: copy.questionCopies, run: () => { onOpen(); void read(id); } });
-          if (result.every(r => r.state === 'opened' || r.state === 'already_open')) { setDetail(null); onClose(); }
+          if (result.every(r => r.state === 'opened' || r.state === 'already_open')) { close(); }
           else { onOpen(); await read(id); }
-        } catch { setUndoAction(null); setError(copy.questionFailed); announce(copy.questionFailed); }
+        } catch { if (request === detailSequence.current) { setUndoAction(null); setError(copy.questionFailed); announce(copy.questionFailed); } }
         finally { setRestoring(false); }
       };
       if (preview.needsConfirmation) setConfirmation({ title: copy.questionRestoreTitle, message: `${copy.questionRestoreWarning}\n${preview.affected.map(key => sites.find(s => s.key === key)?.label ?? key).join(' / ')}`, label: copy.questionRestore, run: () => { void execute(); } });
       else await execute();
-    } catch { setError(copy.questionFailed); }
+    } catch { if (request === detailSequence.current) setError(copy.questionFailed); }
+    finally { if (detailPending.current === request) detailPending.current = 0; }
   };
   if (!open) return null;
   return <aside ref={panel} className={`question-history${full ? ' is-full' : ''}`} style={{ width: full ? undefined : QUESTION_PANEL_WIDTH }} aria-label={copy.questionHistory}>
     <header className="question-header"><h1>{detail ? copy.questionCopies : copy.questionHistory}</h1>
-      {detail && <button type="button" onClick={() => setDetail(null)}>{copy.questionBack}</button>}
-      <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} onClick={onClose}><CloseIcon /></button>
+      {detail && <button type="button" onClick={leaveDetail}>{copy.questionBack}</button>}
+      <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} onClick={close}><CloseIcon /></button>
     </header>
     {restoring && <div role="status" className="question-notice">{copy.questionBusy} <button type="button" onClick={() => { void shell.cancelQuestionRestore(); }}>{copy.cancel}</button></div>}
-    {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(); }}>{copy.questionRetry}</button></div>}
+    {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(undefined, true); }}>{copy.questionRetry}</button></div>}
     {detail ? <QuestionHistoryReader detail={detail} copy={copy} sites={sites} busy={disabled} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} /> : <>
-      <div className="question-search"><input ref={input} type="search" value={query} onChange={e => setQuery(e.target.value)} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
-      <div className="question-scroll" aria-busy={loading}>
+      <div className="question-search"><input ref={input} type="search" value={query} onChange={e => { leaveDetail(); sequence.current++; listPending.current = 0; setQuery(e.target.value); }} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
+      <div ref={scroll} className="question-scroll" aria-busy={loading}>
         {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}
         <QuestionHistoryList items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
         {page.cursor && <button type="button" className="question-load-more" disabled={loading} onClick={() => { void load(page.cursor!); }}>{copy.questionMore}</button>}

@@ -15,7 +15,7 @@ export function QuestionHistoryList({ items, sites, copy, busy, onRestore, onRea
     const siteSummary = labels.slice(0, 2).join(' / ') + (labels.length > 2 ? ` +${labels.length - 2}` : '');
     const restoreHint = busy ? copy.questionReadOnlyBusy : !canRestore ? copy.questionMissing : copy.questionRestore;
     const states = [...new Set(q.answers.filter(a => a.capture !== 'complete').map(a => answerState(a, copy)))];
-    return <li key={q.id}>
+    return <li key={q.id} data-question-id={q.id}>
       {(index === 0 || questionDay(items[index - 1].createdAt, now, copy) !== group) && <h3 className="question-day">{group}</h3>}
       <article className="question-card">
         <button type="button" className="question-main" data-hint={`${copy.questionCopies} · ${siteNames}`}
