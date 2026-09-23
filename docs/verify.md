@@ -110,7 +110,7 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 
 **其它（5 条）**
 
-- F041 · 原审计记录 `site-runtime/core.js` 为 300/300 顶格；2026-09-20 源码已是 288 行，但 `deadline` 仍没贯通到切档路径，贴近截止线时切档可能被硬截断。**明确顺延**（拆卷后再做），已记为已知偏离。
+- F041 · 2026-09-23 已为切档路径透传绝对 deadline，覆盖轮询、等待、交互前检查与菜单超时清理；离线及开发态验收边界见本文件本轮记录。
 - F139 · 便携版白名单不对称：发版前跑一次便携版产物解包校验（跨平台 CI 已有该步），据结果勾掉或顺延。
 - F089 / F132 · ux 两条、F037 · 存储键序：原始审计报告已不可得，**端别判不出的一律按「与切除无关」顺延**，不得默认已随扩展一起消失。
 - F121 · popup ux：随扩展删除消失，就地销号。
@@ -198,3 +198,14 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 ### Claude Opus 5.5 档位（2026-09-23）
 
 重启开发态 Electron 后，在 Claude 站点的隔离上下文调用生产 `__AMS`，完成 fast → think → fast，以及额外一次 think → fast：按钮分别为 `Opus 5.5 Medium` / `Fable 5.1 Max 3.5× or more usage`，`getState()` 分别为 fast / think。菜单退出动画结束后，无残留 `[role=menu]`，模型入口 `aria-expanded=false`。环境为 Linux 开发态、英文、592×1068 站点视口；没有发送提问，不代表已比较回答质量、生成速度或额度消耗。旧版 effort 子菜单与新版平铺 group 的语义归属、缺少入口及点击未生效分支由离线回归覆盖。
+
+### 2026-09-23 可靠性与查询优化
+
+- 真实内存 SQLite 与延迟探针覆盖：切换前等待在途回答、2.5s 总预算、取消后拒收、旧轮进行中新 token 的补采。
+- Drive 使用真实同步引擎、内存库与模拟时钟/网络覆盖到期唤醒、连续编辑、revision 冲突、拉取故障退避、Retry-After、断开与重连；不等于真实双设备验收。
+- 历史真实 React 组件交互命令：`cd desktop && node --import tsx --test --test-isolation=none test/question-history-interaction.check.ts`。测试自行构建临时夹具并启动隔离 Electron，覆盖返回/Escape/关闭/切换/删除、多页刷新、慢列表与慢详情；不连接站点或 Drive，不纳入普通 npm test 的无图形门禁。
+- 查询性能取 WSL/Linux 内存库 1,000 条合成结果、每条 34,500 字符正文、每题两站副本，11 次查询中位值。选择性结果搜索从约 343ms 降至约 133ms；并行开发负载下仅作该样本参考，不代表真实大库或原生 Windows 性能。历史每页 SQL 次数由 51 降为 2，但本轮耗时约 9.5→12.6ms，未测得延迟收益，不据此宣称加速。结果库未筛选全量列表仍有规模上限，后续分页需独立测量。
+- token 原子替换用真实临时文件与旧 inode 硬链接验证，另测替换失败时临时文件清理；未验证断电或原生系统密钥环故障。
+- 重启隔离 Linux 开发态，在真实九站的生产 `__AMS` 验证切档：Claude、ChatGPT、Gemini、DeepSeek、豆包、Kimi、元宝、智谱的快速→思考通过；九站均拒绝 1ms 到期预算下的切档。千问思考成功，快速仍报模型缺失：当前约 8.331s、独立基线约 8.346s，实际菜单仅提供 Qwen3.7-千问、Qwen3.7-Max、Qwen3.6-Flash，均无既定目标 Qwen3.8-Max；两版返回后等待 500ms，menu/dialog 节点均为空。此为已复现的原有模型不匹配，本轮未修改模型策略，不能宣称九站正常切档全部通过。本轮没有发送新提问；“切档预算耗尽后群发仍继续”由离线生产运行时回归验证。
+- 历史组件八类真实交互通过；结果库 18 组布局及交互通过，重新生成的十张截图均非纯色，并目视复核浅/深色 1600 阅读界面。截图工具新增字体与渲染帧等待、空白像素检查，持续空白会失败，不再将截图文件存在当作有效视觉证据。
+- 最终门禁：694 项 TypeScript/React 与 113 项运行时测试通过（共 807 项）；独立 typecheck、verify.sh、Linux package 和 smoke（shell=1、sites=9、attached=9）通过。真实 Drive 双设备及 Windows/macOS 原生验收未执行，Kimi 自动重发仍关闭。

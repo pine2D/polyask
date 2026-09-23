@@ -74,7 +74,7 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 | 只读诊断（`diagnose`） | 2.5s | `view-manager.ts` |
 | 生成态探针（`generation`） | 单次 2.5s，轮询 900ms，连续 5 次读不到状态才放弃 | `view-manager.ts` |
 | 生成监控观测期 | 起始 45s；**确实见到「生成中」后延长到 15 分钟** | `view-manager.ts` |
-| Drive 周期同步 / 本机变更防抖 | 15 分钟 / 3s | `sync-engine.ts` |
+| Drive 周期同步 / 本机变更合并窗口 | 15 分钟 / 3s（连续写入不推迟已计划唤醒）；未来任务按最早 nextAt 到期唤醒 | `sync-engine.ts` |
 | OAuth 回调等待 / 网络请求截止 | 5 分钟 / 30s | `oauth-pkce.ts`、`drive-client.ts` |
 
 改任何一格必须同时看「谁在它下游等」：站点侧的单步等待一律夹到 deadline 内，通道层 `SiteCommandChannel` 也按 `deadline - now` 起定时器，deadline 已过直接返回 `timeoutResult`。
@@ -135,6 +135,9 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 - **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删。`DataAdminService` 的「清空历史」「清空结果库」「清空决策卡」「清空任务文件夹」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
 - **「重置全部本机数据」是本应用唯一的物理删除路径**，语义刻意不同：先 `sync.disconnect()` 断开 Drive，再 `database.resetLocalData()` 物理清空十张业务/同步表并只保留 `meta` 里的 `deviceId`。这里**不能用 tombstone**——tombstone 比云端记录新，重新连接后会赢过云端副本并上传，等于把云端也删了，与「重置不会删除云端数据」的承诺相反。`deviceId` 保留是因为本机在云端的旧 fragment 靠它找回，换掉会让重置后首轮上传把本机不建模的设置键整体丢掉。改这两条语义之前先改用户可见的承诺文案。
 - Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，文件夹和关联实体采用 schema 3，`SUPPORTED_SYNC_SCHEMA = 4` 表达客户端可识别的最高版本；state/history/archive 仍仅接受 schema 1，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
+- 出箱仍有记录时保持 `waiting`，不把“暂未到期”当空闲。按最早 `nextAt` 唤醒，限流遵守退避与 Retry-After；旧失败只更新相同 revision，不覆盖上传期间的新修改。断开或销毁取消定时器并使排队任务失效。
+- 加密 refresh token 先写同目录独占临时文件（0600），完成写入、同步与关闭后原子替换；失败清理临时文件，保留原令牌文件。无安全加密后端时仍仅保留进程内令牌。
+- 结果库过滤在 SQLite 执行，保持既有 searchText 的大小写与字面搜索语义；标签独立查询，不再为标签加载全部回答。历史每页批量读取尝试摘要，正文仍只随选中详情返回；不新增数据库字段或同步格式。
 - **schema 1 的线格式冻结在 `desktop/test/fixtures/schema1-*.json`**（每个文件 `{file, body}`，出自扩展时代的真实实现，代码保留在 tag `archive/extension-v0.25.1`）。**不要重新生成、不要按新校验「修正」它们**：`schema1-wire-format.test.ts` 把全部样本喂进下行链路并要求逐条接收，任何一次校验收紧命中存量形状会先红在那里，而不是在用户的结果库里静默少几条。新增决策卡 schema 2 另增 `schema2-decision*.json`，文件夹及关联 schema 3 另增 `schema3-folder*.json`；旧实体仍为 schema 1，冻结样本不变。
 - **两条跨端不变量**（跨设备记录要能互认，改一端就是让另一端拒收）：
   1. **提问在派发之前无条件入库**——`shell-ipc.ts` 的 `history.record(request.text)` 先于 `coordinator.send`。请求校验、图片站点支持检查、操作互斥及 `collection.beginRun` 的过期轮次检查都在记录之前，被这些检查拒绝的请求不入库；**全部站点都失败的提问照样留记录**，这是有意的（用户要能重发）。
@@ -246,10 +249,12 @@ npm run soak -- --minutes=60
 Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或会话 URL；最高支持 schema 4，旧实体保持原格式。业务备份导出 version 2、兼容读取 version 1；子记录依赖父记录，缺依赖不能静默恢复。恢复已删除提问派生新身份并映射选中的副本，重复导入不复活再次删除的内容。
 
 
-提问历史 IPC 由 `question-history-ipc.ts` 注册并验证外壳身份；renderer 不接受任意导航地址，恢复只提交记录 ID / 尝试 ID，再用主进程生成的一次性预览令牌执行。实际导航前再次核对记录、站点选择及视图身份，受 OperationGate 保护；最多两站并发、单站 15s、总计 30s，缺地址不导航首页。快照轮询每 5s 启动，最多两个只读探针并发，探针 2.5s；初始观察 45s，首次观测到生成或已归属正文时延长一次至 15min，后续进度不再顺延，切换会话前尽力在 2.5s 内保存。中间副本入 outbox 延后 30s，封存或首次文本立即可上传。运行时不把停止键缺失或正文静止当完成证据，无法正向确认结束的副本保留“完成状态未知”。
+提问历史 IPC 由 `question-history-ipc.ts` 注册并验证外壳身份；renderer 不接受任意导航地址，恢复只提交记录 ID / 尝试 ID，再用主进程生成的一次性预览令牌执行。实际导航前再次核对记录、站点选择及视图身份，受 OperationGate 保护；最多两站并发、单站 15s、总计 30s，缺地址不导航首页。快照轮询每 5s 启动，最多两个只读探针并发，探针 2.5s；初始观察 45s，首次观测到生成或已归属正文时延长一次至 15min，后续进度不再顺延，切换会话前尽力在 2.5s 内保存：先等待在途采集；旧轮未覆盖的新 token 在同一剩余预算内补采，到期不阻塞导航。中间副本入 outbox 延后 30s，封存或首次文本立即可上传。运行时不把停止键缺失或正文静止当完成证据，无法正向确认结束的副本保留“完成状态未知”。
 
 右侧历史面板宽 360 CSS px，与左侧面板互斥。共享最小站点列宽决定窄窗全页；阅读副本/确认操作时原位置隐藏原生站点视图，保持挂载、正尺寸与既有禁用后台节流设置，退出恢复可见性（BrowserWindow 默认外壳不是可重排子视图）。历史卡片点击始终读取副本；恢复原站走独立按钮，忙碌时仅保留阅读和复制等只读操作。结果库 surface 会 detach 站点视图，因此其顶部入口仍在发送/辅助操作期间禁用并说明原因。列表只传摘要和尝试元数据，正文仅按选中尝试读取；旧文字历史独立查询分页，顶部提问库的最近文字行为保持不变。错误提示由三语 `question-copy.ts` 提供。
 
 历史再问只恢复文字，原图片不入库或同步；详情和列表显示请求附图数量（不等同于成功发送数量）。恢复带图问题或替换有附件的草稿须提示确认，并清除当前草稿附件与尚未完成的选图读取，防止与历史文字混用。
 
 分页发送统计：`SiteStatus.submission` 是运行期发送结果（runId/state/code），仅群发入口赋值；生成态更新保留它，页面故障仍覆盖站点表头但不覆盖发送结果。新 run 清除上一轮计数，同 runId 子集重试保留未重试站结果。分页绿色计数表示已提交，不宣称回答完成；失败、提交未确认、取消分别显示，逐站生成态与警告进入共享悬停提示和无障碍名称。该字段不持久化、不进入同步。
+
+历史列表每 5s 重读至已加载尾部，反映新增、删除与回答保存进度；以可见记录为滚动锚点。列表或详情请求未结束时不叠加轮询；返回、关闭、切换或删除使旧详情回包失效。
