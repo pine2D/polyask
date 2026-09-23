@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { link, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -100,4 +100,41 @@ test("an unknown safe storage backend is not treated as secure persistence", asy
 test("optional safe storage initialization failures degrade instead of blocking app startup", async () => {
   assert.equal(await safeEncryptionAvailability(async () => { throw new Error("keyring unavailable"); }), false);
   assert.equal(await safeEncryptionAvailability(async () => true), true);
+});
+
+test("saving replaces the token atomically without overwriting the previous file", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "polyask-token-atomic-"));
+  const path = join(directory, "oauth-token.bin"), previous = join(directory, "previous.bin");
+  const store = new TokenStore(path, {
+    backend: () => "dpapi", available: async () => true,
+    encrypt: async value => Buffer.from(`cipher:${value}`),
+    decrypt: async value => value.toString().slice(7)
+  });
+  try {
+    await store.save("old");
+    // A hard link observes the original inode. An in-place overwrite would
+    // truncate the only good ciphertext before the replacement is complete.
+    await link(path, previous);
+    await store.save("new");
+    assert.equal(await readFile(previous, "utf8"), "cipher:old");
+    assert.equal(await new TokenStore(path, store.crypto).load(), "new");
+    if (process.platform !== "win32") assert.equal((await stat(path)).mode & 0o777, 0o600);
+    assert.deepEqual((await readdir(directory)).sort(), ["oauth-token.bin", "previous.bin"]);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test("a failed token replacement removes only its temporary ciphertext", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "polyask-token-failure-"));
+  const path = join(directory, "oauth-token.bin");
+  await mkdir(path);
+  await writeFile(join(path, "keep"), "original data");
+  const store = new TokenStore(path, {
+    backend: () => "dpapi", available: async () => true,
+    encrypt: async () => Buffer.from("synthetic ciphertext"), decrypt: async () => "unused"
+  });
+  try {
+    await assert.rejects(store.save("synthetic token"));
+    assert.deepEqual(await readdir(directory), ["oauth-token.bin"]);
+    assert.equal(await readFile(join(path, "keep"), "utf8"), "original data");
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });

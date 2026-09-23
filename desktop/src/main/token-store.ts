@@ -1,4 +1,5 @@
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 
 export interface TokenCrypto {
@@ -31,7 +32,13 @@ export class TokenStore {
     if (!this.securePersistence() || !await this.crypto.available()) return false;
     const encrypted = await this.crypto.encrypt(refreshToken);
     await mkdir(dirname(this.path), { recursive: true });
-    await writeFile(this.path, encrypted, { mode: 0o600 });
+    const temporary = `${this.path}.${randomUUID()}.tmp`;
+    try {
+      const file = await open(temporary, "wx", 0o600);
+      try { await file.writeFile(encrypted); await file.sync(); }
+      finally { await file.close(); }
+      await rename(temporary, this.path);
+    } finally { await unlink(temporary).catch(() => {}); }
     return true;
   }
 
