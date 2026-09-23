@@ -11,30 +11,40 @@ function claudeEffortCase(options) {
   const opts = options || {};
   const clicked = [];
   const attr = (map) => ({ getAttribute: (name) => (name in map ? map[name] : null) });
-  const state = { label: "Model: Fable 5 · Medium" };
+  const state = { model: "Fable 5.1", effort: "Max", label: "Model: Fable 5.1 · Max" };
   const menu = (lb) => ({ getAttribute: (name) => (name === "aria-labelledby" ? lb : null) });
   const modelMenu = menu("model-lb"), effortMenu = menu("eff-1");
   const radio = (text, home, checked) => ({ textContent: text, closest: () => home,
     getAttribute: (name) => (name === "aria-checked" ? String(!!checked) : null) });
   // 「Max Preview」是刻意放的诱饵模型：文本命中档位标签集，但不属于 effort 子菜单容器。
   // 只按文本过滤就会把它当最高档点下去 —— 双重语义校验的第二层就是防它。
-  const models = [radio("Fable 5", modelMenu), radio("Max Preview", modelMenu), radio("Sonnet 5", modelMenu, true)];
+  const models = (opts.models || ["Fable 5.1", "Opus 5", "Opus 5.50", "Opus 5.5For complex tasks", "Max Preview", "Sonnet 5"])
+    .map((name) => Object.assign(radio(name, modelMenu), { modelName: name.split("For")[0] }));
   const tiers = (opts.tiers || ["Low", "MediumDefault", "High", "Extra", "Max"])
     .map((name) => radio(name, effortMenu));
-  const trigger = Object.assign({ textContent: "EffortMedium", id: opts.id === undefined ? "eff-1" : opts.id }, attr({ "aria-haspopup": "menu" }));
-  let expanded = !!opts.expanded;
+  const trigger = Object.assign({ textContent: opts.inline ? (opts.heading || "Effort") : "EffortMedium", id: opts.id === undefined ? "eff-1" : opts.id }, attr({ "aria-haspopup": "menu" }));
+  effortMenu.contains = (el) => el === trigger;
+  let expanded = !!opts.expanded || !!opts.inline;
   const document = {
+    getElementById: (id) => !opts.dropEntry && id === trigger.id ? trigger : null,
     querySelector: (selector) => selector === '[data-testid="model-selector-dropdown"]'
       ? { getAttribute: (name) => (name === "aria-label" ? state.label : null) }
       : (selector === '[role="menuitemradio"]' ? models[0] : null),
     querySelectorAll: (selector) => {
       if (selector === '[role="menuitemradio"]') return expanded ? models.concat(tiers) : models;
-      if (selector === '[role="menuitem"][aria-haspopup="menu"]') return opts.dropEntry ? [] : [trigger];
+      if (selector === '[role="menuitem"][aria-haspopup="menu"]') return opts.dropEntry || opts.inline ? [] : [trigger];
+      if (selector === '[role="group"][aria-labelledby]') return opts.inline ? [modelMenu, effortMenu] : [];
       return [];
     },
   };
   const S = fakeRuntime(document, clicked, (el) => { if (el === trigger) expanded = true; });
-  S.clickEl = (el) => { clicked.push(el); state.label = "Model: Fable 5 · " + (el.textContent || ""); return true; };
+  S.clickEl = (el) => {
+    clicked.push(el);
+    if (models.includes(el)) state.model = el.modelName;
+    else if (!opts.ignoreEffort) state.effort = el.textContent;
+    state.label = "Model: " + state.model + " · " + state.effort;
+    return true;
+  };
   vm.runInNewContext(source("adapters-intl.js"), { window: { __AMS: S }, t: (key) => key, document, console });
   return { adapter: S.adapters["claude.ai"], S, clicked, tiers, models, state };
 }
@@ -68,6 +78,45 @@ async function claudeFastMustTakeDefaultTier() {
   assert.equal(none.clicked.length, 0, "没有默认档时一项都不许点");
 }
 
+// 生产 fast/think 全链：切模型保留旧 effort，fast 必须把 Max 压回 Medium。
+async function claudeFastMustSelectOpusAndResetEffort() {
+  const c = claudeEffortCase();
+  await c.adapter.fast();
+  assert.equal(c.state.label, "Model: Opus 5.5 · MediumDefault");
+  assert.equal(c.adapter.state(), "fast");
+  assert.equal(c.S.escCount, 2, "模型与档位动作各自收尾");
+  await c.adapter.think();
+  assert.equal(c.state.label, "Model: Fable 5.1 · Max");
+  assert.equal(c.adapter.state(), "think");
+  await c.adapter.fast();
+  assert.equal(c.adapter.state(), "fast");
+  assert.equal(c.state.label, "Model: Opus 5.5 · MediumDefault");
+  const absent = claudeEffortCase({ models: ["Fable 5.1", "Opus 5", "Opus 5.50", "Sonnet 5"] });
+  await assert.rejects(() => absent.adapter.fast(), /未找到模型/);
+  assert.equal(absent.clicked.length, 0, "目标缺失不得误选旧模型");
+  const swallowed = claudeEffortCase({ ignoreEffort: true });
+  await assert.rejects(() => swallowed.adapter.fast(), /目标 effort 未生效/);
+}
+
+// 2026-09-23 真机：effort 已平铺为带 aria-labelledby 的 group，仍须核实标签归属。
+async function claudeInlineEffortGroup() {
+  for (const heading of ["Effort", "思考强度"]) {
+    const c = claudeEffortCase({ inline: true, heading });
+    await c.adapter.fast();
+    assert.equal(c.state.label, "Model: Opus 5.5 · MediumDefault");
+    assert.equal(c.adapter.state(), "fast");
+    await c.adapter.think();
+    assert.equal(c.state.label, "Model: Fable 5.1 · Max");
+    assert.equal(c.adapter.state(), "think");
+    assert.ok(!c.clicked.some(el => el.textContent === "Max Preview"));
+  }
+  for (const opts of [{ dropEntry: true }, { heading: "More models" }, { id: "" }]) {
+    const c = claudeEffortCase({ inline: true, ...opts });
+    await assert.rejects(() => c.adapter._setEffort());
+    assert.equal(c.clicked.length, 0, "没有可信 effort 分组时不可点模型或档位");
+  }
+}
+
 // 档位项与模型项同为 menuitemradio：容器不对的「Max Preview」绝不能被当成最高档点下去
 async function claudeEffortMustIgnoreModelRadios() {
   const c = claudeEffortCase({ tiers: [] }); // 子菜单展开了但一个档位都没有
@@ -92,7 +141,7 @@ async function claudeMissingEffortMustThrow() {
 
 let failed = 0;
 (async () => {
-  const tests = [claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
+  const tests = [claudeInlineEffortGroup, claudeFastMustSelectOpusAndResetEffort, claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
     claudeEffortWithoutTriggerIdMustThrow, claudeMissingEffortMustThrow];
   for (const test of tests) {
     try { await test(); }

@@ -38,7 +38,7 @@ PolyAsk 是个桌面应用。它把 Claude、ChatGPT、Gemini、DeepSeek、豆�
 
 | 站点 | 深度思考 | 快速 |
 |---|---|---|
-| Claude | Fable 5.1，思考强度最高档（现在是 Max） | Sonnet 5，默认强度 |
+| Claude | Fable 5.1，思考强度最高档（现在是 Max） | Opus 5.5，Medium 强度 |
 | ChatGPT | GPT-5.6 Sol，思考强度最高档 | GPT-5.6 Sol，最低档 |
 | Gemini | 最新的 Pro，扩展思考 | 最新的 Flash |
 | DeepSeek | 深度思考开 | 深度思考关 |

@@ -37,10 +37,18 @@
       // 2026-08 改版：effort-menu-trigger / effort-option-* 两个 testid 已消失（Base UI 菜单只剩
       // 自动生成 id），入口退化成「文本 Effort+当前档」的 role=menuitem 子菜单项。
       _effortTrigger: function () {
-        return findByText('[role="menuitem"][aria-haspopup="menu"]', /^(effort|强度|思考强度|努力)/i);
+        const re = /^(effort|强度|思考强度|努力)/i;
+        const submenu = findByText('[role="menuitem"][aria-haspopup="menu"]', re);
+        if (submenu) return submenu;
+        // 2026-09-23 真机：新版把档位平铺到 group，标题由 aria-labelledby 关联。
+        for (const group of document.querySelectorAll('[role="group"][aria-labelledby]')) {
+          const label = document.getElementById(group.getAttribute("aria-labelledby"));
+          if (label && group.contains(label) && re.test((label.textContent || "").trim())) return label;
+        }
+        return null;
       },
       // 档位项与模型项同为 menuitemradio 且同时在 DOM（真机 2026-08-31：顶层 4 个模型 + 子菜单 5 个档位）。
-      // 双重语义校验：① 所属 [role=menu] 的 aria-labelledby 必须指回 effort 入口的 id；② 文本须属档位标签集。
+      // 双重语义校验：① 最近的带标签 group / menu 必须指回 effort 标题/入口的 id；② 文本须属档位标签集。
       // 少一层都会把「最高档」点成末位模型（同 ChatGPT 2026-08 那次事故）。
       _effortItems: function (trig) {
         const id = trig.id || "";
@@ -50,7 +58,7 @@
           .map((el) => ({ el, rank: this._EFFORT.findIndex((re) => re.test((el.textContent || "").trim())) }))
           .filter((x) => {
             if (x.rank < 0) return false;
-            const menu = x.el.closest('[role="menu"]');
+            const menu = x.el.closest('[role="group"][aria-labelledby], [role="menu"]');
             return !!(menu && menu.getAttribute("aria-labelledby") === id);
           });
       },
@@ -89,8 +97,8 @@
           { name: t("diag_modelReadable"), ok: /opus|sonnet|haiku|fable/i.test(this._label()), kind: "tier" },
         ];
       },
-      // think = Fable 5 + 在场最高 effort（当前 Max）；fast = Sonnet 5（快模型，使用该模型默认设置）。
-      // 判档：模型名带 sonnet/haiku 恒 fast；Fable/Opus 再按 thinking/effort 后缀（Adaptive/High/Extra/Max=think，Low/无后缀=fast，其余 effort 不判）
+      // think = Fable 5.1 + 在场最高 effort（当前 Max）；fast = Opus 5.5 + Medium。
+      // Opus 5.5 Medium 判 fast；其余保留旧模型的粗档位识别，Fable Medium 仍不判。
       // aria-label 形如 `Model: Fable 5 · Max`（分隔符 U+00B7，真机 2026-08-31）。
       state: function () {
         const t = this._label();
@@ -98,6 +106,7 @@
         if (/sonnet|haiku/i.test(t)) return this._THINK.test(t) ? null : "fast"; // 快模型带高档 effort 不是预设档（fast 会回到 Medium）
         if (!/fable|opus/i.test(t)) return null;
         if (this._THINK.test(t)) return "think";
+        if (/\bopus\s*5\.5(?![\d.])/i.test(t) && /\bmedium(?:default)?\b|中/i.test(t)) return "fast";
         if (/\blow\b|低/i.test(t)) return "fast";
         if (/(?:fable|opus)\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
         return null;
@@ -114,9 +123,10 @@
       think: async function () {
         await this._selectModel(/fable\s*5/i); await this._setEffort();
       },
-      // fast = Sonnet 5 + 默认档 effort（Medium）。只换模型不回档，上一轮 think 留下的 Max 会原样带过来。
+      // 模型菜单文本紧连说明（Opus 5.5For complex tasks），版本后不能用词边界；仅排除后续数字/小数点。
+      // fast = Opus 5.5 + 默认档 effort（Medium）。只换模型不回档，上一轮 think 留下的 Max 会原样带过来。
       fast: async function () {
-        await this._selectModel(/sonnet\s*5/i); await this._setEffort("default");
+        await this._selectModel(/opus\s*5\.5(?![\d.])/i); await this._setEffort("default");
       },
       attach: function (files, el, deadline) {
         return S.setInputFiles(document.querySelector('input[data-testid="file-upload"]'), files, el, deadline);

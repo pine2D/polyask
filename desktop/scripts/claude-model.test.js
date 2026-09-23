@@ -34,6 +34,13 @@ const state = S.adapters["claude.ai"].state.bind(S.adapters["claude.ai"]);
 // 真机 2026-08-31：aria-label 用 U+00B7 中点分隔（`Model: Fable 5 · Max`），旧的空格形态在
 // 滚动发布期仍会出现，两种都要判对；Extra / Max 是本次新增的两档。
 for (const [value, expected] of [
+  ["Model: Opus 5.5 · Medium", "fast"],
+  ["Model: Opus 5.5 · 中", "fast"],
+  ["Model: Opus 5.5 · Max", "think"],
+  ["Model: Opus 5 · Medium", null],
+  ["Model: Opus 5.50 · Medium", null],
+  ["Model: Fable 5.1 · Max", "think"],
+  ["Model: Fable 5.1 · Medium", null],
   ["Model: Fable 5 \u00b7 Max", "think"],
   ["Model: Fable 5 \u00b7 Extra", "think"],
   ["Model: Fable 5 \u00b7 High", "think"],
@@ -68,7 +75,7 @@ function modelRegex(hook) {
   assert.ok(match, `${hook}() 必须经 _selectModel(/…/i) 选模型`);
   return match[1];
 }
-const plainName = (pattern) => pattern.replace(/\\s[*+]/g, " ").replace(/\\b|[\\^$]/g, "").trim();
+const plainName = (pattern) => pattern.replace("(?![\\d.])", "").replace(/\\s[*+]/g, " ").replace(/\\b|[\\^$]/g, "").trim();
 for (const [hook, suffix, expected] of [["think", " High", "think"], ["fast", " Medium", "fast"]]) {
   const pattern = modelRegex(hook), name = plainName(pattern);
   assert.match(name, new RegExp(pattern, "i"), `${hook}() 的模型正则 /${pattern}/i 反推不出模型名`);
