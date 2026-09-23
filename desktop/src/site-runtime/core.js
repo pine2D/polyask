@@ -4,17 +4,24 @@
   "use strict";
 
   const t = globalThis.__AMS_I18N__ ? globalThis.__AMS_I18N__.t : globalThis.t;
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  function checkDeadline(deadline) { if (deadline && Date.now() >= deadline) throw new Error("timeout"); }
+  function tierAction(deadline, action) { checkDeadline(deadline); return action(); }
+  async function sleep(ms, deadline) {
+    checkDeadline(deadline);
+    await new Promise((r) => setTimeout(r, deadline ? Math.min(ms, Math.max(0, deadline - Date.now())) : ms));
+    checkDeadline(deadline);
+  }
 
   // 轮询等待：fn 返回真值则返回之，超时返回 null
-  async function waitFor(fn, timeout = 3500, step = 120) {
+  async function waitFor(fn, timeout = 3500, step = 120, deadline) {
     const t0 = Date.now();
     for (;;) {
+      checkDeadline(deadline);
       let v = null;
       try { v = fn(); } catch (e) { v = null; }
       if (v) return v;
-      if (Date.now() - t0 > timeout) return null;
-      await sleep(step);
+      if (Date.now() - t0 >= timeout) return null;
+      await sleep(Math.min(step, Math.max(0, timeout - (Date.now() - t0))), deadline);
     }
   }
 
@@ -167,15 +174,17 @@
   }
 
   // silent=true 时不弹 toast、只返回是否成功（供 switchTier 静默重试）。
-  async function runModeNow(mode, silent, image) {
+  async function runModeNow(mode, silent, image, deadline) {
     const a = pickAdapter(), action = image && a && a[mode + "Image"] ? mode + "Image" : mode;
     if (!a || !a[action]) return false;
     // 站点偶发渲染抖动会导致首次失败：静默重试一次，仍失败才报错
     for (let attempt = 0; attempt < 2; attempt++) {
       try {
+        checkDeadline(deadline);
         escMenus(); // 清掉可能残留的菜单，保证从干净态开始
-        await sleep(attempt ? 600 : 150);
-        await a[action]();
+        await sleep(attempt ? 600 : 150, deadline);
+        await a[action](deadline);
+        checkDeadline(deadline);
         if (!silent) toast(t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast"), true);
         focusComposer();
         try { document.dispatchEvent(new CustomEvent("ams:switched")); } catch (e) {}
@@ -195,28 +204,28 @@
     interactionChain = next.then(() => {}, () => {});
     return next;
   }
-  function runMode(mode, silent) { return serializeInteraction(() => runModeNow(mode, silent)); }
+  function runMode(mode, silent, deadline = Date.now() + 10000) { return serializeInteraction(() => runModeNow(mode, silent, false, deadline)); }
   function submitPrompt(text, deadline, images) { return serializeInteraction(() => submitPromptNow(text, deadline, images)); }
 
   // 群发切档用 state() 验证；静默重试到目标档或超时，state 不可读则连续两次无异常视为已尽力。
-  async function switchTier(mode, deadlineMs = 10000, image) {
+  async function switchTier(mode, deadline = Date.now() + 10000, image) {
     const okMsg = t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast");
-    const t0 = Date.now();
     let nullTries = 0;
     let sawReadable = false; // ponytail: guards two-null shortcut from firing on transient nulls for state-readable sites
     let attemptedOk = false;
     for (;;) {
+      if (Date.now() >= deadline) return false;
       const _s = getState(); if (_s != null) sawReadable = true;
       // state 只表示粗档位，不能证明模型版本/强度/开关均精确；每次群发至少跑一次幂等适配器。
       if (attemptedOk && _s === mode) { toast(okMsg, true); return true; }
-      const switched = await runModeNow(mode, true, image);           // 已在交互队列内，直接调用内部实现
+      const switched = await runModeNow(mode, true, image, deadline);           // 已在交互队列内，直接调用内部实现
       if (switched) attemptedOk = true;
-      await sleep(350);
+      await sleep(Math.min(350, Math.max(0, deadline - Date.now())));
       const _s2 = getState(); if (_s2 != null) sawReadable = true;
       if (switched && _s2 === mode) { toast(okMsg, true); return true; } // 适配器成功且状态已切到
       if (switched && _s2 == null && !sawReadable && ++nullTries >= 2) { toast(okMsg, true); return true; }
-      if (Date.now() - t0 > deadlineMs) { toast(t("cs_switchUnstable"), false); return false; }
-      await sleep(switched ? 400 : 700); // 切到了短等 state 追上；没切到多等页面加载出切换器
+      if (Date.now() >= deadline) { toast(t("cs_switchUnstable"), false); return false; }
+      await sleep(Math.min(switched ? 400 : 700, Math.max(0, deadline - Date.now()))); // 切到了短等 state 追上；没切到多等页面加载出切换器
     }
   }
 
@@ -239,7 +248,7 @@
   try {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (!msg || msg.source !== "AMS") return;
-      if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode);
+      if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode, false, Number(msg.deadline) || undefined);
       if (msg.cmd === "getState") { const a = pickAdapter(); sendResponse({ state: getState(), canConfirm: !!(a && a.submitted) }); } if (msg.cmd === "wasSubmitted") { const a = pickAdapter(); let ok = false; try { ok = !!(a && a.submitted && a.submitted(msg.text || "")); } catch (e) {} sendResponse({ supported: !!(a && a.submitted), ok }); }
       if (msg.cmd === "collectAnswer") { // 只读快照：adapter.answer 返回最后一条回答的根节点，通用序列化为 Markdown
         let text = null;
@@ -267,8 +276,8 @@
             const a = pickAdapter(), imageMode = images.length && a && (a.thinkImage || a.fastImage);
             if (imageMode && tier !== "think" && tier !== "fast") tier = getState() || "fast";
             if (tier === "think" || tier === "fast") {
-              const tierMs = deadline ? Math.max(1, Math.min(10000, deadline - Date.now())) : 10000;
-              tierOk = await switchTier(tier, tierMs, !!imageMode); await sleep(200);
+              const tierDeadline = Math.min(deadline || Infinity, Date.now() + 10000);
+              tierOk = await switchTier(tier, tierDeadline, !!imageMode); await sleep(deadline ? Math.min(200, Math.max(0, deadline - Date.now())) : 200);
             }
             if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
             try { window.__AMS.history?.begin(msg.historyToken, msg.text, deadline); } catch (_) {}
@@ -282,5 +291,5 @@
     });
   } catch (e) {}
 
-  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, escMenus, toast, getState, diagnose, findComposer, submitPrompt, visText };
+  window.__AMS = { runMode, adapters, waitFor, findByText, openMenu, clickEl, sleep, checkDeadline, tierAction, escMenus, toast, getState, diagnose, findComposer, submitPrompt, visText };
 })();

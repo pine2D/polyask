@@ -7,7 +7,7 @@
   const t = globalThis.__AMS_I18N__ ? globalThis.__AMS_I18N__.t : globalThis.t;
   const S = window.__AMS;
   if (!S) return;
-  const { waitFor, findByText, openMenu, clickEl, sleep, escMenus } = S;
+  const { waitFor, findByText, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
 
   Object.assign(S.adapters, {
     "chatgpt.com": {
@@ -28,11 +28,12 @@
       _anchor: function () { return document.querySelector('button.__composer-pill[aria-haspopup="menu"]'); },
       // 打开 pill 菜单（2026-08 改版：Radix popper `composer-intelligence-picker-content`，
       // 里面是 Power 滑块 + 常驻的模型 radio，**没有任何 aria-haspopup 子菜单入口**）
-      _openRoot: async function () {
+      _openRoot: async function (deadline) {
+        checkDeadline(deadline);
         const anchor = this._anchor();
         if (!anchor) throw new Error("ChatGPT: Intelligence 按钮未找到");
         const open = () => document.querySelector('[data-testid="composer-intelligence-picker-content"]') || this._power();
-        for (let i = 0; i < 2; i++) { if (open()) return; openMenu(anchor); if (await waitFor(open, 1500)) return; }
+        for (let i = 0; i < 2; i++) { if (open()) return; tierAction(deadline, () => openMenu(anchor)); if (await waitFor(open, 1500, 120, deadline)) return; }
         escMenus(); throw new Error("ChatGPT: 档位菜单未展开");
       },
       // 档位控件：role=menuitem[aria-label=Power]，内含 [data-model-reasoning-effort-slider]；
@@ -63,37 +64,43 @@
       // top=true 取最高档，否则最低档；不写死标签，自适应加减档。
       // 键盘驱动：站点自己在 Power 项上声明 aria-keyshortcuts="ArrowLeft ArrowRight"；
       // **End/Home 真机无效**（2026-08-31 实测：值纹丝不动），只能逐格按，端点会饱和不越界。
-      _pickEdge: async function (top) {
-        await this._openRoot();
-        let lv = this._level();
-        if (!lv) { escMenus(); throw new Error("ChatGPT: 档位滑块未找到"); }
-        const key = top ? "ArrowRight" : "ArrowLeft", goal = top ? lv.max : lv.min;
-        for (let i = 0; i <= lv.max - lv.min && lv.now !== goal; i++) {
-          const el = this._power(); // 每格重渲染，必须重取节点
-          if (!el) break;
-          if (el.focus) el.focus();
-          ["keydown", "keyup"].forEach((type) => el.dispatchEvent(
-            new KeyboardEvent(type, { key: key, code: key, bubbles: true, cancelable: true, view: window })));
-          await sleep(220);
-          lv = this._level() || lv;
-        }
-        const ok = lv.now === goal;
-        escMenus(); // 收尾：菜单不关会罩住输入框，让随后的注入点空
-        if (!ok) throw new Error("ChatGPT: 档位未到端点");
+      _pickEdge: async function (top, deadline) {
+        try {
+          checkDeadline(deadline);
+          await this._openRoot(deadline);
+          let lv = this._level();
+          if (!lv) { escMenus(); throw new Error("ChatGPT: 档位滑块未找到"); }
+          const key = top ? "ArrowRight" : "ArrowLeft", goal = top ? lv.max : lv.min;
+          for (let i = 0; i <= lv.max - lv.min && lv.now !== goal; i++) {
+            const el = this._power(); // 每格重渲染，必须重取节点
+            if (!el) break;
+            if (el.focus) tierAction(deadline, () => el.focus());
+            ["keydown", "keyup"].forEach((type) => tierAction(deadline, () => el.dispatchEvent(
+              new KeyboardEvent(type, { key: key, code: key, bubbles: true, cancelable: true, view: window }))));
+            await sleep(220, deadline);
+            lv = this._level() || lv;
+          }
+          const ok = lv.now === goal;
+          escMenus(); // 收尾：菜单不关会罩住输入框，让随后的注入点空
+          if (!ok) throw new Error("ChatGPT: 档位未到端点");
+        } finally { escMenus(); }
       },
       // 模型 radio 与滑块同时常驻菜单（Advanced 视图不必展开也在 DOM，真机 2026-08-31）：先直接找，
       // 找不到再点 aria-label="Select model" 入口展开一次。已选中就不点——点了会连带把菜单收掉。
-      _selectModel: async function (re) {
-        await this._openRoot();
-        let item = findByText('[role="menuitemradio"]', re);
-        if (!item) {
-          const entry = [...document.querySelectorAll('[role="menuitem"]')]
-            .find((x) => /^(select model|选择模型)$/i.test(x.getAttribute("aria-label") || ""));
-          if (entry) { entry.click(); item = await waitFor(() => findByText('[role="menuitemradio"]', re), 1500); }
-        }
-        if (!item) { escMenus(); throw new Error("ChatGPT: 未找到模型 " + re); }
-        if (item.getAttribute("aria-checked") === "true") return;
-        item.click(); await sleep(700);
+      _selectModel: async function (re, deadline) {
+        try {
+          checkDeadline(deadline);
+          await this._openRoot(deadline);
+          let item = findByText('[role="menuitemradio"]', re);
+          if (!item) {
+            const entry = [...document.querySelectorAll('[role="menuitem"]')]
+              .find((x) => /^(select model|选择模型)$/i.test(x.getAttribute("aria-label") || ""));
+            if (entry) { tierAction(deadline, () => entry.click()); item = await waitFor(() => findByText('[role="menuitemradio"]', re), 1500, 120, deadline); }
+          }
+          if (!item) { escMenus(); throw new Error("ChatGPT: 未找到模型 " + re); }
+          if (item.getAttribute("aria-checked") === "true") return;
+          tierAction(deadline, () => item.click()); await sleep(700, deadline);
+        } finally { escMenus(); }
       },
       diagnose: function () {
         return [
@@ -120,8 +127,10 @@
         const el = els[els.length - 1];
         return el.querySelector(".markdown") || el;
       },
-      think: async function () { await this._selectModel(/^GPT-5\.6\s*Sol$/i); await this._pickEdge(true); },
-      fast: async function () { await this._selectModel(/^GPT-5\.6\s*Sol$/i); await this._pickEdge(false); },
+      think: async function (deadline) {
+        checkDeadline(deadline); await this._selectModel(/^GPT-5\.6\s*Sol$/i, deadline); await this._pickEdge(true, deadline); },
+      fast: async function (deadline) {
+        checkDeadline(deadline); await this._selectModel(/^GPT-5\.6\s*Sol$/i, deadline); await this._pickEdge(false, deadline); },
       attach: function (files, el, deadline) {
         return S.setInputFiles(document.querySelector("#upload-photos"), files, el, deadline);
       },

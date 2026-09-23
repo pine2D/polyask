@@ -23,7 +23,7 @@
 
 | 成员 | 必需 | 签名 | 返回值与异常语义 |
 | --- | --- | --- | --- |
-| `think` / `fast` | ✓ | `async ()` | 切到目标档。**关键控件缺失一律 `throw`**——静默 `return` 会让 `runMode` 误报「已切到」，`switchTier` 跟着认账，外壳上报一个档位其实没动的绿点（例外见下一节） |
+| `think` / `fast` | ✓ | `async (deadline?)` | 切到目标档。**关键控件缺失一律 `throw`**——静默 `return` 会让 `runMode` 误报「已切到」，`switchTier` 跟着认账，外壳上报一个档位其实没动的绿点（例外见下一节） |
 | `state()` | ✓ | 同步 | `"think"` / `"fast"` / `null`。只表示粗档位，不能证明模型版本/强度/开关精确 |
 | `diagnose()` | ✓ | 同步 | 锚点命中报告，供巡检标芯片。只列**常驻**控件，会随对话阶段消失的控件不许列（否则巡检恒红误报）。**每条检查必须带 `kind`**，见下方「检查项的 `kind`」 |
 | `submit(el, deadline)` | | `async` | `false` = 发送键此刻不可用 → 落回通用链；**抛异常 = core 直接 `code:"error"` 终止、不回退**，所以内部必须自行判空返回 false。点击成功也要过 `confirmSubmitted` 才算成功 |
@@ -106,7 +106,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **先等输入框出现再切档**：未就绪返回 `composer_not_found`——`desktop/src/main/broadcast.ts` 把它与 `not_ready` 一起列进 `RETRIABLE`，在同一 deadline 内轮询重试（其它任何码，含新增的，默认不可重试）；提交成功但档位未确认时回 `tier_unconfirmed`（绿点带警示，不谎报全绿）。
 - `state()` 只表示粗档位，不能证明模型版本/强度/开关精确，所以每次群发至少跑一次幂等适配器。
 - **站内 toast 已是 no-op**（`core.js` 的 `toast()` 函数体早退，调用点保留）：用户可见反馈的所有权全在 Desktop 外壳（状态通道 + live region）。九个视图各弹一条硬编码配色、与外壳主题/语言/进度脱节的提示条只会制造噪音。**判断「切档是否成功」一律看返回值与 `state()`，别指望页面上出现什么。**
-- **`think`/`fast` 拿不到 `deadline`**（已知偏离，见文末「待办」）：`runModeNow` 调用适配器是 `await a[action]()` 零参，切档路径上没有任何夹取。
+- **切档透传绝对 `deadline`**：`runMode(mode, silent?, deadline?)` 在排队前确定默认 10s 截止时间；群发采用 `min(群发 deadline, now + 10000)`。`think`/`fast`/图片切档及其私有菜单方法传递同一时间戳，轮询和 sleep 夹取剩余时间，交互动作前检查到期。到期允许菜单关闭收尾，不再选择模型或档位；切档预算耗尽但群发仍有余量时继续提交，保留 `tier_unconfirmed`。
 
 ## 汇总复制（`answer` + `desktop/src/site-runtime/md.js`）
 
@@ -258,11 +258,6 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 3. **离线回归**：补/改对应 `desktop/scripts/*.test.js`（改模型正则按惯例配专项测试），`cd desktop && npm test && npm run typecheck` 全绿；跨端的 5 个仍在 `bash scripts/verify.sh`，**两条都要跑**——适配器测试全在 `desktop/scripts/` 下，只跑 `verify.sh` 对适配器改动几乎零覆盖。
 4. **人审 diff → 真机回归**：重启开发态 Electron（`cd desktop && npm start`）让改动生效，在目标站点视图里用 `__AMS` 复现，九站巡检（`diagnose` 就是现成的 canary；「入口项」与「档位可读」是两个独立信号，只红后者 = 标签集漂移，别去找按钮）。
 5. **收尾**：更新本文件对应站点卡 + `CHANGELOG.md` 未发布段；模型正则改了同时检查 `state()` 的判定分支。
-
-## 待办
-
-- **`think` / `fast` 尚未接 `deadline`（已知偏离「deadline 全链路透传」这条硬约束）**：`core.js` 的 `runModeNow` 调适配器是 `await a[action]()` **零参**——九站适配器里只有 `adapters-cn.js`（DeepSeek 等发送键）与 `adapters-cn2.js`（Kimi 取 file input）两处做了夹取，且都在 submit / attach 路径上，**切档路径 0 处**。实测 Kimi 单次 `think()` 最坏约 12.6s、`runModeNow` 两轮重试合计约 26s，而 `switchTier` 的预算是 `min(10000, deadline - now)` 且**只在适配器返回之后**才比对——超时是事后发现，不是中途打断。要补就把 `deadline` 作为参数透传进 `think`/`fast`（契约表的签名要同步改），别让适配器各自去读全局。
-
 
 ## 逐次提问的只读副本
 

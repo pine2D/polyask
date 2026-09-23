@@ -8,7 +8,7 @@ const vm = require("node:vm");
 
 let label = "";
 const S = {
-  adapters: {},
+  ...require("./lib/deadline-harness"), adapters: {},
   waitFor: async (fn) => fn(),
   findByText: () => null,
   openMenu() {},
@@ -69,9 +69,9 @@ for (const [value, expected] of [
 // 这里从生产源码抠出正则、反推出它期望的模型名，再喂回 state()，把两者钉在一起。
 const claude = source.slice(source.indexOf('"claude.ai": {'), source.indexOf('"chatgpt.com": {'));
 function modelRegex(hook) {
-  const at = claude.indexOf(hook + ": async function ()");
+  const at = claude.indexOf(hook + ": async function (deadline)");
   assert.notEqual(at, -1, `claude.ai 适配器缺少 ${hook}()`);
-  const match = /_selectModel\(\/(.+?)\/i\)/.exec(claude.slice(at));
+  const match = /_selectModel\(\/(.+?)\/i, deadline\)/.exec(claude.slice(at));
   assert.ok(match, `${hook}() 必须经 _selectModel(/…/i) 选模型`);
   return match[1];
 }

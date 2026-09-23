@@ -10,7 +10,7 @@ function helpers(document, extra = {}) {
   const waitFor = async (fn) => fn() || null;
   const findByText = (selector, re) => [...document.querySelectorAll(selector)]
     .find((node) => re.test((node.textContent || "").trim())) || null;
-  const S = { waitFor, findByText, openMenu() {}, clickEl(el) { el.click(); }, sleep, escMenus() {}, adapters: {}, ...extra };
+  const S = { waitFor, findByText, openMenu() {}, clickEl(el) { el.click(); }, sleep, escMenus() {}, ...require("./deadline-harness"), adapters: {}, ...extra };
   return { document, t: (key) => key, window: { __AMS: S }, MouseEvent: class { constructor(type) { this.type = type; } }, console };
 }
 

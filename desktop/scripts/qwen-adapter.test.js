@@ -13,7 +13,7 @@ const document = { querySelectorAll(selector) {
   return [];
 } };
 const helpers = { waitFor() {}, findByText() {}, openMenu() {}, clickEl() {}, sleep: () => Promise.resolve(), escMenus() {} };
-const context = { document, t: (key) => key, window: { __AMS: { ...helpers, adapters: {} } }, console };
+const context = { document, t: (key) => key, window: { __AMS: { ...helpers, ...require("./lib/deadline-harness"), adapters: {} } }, console };
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime/adapters-cn.js"), "utf8"), context);
 
 const qwen = context.window.__AMS.adapters["qianwen.com"];
@@ -68,7 +68,7 @@ assert.equal(qwen.state(), null, "Preview 不得冒充正式版档位");
       document: doc, t: (key) => key, console, MouseEvent: class { constructor(type) { this.type = type; } },
       window: { __AMS: {
         waitFor: async (fn) => fn() || null, findByText, openMenu() {}, clickEl(el) { el.click(); },
-        sleep: () => Promise.resolve(), escMenus() { escCount++; }, adapters: {},
+        sleep: () => Promise.resolve(), escMenus() { escCount++; }, ...require("./lib/deadline-harness"), adapters: {},
       } },
     };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime/adapters-cn.js"), "utf8"), ctx);

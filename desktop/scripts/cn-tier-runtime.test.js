@@ -13,7 +13,7 @@ const source = (file = "adapters-cn2.js") => fs.readFileSync(path.join(__dirname
 
 function runtime(document, extra, file) {
   const S = {
-    adapters: {}, sleep: async () => {}, escCount: 0, escMenus() { S.escCount++; },
+    ...require("./lib/deadline-harness"), adapters: {}, sleep: async () => {}, escCount: 0, escMenus() { S.escCount++; },
     findByText: (selector, re, root) =>
       [...(root || document).querySelectorAll(selector)].find((n) => re.test((n.textContent || "").trim())) || null,
     waitFor: async (fn, timeout = 3500, step = 120) => {

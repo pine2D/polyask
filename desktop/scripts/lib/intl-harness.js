@@ -12,7 +12,7 @@ function fakeRuntime(document, clicked, onOpen) {
   const findByText = (selector, re, root) =>
     [...(root || document).querySelectorAll(selector)].find((n) => re.test((n.textContent || "").trim())) || null;
   const runtime = {
-    adapters: {}, findByText, sleep: async () => {}, escCount: 0, escMenus() { runtime.escCount++; },
+    ...require("./deadline-harness"), adapters: {}, findByText, sleep: async () => {}, escCount: 0, escMenus() { runtime.escCount++; },
     waitFor: async (fn, timeout = 3500, step = 120) => { // 与生产 core.js 同构：轮询到超时才返回 null
       for (let waited = 0; ; waited += step) { const v = fn(); if (v) return v; if (waited >= timeout) return null; }
     },

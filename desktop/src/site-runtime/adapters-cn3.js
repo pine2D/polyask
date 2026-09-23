@@ -5,7 +5,7 @@
   const t = globalThis.__AMS_I18N__ ? globalThis.__AMS_I18N__.t : globalThis.t;
   const S = window.__AMS;
   if (!S) return;
-  const { waitFor, openMenu, clickEl, sleep, escMenus } = S;
+  const { waitFor, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
 
   Object.assign(S.adapters, {
     // 元宝（真机 2026-09-15）：模式菜单 = 「模型/Models」子菜单入口 + 模式项（即时/思考/专家；Hy4 preview 下只剩专家）。
@@ -36,22 +36,26 @@
       // openMenu 是**切换**语义：菜单已开时再点会把它关掉。真机 2026-09-01：关闭动画期间 menuitemradio
       // 仍在 DOM，waitFor 照样找得到项、click 却点在正在消失的节点上 → 落空 → 抛「目标模式未生效」。
       // 所以先看是否已展开，且一次不成要重开一次（同 Claude `_open`、Gemini `_openModelMenu`）。
-      _openModes: async function (b) {
-        if (!this._modeItems().length) openMenu(b);
-        let ok = await waitFor(() => this._modeItems().length || null, 1500);
-        if (!ok) { openMenu(b); ok = await waitFor(() => this._modeItems().length || null, 1500); }
+      _openModes: async function (b, deadline) {
+        checkDeadline(deadline);
+        if (!this._modeItems().length) tierAction(deadline, () => openMenu(b));
+        let ok = await waitFor(() => this._modeItems().length || null, 1500, 120, deadline);
+        if (!ok) { tierAction(deadline, () => openMenu(b)); ok = await waitFor(() => this._modeItems().length || null, 1500, 120, deadline); }
         if (!ok) { escMenus(); throw new Error("元宝: 模式菜单未展开"); }
       },
-      _selectMode: async function (re) {
-        const b = this._modeBtn();
-        if (!b) throw new Error("元宝: 模式按钮未找到");
-        if (re.test(this._mode())) return;
-        await this._openModes(b);
-        const item = this._modeItems().find((el) => re.test((el.textContent || "").trim())); // 语义校验在前：模型项一律不可点
-        if (!item) { escMenus(); throw new Error("元宝: 目标模式未找到"); }
-        item.click(); escMenus();
-        // 按钮文本回显有延迟：复读到目标为止再判失败（原来是 500ms 固定等待，贴着实测值没余量）
-        if (!await waitFor(() => re.test(this._mode()) || null, 2000)) throw new Error("元宝: 目标模式未生效");
+      _selectMode: async function (re, deadline) {
+        try {
+          checkDeadline(deadline);
+          const b = this._modeBtn();
+          if (!b) throw new Error("元宝: 模式按钮未找到");
+          if (re.test(this._mode())) return;
+          await this._openModes(b, deadline);
+          const item = this._modeItems().find((el) => re.test((el.textContent || "").trim())); // 语义校验在前：模型项一律不可点
+          if (!item) { escMenus(); throw new Error("元宝: 目标模式未找到"); }
+          tierAction(deadline, () => item.click()); escMenus();
+          // 按钮文本回显有延迟：复读到目标为止再判失败（原来是 500ms 固定等待，贴着实测值没余量）
+          if (!await waitFor(() => re.test(this._mode()) || null, 2000, 120, deadline)) throw new Error("元宝: 目标模式未生效");
+        } finally { escMenus(); }
       },
       // —— 模型子菜单（真机 2026-09-15）——
       _THINK_MODEL: /^hy4\s*preview/i,
@@ -71,47 +75,54 @@
       },
       // 子菜单靠悬停展开。入口 button 的 React 处理器只有 onMouseMove / onMouseLeave / onClick（CDP 真机 2026-09-16），
       // 合成 mousemove（带坐标）能打开，mouseover / pointermove / click / 方向键都打不开；click 留作站点改版时的第二招。
-      _openModels: async function (b) {
-        await this._openModes(b);
+      _openModels: async function (b, deadline) {
+        checkDeadline(deadline);
+        await this._openModes(b, deadline);
         for (let i = 0; i < 2 && !this._modelItems().length; i++) {
           const entry = this._modelsEntry();
           if (!entry) { escMenus(); throw new Error("元宝: 模型入口未找到"); }
           const r = entry.getBoundingClientRect ? entry.getBoundingClientRect() : { left: 0, top: 0 };
-          try { entry.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: r.left + 4, clientY: r.top + 4 })); } catch (e) {}
-          if (!await waitFor(() => this._modelItems().length || null, 1000)) { entry.click(); await waitFor(() => this._modelItems().length || null, 1000); }
+          try { tierAction(deadline, () => entry.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: r.left + 4, clientY: r.top + 4 }))); } catch (e) {}
+          if (!await waitFor(() => this._modelItems().length || null, 1000, 120, deadline)) { tierAction(deadline, () => entry.click()); await waitFor(() => this._modelItems().length || null, 1000, 120, deadline); }
         }
         if (!this._modelItems().length) { escMenus(); throw new Error("元宝: 模型子菜单未展开"); }
       },
-      _selectModel: async function (re) {
-        const b = this._modeBtn();
-        if (!b) throw new Error("元宝: 模式按钮未找到");
-        await this._openModes(b);
-        if (re.test(this._model())) return;
-        await this._openModels(b);
-        const item = this._modelItems().find((el) => re.test((el.textContent || "").trim()));
-        if (!item) { escMenus(); throw new Error("元宝: 目标模型未找到"); }
-        item.click(); await sleep(300);
-        await this._openModes(b); // 真机 2026-09-16：选完模型根菜单留着、子菜单收起、按钮即时回显；仍重开一次兜底，不猜
-        if (!await waitFor(() => re.test(this._model()) || null, 2000)) { escMenus(); throw new Error("元宝: 目标模型未生效"); }
+      _selectModel: async function (re, deadline) {
+        try {
+          checkDeadline(deadline);
+          const b = this._modeBtn();
+          if (!b) throw new Error("元宝: 模式按钮未找到");
+          await this._openModes(b, deadline);
+          if (re.test(this._model())) return;
+          await this._openModels(b, deadline);
+          const item = this._modelItems().find((el) => re.test((el.textContent || "").trim()));
+          if (!item) { escMenus(); throw new Error("元宝: 目标模型未找到"); }
+          tierAction(deadline, () => item.click()); await sleep(300, deadline);
+          await this._openModes(b, deadline); // 真机 2026-09-16：选完模型根菜单留着、子菜单收起、按钮即时回显；仍重开一次兜底，不猜
+          if (!await waitFor(() => re.test(this._model()) || null, 2000, 120, deadline)) { escMenus(); throw new Error("元宝: 目标模型未生效"); }
+        } finally { escMenus(); }
       },
-      _set: async function (on) {
-        if (this._modeBtn()) {
-          if (on) {
-            await this._selectModel(this._THINK_MODEL); escMenus();
-            // Hy4 preview 只提供专家模式，站点自动落到专家；复读到位才算成功
-            if (!await waitFor(() => /^(Expert|专家)/i.test(this._mode()) || null, 2000)) throw new Error("元宝: 目标模式未生效");
+      _set: async function (on, deadline) {
+        try {
+          checkDeadline(deadline);
+          if (this._modeBtn()) {
+            if (on) {
+              await this._selectModel(this._THINK_MODEL, deadline); escMenus();
+              // Hy4 preview 只提供专家模式，站点自动落到专家；复读到位才算成功
+              if (!await waitFor(() => /^(Expert|专家)/i.test(this._mode()) || null, 2000, 120, deadline)) throw new Error("元宝: 目标模式未生效");
+              return;
+            }
+            if (/^(Instant|即时|快速)/i.test(this._mode())) return; // 已是即时 → 模型必不是 Hy4 preview，免开菜单
+            await this._selectModel(this._FAST_MODEL, deadline);
+            await this._selectMode(/^(Instant|即时|快速)/i, deadline);
+            escMenus(); // 切回 Hy3 时站点会自动恢复上一次的模式（CDP 真机 2026-09-16），_selectMode 可能直接命中返回而菜单还开着
             return;
           }
-          if (/^(Instant|即时|快速)/i.test(this._mode())) return; // 已是即时 → 模型必不是 Hy4 preview，免开菜单
-          await this._selectModel(this._FAST_MODEL);
-          await this._selectMode(/^(Instant|即时|快速)/i);
-          escMenus(); // 切回 Hy3 时站点会自动恢复上一次的模式（CDP 真机 2026-09-16），_selectMode 可能直接命中返回而菜单还开着
-          return;
-        }
-        const t = this._toggle();
-        if (!t) throw new Error("元宝: Deep Thinking 控件未找到");
-        if (this._isOn() !== on) { t.click(); await sleep(500); }
-        if (this._isOn() !== on) throw new Error("元宝: 深度思考未生效"); // 点击被吞时不许静默成功
+          const t = this._toggle();
+          if (!t) throw new Error("元宝: Deep Thinking 控件未找到");
+          if (this._isOn() !== on) { tierAction(deadline, () => t.click()); await sleep(500, deadline); }
+          if (this._isOn() !== on) throw new Error("元宝: 深度思考未生效"); // 点击被吞时不许静默成功
+        } finally { escMenus(); }
       },
       diagnose: function () {
         return [
@@ -126,8 +137,10 @@
         if (mode) return /^(Expert|专家)/i.test(mode) ? "think" : /^(Instant|即时|快速)/i.test(mode) ? "fast" : null;
         return this._toggle() ? (this._isOn() ? "think" : "fast") : null;
       },
-      think: async function () { await this._set(true); },
-      fast: async function () { await this._set(false); },
+      think: async function (deadline) {
+        checkDeadline(deadline); await this._set(true, deadline); },
+      fast: async function (deadline) {
+        checkDeadline(deadline); await this._set(false, deadline); },
       attach: async function (files, el, deadline) {
         const end = Number(deadline) || Date.now() + 15000;
         const boundedWait = async find => {

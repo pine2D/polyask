@@ -5,7 +5,7 @@
   const t = globalThis.__AMS_I18N__ ? globalThis.__AMS_I18N__.t : globalThis.t;
   const S = window.__AMS;
   if (!S) return;
-  const { waitFor, findByText, openMenu, clickEl, sleep, escMenus } = S;
+  const { waitFor, findByText, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
 
   Object.assign(S.adapters, {
     // Kimi：think=K3+Max、fast=K3+Standard（K3 才有 Max 档；effort 经 hover 子菜单选）。
@@ -21,53 +21,60 @@
       // 收尾：**escMenus 只收得掉 effort 子菜单，收不掉模型根菜单**（真机 2026-08-31：Escape 后
       // .model-item 仍可见、入口仍带 .active），再点一次入口才整体关掉。菜单不关会罩住输入框，
       // 让随后的注入点空——Kimi 的注入本就是站点特调的 execCommand 路径，点空即整条群发哑火。
-      _close: async function () {
+      _close: async function (deadline) {
+        // 清理允许到期后关闭已开的菜单；不选项、不启动新等待。
         escMenus();
         const e = this._entry();
         if (!e || !e.classList.contains("active")) return;
-        await sleep(250);
-        if (this._entry() && this._entry().classList.contains("active")) { this._entry().click(); await sleep(300); }
+        if (!deadline || Date.now() < deadline) await sleep(Math.min(250, Math.max(0, (deadline || Infinity) - Date.now())));
+        if (this._entry() && this._entry().classList.contains("active")) { this._entry().click(); if (!deadline || Date.now() < deadline) await sleep(Math.min(300, Math.max(0, (deadline || Infinity) - Date.now()))); }
       },
       _effort: function () {
         const n = this._entry() && this._entry().querySelector(".current-effort");
         return n ? this._zap(n.textContent) : "";
       },
-      _select: async function (name) {
-        const e = this._entry();
-        if (!e) throw new Error("Kimi: 模型入口未找到"); // 静默 return 会让 runMode 误报成功
-        if (!e.classList.contains("active")) e.click();
-        const opt = await waitFor(() => [...document.querySelectorAll(".model-item")].find((el) => {
-          const n = el.querySelector(".name");
-          return n && this._zap(n.textContent) === name; // 去零宽再比，同上，见 F076
-        }), 1500);
-        if (!opt) { await this._close(); throw new Error("Kimi: 目标选项未找到"); }
-        opt.click();
-        await sleep(400);
-        await this._close();
+      _select: async function (name, deadline) {
+        try {
+          checkDeadline(deadline);
+          const e = this._entry();
+          if (!e) throw new Error("Kimi: 模型入口未找到"); // 静默 return 会让 runMode 误报成功
+          if (!e.classList.contains("active")) tierAction(deadline, () => e.click());
+          const opt = await waitFor(() => [...document.querySelectorAll(".model-item")].find((el) => {
+            const n = el.querySelector(".name");
+            return n && this._zap(n.textContent) === name; // 去零宽再比，同上，见 F076
+          }), 1500, 120, deadline);
+          if (!opt) { await this._close(deadline); throw new Error("Kimi: 目标选项未找到"); }
+          tierAction(deadline, () => opt.click());
+          await sleep(400, deadline);
+          await this._close(deadline);
+        } finally { await this._close(deadline); }
       },
-      _setEffort: async function (re) {
-        if (re.test(this._effort())) return;
-        const e = this._entry();
-        if (!e) throw new Error("Kimi: 模型入口未找到");
-        if (!e.classList.contains("active")) e.click();
-        // 菜单开启动画期间合成 hover 会丢失、effort 行节点还会被重挂（真机 2026-07-21：
-        // 重开菜单后对首个找到的行 hover 子菜单不渲染，重查新节点再 hover 才出）
-        // → 每轮重新取行、重发 hover，而不是单次 hover 后干等
-        let opt = null;
-        for (let i = 0; i < 4 && !opt; i++) {
-          const row = await waitFor(() => [...document.querySelectorAll(".effort-item")].find((el) =>
-            /Thinking|思考|推理/i.test((el.querySelector(".effort-title") || {}).textContent || "")), 1500);
-          if (!row) { await this._close(); throw new Error("Kimi: 思考强度入口未找到"); }
-          ["pointerenter", "mouseenter", "pointerover", "mouseover"].forEach((type) =>
-            row.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window })));
-          opt = await waitFor(() => [...document.querySelectorAll(".effort-option")].find((el) =>
-            re.test(this._zap((el.querySelector(".effort-name") || {}).textContent))), 900);
-        }
-        if (!opt) { await this._close(); throw new Error("Kimi: 目标思考强度未找到"); }
-        opt.click();
-        await sleep(400);
-        await this._close();
-        if (!re.test(this._effort())) throw new Error("Kimi: 思考强度未生效"); // 点击被吞时不许静默成功
+      _setEffort: async function (re, deadline) {
+        try {
+          checkDeadline(deadline);
+          if (re.test(this._effort())) return;
+          const e = this._entry();
+          if (!e) throw new Error("Kimi: 模型入口未找到");
+          if (!e.classList.contains("active")) tierAction(deadline, () => e.click());
+          // 菜单开启动画期间合成 hover 会丢失、effort 行节点还会被重挂（真机 2026-07-21：
+          // 重开菜单后对首个找到的行 hover 子菜单不渲染，重查新节点再 hover 才出）
+          // → 每轮重新取行、重发 hover，而不是单次 hover 后干等
+          let opt = null;
+          for (let i = 0; i < 4 && !opt; i++) {
+            const row = await waitFor(() => [...document.querySelectorAll(".effort-item")].find((el) =>
+              /Thinking|思考|推理/i.test((el.querySelector(".effort-title") || {}).textContent || "")), 1500, 120, deadline);
+            if (!row) { await this._close(deadline); throw new Error("Kimi: 思考强度入口未找到"); }
+            ["pointerenter", "mouseenter", "pointerover", "mouseover"].forEach((type) =>
+              tierAction(deadline, () => row.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true, view: window }))));
+            opt = await waitFor(() => [...document.querySelectorAll(".effort-option")].find((el) =>
+              re.test(this._zap((el.querySelector(".effort-name") || {}).textContent))), 900, 120, deadline);
+          }
+          if (!opt) { await this._close(deadline); throw new Error("Kimi: 目标思考强度未找到"); }
+          tierAction(deadline, () => opt.click());
+          await sleep(400, deadline);
+          await this._close(deadline);
+          if (!re.test(this._effort())) throw new Error("Kimi: 思考强度未生效"); // 点击被吞时不许静默成功
+        } finally { await this._close(deadline); }
       },
       diagnose: function () {
         return [
@@ -80,8 +87,10 @@
         const ef = this._effort();
         return /^(Max|极致|最大|最高|最强)$/i.test(ef) ? "think" : /^(Standard|标准)$/i.test(ef) ? "fast" : null; // 中文 UI Max=「极致」（用户实证 2026-07-21）
       },
-      think: async function () { if (this._model() !== "K3") await this._select("K3"); await this._setEffort(/^(Max|极致|最大|最高|最强)$/i); },
-      fast: async function () { if (this._model() !== "K3") await this._select("K3"); await this._setEffort(/^(Standard|标准)$/i); },
+      think: async function (deadline) {
+        checkDeadline(deadline); if (this._model() !== "K3") await this._select("K3", deadline); await this._setEffort(/^(Max|极致|最大|最高|最强)$/i, deadline); },
+      fast: async function (deadline) {
+        checkDeadline(deadline); if (this._model() !== "K3") await this._select("K3", deadline); await this._setEffort(/^(Standard|标准)$/i, deadline); },
       attach: async function (files, el, deadline) {
         let input = document.querySelector('input.hidden-input[type="file"]');
         if (!input) {
@@ -170,23 +179,27 @@
       },
       // 收尾：**escMenus 对本站无效**（真机 2026-08-31：Escape 关不掉 el-tooltip 弹层），只有再点一次
       // 触发器才收。弹层不关会罩住输入框，让随后的注入点空。
-      _close: async function () {
+      _close: async function (deadline) {
+        // 清理允许到期后关闭已开的菜单；不选项、不启动新等待。
         escMenus();
         if (!this._open()) return;
-        await sleep(250);
+        if (!deadline || Date.now() < deadline) await sleep(Math.min(250, Math.max(0, (deadline || Infinity) - Date.now())));
         const tg = this._trigger();
-        if (this._open() && tg) { this._hover(tg); tg.click(); await sleep(300); }
+        if (this._open() && tg) { this._hover(tg); tg.click(); if (!deadline || Date.now() < deadline) await sleep(Math.min(300, Math.max(0, (deadline || Infinity) - Date.now()))); }
       },
-      _pick: async function (name, viaSubmenu) {
-        const tg = this._trigger();
-        if (!tg) throw new Error("智谱: 思考触发器未找到");
-        this._hover(tg); tg.click();                                          // 开 el-tooltip 弹层
-        await sleep(350);
-        if (viaSubmenu) { this._hover(document.querySelector(".think-mode-item.has-submenu")); await sleep(300); } // 展开子菜单
-        const it = this._itemByName(name);
-        if (!it) { await this._close(); throw new Error("智谱: 档位「" + name + "」未找到"); }
-        it.click(); await sleep(500); await this._close();
-        if (!this._selected(name)) throw new Error("智谱: 档位未生效"); // 点击被吞时不许静默成功
+      _pick: async function (name, viaSubmenu, deadline) {
+        try {
+          checkDeadline(deadline);
+          const tg = this._trigger();
+          if (!tg) throw new Error("智谱: 思考触发器未找到");
+          tierAction(deadline, () => this._hover(tg)); tierAction(deadline, () => tg.click());                                          // 开 el-tooltip 弹层
+          await sleep(350, deadline);
+          if (viaSubmenu) { tierAction(deadline, () => this._hover(document.querySelector(".think-mode-item.has-submenu"))); await sleep(300, deadline); } // 展开子菜单
+          const it = this._itemByName(name);
+          if (!it) { await this._close(deadline); throw new Error("智谱: 档位「" + name + "」未找到"); }
+          tierAction(deadline, () => it.click()); await sleep(500, deadline); await this._close(deadline);
+          if (!this._selected(name)) throw new Error("智谱: 档位未生效"); // 点击被吞时不许静默成功
+        } finally { await this._close(deadline); }
       },
       diagnose: function () {
         return [
@@ -200,10 +213,12 @@
         return this._selected("快速") ? "fast" : null;
       },
       // 只读挑目标：档位项在弹层关闭时也在 DOM，所以这里不开菜单（契约要求 think 之前不得副作用）。
-      think: async function () {
-        await this._pick(this._TIERS.find((n) => this._itemByName(n)) || this._TIERS[this._TIERS.length - 1], true);
+      think: async function (deadline) {
+        checkDeadline(deadline);
+        await this._pick(this._TIERS.find((n) => this._itemByName(n)) || this._TIERS[this._TIERS.length - 1], true, deadline);
       },
-      fast: async function () { await this._pick("快速", false); },
+      fast: async function (deadline) {
+        checkDeadline(deadline); await this._pick("快速", false, deadline); },
       // 智谱 input 忽略扩展派发的 input/change，且无可复用预览节点；留空明确报 unsupported。
       // 2026-09-21 真机：正文/代码分成多个 markdown-body，共用 answer-content-wrap。
       // 只返回正文容器；只有思考段时返回 null，不能回退到含思考的整条消息。

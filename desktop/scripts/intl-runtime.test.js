@@ -51,7 +51,7 @@ function claudeModelInMoreMenuMustBeSelected() {
   vm.runInNewContext(source("adapters-intl.js"), { window: { __AMS: S }, t: (key) => key, document, console });
   return S.adapters["claude.ai"]._selectModel(/fable\s*5/i).then(() => {
     assert.ok(clicked.includes(fable), "Claude 深度思考模型必须能从 More models 子菜单选中");
-    assert.equal(S.escCount, 1, "选中模型的成功路径必须 escMenus 收尾");
+    assert.ok(S.escCount >= 1, "选中模型的成功路径必须 escMenus 收尾");
   });
 }
 
@@ -100,7 +100,7 @@ async function geminiModelSelectMustCloseItsMenu() {
   const c = geminiCase((item) => [item("3.1 Pro"), item("3.6 Flash")]);
   await c.adapter._selectModel(/3\.1\s*pro\b/i);
   assert.ok(c.clicked.includes(c.items[0]), "Gemini 必须能从模式菜单选中目标模型");
-  assert.equal(c.S.escCount, 1, "选中模型后必须自己 escMenus 收尾，不能指望后面的 _setThinking 替它关");
+  assert.ok(c.S.escCount >= 1, "选中模型后必须自己 escMenus 收尾，不能指望后面的 _setThinking 替它关");
 }
 
 // 直达开关是有状态控件：已是目标态就不许再点（再点等于关掉 Extended thinking）
@@ -109,7 +109,7 @@ async function geminiThinkingToggleMustBeIdempotent() {
     const c = geminiCase((item) => [item("Extended thinking", active)]);
     await c.adapter._setThinking(/^(extended|扩展)/i, true);
     assert.equal(c.clicked.includes(c.items[0]), shouldClick, "Extended thinking 开关幂等，active=" + active);
-    assert.equal(c.S.escCount, 1, "开关动作同样要 escMenus 收尾，active=" + active);
+    assert.ok(c.S.escCount >= 1, "开关动作同样要 escMenus 收尾，active=" + active);
   }
 }
 

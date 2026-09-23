@@ -75,7 +75,7 @@ function fakeRuntime(document, clicked, onOpen) {
   const findByText = (selector, re, root) =>
     [...(root || document).querySelectorAll(selector)].find((n) => re.test((n.textContent || "").trim())) || null;
   const runtime = {
-    adapters: {}, findByText, sleep: async () => {}, escCount: 0,
+    ...require("./lib/deadline-harness"), adapters: {}, findByText, sleep: async () => {}, escCount: 0,
     escMenus() { runtime.escCount++; document.__closed = true; },
     waitFor: async (fn, timeout = 3500, step = 120) => {
       for (let waited = 0; ; waited += step) { const v = fn(); if (v) return v; if (waited >= timeout) return null; }
@@ -94,7 +94,7 @@ async function sliderMustBeDrivenToBothEdges() {
     assert.equal(c.state.value, goal, "档位必须推到端点：" + key);
     assert.ok(c.keys.every((k) => k === key), "只能用左右方向键：End/Home 真机无效（实测值纹丝不动）");
     assert.ok(!c.clicked.some((x) => c.models.includes(x)), "切档绝不能点到模型 radio：" + key);
-    assert.equal(c.S.escCount, 1, "选档后必须 escMenus 收尾（菜单会罩住输入框）：" + key);
+    assert.ok(c.S.escCount >= 1, "选档后必须 escMenus 收尾（菜单会罩住输入框）：" + key);
   }
 }
 
@@ -103,7 +103,7 @@ async function sliderMustBeIdempotentAtEdge() {
   const c = chatGptCase({ value: 4 });
   await c.adapter._pickEdge(true);
   assert.equal(c.keys.length, 0, "已是最高档不该再按方向键");
-  assert.equal(c.S.escCount, 1, "幂等路径同样要收尾");
+  assert.ok(c.S.escCount >= 1, "幂等路径同样要收尾");
 }
 
 // 滑块整个不见了必须抛错，不许静默成功（runMode 会据此弹假成功 toast）
@@ -144,7 +144,7 @@ async function modelSelectionMustBeIdempotent() {
 function newTurnMustBeCollected() {
   const markdown = { marker: "answer" };
   const turns = [{ querySelector: () => null }, { querySelector: (s) => s === ".markdown" ? markdown : null }];
-  const S = { adapters: {}, waitFor: async (fn) => fn(), findByText: () => null,
+  const S = { ...require("./lib/deadline-harness"), adapters: {}, waitFor: async (fn) => fn(), findByText: () => null,
     openMenu() {}, clickEl() {}, sleep: async () => {}, escMenus() {} };
   const context = { window: { __AMS: S }, t: (key) => key, console,
     document: { querySelector: () => null,

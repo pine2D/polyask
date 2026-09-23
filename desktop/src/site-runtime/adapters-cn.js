@@ -6,7 +6,7 @@
   const t = globalThis.__AMS_I18N__ ? globalThis.__AMS_I18N__.t : globalThis.t;
   const S = window.__AMS;
   if (!S) return;
-  const { waitFor, findByText, openMenu, clickEl, sleep, escMenus } = S;
+  const { waitFor, findByText, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
 
   Object.assign(S.adapters, {
     "deepseek.com": {
@@ -14,19 +14,21 @@
         return [...document.querySelectorAll(".ds-toggle-button")]
           .find((x) => /deepthink|深度思考/i.test((x.textContent || "").trim()));
       },
-      _setDeepThink: async function (on) {
+      _setDeepThink: async function (on, deadline) {
+        checkDeadline(deadline);
         const t = this._deepThink();
         if (!t) throw new Error("DeepSeek: DeepThink 开关未找到"); // 开关常驻 composer，缺失即异常（静默 return 会让 runMode 误报成功）
-        if ((t.getAttribute("aria-pressed") === "true") !== on) clickEl(t);
-        await sleep(300);
+        if ((t.getAttribute("aria-pressed") === "true") !== on) tierAction(deadline, () => clickEl(t));
+        await sleep(300, deadline);
         const after = this._deepThink(); // 点击被吞时不许静默成功
         if (!after || (after.getAttribute("aria-pressed") === "true") !== on) throw new Error("DeepSeek: DeepThink 未生效");
       },
-      _selectMode: async function (re) {
+      _selectMode: async function (re, deadline) {
+        checkDeadline(deadline);
         // DeepSeek 模式 radio 只认原生 click(拒绝合成事件 isTrusted=false)；选择幂等，原生 click 安全。
         // radio 仅空对话首屏存在，聊天中缺失属正常态 → 静默跳过（档位真值由 DeepThink 开关兜底）
         const el = findByText('[role="radio"]', re); // Instant / Expert / Vision
-        if (el) { el.click(); await sleep(400); }
+        if (el) { tierAction(deadline, () => el.click()); await sleep(400, deadline); }
       },
       // diag 不含模式 radio：它仅空对话首屏存在，聊天中缺失属正常态，列进来会让巡检恒红误报
       diagnose: function () {
@@ -46,10 +48,14 @@
         const t = r ? r.textContent || "" : "";
         return /Expert|专家/.test(t) ? "think" : /Instant|快速/.test(t) ? "fast" : null;
       },
-      think: async function () { await this._selectMode(/Expert|专家/); await this._setDeepThink(true); },
-      fast: async function () { await this._selectMode(/Instant|快速/); await this._setDeepThink(false); },
-      thinkImage: async function () { await this._selectMode(/Vision|视觉/); await this._setDeepThink(true); },
-      fastImage: async function () { await this._selectMode(/Vision|视觉/); await this._setDeepThink(false); },
+      think: async function (deadline) {
+        checkDeadline(deadline); await this._selectMode(/Expert|专家/, deadline); await this._setDeepThink(true, deadline); },
+      fast: async function (deadline) {
+        checkDeadline(deadline); await this._selectMode(/Instant|快速/, deadline); await this._setDeepThink(false, deadline); },
+      thinkImage: async function (deadline) {
+        checkDeadline(deadline); await this._selectMode(/Vision|视觉/, deadline); await this._setDeepThink(true, deadline); },
+      fastImage: async function (deadline) {
+        checkDeadline(deadline); await this._selectMode(/Vision|视觉/, deadline); await this._setDeepThink(false, deadline); },
       // 2026-07-23 真机：常驻文件 input 接受合成 change；上传完成后预览 img.alt 保留文件名。
       attach: function (files, el, deadline) {
         return S.setInputFiles(document.querySelector('input[type="file"][accept*=".png"]'), files, el, deadline);
@@ -96,17 +102,20 @@
           .sort((a, b) => Math.abs(a.r.y - cr.y) - Math.abs(b.r.y - cr.y))[0];
         return near && Math.abs(near.r.y - cr.y) < 240 ? near.el : null;
       },
-      _select: async function (re, expected) {
-        for (let i = 0; i < 3; i++) {
-          if (this.state() === expected) return;
-          const btn = this._modeBtn();
-          if (!btn) throw new Error("豆包: 模式按钮未找到"); // 静默 return 会让 runMode 误报"已切到"
-          if (!findByText('[role="menuitem"]', re)) openMenu(btn);
-          const item = await waitFor(() => findByText('[role="menuitem"]', re), 1500);
-          if (item) { item.click(); await sleep(500); } // 选项 onclick，用原生 click
-          escMenus(); await sleep(200);
-        }
-        throw new Error("豆包: 目标模式未选中");
+      _select: async function (re, expected, deadline) {
+        try {
+          checkDeadline(deadline);
+          for (let i = 0; i < 3; i++) {
+            if (this.state() === expected) return;
+            const btn = this._modeBtn();
+            if (!btn) throw new Error("豆包: 模式按钮未找到"); // 静默 return 会让 runMode 误报"已切到"
+            if (!findByText('[role="menuitem"]', re)) tierAction(deadline, () => openMenu(btn));
+            const item = await waitFor(() => findByText('[role="menuitem"]', re), 1500, 120, deadline);
+            if (item) { tierAction(deadline, () => item.click()); await sleep(500, deadline); } // 选项 onclick，用原生 click
+            escMenus(); await sleep(200, deadline);
+          }
+          throw new Error("豆包: 目标模式未选中");
+        } finally { escMenus(); }
       },
       diagnose: function () {
         return [
@@ -119,8 +128,10 @@
         const t = b ? (b.textContent || "").trim() : "";
         return (/专家$/.test(t) || /^豆包\s+[\d.]/.test(t)) ? "think" : /快速$/.test(t) ? "fast" : null;
       },
-      think: async function () { await this._select(/专家$/, "think"); },
-      fast: async function () { await this._select(/快速$/, "fast"); },
+      think: async function (deadline) {
+        checkDeadline(deadline); await this._select(/专家$/, "think", deadline); },
+      fast: async function (deadline) {
+        checkDeadline(deadline); await this._select(/快速$/, "fast", deadline); },
       attach: function (files, el, deadline) {
         return S.setInputFiles(document.querySelector('input[type="file"][accept*="png"]'), files, el, deadline);
       },
@@ -174,28 +185,31 @@
           return /^Qwen3/.test(t) && t.length <= 25 && e.children.length <= 3; // 只读 state() 不需可见性判定
         }).pop() || null;
       },
-      _selectModel: async function (re) {
-        const md = this._trigger();
-        if (!md) throw new Error("千问模型下拉未就绪");
-        // 先读后点：已是目标模型直接返回。否则触发器自身文本会让下面的 findByText 误判
-        // "菜单已开"，leaf 又抓到触发器本身，点击反而打开模型对话框（真机 2026-07-21：
-        // fast/think 同模型后每次切档都踩中此分支，白开对话框靠 Escape 兜底，慢且脆弱）
-        if (re.test((md.textContent || "").trim())) return;
-        if (!findByText("div,li,span,button", re)) md.click();
-        const leaf = await waitFor(() =>
-          [...document.querySelectorAll("div,li,span,button")]
-            .filter((e) => e.children.length <= 2 && re.test((e.textContent || "").trim()) && (e.textContent || "").trim().length < 26).pop());
-        if (!leaf) { escMenus(); throw new Error("千问: 模型选项未找到"); } // 静默 return 会让 runMode 误报成功
-        let c = leaf, clicked = false;
-        for (let i = 0; i < 5 && c; i++) {
-          if (c.onclick || /option|menuitem/.test(c.getAttribute("role") || "") || c.tagName === "LI") { c.click(); clicked = true; break; }
-          c = c.parentElement;
-        }
-        if (!clicked) leaf.click();
-        await sleep(500);
-        escMenus();
-        const after = this._trigger(); // 点完不复读会让换模型静默落空，见 F075
-        if (!after || !re.test((after.textContent || "").trim())) throw new Error("千问: 模型未生效");
+      _selectModel: async function (re, deadline) {
+        try {
+          checkDeadline(deadline);
+          const md = this._trigger();
+          if (!md) throw new Error("千问模型下拉未就绪");
+          // 先读后点：已是目标模型直接返回。否则触发器自身文本会让下面的 findByText 误判
+          // "菜单已开"，leaf 又抓到触发器本身，点击反而打开模型对话框（真机 2026-07-21：
+          // fast/think 同模型后每次切档都踩中此分支，白开对话框靠 Escape 兜底，慢且脆弱）
+          if (re.test((md.textContent || "").trim())) return;
+          if (!findByText("div,li,span,button", re)) tierAction(deadline, () => md.click());
+          const leaf = await waitFor(() =>
+            [...document.querySelectorAll("div,li,span,button")]
+              .filter((e) => e.children.length <= 2 && re.test((e.textContent || "").trim()) && (e.textContent || "").trim().length < 26).pop(), 3500, 120, deadline);
+          if (!leaf) { escMenus(); throw new Error("千问: 模型选项未找到"); } // 静默 return 会让 runMode 误报成功
+          let c = leaf, clicked = false;
+          for (let i = 0; i < 5 && c; i++) {
+            if (c.onclick || /option|menuitem/.test(c.getAttribute("role") || "") || c.tagName === "LI") { tierAction(deadline, () => c.click()); clicked = true; break; }
+            c = c.parentElement;
+          }
+          if (!clicked) tierAction(deadline, () => leaf.click());
+          await sleep(500, deadline);
+          escMenus();
+          const after = this._trigger(); // 点完不复读会让换模型静默落空，见 F075
+          if (!after || !re.test((after.textContent || "").trim())) throw new Error("千问: 模型未生效");
+        } finally { escMenus(); }
       },
       _thinkBtn: function () {
         const menu = [...document.querySelectorAll('button[aria-haspopup="menu"]')].find((b) => {
@@ -211,22 +225,25 @@
           return /思考研究|Thinking Research/i.test(b.getAttribute("aria-label") || b.textContent || "");
         return !!b && (b.className || "").split(/\s+/).includes("text-theme");
       },
-      _setThink: async function (on) {
-        const b = this._thinkBtn();
-        if (!b) throw new Error("千问: 思考按钮未找到"); // 常驻 composer，缺失即异常
-        if (this._isThink(b) === on) return;
-        if (b.getAttribute("aria-haspopup") === "menu") {
-          b.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, view: window, detail: 1, button: 0 }));
-          const re = on ? /思考研究|Thinking Research/i : /^快速|^Fast/i;
-          const item = await waitFor(() => [...document.querySelectorAll('[role="menuitemcheckbox"]')].find((x) => {
-            const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0 && re.test((x.textContent || "").trim());
-          }), 1500);
-          if (!item) { escMenus(); throw new Error("千问: 模式选项未找到"); }
-          item.click(); await sleep(500);
-          escMenus();
-        } else { b.click(); await sleep(300); }
-        const after = this._thinkBtn();
-        if (!after || this._isThink(after) !== on) { escMenus(); throw new Error("千问: 思考开关未生效"); }
+      _setThink: async function (on, deadline) {
+        try {
+          checkDeadline(deadline);
+          const b = this._thinkBtn();
+          if (!b) throw new Error("千问: 思考按钮未找到"); // 常驻 composer，缺失即异常
+          if (this._isThink(b) === on) return;
+          if (b.getAttribute("aria-haspopup") === "menu") {
+            tierAction(deadline, () => b.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true, cancelable: true, view: window, detail: 1, button: 0 })));
+            const re = on ? /思考研究|Thinking Research/i : /^快速|^Fast/i;
+            const item = await waitFor(() => [...document.querySelectorAll('[role="menuitemcheckbox"]')].find((x) => {
+              const r = x.getBoundingClientRect(); return r.width > 0 && r.height > 0 && re.test((x.textContent || "").trim());
+            }), 1500, 120, deadline);
+            if (!item) { escMenus(); throw new Error("千问: 模式选项未找到"); }
+            tierAction(deadline, () => item.click()); await sleep(500, deadline);
+            escMenus();
+          } else { tierAction(deadline, () => b.click()); await sleep(300, deadline); }
+          const after = this._thinkBtn();
+          if (!after || this._isThink(after) !== on) { escMenus(); throw new Error("千问: 思考开关未生效"); }
+        } finally { escMenus(); }
       },
       diagnose: function () {
         return [
@@ -248,8 +265,10 @@
         if (on && this._THINK.test(t)) return "think";
         return !on && this._FAST.test(t) ? "fast" : null;
       },
-      think: async function () { await this._selectModel(this._THINK); await this._setThink(true); },
-      fast: async function () { await this._selectModel(this._FAST); await this._setThink(false); },
+      think: async function (deadline) {
+        checkDeadline(deadline); await this._selectModel(this._THINK, deadline); await this._setThink(true, deadline); },
+      fast: async function (deadline) {
+        checkDeadline(deadline); await this._selectModel(this._FAST, deadline); await this._setThink(false, deadline); },
       // 动态 input 需可信菜单点击，合成 drop/paste 被忽略（2026-07-23 真机），明确报 unsupported。
       // 最后一条回答（真机审计锚点 2026-07：.answer-common-card，正文在 .qk-markdown）。
       // 思考档思考段也是 .qk-markdown（祖先 thinkingContent-<hash>，CSS-module 后缀会变故用
