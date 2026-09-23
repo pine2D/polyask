@@ -18,6 +18,7 @@ setShellApi({
   listFolders: async () => { if (state.failLoad) throw new Error('fixture_load_failed'); return folders; },
   searchFolderContents: async (filters: any) => [...records.map(record => ({kind:'archive',record})), ...cards.map(record => ({kind:'decision',record}))].filter(item => (!filters.kind || item.kind === filters.kind) && (!filters.query || JSON.stringify(item).includes(filters.query))),
   searchArchives: async () => ({items: records, tags: ['产品设计', '待讨论', '很长的标签用于验证下拉菜单内容能够换行且不会撑破窗口边缘']}),
+  listArchiveTags: async () => ['产品设计', '待讨论', '很长的标签用于验证下拉菜单内容能够换行且不会撑破窗口边缘'],
   getArchive: async (id: string) => records.find(r => r.id === id),
   updateArchive: async (id: string, patch: any) => { if (state.failSave) throw new Error('fixture_save_failed'); state.writes++; records = records.map(r => r.id === id ? {...r,...patch} : r); return records.find(r => r.id === id); },
   deleteArchive: async (id: string) => {records=records.filter(r=>r.id!==id);},

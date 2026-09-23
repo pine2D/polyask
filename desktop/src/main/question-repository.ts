@@ -136,9 +136,24 @@ export class QuestionRepository {
       AND (? IS NULL OR sort_time < ? OR (sort_time = ? AND id > ?))
       ORDER BY sort_time DESC,id LIMIT ?`).all(query, query, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[1] ?? "", limit + 1)
       .flatMap(row => { const v = readJson<QuestionRecord>(row); return v ? [v] : []; });
-    const items = records.slice(0, limit).map(record => {
-      const rows = this.db.prepare("SELECT json_remove(body, '$.answerMarkdown') AS body, length(json_extract(body, '$.answerMarkdown')) > 0 AS saved FROM question_answers WHERE question_id = ? AND deleted_at IS NULL ORDER BY attempt,site").all(record.id);
-      const entries = rows.map(row => ({ metadata: readJson<Omit<QuestionAnswerRecord, "answerMarkdown">>(row)!, saved: row.saved === 1 })).filter(e => e.metadata && record.sites.includes(e.metadata.site));
+    const selected = records.slice(0, limit);
+    type Summary = { metadata: Omit<QuestionAnswerRecord, "answerMarkdown">; saved: boolean };
+    const byQuestion = new Map<string, Summary[]>();
+    if (selected.length) {
+      const rows = this.db.prepare(`SELECT json_remove(body, '$.answerMarkdown') AS body,
+        length(json_extract(body, '$.answerMarkdown')) > 0 AS saved FROM question_answers
+        WHERE question_id IN (${selected.map(() => '?').join(',')}) AND deleted_at IS NULL
+        ORDER BY question_id,attempt,site`).all(...selected.map(q => q.id));
+      for (const row of rows) {
+        const metadata = readJson<Summary["metadata"]>(row);
+        if (!metadata) continue;
+        const entries = byQuestion.get(metadata.questionId) ?? [];
+        entries.push({ metadata, saved: row.saved === 1 });
+        byQuestion.set(metadata.questionId, entries);
+      }
+    }
+    const items = selected.map(record => {
+      const entries = (byQuestion.get(record.id) ?? []).filter(e => record.sites.includes(e.metadata.site));
       return { ...record, savedSites: new Set(entries.filter(e => e.saved).map(e => e.metadata.site)).size,
         answers: entries.map(e => e.metadata) };
     });

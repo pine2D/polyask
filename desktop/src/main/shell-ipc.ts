@@ -87,6 +87,7 @@ const HANDLERS = [
   "polyask:broadcast",
   "polyask:collect",
   "polyask:archive-search",
+  "polyask:archive-tags",
   "polyask:archive-get",
   "polyask:archive-add",
   "polyask:archive-update",
@@ -223,6 +224,10 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   ipcMain.handle("polyask:archive-search", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
     return archives.search(value && typeof value === "object" ? value as ArchiveFilters : {});
+  });
+  ipcMain.handle("polyask:archive-tags", event => {
+    if (!trustedShell(event)) throw new Error("untrusted_sender");
+    return archives.tags();
   });
   ipcMain.handle("polyask:archive-get", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");

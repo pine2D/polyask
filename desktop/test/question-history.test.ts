@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
 import { DesktopDatabase } from "../src/main/database";
+import { DatabaseSync } from "node:sqlite";
+import { QuestionRepository } from "../src/main/question-repository";
+import { OutboxRepository } from "../src/main/outbox-repository";
 
 const question = (id = "q-a", createdAt = 10) => ({
   schema: 4 as const, id, text: "相同提问", createdAt, updatedAt: createdAt,
@@ -106,4 +109,30 @@ test('details return only the selected attempt body while lists contain no answe
     assert.ok(db.questions.search().items[0].answers.every(a => !('answerMarkdown' in a)));
     assert.equal(db.questions.search().items[0].savedSites, 1);
   } finally { db.close(); }
+});
+
+test('a full history page reads answer summaries in a bounded number of database queries', () => {
+  const raw = new DatabaseSync(':memory:');
+  raw.exec('CREATE TABLE questions(id TEXT PRIMARY KEY, body TEXT, sort_time INTEGER, deleted_at INTEGER); CREATE TABLE question_answers(id TEXT PRIMARY KEY, question_id TEXT, site TEXT, attempt INTEGER, body TEXT, deleted_at INTEGER);');
+  let queries = 0;
+  const observed = new Proxy(raw, { get(target, key) {
+    if (key === 'prepare') return (sql: string) => { queries++; return target.prepare(sql); };
+    const value = Reflect.get(target, key); return typeof value === 'function' ? value.bind(target) : value;
+  } });
+  const repository = new QuestionRepository(observed, new OutboxRepository(observed));
+  try {
+    for (let i = 1; i <= 60; i++) {
+      repository.put(question(`q-${i}`, i), false);
+      repository.putAnswer(answer(1, `q-${i}`), false);
+      repository.putAnswer({ ...answer(2, `q-${i}`), answerMarkdown: null, capture: 'waiting' }, false);
+    }
+    queries = 0;
+    const page = repository.search();
+    assert.equal(page.items.length, 50);
+    assert.equal(page.items[0].id, 'q-60');
+    assert.equal(page.items[49].id, 'q-11');
+    assert.ok(page.cursor);
+    assert.ok(page.items.every(q => q.savedSites === 1 && q.answers.length === 2 && q.answers.every(a => !('answerMarkdown' in a))));
+    assert.ok(queries <= 3, `a page must not query each question separately (observed ${queries})`);
+  } finally { raw.close(); }
 });

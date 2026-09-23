@@ -6,7 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import { DesktopDatabase } from "../src/main/database";
-import { isArchiveRecord } from "../src/shared/archive";
+import { createArchiveRecord, isArchiveRecord, updateArchiveRecord } from "../src/shared/archive";
 import { archiveFixture } from "./fixtures";
 
 test("a stored archive row that no longer satisfies the current validator is still listed", () => {
@@ -24,8 +24,26 @@ test("a stored archive row that no longer satisfies the current validator is sti
     raw.close();
     const reopened = DesktopDatabase.open(path);
     assert.deepEqual(reopened.archives.list().map((record) => record.id), [legacy.id]);
+    assert.deepEqual(reopened.archives.search({}).map((record) => record.id), [legacy.id]);
     reopened.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("repository search preserves literal Unicode filters, order and global tags", () => {
+  const db = DesktopDatabase.open(":memory:");
+  try {
+    for (const [id, now, task, tags] of [["a", 1, "ÄPFEL 100%_", ["研究"]], ["b", 2, "Other", ["work"]]] as const) {
+      const record = createArchiveRecord({ text: task, task, results: [{ host: "claude.ai", label: "Claude", text: "Synthetic body" }] }, { id, now, deviceId: "test" });
+      db.archives.put(updateArchiveRecord(record, { tags: [...tags], favorite: id === "a" }, { now, deviceId: "test" }), false);
+    }
+    assert.deepEqual(db.archives.search({ query: " ÄPFEL 100%_ ", tag: "研究", favorite: true }).map(r => r.id), ["a"]);
+    assert.deepEqual(db.archives.search({ query: "%missing_" }), []);
+    assert.deepEqual(db.archives.search({}).map(r => r.id), ["b", "a"]);
+    assert.deepEqual(db.archives.tags(), ["work", "研究"]);
+    db.archives.delete("b", 3, "test");
+    assert.deepEqual(db.archives.tags(), ["研究"]);
+    assert.deepEqual(db.archives.search({}).map(r => r.id), ["a"]);
+  } finally { db.close(); }
 });

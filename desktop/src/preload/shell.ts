@@ -74,6 +74,7 @@ export interface PolyAskDesktopApi {
   deleteDecision(id: string): Promise<void>;
   decisionMarkdown(id: string, locale: string): Promise<string>;
   searchArchives(filters: ArchiveFilters): Promise<ArchiveSearchResult>;
+  listArchiveTags(): Promise<string[]>;
   getArchive(id: string): Promise<ArchiveRecord | null>;
   addArchive(input: ArchiveInput): Promise<ArchiveRecord>;
   updateArchive(id: string, patch: ArchivePatch): Promise<ArchiveRecord>;
@@ -168,6 +169,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   deleteDecision: (id: string) => invoke("polyask:decision-delete", id),
   decisionMarkdown: (id: string, locale: string) => invoke("polyask:decision-markdown", { id, locale }),
   searchArchives: (filters: ArchiveFilters) => invoke("polyask:archive-search", filters),
+  listArchiveTags: () => invoke("polyask:archive-tags"),
   getArchive: (id: string) => invoke("polyask:archive-get", id),
   addArchive: (input: ArchiveInput) => invoke("polyask:archive-add", input),
   updateArchive: (id: string, patch: ArchivePatch) => invoke("polyask:archive-update", { id, patch }),

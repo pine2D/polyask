@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import {
   isArchiveRecord,
   tombstoneArchive,
+  type ArchiveFilters,
   type ArchiveRecord,
   type StoredArchive
 } from "../shared/archive";
@@ -35,6 +36,27 @@ export class ArchiveRepository {
     // 任何一次校验收紧都会把存量记录静默过滤掉——不报错、不计数、不落日志，用户只看到结果库凭空少了几条。
     // deleted_at IS NULL 已排除 tombstone。
     return rows.flatMap((row) => readJson<ArchiveRecord>(row) ?? []);
+  }
+
+  search(filters: ArchiveFilters): ArchiveRecord[] {
+    const query = String(filters.query ?? "").trim().toLowerCase();
+    const tag = String(filters.tag ?? "").trim();
+    // Filter in SQLite so unrelated answer bodies never cross into JS or IPC.
+    // Use instr rather than LIKE: %, _ and Unicode keep their literal meaning.
+    const rows = this.database.prepare(`SELECT body FROM archives WHERE deleted_at IS NULL
+      AND CASE WHEN json_valid(body) THEN
+        (? = '' OR instr(json_extract(body, '$.searchText'), ?) > 0)
+        AND (? = 0 OR json_extract(body, '$.favorite') = 1)
+        AND (? = '' OR EXISTS (SELECT 1 FROM json_each(body, '$.tags') WHERE value = ?))
+      ELSE 0 END ORDER BY sort_time DESC, id DESC`).all(query, query, filters.favorite ? 1 : 0, tag, tag);
+    return rows.flatMap(row => readJson<ArchiveRecord>(row) ?? []);
+  }
+
+  tags(): string[] {
+    const rows = this.database.prepare(`SELECT json_extract(body, '$.tags') AS body FROM archives
+      WHERE deleted_at IS NULL AND json_valid(body)`).all();
+    return [...new Set(rows.flatMap(row => readJson<string[]>(row) ?? []))]
+      .sort((left, right) => left.localeCompare(right));
   }
 
   put(record: StoredArchive, enqueue = true): StoredArchive {

@@ -43,9 +43,9 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     const request = ++epoch.current;
     const timer = setTimeout(() => {
       setLoading(true);
-      Promise.all([shell.listFolders(), shell.searchFolderContents(filters), shell.searchArchives({})]).then(([nextFolders, contents, archives]) => {
+      Promise.all([shell.listFolders(), shell.searchFolderContents(filters), shell.listArchiveTags()]).then(([nextFolders, contents, nextTags]) => {
         if (request !== epoch.current) return;
-        setFolders(nextFolders); setItems(contents); setTags(archives.tags); setLoading(false); setLoadFailed(false); setMessage('');
+        setFolders(nextFolders); setItems(contents); setTags(nextTags); setLoading(false); setLoadFailed(false); setMessage('');
         setSelected(current => current ? contents.find(item => contentKey(item) === contentKey(current)) ?? null : null);
       }).catch(() => { if (request === epoch.current) { setLoading(false); setLoadFailed(true); setMessage(copy.folderLoadFailed); } });
     }, filters.query ? 180 : 0);

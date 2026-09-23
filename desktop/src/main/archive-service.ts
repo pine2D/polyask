@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 
 import type { ArchiveRepository } from "./archive-repository";
 import {
-  archiveMatches,
   createArchiveRecord,
   updateArchiveRecord,
   type ArchiveFilters,
@@ -38,11 +37,10 @@ export class ArchiveService {
   }
 
   search(filters: ArchiveFilters = {}): ArchiveSearchResult {
-    const records = this.repository.list();
-    const tags = [...new Set(records.flatMap((record) => record.tags))]
-      .sort((left, right) => left.localeCompare(right));
-    return { items: records.filter((record) => archiveMatches(record, filters)), tags };
+    return { items: this.repository.search(filters), tags: this.tags() };
   }
+
+  tags(): string[] { return this.repository.tags(); }
 
   get(id: string): ArchiveRecord | null {
     const record = this.repository.get(id);
