@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/pbakaus/impeccable",
+  "revision": "e0881d2de397d5e9761d7b35ff5017d8f5ebf69b",
+  "source": ".agents/skills/impeccable",
+  "destination": ".agents/skills/impeccable",
+  "skillVersion": "4.3.1",
+  "engineVersion": "0.1.5",
+  "scope": "project",
+  "automaticHooks": false
+}
