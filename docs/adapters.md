@@ -51,7 +51,7 @@
 | `tier` | 当前档位读不读得出（`state() != null`） | **不代表站点坏了**，见下 |
 | `probe` | 探测本身出错（适配器缺席 / `diagnose` 抛异常） | 适配器层面出问题 |
 
-**为什么 `tier` 单独一档**：各站 `state()` 是**刻意的偏函数**，按各站可只读获取的证据映射粗档位；用户手动停在非预设组合时可能返回 `null`——千问「Qwen3.7-千问 + 快速」（think 的模型配 fast 的模式）、Kimi「Instant」（非 K3）、当前元宝「Thinking/思考」均如此；也有粗判无法区分的组合，详见各站卡。真机 2026-08-31 曾因这类合法档位**常态**被判「发现异常」，反而把真正的改版信号淹掉了。元宝当时的 Expert 非预设例子已随 2026-09 的映射调整过时，当前 Expert 判 think。现在 Desktop 的 `buildSiteHealth` 只让非 `tier` 的红项决定可用性，`tier` 红项在详情页显示成「提示」而不是故障。
+**为什么 `tier` 单独一档**：各站 `state()` 是**刻意的偏函数**，按各站可只读获取的证据映射粗档位；用户手动停在非预设组合时可能返回 `null`——千问「Qwen3.7-Max + 快速」（非预设模型）、Kimi「Instant」（非 K3）、当前元宝「Thinking/思考」均如此；也有粗判无法区分的组合，详见各站卡。真机 2026-08-31 曾因这类合法档位**常态**被判「发现异常」，反而把真正的改版信号淹掉了。元宝当时的 Expert 非预设例子已随 2026-09 的映射调整过时，当前 Expert 判 think。现在 Desktop 的 `buildSiteHealth` 只让非 `tier` 的红项决定可用性，`tier` 红项在详情页显示成「提示」而不是故障。
 
 **标签集真漂移时靠九站巡检的 `tier` 红项兜底**：`tier` 被降为「提示」只是不再决定站点可用性，检查项本身照常产出——九站一起把「档位读不出」亮起来，就不是用户手动停档能解释的了。这是自动信号退役后唯一还在的漂移线索，所以详情页不许把 `tier` 项整个藏掉。
 
@@ -210,8 +210,8 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 ### 千问（`www.qianwen.com` / 键 `qianwen.com`，`desktop/src/site-runtime/adapters-cn.js`）
 
-- 档位是**两档各自换模型**，不是只切开关：think = `_selectModel(this._THINK)` + `_setThink(true)`（思考研究档）；fast = `_selectModel(this._FAST)` + `_setThink(false)`（快速档）。**两条模型正则已提成适配器常量** `_THINK = /Qwen3\.7-千问(?!-Max)/i` 与 `_FAST = /Qwen3\.8-Max(?!-Preview)/i`，`think`/`fast` 与 `state()` 共用同一份字面量——**改模型名只改这两个常量**，别再在三处各写一遍（重复字面量静默漂开的表现是「切档成功但 state 恒读不出」，`switchTier` 重试到超时后带 `tier_unconfirmed` 提交）。
-- **`state()` 是复合条件**：思考按钮缺失 → null；开关开且模型文本命中 `_THINK` → think；开关关且模型命中 `_FAST` → fast；**开关与模型不匹配的任意组合 → null**。只切开关不换模型会判不出档。
+- 日常聊天预设：快速 = Qwen3.7-千问 + 快速，思考 = Qwen3.7-千问 + 思考研究；不自动切换到工作模式寻找 Qwen3.8-Max。
+- 两档共用 `_MODEL = /Qwen3\.7-千问(?!-Max)/i`，先幂等选中该模型，再分别 `_setThink(true)` / `_setThink(false)`。`state()` 共用同一正则：模型命中且思考开启 → think，模型命中且思考关闭 → fast；缺少模式按钮或非预设模型 → null。Qwen3.7-Max 在当前网页不支持“思考研究”，不作为本应用的思考预设。
 - 模型触发器 `_trigger()`：先找 `[aria-haspopup="dialog"]` 且文本含 `Qwen3` 的节点；找不到回退按可见文本找最内层（文本以 Qwen3 开头、长度 ≤25、子节点 ≤3 的 div/button/span 取最后一个）——**`aria-haspopup` 由前端延迟水合**，新加载页一段时间内只有纯文本节点。
 - **`_selectModel` 必须先读后点**：触发器自身的常驻文本会骗过「菜单已开」判定，leaf 又抓到触发器本身，点下去反而打开模型对话框（真机 2026-07-21：fast/think 同模型时每次切档都踩中，靠 Escape 兜底，慢且脆弱）。选中项要沿 `parentElement` 上溯最多 5 层找带 onclick / `role=option|menuitem` / `LI` 的可点祖先，都没有才点 leaf。结尾**复读 `_trigger()` 校验**，文本仍不命中目标正则就抛「千问: 模型未生效」——点击被站点吞掉时静默成功就是一个假绿点。可见性过滤与对话框容器收窄尚未做（要动先真机）。
 - 思考按钮 `_thinkBtn()`：优先可见的 `button[aria-haspopup="menu"]` 且 aria-label/文本命中 `/^(快速|思考研究|Fast|Thinking Research)$/i`；回退到内部 span 或自身文本为 `/^(思考|Thinking)$/i` 的旧版裸按钮。`_setThink(on)` 先读后点，新版派发 pointerdown 后在可见 `[role="menuitemcheckbox"]` 里原生 click 目标项，收尾复读校验，未生效抛「千问: 思考开关未生效」；按钮缺失即抛（常驻 composer）。**三条路径（选项未找到 / 成功点击后 / 复读失败前）都各自 `escMenus()` 收尾**，残留菜单会罩住输入框让随后的注入点空。

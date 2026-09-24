@@ -17,21 +17,23 @@ const context = { document, t: (key) => key, window: { __AMS: { ...helpers, ...r
 vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime/adapters-cn.js"), "utf8"), context);
 
 const qwen = context.window.__AMS.adapters["qianwen.com"];
+assert.equal(qwen.state(), "think", "Qwen3.7-千问 开启思考应识别为 think");
 // 档位正则必须只在源码里出现一次（执行端与识别端共用常量），两处各写一遍就是漂开的起点
 {
   const src = fs.readFileSync(path.join(__dirname, "../src/site-runtime/adapters-cn.js"), "utf8");
-  for (const literal of ["Qwen3\\.7-千问(?!-Max)", "Qwen3\\.8-Max(?!-Preview)"]) {
-    assert.equal(src.split(literal).length - 1, 1, `千问档位正则「${literal}」应只在 _THINK/_FAST 常量里出现一次`);
-  }
-  assert.equal(qwen._THINK.source, "Qwen3\\.7-千问(?!-Max)");
-  assert.equal(qwen._FAST.source, "Qwen3\\.8-Max(?!-Preview)");
+  const literal = "Qwen3\\.7-千问(?!-Max)";
+  assert.equal(src.split(literal).length - 1, 1, "两档选择与识别共用一份模型正则");
+  assert.equal(qwen._MODEL.source, literal);
 }
-assert.equal(qwen.state(), "think", "正式版开启思考时应识别为 think");
+trigger.textContent = "Qwen3.7-Max";
+assert.equal(qwen.state(), null, "Max 不能冒充预设思考档");
 thinkButton.className = "text-primary";
-trigger.textContent = "Qwen3.8-Max";
+trigger.textContent = "Qwen3.7-千问";
 assert.equal(qwen.state(), "fast", "正式版关闭思考时应识别为 fast");
-trigger.textContent = "Qwen3.8-Max-Preview";
-assert.equal(qwen.state(), null, "Preview 不得冒充正式版档位");
+trigger.textContent = "Qwen3.7-Max";
+assert.equal(qwen.state(), null, "Max 不是预设快速档");
+trigger.textContent = "Qwen3.8-Max";
+assert.equal(qwen.state(), null, "工作模式模型不得冒充日常快速档");
 
 (async () => {
   let selected;
@@ -39,15 +41,15 @@ assert.equal(qwen.state(), null, "Preview 不得冒充正式版档位");
   qwen._setThink = async () => {};
   await qwen.think();
   assert.equal(selected.test("Qwen3.7-千问"), true);
-  assert.equal(selected.test("Qwen3.7-Max"), false, "思考档必须使用支持思考研究的综合模型");
+  assert.equal(selected.test("Qwen3.7-Max"), false, "思考档不得选择不支持思考研究的 Max");
   await qwen.fast();
-  assert.equal(selected.test("Qwen3.8-Max"), true);
-  assert.equal(selected.test("Qwen3.8-Max-Preview"), false, "快速档不得回退 Preview");
+  assert.equal(selected.test("Qwen3.7-千问"), true);
+  assert.equal(selected.test("Qwen3.7-Max"), false, "快速档不得选择 Max");
 
   // F075：上面全部用例都把 _selectModel 整个 stub 掉，覆盖为零。这里真实调用它——
   // 菜单打开、leaf 点击、点完复读 _trigger() 确认模型真的换了；点击被吞时必须抛错而非静默成功。
   function selectModelFixture(clickTakesEffect) {
-    let modelText = "Qwen3.8-Max", menuOpen = false, escCount = 0;
+    let modelText = "Qwen3.7-Max", menuOpen = false, escCount = 0;
     const trigger = {
       get textContent() { return modelText; },
       getAttribute(name) { return name === "aria-haspopup" ? "dialog" : null; },

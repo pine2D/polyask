@@ -153,7 +153,7 @@
       },
     },
 
-    // 千问：think=Qwen3.7-千问+思考研究，fast=Qwen3.8-Max+快速；兼容旧版裸思考按钮。
+    // 千问：think=Qwen3.7-千问+思考研究，fast=Qwen3.7-千问+快速；兼容旧版裸思考按钮。
     "qianwen.com": {
       attach: async function (files, el, deadline) {
         if (Date.now() >= deadline) return false;
@@ -254,21 +254,20 @@
       },
       // 执行端（think/fast 切到哪）与识别端（state 认出没）共用同一条正则，避免两处漂开：改了一处忘另一处
       // 会让切档实际成功但 state 恒 null，switchTier 空转到 10s 才报 tier_unconfirmed。
-      _THINK: /Qwen3\.7-千问(?!-Max)/i,
-      _FAST: /Qwen3\.8-Max(?!-Preview)/i,
+      _MODEL: /Qwen3\.7-千问(?!-Max)/i,
       state: function () {
         const m = this._trigger();
         const t = m ? m.textContent || "" : "";
         const b = this._thinkBtn();
         if (!b) return null;
         const on = this._isThink(b);
-        if (on && this._THINK.test(t)) return "think";
-        return !on && this._FAST.test(t) ? "fast" : null;
+        if (on && this._MODEL.test(t)) return "think";
+        return !on && this._MODEL.test(t) ? "fast" : null;
       },
       think: async function (deadline) {
-        checkDeadline(deadline); await this._selectModel(this._THINK, deadline); await this._setThink(true, deadline); },
+        checkDeadline(deadline); await this._selectModel(this._MODEL, deadline); await this._setThink(true, deadline); },
       fast: async function (deadline) {
-        checkDeadline(deadline); await this._selectModel(this._FAST, deadline); await this._setThink(false, deadline); },
+        checkDeadline(deadline); await this._selectModel(this._MODEL, deadline); await this._setThink(false, deadline); },
       // 动态 input 需可信菜单点击，合成 drop/paste 被忽略（2026-07-23 真机），明确报 unsupported。
       // 最后一条回答（真机审计锚点 2026-07：.answer-common-card，正文在 .qk-markdown）。
       // 思考档思考段也是 .qk-markdown（祖先 thinkingContent-<hash>，CSS-module 后缀会变故用

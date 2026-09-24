@@ -141,7 +141,7 @@ test("切档超时后不提交，交给用户 retry", async () => {
 });
 
 test("千问新模式按钮可读，think 与 fast 使用当前可用模型，切档成功后收尾 escMenus", async () => {
-  const trigger = { textContent: "Qwen3.8-Max", children: [], getAttribute: () => null };
+  const trigger = { textContent: "Qwen3.7-千问", children: [], getAttribute: () => null };
   let label = "快速", menuOpen = false, escCount = 0;
   const modeButton = {
     className: "", textContent: label, querySelectorAll: () => [],
@@ -162,18 +162,14 @@ test("千问新模式按钮可读，think 与 fast 使用当前可用模型，�
   vm.runInNewContext(source("adapters-cn.js"), context);
   const qwen = context.window.__AMS.adapters["qianwen.com"];
   assert.equal(qwen.state(), "fast");
-  trigger.textContent = "Qwen3.7-千问";
-  await qwen._setThink(true);
+  await qwen.think();
   assert.equal(qwen.state(), "think");
-  assert.ok(escCount >= 1, "_setThink 成功路径必须收尾 escMenus，否则菜单会罩住输入框");
+  assert.equal(trigger.textContent, "Qwen3.7-千问");
+  assert.ok(escCount >= 1, "切档成功必须收尾菜单");
+  await qwen.fast();
+  assert.equal(qwen.state(), "fast");
+  assert.equal(trigger.textContent, "Qwen3.7-千问", "同模型切档只改变模式，不重开模型菜单");
 
-  const models = [];
-  qwen._selectModel = async (re) => { models.push(re); };
-  qwen._setThink = async () => {};
-  await qwen.think(); await qwen.fast();
-  assert.equal(models[0].test("Qwen3.7-千问"), true);
-  assert.equal(models[0].test("Qwen3.7-Max"), false);
-  assert.equal(models[1].test("Qwen3.8-Max"), true);
 });
 
 test("千问 _setThink 选项缺失或点击被吞时仍收尾 escMenus，且抛错不静默成功", async () => {
