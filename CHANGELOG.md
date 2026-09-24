@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.6.0] - 2026-09-24
+
+验收限制：已完成 Linux 开发态切档及界面回归；本版未重跑九站实际群发，真实 Drive 双设备同步和五种发行包的原生安装使用尚未验收。
+
 ### 变更
 
 - Claude 快速档改用 Opus 5.5 Medium；思考档保持 Fable 5.1 的最高强度（当前 Max），并兼容新版平铺的强度菜单。
@@ -15,7 +19,6 @@
 ### 修复
 
 - 千问两档统一使用 Qwen3.7-千问：快速档使用快速模式，思考档开启思考研究，修复快速档寻找仅工作模式可用模型而失败的问题。
-
 - 修复切换原站前未等待在途回答采集便停止保存的问题；在原有时限内补采旧轮未覆盖的新提问。
 - Drive 待上传任务按到期时间恢复，保留等待状态；持续编辑不会推迟已计划上传，断开同步后取消待执行任务。
 - 修复历史详情退出后被迟到回包重新打开的问题；多页历史持续刷新新增、删除及回答保存进度，并保留阅读位置。
@@ -879,7 +882,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.5.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/pine2D/polyask/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/pine2D/polyask/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/pine2D/polyask/compare/v1.3.0...v1.4.0
 [1.3.0]: https://github.com/pine2D/polyask/compare/v1.2.0...v1.3.0

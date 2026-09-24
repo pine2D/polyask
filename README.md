@@ -43,7 +43,7 @@ PolyAsk 是个桌面应用。它把 Claude、ChatGPT、Gemini、DeepSeek、豆�
 | Gemini | 最新的 Pro，扩展思考 | 最新的 Flash |
 | DeepSeek | 深度思考开 | 深度思考关 |
 | 豆包 | 专家 | 快速 |
-| 千问 | Qwen3.7-千问，思考研究 | Qwen3.8-Max，快速 |
+| 千问 | Qwen3.7-千问，思考研究 | Qwen3.7-千问，快速 |
 | Kimi | K3，极致 | K3，标准 |
 | 元宝 | Hy4 preview（站点只给专家模式） | Hy3，即时 |
 | 智谱清言 | 极致，没有这档就用深度 | 快速 |
