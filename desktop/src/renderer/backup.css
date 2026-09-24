@@ -37,9 +37,9 @@
 .backup-footer { border-top: 1px solid var(--border); }
 .backup-footer > div { max-width: 80%; }
 .backup-footer button { flex-shrink: 0; }
-.backup-workspace button.primary { background: var(--accent); color: var(--panel); border-color: var(--accent); }
+.backup-workspace button.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .backup-summary { padding: 24px; overflow: auto; flex: 1; }
 .backup-summary p { color: var(--muted); line-height: 1.7; }
 .backup-summary li { padding: 8px 0; overflow-wrap: anywhere; }
-.backup-error { margin: 12px 24px; color: var(--danger); }
+.backup-error { margin: 12px 24px; color: var(--danger-ink); }
 @media (max-width: 850px) { .backup-scrim { padding: 10px; } .backup-body { grid-template-columns: 190px minmax(0, 1fr); } .backup-comparison { padding: 16px; } .backup-versions { grid-template-columns: 1fr; } .backup-footer { gap: 12px; padding: 14px; } }

@@ -38,9 +38,9 @@
 .phase-generating .site-status-dot { background: var(--accent); }
 .phase-submitted .site-status-dot, .phase-complete .site-status-dot { background: var(--success); }
 .phase-warning .site-status-dot { background: var(--warning); }
-.phase-warning .site-state { color: var(--warning); }
+.phase-warning .site-state { color: var(--warning-ink); }
 .phase-failed .site-status-dot, .phase-crashed .site-status-dot { background: var(--danger); }
-.phase-failed .site-state, .phase-crashed .site-state { color: var(--danger); }
+.phase-failed .site-state, .phase-crashed .site-state { color: var(--danger-ink); }
 .site-load-progress {
   position: absolute; top: calc(var(--tile-header-height) - 3px); left: 0; right: 0;
   height: 2px; overflow: hidden; background: var(--selection-soft);
@@ -58,3 +58,6 @@
 @media (prefers-reduced-motion: reduce) {
   .site-load-progress > span { animation: none; width: 100%; opacity: .65; }
 }
+
+/* 标题条与按钮同高，向内绘制焦点以免被视图边界裁掉。 */
+.tile-header button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }

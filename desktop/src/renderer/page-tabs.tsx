@@ -65,9 +65,9 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
             }}
           >
             <span>{range}</span>
-            {badges.map(badge => <i key={badge.state} className={`page-tab-badge ${badge.state}`} aria-hidden="true">
-              <span>{badge.symbol}</span>{badge.count}
-            </i>)}
+            {badges.length > 0 && <span className="page-tab-badges" aria-hidden="true">{badges.map(badge => <i key={badge.state} className={`page-tab-badge ${badge.state}`}>
+              <span>{badge.symbol}</span><span className="page-tab-count">{badge.count}</span>
+            </i>)}</span>}
           </button>
         );
       })}

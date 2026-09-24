@@ -24,11 +24,11 @@
 .image-filename { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
 .image-preview button { width: var(--target-size); flex-shrink: 0; padding: 0; border: 0; border-radius: 5px; color: var(--muted); background: transparent; }
 .image-tray-close { position: absolute; top: 10px; right: 10px; }
-.image-scope-notice { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 8px; color: var(--warning); font-size: 12px; }
+.image-scope-notice { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 8px; color: var(--warning-ink); font-size: 12px; }
 .image-scope-notice p { margin: 0; line-height: 1.6; }
 .image-scope-notice button { grid-column: 2; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: inherit; }
 .image-tray button:disabled { opacity: .4; }
 @media (hover: hover) and (pointer: fine) {
   .image-tray button:hover:not(:disabled) { background: var(--hover-soft); }
-  .image-preview button:hover:not(:disabled) { color: var(--danger); }
+  .image-preview button:hover:not(:disabled) { color: var(--danger-ink); }
 }

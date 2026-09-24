@@ -21,7 +21,8 @@
     "soak": "node scripts/soak.mjs",
     "test": "tsc --noEmit && tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\" && node --test \"scripts/*.test.{js,mjs}\"",
     "typecheck": "tsc --noEmit",
-    "test:library-ui": "node scripts/library-visual.mjs"
+    "test:library-ui": "node scripts/library-visual.mjs",
+    "test:shell-ui": "node scripts/shell-visual.mjs"
   },
   "dependencies": {
     "electron-squirrel-startup": "1.0.1",

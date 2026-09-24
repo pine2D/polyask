@@ -38,7 +38,7 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
       {retryLabel ? <button type="button" className="retry-trigger"
         data-hint={commandHint(retryLabel, "retry-failed", props.isMac)} aria-label={retryLabel}
         disabled={props.disabled} onClick={props.onRetry}>
-        <ReloadIcon /><span>{props.copy.retryCompact} · {retryCount}</span>
+        <ReloadIcon /><span><span className="retry-label">{props.copy.retryCompact} · </span>{retryCount}</span>
       </button> : null}
       <button type="button" className="compare-trigger" data-hint={compareBlocked ?? props.copy.collectCompare}
         aria-label={props.copy.collectCompare} aria-disabled={!!compareBlocked}

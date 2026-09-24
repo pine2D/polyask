@@ -1,0 +1,50 @@
+/* 外壳共用视觉令牌；视图几何仍由 shared/display.ts 与 styles.css 对账。 */
+:root {
+  color-scheme: light dark;
+  --font-ui: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa UI SC", sans-serif;
+  --text: #20212b;
+  --canvas: #f4f5f8;
+  --panel: #ffffff;
+  --panel-muted: #edeef3;
+  --field: #fafafd;
+  --border: #d8dae2;
+  --muted: #626575;
+  --accent: #4f46e5;
+  --on-accent: #ffffff;
+  --accent-soft: #eeedff;
+  --selection-soft: color-mix(in srgb, var(--accent) 5%, var(--panel));
+  --hover-soft: color-mix(in srgb, var(--muted) 7%, var(--panel));
+  /* 圆点/进度颜色与文字分开，避免把亮色图标色用作小字号文字。 */
+  --success: #16a34a;
+  --warning: #ca8a04;
+  --danger: #dc2626;
+  --success-ink: #167039;
+  --warning-ink: #875900;
+  --danger-ink: #b91c1c;
+  --font-meta: 12px;
+  --font-control: 13px;
+  --font-body: 14px;
+  --font-reading: 16px;
+  --radius-control: 6px;
+  --radius-panel: 8px;
+  --space-4: 16px;
+  --shadow-control: 0 1px 2px #11182714;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #f0f0f5;
+    --canvas: #17171c;
+    --panel: #222228;
+    --panel-muted: #2c2c35;
+    --field: #1b1b22;
+    --border: #3e3e4a;
+    --muted: #b0b0c0;
+    --accent: #a5a0ff;
+    --on-accent: #201d41;
+    --accent-soft: #2d2a50;
+    --success-ink: #86d9a3;
+    --warning-ink: #efc267;
+    --danger-ink: #fca5a5;
+    --shadow-control: 0 1px 2px #00000033;
+  }
+}

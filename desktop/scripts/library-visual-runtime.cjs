@@ -61,6 +61,7 @@ app.whenReady().then(async () => {
           assert.ok(box.scroll <= box.width + 2, `${locale}/${theme}/${width} overflow ${JSON.stringify(box)}`);
           assert.ok(box.right <= box.viewport + 2, `${locale}/${theme}/${width} offscreen ${JSON.stringify(box)}`);
         }
+        assert.equal(await run('(() => { const e=document.querySelector(".archive-answer-nav"); return e.scrollWidth <= e.clientWidth + 2; })()'), true, `${locale}/${theme}/${width} source navigation overflow`);
         reports.push({ locale, theme, width, boxes });
         if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}`);
       }
@@ -70,6 +71,10 @@ app.whenReady().then(async () => {
   win.setContentSize(1600, 1000);
   await win.loadFile(join(output, 'index.html'));
   await wait('!!document.querySelector(".archive-detail h1")');
+  // Wrapped sticky navigation must not cover the answer selected by its last link.
+  await click('.archive-answer-nav a:last-child');
+  assert.equal(await run('(() => { const nav=document.querySelector(".archive-answer-nav"), link=nav.querySelector("a:last-child"), answer=document.getElementById(link.hash.slice(1)); return answer.getBoundingClientRect().top >= nav.getBoundingClientRect().bottom - 2; })()'), true);
+  await run('document.querySelector(".archive-detail-pane").scrollTop = 0');
   // Open a searchable select, keyboard navigation, Escape and focus restoration.
   await click('.library-select');
   await wait('!!document.querySelector(".library-popover input")');
