@@ -20,7 +20,7 @@ await new Promise((resolve, reject) => {
   });
   compiler.run((error, stats) => compiler.close(() => error || stats.hasErrors() ? reject(error || new Error(stats.toString({ all: false, errors: true }))) : resolve()));
 });
-await writeFile(join(output, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; img-src \'none\'; connect-src \'none\'"><title>PolyAsk synthetic shell fixture</title></head><body><div id="root"></div><script src="bundle.js"></script></body></html>');
+await writeFile(join(output, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; img-src data:; connect-src \'none\'"><title>PolyAsk synthetic shell fixture</title></head><body><div id="root"></div><script src="bundle.js"></script></body></html>');
 const child = spawn(require('electron'), [join(root, 'scripts/shell-visual-runtime.cjs'), output], { stdio: 'inherit' });
 const timer = setTimeout(() => child.kill('SIGTERM'), 120_000);
 const status = await new Promise(resolve => child.on('exit', resolve));

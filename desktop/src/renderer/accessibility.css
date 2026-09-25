@@ -12,6 +12,7 @@ h1, h2 { text-wrap: balance; }
 @media (forced-colors: active) {
   .tile-frame, .command-bar, .workspace-drawer, .archive-toolbar, .settings-toolbar, .command-palette { border-color: CanvasText; }
   .site-status-dot { border: 1px solid CanvasText; }
+  .image-preview img { outline-color: CanvasText; }
   .site-load-progress > span { forced-color-adjust: none; background: Highlight; }
   button.active, button[aria-pressed="true"] { outline: 1px solid Highlight; }
   .workspace-actions > button.sync-attention::after { border-color: Canvas; background: CanvasText; }

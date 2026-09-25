@@ -20,7 +20,10 @@
 .image-tray .image-replace { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; color: inherit; background: transparent; font-size: 12px; }
 .image-previews { display: flex; flex-direction: column; gap: 8px; }
 .image-preview { display: flex; align-items: center; gap: 8px; padding: 8px; min-width: 0; border: 1px solid var(--border); border-radius: 8px; }
-.image-preview img { width: 64px; height: 48px; flex-shrink: 0; object-fit: contain; border-radius: 4px; background: var(--hover-soft); }
+.image-preview img {
+  width: 64px; height: 48px; flex-shrink: 0; object-fit: contain; border-radius: 4px; background: var(--hover-soft);
+  outline: 1px solid var(--image-outline); outline-offset: -1px;
+}
 .image-filename { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 12px; line-height: 1.5; }
 .image-preview button { width: var(--target-size); flex-shrink: 0; padding: 0; border: 0; border-radius: 5px; color: var(--muted); background: transparent; }
 .image-tray-close { position: absolute; top: 10px; right: 10px; }

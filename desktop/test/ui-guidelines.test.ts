@@ -47,7 +47,6 @@ test("desktop motion uses shared curves, explicit properties, and input-aware pa
   assert.match(css, /\.page-tabs\[data-input-method="keyboard"\] \.page-tab-indicator[\s\S]*transition-duration:\s*0ms/);
   assert.match(renderer("index.tsx"), /requestedPage\.current\?\.page === next\.page[\s\S]*request\?\.inputMethod \?\? "keyboard"/);
   assert.match(css, /@media \(hover:\s*hover\) and \(pointer:\s*fine\)/);
-  assert.match(css, /button:not\(:disabled\):active[\s\S]*transform:\s*scale\(\.97\)/);
   assert.doesNotMatch(css, /button,\s*\.tile-actions\s*\{\s*transition:\s*none/);
 });
 

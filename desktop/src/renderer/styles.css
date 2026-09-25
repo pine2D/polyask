@@ -182,7 +182,7 @@ button { cursor: default; }
   min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; display: inline-flex;
   align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 5px;
   color: var(--muted); background: transparent; white-space: nowrap;
-  transition: transform 140ms var(--ease-out), color 120ms ease, background-color 120ms ease;
+  transition: color 120ms ease, background-color 120ms ease;
 }
 .mode-switch button.active, .tier-switch button.active {
   color: inherit; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border);
@@ -232,7 +232,8 @@ button { cursor: default; }
   justify-content: center; gap: 6px; border: 0; border-radius: 7px; color: white; font-weight: 650;
 }
 .send { color: var(--on-accent); background: var(--accent); }
-.send-count { font-variant-numeric: tabular-nums; }
+.send-count, .scope-label-compact, .retry-trigger > span,
+.workspace-actions > button.more-trigger::after { font-variant-numeric: tabular-nums; }
 .cancel { background: var(--danger); }
 .primary-action:hover:not(:disabled) { filter: brightness(.92); }
 .send:disabled { opacity: .45; }
@@ -247,13 +248,13 @@ kbd { opacity: .7; font: 10px system-ui; }
   position: relative; z-index: 1; min-width: 42px; height: 100%; padding: 0 6px; display: inline-flex;
   align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 5px;
   color: var(--muted); background: transparent; font-size: var(--font-meta); font-variant-numeric: tabular-nums;
-  transition: transform 140ms var(--ease-out), color 120ms ease;
+  transition: color 120ms ease;
 }
 .page-tabs button[aria-selected="true"] { color: var(--accent); }
 .page-tabs button > span { white-space: nowrap; }
 .page-tab-badges { display: inline-flex; gap: 3px; }
 .page-tab-indicator {
-  position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 0; border-radius: 5px;
+  position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 2px; border-radius: 5px;
   background: var(--panel); box-shadow: 0 1px 2px #11182718;
   transition: transform 180ms var(--ease-in-out);
 }
@@ -414,9 +415,6 @@ kbd { opacity: .7; font: 10px system-ui; }
 }
 @media (hover: hover) and (pointer: fine) {
   .page-tabs button:hover { color: var(--accent); }
-}
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  button:not(:disabled):active { transform: scale(.97); transition: transform 140ms var(--ease-out); }
 }
 @media (max-width: 1400px) {
   .mode-switch .priority-p1, .workspace-actions .priority-p1, .summary, kbd { display: none; }

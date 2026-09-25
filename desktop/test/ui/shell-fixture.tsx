@@ -8,6 +8,7 @@ import { SettingsWorkspace } from '../../src/renderer/settings-workspace';
 import { WorkspaceDrawer } from '../../src/renderer/workspace-drawer';
 import { SiteFrames } from '../../src/renderer/site-frames';
 import { ConfirmDialog } from '../../src/renderer/confirm-dialog';
+import { FeedbackProvider } from '../../src/renderer/feedback-provider';
 import { currentPlatform, type DesktopPlatform } from '../../src/renderer/platform';
 import { usePresence } from '../../src/renderer/presence';
 import { setShellApi } from '../../src/renderer/shell-api';
@@ -21,6 +22,7 @@ import { SITES } from '../../src/main/sites';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
 import '../../src/renderer/accessibility.css';
+import '../../src/renderer/feedback.css';
 
 const query = new URLSearchParams(location.search);
 const locale = query.get('locale') || 'zh-CN';
@@ -34,6 +36,11 @@ const runtime = { version: '1.6.0-fixture', distribution: 'installed' as const }
 const status: SyncStatus = { state: 'idle', connected: true, pending: 0, errorCount: 0,
   readOnly: false, oauthConfigured: true, secureTokenStorage: true, lastSuccessAt: 1_790_208_000_000 };
 const noop = () => {};
+const previewImages = ['white', 'black'].map(color => {
+  const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 48;
+  const context = canvas.getContext('2d')!; context.fillStyle = color; context.fillRect(0, 0, 64, 48);
+  return { name: `${color}.png`, type: 'image/png' as const, size: 128, dataUrl: canvas.toDataURL() };
+});
 function NativeFixture(): React.JSX.Element {
   const [open, setOpen] = useState(false);
   const [pane, setPane] = useState(true);
@@ -65,6 +72,9 @@ function Fixture(): React.JSX.Element {
   const [expanded, setExpanded] = useState(false);
   const [layout, setLayout] = useState<'overview' | 'focus'>('overview');
   const [page, setPage] = useState(0);
+  const [inputMethod, setInputMethod] = useState<'keyboard' | 'pointer'>('keyboard');
+  const [images, setImages] = useState(query.has('details') ? previewImages : []);
+  const [imagesOpen, setImagesOpen] = useState(false);
   const [selected, setSelected] = useState<readonly SiteKey[]>(SITES.map(s => s.key));
   const [panel, setPanel] = useState<OpenWorkspacePanelState | null>({ tab: 'sites', detail: null, inputMethod: 'keyboard' });
   const [notifications, setNotifications] = useState(true);
@@ -76,11 +86,11 @@ function Fixture(): React.JSX.Element {
     <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
       layoutMode={layout} selectedCount={selected.length} failureCount={stress ? 6 : 0} cancelledCount={0}
       scopeLabel={copy.allSites} healthAttention={0} panelTab={panel?.tab ?? null}
-      pageControl={<PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod="keyboard" onPageChange={setPage} />}
-      imageControl={<ImagePicker copy={copy} images={stress ? [{ name: 'synthetic.png', type: 'image/png', size: 1, dataUrl: 'data:image/png;base64,AA==' }] : []} open={false} disabled={false} warning={null} warningCount={0}
-        error={null} onOpenChange={noop} onFiles={noop} onRemove={noop} onAdjustScope={noop} />}
+      pageControl={<PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}
+      imageControl={<ImagePicker copy={copy} images={query.has('details') ? images : stress ? previewImages.slice(0, 1) : []} open={imagesOpen} disabled={false} warning={null} warningCount={0}
+        error={null} onOpenChange={open => { setImagesOpen(open); if (open) setPanel(null); }} onFiles={noop} onRemove={index => setImages(current => current.filter((_, i) => i !== index))} onAdjustScope={noop} />}
       sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded}
-      onTextChange={setText} onSubmit={() => setSent(true)} onCompare={noop} onRetry={noop} onCancel={noop}
+      onTextChange={setText} onSubmit={() => setSent(true)} onCompare={query.has('blocked') ? undefined : noop} onRetry={noop} onCancel={noop}
       onTierChange={setTier} onLayoutChange={setLayout} onExpandedChange={setExpanded}
       onOpenPanel={tab => setPanel({ tab, detail: null, inputMethod: 'keyboard' })}
       onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onPasteImages={noop} />
@@ -96,4 +106,5 @@ function Fixture(): React.JSX.Element {
     <p style={{ position: 'absolute', top: 180, left: 360, color: 'var(--muted)' }}>UI fixture · 仅验证外壳，未加载 AI 站点</p>
   </div>;
 }
-createRoot(document.getElementById('root')!).render(query.get('surface') === 'native' ? <NativeFixture /> : <Fixture />);
+createRoot(document.getElementById('root')!).render(query.get('surface') === 'native' ? <NativeFixture />
+  : query.has('details') ? <FeedbackProvider copy={copy}><Fixture /></FeedbackProvider> : <Fixture />);

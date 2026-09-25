@@ -14,7 +14,8 @@ button, [role="tab"], .tile-header, .command-bar label, .command-tabs {
 }
 /* 正文、诊断信息与输入内容保持可选中复制。 */
 input, textarea, [contenteditable="true"] { user-select: text; }
-button:not(:disabled):active { filter: brightness(.92); }
+/* 高频工具动作只给静态反馈；aria-disabled 仍可聚焦读原因，但不能像已接受点击。 */
+button:not(:disabled, [aria-disabled="true"]):active { filter: brightness(.92); }
 @media (prefers-contrast: more) {
   :root { --border: var(--muted); }
 }
@@ -32,7 +33,7 @@ button:not(:disabled):active { filter: brightness(.92); }
   button:disabled { color: GrayText; }
   /* 已用 Highlight/HighlightText 配对；关闭 Chromium 文字背板，避免黑字落在黑背板上。 */
   :root button:is(.primary, .send) { forced-color-adjust: none; }
-  button:not(:disabled):active { filter: none; outline: 1px solid Highlight; }
+  button:not(:disabled, [aria-disabled="true"]):active { filter: none; outline: 1px solid Highlight; }
   :root ::selection { color: HighlightText; background: Highlight; }
 }
 @media (prefers-reduced-motion: reduce) {

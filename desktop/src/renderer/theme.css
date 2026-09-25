@@ -29,6 +29,7 @@
   --radius-panel: 8px;
   --space-4: 16px;
   --shadow-control: 0 1px 2px #11182714;
+  --image-outline: oklch(0 0 0 / 0.1);
 }
 @media (prefers-color-scheme: dark) {
   :root {
@@ -46,5 +47,6 @@
     --warning-ink: #efc267;
     --danger-ink: #fca5a5;
     --shadow-control: 0 1px 2px #00000033;
+    --image-outline: oklch(1 0 0 / 0.1);
   }
 }

@@ -33,6 +33,7 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   const measure = () => run(`(() => {
     const visible = e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden';
     const selectors = ['.command-bar', '.command-bar > *', '.page-tabs button', '.scope-split', '.settings-card', '.settings-actions', '.sync-stage-list', '.workspace-drawer'];

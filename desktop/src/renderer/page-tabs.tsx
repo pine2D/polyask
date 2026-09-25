@@ -30,7 +30,7 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
       <span
         className="page-tab-indicator"
         aria-hidden="true"
-        style={{ width: `${100 / pages.length}%`, transform: `translateX(${props.page * 100}%)` }}
+        style={{ width: `calc((100% - 4px) / ${pages.length})`, transform: `translateX(${props.page * 100}%)` }}
       />
       {pages.map((sites, index) => {
         const start = nextStart;
