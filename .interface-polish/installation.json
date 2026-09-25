@@ -1,0 +1,8 @@
+{
+  "repository": "https://github.com/jakubkrehel/make-interfaces-feel-better",
+  "revision": "35545ea1512ad59fa463e6b1f95ca9c052981fe6",
+  "source": "skills/make-interfaces-feel-better",
+  "destination": ".agents/skills/make-interfaces-feel-better",
+  "scope": "project",
+  "license": "MIT"
+}
