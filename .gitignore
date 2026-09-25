@@ -23,6 +23,7 @@
 
 # 项目级 Impeccable：安装载荷和引擎可重建，来源与操作说明入库。
 /.agents/skills/impeccable/
+/.agents/skills/native-feel-cross-platform-desktop/
 /.impeccable/cache/
 /.impeccable/config.local.json
 /.impeccable/critique/

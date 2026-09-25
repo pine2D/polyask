@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/yetone/native-feel-skill",
+  "revision": "9bd88c6378e1a80a4da165f3ee7bebb761a74945",
+  "source": ".",
+  "destination": ".agents/skills/native-feel-cross-platform-desktop",
+  "scope": "project"
+}
