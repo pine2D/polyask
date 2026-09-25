@@ -115,7 +115,7 @@ test("shortcut reference lists registered accelerators and aliases", () => {
   assert.match(html, /Alt\+1/);
   // 菜单里由 Electron 给加速器的 role 项也必须列出——只列 COMMANDS 会让速查名不副实
   assert.match(html, /Reload/);
-  assert.match(html, /CmdOrCtrl\+R/);
+  assert.match(html, /Ctrl\+R/);
   assert.match(html, /Toggle Full Screen/);
   assert.match(html, /F11/);
   assert.match(html, /Copy/);

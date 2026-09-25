@@ -2,8 +2,10 @@ import { useEffect, useRef } from "react";
 
 import type { DesktopCopy } from "../shared/copy";
 import { CloseIcon } from "./icons";
+import { currentPlatform, type DesktopPlatform } from "./platform";
 
 interface ConfirmDialogProps {
+  readonly platform?: DesktopPlatform;
   readonly copy: DesktopCopy;
   readonly title: string;
   readonly message: string;
@@ -22,6 +24,8 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
   const panelRef = useRef<HTMLDivElement | null>(null);
   const onCancelRef = useRef(props.onCancel);
   onCancelRef.current = props.onCancel;
+  const cancel = <button key="cancel" type="button" ref={cancelRef} onClick={props.onCancel}>{props.cancelLabel}</button>;
+  const confirm = <button key="confirm" type="button" className="primary" onClick={props.onConfirm}>{props.confirmLabel}</button>;
 
   // 焦点圈在弹层内、Escape 只关弹层：键盘事件挂在 window 的捕获阶段——挂在 scrim 的 React onKeyDown 上
   // 有两个洞：宿主页面（设置页、工作区抽屉）自己的 window Escape 监听会同时收到事件把整页关掉；
@@ -30,6 +34,10 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancelRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.isComposing || event.keyCode === 229) {
+        if (event.key === "Escape") event.stopImmediatePropagation();
+        return; // 保留输入法默认处理，但不让宿主页面把 Escape 当作关闭命令。
+      }
       if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); onCancelRef.current(); return; }
       if (event.key !== "Tab") return;
       const focusable = panelRef.current?.querySelectorAll<HTMLElement>("button");
@@ -65,8 +73,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
         </header>
         <p id="confirm-message">{props.message}</p>
         <div className="confirm-actions">
-          <button type="button" ref={cancelRef} onClick={props.onCancel}>{props.cancelLabel}</button>
-          <button type="button" className="primary" onClick={props.onConfirm}>{props.confirmLabel}</button>
+          {(props.platform ?? currentPlatform) === 'win32' ? [confirm, cancel] : [cancel, confirm]}
         </div>
       </div>
     </div>

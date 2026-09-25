@@ -1,3 +1,5 @@
+import { applicationMenu } from "./application-menu";
+import { installNativeShell, initialShellBackground } from "./native-shell";
 import { createLocalDataServices } from "./local-data-services";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -10,13 +12,10 @@ import {
   Notification,
   screen,
   shell as electronShell,
-  type MenuItemConstructorOptions
 } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 
 import {
-  COMMANDS,
-  commandAccelerator,
   commandAliasForInput,
   type CommandId
 } from "../shared/commands";
@@ -195,81 +194,8 @@ function applyDisplayPreferences(
 function createMenu(): void {
   const copy = getCopy(app.getLocale());
   const display = viewManager?.getDisplayPreferences() ?? DEFAULT_DISPLAY_PREFERENCES;
-  const template: MenuItemConstructorOptions[] = [
-    ...(process.platform === "darwin"
-      ? [{ label: app.name, submenu: [{ role: "about" as const }, { type: "separator" as const }, { role: "quit" as const }] }]
-      : []),
-    {
-      label: copy.fileMenu,
-      submenu: [process.platform === "darwin" ? { role: "close" } : { role: "quit" }]
-    },
-    {
-      label: copy.editMenu,
-      submenu: [
-        { role: "undo" }, { role: "redo" }, { type: "separator" },
-        { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }
-      ]
-    },
-    {
-      label: copy.viewMenu,
-      submenu: [
-        { role: "reload" }, { role: "forceReload" }, { type: "separator" },
-        { role: "resetZoom" }, { role: "zoomIn" }, { role: "zoomOut" },
-        { type: "separator" },
-        {
-          label: copy.densityMenu,
-          submenu: [
-            {
-              label: copy.compactDensity,
-              type: "radio",
-              checked: display.density === "compact",
-              click: () => {
-                if (viewManager) applyDisplayPreferences(viewManager, { ...display, density: "compact" });
-              }
-            },
-            {
-              label: copy.comfortableDensity,
-              type: "radio",
-              checked: display.density === "comfortable",
-              click: () => {
-                if (viewManager) applyDisplayPreferences(viewManager, { ...display, density: "comfortable" });
-              }
-            }
-          ]
-        },
-        {
-          label: copy.siteScaleMenu,
-          submenu: [
-            {
-              label: copy.fitSiteScale,
-              type: "radio",
-              checked: display.siteScale === 0.9,
-              click: () => {
-                if (viewManager) applyDisplayPreferences(viewManager, { ...display, siteScale: 0.9 });
-              }
-            },
-            {
-              label: copy.actualSiteScale,
-              type: "radio",
-              checked: display.siteScale === 1,
-              click: () => {
-                if (viewManager) applyDisplayPreferences(viewManager, { ...display, siteScale: 1 });
-              }
-            }
-          ]
-        },
-        { type: "separator" },
-        ...COMMANDS.filter((command) => !!commandAccelerator(command.id, process.platform))
-          .map((command): MenuItemConstructorOptions => ({
-            label: copy[command.labelKey],
-            accelerator: commandAccelerator(command.id, process.platform),
-            click: () => dispatchAppCommand(command.id)
-          })),
-        { type: "separator" }, { role: "togglefullscreen" }
-      ]
-    },
-    { label: copy.windowMenu, submenu: [{ role: "minimize" }, { role: "close" }] }
-  ];
+  const template = applicationMenu(process.platform, copy, display,
+    (value) => { if (viewManager) applyDisplayPreferences(viewManager, value); }, dispatchAppCommand, app.name);
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
@@ -306,7 +232,7 @@ async function createWindow(): Promise<void> {
     minWidth: 960,
     minHeight: 680,
     show: false,
-    backgroundColor: "#f4f5f8",
+    backgroundColor: initialShellBackground(),
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,
@@ -319,6 +245,7 @@ async function createWindow(): Promise<void> {
     window.setAutoHideMenuBar(true);
     window.setMenuBarVisibility(false);
   }
+  installNativeShell(window);
   mainWindow = window;
   const completionNotifier = new CompletionNotifier({
     copy: {

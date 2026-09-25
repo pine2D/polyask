@@ -18,6 +18,8 @@
 
 ## 离线回归
 
+- `test:shell-ui` 另覆盖 Windows/macOS/Linux 的确认按钮 DOM 顺序、取消默认焦点、Tab 圈定、IME Escape、焦点恢复，以及强制颜色与减少动态效果的 Chromium 媒体模拟。截图与断言来自 Linux Electron，不能证明 Windows/macOS 的原生字体、系统菜单、输入法候选窗或读屏行为；这些仍需对应实机验收。
+
 **两条互不重叠的门禁，顺序与职责写死**：`bash scripts/verify.sh` 是零 node_modules 依赖的仓库级卫生（`.js/.mjs` 语法、JSON、`.js` 300 行、`desktop/src` 的 `.ts/.tsx` 400 行棘轮、OAuth 凭据卫生、文档与 `.github` 引用、workflow YAML、根 `scripts/` 的五个跨端测试）；`cd desktop && npm test` 是 Desktop 门禁（首段 `tsc --noEmit`，其后 `tsx --test` 跑 `test/**/*.test.ts(x)`、`node --test` 跑 `scripts/*.test.{js,mjs}`——九站适配器离线回归及打包脚本测试就在后者里）。`verify.sh` 不跑 `npm test`，两条都要过；`npm test` 首段虽已含 typecheck，仍单跑一次 `npm run typecheck`（CI 也分两步，失败点更清楚）。动窗口/视图/preload 的改动另加 `npm run package && xvfb-run -a npm run smoke -- --skip-package`（在 `desktop/` 下运行，先打包当前源码，避免验证旧产物）。
 
 - 测试包含三种手法：直接调用生产模块的行为测试（含内存 SQLite 的仓储/备份/同步测试）、`vm.runInNewContext` 配 DOM 桩执行站点运行时、读取源码文本的契约守卫；React 组件还用 `renderToStaticMarkup` 检查输出。**不能把执行行为的测试都归为源码字符串断言**。只有守卫类测试依赖正则 / `indexOf` 等文本匹配，改 UI 的 class/id/顺序/CSS 数值可能打断这些检查。`verify.sh` 另跑 `node --check`、JSON parse、两档行数门禁、Desktop OAuth 凭据卫生、文档引用与测试登记检查、workflow YAML 解析、`git diff --check`。

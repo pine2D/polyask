@@ -102,6 +102,7 @@ app.whenReady().then(async () => {
   for (const box of zoom.boxes) check(box.scroll <= box.width + 2 && box.right <= zoom.viewport + 1, `150% settings overflow: ${JSON.stringify(box)}`);
   check(zoom.textSize.every(size => size >= 12), 'expanded diagnostics text below 12px');
   await shot('settings-zoom');
+  await require('./native-feel-visual.cjs')({ win, output, run, wait, paint, shot });
   assert.deepEqual(errors, []);
   writeFileSync(join(output, 'report.json'), JSON.stringify({ reports, failures }, null, 2));
   if (failures.length) { console.error(failures.slice(0, 16).join('\n')); throw new Error(`${failures.length} UI checks failed`); }

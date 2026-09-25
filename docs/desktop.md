@@ -110,6 +110,10 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 ## 6. 布局与密度
 
+- 平台适配：`main/application-menu.ts` 生成系统菜单，macOS 的设置入口只位于应用菜单，保留服务、隐藏及窗口角色；现有命令绑定不变。外壳 `main/native-shell.ts` 使用系统编辑菜单，按 `editFlags` 启用操作，不接管远程站点。窗口背景在建窗与 `nativeTheme.updated` 时匹配外壳 canvas，关闭时移除主题监听。
+- 外壳 `renderer/platform.ts` 集中识别平台，仅用于外观与顺序，不作为权限依据。Windows 优先 Segoe UI Variable，macOS/Linux 使用对应系统字体；`shortcut-label.ts` 只格式化可见键名，不改命令注册或搜索。Windows 确认在取消之前，macOS/Linux 相反；DOM 与视觉顺序一致，破坏性确认默认聚焦取消，IME 组合输入时 Escape 不关闭弹框。
+- `native-feel.css` 限制工具栏文字选择但保留正文/输入可复制，支持系统增加对比度、强制颜色与减少动态效果；`usePresence` 同步尊重减少动态效果，不保留无动画的退场等待。原生适配技能来源及研究依据记录在 `.native-feel/`，不要求架构迁移、透明材质或自动更新。
+
 - 顶部栏、工作台与历史入口通过 `data-hint` 提供辅助提示，`control-hints.ts` 在底部反馈条展示：鼠标悬停 350ms、键盘聚焦即时；离开、点击、输入或 Escape 后恢复原有通知。新操作通知优先并关闭辅助提示，提示本身不写入任务通知或 sr-only 播报。
 
 - 全页面共享底部反馈条（`WORKSPACE_FEEDBACK_HEIGHT = 32` CSS px）；主进程布局减去同一高度，避免原生站点遮挡。关闭按钮统一无边框、同尺寸图标、悬停浅底与键盘焦点环。工作台退场淡出期间保留原生视图预留宽度，结束后归还；原生站点 bounds 不做逐帧插值，其他侧栏与内容区仅短淡入，减少动态效果时取消。后台站点轮询只播报、不覆盖用户操作提示。群发汇总保留到用户关闭或下一项操作，复制成功提示 6 秒后收起。

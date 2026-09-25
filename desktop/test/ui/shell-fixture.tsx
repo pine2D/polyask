@@ -7,8 +7,11 @@ import { PageTabs } from '../../src/renderer/page-tabs';
 import { SettingsWorkspace } from '../../src/renderer/settings-workspace';
 import { WorkspaceDrawer } from '../../src/renderer/workspace-drawer';
 import { SiteFrames } from '../../src/renderer/site-frames';
+import { ConfirmDialog } from '../../src/renderer/confirm-dialog';
+import { currentPlatform, type DesktopPlatform } from '../../src/renderer/platform';
+import { usePresence } from '../../src/renderer/presence';
 import { setShellApi } from '../../src/renderer/shell-api';
-import { getCopy } from '../../src/shared/copy';
+import { formatCopy, getCopy } from '../../src/shared/copy';
 import { createSyncDiagnosticSnapshot } from '../../src/shared/sync-diagnostics';
 import type { SyncStatus } from '../../src/shared/sync';
 import type { Tier, SiteStatus } from '../../src/shared/protocol';
@@ -25,10 +28,26 @@ const stress = query.get('stress') === '1';
 const copy = getCopy(locale);
 document.documentElement.lang = locale;
 document.documentElement.dataset.density = query.get('density') || 'compact';
+const platform = (query.get('platform') || currentPlatform) as DesktopPlatform;
+document.documentElement.dataset.platform = platform;
 const runtime = { version: '1.6.0-fixture', distribution: 'installed' as const };
 const status: SyncStatus = { state: 'idle', connected: true, pending: 0, errorCount: 0,
   readOnly: false, oauthConfigured: true, secureTokenStorage: true, lastSuccessAt: 1_790_208_000_000 };
 const noop = () => {};
+function NativeFixture(): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [pane, setPane] = useState(true);
+  const present = usePresence(pane, 10_000);
+  return <main>
+    <button id="open-dialog" onClick={() => setOpen(true)}>Open</button>
+    <button id="close-pane" onClick={() => setPane(false)}>Close pane</button>
+    {present && <p id="presence-pane">Retained until exit</p>}
+    <p id="selectable-content">Answer content stays selectable.</p><input aria-label="Edit" defaultValue="Draft" />
+    {open && <ConfirmDialog copy={copy} title={copy.newSessionConfirmTitle} message={formatCopy(copy.newSessionConfirmMessage, { count: 9 })}
+      platform={platform} confirmLabel={copy.newSessionConfirmAction} cancelLabel={copy.newSessionKeepCurrent}
+      onConfirm={() => { document.body.dataset.confirmed = 'true'; setOpen(false); }} onCancel={() => setOpen(false)} />}
+  </main>;
+}
 const statuses: Record<string, SiteStatus> = {
   claude: { site: 'claude', phase: 'warning', code: 'tier_unconfirmed' },
   chatgpt: { site: 'chatgpt', phase: 'failed', code: 'submit_unconfirmed' }
@@ -54,13 +73,13 @@ function Fixture(): React.JSX.Element {
     status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={noop}
     onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications} />;
   return <div className={`app-shell${expanded ? ' is-composer-expanded' : ''}`} data-sent={sent}>
-    <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState="idle" auxiliaryBusy={false}
+    <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
       layoutMode={layout} selectedCount={selected.length} failureCount={stress ? 6 : 0} cancelledCount={0}
       scopeLabel={copy.allSites} healthAttention={0} panelTab={panel?.tab ?? null}
       pageControl={<PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod="keyboard" onPageChange={setPage} />}
       imageControl={<ImagePicker copy={copy} images={stress ? [{ name: 'synthetic.png', type: 'image/png', size: 1, dataUrl: 'data:image/png;base64,AA==' }] : []} open={false} disabled={false} warning={null} warningCount={0}
         error={null} onOpenChange={noop} onFiles={noop} onRemove={noop} onAdjustScope={noop} />}
-      sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={false} expanded={expanded}
+      sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded}
       onTextChange={setText} onSubmit={() => setSent(true)} onCompare={noop} onRetry={noop} onCancel={noop}
       onTierChange={setTier} onLayoutChange={setLayout} onExpandedChange={setExpanded}
       onOpenPanel={tab => setPanel({ tab, detail: null, inputMethod: 'keyboard' })}
@@ -77,4 +96,4 @@ function Fixture(): React.JSX.Element {
     <p style={{ position: 'absolute', top: 180, left: 360, color: 'var(--muted)' }}>UI fixture · 仅验证外壳，未加载 AI 站点</p>
   </div>;
 }
-createRoot(document.getElementById('root')!).render(<Fixture />);
+createRoot(document.getElementById('root')!).render(query.get('surface') === 'native' ? <NativeFixture /> : <Fixture />);

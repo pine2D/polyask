@@ -68,6 +68,7 @@ import { useImageSelection } from "./use-image-selection";
 import { useSynthesisFlow } from "./use-synthesis-flow";
 import { useWorkspaceFlow } from "./use-workspace-flow";
 import { shell } from "./shell-api";
+import { currentPlatform, isMac } from "./platform";
 import "./styles.css";
 import "./settings.css";
 import "./accessibility.css";
@@ -555,7 +556,7 @@ function App(): React.JSX.Element {
         groups={workspace.groups}
         library={templateDeletion.library}
         draft={text}
-        isMac={navigator.userAgent.includes("Mac")}
+        isMac={isMac}
         mode={commandMode}
         onModeChange={setCommandMode}
         onExecute={(id) => executeCommand(id, commandActions.current)}
@@ -601,7 +602,7 @@ function App(): React.JSX.Element {
         pageControl={layout.pageCount > 1 ? (
           <PageTabs
             copy={copy}
-            isMac={navigator.userAgent.includes("Mac")}
+            isMac={isMac}
             sites={sites}
             selectedSites={workspace.selectedSites}
             statuses={statuses}
@@ -633,7 +634,7 @@ function App(): React.JSX.Element {
         sendBlockedReason={imageWarning}
         synthesisPending={!!synthesis.pending}
         syncStatus={syncStatus}
-        isMac={navigator.userAgent.includes("Mac")}
+        isMac={isMac}
         expanded={composerExpanded}
         onTextChange={setText}
         onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
@@ -709,5 +710,6 @@ function App(): React.JSX.Element {
 document.documentElement.lang = resolveLocale(navigator.language) === "zhCN"
   ? "zh-CN"
   : resolveLocale(navigator.language) === "zhTW" ? "zh-TW" : "en";
+document.documentElement.dataset.platform = currentPlatform;
 document.title = getCopy(navigator.language).appTitle;
 createRoot(document.getElementById("root")!).render(<StrictMode><FeedbackProvider copy={getCopy(navigator.language)}><App /></FeedbackProvider></StrictMode>);

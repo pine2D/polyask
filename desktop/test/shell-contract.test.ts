@@ -34,7 +34,8 @@ test("application menu offers a keyboard route back to the prompt", () => {
   const commands = readSource("src/shared/commands.ts");
   const preload = readSource("src/preload/shell.ts");
   const renderer = readSource("src/renderer/index.tsx");
-  assert.match(main, /commandAccelerator/);
+  assert.match(main, /applicationMenu\(/);
+  assert.match(readSource("src/main/application-menu.ts"), /commandAccelerator/);
   assert.match(main, /polyask:command/);
   assert.match(main, /before-input-event/);
   assert.match(preload, /onCommand/);
@@ -86,8 +87,7 @@ test("the shortcut reference reads the real application menu", () => {
 });
 
 test("every menu accelerator comes from the shared command table", () => {
-  const main = readSource("src/main/index.ts");
-  const template = main.slice(main.indexOf("function createMenu"), main.indexOf("Menu.setApplicationMenu"));
+  const template = readSource("src/main/application-menu.ts");
   const handWritten = [...template.matchAll(/accelerator:\s*"([^"]+)"/g)].map((match) => match[1]);
 
   assert.deepEqual(handWritten, [],

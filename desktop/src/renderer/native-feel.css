@@ -1,0 +1,40 @@
+/* 保留品牌与几何，只在有平台习惯或系统偏好时覆盖。 */
+:root[data-platform="win32"] {
+  --font-ui: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+}
+:root[data-platform="darwin"] {
+  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
+}
+:root[data-platform="linux"] {
+  --font-ui: system-ui, "Noto Sans", "Noto Sans CJK SC", sans-serif;
+}
+button, [role="tab"], .tile-header, .command-bar label, .command-tabs {
+  user-select: none;
+  -webkit-user-select: none;
+}
+/* 正文、诊断信息与输入内容保持可选中复制。 */
+input, textarea, [contenteditable="true"] { user-select: text; }
+button:not(:disabled):active { filter: brightness(.92); }
+@media (prefers-contrast: more) {
+  :root { --border: var(--muted); }
+}
+@media (forced-colors: active) {
+  :root {
+    --text: CanvasText; --muted: CanvasText;
+    --canvas: Canvas; --panel: Canvas; --panel-muted: Canvas; --field: Canvas;
+    --border: ButtonText; --accent: Highlight; --on-accent: HighlightText;
+    --accent-soft: Canvas; --selection-soft: Canvas; --hover-soft: Canvas;
+    --success-ink: CanvasText; --warning-ink: CanvasText; --danger-ink: CanvasText;
+  }
+  :root :is(button, input, textarea, select, a):focus-visible {
+    outline-color: Highlight;
+  }
+  button:disabled { color: GrayText; }
+  /* 已用 Highlight/HighlightText 配对；关闭 Chromium 文字背板，避免黑字落在黑背板上。 */
+  :root button:is(.primary, .send) { forced-color-adjust: none; }
+  button:not(:disabled):active { filter: none; outline: 1px solid Highlight; }
+  :root ::selection { color: HighlightText; background: Highlight; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

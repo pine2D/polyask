@@ -5,6 +5,7 @@ import type { DesktopCopy } from "../shared/copy";
 import type { MenuShortcut } from "../shared/protocol";
 import type { PromptLibraryState } from "../shared/prompt-library";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
+import { shortcutLabel } from "./shortcut-label";
 import { CloseIcon } from "./icons";
 import { commandItems, menuShortcutItems, searchCommands, type PaletteCommand, type PaletteGroup } from "./command-search";
 import { pageTabKeyAction, paletteKeyAction } from "./keyboard";
@@ -46,8 +47,8 @@ function groupLabel(copy: DesktopCopy, group: PaletteGroup): string {
   return copy[GROUP_LABEL_KEYS[group]];
 }
 
-function shortcutText(item: PaletteCommand): string {
-  return [item.accelerator, ...item.aliases].filter(Boolean).join(" · ");
+function shortcutText(item: PaletteCommand, isMac: boolean): string {
+  return [item.accelerator, ...item.aliases].filter((value): value is string => !!value).map(value => shortcutLabel(value, isMac)).join(" · ");
 }
 
 export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
@@ -163,7 +164,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
               onClick={() => run(item)}
             >
               <span><strong>{item.label}</strong><small>{groupLabel(props.copy, item.group)}</small></span>
-              {shortcutText(item) ? <kbd>{shortcutText(item)}</kbd> : null}
+              {shortcutText(item, props.isMac) ? <kbd>{shortcutText(item, props.isMac)}</kbd> : null}
             </button>
           )) : <p className="command-empty">{props.copy.commandSearchEmpty}</p>}
         </div>}
