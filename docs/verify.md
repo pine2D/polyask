@@ -234,3 +234,11 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 - Linux package 与 smoke 通过（shell=1、sites=9、attached=9）。当前 WSL 桌面会话下 smoke 等待诊断文件超时，移除 WAYLAND_DISPLAY 仍超时；使用 `env -u WAYLAND_DISPLAY xvfb-run -a dbus-run-session -- npm run smoke -- --skip-package` 的独立会话后通过。此结果指向桌面会话环境差异，未修改应用或放宽 45 秒超时。
 - 隔离 Electron 外壳 96 组、结果库 18 组布局及界面细节、三平台确认框分支回归通过；已抽查截图。
 - Windows/macOS 原生字体、系统菜单、输入法及读屏、五种发行包原生安装仍未验收；本版未重跑九站群发、真实 Drive 双设备同步，未核验 Google Cloud 控制台授权状态和监控指标。
+
+### 2026-09-28 ChatGPT 新版入口修复
+
+- 在用户明确授权后，直接使用 `~/.config/PolyAsk` 登录资料启动 Linux 开发态 Electron，CDP 仅监听 `127.0.0.1`。未复制登录资料、未发送提问。
+- 修复前生产 `__AMS` 复现：输入框可达，Intelligence 入口检查失败、state=null。新版入口已无 `__composer-pill`，实际带 `data-codex-intelligence-trigger="true"`；隐藏测量文字使 textContent 为 `Thinking effortMedium`，innerText 为 `Medium`。
+- 修复后重启开发态，生产 `__AMS.runMode` 快速→思考→快速均成功，分别为 `5.6 Sol Instant` / `5.6 Sol Pro` / `5.6 Sol Instant`。每次等待 400ms 后入口 aria-expanded=false、role=menu 数量为 0，三条诊断全绿。结束时恢复测试前的 Latest / Medium 并关闭调试实例。
+- 701 项 TypeScript/React 与 113 项运行时测试、仓库 verify.sh 通过；新增回归先在旧代码下失败，再验证新版与旧版入口、中文标签、隐藏测量文字、展开态及入口缺失分支。
+- 真机环境为 Linux、英文页面、465×1011 站点视口；Windows 150% 中文原生环境未实测，中文「最新 - 中」由离线回归覆盖。本轮未执行实际群发或 Drive 同步验收。

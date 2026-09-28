@@ -22,10 +22,12 @@
       _tier: function (text) {
         return (text || "").trim().replace(/^(?:gpt-?)?5\.[3456](?:\s*sol)?/i, "").trim();
       },
-      // 锚点：composer pill 纯选择子（真机 2026-08-31：全页精确 1 个）。**不再做文本前置校验**——
-      // 新 UI 的 pill 在菜单开着时显示控件名而非档名，带文本校验的 _anchor 会当场返回 undefined，
-      // 让 think/fast 双双抛「按钮未找到」而 diagnose 全绿（那正是这次事故的表象）。
-      _anchor: function () { return document.querySelector('button.__composer-pill[aria-haspopup="menu"]'); },
+      // 2026-09-28：新版去掉 __composer-pill，改用专属 data 属性；旧版选择子保留兜底。
+      // 不按档位文本定位，菜单展开时按钮显示的是控件名。
+      _anchor: function () {
+        return document.querySelector('button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') ||
+          document.querySelector('button.__composer-pill[aria-haspopup="menu"]');
+      },
       // 打开 pill 菜单（2026-08 改版：Radix popper `composer-intelligence-picker-content`，
       // 里面是 Power 滑块 + 常驻的模型 radio，**没有任何 aria-haspopup 子菜单入口**）
       _openRoot: async function (deadline) {
@@ -110,7 +112,9 @@
       },
       state: function () {
         const a = this._anchor();
-        const raw = a ? (a.textContent || "").trim() : "";
+        if (!a || a.getAttribute("aria-expanded") === "true") return null;
+        // 新版含 visibility:hidden 的测量副本（Thinking effort），只读可见标签。
+        const raw = (a.innerText != null ? a.innerText : a.textContent || "").trim();
         if (!raw || this._OPEN_PILL.test(raw)) return null; // 菜单开着：pill 是控件名，非终态
         const t = this._tier(raw);
         if (/instant|medium|极速|即时|均衡|中/i.test(t)) return "fast"; // Instant/Medium

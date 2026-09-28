@@ -45,15 +45,18 @@ function chatGptCase(options) {
     click() { clicked.push("select-model"); } }, attr({ "aria-label": "Select model" }));
   // 菜单开着时 pill 显示控件名而不是档名——旧 _anchor 的文本前置校验就是栽在这里
   const pill = { className: "__composer-pill",
-    get textContent() { return state.open ? "Thinking effort" : (opts.pill || TIERS[state.value]); },
+    get innerText() { return state.open ? (opts.openLabel || "Thinking effort") : (opts.pill || TIERS[state.value]); },
+    get textContent() { return (opts.measurement || "") + this.innerText; },
     set textContent(value) { opts.pill = value; },
-    getAttribute: (name) => name === "aria-haspopup" ? "menu" : null };
+    getAttribute: (name) => name === "aria-haspopup" ? "menu"
+      : name === "aria-expanded" ? String(state.open) : null };
 
   const menuItems = opts.dropPower ? [selectModel] : [selectModel, power];
   const document = {
     getElementById: (id) => (id === "_r_desc_" ? desc : null),
     querySelector: (selector) => {
-      if (selector.includes("__composer-pill")) return pill;
+      if (selector === 'button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') return opts.modern && !opts.missing ? pill : null;
+      if (selector === 'button.__composer-pill[aria-haspopup="menu"]') return !opts.modern && !opts.missing ? pill : null;
       if (selector.includes("composer-intelligence-picker-content")) return state.open ? {} : null;
       return null;
     },
@@ -141,6 +144,34 @@ async function modelSelectionMustBeIdempotent() {
   assert.ok(other.clicked.includes("GPT-5.5"), "模型不对时必须点中目标 radio");
 }
 
+// 2026-09-28：新版入口去掉样式类，隐藏测量文字仍在 textContent 中。
+async function modernTriggerMustSwitchBothTiers() {
+  const c = chatGptCase({ modern: true, measurement: "Thinking effort" });
+  assert.equal(c.adapter.diagnose()[0].ok, true, "新版语义入口必须可达");
+  await c.adapter.think();
+  assert.equal(c.state.value, 4);
+  await c.adapter.fast();
+  assert.equal(c.state.value, 0);
+}
+
+function modernStateMustIgnoreMeasurementAndOpenMenu() {
+  for (const [pill, expected] of [["最新 - 中", "fast"], ["5.6 Sol Pro", "think"], ["5.5Pro", null], ["未知", null]]) {
+    const c = chatGptCase({ modern: true, pill, measurement: "Medium", openLabel: "Pro" });
+    assert.equal(c.adapter.state(), expected, "只读可见档位，隐藏测量文字不得参与判定：" + pill);
+    assert.equal(c.clicked.length, 0, "读状态不得操作菜单");
+    c.state.open = true;
+    assert.equal(c.adapter.state(), null, "菜单展开但标签尚未重绘时，也不能把旧 Pro 标签识别为当前档位");
+  }
+}
+
+async function missingTriggerMustRemainFailure() {
+  const c = chatGptCase({ modern: true, missing: true });
+  assert.equal(c.adapter.diagnose()[0].ok, false);
+  assert.equal(c.adapter.state(), null);
+  await assert.rejects(() => c.adapter.think(), /Intelligence/);
+  assert.equal(c.keys.length, 0);
+}
+
 function newTurnMustBeCollected() {
   const markdown = { marker: "answer" };
   const turns = [{ querySelector: () => null }, { querySelector: (s) => s === ".markdown" ? markdown : null }];
@@ -157,7 +188,8 @@ let failed = 0;
 (async () => {
   const tests = [sliderMustBeDrivenToBothEdges, sliderMustBeIdempotentAtEdge, missingSliderMustThrow,
     openMenuPillMustNotBeReadAsTier, entryCheckMustSurviveLabelDrift, modelSelectionMustBeIdempotent,
-    newTurnMustBeCollected];
+    newTurnMustBeCollected, modernTriggerMustSwitchBothTiers,
+    modernStateMustIgnoreMeasurementAndOpenMenu, missingTriggerMustRemainFailure];
   for (const test of tests) {
     try { await test(); }
     catch (error) { failed++; console.error(error.stack || error); }
