@@ -2,8 +2,8 @@
   --workspace-surface: color-mix(in srgb, var(--muted) 6%, var(--panel));
   --workspace-row-height: 32px;
   position: fixed; z-index: 3; top: var(--shell-height); bottom: var(--feedback-height, 32px);
-  left: 0; width: var(--drawer-width); max-width: 100vw; padding: 0 16px 16px;
-  overflow: auto; scrollbar-gutter: stable; border-right: 1px solid var(--border); background: var(--panel);
+  left: 0; width: var(--drawer-width); max-width: 100vw; padding: 0 12px 12px;
+  overflow: auto; scrollbar-width: thin; border-right: 1px solid var(--border); background: var(--panel);
   transition: opacity 160ms var(--ease-out);
 }
 :root[data-density="comfortable"] .workspace-drawer { --workspace-row-height: 36px; }

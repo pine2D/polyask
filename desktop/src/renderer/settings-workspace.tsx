@@ -153,95 +153,101 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         <button className="panel-close" type="button" title={props.copy.closeSettings} aria-label={props.copy.closeSettings} disabled={closeLocked} onClick={props.onClose}><CloseIcon /></button>
       </header>
       <div className="settings-body">
-        <section className="settings-card sync-overview" aria-labelledby="sync-title">
-          <div>
-            <h1 id="sync-title">{props.copy.syncTitle}</h1>
-            <p>{props.copy.syncDescription}</p>
-          </div>
-          <div className="sync-state" data-state={props.status.state} data-connected={props.status.connected}>
-            <i aria-hidden="true" />
-            <strong>{props.status.connected ? props.copy.syncConnected : props.copy.syncDisconnected}</strong>
-            <span>{statusText}</span>
-          </div>
-          <dl className="sync-facts">
-            <div><dt>{formatCopy(props.copy.syncPending, { count: props.status.pending })}</dt><dd>{lastSuccess}</dd></div>
-          </dl>
-          {!props.status.oauthConfigured ? <p className="settings-notice danger" role="alert">{props.copy.syncOauthMissing}</p> : null}
-          {props.status.oauthConfigured && !props.status.secureTokenStorage ? <p className="settings-notice warning">{props.copy.syncStorageWarning}</p> : null}
-          {props.status.readOnly ? <p className="settings-notice warning">{props.copy.syncReadOnly}</p> : null}
-          <div className="settings-actions">
-            {!props.status.connected || props.status.state === "auth" ? (
-              <button type="button" className="primary" disabled={busy || !props.status.oauthConfigured} onClick={() => void run(() => shell.connectSync())}>{props.copy.syncConnect}</button>
-            ) : <button type="button" className="primary" disabled={busy} onClick={() => void run(() => shell.syncNow())}>{props.copy.syncNow}</button>}
-            {props.status.connected ? <button type="button" disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncDisconnect}</button> : null}
-            {!props.status.connected && props.status.hasStoredToken ? (
-              <button type="button" title={props.copy.syncRevokeHint} disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncRevoke}</button>
-            ) : null}
-          </div>
-          <SyncDiagnosticsPanel
-            copy={props.copy}
-            snapshot={diagnostics}
-            open={diagnosticsOpen}
-            busy={busy || diagnosticsBusy}
-            canSync={props.status.connected && props.status.state !== "auth"}
-            onOpenChange={setDiagnosticsOpen}
-            onCopy={() => { void copyDiagnostics(); }}
-            onRefresh={() => { void refreshDiagnostics(); }}
-            onSync={() => { void run(() => shell.syncNow()); }}
-          />
-          <p className="sync-privacy">{props.copy.syncPrivacy}</p>
-        </section>
-        <section className="settings-card danger-zone" aria-labelledby="clear-sync-title">
-          <h2 id="clear-sync-title">{props.copy.syncClearTitle}</h2>
-          <p>{props.copy.syncClearDescription}</p>
-          <label>
-            <span>{props.copy.syncClearInstruction}</span>
-            <input name="clear-cloud-confirmation" value={confirmation} autoComplete="off" spellCheck={false} onChange={(event) => setConfirmation(event.target.value)} />
-          </label>
-          <button
-            type="button"
-            disabled={busy || !props.status.connected || confirmation !== CLEAR_REMOTE_CONFIRMATION}
-            onClick={() => {
-              setClearingCloud(true);
-              void run(async () => {
-                const next = await shell.clearRemoteSync(confirmation);
-                setConfirmation("");
-                return next;
-              }).finally(() => setClearingCloud(false));
-            }}
-          >{props.copy.syncClear}</button>
-        </section>
-        <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
-        <LocalDataCard
-          copy={props.copy}
-          busy={busy}
-          onBusy={setActionBusy}
-          onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
-          onStatus={props.onStatus}
-          onReset={props.onLocalReset}
-        />
-        <label className="settings-card preference-card">
-          <span className="preference-copy">
-            <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
-            <p>{props.copy.completionNotificationsDescription}</p>
-            <small>{props.copy.localPreference}</small>
-          </span>
-          <span className="preference-switch">
-            <input
-              type="checkbox"
-              name="completion-notifications"
-              aria-labelledby="completion-notifications-title"
-              checked={!!props.completionNotifications}
-              onChange={(event) => props.onCompletionNotificationsChange?.(event.target.checked)}
+        <div className="settings-group">
+          <section className="settings-card sync-overview" aria-labelledby="sync-title">
+            <div>
+              <h1 id="sync-title">{props.copy.syncTitle}</h1>
+              <p>{props.copy.syncDescription}</p>
+            </div>
+            <div className="sync-state" data-state={props.status.state} data-connected={props.status.connected}>
+              <i aria-hidden="true" />
+              <strong>{props.status.connected ? props.copy.syncConnected : props.copy.syncDisconnected}</strong>
+              <span>{statusText}</span>
+            </div>
+            <dl className="sync-facts">
+              <div><dt>{formatCopy(props.copy.syncPending, { count: props.status.pending })}</dt><dd>{lastSuccess}</dd></div>
+            </dl>
+            {!props.status.oauthConfigured ? <p className="settings-notice danger" role="alert">{props.copy.syncOauthMissing}</p> : null}
+            {props.status.oauthConfigured && !props.status.secureTokenStorage ? <p className="settings-notice warning">{props.copy.syncStorageWarning}</p> : null}
+            {props.status.readOnly ? <p className="settings-notice warning">{props.copy.syncReadOnly}</p> : null}
+            <div className="settings-actions">
+              {!props.status.connected || props.status.state === "auth" ? (
+                <button type="button" className="primary" disabled={busy || !props.status.oauthConfigured} onClick={() => void run(() => shell.connectSync())}>{props.copy.syncConnect}</button>
+              ) : <button type="button" className="primary" disabled={busy} onClick={() => void run(() => shell.syncNow())}>{props.copy.syncNow}</button>}
+              {props.status.connected ? <button type="button" disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncDisconnect}</button> : null}
+              {!props.status.connected && props.status.hasStoredToken ? (
+                <button type="button" title={props.copy.syncRevokeHint} disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncRevoke}</button>
+              ) : null}
+            </div>
+            <SyncDiagnosticsPanel
+              copy={props.copy}
+              snapshot={diagnostics}
+              open={diagnosticsOpen}
+              busy={busy || diagnosticsBusy}
+              canSync={props.status.connected && props.status.state !== "auth"}
+              onOpenChange={setDiagnosticsOpen}
+              onCopy={() => { void copyDiagnostics(); }}
+              onRefresh={() => { void refreshDiagnostics(); }}
+              onSync={() => { void run(() => shell.syncNow()); }}
             />
-            <span aria-hidden="true" />
-          </span>
-        </label>
-        <section className="settings-card update-card" aria-labelledby="app-updates-title">
-          <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
-          <p>{props.copy.appUpdatesDescription}</p>
-          <button type="button" disabled={busy || !props.onCheckUpdates} onClick={() => { void checkUpdates(); }}>{props.copy.checkForUpdates}</button>
-        </section>
+            <p className="sync-privacy">{props.copy.syncPrivacy}</p>
+          </section>
+          <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
+          <label className="settings-card preference-card">
+            <span className="preference-copy">
+              <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
+              <p>{props.copy.completionNotificationsDescription}</p>
+              <small>{props.copy.localPreference}</small>
+            </span>
+            <span className="preference-switch">
+              <input
+                type="checkbox"
+                name="completion-notifications"
+                aria-labelledby="completion-notifications-title"
+                checked={!!props.completionNotifications}
+                onChange={(event) => props.onCompletionNotificationsChange?.(event.target.checked)}
+              />
+              <span aria-hidden="true" />
+            </span>
+          </label>
+          <section className="settings-card settings-row update-card" aria-labelledby="app-updates-title">
+            <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
+            <p>{props.copy.appUpdatesDescription}</p>
+            <button type="button" disabled={busy || !props.onCheckUpdates} onClick={() => { void checkUpdates(); }}>{props.copy.checkForUpdates}</button>
+          </section>
+        </div>
+        <div className="settings-group settings-data-group">
+          <LocalDataCard
+            copy={props.copy}
+            busy={busy}
+            onBusy={setActionBusy}
+            onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
+            onStatus={props.onStatus}
+            onReset={props.onLocalReset}
+          />
+          <section className="settings-card settings-row danger-zone cloud-data-row" aria-labelledby="clear-sync-title">
+            <h2 id="clear-sync-title">{props.copy.syncClearTitle}</h2>
+            <p>{props.copy.syncClearDescription}</p>
+            <div className="cloud-data-controls">
+              <label>
+                <span>{props.copy.syncClearInstruction}</span>
+                <input name="clear-cloud-confirmation" value={confirmation} autoComplete="off" spellCheck={false} onChange={(event) => setConfirmation(event.target.value)} />
+              </label>
+              <button
+                type="button"
+                disabled={busy || !props.status.connected || confirmation !== CLEAR_REMOTE_CONFIRMATION}
+                onClick={() => {
+                  setClearingCloud(true);
+                  void run(async () => {
+                    const next = await shell.clearRemoteSync(confirmation);
+                    setConfirmation("");
+                    return next;
+                  }).finally(() => setClearingCloud(false));
+                }}
+              >{props.copy.syncClear}</button>
+            </div>
+          </section>
+        </div>
       </div>
       <footer className="archive-status" role="status" aria-live="polite">{feedback}</footer>
     </main>
