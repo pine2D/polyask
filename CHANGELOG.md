@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.7.3] - 2026-09-28
+
+验收限制：已在 Linux 开发态真实 ChatGPT 页面验证快速与思考档切换；Windows 150% 缩放的中文环境及五种发行包原生安装尚未复验。本版未重跑九站群发或真实 Drive 双设备同步。
+
 ### 修复
 
 - 修复 ChatGPT 新版模型按钮无法识别、群发后提示档位未确认的问题；档位读取排除隐藏测量文字，并保留旧版入口兼容。
@@ -930,7 +934,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.7.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.7.3...HEAD
+[1.7.3]: https://github.com/pine2D/polyask/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/pine2D/polyask/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/pine2D/polyask/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/pine2D/polyask/compare/v1.6.0...v1.7.0
