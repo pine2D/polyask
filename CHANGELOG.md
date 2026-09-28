@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.7.0] - 2026-09-28
+
+验收限制：Windows/macOS 原生字体、系统菜单、输入法和读屏行为，以及五种发行包的原生安装使用尚未验收；本版未重跑九站实际群发和真实 Drive 双设备同步。
+
 ### 变更
 
 - 高频按钮按下时保持尺寸稳定，站点范围、重试与待办数量使用等宽数字；附件缩略图增加随明暗主题变化的细边界。
@@ -899,7 +903,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.6.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.7.0...HEAD
+[1.7.0]: https://github.com/pine2D/polyask/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/pine2D/polyask/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/pine2D/polyask/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/pine2D/polyask/compare/v1.3.0...v1.4.0

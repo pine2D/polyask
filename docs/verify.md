@@ -225,3 +225,10 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 按用户最终选择，两档统一 Qwen3.7-千问：快速档为“快速”，思考档为“思考研究”。不再寻找日常菜单中没有的 Qwen3.8-Max，也不尝试为 Qwen3.7-Max 开启网页不支持的“思考研究”。
 
 重启隔离 Linux 开发态后，在真实千问页面调用生产 `__AMS.runMode`，快速→思考→快速→思考四次均成功；模型始终为 Qwen3.7-千问，按钮及 `getState()` 对应快速/fast、思考研究/think，每次返回后等待 500ms，menu/dialog 节点均为 0。本轮未发送提问，不据此判断回答质量。694 项 TypeScript/React 与 113 项运行时测试、独立类型检查通过；离线另覆盖非预设模型拒绝识别、真实模型选择与点击未生效分支。
+
+### 2026-09-28 v1.7.0 发版回归
+
+- 700 项 TypeScript/React 与 113 项运行时测试、独立 typecheck、仓库校验及两项运行时依赖审计通过。
+- Linux package 与 smoke 通过（shell=1、sites=9、attached=9）。当前 WSL 桌面会话下 smoke 等待诊断文件超时，移除 WAYLAND_DISPLAY 仍超时；使用 `env -u WAYLAND_DISPLAY xvfb-run -a dbus-run-session -- npm run smoke -- --skip-package` 的独立会话后通过。此结果指向桌面会话环境差异，未修改应用或放宽 45 秒超时。
+- 隔离 Electron 外壳 96 组、结果库 18 组布局及界面细节、三平台确认框分支回归通过；已抽查截图。
+- Windows/macOS 原生字体、系统菜单、输入法及读屏、五种发行包原生安装仍未验收；本版未重跑九站群发、真实 Drive 双设备同步，未核验 Google Cloud 控制台授权状态和监控指标。
