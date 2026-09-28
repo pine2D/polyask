@@ -37,6 +37,7 @@ type SyncAction = () => Promise<SyncStatus>;
 export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Element {
   const [actionBusy, setActionBusy] = useState(false);
   const [confirmation, setConfirmation] = useState("");
+  const [pendingAction, setPendingAction] = useState<"sync" | "connect" | "clear" | "other" | null>(null);
   const [feedback, setFeedback] = useState("");
   const [diagnostics, setDiagnostics] = useState<SyncDiagnosticSnapshot>(() =>
     createSyncDiagnosticSnapshot(props.status, props.runtime)
@@ -54,7 +55,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   const busy = actionBusy || props.status.state === "syncing";
   const statusText = describeSync(props.copy, props.status);
   useEffect(() => {
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !closeLocked) props.onClose(); };
+    const close = (event: KeyboardEvent) => {
+      if (event.isComposing || event.keyCode === 229) return;
+      if (event.key === "Escape" && !closeLocked) props.onClose();
+    };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [closeLocked, props.onClose]);
@@ -79,8 +83,9 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         .format(props.status.lastSuccessAt)
     })
     : props.copy.syncNever;
-  const run = async (action: SyncAction): Promise<void> => {
+  const run = async (action: SyncAction, kind: "sync" | "connect" | "clear" | "other" = "other"): Promise<void> => {
     if (busy) return;
+    setPendingAction(kind);
     setActionBusy(true);
     try {
       const next = await action();
@@ -94,6 +99,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
       setFeedback(props.copy.syncActionFailed);
       props.onAnnounce(props.copy.syncActionFailed);
     } finally {
+      setPendingAction(null);
       setActionBusy(false);
     }
   };
@@ -140,6 +146,18 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     }
   };
 
+  const cloudDisabled = clearingCloud || busy || !props.status.connected
+    || props.status.state === "auth" || confirmation !== CLEAR_REMOTE_CONFIRMATION;
+  const cloudBlocked = clearingCloud ? props.copy.syncClearing
+    : busy ? props.copy.settingsWait
+    : !props.status.connected ? props.copy.syncClearConnectFirst
+    : props.status.state === "auth" ? props.copy.syncStateAuth
+    : confirmation !== CLEAR_REMOTE_CONFIRMATION ? props.copy.syncClearInstruction : "";
+  const progress = actionBusy ? pendingAction === "sync" ? props.copy.syncStateSyncing
+    : pendingAction === "connect" ? props.copy.syncStateAuthorizing
+    : pendingAction === "clear" ? props.copy.syncClearing : props.copy.settingsWorking
+    : props.status.state === "syncing" ? statusText : "";
+
   return (
     <main className="settings-workspace" aria-busy={busy}>
       <header className="settings-toolbar">
@@ -155,7 +173,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
       <div className="settings-body">
         <div className="settings-group">
           <section className="settings-card sync-overview" aria-labelledby="sync-title">
-            <div>
+            <div className="settings-description">
               <h1 id="sync-title">{props.copy.syncTitle}</h1>
               <p>{props.copy.syncDescription}</p>
             </div>
@@ -172,11 +190,11 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             {props.status.readOnly ? <p className="settings-notice warning">{props.copy.syncReadOnly}</p> : null}
             <div className="settings-actions">
               {!props.status.connected || props.status.state === "auth" ? (
-                <button type="button" className="primary" disabled={busy || !props.status.oauthConfigured} onClick={() => void run(() => shell.connectSync())}>{props.copy.syncConnect}</button>
-              ) : <button type="button" className="primary" disabled={busy} onClick={() => void run(() => shell.syncNow())}>{props.copy.syncNow}</button>}
-              {props.status.connected ? <button type="button" disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncDisconnect}</button> : null}
+                <button type="button" className="settings-control primary" disabled={busy || !props.status.oauthConfigured} onClick={() => void run(() => shell.connectSync(), "connect")}>{props.copy.syncConnect}</button>
+              ) : <button type="button" className="settings-control primary" disabled={busy} onClick={() => void run(() => shell.syncNow(), "sync")}>{props.status.state === "syncing" ? statusText : pendingAction === "sync" ? props.copy.syncStateSyncing : props.copy.syncNow}</button>}
+              {props.status.connected ? <button type="button" className="settings-control" disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncDisconnect}</button> : null}
               {!props.status.connected && props.status.hasStoredToken ? (
-                <button type="button" title={props.copy.syncRevokeHint} disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncRevoke}</button>
+                <button type="button" className="settings-control" title={props.copy.syncRevokeHint} disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncRevoke}</button>
               ) : null}
             </div>
             <SyncDiagnosticsPanel
@@ -184,11 +202,12 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
               snapshot={diagnostics}
               open={diagnosticsOpen}
               busy={busy || diagnosticsBusy}
+              refreshing={diagnosticsBusy}
               canSync={props.status.connected && props.status.state !== "auth"}
               onOpenChange={setDiagnosticsOpen}
               onCopy={() => { void copyDiagnostics(); }}
               onRefresh={() => { void refreshDiagnostics(); }}
-              onSync={() => { void run(() => shell.syncNow()); }}
+              onSync={() => { void run(() => shell.syncNow(), "sync"); }}
             />
             <p className="sync-privacy">{props.copy.syncPrivacy}</p>
           </section>
@@ -213,7 +232,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           <section className="settings-card settings-row update-card" aria-labelledby="app-updates-title">
             <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
             <p>{props.copy.appUpdatesDescription}</p>
-            <button type="button" disabled={busy || !props.onCheckUpdates} onClick={() => { void checkUpdates(); }}>{props.copy.checkForUpdates}</button>
+            <button type="button" className="settings-control" disabled={busy || !props.onCheckUpdates} onClick={() => { void checkUpdates(); }}>{props.copy.checkForUpdates}</button>
           </section>
         </div>
         <div className="settings-group settings-data-group">
@@ -226,30 +245,35 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             onReset={props.onLocalReset}
           />
           <section className="settings-card settings-row danger-zone cloud-data-row" aria-labelledby="clear-sync-title">
-            <h2 id="clear-sync-title">{props.copy.syncClearTitle}</h2>
-            <p>{props.copy.syncClearDescription}</p>
+            <div className="settings-description">
+              <h2 id="clear-sync-title">{props.copy.syncClearTitle}</h2>
+              <p>{props.copy.syncClearDescription}</p>
+            </div>
             <div className="cloud-data-controls">
               <label>
-                <span>{props.copy.syncClearInstruction}</span>
-                <input name="clear-cloud-confirmation" value={confirmation} autoComplete="off" spellCheck={false} onChange={(event) => setConfirmation(event.target.value)} />
+                <span>{props.copy.syncClearConfirmation}</span>
+                <input aria-describedby={cloudBlocked ? "cloud-clear-hint" : undefined} name="clear-cloud-confirmation" value={confirmation} autoComplete="off" spellCheck={false} onChange={(event) => setConfirmation(event.target.value)} />
               </label>
+              <p id="cloud-clear-hint" className="settings-control-hint">{cloudBlocked}</p>
               <button
+                className="settings-control"
                 type="button"
-                disabled={busy || !props.status.connected || confirmation !== CLEAR_REMOTE_CONFIRMATION}
+                aria-describedby={cloudBlocked ? "cloud-clear-hint" : undefined}
+                disabled={cloudDisabled}
                 onClick={() => {
                   setClearingCloud(true);
                   void run(async () => {
                     const next = await shell.clearRemoteSync(confirmation);
                     setConfirmation("");
                     return next;
-                  }).finally(() => setClearingCloud(false));
+                  }, "clear").finally(() => setClearingCloud(false));
                 }}
-              >{props.copy.syncClear}</button>
+              >{clearingCloud ? props.copy.syncClearing : props.copy.syncClear}</button>
             </div>
           </section>
         </div>
       </div>
-      <footer className="archive-status" role="status" aria-live="polite">{feedback}</footer>
+      <footer className="archive-status" role="status" aria-live="polite">{progress || feedback}</footer>
     </main>
   );
 }

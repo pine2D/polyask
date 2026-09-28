@@ -10,6 +10,7 @@ interface SyncDiagnosticsPanelProps {
   readonly snapshot: SyncDiagnosticSnapshot;
   readonly open: boolean;
   readonly busy: boolean;
+  readonly refreshing?: boolean;
   readonly canSync: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly onCopy: () => void;
@@ -42,6 +43,7 @@ export function SyncDiagnosticsPanel(props: SyncDiagnosticsPanelProps): React.JS
           <p>{props.copy.syncDiagnosticsDescription}</p>
         </div>
         <button
+          className="settings-control"
           id="sync-diagnostics-toggle"
           type="button"
           aria-controls="sync-diagnostic-stages"
@@ -67,9 +69,9 @@ export function SyncDiagnosticsPanel(props: SyncDiagnosticsPanelProps): React.JS
             ))}
           </ol>
           <div className="sync-diagnostic-actions">
-            <button type="button" disabled={props.busy} onClick={props.onCopy}>{props.copy.syncDiagnosticsCopy}</button>
-            <button type="button" disabled={props.busy} onClick={props.onRefresh}>{props.copy.checkAgain}</button>
-            <button type="button" disabled={props.busy || !props.canSync} onClick={props.onSync}>{props.copy.syncNow}</button>
+            <button type="button" className="settings-control" disabled={props.busy} onClick={props.onCopy}>{props.copy.syncDiagnosticsCopy}</button>
+            <button type="button" className="settings-control" disabled={props.busy} onClick={props.onRefresh}>{props.refreshing ? props.copy.syncDiagnosticChecking : props.copy.checkAgain}</button>
+            <button type="button" className="settings-control" disabled={props.busy || !props.canSync} onClick={props.onSync}>{props.copy.syncNow}</button>
           </div>
           <p className="sync-diagnostic-privacy">{props.copy.syncDiagnosticsPrivacy}</p>
         </div>

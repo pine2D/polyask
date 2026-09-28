@@ -33,6 +33,7 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  await require('./settings-interaction-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   const measure = () => run(`(() => {
     const visible = e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden';

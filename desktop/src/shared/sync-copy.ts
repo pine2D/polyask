@@ -1,5 +1,10 @@
 export const SYNC_COPY = {
   en: {
+    settingsWorking: "Working…",
+    settingsWait: "Another operation is in progress. Wait for it to finish.",
+    syncClearConnectFirst: "Connect Google Drive before deleting cloud data.",
+    syncClearing: "Deleting cloud data…",
+    syncClearConfirmation: "Deletion confirmation",
     settings: "Settings",
     syncTitle: "Google Drive sync",
     syncDescription: "Sync site scope, groups, prompt history, templates, saved results, decision cards and task folders through PolyAsk's private Drive app folder. After syncing task folders or decision cards, older devices need an update to resume sync.",
@@ -77,6 +82,11 @@ export const SYNC_COPY = {
     syncDiagnosticUnknown: "Not checked"
   },
   zhCN: {
+    settingsWorking: "正在处理…",
+    settingsWait: "有其他操作正在进行，请等待完成。",
+    syncClearConnectFirst: "请先连接 Google Drive，再删除云端数据。",
+    syncClearing: "正在删除云端数据…",
+    syncClearConfirmation: "确认删除",
     settings: "设置",
     syncTitle: "Google Drive 同步",
     syncDescription: "通过 PolyAsk 的 Drive 应用专属目录同步站点范围、分组、提问历史、模板、结果库、决策卡和任务文件夹。同步文件夹或决策卡后，旧版设备需升级才能恢复同步。",
@@ -154,6 +164,11 @@ export const SYNC_COPY = {
     syncDiagnosticUnknown: "尚未检查"
   },
   zhTW: {
+    settingsWorking: "正在處理…",
+    settingsWait: "有其他操作正在進行，請等待完成。",
+    syncClearConnectFirst: "請先連接 Google Drive，再刪除雲端資料。",
+    syncClearing: "正在刪除雲端資料…",
+    syncClearConfirmation: "確認刪除",
     settings: "設定",
     syncTitle: "Google Drive 同步",
     syncDescription: "透過 PolyAsk 的 Drive 應用程式專屬資料夾同步網站範圍、群組、提問記錄、範本、結果庫、決策卡與任務資料夾。同步資料夾或決策卡後，舊版裝置須升級才能恢復同步。",

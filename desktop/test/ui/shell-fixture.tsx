@@ -34,7 +34,10 @@ const platform = (query.get('platform') || currentPlatform) as DesktopPlatform;
 document.documentElement.dataset.platform = platform;
 const runtime = { version: '1.6.0-fixture', distribution: 'installed' as const };
 const status: SyncStatus = { state: 'idle', connected: true, pending: 0, errorCount: 0,
-  readOnly: false, oauthConfigured: true, secureTokenStorage: true, lastSuccessAt: 1_790_208_000_000 };
+  readOnly: false, oauthConfigured: true, secureTokenStorage: true, lastSuccessAt: 1_790_208_000_000,
+  ...(query.get('connection') === 'off' ? { connected: false } : {}),
+  ...(query.get('connection') === 'auth' ? { state: 'auth' as const } : {}),
+  ...(query.has('diagnosticError') ? { state: 'error' as const, reason: 'oauth_callback_timeout' as const } : {}) };
 const noop = () => {};
 const previewImages = ['white', 'black'].map(color => {
   const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 48;
@@ -63,7 +66,13 @@ if (stress) SITES.forEach((site, i) => {
   statuses[site.key] = { site: site.key, phase: 'failed', code: 'submit_unconfirmed',
     submission: { runId: 'fixture', state: (['failed', 'unconfirmed', 'sent'] as const)[i % 3] } };
 });
-setShellApi({ syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime) } as any);
+const finishOperation = () => new Promise<void>(resolve => document.addEventListener('fixture:finish-operation', () => resolve(), { once: true }));
+setShellApi({
+  syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
+  syncNow: async () => { await finishOperation(); return status; },
+  clearHistory: async () => { await finishOperation(); return 3; },
+  clearRemoteSync: async () => { await finishOperation(); return status; }
+} as any);
 
 function Fixture(): React.JSX.Element {
   const promptRef = useRef<HTMLTextAreaElement>(null);
@@ -80,7 +89,7 @@ function Fixture(): React.JSX.Element {
   const [notifications, setNotifications] = useState(true);
   const [sent, setSent] = useState(false);
   if (query.get('surface') === 'settings') return <SettingsWorkspace copy={copy} locale={locale}
-    status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={noop}
+    status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={() => { document.body.dataset.settingsClosed = 'true'; }}
     onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications} />;
   return <div className={`app-shell${expanded ? ' is-composer-expanded' : ''}`} data-sent={sent}>
     <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}

@@ -28,15 +28,17 @@
 .settings-card { min-width: 0; padding: 20px 24px; }
 .settings-group > .settings-card + .settings-card { border-top: 1px solid var(--border); }
 .settings-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 32px; align-items: start; }
-.settings-row > h2, .settings-row > p { grid-column: 1; }
+.settings-row > h2, .settings-row > p, .settings-row > .settings-description { grid-column: 1; }
 .settings-row > :is(.settings-actions, button, .cloud-data-controls) { grid-column: 2; grid-row: 1 / 3; align-self: center; }
 .settings-row > .settings-actions { justify-content: flex-end; }
 .settings-row > p:last-of-type { margin-bottom: 0; }
 .settings-row > button { margin: 0; }
+.cloud-data-row > .cloud-data-controls { grid-row: 1; align-self: start; }
+.cloud-data-row .settings-description p { margin-bottom: 0; }
 .cloud-data-row { grid-template-columns: minmax(0, 1fr) minmax(240px, 32%); }
 .settings-data-group .settings-card > p:last-child { margin-bottom: 0; }
-.settings-card h1, .settings-card h2 { margin: 0; font-size: 16px; }
-.settings-card p { margin: 8px 0 16px; color: var(--muted); font-size: var(--font-control); line-height: 1.65; overflow-wrap: anywhere; }
+.settings-card > h2, .settings-description > :is(h1, h2) { margin: 0; font-size: 16px; }
+.settings-card > p, .settings-description > p, .preference-copy > p, .sync-diagnostics p { margin: 8px 0 16px; color: var(--muted); font-size: var(--font-control); line-height: 1.65; overflow-wrap: anywhere; }
 .sync-overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(80px, 160px); align-items: start; gap: 12px 16px; }
 .sync-state { min-width: 0; display: grid; grid-template-columns: 8px minmax(0, 1fr); align-items: center; gap: 2px 6px; }
 .sync-state i { width: 8px; height: 8px; grid-row: 1 / 3; border-radius: 50%; background: var(--muted); }
@@ -53,16 +55,16 @@
 .settings-notice.warning { color: var(--warning-ink); background: color-mix(in srgb, var(--warning) 9%, transparent); }
 .settings-notice.danger { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .settings-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
-.settings-actions button, .danger-zone button, .update-card button,
-.sync-diagnostics-heading button, .sync-diagnostic-actions button {
+.settings-actions > .settings-control, .danger-zone .settings-control, .update-card > .settings-control,
+.sync-diagnostics-heading > .settings-control, .sync-diagnostic-actions > .settings-control {
   min-height: max(34px, var(--control-height)); padding: 6px 12px;
   border: 1px solid transparent; border-radius: var(--radius-control);
   color: var(--text); background: var(--settings-control-fill); font: inherit;
 }
-.settings-card button:hover:not(:disabled) { background: var(--settings-control-hover); }
-.settings-actions button.primary { color: var(--on-accent); background: var(--accent); }
-.settings-actions button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(.92); }
-.settings-card button:disabled { opacity: 1; color: var(--muted); background: var(--settings-control-fill); cursor: default; }
+.settings-card .settings-control:hover:not(:disabled) { background: var(--settings-control-hover); }
+.settings-actions > .settings-control.primary { color: var(--on-accent); background: var(--accent); }
+.settings-actions > .settings-control.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(.92); }
+.settings-card .settings-control:disabled { opacity: 1; color: var(--muted); background: var(--settings-control-fill); cursor: default; }
 .settings-card :is(button, input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sync-diagnostics {
   grid-column: 1 / -1; padding-top: 16px; border-top: 1px solid var(--border);
@@ -71,7 +73,7 @@
 .sync-diagnostics-heading h2 { font-size: 13px; }
 .sync-diagnostics-heading p { margin-bottom: 0; font-size: var(--font-meta); }
 .sync-stage-list {
-  margin: 10px 0 8px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;
+  margin: 10px 0 8px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px;
   list-style: none;
 }
 .sync-stage-list li {
@@ -81,8 +83,8 @@
 .sync-stage-list li:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sync-stage-list i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .sync-stage-list span { min-width: 0; display: grid; gap: 2px; }
-.sync-stage-list strong { overflow: hidden; font-size: var(--font-meta); text-overflow: ellipsis; white-space: nowrap; }
-.sync-stage-list code { overflow: hidden; color: var(--muted); font-size: var(--font-meta); text-overflow: ellipsis; white-space: nowrap; }
+.sync-stage-list strong { font-size: var(--font-meta); overflow-wrap: anywhere; }
+.sync-stage-list code { color: var(--muted); font-size: var(--font-meta); overflow-wrap: anywhere; user-select: text; }
 .sync-stage-list small { grid-column: 2; color: var(--muted); font-size: var(--font-meta); white-space: nowrap; }
 .sync-stage-list li[data-stage-state="ok"] i { background: var(--success); }
 .sync-stage-list li[data-stage-state="checking"] i { background: var(--accent); }
@@ -91,21 +93,21 @@
 .sync-diagnostic-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sync-diagnostics .sync-diagnostic-privacy { margin: 7px 0 0; font-size: var(--font-meta); }
 .sync-overview .sync-privacy { grid-column: 1 / -1; margin: 0; font-size: var(--font-meta); }
-.danger-zone h2 { color: var(--danger-ink); }
+.danger-zone > h2, .danger-zone > .settings-description h2 { color: var(--danger-ink); }
 .danger-zone label { display: grid; gap: 4px; color: var(--muted); font-size: var(--font-meta); }
 .danger-zone input {
   min-height: max(34px, var(--control-height)); padding: 6px 12px; width: 100%;
   border: 1px solid var(--settings-control-border); border-radius: var(--radius-control);
   color: var(--text); background: var(--settings-control-fill); caret-color: var(--accent); font: inherit;
 }
-.danger-zone input:hover:not(:disabled) { border-color: var(--border); }
+.danger-zone input:hover:not(:disabled, :focus) { border-color: var(--border); }
 .danger-zone input:focus { border-color: var(--accent); }
-.danger-zone button {
+.danger-zone .settings-control {
   max-width: 100%; overflow-wrap: anywhere; margin-top: 8px;
   color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 6%, var(--panel));
 }
-.danger-zone .settings-actions button { margin-top: 0; }
-.settings-card.danger-zone button:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, var(--panel)); }
+.danger-zone .settings-actions > .settings-control { margin-top: 0; }
+.settings-card.danger-zone .settings-control:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, var(--panel)); }
 .preference-card { display: flex; align-items: start; justify-content: space-between; gap: 16px; cursor: pointer; }
 .preference-copy { display: block; }
 .preference-title { display: block; font-size: 16px; }
@@ -124,6 +126,12 @@
 .preference-switch input:checked + span { border-color: var(--accent); background: var(--accent); }
 .preference-switch input:checked + span::after { transform: translateX(16px); }
 .preference-switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-card .settings-control-hint, .local-reset > p {
+  margin: 8px 0; color: var(--muted); font-size: var(--font-meta); line-height: 1.6; overflow-wrap: anywhere;
+}
+.settings-control-hint:empty { display: none; }
+.local-reset { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); }
+.local-reset > .settings-control { margin-top: 0; }
 @media (max-width: 760px) {
   .settings-body { grid-template-columns: minmax(0, 1fr); padding: 16px; }
   .settings-card { padding: 16px; }
@@ -143,10 +151,10 @@
 
 @media (prefers-contrast: more) {
   .settings-workspace { --settings-control-border: var(--muted); }
-  .settings-card button, .sync-stage-list li { border-color: var(--muted); }
+  .settings-card .settings-control, .sync-stage-list li { border-color: var(--muted); }
 }
 @media (forced-colors: active) {
-  .settings-card button, .danger-zone input, .sync-stage-list li { border-color: ButtonText; }
-  .settings-card button:disabled { color: GrayText; border-color: GrayText; }
+  .settings-card .settings-control, .danger-zone input, .sync-stage-list li { border-color: ButtonText; }
+  .settings-card .settings-control:disabled { color: GrayText; border-color: GrayText; }
   .settings-card :is(button, input):focus-visible { outline-color: Highlight; }
 }

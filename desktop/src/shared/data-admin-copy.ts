@@ -1,5 +1,8 @@
 export const DATA_ADMIN_COPY = {
   en: {
+    localDataDeletionSync: "Clearing these categories also deletes them on other devices when Google Drive syncs.",
+    localDataClearing: "Clearing…",
+    localDataResetting: "Resetting local data…",
     clearDecisionsAction: "Clear decision cards",
     clearDecisionsConfirmTitle: "Clear all decision cards?",
     clearDecisionsConfirmMessage: "All decision cards and saved excerpts will be deleted. Source results are retained. The deletions sync to your other devices.",
@@ -23,6 +26,9 @@ export const DATA_ADMIN_COPY = {
     localDataActionFailed: "Could not change local data"
   },
   zhCN: {
+    localDataDeletionSync: "清空以下分类后，删除会通过 Google Drive 同步到其他设备。",
+    localDataClearing: "正在清空…",
+    localDataResetting: "正在重置本机数据…",
     clearDecisionsAction: "清空决策卡",
     clearDecisionsConfirmTitle: "清空全部决策卡？",
     clearDecisionsConfirmMessage: "全部决策卡及其摘录将被删除，来源归档仍保留。删除标记会同步到你的其它设备。",
@@ -46,6 +52,9 @@ export const DATA_ADMIN_COPY = {
     localDataActionFailed: "本机数据操作失败"
   },
   zhTW: {
+    localDataDeletionSync: "清空以下分類後，刪除會透過 Google Drive 同步到其他裝置。",
+    localDataClearing: "正在清空…",
+    localDataResetting: "正在重設本機資料…",
     clearDecisionsAction: "清空決策卡",
     clearDecisionsConfirmTitle: "清空全部決策卡？",
     clearDecisionsConfirmMessage: "全部決策卡及其摘錄將被刪除，來源封存仍保留。刪除標記會同步到你的其他裝置。",

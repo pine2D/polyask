@@ -89,8 +89,8 @@ test("disconnected Drive keeps actionable states and reasons visible", () => {
 test("syncing settings keep the exit available while freezing state-changing actions", () => {
   const html = renderSettings(status({ connected: true, state: "syncing" }));
   assert.doesNotMatch(html, /title="Close settings" aria-label="Close settings" disabled=""/);
-  assert.match(html, /<button type="button" class="primary" disabled="">Sync now<\/button>/);
-  assert.match(html, /<button type="button" disabled="">Disconnect<\/button>/);
+  assert.match(html, /<button type="button" class="settings-control primary" disabled="">Syncing…<\/button>/);
+  assert.match(html, /<button type="button" class="settings-control" disabled="">Disconnect<\/button>/);
 });
 
 test("waiting for browser authorization never traps the settings page", () => {
@@ -137,7 +137,7 @@ test("sync settings expose compact connection state and protected cloud deletion
   assert.match(html, /立即同步/);
   assert.match(html, /断开连接/);
   assert.match(html, /输入 DELETE 后启用/);
-  assert.match(html, /<button type="button" disabled=""[^>]*>删除云端数据<\/button>/);
+  assert.match(html, /<button[^>]*disabled=""[^>]*>删除云端数据<\/button>/);
   assert.match(html, /drive\.appdata/);
 });
 
@@ -155,7 +155,7 @@ test("sync settings surfaces missing OAuth without irrelevant storage warnings",
   );
   assert.match(html, /missing its Google Desktop OAuth credentials/);
   assert.doesNotMatch(html, /Linux keyring is unavailable/);
-  assert.match(html, /<button type="button" class="primary" disabled="">Connect Google Drive<\/button>/);
+  assert.match(html, /<button type="button" class="settings-control primary" disabled="">Connect Google Drive<\/button>/);
 });
 
 test("a configured Linux build reports insecure token storage", () => {
@@ -179,7 +179,7 @@ test("an expired connected session offers reauthentication instead of a dead-end
   );
   assert.match(html, /Connect Google Drive/);
   assert.match(html, /Disconnect/);
-  assert.doesNotMatch(html, /class="primary"[^>]*>Sync now<\/button>/);
+  assert.doesNotMatch(html, /class="settings-control primary"[^>]*>Sync now<\/button>/);
   assert.doesNotMatch(html, /<button type="button">Sync now<\/button>/);
 });
 
@@ -242,10 +242,23 @@ test("settings expose the three local-data entry points and promise cloud data s
   const html = renderSettings(status({ connected: true, state: "idle" }));
   assert.match(html, /aria-labelledby="local-data-title"/);
   for (const label of ["Clear prompt history", "Clear result library", "Reset all local data"]) {
-    assert.match(html, new RegExp(`<button type="button">${label}</button>`));
+    assert.match(html, new RegExp(`<button[^>]*>${label}</button>`));
   }
   assert.match(html, /Resetting never deletes data on Google Drive/);
   assert.doesNotMatch(html, /confirm-dialog/, "未点击前不得出现确认层");
   const syncing = renderSettings(status({ connected: true, state: "syncing" }));
-  assert.match(syncing, /<button type="button" disabled="">Reset all local data<\/button>/);
+  assert.match(syncing, /<button[^>]*disabled=""[^>]*>Reset all local data<\/button>/);
+});
+
+test("cloud deletion explains disconnected, reauthentication and busy states before confirmation", () => {
+  for (const [patch, expected] of [
+    [{ connected: false }, "Connect Google Drive before deleting cloud data."],
+    [{ connected: true, state: "auth" }, "Sign in again to continue"],
+    [{ connected: true, state: "syncing" }, "Another operation is in progress. Wait for it to finish."],
+    [{ connected: true }, "Type DELETE to enable"]
+  ] as const) {
+    const html = renderSettings(status(patch));
+    assert.ok(html.includes(`id="cloud-clear-hint" class="settings-control-hint">${expected}</p>`));
+    assert.match(html, /aria-describedby="cloud-clear-hint" disabled=""/);
+  }
 });

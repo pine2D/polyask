@@ -27,9 +27,11 @@ const CONFIRM_COPY: Record<LocalDataAction, { readonly title: keyof DesktopCopy;
 
 // 破坏性入口都先过应用内确认框（沿用新建会话的样式，默认焦点在取消上），确认后才真的动数据。
 export function LocalDataCard(props: LocalDataCardProps): React.JSX.Element {
+  const [active, setActive] = useState<LocalDataAction | null>(null);
   const [pending, setPending] = useState<LocalDataAction | null>(null);
 
   const run = async (action: LocalDataAction): Promise<void> => {
+    setActive(action);
     props.onBusy(true);
     try {
       if (action === "history") {
@@ -48,6 +50,7 @@ export function LocalDataCard(props: LocalDataCardProps): React.JSX.Element {
     } catch {
       props.onFeedback(props.copy.localDataActionFailed);
     } finally {
+      setActive(null);
       props.onBusy(false);
     }
   };
@@ -56,14 +59,18 @@ export function LocalDataCard(props: LocalDataCardProps): React.JSX.Element {
     <section className="settings-card danger-zone" aria-labelledby="local-data-title">
       <h2 id="local-data-title">{props.copy.localDataTitle}</h2>
       <p>{props.copy.localDataDescription}</p>
+      <p className="settings-control-hint">{props.copy.localDataDeletionSync}</p>
       <div className="settings-actions">
-        <button type="button" disabled={props.busy} onClick={() => setPending("history")}>{props.copy.clearHistoryAction}</button>
-        <button type="button" disabled={props.busy} onClick={() => setPending("archives")}>{props.copy.clearArchivesAction}</button>
-        <button type="button" disabled={props.busy} onClick={() => setPending("decisions")}>{props.copy.clearDecisionsAction}</button>
-        <button type="button" disabled={props.busy} onClick={() => setPending("folders")}>{props.copy.clearFoldersAction}</button>
-        <button type="button" disabled={props.busy} onClick={() => setPending("reset")}>{props.copy.resetLocalAction}</button>
+        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("history")}>{active === "history" ? props.copy.localDataClearing : props.copy.clearHistoryAction}</button>
+        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("archives")}>{active === "archives" ? props.copy.localDataClearing : props.copy.clearArchivesAction}</button>
+        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("decisions")}>{active === "decisions" ? props.copy.localDataClearing : props.copy.clearDecisionsAction}</button>
+        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("folders")}>{active === "folders" ? props.copy.localDataClearing : props.copy.clearFoldersAction}</button>
       </div>
-      <p className="sync-privacy">{props.copy.localDataCloudUntouched}</p>
+      {props.busy && !active ? <p className="settings-control-hint">{props.copy.settingsWait}</p> : null}
+      <div className="local-reset">
+        <p className="sync-privacy">{props.copy.localDataCloudUntouched}</p>
+        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("reset")}>{active === "reset" ? props.copy.localDataResetting : props.copy.resetLocalAction}</button>
+      </div>
       {pending ? (
         <ConfirmDialog
           copy={props.copy}
