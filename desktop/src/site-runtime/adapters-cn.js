@@ -176,19 +176,21 @@
         } finally { document.removeEventListener("click", blockPicker, true); escMenus(); }
       },
       // 模型下拉触发器：aria-haspopup 属性由前端延迟水合，新加载页面一段时间内只有纯文本节点，
-      // 先按 aria 找，找不到退回按可见文本找最内层节点（click 冒泡可达真正持有 handler 的祖先）
+      // 先按 aria 找，水合期文字回退限定顶部控件区，不能把聊天正文中的模型名当成入口。
       _trigger: function () {
         const byAria = [...document.querySelectorAll('[aria-haspopup="dialog"]')].find((x) => /Qwen3/.test(x.textContent || ""));
         if (byAria) return byAria;
         return [...document.querySelectorAll("div,button,span")].filter((e) => {
           const t = (e.textContent || "").trim();
-          return /^Qwen3/.test(t) && t.length <= 25 && e.children.length <= 3; // 只读 state() 不需可见性判定
+          return /^Qwen3/.test(t) && t.length <= 25 && e.children.length <= 3 && e.closest(".desktop-no-drag");
         }).pop() || null;
       },
       _selectModel: async function (re, deadline) {
         try {
           checkDeadline(deadline);
           const md = this._trigger();
+          // 无模型入口的日常页面仅承诺模式；其后的 _setThink 仍须切换并复读确认。
+          if (!md && this._modeOnly()) return;
           if (!md) throw new Error("千问模型下拉未就绪");
           // 先读后点：已是目标模型直接返回。否则触发器自身文本会让下面的 findByText 误判
           // "菜单已开"，leaf 又抓到触发器本身，点击反而打开模型对话框（真机 2026-07-21：
@@ -225,6 +227,14 @@
           return /思考研究|Thinking Research/i.test(b.getAttribute("aria-label") || b.textContent || "");
         return !!b && (b.className || "").split(/\s+/).includes("text-theme");
       },
+      _modeOnly: function () {
+        const daily = [...document.querySelectorAll('[role="tab"][aria-selected="true"]')].some((e) => {
+          const r = e.getBoundingClientRect();
+          return r.width > 0 && r.height > 0 && /^(日常|Daily)$/i.test((e.textContent || "").trim());
+        });
+        const b = this._thinkBtn();
+        return daily && !!S.findComposer() && !!b && b.getAttribute("aria-haspopup") === "menu";
+      },
       _setThink: async function (on, deadline) {
         try {
           checkDeadline(deadline);
@@ -247,7 +257,7 @@
       },
       diagnose: function () {
         return [
-          { name: t("diag_modelDropdown"), ok: !!this._trigger(), kind: "control" },
+          { name: t("diag_modelDropdown"), ok: !!this._trigger(), kind: !this._trigger() && this._modeOnly() ? "tier" : "control" },
           { name: t("diag_thinkBtn"), ok: !!this._thinkBtn(), kind: "control" },
           { name: t("diag_tierReadable"), ok: this.state() != null, kind: "tier" },
         ];
@@ -261,6 +271,7 @@
         const b = this._thinkBtn();
         if (!b) return null;
         const on = this._isThink(b);
+        if (!m && this._modeOnly()) return on ? "think" : "fast";
         if (on && this._MODEL.test(t)) return "think";
         return !on && this._MODEL.test(t) ? "fast" : null;
       },

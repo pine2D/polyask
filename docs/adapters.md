@@ -85,13 +85,14 @@
 
 Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点按钮 vs 合成 Enter），只有 Claude 有真机结论；其余三站代码里没有站点级证据，别断言。
 
-## 「控件缺失一律 throw」的 3 处例外（2 个站）
+## 「控件缺失一律 throw」的 4 处例外（3 个站）
 
 例外全部在 `adapters-*.js` 里。`core.js` 没有这条规则，它只负责把适配器抛出的异常转成 `runMode` 返回 false 或 `submitPrompt` 的 `code:"error"`。
 
 1. **DeepSeek `_selectMode`** 找不到模式 radio → 静默跳过。radio 仅空对话首屏存在，聊天中缺失属正常态，档位真值由 DeepThink 开关兜底。
 2. **Gemini `_setThinking`** 没有直达开关且 `on === false` → 静默 return（关思考时没有开关可关）。
 3. **Gemini `_setThinking`** 找不到「thinking level / 思考等级」子菜单入口 → 静默 return（窄屏或该模型无此项，属合法缺席）。反例：**子菜单在但目标等级缺失必须 throw**，静默会漏设等级。
+4. **千问 `_selectModel`** 无模型入口，且可见的已选中日常标签、输入框、快速/思考研究菜单按钮同时存在 → 跳过选模型，继续 `_setThink` 并复读。只承诺模式、不承诺底层模型；工作页、未就绪页、模式按钮缺失仍抛错，目标选项缺失或点击未生效也仍抛错。
 
 **已撤销的例外**：原第 2 条「Claude `_setThinking` 连裸 Thinking 开关也缺失 → 静默结束」于 2026-08-31 删除。当时的理由是「思考控件整个缺席在旧布局属合法态」，但真机复核发现控件一直在、只是 `effort-menu-trigger` / `effort-option-*` 两个 testid 改没了；静默让 `think()` 一路假成功、上报绿而档位纹丝不动（本次事故里最难发现的一站）。现在 Claude 的 effort 入口缺失、档位为空一律 throw。**加新例外前先想清楚：它是「站点本就没有这个能力」，还是「我们的选择子过期了」——后者永远不该静默。**
 
@@ -210,10 +211,10 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 ### 千问（`www.qianwen.com` / 键 `qianwen.com`，`desktop/src/site-runtime/adapters-cn.js`）
 
-- 日常聊天预设：快速 = Qwen3.7-千问 + 快速，思考 = Qwen3.7-千问 + 思考研究；不自动切换到工作模式寻找 Qwen3.8-Max。
-- 两档共用 `_MODEL = /Qwen3\.7-千问(?!-Max)/i`，先幂等选中该模型，再分别 `_setThink(true)` / `_setThink(false)`。`state()` 共用同一正则：模型命中且思考开启 → think，模型命中且思考关闭 → fast；缺少模式按钮或非预设模型 → null。Qwen3.7-Max 在当前网页不支持“思考研究”，不作为本应用的思考预设。
-- 模型触发器 `_trigger()`：先找 `[aria-haspopup="dialog"]` 且文本含 `Qwen3` 的节点；找不到回退按可见文本找最内层（文本以 Qwen3 开头、长度 ≤25、子节点 ≤3 的 div/button/span 取最后一个）——**`aria-haspopup` 由前端延迟水合**，新加载页一段时间内只有纯文本节点。
-- **无模型入口的页面（2026-09-28）**：用户 Windows 截图为宽版日常首页，左上没有模型选择，快速按钮仍在；该环境报告模型下拉 `control=false`、思考开关 `control=true`、档位 `tier=false`。本机已登录页正常宽度仍有入口，临时收窄至实测 `innerWidth=267` 时入口从 DOM 消失，可复现相同诊断及 `runMode=false`；恢复宽度后切档正常。这只是同类失败路径，不能据此断言远端由宽度导致，也不能确认灰度改版。现实现先选模型再切模式，入口缺失会抛错；不得用缓存模型或仅凭快速按钮把未知模型冒充预设。远端无入口版本仍待 DOM 取证适配。
+- 有模型入口的日常聊天预设：快速 = Qwen3.7-千问 + 快速，思考 = Qwen3.7-千问 + 思考研究；不自动切换到工作模式寻找 Qwen3.8-Max。无模型入口且确认日常页面就绪时，只切快速/思考研究，不承诺底层模型。
+- 有模型入口时，两档共用 `_MODEL = /Qwen3\.7-千问(?!-Max)/i`，先幂等选中该模型，再分别 `_setThink(true)` / `_setThink(false)`。`state()` 共用同一正则：模型命中且思考开启 → think，模型命中且思考关闭 → fast；缺少模式按钮或非预设模型 → null。Qwen3.7-Max 在当前网页不支持“思考研究”，不作为本应用的思考预设。
+- 模型触发器 `_trigger()`：先找 `[aria-haspopup="dialog"]` 且文本含 `Qwen3` 的节点；找不到回退在顶部 `.desktop-no-drag` 控件区按文本找最内层（文本以 Qwen3 开头、长度 ≤25、子节点 ≤3 的 div/button/span 取最后一个），排除正文同名模型——**`aria-haspopup` 由前端延迟水合**，新加载页一段时间内只有纯文本节点。
+- **无模型入口的页面（2026-09-28）**：用户 Windows 截图为宽版日常首页，左上没有模型选择，快速按钮仍在；该环境报告模型下拉 `control=false`、思考开关 `control=true`、档位 `tier=false`。本机已登录页正常宽度仍有入口，临时收窄至实测 `innerWidth=267` 时入口从 DOM 消失，可复现相同诊断及 `runMode=false`；恢复宽度后切档正常。这只是同类失败路径，不能据此断言远端由宽度导致，也不能确认灰度改版。现实现先选模型再切模式，入口缺失会抛错；不得用缓存模型或仅凭快速按钮把未知模型冒充预设。经用户同意，无模型入口时新增 `_modeOnly()`：可见且已选中的 `[role="tab"]` 文本为日常/Daily、`findComposer()` 成功、可见快速/思考研究菜单按钮三者同时成立，才跳过模型选择，后续 `_setThink` 仍执行并复读确认。该分支 `state()` 仅按模式返回 think/fast；模型下拉检查保留 `ok:false`，但 `kind:tier` 只作提示。入口恢复后立即恢复模型约束，无缓存；其它缺失仍为 control 故障。远端版本仍需 Windows 真机验收。
 - **`_selectModel` 必须先读后点**：触发器自身的常驻文本会骗过「菜单已开」判定，leaf 又抓到触发器本身，点下去反而打开模型对话框（真机 2026-07-21：fast/think 同模型时每次切档都踩中，靠 Escape 兜底，慢且脆弱）。选中项要沿 `parentElement` 上溯最多 5 层找带 onclick / `role=option|menuitem` / `LI` 的可点祖先，都没有才点 leaf。结尾**复读 `_trigger()` 校验**，文本仍不命中目标正则就抛「千问: 模型未生效」——点击被站点吞掉时静默成功就是一个假绿点。可见性过滤与对话框容器收窄尚未做（要动先真机）。
 - 思考按钮 `_thinkBtn()`：优先可见的 `button[aria-haspopup="menu"]` 且 aria-label/文本命中 `/^(快速|思考研究|Fast|Thinking Research)$/i`；回退到内部 span 或自身文本为 `/^(思考|Thinking)$/i` 的旧版裸按钮。`_setThink(on)` 先读后点，新版派发 pointerdown 后在可见 `[role="menuitemcheckbox"]` 里原生 click 目标项，收尾复读校验，未生效抛「千问: 思考开关未生效」；按钮缺失即抛（常驻 composer）。**三条路径（选项未找到 / 成功点击后 / 复读失败前）都各自 `escMenus()` 收尾**，残留菜单会罩住输入框让随后的注入点空。
 - 受控编辑器，走 core 的 `beforeinput` 注入。`answer()` 取末个 `.answer-common-card` 内、排除祖先 `[class*="thinkingContent"]` 后的最后一个 `.qk-markdown`（思考段与正文同为 `.qk-markdown`，祖先类名带 CSS-module 哈希后缀）。`attach` 使用 PointerEvent 展开附件菜单，再选上传图片创建动态 input；不使用 drop/paste，finally 关菜单。
