@@ -48,6 +48,7 @@
 
 ## 真机环境（Desktop 开发态）
 
+- **本机登录档案默认使用 `~/.config/PolyAsk`**（用户于 2026-09-28 明确指定并授权用于真机排障）。后续站点排障直接复用该档案，不重复询问路径或要求重新登录；不复制登录资料。启动前检查已有实例，避免并发占用；调试端口仅监听本机。该约定不包含发送提问、删除数据或对外传送登录资料的授权。
 - **真机 = 开发态 Electron**：`cd desktop && npm start`。**改动要重启进程才生效**（主进程、preload、站点运行时都在启动时加载），别在跑着的实例上等热更新，那是最常见的「改了没反应」。
 - 复现只认**目标站点视图里的生产 `__AMS`**：站点运行时挂在站点视图的隔离上下文，`__AMS.getState()` / `_isOn()` 是唯一可信断言源。**不要在临时片段里重写正则**——转义会把 `\s` 变成 `\\s`，产生「幽灵失败」（实战吃过亏）。
 - **直接在真实页面上跑真实适配器（CDP，2026-09-16 起首选）**：`cd desktop && npm start -- -- --remote-debugging-port=9223`（`main/index.ts` 只在打包后移除这个开关，开发态可用；同一 userData，站点登录态照用）。`curl -s http://127.0.0.1:9223/json` 拿站点视图的 `webSocketDebuggerUrl`，用 `desktop/node_modules/ws` 发 `Runtime.enable`，从 `Runtime.executionContextCreated` 里取名为 **`Electron Isolated Context`** 的上下文（`auxData.isDefault === false`），在该 `contextId` 上 `Runtime.evaluate`（`awaitPromise`）就能直接调 `window.__AMS.adapters["<host>"].think()` / `.fast()` / `.state()`，返回值带按钮文本与 `[role=menu]` 残留数即是证据。主世界（默认上下文）看不到 `__AMS`，但能 dump DOM、试各种合成事件——元宝模型子菜单「只认 mousemove」就是这样定的。
@@ -242,3 +243,10 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 - 修复后重启开发态，生产 `__AMS.runMode` 快速→思考→快速均成功，分别为 `5.6 Sol Instant` / `5.6 Sol Pro` / `5.6 Sol Instant`。每次等待 400ms 后入口 aria-expanded=false、role=menu 数量为 0，三条诊断全绿。结束时恢复测试前的 Latest / Medium 并关闭调试实例。
 - 701 项 TypeScript/React 与 113 项运行时测试、仓库 verify.sh 通过；新增回归先在旧代码下失败，再验证新版与旧版入口、中文标签、隐藏测量文字、展开态及入口缺失分支。
 - 真机环境为 Linux、英文页面、465×1011 站点视口；Windows 150% 中文原生环境未实测，中文「最新 - 中」由离线回归覆盖。本轮未执行实际群发或 Drive 同步验收。
+
+### 千问缺少模型入口的排障实测（2026-09-28）
+
+- 使用 `~/.config/PolyAsk` 直接启动 1.7.3 开发态，指定 `--user-data-dir=/home/oumu/.config/PolyAsk --remote-debugging-address=127.0.0.1 --remote-debugging-port=9223`，在千问隔离上下文调用生产 `__AMS`。正常首页为日常 / Qwen3.7-千问 / 快速；思考→快速均返回 true，`getState()` 与按钮对应，诊断全绿。
+- 临时 CDP 视口变化后，实测 `innerWidth=355` 时入口存在，`267` 时入口从 DOM 消失；后者诊断与用户报告相同，`runMode('think')` 返回 false。恢复至 `519` 并等待布局后，入口恢复，思考→快速再次成功。数字仅为本次采样，不作为产品判定阈值。有效 `devicePixelRatio` 始终约 1.35（页面缩放参与计算），不是 Windows 150% 的等价验证。
+- 工作页会同时缺少模型和思考入口，与用户报告不一致；已恢复日常和快速。用户补充的另一台 Windows 电脑截图是宽页面日常首页但没有模型入口，本机宽页仍有；本机窄栏只能复现失败链路，远端差异原因尚未确定。
+- 本次没有发送提问，不据此断言群发或回答已通过；未修改适配器逻辑。远端无入口页面的切档适配仍未完成。
