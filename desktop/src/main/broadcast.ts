@@ -1,4 +1,5 @@
 import type { SiteKey } from "../shared/contracts";
+import { normalizeSelectionMetadata } from "../shared/selection";
 import {
   normalizeSubmitted,
   type BroadcastPayload,
@@ -99,7 +100,7 @@ export class BroadcastCoordinator {
           onResult?.(cancelled);
           return cancelled;
         }
-        const output: SiteRunResult = { site, ok: result.ok };
+        const output: SiteRunResult = { site, ok: result.ok, ...normalizeSelectionMetadata(result) };
         const observed = result.code ? { ...output, code: result.code } : output;
         onResult?.(observed);
         return observed;
@@ -136,7 +137,11 @@ export class BroadcastCoordinator {
       if (result.code === "submit_unconfirmed" && confirm) {
         const verdict = await this.confirmSubmitted(site, command, confirm, epoch, signal);
         if (epoch !== this.epoch) return { ok: false, code: "cancelled" };
-        if (verdict.supported && verdict.ok) return { ok: true };
+        if (verdict.supported && verdict.ok) {
+          const metadata = normalizeSelectionMetadata(result);
+          return { ok: true, ...metadata,
+            ...(metadata.selection?.outcome === "unconfirmed" ? { code: "tier_unconfirmed" } : {}) };
+        }
         if (!(verdict.supported && resubmit && !resent)) return result;
         resent = true;
       } else if (!result.code || !RETRIABLE.has(result.code as SiteCode)) {

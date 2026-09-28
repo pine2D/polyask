@@ -36,6 +36,7 @@ function fixture(file, host, mode = 'ok') {
   });
   context.Date = { now: () => now };
   context.PointerEvent = class { constructor(type, options) { this.type = type; Object.assign(this, options); } };
+  vm.runInNewContext(source("selection-match.js"), context);
   vm.runInNewContext(source(file), context);
   return { adapter: context.window.__AMS.adapters[host], input, events, waits, listeners,
     result: () => ({ attached, closed, menu }) };
@@ -43,7 +44,7 @@ function fixture(file, host, mode = 'ok') {
 
 for (const [label, file, host] of [
   ['Gemini', 'adapters-intl.js', 'gemini.google.com'],
-  ['千问', 'adapters-cn.js', 'qianwen.com'],
+  ['千问', 'adapters-cn4.js', 'qianwen.com'],
   ['智谱', 'adapters-cn2.js', 'chatglm.cn']
 ]) {
   test(`${label} uses its chat image input and forwards all files and the original deadline`, async () => {

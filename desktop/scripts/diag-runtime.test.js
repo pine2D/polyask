@@ -115,8 +115,8 @@ test("九站 diagnose 的每条检查都带合法 kind，且恰有一条 reach",
     waitFor: async () => null, findByText: () => null, openMenu() {}, clickEl() {},
     sleep: () => Promise.resolve(), escMenus() {},
   });
-  for (const file of ["adapters-intl.js", "adapters-intl2.js",
-    "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js"]) vm.runInNewContext(source(file), ctx);
+  for (const file of ["selection-match.js", "adapters-intl.js", "adapters-intl2.js",
+    "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js"]) vm.runInNewContext(source(file), ctx);
   vm.runInNewContext(source("diag.js"), ctx);
 
   const hosts = Object.keys(ctx.window.__AMS.adapters);

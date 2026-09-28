@@ -26,7 +26,7 @@ PolyAsk 是一个 Electron 桌面应用：把同一问题群发到 9 个真实 A
 - **群发预算只有一个真源**：`shell-ipc.ts` 群发入口的 44s/90s；`main/index.ts` 辅助发送回调的 44s 必须跟随（硬编码、无带图分支）。改预算先改那一处，再改 `docs/desktop.md` 的预算表。
 - **只产 `code`，不产用户可见文案**：site-runtime / preload / 主进程返回错误码，渲染层翻译；轮询认 `r.code`，**绝不正则匹配文案**。新增可见码三处落点：`shared/protocol.ts` 的 `SITE_CODES`、`shared/status-copy.ts` 的 `STATUS_COPY_KEY`（漏映射 typecheck 红）、`shared/copy.ts` 三语；`desktop/test/status-copy-coverage.test.ts` 双向对账。IPC 抛出的裸码经 `shared/ipc-error.ts` 剥掉 Electron 前缀后才到渲染层。
 - **`diagnose()` 每条检查必须带 `kind`**（`reach`/`control`/`tier`/`probe`）。只让**非 `tier`** 的红项决定站点可用性——各站 `state()` 是刻意的偏函数，用户停在非预设的合法档位（千问 Qwen3.7-Max+快速、Kimi Instant、元宝 Thinking）都返回 null，那不是故障。漏标会被归成 `control` 继续误报，`desktop/scripts/diag-runtime.test.js` 守着。
-- **适配器协议**：每站必需 `{think, fast, state, diagnose}` 四项，其余钩子可选、不实现 = 该能力静默降级。`state`/`diagnose`/`answer`/`submitted` **只读同步，不得开菜单**。`return false` = 落回 core 通用链；`throw` = 通用链对本站不安全，core 直接失败**不回退**。全表与九站映射见 `docs/adapters.md`。
+- **适配器协议**：每站必需 `{think, fast, state, diagnose}` 四项，其余钩子可选、不实现 = 该能力静默降级。`state`/`selection`/`diagnose`/`answer`/`submitted` **只读同步，不得开菜单**。`return false` = 落回 core 通用链；`throw` = 通用链对本站不安全，core 直接失败**不回退**。全表与九站映射见 `docs/adapters.md`。
 - **切档控件缺失一律 `throw`，不要静默 `return`**——静默 return 会让 `runMode` 误报「已切到」。例外只有 4 处（DeepSeek 首屏 radio、Gemini 两处、千问已确认日常页面的无模型入口分支），全部写死在适配器里；加新例外前先读 `docs/adapters.md` 的例外清单。
 - **站点 UI 三条通用规则**（反例见 `docs/adapters.md`）：① 控件在下沉到二级子菜单，默认「顶层找不到 → 展开子菜单 → 再找」；② 同一 role 可能承载不同语义的列表，取列表必须校验语义，否则「最高档」被点成末位模型；③ **每个菜单动作自己 `escMenus()` 收尾**。
 - **群发取消（epoch）**：`broadcast.ts` 的 `epoch`。新写的长流程必须在每个 `await` 后核对 epoch，否则用户取消了、主进程还在往站点输入框里打字；`AbortSignal` 不替代 epoch 核对。
@@ -46,7 +46,7 @@ PolyAsk 是一个 Electron 桌面应用：把同一问题群发到 9 个真实 A
 bash scripts/verify.sh               # 零依赖仓库卫生：.js/.mjs 语法 + JSON + 300 行 + desktop/src 400 行棘轮 + OAuth 卫生 + 文档/.github 引用 + workflow YAML + 根 scripts 五个跨端测试 + diff --check
 cd desktop && npm test               # Desktop 门禁：tsc --noEmit + tsx --test（test/）+ node --test（scripts/*.test.{js,mjs}，含九站适配器回归）；verify.sh 不跑它
 cd desktop && npm run typecheck      # 与 npm test 首段重叠，CI 单独再跑是刻意的双保险
-cd desktop && npm run package && xvfb-run -a npm run smoke -- --skip-package   # preload 的 14 条 require 仍解析、九站视图挂上
+cd desktop && npm run package && xvfb-run -a npm run smoke -- --skip-package   # preload 的 require 仍解析、九站视图挂上
 bash scripts/prepare-release.sh auto # 推导版本、晋升 CHANGELOG、同步 Desktop package/lock（只改文件不 commit）
 bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布（--build-only 只校验源码并提取 Release 正文）
 ```
@@ -54,7 +54,7 @@ bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布
 ## 架构（先在这里定位入口文件）
 
 - **主进程**：`desktop/src/main/index.ts`（装配）→ `view-manager.ts`（站点视图树/状态）、`broadcast.ts`（群发编排、deadline、epoch、Kimi 只读确认）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts`（IPC，全部过 `trustedShell`）。
-- **站点适配**：`desktop/src/site-runtime/{i18n,core,send,upload,md,adapters-intl,adapters-intl2,adapters-cn,adapters-cn2,adapters-cn3,generation,diag}.js`，classic script、`__AMS` 全局，`preload/site.ts` 按此序 require；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
+- **站点适配**：`desktop/src/site-runtime/`：core/tier 编排、selection-match 候选匹配、send/upload 提交与附件；intl/intl2/cn/cn2/cn3/cn4 按站分卷；注入顺序以 `preload/site.ts` 为准，classic script、`__AMS` 全局；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
 - **数据与同步**：`main/database.ts`（SQLite）+ `*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata，旧实体 schema 1 / 决策卡 schema 2 / 文件夹及关联 schema 3 / 逐次提问及回答 schema 4，fixture 在 `desktop/test/fixtures/`）、`data-admin-service.ts`（本机数据管理）、`backup-service.ts`（预览与事务恢复）。
 - **渲染层**：`desktop/src/renderer/`，所有 IPC 只经 `shell-api.ts` 的 `shell`（测试用 `setShellApi` 注入桩）。
 - **共享契约**：`desktop/src/shared/`（protocol、copy、locale、site-report、ipc-error）。

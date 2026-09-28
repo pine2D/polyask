@@ -7,7 +7,7 @@
   const t = globalThis.__AMS_I18N__ ? globalThis.__AMS_I18N__.t : globalThis.t;
   const S = window.__AMS;
   if (!S) return;
-  const { waitFor, findByText, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
+  const { waitFor, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
 
   Object.assign(S.adapters, {
     "chatgpt.com": {
@@ -41,9 +41,12 @@
       // 档位控件：role=menuitem[aria-label=Power]，内含 [data-model-reasoning-effort-slider]；
       // 两条锚点取并集，任一在就认（aria-label 会随界面语言变，data-* 属性不会）。
       _power: function () {
-        return [...document.querySelectorAll('[role="menuitem"]')].find((x) =>
-          /^(power|强度|力度)$/i.test(x.getAttribute("aria-label") || "") ||
-          !!x.querySelector("[data-model-reasoning-effort-slider]")) || null;
+        return [...document.querySelectorAll('[role="menuitem"]')].find((x) => {
+          if (!/^(power|强度|力度)$/i.test(x.getAttribute("aria-label") || "") &&
+              !x.querySelector("[data-model-reasoning-effort-slider]")) return false;
+          const info = this._modelInfo(x);
+          return info.visible && !info.disabled;
+        }) || null;
       },
       // 档位真值只认位次「now/min/max」，不认档名：0–3 档的档名不在 DOM 里（只有 describedby 的
       // 一行朗读文本给出当前档），拿标签判档一改版就漂。滑块读不出时回退解析 `Pro, 5 of 5.`。
@@ -52,11 +55,14 @@
         if (!p) return null;
         const sl = p.querySelector('[role="slider"]');
         if (sl) {
-          const now = +sl.getAttribute("aria-valuenow"), min = +sl.getAttribute("aria-valuemin"), max = +sl.getAttribute("aria-valuemax");
-          if (Number.isFinite(now) && Number.isFinite(min) && Number.isFinite(max) && max > min) return { now, min, max };
+          const raw = ["aria-valuenow", "aria-valuemin", "aria-valuemax"].map(name => sl.getAttribute(name));
+          const [now, min, max] = raw.map(Number);
+          if (raw.every(value => value != null && value.trim() !== "") &&
+              [now, min, max].every(Number.isFinite) && max > min && now >= min && now <= max) return { now, min, max };
         }
         const m = /(\d+)\s*(?:of|\/|共)\s*(\d+)/i.exec(this._describe(p));
-        return m ? { now: +m[1] - 1, min: 0, max: +m[2] - 1 } : null;
+        return m && +m[2] > 1 && +m[1] >= 1 && +m[1] <= +m[2]
+          ? { now: +m[1] - 1, min: 0, max: +m[2] - 1 } : null;
       },
       _describe: function (el) {
         return (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean)
@@ -89,19 +95,49 @@
       },
       // 模型 radio 与滑块同时常驻菜单（Advanced 视图不必展开也在 DOM，真机 2026-08-31）：先直接找，
       // 找不到再点 aria-label="Select model" 入口展开一次。已选中就不点——点了会连带把菜单收掉。
-      _selectModel: async function (re, deadline) {
+      _MODELS: [{ model: "GPT-5.6 Sol", aliases: ["GPT-5.6 Sol"] }],
+      _modelItems: function () {
+        const root = document.querySelector('[data-testid="composer-intelligence-picker-content"]') ||
+          this._power()?.closest('[role="menu"]');
+        return root ? [...root.querySelectorAll('[role="menuitemradio"]')] : [];
+      },
+      _modelInfo: function (node) {
+        const r = node.getBoundingClientRect();
+        const style = typeof getComputedStyle === "function" ? getComputedStyle(node) : null;
+        return { text: node.innerText != null ? node.innerText : node.textContent,
+          visible: r.width > 0 && r.height > 0 && !node.hidden && node.isConnected !== false &&
+            (!style || !/hidden|collapse/.test(style.visibility) && style.display !== "none"),
+          disabled: !!node.disabled || node.getAttribute("aria-disabled") === "true" ||
+            node.getAttribute("data-disabled") != null };
+      },
+      _matchModel: function (nodes) { return S.matchSelection(nodes, this._MODELS, this._modelInfo); },
+      _selectedModel: function () {
+        const selected = this._modelItems().filter(node => {
+          const info = this._modelInfo(node);
+          return info.visible && !info.disabled && node.getAttribute("aria-checked") === "true";
+        });
+        return selected.length === 1 ? this._matchModel(selected) : null;
+      },
+      _selectModel: async function (deadline) {
         try {
           checkDeadline(deadline);
           await this._openRoot(deadline);
-          let item = findByText('[role="menuitemradio"]', re);
-          if (!item) {
+          let match = this._matchModel(this._modelItems());
+          if (!match) {
             const entry = [...document.querySelectorAll('[role="menuitem"]')]
               .find((x) => /^(select model|选择模型)$/i.test(x.getAttribute("aria-label") || ""));
-            if (entry) { tierAction(deadline, () => entry.click()); item = await waitFor(() => findByText('[role="menuitemradio"]', re), 1500, 120, deadline); }
+            if (entry) {
+              tierAction(deadline, () => entry.click());
+              match = await waitFor(() => this._matchModel(this._modelItems()), 1500, 120, deadline);
+            }
           }
-          if (!item) { escMenus(); throw new Error("ChatGPT: 未找到模型 " + re); }
-          if (item.getAttribute("aria-checked") === "true") return;
-          tierAction(deadline, () => item.click()); await sleep(700, deadline);
+          if (!match) throw new Error("ChatGPT: 未找到模型");
+          if (this._selectedModel()?.model === match.model) return;
+          tierAction(deadline, () => match.candidate.click()); await sleep(700, deadline);
+          // 模型点击可能关闭菜单；动作路径可重开复读，selection 本身永远只读。
+          await this._openRoot(deadline);
+          const applied = await waitFor(() => this._selectedModel()?.model === match.model, 1500, 120, deadline);
+          if (!applied) throw new Error("ChatGPT: 模型未生效");
         } finally { escMenus(); }
       },
       diagnose: function () {
@@ -122,6 +158,14 @@
         if (/high|pro|高/i.test(t)) return "think";             // High/Extra High/Pro（含旧 Standard/Extended）
         return null;
       },
+      selection: function (mode) {
+        const level = this._level();
+        const observed = level ? (level.now === level.max ? "think" : level.now === level.min ? "fast" : null) : this.state();
+        if (observed !== mode) return observed ? { outcome: "unconfirmed", observed } : { outcome: "unconfirmed" };
+        const match = this._selectedModel();
+        // 粗档位不能证明滑块端点；菜单关着读不到模型时仅确认模式，不缓存先前读数。
+        return level && match ? { outcome: "preferred", observed, model: match.model } : { outcome: "mode_only", observed };
+      },
       // 最后一条回答（真机审计 2026-08：每轮 section[data-turn]，正文仍在 .markdown）；
       // data-message-author-role 是滚动发布中的旧内层，保留兜底。
       answer: function () {
@@ -132,9 +176,9 @@
         return el.querySelector(".markdown") || el;
       },
       think: async function (deadline) {
-        checkDeadline(deadline); await this._selectModel(/^GPT-5\.6\s*Sol$/i, deadline); await this._pickEdge(true, deadline); },
+        checkDeadline(deadline); await this._selectModel(deadline); await this._pickEdge(true, deadline); },
       fast: async function (deadline) {
-        checkDeadline(deadline); await this._selectModel(/^GPT-5\.6\s*Sol$/i, deadline); await this._pickEdge(false, deadline); },
+        checkDeadline(deadline); await this._selectModel(deadline); await this._pickEdge(false, deadline); },
       attach: function (files, el, deadline) {
         return S.setInputFiles(document.querySelector("#upload-photos"), files, el, deadline);
       },

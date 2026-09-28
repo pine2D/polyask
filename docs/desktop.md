@@ -37,13 +37,13 @@
 
 ## 3. 站点运行时注入
 
-`desktop/src/preload/site.ts` 在隔离世界按**固定顺序**同步 require 14 条：
+`desktop/src/preload/site.ts` 在隔离世界按**固定顺序**同步 require 17 条：
 
 ```
-i18n → core → send → upload → md → adapters-intl → adapters-intl2 → adapters-cn → adapters-cn2 → adapters-cn3 → generation → history → history-adapters → diag
+i18n → core → tier → selection-match → send → upload → md → adapters-intl → adapters-intl2 → adapters-cn → adapters-cn2 → adapters-cn3 → adapters-cn4 → generation → history → history-adapters → diag
 ```
 
-- `send.js` 读 `window.__AMS`，必须排在 `core.js` 之后；`generation.js` 与 `diag.js` 必须排在**全部适配器之后**——两者都按已填充的注册表逐 host 挂实现/包装，早了就静默缺席。
+- `tier.js`、`selection-match.js`、`send.js` 读 `window.__AMS`，必须排在 `core.js` 之后；候选匹配模块排在适配器之前；`generation.js` 与 `diag.js` 必须排在**全部适配器之后**——两者都按已填充的注册表逐 host 挂实现/包装，早了就静默缺席。
 - **chrome shim 只剩 `runtime.onMessage.addListener`** 一条（`core.js` 用它收命令），以不可写不可配置的属性装在 `globalThis.chrome` 上。
 - **locale 单向注入**：require 完成后由外壳调 `__AMS_I18N__.setLang(resolveLocale(navigator.language))`。全应用只有 `shared/locale.ts` 一份解析（`en` / `zhCN` / `zhTW`，前缀匹配，未命中的 `zh-*` 之外一律 `en`）；运行时不再自己猜语言。
 - 命令通道：main 用 `contents.send("polyask:site-command", {requestId, command})`，preload 回 `polyask:site-response`。**两端都只认主帧**——`shell-ipc.ts` 的接收侧显式判 `event.senderFrame?.parent !== null` 就丢弃，再由 `manager.owns(sender)` 校验来源视图；`SiteCommandChannel.receive` 还要求 `pending.contentsId === sender.id`。
@@ -102,6 +102,7 @@ i18n → core → send → upload → md → adapters-intl → adapters-intl2 �
 
 - `describeStatus` **不做运行时白名单校验**：认不得的码按 `phase` 兜底，宁可笼统也不丢消息。
 - `ok:true` 也可以带 `code`（如 `tier_unconfirmed`）：显示为成功 + 警示，不谎报全绿。
+- `SiteResult`、`SiteStatus`、`SubmissionStatus` 可携带临时 `selection` / `submissionEvidence`，由 `shared/selection.ts` 在 preload、群发和状态边界归一。状态提示与读屏文案区分精确模型、仅模式、未确认以及本轮消息/输入框证据；生成和完成保留本轮证据，下一轮清除。失败优先显示，不能被已确认档位覆盖。旧回包没有字段则保持旧行为，不制造确认；这些字段不进 SQLite、Drive 或复制诊断报告。
 - `attachment_action_required` 由适配器要求用户完成登录或站点附件操作时产出；`attachment_conflict` → `attachmentConflict` 表示上次尝试遗留的附件无法安全复用，需在站点移除后重试。
 - **新增可见码要同时改三处**：`SITE_CODES`（或 `describeCollectionCode` 的 `case`）、`STATUS_COPY_KEY`、`copy.ts` 的三语。漏一处 `desktop/test/status-copy-coverage.test.ts` 会红——它做双向对账：源码里产出的每个码必须有文案，文案表里的每个码必须真有产出方，例外要在 `PRODUCED_WITHOUT_COPY` / `COPY_WITHOUT_PRODUCER` 里写明理由。
 - IPC 抛出的裸码经 `ipcRenderer.invoke` 会被 Electron 包成 `Error invoking remote method '…': Error: <code>`，**唯一还原点是 `shared/ipc-error.ts` 的 `ipcErrorCode`**；不剥前缀，渲染层写好的三语文案永远不可达。

@@ -139,7 +139,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 | `desktop/src/shared/copy.ts` | 主表。`en` / `zhCN` / `zhTW` 三档，外壳通用词条直接写在这里，并把下面各分表 `...` 展开合并 |
 | `desktop/src/shared/*-copy.ts` 分表 | 按领域拆的词条：archive / backup / command / data-admin / decision / library / productivity / prompt-library / sync / synthesis / task-folder / workspace，各自导出 `{ en, zhCN, zhTW }` 供主表合并 |
 
-`desktop/src/shared/status-copy.ts` **不是**第三张词条表，它是 `SiteCode → keyof DesktopCopy` 的映射（`STATUS_COPY_KEY`），把机器码翻译成主表里的某个键。
+`desktop/src/shared/status-copy.ts` **不是**第三张词条表，它是 `SiteCode → keyof DesktopCopy` 的映射（`STATUS_COPY_KEY`），把机器码翻译成主表里的某个键。 选择与提交证据的附加说明也在这里组合，使用 `copy.ts` 的 `selection*` / `submissionMessage` / `submissionComposer` 三语键；保持“页面本轮消息已出现”与“仅输入框变化”的确认程度，不写成服务端已接收。
 
 - **新增用户可见错误码要动三处**：`desktop/src/shared/protocol.ts` 的 `SITE_CODES` 数组（码的真源）、`status-copy.ts` 的 `STATUS_COPY_KEY`（码 → 文案键）、`copy.ts` 或对应分表的三语词条。漏任一处，`desktop/test/status-copy-coverage.test.ts`（源码里产出的每个码都要有文案、文案表里的每个码都要真有产出方，双向覆盖）与 `desktop/test/copy.test.ts`（三语 key 对齐）会红。错误码全表见 `docs/desktop.md`。
 - **locale 解析只有一份**：`desktop/src/shared/locale.ts` 的 `resolveLocale`，外壳（`copy.ts` 的 `getCopy`）与站点运行时（preload 注入 `__AMS_I18N__.setLang`）共用它。前缀匹配（不是 `includes`）：`zh` / `zh-cn` / `zh-hans` → `zhCN`，`zh-tw` / `zh-hk` / `zh-mo` / `zh-hant` → `zhTW`，未命中的一律落 `en`（**不兜底成简体**）。想改档位映射只改这一处，别在调用点各自判断。

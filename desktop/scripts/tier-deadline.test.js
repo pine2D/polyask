@@ -17,7 +17,7 @@ function runtime(host, document) {
     t: key => key, console: { debug() {} }, MouseEvent: Event, KeyboardEvent: Event, CustomEvent: Event,
     Date: { now: () => now }, setTimeout: (fn, ms) => { now += ms; fn(); },
   });
-  for (const file of ["core.js", "adapters-intl.js", "adapters-intl2.js", "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js"])
+  for (const file of ["core.js", "tier.js", "selection-match.js", "adapters-intl.js", "adapters-intl2.js", "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js"])
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8"), context);
   return { S: context.window.__AMS, now: () => now, events, dispatch: msg => new Promise(resolve => listener({ source: "AMS", ...msg }, {}, resolve)) };
 }
@@ -42,7 +42,7 @@ test("slow Kimi menu stops at deadline without later option clicks", async () =>
 
 test("deadline is absolute and unchanged when passed to an adapter", async () => {
   const r = runtime("example.com"); let deadline;
-  r.S.adapters["example.com"] = { think: async value => { deadline = value; } };
+  r.S.adapters["example.com"] = { think: async value => { deadline = value; }, state: () => "think" };
   assert.equal(await r.S.runMode("think", true, 2000), true);
   assert.equal(deadline, 2000);
 });
@@ -69,7 +69,7 @@ test("DeepSeek normal tier changes still reach their intended toggle", async () 
 
 test("queued tier changes retain their original deadline", async () => {
   const r = runtime("example.com"); let calls = 0;
-  r.S.adapters["example.com"] = { think: async deadline => { calls++; await r.S.sleep(600, deadline); } };
+  r.S.adapters["example.com"] = { think: async deadline => { calls++; await r.S.sleep(600, deadline); }, state: () => "think" };
   const first = r.S.runMode("think", true, 3000);
   const second = r.S.runMode("think", true, 1500);
   assert.equal(await first, true);

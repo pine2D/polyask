@@ -22,7 +22,7 @@ function fixture(options = {}) {
     textContent: text, getBoundingClientRect: () => rect(state.open),
     click() { state.actions++; if (!options.swallowed) state.mode = text; state.open = false; },
   }));
-  const model = { get textContent() { return state.model; }, children: [],
+  const model = { getAttribute: () => null, getBoundingClientRect: () => rect(), get textContent() { return state.model; }, children: [],
     closest: selector => selector === ".desktop-no-drag" && options.header ? {} : null };
   const document = { querySelectorAll(selector) {
     if (selector === "div,button,span") return state.model ? [model] : [];
@@ -39,7 +39,8 @@ function fixture(options = {}) {
   };
   const context = { document, window: { __AMS: S }, t: key => key,
     MouseEvent: class { constructor(type) { this.type = type; } } };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime/adapters-cn.js"), "utf8"), context);
+  for (const file of ["selection-match.js", "adapters-cn4.js"])
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8"), context);
   return { adapter: S.adapters["qianwen.com"], state, tab, button };
 }
 
@@ -121,4 +122,15 @@ test("延迟水合的顶部模型文字仍有效，入口恢复后重新施加�
   assert.equal(adapter.diagnose().find(c => c.name === "diag_modelDropdown").kind, "control");
   state.model = "Qwen3.7-千问";
   assert.equal(adapter.state(), "fast");
+});
+
+test("当前模型证据出现或消失时分别报告首选和仅模式，不缓存前次模型", () => {
+  const { adapter, state } = fixture({ header: true });
+  const read = () => JSON.parse(JSON.stringify(adapter.selection("fast")));
+  assert.deepEqual(read(), { outcome: "mode_only", observed: "fast" });
+  state.model = "Qwen3.7-千问";
+  assert.deepEqual(read(), { outcome: "preferred", observed: "fast", model: "Qwen3.7-千问" });
+  state.model = null;
+  assert.deepEqual(read(), { outcome: "mode_only", observed: "fast" });
+  assert.equal(state.actions, 0);
 });

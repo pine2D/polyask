@@ -15,6 +15,7 @@ import type {
 import { normalizeSubmitted, parseGenerationState } from "../shared/protocol";
 import { resolveLocale } from "../shared/locale";
 import { normalizeDiagnosticChecks } from "../shared/site-health";
+import { normalizeSelectionMetadata } from "../shared/selection";
 
 type SendResponse = (response: unknown) => void;
 type RuntimeListener = (
@@ -43,6 +44,8 @@ Object.defineProperty(globalThis, "chrome", {
 
 require("../site-runtime/i18n.js");
 require("../site-runtime/core.js");
+require("../site-runtime/tier.js");
+require("../site-runtime/selection-match.js");
 require("../site-runtime/send.js");
 require("../site-runtime/upload.js");
 require("../site-runtime/md.js");
@@ -51,6 +54,7 @@ require("../site-runtime/adapters-intl2.js");
 require("../site-runtime/adapters-cn.js");
 require("../site-runtime/adapters-cn2.js");
 require("../site-runtime/adapters-cn3.js");
+require("../site-runtime/adapters-cn4.js");
 require("../site-runtime/generation.js");
 require("../site-runtime/history.js");
 require("../site-runtime/history-adapters.js");
@@ -63,7 +67,7 @@ function normalizeResult(value: unknown): SiteResult {
   if (!value || typeof value !== "object") return { ok: false, code: "invalid_response" };
   const candidate = value as Record<string, unknown>;
   if (typeof candidate.ok !== "boolean") return { ok: false, code: "invalid_response" };
-  const result: SiteResult = { ok: candidate.ok };
+  const result: SiteResult = { ok: candidate.ok, ...normalizeSelectionMetadata(candidate) };
   if (typeof candidate.code === "string") return { ...result, code: candidate.code.slice(0, 64) };
   return result;
 }

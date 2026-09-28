@@ -115,7 +115,7 @@ function coreWithAdapter(adapter) {
     matchMedia: () => ({ matches: true }), setTimeout, clearTimeout, Date,
     getSelection: () => { throw new Error("no selection"); },
   };
-  vm.runInNewContext(source("core.js"), context);
+  for (const file of ["core.js", "tier.js"]) vm.runInNewContext(source(file), context);
   context.window.__AMS.adapters["example.com"] = adapter;
   return { S: context.window.__AMS, seq, toasts, debug, send: (message) => new Promise((resolve) =>
     context.listener(Object.assign({ source: "AMS", cmd: "submitPrompt" }, message), null, resolve)) };
@@ -141,7 +141,8 @@ test("切档超时后不提交，交给用户 retry", async () => {
 });
 
 test("千问新模式按钮可读，think 与 fast 使用当前可用模型，切档成功后收尾 escMenus", async () => {
-  const trigger = { textContent: "Qwen3.7-千问", children: [], getAttribute: () => null };
+  const trigger = { textContent: "Qwen3.7-千问", children: [], getAttribute: () => null,
+    getBoundingClientRect: () => ({ width: 80, height: 32 }) };
   let label = "快速", menuOpen = false, escCount = 0;
   const modeButton = {
     className: "", textContent: label, querySelectorAll: () => [],
@@ -159,7 +160,7 @@ test("千问新模式按钮可读，think 与 fast 使用当前可用模型，�
     return [];
   } };
   const context = helpers(document, { escMenus() { escCount++; } });
-  vm.runInNewContext(source("adapters-cn.js"), context);
+  for (const file of ["selection-match.js", "adapters-cn4.js"]) vm.runInNewContext(source(file), context);
   const qwen = context.window.__AMS.adapters["qianwen.com"];
   assert.equal(qwen.state(), "fast");
   await qwen.think();
@@ -189,7 +190,7 @@ test("千问 _setThink 选项缺失或点击被吞时仍收尾 escMenus，且抛
       return [];
     } };
     const context = helpers(document, { escMenus() { escCount++; } });
-    vm.runInNewContext(source("adapters-cn.js"), context);
+    for (const file of ["selection-match.js", "adapters-cn4.js"]) vm.runInNewContext(source(file), context);
     return { qwen: context.window.__AMS.adapters["qianwen.com"], esc: () => escCount };
   }
   const missing = run("missing");

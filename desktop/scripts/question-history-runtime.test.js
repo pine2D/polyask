@@ -265,3 +265,23 @@ test('Doubao recycled baseline without matching predecessor cannot bind', () => 
     assert.equal(s.S.history.snapshot('token').owned,false);
   }
 });
+
+test('submission evidence binds only this new turn and never serializes answer content', () => {
+  const s = setup(), old = node('Question');
+  s.set({ user: old, text: 'Question', userCount: 1 });
+  s.S.toMarkdown = () => { throw Error('must not serialize'); };
+  s.S.history.begin('token', 'Question');
+  assert.equal(s.S.history.submitted('token'), false);
+  s.set({ user: node('Question'), text: 'Question', userCount: 2, answer: node('answer') });
+  assert.equal(s.S.history.submitted('token'), true);
+  assert.equal(s.S.history.submitted('other'), false);
+  s.popstate();
+  assert.equal(s.S.history.submitted('token'), false, 'ended capture is not fresh submission evidence');
+});
+
+test('submission evidence rejects matching old DOM after an empty baseline', () => {
+  const s = setup();
+  s.S.history.begin('token', 'Question');
+  s.set({ user: node('Question'), text: 'Question', userCount: 1 });
+  assert.equal(s.S.history.submitted('token'), false);
+});

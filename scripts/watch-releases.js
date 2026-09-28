@@ -81,7 +81,7 @@ const SOURCES = [
   { key: "bailian", name: "阿里云百炼·模型上线表（跨厂商）", url: "https://help.aliyun.com/en/model-studio/newly-released-models", kind: "bailian",
     filter: /^20\d\d-\d{1,2}-\d{1,2}$/, highSignal: NEVER_HIGH_SIGNAL,
     lowSignalNote: "低信号条目：阿里云百炼是跨厂商 API 上线表（Qwen/GLM/Kimi 等厂商模型经百炼平台上线），只代表 API 侧已可调用，不代表对应网页产品（qianwen.com / chatglm.cn / kimi.com 等）的模型选择器已同步这个模型——需要按条目里的厂商真机核对具体站点才能确认 UI 是否变化。",
-    adapter: "按行内 Model type 对应厂商站点定，例如 Qwen 系→desktop/src/site-runtime/adapters-cn.js，GLM/Kimi 系→desktop/src/site-runtime/adapters-cn2.js" },
+    adapter: "按行内 Model type 对应厂商站点定，例如 Qwen 系→desktop/src/site-runtime/adapters-cn4.js，GLM/Kimi 系→desktop/src/site-runtime/adapters-cn2.js" },
 ];
 
 async function fetchText(url, retry = 1) {

@@ -99,6 +99,11 @@
     return { token: e.token, owned: true, text: text || null, url: location.href, generation };
   }
   S.history = {
+    // 仅提供本轮新增用户消息的正向证据，不序列化正文，不作为“未发送”的判据。
+    submitted(token) {
+      if (!entry || entry.token !== token || entry.ended) return false;
+      try { return bind(entry, adapter()?.historyTurn?.()); } catch (_) { return false; }
+    },
     begin(token, text, deadline) {
       if (!token || entry?.token === token) return;
       if (entry) stop(entry);

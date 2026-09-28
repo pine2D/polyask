@@ -1,6 +1,6 @@
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteKey } from "../shared/contracts";
-import type { SiteStatus, SubmissionStatus } from "../shared/protocol";
+import type { SitePhase, SiteStatus, SubmissionStatus } from "../shared/protocol";
 import { describeStatus } from "../shared/status-copy";
 
 export const SUBMISSION_BADGES = [
@@ -21,13 +21,16 @@ export function pageSubmissionSummary(sites: readonly SiteKey[], statuses: Reado
 
 export function pageSiteDetail(name: string, status: SiteStatus | undefined, copy: DesktopCopy): string {
   const submission = status?.submission;
-  const labels: Record<SubmissionStatus["state"], string> = {
-    sending: copy.sending, sent: copy.submitted, failed: copy.failed,
-    unconfirmed: copy.submitUnconfirmed, cancelled: copy.cancelledStatus
+  const phases: Record<SubmissionStatus["state"], SitePhase> = {
+    sending: "sending", sent: "submitted", failed: "failed",
+    unconfirmed: "failed", cancelled: "cancelled"
   };
-  const details = [submission ? labels[submission.state] : copy.sitePageNotSent];
-  if (submission?.code && status) details.push(describeStatus(copy, { ...status, code: submission.code }));
+  const details = [submission && status ? describeStatus(copy, {
+    site: status.site, phase: phases[submission.state],
+    code: submission.code ?? (submission.state === "unconfirmed" ? "submit_unconfirmed" : undefined),
+    selection: submission.selection, submissionEvidence: submission.submissionEvidence
+  }) : copy.sitePageNotSent];
   if (status && (status.phase === "generating" || status.phase === "complete" || status.phase === "crashed" || status.code === "load_failed"))
-    details.push(describeStatus(copy, status));
+    details.push(describeStatus(copy, { site: status.site, phase: status.phase, code: status.code }));
   return `${name}: ${[...new Set(details)].join(" · ")}`;
 }

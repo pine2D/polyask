@@ -7,7 +7,6 @@ const MSG = {
   cs_siteAdapter:    { en: "Site adapter",                                      zh_CN: "站点适配器",                      zh_TW: "網站適配器" },
   cs_stopped:        { en: "Stopped",                                           zh_CN: "已停止",                          zh_TW: "已停止" },
   cs_switchFailGeneric: { en: "Switch failed",                                  zh_CN: "切换失败",                        zh_TW: "切換失敗" },
-  cs_switchUnstable:      { en: "Switch not confirmed; sent using the current tier", zh_CN: "切换未确认，已按当前档位发送", zh_TW: "切換未確認，已依目前檔位傳送" },
   cs_switchedThink:  { en: "Switched: Deep Think",                              zh_CN: "已切到：深度思考",                zh_TW: "已切到：深度思考" },
   cs_switchedFast:   { en: "Switched: Fast Model",                              zh_CN: "已切到：快速模型",                zh_TW: "已切到：快速模型" },
   diag_composer:     { en: "Composer",                                          zh_CN: "输入框",                          zh_TW: "輸入框" },

@@ -13,6 +13,7 @@ import type { RuntimeInfo } from "./runtime";
 import type { SyncStatus } from "./sync";
 import type { SiteDiagnosticCheck } from "./site-health";
 import type { WorkspaceState } from "./workspace";
+import type { SelectionMetadata } from "./selection";
 
 export type Tier = "think" | "fast" | null;
 export type DesktopSurface = "sites" | "archive" | "settings" | "commands" | "confirmation" | "question-history";
@@ -90,7 +91,7 @@ export interface SiteSubmittedResponse {
 }
 
 // fail-closed：任何非预期形状（非对象 / 缺 supported / ok 不是 boolean）都当作「站点不支持只读确认」，
-// 绝不能落到「支持且未提交」——那是唯一会触发自动重发的组合。也不能走 normalizeResult：它只保留 {ok, code}，
+// 绝不能落到「支持且未提交」——那是唯一会触发自动重发的组合。也不能走 normalizeResult：它不保留 supported，
 // supported 会被静默丢掉，「没实现 submitted()」与「实现了且确认未提交」会塌成同一个 {ok:false}。
 export function normalizeSubmitted(value: unknown): SiteSubmittedResponse {
   if (!value || typeof value !== "object") return { supported: false, ok: false };
@@ -99,7 +100,7 @@ export function normalizeSubmitted(value: unknown): SiteSubmittedResponse {
   return { supported: true, ok: candidate.ok };
 }
 
-export interface SiteResult {
+export interface SiteResult extends SelectionMetadata {
   readonly ok: boolean;
   readonly code?: string;
   readonly reason?: string;
@@ -178,13 +179,13 @@ export const SITE_CODES = [
 ] as const;
 export type SiteCode = (typeof SITE_CODES)[number];
 
-export interface SubmissionStatus {
+export interface SubmissionStatus extends SelectionMetadata {
   readonly runId: string;
   readonly state: "sending" | "sent" | "failed" | "unconfirmed" | "cancelled";
   readonly code?: string;
 }
 
-export interface SiteStatus {
+export interface SiteStatus extends SelectionMetadata {
   readonly submission?: SubmissionStatus;
   readonly site: SiteKey;
   readonly phase: SitePhase;

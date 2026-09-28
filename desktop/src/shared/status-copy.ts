@@ -1,5 +1,6 @@
-import type { DesktopCopy } from "./copy";
+import { formatCopy, type DesktopCopy } from "./copy";
 import type { SiteCode, SitePhase, SiteStatus } from "./protocol";
+import { normalizeSelectionMetadata } from "./selection";
 
 const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
   tier_unconfirmed: "tierUnconfirmed",
@@ -38,9 +39,20 @@ const PHASE_COPY_KEY: Record<SitePhase, keyof DesktopCopy> = {
 
 // 不做运行时白名单校验：站点码会随适配器演进，认不得的码按 phase 兜底，宁可笼统也不丢消息。
 export function describeStatus(copy: DesktopCopy, status: SiteStatus): string {
+  const { selection, submissionEvidence } = normalizeSelectionMetadata(status);
   const code = status.code;
-  const key = code && Object.hasOwn(STATUS_COPY_KEY, code) ? STATUS_COPY_KEY[code as SiteCode] : PHASE_COPY_KEY[status.phase];
-  return copy[key];
+  const key = code === "tier_unconfirmed" && (selection || status.phase === "failed")
+    ? PHASE_COPY_KEY[status.phase === "warning" ? "submitted" : status.phase]
+    : code && Object.hasOwn(STATUS_COPY_KEY, code) ? STATUS_COPY_KEY[code as SiteCode] : PHASE_COPY_KEY[status.phase];
+  const details = [copy[key]];
+  if (selection) {
+    const template = selection.outcome === "preferred" ? copy.selectionPreferred
+      : selection.outcome === "alternative" ? copy.selectionAlternative
+        : selection.outcome === "mode_only" ? copy.selectionModeOnly : copy.selectionUnconfirmed;
+    details.push(formatCopy(template, { mode: copy[selection.requested], model: "model" in selection ? selection.model : "" }));
+  }
+  if (submissionEvidence) details.push(submissionEvidence === "message" ? copy.submissionMessage : copy.submissionComposer);
+  return details.join(" · ");
 }
 
 export function visibleStatus(copy: DesktopCopy, status: SiteStatus): string | null {
