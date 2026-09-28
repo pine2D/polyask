@@ -163,8 +163,8 @@ button { cursor: default; }
   min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; border: 0;
   color: var(--muted); background: transparent;
 }
-.scope-main { overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.scope-menu { padding: 0 !important; border-left: 1px solid var(--border) !important; display: grid; place-items: center; }
+.scope-main { border-radius: 6px 0 0 6px; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.scope-menu { border-radius: 0 6px 6px 0; padding: 0 !important; border-left: 1px solid var(--border) !important; display: grid; place-items: center; }
 .scope-label-full, .scope-label-compact { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scope-label-compact { display: none; }
 .health-trigger { position: relative; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 7px; background: transparent; }

@@ -27,6 +27,21 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     await win.loadFile(join(output, 'index.html'), { query: { details: '1', blocked: '1', stress: '1' } });
     await wait('!!document.querySelector(".compare-trigger[aria-disabled=true]")');
     await paint();
+    // Split-button hover backgrounds must follow the frame without clipping focus rings.
+    for (const selector of ['.scope-main', '.scope-menu']) {
+      await pointer(selector, false); await paint();
+      const corners = await run(`(() => {
+        const e = document.querySelector(${JSON.stringify(selector)}), s = getComputedStyle(e);
+        const frame = getComputedStyle(e.parentElement);
+        const radius = parseFloat(frame.borderTopLeftRadius) - parseFloat(frame.borderTopWidth);
+        return { radius, overflow: frame.overflow, hover: e.matches(':hover'),
+          values: [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].map(parseFloat) };
+      })()`);
+      const outer = selector === '.scope-main' ? [0, 3] : [1, 2];
+      check(corners.hover && corners.values.every((value, index) => value === (outer.includes(index) ? corners.radius : 0)), `${theme}: ${selector} hover corners escape frame`);
+      check(corners.overflow === 'visible', `${theme}: split frame clips keyboard focus`);
+      await shot(`scope-hover-${theme}-${selector.slice(1)}`);
+    }
     // Inert actions keep their reason discoverable but must not acknowledge a press.
     const disabledBefore = await visualState('.compare-trigger');
     const disabledPoint = await pointer('.compare-trigger'); await paint(); await finish();
