@@ -1,4 +1,7 @@
 .settings-workspace {
+  --settings-control-border: color-mix(in srgb, var(--border) 45%, var(--panel));
+  --settings-control-fill: color-mix(in srgb, var(--muted) 7%, var(--panel));
+  --settings-control-hover: color-mix(in srgb, var(--muted) 12%, var(--panel));
   position: fixed; z-index: 10; inset: 0; display: grid;
   grid-template-rows: 52px minmax(0, 1fr) auto; background: var(--canvas);
 }
@@ -31,7 +34,6 @@
 .settings-row > p:last-of-type { margin-bottom: 0; }
 .settings-row > button { margin: 0; }
 .cloud-data-row { grid-template-columns: minmax(0, 1fr) minmax(240px, 32%); }
-.settings-data-group { border-color: color-mix(in srgb, var(--danger) 28%, var(--border)); }
 .settings-data-group .settings-card > p:last-child { margin-bottom: 0; }
 .settings-card h1, .settings-card h2 { margin: 0; font-size: 16px; }
 .settings-card p { margin: 8px 0 16px; color: var(--muted); font-size: var(--font-control); line-height: 1.65; overflow-wrap: anywhere; }
@@ -51,34 +53,30 @@
 .settings-notice.warning { color: var(--warning-ink); background: color-mix(in srgb, var(--warning) 9%, transparent); }
 .settings-notice.danger { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 8%, transparent); }
 .settings-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; }
-.settings-actions button, .danger-zone button {
-  min-height: max(34px, var(--control-height)); padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-control);
-  color: inherit; background: transparent;
+.settings-actions button, .danger-zone button, .update-card button,
+.sync-diagnostics-heading button, .sync-diagnostic-actions button {
+  min-height: max(34px, var(--control-height)); padding: 6px 12px;
+  border: 1px solid transparent; border-radius: var(--radius-control);
+  color: var(--text); background: var(--settings-control-fill); font: inherit;
 }
-.settings-actions button.primary { border-color: var(--accent); color: var(--on-accent); background: var(--accent); }
-.settings-actions button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
-.settings-actions button.primary:hover:not(:disabled) { color: var(--on-accent); filter: brightness(.92); }
-.settings-actions button:disabled, .danger-zone button:disabled { opacity: .42; }
+.settings-card button:hover:not(:disabled) { background: var(--settings-control-hover); }
+.settings-actions button.primary { color: var(--on-accent); background: var(--accent); }
+.settings-actions button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(.92); }
+.settings-card button:disabled { opacity: 1; color: var(--muted); background: var(--settings-control-fill); cursor: default; }
+.settings-card :is(button, input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sync-diagnostics {
   grid-column: 1 / -1; padding-top: 16px; border-top: 1px solid var(--border);
 }
 .sync-diagnostics-heading { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: 12px; }
 .sync-diagnostics-heading h2 { font-size: 13px; }
 .sync-diagnostics-heading p { margin-bottom: 0; font-size: var(--font-meta); }
-.sync-diagnostics-heading button, .sync-diagnostic-actions button {
-  min-height: 30px; padding: 0 9px; border: 1px solid var(--border); border-radius: var(--radius-control);
-  color: inherit; background: transparent;
-}
-.sync-diagnostics-heading button:hover, .sync-diagnostic-actions button:hover:not(:disabled) {
-  color: var(--accent); border-color: var(--accent);
-}
 .sync-stage-list {
   margin: 10px 0 8px; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px;
   list-style: none;
 }
 .sync-stage-list li {
   min-width: 0; padding: 8px; display: grid; grid-template-columns: 8px minmax(0, 1fr);
-  align-items: center; gap: 7px; border: 1px solid var(--border); border-radius: var(--radius-control);
+  align-items: center; gap: 7px; border: 1px solid transparent; border-radius: var(--radius-control); background: var(--settings-control-fill);
 }
 .sync-stage-list li:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .sync-stage-list i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
@@ -91,15 +89,23 @@
 .sync-stage-list li[data-stage-state="warning"] i { background: var(--warning); }
 .sync-stage-list li[data-stage-state="failed"] i { background: var(--danger); }
 .sync-diagnostic-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.sync-diagnostic-actions button:disabled { opacity: .42; }
 .sync-diagnostics .sync-diagnostic-privacy { margin: 7px 0 0; font-size: var(--font-meta); }
 .sync-overview .sync-privacy { grid-column: 1 / -1; margin: 0; font-size: var(--font-meta); }
 .danger-zone h2 { color: var(--danger-ink); }
 .danger-zone label { display: grid; gap: 4px; color: var(--muted); font-size: var(--font-meta); }
-.danger-zone input { min-height: max(34px, var(--control-height)); padding: 6px 10px; width: 100%; border: 1px solid var(--border); border-radius: var(--radius-control); color: inherit; background: var(--field); }
-.danger-zone button { max-width: 100%; overflow-wrap: anywhere; margin-top: 8px; border-color: var(--danger-ink); color: var(--danger-ink); }
+.danger-zone input {
+  min-height: max(34px, var(--control-height)); padding: 6px 12px; width: 100%;
+  border: 1px solid var(--settings-control-border); border-radius: var(--radius-control);
+  color: var(--text); background: var(--settings-control-fill); caret-color: var(--accent); font: inherit;
+}
+.danger-zone input:hover:not(:disabled) { border-color: var(--border); }
+.danger-zone input:focus { border-color: var(--accent); }
+.danger-zone button {
+  max-width: 100%; overflow-wrap: anywhere; margin-top: 8px;
+  color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 6%, var(--panel));
+}
 .danger-zone .settings-actions button { margin-top: 0; }
-.danger-zone button:hover:not(:disabled) { color: white; background: var(--danger); }
+.settings-card.danger-zone button:hover:not(:disabled) { background: color-mix(in srgb, var(--danger) 12%, var(--panel)); }
 .preference-card { display: flex; align-items: start; justify-content: space-between; gap: 16px; cursor: pointer; }
 .preference-copy { display: block; }
 .preference-title { display: block; font-size: 16px; }
@@ -118,11 +124,6 @@
 .preference-switch input:checked + span { border-color: var(--accent); background: var(--accent); }
 .preference-switch input:checked + span::after { transform: translateX(16px); }
 .preference-switch input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
-.update-card button {
-  min-height: max(34px, var(--control-height)); padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-control);
-  color: inherit; background: transparent;
-}
-.update-card button:hover { color: var(--accent); border-color: var(--accent); }
 @media (max-width: 760px) {
   .settings-body { grid-template-columns: minmax(0, 1fr); padding: 16px; }
   .settings-card { padding: 16px; }
@@ -139,3 +140,13 @@
 }
 
 .settings-workspace > .archive-status { min-height: 24px; padding: 4px 20px; font-size: var(--font-meta); white-space: normal; overflow-wrap: anywhere; }
+
+@media (prefers-contrast: more) {
+  .settings-workspace { --settings-control-border: var(--muted); }
+  .settings-card button, .sync-stage-list li { border-color: var(--muted); }
+}
+@media (forced-colors: active) {
+  .settings-card button, .danger-zone input, .sync-stage-list li { border-color: ButtonText; }
+  .settings-card button:disabled { color: GrayText; border-color: GrayText; }
+  .settings-card :is(button, input):focus-visible { outline-color: Highlight; }
+}
