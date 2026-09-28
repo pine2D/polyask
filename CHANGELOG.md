@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.7.2] - 2026-09-28
+
+验收限制：悬停修复已通过 Linux 隔离 Electron 明暗主题回归；Windows/macOS 原生显示与五种发行包的原生安装使用尚未验收。本版未重跑九站实际群发、真实 Drive 双设备同步或 Google Cloud 控制台指标检查。
+
 ### 修复
 
 - 修复工作台入口及右侧下拉按钮悬停时，背景覆盖外框圆角、形成浅色缺口的问题。
@@ -922,7 +926,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.7.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.7.2...HEAD
+[1.7.2]: https://github.com/pine2D/polyask/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/pine2D/polyask/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/pine2D/polyask/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/pine2D/polyask/compare/v1.5.0...v1.6.0
