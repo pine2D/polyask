@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.7.1] - 2026-09-28
+
+验收限制：本版已完成 Linux 隔离 Electron 界面与交互回归；Windows/macOS 原生字体、系统缩放、真实输入法及五种发行包的原生安装使用尚未验收。本版未重跑九站实际群发、真实 Drive 双设备同步或 Google Cloud 控制台指标检查。
+
 ### 变更
 
 - 设置页区分会同步删除的分类清空与保留云端数据的本机重置；收紧云端删除说明间距，诊断名称和错误码完整换行，补充不可用原因及操作进度。
@@ -914,7 +918,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.7.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.7.1...HEAD
+[1.7.1]: https://github.com/pine2D/polyask/compare/v1.7.0...v1.7.1
 [1.7.0]: https://github.com/pine2D/polyask/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/pine2D/polyask/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/pine2D/polyask/compare/v1.4.0...v1.5.0
