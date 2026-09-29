@@ -51,6 +51,8 @@
 ## 真机环境（Desktop 开发态）
 
 - **本机登录档案默认使用 `~/.config/PolyAsk`**（用户于 2026-09-28 明确指定并授权用于真机排障）。后续站点排障直接复用该档案，不重复询问路径或要求重新登录；不复制登录资料。启动前检查已有实例，避免并发占用；调试端口仅监听本机。该约定不包含发送提问、删除数据或对外传送登录资料的授权。
+- **Windows 正式档案不得再用于测试**：2026-09-29 登录态事故后，后续 Windows 测试仅用独立测试档案，不读取、复制或修改用户正式档案，不启动指向正式档案的测试实例。此前使用该档案的授权不作为后续测试授权；加密 fuse 一致也不能豁免此约定。本次临时测试进程已确认全部退出，临时运行时、应用副本及启动控制脚本已移除，原安装程序未修改。
+- **真实档案启动前必须核对 Cookie 加密 fuse**：先用 `@electron/fuses.getCurrentFuseWire` 读取原程序与测试运行时的 `EnableCookieEncryption`，必须一致后才能打开档案。项目发行包为 true，官方下载的裸 Electron 默认为 false；版本相同、userData/sessionData 路径相同仍不够。不得先启动再修开关；关掉加密打开已有加密档案可能使 Cookie 不可用，事后重新打开加密不保证恢复。核对不了就使用空白临时档案，不碰真实档案；可恢复性方案须在启动前明确，复制凭据或覆盖恢复不能默默进行。依据：[Electron Cookie encryption fuse](https://www.electronjs.org/docs/latest/tutorial/fuses#cookieencryption)。
 - **真机 = 开发态 Electron**：`cd desktop && npm start`。**改动要重启进程才生效**（主进程、preload、站点运行时都在启动时加载），别在跑着的实例上等热更新，那是最常见的「改了没反应」。
 - 复现只认**目标站点视图里的生产 `__AMS`**：站点运行时挂在站点视图的隔离上下文，`__AMS.getState()` / `_isOn()` 是唯一可信断言源。**不要在临时片段里重写正则**——转义会把 `\s` 变成 `\\s`，产生「幽灵失败」（实战吃过亏）。
 - **直接在真实页面上跑真实适配器（CDP，2026-09-16 起首选）**：`cd desktop && npm start -- -- --remote-debugging-port=9223`（`main/index.ts` 只在打包后移除这个开关，开发态可用；同一 userData，站点登录态照用）。`curl -s http://127.0.0.1:9223/json` 拿站点视图的 `webSocketDebuggerUrl`，用 `desktop/node_modules/ws` 发 `Runtime.enable`，从 `Runtime.executionContextCreated` 里取名为 **`Electron Isolated Context`** 的上下文（`auxData.isDefault === false`），在该 `contextId` 上 `Runtime.evaluate`（`awaitPromise`）就能直接调 `window.__AMS.adapters["<host>"].think()` / `.fast()` / `.state()`，返回值带按钮文本与 `[role=menu]` 残留数即是证据。主世界（默认上下文）看不到 `__AMS`，但能 dump DOM、试各种合成事件——元宝模型子菜单「只认 mousemove」就是这样定的。
@@ -330,3 +332,18 @@ CPU 指标为 Electron 各进程 cpuPercent 之和，非系统归一化占用率
 三段资源采样均完成；随后并行帧响应检查在 Gemini 页面执行异常，未获得完整恢复延迟数据，恢复后 30 秒采样未执行。finally 及后续独立检查确认窗口可见、九站标志全部为 false。重新连接主帧后九站输入框存在且为空，八站为 complete、回答长度与此前一致，Gemini 为 idle 且无回答；生产只读性能工具九站各五次采样通过。该补查不等价于恢复延迟、视觉完整性或后台发送验收。
 
 最终验证：751 项 TS/TSX 与 182 项脚本测试通过，独立 typecheck、真实 Chromium DOM smoke、仓库 verify 通过；Linux 打包成功，默认状态及开启实验环境变量两次产物 smoke 均为 shell=1、sites=9、attached=9。开关开启的 smoke 仅证明装配和启动正常，不证明最小化策略实际触发。完成测量后正常退出开发态。当前结论是保留默认关闭，原生平台验收及多次对照完成后再决定是否启用。
+
+## 2026-09-29 Windows 原生验证与登录态事故
+
+使用用户指定的 Windows 便携版档案，临时 Windows Electron 43.4.0 加载提交 `067ddb2` 的已验证 bundle；运行期确认 platform=win32、isPackaged=false、userData/sessionData/站点 partition 均指向指定档案，显示缩放为 150%。未替换原安装程序或复制登录凭据。此方式为开发运行时，不是 Windows 发行包验收。
+
+**本轮发生登录态丢失，不能作为无副作用验收通过。** 首次启动前漏查 Cookie 加密 fuse：原安装程序为 true，裸 Electron 为 false，且未先建立可恢复副本。发现多个站点未登录后，才将临时二进制该项改为 true 并重启；用户随后确认原先九站已登录，而原装程序也已掉登录。运行时不兼容操作是本轮事故，不能归因于用户档案不可复用或要求用户重新登录来替代事故处理。性能测试已停止，临时实例及复核用原装实例均正常退出。
+
+恢复检查仅只读：Cookie SQLite quick_check 为 ok，但不代表凭据完整；当前 20 个空闲叶页均为零，用户确认没有目录备份。Windows 文件历史配置不存在；卷影副本 CIM 查询初始化失败，vssadmin 查询要求 Windows 管理员权限，未确认是否存在系统历史副本。用户明确选择停止检查并自行重新登录，因此不执行 UAC 查询或继续访问该档案；后续测试改用独立测试档案。未重置、清空或尝试改写 Cookie 数据库，登录态未恢复。以上检查不证明所有恢复途径都已排除。
+
+Cookie 开关对齐后取得的有限功能证据：
+
+- 三轮普通/最大化窗口的真实最小化均使九站自动允许节流，恢复调用后九站标志全部为 false；每轮恢复后站点边界与该轮最小化前一致。恢复 1 秒后测双帧回调，27 次均成功，约 4.6–31.9ms；这不是从点击恢复到可交互的完整延迟，也不证明视觉、输入法验收。
+- 仅在当时确认有头像与历史入口的 Kimi 发出一条合成通用问题，保留原模型、不带图。发送前窗口真实最小化且九站标志为 true；在生产通道实际 dispatch 处观察到全部为 false，整个生成期间保持关闭；约 22 秒完成，末条用户消息精确匹配、正文 700 字符、输入框为空。提交回包证据为 composer，完成后的消息匹配是独立补查。
+- 另发起一次合成请求，在 sending 通知时立即取消。返回 cancelled，16 秒观察期内全部不节流；取消替换了 Kimi WebContents，旧 CDP 上下文最终检查超时，重新连接后用户消息仍为 1、取消问题不匹配、此前 700 字符回答保留、输入框为空。未自动重发。
+- 最小化期间刷新专项的初始采样未保持最小化，该轮不能计作导航唤醒通过。九站真实后台群发、Windows 资源收益、macOS 均未完成；保持实验默认关闭。
