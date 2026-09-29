@@ -101,7 +101,7 @@ function Fixture(): React.JSX.Element {
       sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded}
       onTextChange={setText} onSubmit={() => setSent(true)} onCompare={query.has('blocked') ? undefined : noop} onRetry={noop} onCancel={noop}
       onTierChange={setTier} onLayoutChange={setLayout} onExpandedChange={setExpanded}
-      onOpenPanel={tab => setPanel({ tab, detail: null, inputMethod: 'keyboard' })}
+      onPanelChange={tab => setPanel(tab ? { tab, detail: null, inputMethod: 'keyboard' } : null)}
       onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onPasteImages={noop} />
     <SiteFrames copy={copy} sites={SITES} statuses={statuses} selected={new Set(selected)} history={{}}
       layout={{ mode: 'overview', focused: 'claude', page: 0, pageCount: 3,

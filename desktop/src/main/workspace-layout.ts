@@ -11,6 +11,7 @@ import {
   type DisplayPreferences
 } from "../shared/display";
 import { computeViewLayout, resolveLayoutMode, scaleBounds } from "./layout";
+import type { SiteZoomController } from "./site-zoom";
 
 interface WorkspaceLayoutInput {
   readonly width: number;
@@ -31,6 +32,7 @@ interface WorkspaceLayoutResult {
 }
 
 interface ApplyWorkspaceLayoutInput {
+  readonly siteZoom: SiteZoomController;
   readonly views: ReadonlyMap<SiteKey, WebContentsView>;
   readonly placements: readonly ViewPlacement[];
   readonly metrics: DisplayMetrics;
@@ -96,8 +98,6 @@ export function applyWorkspaceLayout(input: ApplyWorkspaceLayoutInput): void {
       input.mode,
       placement.key === input.focused
     );
-    if (Math.abs(view.webContents.getZoomFactor() - siteZoom) > 0.001) {
-      view.webContents.setZoomFactor(siteZoom);
-    }
+    input.siteZoom.apply(placement.key, view.webContents, siteZoom);
   }
 }

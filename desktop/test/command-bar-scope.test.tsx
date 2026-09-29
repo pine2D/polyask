@@ -14,10 +14,25 @@ function render(overrides: Partial<ComponentProps<typeof CommandBar>> = {}) {
     panelTab={null} imageControl={null} sendBlockedReason={null} synthesisPending={false}
     syncStatus={{ state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true }}
     isMac={false} expanded={false} onTextChange={noop} onSubmit={noop} onCancel={noop}
-    onTierChange={noop} onLayoutChange={noop} onExpandedChange={noop} onOpenPanel={noop}
+    onTierChange={noop} onLayoutChange={noop} onExpandedChange={noop} onPanelChange={noop}
     onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onRetry={noop} onPasteImages={noop} {...overrides}
   />);
 }
+
+test("workbench entry exposes either open tab and its localized close action", () => {
+  for (const locale of ["en", "zh-CN", "zh-TW"]) {
+    const copy = getCopy(locale);
+    const closed = render({ copy }).match(/<button[^>]*class="scope-main"[^>]*>/)![0];
+    assert.ok(closed.includes('aria-expanded="false"'));
+    assert.ok(closed.includes('aria-label="Custom · 3"'));
+    for (const panelTab of ["sites", "health"] as const) {
+      const opened = render({ copy, panelTab }).match(/<button[^>]*class="scope-main"[^>]*>/)![0];
+      assert.ok(opened.includes('aria-expanded="true"'));
+      assert.ok(opened.includes(`aria-label="${copy.closeWorkbench}"`));
+      assert.ok(opened.includes(`data-hint="${copy.closeWorkbench}"`));
+    }
+  }
+});
 
 test("send has a localized scope name even when narrow layouts hide its text", () => {
   for (const [locale, name] of [["en", "Send to 3 sites"], ["zh-CN", "发送至 3 个站点"], ["zh-TW", "傳送至 3 個網站"]]) {

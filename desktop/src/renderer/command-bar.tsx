@@ -43,7 +43,7 @@ interface CommandBarProps {
   readonly onTierChange: (value: Tier) => void;
   readonly onLayoutChange: (value: "overview" | "focus") => void;
   readonly onExpandedChange: (value: boolean) => void;
-  readonly onOpenPanel: (tab: WorkspacePanelTab) => void;
+  readonly onPanelChange: (tab: WorkspacePanelTab | null) => void;
   readonly onShowGroupMenu: () => void;
   readonly onOpenMore: () => void;
   readonly onOpenArchive: () => void;
@@ -59,18 +59,20 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
   const busy = props.runState !== "idle" || props.auxiliaryBusy;
   const sendLabel = formatCopy(props.selectedCount === 1 ? props.copy.sendToOneSite : props.copy.sendToSites, { count: props.selectedCount });
   const cancelLabel = props.runState === "cancelling" ? props.copy.cancelling : props.copy.cancel;
+  const workbenchOpen = props.panelTab !== null;
+  const healthOpen = props.panelTab === "health";
 
   return (
     <header className={`command-bar${props.pageControl ? " has-pages" : ""}${props.expanded ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
       <div className="workspace-entry priority-p0">
         <div className="scope-split">
-          <button type="button" className="scope-main" data-hint={commandHint(props.scopeLabel, "open-sites", props.isMac)} aria-label={props.scopeLabel} aria-expanded={props.panelTab === "sites"} aria-controls="workspace-panel" onClick={() => props.onOpenPanel("sites")}>
+          <button type="button" className="scope-main" data-hint={workbenchOpen ? props.copy.closeWorkbench : commandHint(props.scopeLabel, "open-sites", props.isMac)} aria-label={workbenchOpen ? props.copy.closeWorkbench : props.scopeLabel} aria-expanded={workbenchOpen} aria-controls="workspace-panel" onClick={() => props.onPanelChange(workbenchOpen ? null : "sites")}>
             <span className="scope-label-full">{props.scopeLabel}</span>
             <span className="scope-label-compact">{props.copy.sitesCompact} · {props.selectedCount}</span>
           </button>
           <button type="button" className="scope-menu" data-hint={props.copy.chooseSavedGroup} aria-label={props.copy.chooseSavedGroup} aria-haspopup="menu" onClick={props.onShowGroupMenu}><ChevronDownIcon /></button>
         </div>
-        <button type="button" className={props.panelTab === "health" ? "health-trigger active" : "health-trigger"} data-hint={commandHint(props.copy.siteHealth, "open-site-health", props.isMac)} aria-label={props.copy.siteHealth} aria-pressed={props.panelTab === "health"} aria-controls="workspace-panel" data-health-attention={props.healthAttention || undefined} onClick={() => props.onOpenPanel("health")}><HealthIcon /></button>
+        <button type="button" className={healthOpen ? "health-trigger active" : "health-trigger"} data-hint={healthOpen ? props.copy.closeWorkbench : commandHint(props.copy.siteHealth, "open-site-health", props.isMac)} aria-label={healthOpen ? props.copy.closeWorkbench : props.copy.siteHealth} aria-pressed={healthOpen} aria-controls="workspace-panel" data-health-attention={props.healthAttention || undefined} onClick={() => props.onPanelChange(healthOpen ? null : "health")}><HealthIcon /></button>
       </div>
       <div className="mode-switch priority-p0" aria-label={props.copy.layoutLabel}>
         <button type="button" data-hint={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>

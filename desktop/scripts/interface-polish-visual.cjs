@@ -27,6 +27,28 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     await win.loadFile(join(output, 'index.html'), { query: { details: '1', blocked: '1', stress: '1' } });
     await wait('!!document.querySelector(".compare-trigger[aria-disabled=true]")');
     await paint();
+    // The workbench entry closes either tab and reopens the sites tab.
+    for (const tab of ['sites', 'health']) {
+      if (tab === 'health') {
+        const point = await pointer('.health-trigger'); release(point);
+        await wait('!!document.querySelector("#workspace-health-panel")');
+      }
+      assert.equal(await run('document.querySelector(".scope-main").getAttribute("aria-expanded")'), 'true');
+      const closePoint = await pointer('.scope-main'); release(closePoint);
+      await paint();
+      assert.equal(await run('!!document.querySelector(".workspace-drawer")'), false, `${theme}: workbench entry must close ${tab}`);
+      assert.equal(await run('document.querySelector(".scope-main").getAttribute("aria-expanded")'), 'false');
+      const openPoint = await pointer('.scope-main'); release(openPoint);
+      await wait('!!document.querySelector("#workspace-sites-panel")');
+    }
+    for (const open of [true, false, true, false]) {
+      const point = await pointer('.health-trigger'); release(point);
+      await paint();
+      assert.equal(await run('!!document.querySelector("#workspace-health-panel")'), open, `${theme}: health entry must toggle`);
+      assert.equal(await run('document.querySelector(".health-trigger").getAttribute("aria-pressed")'), String(open));
+    }
+    const reopenPoint = await pointer('.scope-main'); release(reopenPoint);
+    await wait('!!document.querySelector("#workspace-sites-panel")');
     // Split-button hover backgrounds must follow the frame without clipping focus rings.
     for (const selector of ['.scope-main', '.scope-menu']) {
       await pointer(selector, false); await paint();

@@ -156,7 +156,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     admin: options.dataAdmin,
     trusted: trustedShell,
     afterHistoryChange: () => { publishPromptLibrary(); },
-    afterReset: () => { publishWorkspace(); publishPromptLibrary(); }
+    afterReset: () => { manager.siteZoom.clear(); publishWorkspace(); publishPromptLibrary(); }
   });
 
   // 速查面板按需拉取：菜单会随显示偏好重建，按需读永远是当前那一份。

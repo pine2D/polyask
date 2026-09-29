@@ -7,6 +7,7 @@ import { normalizeAccelerator } from "../shared/accelerators";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { MenuShortcut } from "../shared/protocol";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
+import { SITE_ZOOM_SHORTCUTS } from "../shared/site-zoom";
 
 export type PaletteGroup = CommandGroup | "saved" | "menu";
 
@@ -39,6 +40,13 @@ function itemMatches(item: PaletteCommand, query: string): boolean {
     ...item.aliases
   ].join(" "));
   return terms.every((term) => haystack.includes(term));
+}
+
+export function siteZoomShortcutItems(copy: DesktopCopy): readonly PaletteCommand[] {
+  return SITE_ZOOM_SHORTCUTS.map(item => ({
+    id: `site-zoom:${item.action}`, label: copy[item.labelKey], group: "navigate",
+    accelerator: item.accelerator, aliases: []
+  }));
 }
 
 // 菜单里由 Electron 给加速器的 role 项（重新加载/缩放/全屏/复制/退出…）不在 COMMANDS 表里，

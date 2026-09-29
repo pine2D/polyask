@@ -16,7 +16,8 @@ test("UI state store writes atomically and loads the saved local value", () => {
       maximized: true,
       layoutMode: "focus" as const,
       currentPage: 1,
-      focusedByPage: { 0: "claude" as const, 1: "deepseek" as const }
+      focusedByPage: { 0: "claude" as const, 1: "deepseek" as const },
+      siteZoom: { claude: 1.25, kimi: 0.75 }
     };
     store.save(state);
 

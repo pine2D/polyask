@@ -12,7 +12,11 @@ export const COMMAND_COPY = {
     applySavedGroup: "Switch to {group}",
     closeCommandPalette: "Close command palette",
     showCommands: "Commands",
-    shortcutReferenceHint: "Every available app shortcut, in one place"
+    shortcutReferenceHint: "Every available app shortcut, in one place",
+    siteZoomIn: "Zoom in on the focused AI site",
+    siteZoomOut: "Zoom out on the focused AI site",
+    siteZoomReset: "Reset the focused AI site to 100%",
+    siteZoomHint: "Click an AI page before using its zoom shortcuts. Ctrl + mouse wheel also zooms that site. Each site's zoom is saved on this device."
   },
   zhCN: {
     commandSearchPlaceholder: "搜索命令、快捷键或已存分组…",
@@ -27,7 +31,11 @@ export const COMMAND_COPY = {
     applySavedGroup: "切换到{group}",
     closeCommandPalette: "关闭命令面板",
     showCommands: "命令",
-    shortcutReferenceHint: "集中查看当前可用的应用快捷键"
+    shortcutReferenceHint: "集中查看当前可用的应用快捷键",
+    siteZoomIn: "放大当前 AI 站点",
+    siteZoomOut: "缩小当前 AI 站点",
+    siteZoomReset: "当前 AI 站点恢复 100%",
+    siteZoomHint: "先点击 AI 页面，再使用缩放快捷键；Ctrl + 鼠标滚轮也可缩放该站点。各站比例保存在本机，重启后仍保留。"
   },
   zhTW: {
     commandSearchPlaceholder: "搜尋指令、快速鍵或已儲存群組…",
@@ -42,6 +50,10 @@ export const COMMAND_COPY = {
     applySavedGroup: "切換到{group}",
     closeCommandPalette: "關閉指令面板",
     showCommands: "指令",
-    shortcutReferenceHint: "集中查看目前可用的應用程式快速鍵"
+    shortcutReferenceHint: "集中查看目前可用的應用程式快速鍵",
+    siteZoomIn: "放大目前的 AI 網站",
+    siteZoomOut: "縮小目前的 AI 網站",
+    siteZoomReset: "目前的 AI 網站還原為 100%",
+    siteZoomHint: "先點選 AI 頁面，再使用縮放快速鍵；Ctrl + 滑鼠滾輪也可縮放該網站。各網站的比例儲存於本機，重新啟動後仍會保留。"
   }
 } as const;

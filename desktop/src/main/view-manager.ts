@@ -8,7 +8,7 @@ import {
 } from "electron";
 
 import type { SiteDefinition, SiteKey, ViewPlacement } from "../shared/contracts";
-import type { DesktopUiState } from "../shared/desktop-ui-state";
+import { captureSiteFocus, type DesktopUiState } from "../shared/desktop-ui-state";
 import {
   DEFAULT_DISPLAY_PREFERENCES,
   type DisplayPreferences
@@ -37,7 +37,6 @@ import {
   type SiteHealthRunPhase
 } from "../shared/site-health";
 import {
-  paginateSiteKeys,
   resolveFocusedSite,
   resolveSitePage,
   resolveSitePageIndex
@@ -58,6 +57,7 @@ import { beginSubmissionRun, preserveSubmission, effectiveStatus, markStatusRead
 import type { StabilityEventInput } from "./stability-monitor";
 import { applyWorkspaceLayout, computeWorkspaceLayout } from "./workspace-layout";
 import { reconcileVisibleSiteKeys, stackOrder } from "./view-visibility";
+import { SiteZoomController } from "./site-zoom";
 
 // TODO(size-ratchet)：748 行，目标 ≤400——抽出 site-workspace-state（勾选/分页/布局纯状态）、
 // site-status-registry（pageStatus/runStatus 合并与 unread）、generation-watcher（生成态轮询）三块无 Electron 依赖的纯逻辑。
@@ -79,6 +79,7 @@ interface ViewManagerOptions {
 }
 
 export class ViewManager {
+  readonly siteZoom = new SiteZoomController(() => this.options.onUiStateChange?.(this.getUiState()));
   private readonly views = new Map<SiteKey, WebContentsView>();
   private readonly attached = new Set<SiteKey>();
   private readonly pageStatus = new Map<SiteKey, SiteStatus>();
@@ -114,6 +115,7 @@ export class ViewManager {
     const selectedSites = new Set(options.selectedSites ?? SITES.map((site) => site.key));
     this.selected = SITES.map((site) => site.key).filter((site) => selectedSites.has(site));
     const initial = options.initialUiState;
+    this.siteZoom.restore(initial?.siteZoom);
     if (initial) {
       this.mode = initial.layoutMode;
       this.page = initial.currentPage;
@@ -166,18 +168,13 @@ export class ViewManager {
   }
 
   getUiState(): DesktopUiState {
-    const focusedByPage: Partial<Record<number, SiteKey>> = {};
-    paginateSiteKeys(this.selected).forEach((sites, page) => {
-      const remembered = page === this.page ? this.focused : this.focusedByPage.get(page);
-      const focused = remembered && sites.includes(remembered) ? remembered : sites[0];
-      if (focused) focusedByPage[page] = focused;
-    });
     return {
       windowBounds: this.window.getNormalBounds(),
       maximized: this.window.isMaximized(),
       layoutMode: this.mode,
       currentPage: this.page,
-      focusedByPage: focusedByPage as Readonly<Record<number, SiteKey>>
+      focusedByPage: captureSiteFocus(this.selected, this.page, this.focused, this.focusedByPage),
+      siteZoom: this.siteZoom.snapshot()
     };
   }
 
@@ -581,6 +578,7 @@ export class ViewManager {
       onExternal: (target) => this.options.openExternal?.(target)
     });
     this.views.set(site.key, view);
+    this.siteZoom.bind(site.key, view.webContents);
     // 已勾选即挂载（不再只挂当前页）：replaceView 后重建的后台视图若不回到视图树，
     // 下一轮群发又会打进 0×0 视口。层序由调用方随后的 reconcileViews 归位。
     if (this.surface === "sites" && this.selected.includes(site.key)) this.attach(site.key);
@@ -629,6 +627,7 @@ export class ViewManager {
       metrics,
       zoom,
       display: this.display,
+      siteZoom: this.siteZoom,
       mode: this.renderedMode,
       focused: this.focused
     });

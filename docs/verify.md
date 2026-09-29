@@ -22,6 +22,8 @@
 
 ## 离线回归
 
+- 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
+
 - `test:shell-ui` 另覆盖 Windows/macOS/Linux 的确认按钮 DOM 顺序、取消默认焦点、Tab 圈定、IME Escape、焦点恢复，以及强制颜色与减少动态效果的 Chromium 媒体模拟。截图与断言来自 Linux Electron，不能证明 Windows/macOS 的原生字体、系统菜单、输入法候选窗或读屏行为；这些仍需对应实机验收。
 
 **两条互不重叠的门禁，顺序与职责写死**：`bash scripts/verify.sh` 是零 node_modules 依赖的仓库级卫生（`.js/.mjs` 语法、JSON、`.js` 300 行、`desktop/src` 的 `.ts/.tsx` 400 行棘轮、OAuth 凭据卫生、文档与 `.github` 引用、workflow YAML、根 `scripts/` 的五个跨端测试）；`cd desktop && npm test` 是 Desktop 门禁（首段 `tsc --noEmit`，其后 `tsx --test` 跑 `test/**/*.test.ts(x)`、`node --test` 跑 `scripts/*.test.{js,mjs}`——九站适配器离线回归及打包脚本测试就在后者里）。`verify.sh` 不跑 `npm test`，两条都要过；`npm test` 首段虽已含 typecheck，仍单跑一次 `npm run typecheck`（CI 也分两步，失败点更清楚）。动窗口/视图/preload 的改动另加 `npm run package && xvfb-run -a npm run smoke -- --skip-package`（在 `desktop/` 下运行，先打包当前源码，避免验证旧产物）。

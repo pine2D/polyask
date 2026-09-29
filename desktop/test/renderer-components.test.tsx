@@ -119,6 +119,13 @@ test("shortcut reference lists registered accelerators and aliases", () => {
   assert.match(html, /Toggle Full Screen/);
   assert.match(html, /F11/);
   assert.match(html, /Copy/);
+  assert.match(html, /放大当前 AI 站点/);
+  assert.match(html, /缩小当前 AI 站点/);
+  assert.match(html, /当前 AI 站点恢复 100%/);
+  assert.match(html, /Ctrl\+\+/);
+  assert.match(html, /Ctrl\+-/);
+  assert.match(html, /Ctrl\+0/);
+  assert.match(html, /Ctrl \+ 鼠标滚轮/);
   // Alt+K 在 COMMANDS 与菜单里各有一份，去重后只能出现一次
   assert.equal(html.split("Alt+K").length - 1, 1);
 });
@@ -272,7 +279,7 @@ test("command bar renders one compact command surface with stateful controls", (
       onTierChange={noop}
       onLayoutChange={noop}
       onExpandedChange={noop}
-      onOpenPanel={noop}
+      onPanelChange={noop}
       onShowGroupMenu={noop}
       onOpenMore={noop} onOpenArchive={noop} onRetry={noop}
       onPasteImages={noop}
@@ -333,7 +340,7 @@ test("command bar begins with adjacent workspace and health entries", () => {
     onTierChange: noop,
     onLayoutChange: noop,
     onExpandedChange: noop,
-    onOpenPanel: noop,
+    onPanelChange: noop,
     onShowGroupMenu: noop,
     onOpenMore: noop, onOpenArchive: noop, onRetry: noop,
     onPasteImages: noop
@@ -374,7 +381,7 @@ test("command bar surfaces actionable sync state without consuming toolbar width
       onTierChange={noop}
       onLayoutChange={noop}
       onExpandedChange={noop}
-      onOpenPanel={noop}
+      onPanelChange={noop}
       onShowGroupMenu={noop}
       onOpenMore={noop} onOpenArchive={noop} onRetry={noop}
       onPasteImages={noop}

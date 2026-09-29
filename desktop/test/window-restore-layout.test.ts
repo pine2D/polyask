@@ -6,17 +6,20 @@ import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import { transformSync } from "esbuild";
 import { readSource } from "./fixtures";
+import type { DesktopUiState } from "../src/shared/desktop-ui-state";
 
-function harness() {
+function harness(initialUiState?: DesktopUiState) {
   const require = createRequire(resolve(__dirname, "../src/main/view-manager.ts"));
   const bounds: any[] = [];
   const layouts: any[] = [];
+  const contents: any[] = [], saved: DesktopUiState[] = [];
   let minimized = false;
   let size = [2560, 1378];
   let nextId = 1;
   const window = Object.assign(new EventEmitter(), {
     isDestroyed: () => false, isMinimized: () => minimized,
     getContentSize: () => size,
+    getNormalBounds: () => ({ x: 0, y: 0, width: size[0], height: size[1] }), isMaximized: () => false,
     contentView: { addChildView() {}, removeChildView() {} },
     webContents: Object.assign(new EventEmitter(), { getZoomFactor: () => 1 })
   });
@@ -28,23 +31,42 @@ function harness() {
       if (name === "./site-view") return { createSiteView: () => {
         const id = nextId++;
         let zoom = 1;
-        return {
+        const view = {
           setBounds: (value: unknown) => bounds.push({ id, value }),
           webContents: Object.assign(new EventEmitter(), { id,
-            isDestroyed: () => false, loadURL: async () => {},
+            isDestroyed: () => false, loadURL: async () => {}, focus() {},
             getZoomFactor: () => zoom, setZoomFactor: (value: number) => { zoom = value; }
           })
         };
+        contents.push(view.webContents);
+        return view;
       } };
       return require(name);
     }
   });
   const manager = new module.exports.ViewManager(window, () => {}, (layout: unknown) => layouts.push(layout), undefined,
-    { selectedSites: ["claude", "chatgpt", "gemini"] });
-  return { manager, window, bounds, layouts,
+    { selectedSites: ["claude", "chatgpt", "gemini"], initialUiState, onUiStateChange: (state: DesktopUiState) => saved.push(state) });
+  return { manager, window, bounds, layouts, contents, saved,
     setGeometry: (hidden: boolean, width: number, height: number) => { minimized = hidden; size = [width, height]; }
   };
 }
+
+test("view manager restores per-site zoom and publishes edits in its persisted UI state", () => {
+  const h = harness({ maximized: false, layoutMode: "overview", currentPage: 0,
+    focusedByPage: { 0: "claude" }, siteZoom: { claude: 1.25, kimi: 0.75 } });
+  assert.equal(h.contents[0].getZoomFactor(), 1.25);
+  assert.equal(h.contents[1].getZoomFactor(), 0.9);
+  h.contents[0].emit("zoom-changed", {}, "in");
+  assert.equal(h.saved.at(-1)?.siteZoom?.claude, 1.5);
+  assert.equal(h.saved.at(-1)?.siteZoom?.kimi, 0.75, "unselected site memory must survive a save");
+  h.manager.setDrawerOpen(true);
+  h.manager.setLayout("focus", "claude");
+  assert.equal(h.contents[0].getZoomFactor(), 1.5);
+  const restarted = harness(JSON.parse(JSON.stringify(h.saved.at(-1))));
+  assert.equal(restarted.contents[0].getZoomFactor(), 1.5);
+  h.manager.siteZoom.clear();
+  assert.equal(Object.keys(h.saved.at(-1)?.siteZoom ?? {}).length, 0);
+});
 
 test("Windows maximized minimize resize preserves page bounds and overview mode", () => {
   const h = harness();

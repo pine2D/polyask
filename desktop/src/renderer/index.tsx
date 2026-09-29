@@ -643,7 +643,7 @@ function App(): React.JSX.Element {
         onTierChange={workspaceFlow.changeTier}
         onLayoutChange={setMode}
         onExpandedChange={setPromptExpanded}
-        onOpenPanel={(tab) => openPanel(tab, "pointer")}
+        onPanelChange={(tab) => tab ? openPanel(tab, "pointer") : changePanelState(null)}
         onShowGroupMenu={() => { void showGroupMenu(); }}
         onOpenMore={() => { void showMoreMenu(); }}
         historyOpen={questionHistoryOpen}

@@ -1,5 +1,6 @@
 import { SITE_KEYS, type SiteKey } from "./contracts";
 import { paginateSiteKeys } from "./site-pages";
+import { parseSiteZoom, type SiteZoomPreferences } from "./site-zoom";
 
 export interface DesktopBounds {
   readonly x: number;
@@ -14,6 +15,19 @@ export interface DesktopUiState {
   readonly layoutMode: "overview" | "focus";
   readonly currentPage: number;
   readonly focusedByPage: Readonly<Record<number, SiteKey>>;
+  readonly siteZoom?: SiteZoomPreferences;
+}
+
+export function captureSiteFocus(
+  selected: readonly SiteKey[], page: number, focused: SiteKey, memory: ReadonlyMap<number, SiteKey>
+): Readonly<Record<number, SiteKey>> {
+  const focusedByPage: Record<number, SiteKey> = {};
+  paginateSiteKeys(selected).forEach((sites, index) => {
+    const remembered = index === page ? focused : memory.get(index);
+    const value = remembered && sites.includes(remembered) ? remembered : sites[0];
+    if (value) focusedByPage[index] = value;
+  });
+  return focusedByPage;
 }
 
 const MIN_WIDTH = 960;
@@ -103,6 +117,7 @@ export function parseDesktopUiState(
     maximized: candidate.maximized === true,
     layoutMode: candidate.layoutMode === "focus" ? "focus" : "overview",
     currentPage,
-    focusedByPage
+    focusedByPage,
+    siteZoom: parseSiteZoom(candidate.siteZoom)
   };
 }

@@ -7,7 +7,7 @@ import type { PromptLibraryState } from "../shared/prompt-library";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { shortcutLabel } from "./shortcut-label";
 import { CloseIcon } from "./icons";
-import { commandItems, menuShortcutItems, searchCommands, type PaletteCommand, type PaletteGroup } from "./command-search";
+import { commandItems, menuShortcutItems, siteZoomShortcutItems, searchCommands, type PaletteCommand, type PaletteGroup } from "./command-search";
 import { pageTabKeyAction, paletteKeyAction } from "./keyboard";
 import { PromptLibrary } from "./prompt-library";
 import { GettingStarted } from "./getting-started";
@@ -64,8 +64,8 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   // 速查 = 本应用命令 + 菜单里由 Electron 给加速器的 role 项（重新加载/缩放/全屏/复制…）。
   // 后者不在 COMMANDS 表里，只列前者会让速查名不副实——它的说明写的是「集中查看当前可用的应用快捷键」。
   const shortcuts = useMemo(() => {
-    const listed = commandItems(props.commands, props.copy, { isMac: props.isMac })
-      .filter((item) => item.accelerator || item.aliases.length);
+    const listed = [...commandItems(props.commands, props.copy, { isMac: props.isMac })
+      .filter((item) => item.accelerator || item.aliases.length), ...siteZoomShortcutItems(props.copy)];
     return [...listed, ...menuShortcutItems(props.menuShortcuts, listed, props.isMac)];
   }, [props.commands, props.copy, props.isMac, props.menuShortcuts]);
   const visible = props.mode === "commands" ? results : shortcuts;
@@ -141,7 +141,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-        ) : props.mode === "shortcuts" ? <p className="command-subtitle">{props.copy.shortcutReferenceHint}</p> : null}
+        ) : props.mode === "shortcuts" ? <p className="command-subtitle">{props.copy.shortcutReferenceHint}<br />{props.copy.siteZoomHint}</p> : null}
         {props.mode === "guide" ? <GettingStarted copy={props.copy} commands={props.commands} onExecute={props.onExecute} /> : props.mode === "library" ? <PromptLibrary
           copy={props.copy}
           draft={props.draft}
