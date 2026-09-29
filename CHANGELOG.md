@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.8.0] - 2026-09-29
+
+验收限制：已在 Linux 开发态实测千问有、无模型入口两种布局及从其他模型切回预设，并验证 ChatGPT 模型与强度切换。Windows 150% 缩放远端页面、九站真实群发、五种发行包的原生安装、真实 Drive 双设备同步及 Google Cloud 控制台指标未在本轮验收。豆包当前页面的模式标签仍无法识别，会保留异常提示。
+
 ### 新增
 
 - 群发状态区分精确模型、仅模式与切档未确认；发送结果区分本轮消息已出现和仅输入框变化，生成完成后仍可查看本轮依据。
@@ -945,7 +949,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.7.3...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.8.0...HEAD
+[1.8.0]: https://github.com/pine2D/polyask/compare/v1.7.3...v1.8.0
 [1.7.3]: https://github.com/pine2D/polyask/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/pine2D/polyask/compare/v1.7.1...v1.7.2
 [1.7.1]: https://github.com/pine2D/polyask/compare/v1.7.0...v1.7.1
