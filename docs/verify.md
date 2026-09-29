@@ -76,6 +76,14 @@
 
 ## 工具
 
+- 资源归属记录：启动前设置 `POLYASK_RESOURCE_TRACE` 为尚不存在的本地 JSONL 路径，默认每 5 秒一笔，最长 30 分钟，关闭窗口即停止；不自动退出应用。启动期单列，CPU 首笔和每个新 PID/创建时间的首笔无有效区间，按 `cpuIntervalValid` 排除。进程数组按 PID 一笔，站点只关联主帧；不可把共享 PID 分别归到各站后再次求和，也不可将工作集总和称为独占内存。与 soak 分开运行，两者都读 `getAppMetrics` 会影响 CPU 采样区间。日志不含对话或网址。
+- 只读探针耗时：开发态按上文启用本机 9223 调试端口后，在 `desktop/` 运行 `node scripts/probe-performance.mjs 9223`。脚本串行对已加载站点的生产隔离上下文各采 5 次 `generation()`、`answer()`、`toMarkdown()`，仅返回耗时、布尔值、状态和视口，不发送提问、不切档、不保存正文；结果写入打印出的临时目录。无回答时 Markdown 项为 null，不能据此宣称长回答处理很快。它测同步函数耗时，不包含生产 IPC 往返；零毫秒可能只是计时精度不足。缺适配器/执行失败会非零退出，尚未加载的站点不会凭空计入覆盖。
+- 后台节流机制实验：在 `desktop/` 运行 `xvfb-run -a node scripts/background-throttling-lab.mjs`（有原生显示时可直接 `node`）。临时档案、三个重叠且正尺寸的本地页面，拦截 HTTP/HTTPS，按关闭→全部允许→混合→恢复关闭测试隐藏窗口下的动画帧、定时器与可见性；输出原始报告，不以特定节流比例作通关条件。此工具不触碰生产策略，不能替代九站后台生成、最小化和 Windows/macOS 验收。
+
+2026-09-29 资源研究验收：Linux/WSL、Electron 43.4.0 开发态复用已授权档案，九站当前页面均无回答正文；约 165 秒共 34 笔资源样本，60 秒后进程工作集合计约 3.83–3.95 GiB，不能与此前 Xvfb 新档案样本作优化前后比较。九站生产生成探针各测 5 次，中位约 0–0.4ms；未测到 Markdown 转换，不能外推长会话性能。没有发送测试提问或切换模型，日志有部分网络解析/连接失败，不据此证明全部站点网络正常或已登录。
+
+同日隔离隐藏窗口实验：关闭节流时每视图 3 秒约 180 帧/60 次定时器；全部允许节流时三视图均为 0 帧，但两视图仍约 60 次定时器、一视图约 3 次，可见性状态并不一致。恢复关闭后帧与定时器恢复，而隐藏状态也不全同步。这仅确认当前 Linux Electron 的机制及回退，不是九站兼容性或节电百分比证据；正式策略保持 `backgroundThrottling:false`，真实生成、长会话与 Windows/macOS 验收仍待完成。
+
 - 窗口恢复取证：启动前设置 `POLYASK_WINDOW_TRACE` 为**尚不存在**的本地 `.jsonl` 路径。`window-trace.ts` 从外壳就绪后记录 minimize/restore/maximize/resize 等事件、窗口尺寸/缩放、当前布局、站点视图 bounds/缩放/加载状态，并在 restore 后 0/50/250/1000ms 追加快照。首条含版本、GPU 功能状态及显示器缩放，不含网址、对话或账号信息。最多 2 分钟或 4096 条；写盘失败/背压停止采样，不影响应用。默认不建文件、不挂监听；不替代 Alt+H 的站点诊断报告。采样改变时序的可能性仍需考虑，日志只能证明尺寸/事件，不能单独证明画面没有闪动。
 
 - `xvfb-run -a npm run smoke -- --skip-package`——真实 Electron 起一次，断言 shell=1、九站全部 attached 且 bounds > 0、同一 session 分区、sandbox + contextIsolation + 无 nodeIntegration。它是「preload 的 require 链仍解析」的唯一离线证据（打包期断链在别处不暴露）。
