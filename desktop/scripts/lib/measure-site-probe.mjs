@@ -20,3 +20,9 @@ export function measureSiteProbe() {
     answer: answer && { ms: answer.ms, failed: answer.failed, present: !!answer.value },
     markdown: markdown && { ms: markdown.ms, failed: markdown.failed, present: !!markdown.value } };
 }
+
+// Electron creates identically named isolated worlds for embedded frames too.
+export function mainFrameProbeContext(contexts, frameId) {
+  if (!frameId) return undefined;
+  return contexts.find(item => item.name === 'Electron Isolated Context' && item.auxData?.isDefault === false && item.auxData?.frameId === frameId);
+}

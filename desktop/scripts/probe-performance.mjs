@@ -3,7 +3,7 @@ import { writeFile, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
-import { measureSiteProbe } from './lib/measure-site-probe.mjs';
+import { measureSiteProbe, mainFrameProbeContext } from './lib/measure-site-probe.mjs';
 const require = createRequire(import.meta.url);
 const { desktopSites } = require('./lib/desktop-anchors.js');
 const port = Number(process.argv[2] ?? 9223);
@@ -50,7 +50,8 @@ for (const target of targets) {
       socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('debug_connect_failed')); }, { once: true });
     });
     await call('Runtime.enable');
-    const context = contexts.find(item => item.name === 'Electron Isolated Context' && item.auxData?.isDefault === false);
+    const frameId = (await call('Page.getFrameTree')).frameTree.frame.id;
+    const context = mainFrameProbeContext(contexts, frameId);
     if (!context) { rows.push({ site: site.key, available: false }); continue; }
     const samples = [];
     for (let i = 0; i < 5; i++) {

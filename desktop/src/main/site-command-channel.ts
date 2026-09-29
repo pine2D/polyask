@@ -1,3 +1,4 @@
+import { beforeSiteSubmit } from "./site-command-activity";
 import { randomUUID } from "node:crypto";
 
 import type { WebContents } from "electron";
@@ -33,6 +34,7 @@ export class SiteCommandChannel {
     const remaining = Math.max(0, command.deadline - Date.now());
     if (remaining === 0) return Promise.resolve(options.timeoutResult);
     if (options.signal?.aborted) return Promise.resolve({ ok: false, code: "cancelled" });
+    if (command.cmd === "submitPrompt") beforeSiteSubmit(contents.id);
     const requestId = randomUUID();
     return new Promise((resolve) => {
       const finish = (result: SiteCommandResponse) => {

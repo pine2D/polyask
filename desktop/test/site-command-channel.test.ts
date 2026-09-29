@@ -39,3 +39,22 @@ test("排队期间已取消的任务不向站点发送任何动作", async () =>
   assert.equal(calls, 0);
   channel.dispose();
 });
+
+test('experimental wake completes before a mutating command is dispatched', async () => {
+  const { observeSiteCommands } = await import('../src/main/site-command-activity');
+  const events: string[] = [];
+  const stop = observeSiteCommands(id => { if (id === 71) events.push('wake-all'); });
+  const channel = new SiteCommandChannel();
+  const contents = { id: 71, send() { events.push('dispatch'); } } as unknown as WebContents;
+  const pending = channel.send(contents, command(), { timeoutResult: { ok: false, code: 'timeout' } });
+  assert.deepEqual(events, ['wake-all', 'dispatch']); channel.dispose(); await pending; stop();
+});
+test('read-only generation probes do not wake the experimental window', async () => {
+  const { observeSiteCommands } = await import('../src/main/site-command-activity');
+  let wakes = 0;
+  const stop = observeSiteCommands(id => { if (id === 72) wakes++; });
+  const channel = new SiteCommandChannel();
+  const contents = { id: 72, send() {} } as unknown as WebContents;
+  const pending = channel.send(contents, { source: 'AMS', cmd: 'generation', runId: 'fixture', deadline: Date.now() + 1000 }, { timeoutResult: { state: null } });
+  assert.equal(wakes, 0); channel.dispose(); await pending; stop();
+});

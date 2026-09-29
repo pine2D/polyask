@@ -293,3 +293,5 @@ Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址：仅空首�
 ### 2026-09-29 生成状态控件复核
 
 `generation.js` 补充五站实测停止键：ChatGPT `button[aria-label="Stop"]`；DeepSeek `.ds-button--primary` 内 `path[d^="M2 4.88C2"]` 方形 SVG（同类发送箭头不能算停止键）；豆包 `[class*="break-btn-"]` 无 button 角色的容器；Kimi `.send-button-container.stop`；元宝 `#yuanbao-send-btn[aria-label="Stop Answering"]`。继续执行可见性和输入区邻近检查，旧锚点保留。主进程仍须先观察到 generating，再经连续完成确认；未改变轮询、预算、后台节流或不明确提交不重发的规则。不能用此状态探针证明回答内容正确，或推断历史副本已完成。
+
+2026-09-29 多轮资源测试补充：ChatGPT 长回答会产生可编辑 Canvas，位于 `[data-chatgpt-selection-message-id]` 内（实测约 384×3252px）；真实提问框在 form 内约 405×26px。按面积选最大编辑区会误选回答。`core.findComposer()` 仅在 chatgpt.com 排除现代及两种旧版 assistant 容器中的编辑器，保留其它站原有几何规则。离线与真实 DOM 反例通过，重启后同一测试会话连续两轮生产发送均取得 message 确认，提问框为空、回答可读。

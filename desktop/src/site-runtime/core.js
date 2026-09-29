@@ -62,6 +62,8 @@
   // Claude 单行编辑器标称 20px，缩放机器上实测 19.99…，贴着实测值的 >=20 会筛掉唯一的真编辑器（2026-08）
   function findComposer() {
     const cands = [...document.querySelectorAll('textarea, [contenteditable="true"]')]
+      // ChatGPT 的长回答可变为 Canvas 编辑器；它的面积大于真正的提问框，必须先排除。
+      .filter(el => location.hostname !== "chatgpt.com" || !el.closest?.('[data-chatgpt-selection-message-id], [data-turn="assistant"], [data-message-author-role="assistant"]'))
       .map((el) => ({ el, r: el.getBoundingClientRect() }))
       .filter(({ r }) => r.width > 80 && r.height >= 16 &&
         r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth);

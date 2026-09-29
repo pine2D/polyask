@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
-import { measureSiteProbe } from './lib/measure-site-probe.mjs';
+import { measureSiteProbe, mainFrameProbeContext } from './lib/measure-site-probe.mjs';
 
 function probe(adapter, toMarkdown = () => 'PRIVATE') {
   let now = 0;
@@ -31,4 +31,12 @@ test('probe sanitizes exceptions and unexpected states', () => {
   assert.equal(result.answer.failed, true);
   assert.equal(result.markdown, null);
   assert.ok(!JSON.stringify(result).includes('PRIVATE'));
+});
+
+test('probe selects only the main frame isolated context, never a same-process iframe', () => {
+  const child = { id: 1, name: 'Electron Isolated Context', auxData: { isDefault: false, frameId: 'child' } };
+  const main = { id: 2, name: 'Electron Isolated Context', auxData: { isDefault: false, frameId: 'main' } };
+  assert.equal(mainFrameProbeContext([child, main], 'main'), main);
+  assert.equal(mainFrameProbeContext([child], 'main'), undefined);
+  assert.equal(mainFrameProbeContext([main], undefined), undefined);
 });

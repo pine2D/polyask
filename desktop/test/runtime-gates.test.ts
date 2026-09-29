@@ -19,6 +19,7 @@ function harness(report = false) {
       if (name === "node:path") return { dirname: () => "/tmp" };
       if (name === "./diagnostics") return { buildDiagnosticSnapshot: () => ({ ok: true }) };
       if (name === "./window-trace") return { startWindowTrace: () => () => {} };
+      if (name === "./idle-throttling") return { startIdleThrottlingExperiment: () => () => {} };
       if (name === "./resource-trace") return { startResourceTrace: () => () => {} };
       assert.equal(name, "./stability-monitor");
       return { StabilityMonitor: class {

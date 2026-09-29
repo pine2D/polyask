@@ -6,6 +6,7 @@ import { app, type BrowserWindow } from "electron";
 import type { LayoutState } from "../shared/protocol";
 import { buildDiagnosticSnapshot, type DiagnosticSiteInput } from "./diagnostics";
 import { startWindowTrace } from "./window-trace";
+import { startIdleThrottlingExperiment } from "./idle-throttling";
 import { startResourceTrace } from "./resource-trace";
 import {
   StabilityMonitor,
@@ -55,6 +56,7 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
   let finished = false;
   let stopWindowTrace = () => {};
   let stopResourceTrace = () => {};
+  let stopIdleThrottling = () => {};
 
   const takeSample = () => {
     const sample = monitor.sample(metrics());
@@ -92,6 +94,8 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
   return {
     record,
     writeDiagnostic: (source) => {
+      stopIdleThrottling();
+      stopIdleThrottling = startIdleThrottlingExperiment(window, source);
       stopWindowTrace();
       stopWindowTrace = startWindowTrace(window, source);
       stopResourceTrace();
@@ -106,6 +110,7 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
       writeFileSync(diagnosticPath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
     },
     dispose: () => {
+      stopIdleThrottling();
       stopWindowTrace();
       stopResourceTrace();
       if (interval) clearInterval(interval);

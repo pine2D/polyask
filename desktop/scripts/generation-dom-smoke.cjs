@@ -15,6 +15,8 @@ app.whenReady().then(async () => {
   win = new BrowserWindow({ show: false, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   const evaluate = code => win.webContents.executeJavaScript(code);
   await win.loadURL('https://chatgpt.com/c/fixture');
+  await evaluate(source('core.js'));
+  assert.equal(await evaluate(`(()=>{const answer=document.createElement('div');answer.setAttribute('data-chatgpt-selection-message-id','canvas');answer.innerHTML='<div contenteditable="true" style="width:384px;height:3252px">Synthetic answer</div>';document.body.append(answer);const ok=window.__AMS.findComposer()===document.querySelector('textarea');answer.remove();return ok;})()`), true);
   await evaluate(`window.__AMS={adapters:{},toMarkdown:n=>n.textContent,findComposer:()=>document.querySelector('textarea')};void 0;`);
   for (const file of ['adapters-intl2.js', 'generation.js', 'history-adapters.js', 'history.js']) await evaluate(source(file));
   const results = await evaluate(`(async()=>{
