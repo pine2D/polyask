@@ -32,6 +32,7 @@ function harness(initialUiState?: DesktopUiState) {
         const id = nextId++;
         let zoom = 1;
         const view = {
+          setVisible() {},
           setBounds: (value: unknown) => bounds.push({ id, value }),
           webContents: Object.assign(new EventEmitter(), { id,
             isDestroyed: () => false, loadURL: async () => {}, focus() {},

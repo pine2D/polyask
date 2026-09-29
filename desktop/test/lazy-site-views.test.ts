@@ -20,24 +20,10 @@ test("views are created for the selection, never for the whole catalogue", () =>
     "已存在的视图不得重建，否则切页会把对话冲掉");
 });
 
-test("deselecting a site releases its view, but never one that is busy", () => {
-  const release = slice("releaseUnselectedViews");
-
-  assert.match(release, /this\.selected\.includes\(key\)/);
-  assert.match(release, /siteReloadAllowed/,
-    "正在发送/生成的站点不得释放——会把正在写的回答连页面一起丢掉");
-  assert.match(release, /webContents\.close\(\)/);
-  // 释放时要连状态一起清干净，否则重新勾选后会读到上一轮的残留状态
-  for (const cleanup of ["this.detach(key)", "this.views.delete(key)", "this.pageStatus.delete(key)",
-    "this.runStatus.delete(key)", "this.clearGenerationTracking(key)"]) {
-    assert.ok(release.includes(cleanup), `释放时漏了 ${cleanup}`);
-  }
-});
-
 test("both halves run on every reconcile so the state self-heals", () => {
   const reconcile = slice("reconcileViews");
 
-  // 忙碌站点这一轮不释放，靠下一次 reconcile 补上——不自愈就会永远留在内存里。
+  // 布局操作也执行释放检查；状态/采集完成后的自动回收另有行为回归。
   assert.match(reconcile, /this\.ensureViews\(\);/);
   assert.match(reconcile, /this\.releaseUnselectedViews\(\);/);
 });

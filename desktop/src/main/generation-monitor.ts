@@ -15,6 +15,7 @@ import type { GenerationState, SitePhase } from "../shared/protocol";
 const COMPLETE_CONFIRMATIONS = 3;
 
 interface GenerationEntry {
+  runId: string;
   observedGenerating: boolean;
   completeStreak: number;
   phase: "submitted" | "generating" | "complete";
@@ -24,28 +25,26 @@ export class GenerationMonitor {
   private runId: string | null = null;
   private readonly entries = new Map<SiteKey, GenerationEntry>();
 
-  // Retrying a failed subset reuses the run id, so the same run resumes: entries
-  // already being watched survive and only the missing sites are added. A run
-  // that was invalidated (cancel, shutdown) cannot be resumed — every site was
-  // reported cancelled and the retry carries them all — so the next begin with
-  // the same id deliberately starts over from the submitted sites alone.
-  // Returns true when an existing run was resumed.
-  begin(runId: string, sites: readonly SiteKey[]): boolean {
+  // Same-run retries preserve other sites' entries. Cancelling a dispatch
+  // invalidates its pending sites; shutdown invalidates every watch.
+  // A new run replaces only its own sites, retaining other unfinished turns.
+  // The return value concerns broadcast retry identity, not assisted watches.
+  begin(runId: string, sites: readonly SiteKey[], rememberBroadcast = true): boolean {
     const resumed = this.runId === runId;
-    if (!resumed) {
-      this.runId = runId;
-      this.entries.clear();
-    }
+    if (rememberBroadcast) this.runId = runId;
     for (const site of sites) {
-      if (this.entries.has(site)) continue;
-      this.entries.set(site, { observedGenerating: false, completeStreak: 0, phase: "submitted" });
+      if (this.entries.get(site)?.runId === runId) continue;
+      this.entries.set(site, { runId, observedGenerating: false, completeStreak: 0, phase: "submitted" });
     }
     return resumed;
   }
 
-  invalidate(): void {
-    this.runId = null;
-    this.entries.clear();
+  invalidate(sites?: readonly SiteKey[]): void {
+    if (!sites) { this.runId = null; this.entries.clear(); return; }
+    for (const site of sites) {
+      if (this.entries.get(site)?.runId === this.runId) this.runId = null;
+      this.entries.delete(site);
+    }
   }
 
   forget(site: SiteKey): void {
@@ -53,13 +52,12 @@ export class GenerationMonitor {
   }
 
   accepts(runId: string, site: SiteKey): boolean {
-    return this.runId === runId && this.entries.has(site);
+    return this.entries.get(site)?.runId === runId;
   }
 
   accept(runId: string, site: SiteKey, state: GenerationState): SitePhase | null {
-    if (this.runId !== runId) return null;
     const entry = this.entries.get(site);
-    if (!entry) return null;
+    if (!entry || entry.runId !== runId) return null;
     if (entry.phase === "complete") return "complete";
     if (state === "generating") {
       entry.observedGenerating = true;

@@ -1,3 +1,4 @@
+import { reclaimUnselectedViews } from "./view-reclamation";
 import { historyPanelWidth, coverSitesForHistory } from "./question-layout";
 import { SiteHistoryAccess } from "./site-history-access";
 import {
@@ -56,7 +57,7 @@ import { SITES } from "./sites";
 import { beginSubmissionRun, preserveSubmission, effectiveStatus, markStatusRead, statusWithUnread } from "./status";
 import type { StabilityEventInput } from "./stability-monitor";
 import { applyWorkspaceLayout, computeWorkspaceLayout } from "./workspace-layout";
-import { reconcileVisibleSiteKeys, stackOrder } from "./view-visibility";
+import { stackOrder } from "./view-visibility";
 import { SiteZoomController } from "./site-zoom";
 
 // TODO(size-ratchet)：748 行，目标 ≤400——抽出 site-workspace-state（勾选/分页/布局纯状态）、
@@ -85,6 +86,7 @@ export class ViewManager {
   private readonly pageStatus = new Map<SiteKey, SiteStatus>();
   private readonly runStatus = new Map<SiteKey, SiteStatus>();
   private readonly commands = new SiteCommandChannel();
+  private capturePending: (site: SiteKey) => boolean = () => false;
   private readonly generation = new GenerationMonitor();
   private readonly generationTimers = new Map<SiteKey, NodeJS.Timeout>();
   private readonly generationDeadlines = new Map<SiteKey, number>();
@@ -352,18 +354,21 @@ export class ViewManager {
   }, () => this.layout());
   async navigate(site: SiteKey, url: string): Promise<void> { await this.historyAccess.navigate(site, url, true); }
 
+  setCapturePending(check: (site: SiteKey) => boolean): void { this.capturePending = check; }
+
   markStatus(status: SiteStatus): void {
     this.runStatus.set(status.site, statusWithUnread(preserveSubmission(this.runStatus.get(status.site), status), this.isSiteVisible(status.site)));
     this.onStatus(this.currentStatus(status.site));
+    void Promise.resolve().then(() => this.releaseUnselectedViews());
   }
 
   // A retry reuses the run id, so only the resubmitted sites are rearmed and the
   // sites still streaming keep their timer, deadline and observed flag. A new run
-  // id (or a retry after cancel) resets every site.
-  beginGenerationRun(runId: string, sites: readonly SiteKey[]): void {
-    const resumed = beginSubmissionRun(this.generation.begin(runId, sites), this.runStatus, site => this.onStatus(this.currentStatus(site)));
-    if (resumed) for (const site of sites) this.clearGenerationTracking(site);
-    else this.clearGenerationTracking();
+  // id replaces only its target sites; other sites may still be finishing an older run.
+  beginGenerationRun(runId: string, sites: readonly SiteKey[], submission = true): void {
+    const resumed = this.generation.begin(runId, sites, submission);
+    if (submission) beginSubmissionRun(resumed, this.runStatus, site => this.onStatus(this.currentStatus(site)));
+    for (const site of sites) this.clearGenerationTracking(site);
   }
 
   watchGeneration(runId: string, site: SiteKey): void {
@@ -377,9 +382,10 @@ export class ViewManager {
     this.clearGenerationTracking(site);
   }
 
-  cancelGenerationRun(): void {
-    this.generation.invalidate();
-    this.clearGenerationTracking();
+  cancelGenerationRun(sites?: readonly SiteKey[]): void {
+    this.generation.invalidate(sites);
+    if (sites) for (const site of sites) this.clearGenerationTracking(site);
+    else this.clearGenerationTracking();
   }
 
   private clearGenerationTracking(site?: SiteKey): void {
@@ -687,31 +693,26 @@ export class ViewManager {
     }
   }
 
-  // 取消勾选后释放该站点视图：这是「少勾站点就少占内存」真正生效的那一半。
-  // 登录态存活在持久化 session 分区里，重新勾选会重新加载并仍是登录状态；**丢的是页面上的对话**，
-  // 所以正在发送/生成的站点不动——留到它空闲后的下一次 reconcile 再释放（这条路径自愈，不会漏）。
-  private releaseUnselectedViews(): void {
-    for (const [key, view] of [...this.views]) {
-      if (this.selected.includes(key)) continue;
-      if (!siteReloadAllowed(this.currentStatus(key).phase)) continue;
-      this.detach(key);
-      this.views.delete(key);
-      this.pageStatus.delete(key);
-      this.runStatus.delete(key);
-      this.generation.forget(key);
-      this.clearGenerationTracking(key);
-      if (!view.webContents.isDestroyed()) view.webContents.close();
-    }
+  // 取消勾选仅释放页面，登录保留在持久化 session；发送、生成和答案采集结束前不关闭。
+  // 状态更新及采集落库后都会重查，不再等待下一次用户布局操作。
+  releaseUnselectedViews(): void {
+    if (this.window.isDestroyed()) return;
+    reclaimUnselectedViews({
+      views: this.views, selected: this.selected, status: site => this.currentStatus(site),
+      capturePending: this.capturePending, detach: site => this.detach(site),
+      pageStatus: this.pageStatus, runStatus: this.runStatus,
+      forget: site => { this.generation.forget(site); this.clearGenerationTracking(site); }
+    });
   }
 
   private reconcileViews(): void {
     if (this.surface !== "sites" || this.window.isDestroyed()) return;
     this.ensureViews();
     this.releaseUnselectedViews();
-    const changes = reconcileVisibleSiteKeys([...this.attached], this.selected);
-    for (const site of changes.detach) this.detach(site);
-    // 按 stackOrder 依次 attach：后台页在前（底层），当前页在后（顶层）。
-    for (const site of stackOrder(this.selected, this.visibleSites())) this.attach(site);
+    for (const site of stackOrder([...this.views.keys()], this.visibleSites())) {
+      this.attach(site); // 未选但忙碌的页保留正视口，仅隐藏；当前页仍排在最上层。
+      this.views.get(site)!.setVisible(this.selected.includes(site));
+    }
   }
 
   private attach(site: SiteKey): void {

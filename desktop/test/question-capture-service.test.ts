@@ -89,3 +89,63 @@ test("flush captures a new token introduced while the previous poll is pending",
     assert.equal(db.questions.answers(next.id)[0].answerMarkdown, "New turn final text");
   } finally { capture.dispose(); pending.resolve({ token, owned: false }); db.close(); }
 });
+
+test("reclamation notification observes the persisted final answer", async () => {
+  const { db, history, q, token } = fixture();
+  let checks = 0;
+  const capture = new QuestionCaptureService(history,
+    async () => ({ token, owned: true, text: "Final answer", generation: "complete" }),
+    () => {
+      checks++;
+      if (!history.token("claude")) {
+        const answer = db.questions.answers(q.id)[0];
+        assert.equal(answer.answerMarkdown, "Final answer");
+        assert.equal(answer.capture, "complete");
+        assert.notEqual(answer.sealedAt, null);
+      }
+    });
+  try {
+    for (let i = 0; i < 4; i++) await capture.tick();
+    assert.equal(checks, 4);
+    assert.equal(history.token("claude"), undefined);
+  } finally { capture.dispose(); db.close(); }
+});
+
+test("disposed capture does not request reclamation from a late result", async () => {
+  const { db, history, token } = fixture();
+  const pending = deferredSnapshot();
+  let checks = 0;
+  const capture = new QuestionCaptureService(history, () => pending.promise, () => { checks++; });
+  try {
+    const tick = capture.tick();
+    capture.dispose();
+    pending.resolve({ token, owned: true, text: "Late answer" });
+    await tick;
+    assert.equal(checks, 0);
+  } finally { capture.dispose(); db.close(); }
+});
+
+test("unknown completion stays protected until the existing capture budget seals the saved body", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: 1000 });
+  const { db, history, q, token } = fixture();
+  let generating = true;
+  const sealed: boolean[] = [];
+  const capture = new QuestionCaptureService(history,
+    async () => ({ token, owned: true, text: "Safely attributed answer", generation: generating ? "generating" : null }),
+    () => { sealed.push(!history.token("claude")); });
+  try {
+    await capture.tick();
+    generating = false;
+    t.mock.timers.setTime(60_000);
+    await capture.tick();
+    assert.equal(history.token("claude"), token, "quiet text is not positive completion evidence");
+    assert.deepEqual(sealed, [false, false]);
+    t.mock.timers.setTime(901_010);
+    await capture.tick();
+    const answer = db.questions.answers(q.id)[0];
+    assert.equal(answer.answerMarkdown, "Safely attributed answer");
+    assert.equal(answer.capture, "unknown");
+    assert.notEqual(answer.sealedAt, null);
+    assert.deepEqual(sealed, [false, false, true]);
+  } finally { capture.dispose(); db.close(); }
+});

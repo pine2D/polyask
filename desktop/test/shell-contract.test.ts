@@ -293,7 +293,7 @@ test("answer generation monitoring is run-scoped and never changes navigation", 
   const preload = readSource("src/preload/site.ts");
   assert.match(ipc, /manager\.beginGenerationRun\(request\.runId, request\.sites\)/);
   assert.match(ipc, /watchGeneration\(request\.runId, result\.site\)/);
-  assert.match(ipc, /cancelGenerationRun\(\)/);
+  assert.match(ipc, /cancelGenerationRun\(sites\)/);
   assert.match(manager, /cmd: "generation"/);
   assert.match(preload, /parseGenerationState/);
   assert.doesNotMatch(manager, /generation[\s\S]{0,500}(loadURL|reload\(|focus\()/);
@@ -309,8 +309,8 @@ test("a retried run keeps watching the sites that are still generating", () => {
     manager.indexOf("beginGenerationRun(runId: string"),
     manager.indexOf("watchGeneration(runId: string")
   );
-  assert.match(begin, /const resumed = beginSubmissionRun\(this\.generation\.begin\(runId, sites\)/);
-  assert.match(begin, /if \(resumed\) for \(const site of sites\) this\.clearGenerationTracking\(site\)/);
+  assert.match(begin, /const resumed = this\.generation\.begin\(runId, sites, submission\)/);
+  assert.match(begin, /for \(const site of sites\) this\.clearGenerationTracking\(site\)/);
   assert.doesNotMatch(begin, /cancelGenerationRun\(\)/);
 });
 
@@ -367,12 +367,12 @@ test("assisted synthesis dispatches through its own coordinator and cancel reach
   const main = readSource("src/main/index.ts");
   const ipc = readSource("src/main/shell-ipc.ts");
   assert.match(main, /const synthesisCoordinator = new BroadcastCoordinator\(\)/);
-  assert.match(main, /return synthesisCoordinator\.send\(/);
+  assert.match(main, /sendTrackedSynthesis\(request, manager, synthesisCoordinator, 44_000\)/);
   assert.match(main, /synthesisCoordinator,/);
   const cancel = ipc.slice(ipc.indexOf('ipcMain.on("polyask:cancel"'), ipc.indexOf('ipcMain.on("polyask:set-composer-expanded"'));
   assert.match(cancel, /coordinator\.cancel\(\)/);
   assert.match(cancel, /synthesisCoordinator\.cancel\(\)/);
-  assert.match(cancel, /manager\.cancelGenerationRun\(\)/);
+  assert.match(cancel, /manager\.cancelGenerationRun\(sites\)/);
   assert.match(cancel, /synthesis\.cancel\(\)/);
 });
 

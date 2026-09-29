@@ -18,7 +18,7 @@
 | Site preload | 隔离世界里加载站点运行时，收发 `site-command`/`site-response` | `desktop/src/preload/site.ts` |
 | 站点运行时 | 九站适配器与通用链（classic script、`__AMS` 全局） | `desktop/src/site-runtime/` |
 
-- Shell 是唯一的 `BrowserWindow`；每个**已勾选**站点一个 `WebContentsView`。视图按勾选懒建：没勾的站点不建视图、不加载页面；取消勾选释放视图（登录态活在持久化 session 里，重新勾选会重新加载并仍是登录态，**丢的是页面上的对话**）。正在发送/生成的站点不释放，留到空闲后的下一次 reconcile。
+- Shell 是唯一的 `BrowserWindow`；每个**已勾选**站点一个 `WebContentsView`。视图按勾选懒建：没勾的站点不建视图、不加载页面；取消勾选释放视图（登录态活在持久化 session 里，重新勾选会重新加载并仍是登录态，**丢的是页面上的对话**）。发送中、已提交、生成中及警告态暂不释放；答案采集 token 未结束时同样保留。未选但忙碌的视图保持挂载与正尺寸、仅隐藏；状态更新及采集落库后重查并释放，无新增轮询，重新勾选及新发送按释放当时状态保护。生成监控按站点保留轮次，新轮不停止其它站旧回答的监控；取消仅终止尚在发送的站点监控和采集，已提交回答继续只读收尾。辅助综合独立监控完成、不中断群发统计，待采集/待保存的目标也保持保护，保存成功后再检查释放。
 - **所有已勾选站点都挂在视图树里并保持正尺寸**，非当前页的与当前页第一格用完全相同的矩形、压在其之下——不占屏幕、不抢鼠标。**不能只挂当前页**：未 `addChildView` 的 `WebContentsView` 页面视口恒 0×0（只 `setBounds` 同样是 0），`site-runtime/core.js` 的 `findComposer` 因 `r.top < innerHeight` 恒假而返回 null，群发对后台站点必然 `composer_not_found`，一路重投烧到截止线。
 - **层序靠「重挂即提升」**：`addChildView` 对已在树里的子视图是原地提升到最顶层（幂等、`children` 不增长）。**绝不要改成先 detach 再 attach**——全拆重挂实测会让被聚焦站点的渲染进程真的丢焦点。落点 `view-manager.ts` 的 `attach`/`detach`/`reconcile`。
 - 布局、缩放、槽位顺序、`WebContents` 生命周期归 main；renderer 只提交白名单意图。

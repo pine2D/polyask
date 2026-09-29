@@ -48,7 +48,7 @@ import { DataAdminService } from "./data-admin-service";
 import { registerShellIpc } from "./shell-ipc";
 import { SITES } from "./sites";
 import { runStartup } from "./startup";
-import { statusForResult } from "./status";
+import { sendTrackedSynthesis } from "./synthesis-generation";
 import { createSyncRuntime } from "./sync-runtime";
 import { SynthesisService } from "./synthesis-service";
 import { UiStateStore } from "./ui-state-store";
@@ -298,16 +298,8 @@ async function createWindow(): Promise<void> {
     sites: SITES,
     archives,
     navigate: (site, url) => manager.navigate(site, url),
-    send: (request) => {
-      for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
-      return synthesisCoordinator.send(
-        request,
-        (site, command, signal) => manager.sendCommand(site, command, signal),
-        44_000,
-        (result) => manager.markStatus(statusForResult(result.site, result)),
-        { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
-      );
-    },
+    send: request => sendTrackedSynthesis(request, manager, synthesisCoordinator, 44_000),
+    onPendingChange: () => manager.releaseUnselectedViews(),
     collect: (sites, runId) => collection.collect(sites, runId),
     targetAvailable: (site) => workspace.getState().selectedSites.includes(site),
     beforeSend: () => collection.clearRun(),

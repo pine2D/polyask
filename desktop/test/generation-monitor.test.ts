@@ -107,3 +107,41 @@ test("forgetting one site leaves the rest of the run watched", () => {
   assert.equal(monitor.accept("run-1", "claude", "generating"), null);
   assert.equal(monitor.accepts("run-1", "gemini"), true);
 });
+
+test("starting another site's run preserves the first site's completion watch", () => {
+  const monitor = new GenerationMonitor();
+  monitor.begin("first", ["claude"]);
+  monitor.accept("first", "claude", "generating");
+  monitor.begin("second", ["gemini"]);
+  assert.equal(monitor.accepts("first", "claude"), true);
+  reachComplete(monitor, "first", "claude");
+  assert.equal(monitor.accept("first", "claude", "complete"), "complete");
+  assert.equal(monitor.accepts("second", "gemini"), true);
+  monitor.begin("third", ["claude"]);
+  assert.equal(monitor.accepts("first", "claude"), false);
+  assert.equal(monitor.accepts("second", "gemini"), true);
+  monitor.invalidate();
+  assert.equal(monitor.accepts("second", "gemini"), false);
+});
+
+test("assisted monitoring does not replace the latest broadcast retry identity", () => {
+  const monitor = new GenerationMonitor();
+  monitor.begin("broadcast", ["claude", "gemini"]);
+  monitor.begin("assisted", ["kimi"], false);
+  assert.equal(monitor.begin("broadcast", ["gemini"]), true);
+  assert.equal(monitor.accepts("broadcast", "claude"), true);
+  assert.equal(monitor.accepts("assisted", "kimi"), true);
+});
+
+test("cancelling a dispatch subset preserves already submitted older watches", () => {
+  const monitor = new GenerationMonitor();
+  monitor.begin("old", ["claude"]);
+  monitor.accept("old", "claude", "generating");
+  monitor.begin("new", ["gemini"]);
+  monitor.invalidate(["gemini"]);
+  assert.equal(monitor.accepts("old", "claude"), true);
+  assert.equal(monitor.accepts("new", "gemini"), false);
+  assert.equal(monitor.begin("new", ["gemini"]), false);
+  reachComplete(monitor, "old", "claude");
+  assert.equal(monitor.accept("old", "claude", "complete"), "complete");
+});

@@ -1,5 +1,5 @@
 import { registerQuestionHistoryIpc } from "./question-history-ipc";
-import { QuestionCaptureService } from "./question-capture-service";
+import { createQuestionCapture } from "./question-capture-binding";
 import type { QuestionHistoryService } from "./question-history-service";
 import type { BackupService } from "./backup-service";
 import { registerBackupIpc } from "./backup-ipc";
@@ -130,7 +130,7 @@ function strictId(value: unknown): string {
 export function registerShellIpc(options: ShellIpcOptions): () => void {
   const { window, manager, workspace, coordinator, synthesisCoordinator, collection, archives, history, promptLibrary, synthesis, sync } = options;
   const operationGate = new OperationGate();
-  const capture = new QuestionCaptureService(options.questions, (site, token, deadline) => manager.historyAccess.snapshot(site, token, deadline));
+  const capture = createQuestionCapture(options.questions, manager, site => synthesis.getPending()?.targetSite === site);
   const trustedShell = (event: ShellIpcEvent) =>
     event.sender.id === window.webContents.id &&
     event.senderFrame?.parent === null &&
@@ -316,12 +316,13 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.on("polyask:cancel", (event) => {
     if (trustedShell(event)) {
-      options.questions.cancel();
+      const sites = manager.getStatuses().filter(status => status.phase === "sending").map(status => status.site);
+      options.questions.cancel(sites);
       coordinator.cancel();
       // Cancel reaches both dispatch paths; the synthesis coordinator is separate
       // from the broadcast one and would otherwise keep typing into a site.
       synthesisCoordinator.cancel();
-      manager.cancelGenerationRun();
+      manager.cancelGenerationRun(sites);
       synthesis.cancel();
     }
   });

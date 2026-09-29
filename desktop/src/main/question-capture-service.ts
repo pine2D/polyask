@@ -9,7 +9,8 @@ export class QuestionCaptureService {
   private running: Promise<void> | null = null;
   private observed = new Set<string>();
   constructor(private readonly history: QuestionHistoryService,
-    private readonly read: (site: SiteKey, token: string, deadline: number) => Promise<HistorySnapshot>) {}
+    private readonly read: (site: SiteKey, token: string, deadline: number) => Promise<HistorySnapshot>,
+    private readonly afterPoll: () => void = () => {}) {}
   start(): void {
     if (this.timer || this.running) return;
     this.timer = setTimeout(() => { this.timer = null; void this.tick(); }, 5_000);
@@ -46,7 +47,10 @@ export class QuestionCaptureService {
       await this.running;
     } finally {
       this.running = null;
-      if (epoch === this.epoch && this.history.targets().length) this.start();
+      if (epoch === this.epoch) {
+        if (this.history.targets().length) this.start();
+        this.afterPoll();
+      }
     }
   }
   private async poll(epoch: number, deadline: number, observed: Set<string>, sites?: readonly SiteKey[]): Promise<void> {

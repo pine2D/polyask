@@ -24,6 +24,7 @@ interface SynthesisServiceOptions {
   readonly showTarget: (site: SiteKey) => void;
   readonly recordHistory: (text: string) => void;
   readonly beforeSend?: () => void;
+  readonly onPendingChange?: () => void;
   readonly now?: () => number;
 }
 
@@ -95,6 +96,7 @@ export class SynthesisService {
         sentAt: this.now()
       };
       this.candidate = null;
+      this.options.onPendingChange?.();
       return { result: outcome, pending: this.pending };
     } finally {
       if (this.activeController === controller) this.activeController = null;
@@ -129,6 +131,7 @@ export class SynthesisService {
     });
     this.pending = null;
     this.candidate = null;
+    this.options.onPendingChange?.();
     return saved;
   }
 

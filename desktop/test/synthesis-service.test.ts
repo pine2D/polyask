@@ -330,3 +330,24 @@ test("follow-up validates before navigation and sends once to one selected site,
     assert.deepEqual((await service.save(true)).results,record.results);
   } finally {database.close();}
 });
+
+test("pending synthesis keeps its page protected through collect and notifies after saved", async () => {
+  const { database, archives, record } = fixture();
+  const pendingTargets: (string | undefined)[] = [];
+  const service = new SynthesisService({
+    sites: SITES, archives, navigate: async () => {}, send: async () => [{ site: "claude", ok: true }],
+    collect: async () => [{ site: "claude", host: "claude.ai", label: "Claude", text: "Saved synthesis", state: "fast" }],
+    showTarget: () => {}, recordHistory: () => {},
+    onPendingChange: () => pendingTargets.push(service.getPending()?.targetSite)
+  });
+  try {
+    await service.send({ archiveId: record.id, targetSite: "claude", tier: "think",
+      selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "Compare" });
+    assert.deepEqual(pendingTargets, ["claude"]);
+    await service.collect();
+    assert.equal(service.getPending()?.targetSite, "claude");
+    await service.save(false);
+    assert.deepEqual(pendingTargets, ["claude", undefined]);
+    assert.equal(archives.get(record.id)?.synthesis?.text, "Saved synthesis");
+  } finally { database.close(); }
+});
