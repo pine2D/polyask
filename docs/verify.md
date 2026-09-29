@@ -292,3 +292,15 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 - `bash scripts/verify.sh`、`cd desktop && npm test`（701 项应用测试、129 项运行时测试）及独立 `npm run typecheck` 均通过；独立代码审查发现正文模型名可能冒充入口，已将文字回退限定在真实顶部 `.desktop-no-drag` 区域并补回归，复核通过。
 - 重启使用 `~/.config/PolyAsk` 的开发态，先确认旧调试端口释放，再确认隔离上下文加载新版 `_modeOnly`。正常视口 `innerWidth=467` 和真实站点移除模型入口后的 `267`，各调用生产 `__AMS.runMode` 思考→快速→思考→快速，8 次全部返回 true；模式按钮与 `getState()` 一致，每次等待 650ms 后可见 menu/dialog 均为 0。
 - 无入口时模型检查为 `ok:false, kind:tier`，其余检查通过；有入口时四项检查全绿。恢复原先宽度及日常/快速状态。有效 `devicePixelRatio≈1.35`，不把 Linux/CDP 验证称为 Windows 150% 原生验收；另一台电脑宽页无入口版本仍需用户环境验收。本轮未发送提问或验证九站群发。
+
+## 2026-09-29 生成状态与新版 ChatGPT 复核
+
+继续测试时，对异常五站各发一次新通用问题采集状态变化；ChatGPT 输入注入成功且发送按钮点击时仍有文本，随后出现 Stop 与回答操作控件，本轮排除“注入先被回滚为空”的假设。ChatGPT 新版轮次/正文属性、四站停止键漏匹配均有实时 DOM 证据；豆包补采后确认停止控件是无 button 角色的 break-btn 容器。首轮未保留足够 DOM，不能倒推首轮 ChatGPT 的实际回答情况。
+
+修复后的 Linux/WSL 开发态测试使用生产群发入口，保持当前模型、无图片、无重发。ChatGPT、DeepSeek、Kimi、元宝均依次上报 submitted/generating/complete，完成约为 15.4/4.3/17.2/10.6 秒；各站本轮用户数为 1，提问精确匹配，提取正文分别为 354/382/272/420 字符。豆包在此轮尚未应用最终停止键修复，有 59 字符正文但仍 submitted；补齐后再次重启开发态单站验证，约 1.0 秒 submitted、1.1 秒 generating、14.2 秒 complete，本轮提问匹配、用户数为 1。测试问题的约 300 字要求不是站点准确遵守的保证。
+
+新增隔离验证命令：仓库根运行 `xvfb-run -a desktop/node_modules/.bin/electron desktop/scripts/generation-dom-smoke.cjs`（有显示服务可省略 xvfb-run）。临时 profile 内拦截 HTTPS 返回合成页面、阻断 HTTP；不访问账号、不发送提问。真实 Chromium 选择器覆盖五站停止键/发送键对照，以及 ChatGPT 旧答→新用户→思考→新正文、同根 Markdown 替换、新旧用户标记去重和直接追问归属终止。它补足 VM 选择器字符串桩的局限，不替代生产站点验证。
+
+此修复是后续资源策略的可靠性前提，不是 CPU/内存优化收益；生产 `backgroundThrottling:false` 与探针频率保持。跨平台、长会话及启用后台节流后的兼容性仍待验证。
+
+最终离线门禁：727 条 TS/TSX 测试及 179 条脚本测试通过，独立 typecheck、仓库 verify 与真实 DOM 隔离 smoke 通过；Linux 打包成功，产物 smoke 确认 shell=1、sites=9、attached=9。

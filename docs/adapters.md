@@ -180,7 +180,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **切档靠键盘，且只有左右方向键有效**：`_pickEdge` 聚焦 Power 项后逐格发 `ArrowRight`/`ArrowLeft`（`KeyboardEvent` 必须 `bubbles:true`），每格 220ms、循环上界 = 档位数，端点会饱和不越界。**`End` / `Home` 真机实测无效**（值纹丝不动），不要拿它们省循环。收尾比对 `lv.now === goal`，不等就抛「ChatGPT: 档位未到端点」。
 - **模型 radio 常驻菜单**：Advanced 视图（`composer-model-picker-slider-advanced-view`）不必展开也在 DOM，`GPT-5.6 Sol`(checked) / `GPT-5.5` 两项随时可取。`_selectModel` 先直接找，找不到才点 `aria-label="Select model"` 入口；**已 `aria-checked=true` 就直接返回不点**（点了会连带把菜单收掉）。
 - 档位锚点 `_anchor()` 使用**纯选择子**：优先 `button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]`，旧版 `button.__composer-pill[aria-haspopup="menu"]` 兜底。2026-09-28 开发态复现：新版移除了 `__composer-pill`，原选择子导致入口项红、档位未知；菜单仍有 Power 滑块与模型 radio，但 `composer-intelligence-picker-content` testid 已缺失，由 `_power()` 兜底识别。按钮含 `visibility:hidden` 的测量文字，`state()` 改读 `innerText`（不支持时回退 `textContent`），且 `aria-expanded=true` 时返回 null。**不许做文本前置校验**：菜单展开时按钮是控件名。入口项反映锚点是否命中，档位项反映标签是否可读；不凭诊断红项断言按钮真的消失。
-- `answer()` 取 `[data-turn="assistant"]` 末条 → `.markdown`（旧内层 `[data-message-author-role="assistant"]` 兜底）。`attach` 走 `#upload-photos`。唯一实现 `stop()` 的站（`[data-testid="stop-button"]`，回退 aria-label 含 stop answering/streaming/generating 的按钮）——**目前无调用方**。
+- `answer()` 优先取 `[data-content-search-unit-key]` 内具有 `[data-conversation-role="assistant"]` 标记的 `[data-markdown-text-style="assistant-message"]`，旧 `[data-turn="assistant"]` 末条 → `.markdown` 及 `[data-message-author-role="assistant"]` 保留兜底。2026-09-29 新版真机已移除旧标记；历史用户正文认 `[data-user-message-bubble]`，同轮新旧标记嵌套只计一次；回答根及身份取 `[data-chatgpt-selection-message-id]`，仍用文档顺序拒绝新用户之前的旧回答。`attach` 走 `#upload-photos`。唯一实现 `stop()` 的站（`[data-testid="stop-button"]`，回退 aria-label 含 stop answering/streaming/generating 的按钮）——**目前无调用方**。
 - **中文界面（用户截图 2026-09-15）**：菜单打开时 pill 显示「思考强度」，命中 `_OPEN_PILL`；模型 radio 三项 **「最新」（默认勾选，GPT-6 Astra 别名）/ `GPT-5.6 Sol` / `GPT-5.5`（10 月 14 日下线）**。适配器仍显式选 `GPT-5.6 Sol`，不跟「最新」——它指向谁由 OpenAI 随时改，think/fast 两档要落在同一个已知模型上。`_power()` 里的其余中文候选（强度 / 力度）仍是直译未验证。
 
 - **2026-09-29 切档证据**：现代菜单的 Power 最近 `role=menu` 包含模型 radio，匹配范围限定此菜单（兼容旧 testid）。实际选中 GPT-5.6 Sol 并复读后，把滑块推到 4/4 或 0/4；`selection()` 在菜单仍可读时返回 `preferred`，关闭后仅凭标签返回 `mode_only`，不复用缓存模型。缺字段、隐藏滑块、模型未选中均不能宣称精确确认。
@@ -289,3 +289,7 @@ Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址：仅空首�
 - 千问：添加附件通过 PointerEvent 的 pointerdown/up（pointerType=mouse）打开；选“上传图片”才会创建 `accept*=image/` 输入，捕获 file click 防止弹出系统选择器。每次重新走菜单；finally 移除监听并关菜单，所有等待夹取 deadline。
 - 智谱：本地文件选择的 `.upload-demo` 承载新聊天附件入口；旧 `.img-input` 虽接收 files，却不触发当前附件流程。
 - 开发态已用无个人信息的测试图验证上述三站与 Kimi 的附件确认；不把“附件确认”视为完整回答质量或所有账号额度的保证。
+
+### 2026-09-29 生成状态控件复核
+
+`generation.js` 补充五站实测停止键：ChatGPT `button[aria-label="Stop"]`；DeepSeek `.ds-button--primary` 内 `path[d^="M2 4.88C2"]` 方形 SVG（同类发送箭头不能算停止键）；豆包 `[class*="break-btn-"]` 无 button 角色的容器；Kimi `.send-button-container.stop`；元宝 `#yuanbao-send-btn[aria-label="Stop Answering"]`。继续执行可见性和输入区邻近检查，旧锚点保留。主进程仍须先观察到 generating，再经连续完成确认；未改变轮询、预算、后台节流或不明确提交不重发的规则。不能用此状态探针证明回答内容正确，或推断历史副本已完成。

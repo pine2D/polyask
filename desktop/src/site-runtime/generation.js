@@ -10,13 +10,14 @@
     // chat-input-attach 均已真机核实）；stop-button 是 ChatGPT 的形状，Claude 上零命中，
     // 保留它只为万一回归。aria-label 由 react-intl 产出、随界面语言变，只能当兜底不能当锚点。
     "claude.ai": '[data-testid="chat-input-stop"],[data-testid="stop-button"],button[aria-label*="stop response" i],button[aria-label*="停止回答"]',
-    "chatgpt.com": '[data-testid="stop-button"],button[aria-label*="stop answering" i],button[aria-label*="stop generating" i],button[aria-label*="停止回答"]',
+    "chatgpt.com": 'button[aria-label="Stop"],[data-testid="stop-button"],button[aria-label*="stop answering" i],button[aria-label*="stop generating" i],button[aria-label*="停止回答"]',
     "gemini.google.com": 'button[aria-label*="stop response" i],button[aria-label*="停止回答"]',
-    "deepseek.com": '[aria-label*="stop" i],[aria-label*="停止"]',
-    "doubao.com": '#flow-end-msg-stop,[aria-label*="stop" i],[aria-label*="停止"]',
+    // DeepSeek 无停止标签：限定主按钮内已实测的方形 SVG，不能把同类发送箭头当停止键。
+    "deepseek.com": '.ds-button--primary:has(svg path[d^="M2 4.88C2"]),[aria-label*="stop" i],[aria-label*="停止"]',
+    "doubao.com": '[class*="break-btn-"],#flow-end-msg-stop,[aria-label*="stop" i],[aria-label*="停止"]',
     "qianwen.com": '[aria-label*="stop" i],[aria-label*="停止"]',
-    "kimi.com": '.stop-button,[class*="stop-button"],[aria-label*="stop" i],[aria-label*="停止"]',
-    "yuanbao.tencent.com": '[aria-label="Stop"],[aria-label="停止"]',
+    "kimi.com": '.send-button-container.stop,.stop-button,[class*="stop-button"],[aria-label*="stop" i],[aria-label*="停止"]',
+    "yuanbao.tencent.com": '#yuanbao-send-btn[aria-label="Stop Answering"],[aria-label="Stop"],[aria-label="停止"]',
     "chatglm.cn": '.enter.searching,.stop-button,[aria-label*="stop" i],[aria-label*="停止"]',
   };
 

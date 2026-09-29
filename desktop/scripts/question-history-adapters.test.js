@@ -62,3 +62,15 @@ test('Doubao predecessor uses the prior logical text turn, not its image bubble'
   assert.equal(a.historyTurn().previousUserKey, 'old');
   assert.equal(a.historyTurn().userKey, 'new');
 });
+
+test('ChatGPT binds the new user bubble without including copy controls or counting its old wrapper twice', () => {
+  const bubble = user('Synthetic question');
+  const wrapper = user('Synthetic question Copy', { '[data-user-message-bubble]': bubble });
+  wrapper.contains = node => node === bubble;
+  const selector = '[data-turn="user"], [data-message-author-role="user"], [data-user-message-bubble]';
+  const a = fixture('chatgpt.com', selector, [wrapper, bubble]);
+  assert.equal(a.historyTurn().userCount, 1);
+  assert.equal(a.historyTurn().text, 'Synthetic question');
+  const modern = fixture('chatgpt.com', selector, [bubble]);
+  assert.equal(modern.historyTurn().user, bubble);
+});

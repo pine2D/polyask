@@ -166,9 +166,11 @@
         // 粗档位不能证明滑块端点；菜单关着读不到模型时仅确认模式，不缓存先前读数。
         return level && match ? { outcome: "preferred", observed, model: match.model } : { outcome: "mode_only", observed };
       },
-      // 最后一条回答（真机审计 2026-08：每轮 section[data-turn]，正文仍在 .markdown）；
-      // data-message-author-role 是滚动发布中的旧内层，保留兜底。
+      // 2026-09 新版用语义 data 属性；限定 assistant 区块，排除用户气泡和思考段。
+      // 保留 section[data-turn] 与 data-message-author-role 两种旧布局。
       answer: function () {
+        const modern = document.querySelectorAll('[data-content-search-unit-key]:has([data-conversation-role="assistant"]) [data-markdown-text-style="assistant-message"]');
+        if (modern.length) return modern[modern.length - 1];
         let els = document.querySelectorAll('[data-turn="assistant"]');
         if (!els.length) els = document.querySelectorAll('[data-message-author-role="assistant"]');
         if (!els.length) return null;

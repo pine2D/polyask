@@ -5,7 +5,7 @@
   if (!S?.adapters) return;
   const users = {
     "claude.ai": '[data-testid="user-message"]',
-    "chatgpt.com": '[data-turn="user"], [data-message-author-role="user"]',
+    "chatgpt.com": '[data-turn="user"], [data-message-author-role="user"], [data-user-message-bubble]',
     "gemini.google.com": "user-query",
     "deepseek.com": ".ds-message",
     "doubao.com": "[data-message-id]",
@@ -15,13 +15,13 @@
     "chatglm.cn": ".conversation.question .question-txt"
   };
   const answerRoots = {
-    "claude.ai": ".font-claude-response", "chatgpt.com": '[data-turn="assistant"]',
+    "claude.ai": ".font-claude-response", "chatgpt.com": '[data-turn="assistant"], [data-chatgpt-selection-message-id]',
     "gemini.google.com": "model-response", "deepseek.com": ".ds-message",
     "doubao.com": "[data-message-id]", "qianwen.com": ".answer-common-card",
     "kimi.com": ".chat-content-item-assistant", "yuanbao.tencent.com": ".agent-chat__list__item--ai",
     "chatglm.cn": ".answer-content"
   };
-  const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || null;
+  const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || null;
   for (const [host, selector] of Object.entries(users)) {
     const a = S.adapters[host];
     if (!a || typeof a.answer !== "function") continue;
@@ -53,7 +53,8 @@
         const order = user.compareDocumentPosition(answer);
         if ((order & 1) || !(order & 4) || user.contains(answer)) answer = null;
       }
-      const textNode = host === "kimi.com" ? user.querySelector(".user-content") || user : user;
+      const textNode = host === "kimi.com" ? user.querySelector(".user-content") || user
+        : host === "chatgpt.com" ? user.querySelector('[data-user-message-bubble]') || user : user;
       const text = host === "gemini.google.com"
         ? [...user.querySelectorAll(".query-text-line")].map(node => node.innerText || node.textContent || "").join("\n")
         : textNode.innerText || textNode.textContent || "";

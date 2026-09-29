@@ -102,3 +102,18 @@ test('ChatGLM searching control keeps thought-only turns generating', () => {
   assert.equal(run('chatglm.cn', { answer: () => null }, [stop]).generation(), 'generating');
   assert.equal(run('chatglm.cn', { answer: () => null }).generation(), 'idle');
 });
+
+for (const [host, selector] of [
+  ['chatgpt.com', 'button[aria-label="Stop"]'],
+  ['kimi.com', '.send-button-container.stop'],
+  ['doubao.com', '[class*="break-btn-"]'],
+  ['yuanbao.tencent.com', '#yuanbao-send-btn[aria-label="Stop Answering"]'],
+  ['deepseek.com', '.ds-button--primary:has(svg path[d^="M2 4.88C2"])'],
+]) {
+  test(`${host} recognizes the verified September stop control, including thought-only replies`, () => {
+    const stop = { selectors: [selector], getBoundingClientRect: () => rect(620) };
+    assert.equal(run(host, { answer: () => null }, [stop]).generation(), 'generating');
+    stop.getBoundingClientRect = () => ({ ...rect(620), width: 0 });
+    assert.equal(run(host, { answer: () => null }, [stop]).generation(), 'idle');
+  });
+}
