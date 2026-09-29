@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.9.0] - 2026-09-29
+
+验收限制：本版已通过 Linux 隔离 Electron 的侧栏开关、键盘及原生 Ctrl+滚轮缩放回归，并验证各站比例保存恢复。Windows/macOS 原生键鼠与五种发行包原生安装尚未验收；本轮未重跑九站真实群发、真实 Drive 双设备同步或 Google Cloud 控制台指标检查。
+
 ### 新增
 
 - AI 站点支持 Ctrl+鼠标滚轮及 Ctrl++／−独立缩放，Ctrl+0 恢复 100%；macOS 支持 Command 快捷键。各站比例在重启后保留，快捷键速查新增对应操作与说明。
@@ -957,7 +961,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.8.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.9.0...HEAD
+[1.9.0]: https://github.com/pine2D/polyask/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/pine2D/polyask/compare/v1.7.3...v1.8.0
 [1.7.3]: https://github.com/pine2D/polyask/compare/v1.7.2...v1.7.3
 [1.7.2]: https://github.com/pine2D/polyask/compare/v1.7.1...v1.7.2
