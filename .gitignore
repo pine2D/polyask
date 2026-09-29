@@ -40,3 +40,7 @@ desktop/resources/oauth.json
 
 # 本地调试脚本
 scratchpad/
+
+# 测试报告、抓包、截图与临时采样；可复用测试源码仍正常入库。
+/test-artifacts/
+/desktop/test-artifacts/
