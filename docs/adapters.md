@@ -184,6 +184,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **中文界面（用户截图 2026-09-15）**：菜单打开时 pill 显示「思考强度」，命中 `_OPEN_PILL`；模型 radio 三项 **「最新」（默认勾选，GPT-6 Astra 别名）/ `GPT-5.6 Sol` / `GPT-5.5`（10 月 14 日下线）**。适配器仍显式选 `GPT-5.6 Sol`，不跟「最新」——它指向谁由 OpenAI 随时改，think/fast 两档要落在同一个已知模型上。`_power()` 里的其余中文候选（强度 / 力度）仍是直译未验证。
 
 - **2026-09-29 切档证据**：现代菜单的 Power 最近 `role=menu` 包含模型 radio，匹配范围限定此菜单（兼容旧 testid）。实际选中 GPT-5.6 Sol 并复读后，把滑块推到 4/4 或 0/4；`selection()` 在菜单仍可读时返回 `preferred`，关闭后仅凭标签返回 `mode_only`，不复用缓存模型。缺字段、隐藏滑块、模型未选中均不能宣称精确确认。
+- **2026-09-30 副本实测**：首轮先出现 `/c/local-chatgpt%3A<id>`，再变为 `/c/<server-id>`；旧规则只识别 `WEB:<id>`，会误判用户切会话并封存空副本。`history.js` 只把 `WEB` / `local-chatgpt` 加 `:` 或 `%3A` 的明确临时格式视为尚未确定路由，正式地址仍锁定；未知前缀、浏览器前后退、其它正式会话不能沿用归属。流式正文还会在首 token 后新增 `[data-chatgpt-selection-message-id]` 包装；历史回答根优先用生成前后都存在的 `[data-content-search-unit-key]` 及其 key，旧布局仍回退原根。不要用延迟插入的 selection 包装锁定首 token，否则下一次读取就误判替换，仅保存开头。
 
 ### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl.js`）
 

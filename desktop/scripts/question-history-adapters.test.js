@@ -74,3 +74,17 @@ test('ChatGPT binds the new user bubble without including copy controls or count
   const modern = fixture('chatgpt.com', selector, [bubble]);
   assert.equal(modern.historyTurn().user, bubble);
 });
+test('ChatGPT keeps the search-unit answer root when selection metadata wraps the same streaming Markdown', () => {
+  const bubble = user('Synthetic question');
+  const selector = '[data-turn="user"], [data-message-author-role="user"], [data-user-message-bubble]';
+  const a = fixture('chatgpt.com', selector, [bubble]);
+  const root = { getAttribute: name => name === 'data-content-search-unit-key' ? 'answer-unit' : null };
+  let selection = null;
+  const markdown = { isConnected: true, closest: s => s === '[data-content-search-unit-key]' ? root : selection };
+  a.answer = () => markdown;
+  assert.equal(a.historyTurn().answerRoot, root);
+  assert.equal(a.historyTurn().answerKey, 'answer-unit');
+  selection = { getAttribute: () => 'selection-id' };
+  assert.equal(a.historyTurn().answerRoot, root);
+  assert.equal(a.historyTurn().answerKey, 'answer-unit');
+});

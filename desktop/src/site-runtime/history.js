@@ -16,8 +16,11 @@
   function route() {
     const url = new URL(location.href);
     const cid = url.hostname === "chatglm.cn" ? url.searchParams.get("cid") : null;
+    // ChatGPT first renders local-chatgpt:<id> (often URL-encoded), then settles
+    // to the server conversation. Neither provisional format locks ownership.
+    const provisional = url.hostname === "chatgpt.com" && /^\/c\/(?:WEB|local-chatgpt)(?::|%3a)[a-zA-Z0-9_-]+$/i.test(url.pathname);
     return { id: url.origin + url.pathname + (cid ? "?cid=" + cid : ""),
-      home: !cid && ((url.hostname === "chatgpt.com" && /^\/c\/WEB:[a-zA-Z0-9_-]+$/.test(url.pathname)) || (url.hostname === "yuanbao.tencent.com" && /^\/chat\/[^/]+\/?$/.test(url.pathname)) || /^\/(?:new|app|agent|chat\/?|main\/alltoolsdetail)?$/.test(url.pathname)) };
+      home: !cid && (provisional || (url.hostname === "yuanbao.tencent.com" && /^\/chat\/[^/]+\/?$/.test(url.pathname)) || /^\/(?:new|app|agent|chat\/?|main\/alltoolsdetail)?$/.test(url.pathname)) };
   }
   function checkRoute(e, turn) {
     const current = route();

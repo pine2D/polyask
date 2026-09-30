@@ -21,7 +21,7 @@
     "kimi.com": ".chat-content-item-assistant", "yuanbao.tencent.com": ".agent-chat__list__item--ai",
     "chatglm.cn": ".answer-content"
   };
-  const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || null;
+  const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || node?.getAttribute?.("data-content-search-unit-key") || null;
   for (const [host, selector] of Object.entries(users)) {
     const a = S.adapters[host];
     if (!a || typeof a.answer !== "function") continue;
@@ -58,7 +58,10 @@
       const text = host === "gemini.google.com"
         ? [...user.querySelectorAll(".query-text-line")].map(node => node.innerText || node.textContent || "").join("\n")
         : textNode.innerText || textNode.textContent || "";
-      const answerRoot = answer?.closest?.(answerRoots[host]) || answer;
+      // ChatGPT adds its selection-message wrapper after streaming has begun.
+      // The surrounding search unit exists from the first token and stays stable.
+      const answerRoot = (host === "chatgpt.com" && answer?.closest?.('[data-content-search-unit-key]'))
+        || answer?.closest?.(answerRoots[host]) || answer;
       return { user, userCount: userCount ?? nodes.length, previousUserKey, answer, answerRoot, text, userKey: key(user), answerKey: key(answerRoot) };
     };
   }
