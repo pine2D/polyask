@@ -8,9 +8,21 @@
 
 ## [未发布]
 
+## [1.10.1] - 2026-09-30
+
+验收限制：本次在 Linux/WSL 开发态实测 ChatGPT；Windows/macOS 原生站点与五种发行包原生安装、真实 Drive 双设备同步及 Google Cloud 控制台指标未在本轮验收。已缺失或截断的旧副本不会自动回填。
+
 ### 修复
 
 - 修复 ChatGPT 首轮临时会话地址转为正式地址时漏存回答副本，以及流式正文新增消息容器后仅保存开头的问题；副本持续跟随同轮回答，切换会话和手动追问仍停止原轮采集。
+
+### 安全
+
+- 将随发行包分发的 Electron 从 43.4.0 升级到 44.5.0，修复旧运行时已披露的高危安全问题。
+
+### 变更
+
+- macOS 最低要求提高到 13（Ventura），不再支持 macOS 12。
 
 ## [1.10.0] - 2026-09-30
 
@@ -981,7 +993,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.10.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.10.1...HEAD
+[1.10.1]: https://github.com/pine2D/polyask/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/pine2D/polyask/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/pine2D/polyask/compare/v1.8.0...v1.9.0
 [1.8.0]: https://github.com/pine2D/polyask/compare/v1.7.3...v1.8.0

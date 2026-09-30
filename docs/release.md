@@ -30,6 +30,8 @@ bash scripts/release.sh --publish      # 推 v* tag；Release workflow 构建并
 
 ## Release 资产与正文
 
+当前运行时为 Electron 44.5.0；从 v1.10.1 起，macOS 最低版本为 13（Ventura）。更新运行时主版本时，应核对上游兼容性变更，并同步 README 与本版 Release 说明的系统要求。
+
 每个 Release 恰好包含 5 个主包和 5 个同名 `.sha256`：
 
 - Windows x64 安装版：`polyask-desktop-vX.Y.Z-windows-x64.exe`

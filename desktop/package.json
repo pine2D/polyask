@@ -1,6 +1,6 @@
 {
   "name": "polyask-desktop",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "productName": "PolyAsk",
   "private": true,
   "description": "PolyAsk cross-platform desktop shell",
@@ -43,7 +43,7 @@
     "@types/react": "^19.0.3",
     "@types/react-dom": "^19.0.2",
     "css-loader": "^7.1.2",
-    "electron": "43.4.0",
+    "electron": "44.5.0",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.2",
     "tsx": "4.23.12",

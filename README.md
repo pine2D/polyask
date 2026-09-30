@@ -58,6 +58,8 @@ PolyAsk 是个桌面应用。它把 Claude、ChatGPT、Gemini、DeepSeek、豆�
 
 到 [Releases](https://github.com/pine2D/polyask/releases) 下载对应系统的文件：
 
+macOS 需要 13（Ventura）或更高版本。
+
 | 系统 | 文件 | 怎么装 |
 | --- | --- | --- |
 | Windows x64 | `polyask-desktop-vX.Y.Z-windows-x64.exe` | 运行安装程序 |
