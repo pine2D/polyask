@@ -30,7 +30,8 @@
 
 ## 离线回归
 
-- 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
+- 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个同源本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、共享登录域导航、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
+- 进程诊断桥接实测：`xvfb-run -a node scripts/runtime-process-smoke.mjs`，在两个临时离线 Electron 窗口运行生产 runtime-gates、preload 与 site-health IPC。合成 `child-process-gone` 事件核对可信窗口取数、其它 sender 拒绝、报告白名单过滤及释放清理；不使实际 GPU/网络进程崩溃，不代表 Windows 原生启动失败复现。
 
 - `test:shell-ui` 另覆盖 Windows/macOS/Linux 的确认按钮 DOM 顺序、取消默认焦点、Tab 圈定、IME Escape、焦点恢复，以及强制颜色与减少动态效果的 Chromium 媒体模拟。截图与断言来自 Linux Electron，不能证明 Windows/macOS 的原生字体、系统菜单、输入法候选窗或读屏行为；这些仍需对应实机验收。
 
@@ -88,7 +89,7 @@
 
 - 资源归属记录：启动前设置 `POLYASK_RESOURCE_TRACE` 为尚不存在的本地 JSONL 路径，默认每 5 秒一笔，最长 30 分钟，关闭窗口即停止；不自动退出应用。启动期单列，CPU 首笔和每个新 PID/创建时间的首笔无有效区间，按 `cpuIntervalValid` 排除。进程数组按 PID 一笔，站点只关联主帧；不可把共享 PID 分别归到各站后再次求和，也不可将工作集总和称为独占内存。与 soak 分开运行，两者都读 `getAppMetrics` 会影响 CPU 采样区间。日志不含对话或网址。
 - 只读探针耗时：开发态按上文启用本机 9223 调试端口后，在 `desktop/` 运行 `node scripts/probe-performance.mjs 9223`。脚本串行对已加载站点的生产隔离上下文各采 5 次 `generation()`、`answer()`、`toMarkdown()`，仅返回耗时、布尔值、状态和视口，不发送提问、不切档、不保存正文；结果写入打印出的临时目录。无回答时 Markdown 项为 null，不能据此宣称长回答处理很快。它测同步函数耗时，不包含生产 IPC 往返；零毫秒可能只是计时精度不足。缺适配器/执行失败会非零退出，尚未加载的站点不会凭空计入覆盖。
-- 后台节流机制实验：在 `desktop/` 运行 `xvfb-run -a node scripts/background-throttling-lab.mjs`（有原生显示时可直接 `node`）。临时档案、三个重叠且正尺寸的本地页面，拦截 HTTP/HTTPS，按关闭→全部允许→混合→恢复关闭测试隐藏窗口下的动画帧、定时器与可见性；输出原始报告，不以特定节流比例作通关条件。此工具不触碰生产策略，不能替代九站后台生成、最小化和 Windows/macOS 验收。
+- 后台节流机制实验：在 `desktop/` 运行 `xvfb-run -a node scripts/background-throttling-lab.mjs`（有原生显示时可直接 `node`）。临时档案、三个重叠且正尺寸的本地页面，拦截 HTTP/HTTPS；窗口先隐藏，再按关闭→全部允许→混合→恢复关闭→再次全部允许→再次恢复切换，直接覆盖 Electron 44.5.0 修复的「已隐藏时重新允许节流」路径。测动画帧、定时器与可见性；输出原始报告，不以特定节流比例作通关条件。此工具不触碰生产策略，不能替代九站后台生成、最小化和 Windows/macOS 验收。
 
 2026-09-29 资源研究验收：Linux/WSL、Electron 43.4.0 开发态复用已授权档案，九站当前页面均无回答正文；约 165 秒共 34 笔资源样本，60 秒后进程工作集合计约 3.83–3.95 GiB，不能与此前 Xvfb 新档案样本作优化前后比较。九站生产生成探针各测 5 次，中位约 0–0.4ms；未测到 Markdown 转换，不能外推长会话性能。没有发送测试提问或切换模型，日志有部分网络解析/连接失败，不据此证明全部站点网络正常或已登录。
 
@@ -429,3 +430,11 @@ Linux/WSL 开发态复用已授权档案，三条不同的合成短问题均经�
 回归先红后绿：明确临时路由转正式路由、未知前缀和浏览器导航拒绝；真实 Chromium 合成页面验证 selection 包装晚于首 token 插入、同根 Markdown 替换、旧答案及思考段排除、手动追问和其它会话拒绝。765 项 TS/TSX 与 187 项脚本测试、独立 typecheck、仓库 verify、真实 DOM smoke、Linux 打包与产物 smoke（shell=1、sites=9、attached=9）通过，独立代码审查无阻塞。打包与开发态共享 `.webpack` 输出，打包完成后须重启开发态再做站点实测，不能并行假定 preload 文件仍为开发产物。
 
 实测仅覆盖 Linux/WSL ChatGPT 的本轮页面；Windows/macOS 原生及长会话尚未重验。测试前布局已恢复，测试实例正常退出、调试端口关闭；没有访问 Windows 正式档案，也未清空既有登录资料。
+
+## 2026-09-30 Electron 44 能力接入与机制复测
+
+Electron 44.5.0、Linux/WSL、空白临时档案，未使用已有登录资料或发送真实问题。缩放先红后绿：同源测试桩复现其它视图被同步修改；真实 Chromium 对生产 `SiteZoomController`、布局和 UI 状态存储验证 Ctrl 快捷键、XTest 原生 Ctrl+滚轮、两个同源页面及共享登录域导航、外壳比例不变、刷新/重建恢复、本机重置。生产 preload/IPC smoke 另以合成 child-process-gone 事件验证可信 shell 取数、非可信 sender 拒绝、诊断报告白名单字段及监听释放；没有制造真实 GPU 崩溃或 Windows 启动错误。
+
+已隐藏的三个重叠页面直接切换节流，按 baseline → all-throttled → mixed → restored → all-throttled-repeat → restored-repeat 重复观察，每段预热 1.5 秒再测约 3 秒。关闭时各页约 180 帧、60–61 次定时器；两次全部允许时各页均 0 帧、3 次定时器、visibility=hidden；混合时允许的两页 0 帧/3 次、未允许的一页约 180 帧/60 次；两次恢复均回到约 180 帧/60–61 次和 visible，视口始终正尺寸。该结果说明 Electron 44.5.0 下此切换路径符合预期，没有测量真实站点 CPU、能耗或长期稳定性；不与旧版不同切换步骤直接计算优化比例。
+
+772 项 TS/TSX 与 187 项脚本测试、独立 typecheck、仓库 verify、Linux 当前源码 package 与 smoke（shell=1、sites=9、attached=9）通过；独立代码审查无重要问题，数值边界、全部类别上限及真实 soak failure summary 回归均通过。真实站点最小化生成/恢复后再次发送、九站组合以及 Windows/macOS 原生设备仍未验收；节流实验继续默认关闭。全部离线测试实例已退出，原始报告留在系统临时目录，不入库。

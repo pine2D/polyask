@@ -1,4 +1,5 @@
 import type { SiteKey } from "../shared/contracts";
+import type { RuntimeProcessFailure } from "../shared/runtime-process";
 
 export interface StabilityMetric {
   readonly pid: number;
@@ -14,7 +15,7 @@ export interface StabilitySample {
   readonly metrics: readonly StabilityMetric[];
 }
 
-export type StabilityEventType = "did-fail-load" | "render-process-gone" | "unresponsive";
+export type StabilityEventType = "did-fail-load" | "render-process-gone" | "child-process-gone" | "unresponsive";
 
 export interface StabilityEvent {
   readonly kind: "event";
@@ -22,6 +23,7 @@ export interface StabilityEvent {
   readonly type: StabilityEventType;
   readonly site?: SiteKey;
   readonly code?: string;
+  readonly processFailure?: RuntimeProcessFailure;
 }
 
 export type StabilityEventInput = Omit<StabilityEvent, "kind" | "timestamp">;

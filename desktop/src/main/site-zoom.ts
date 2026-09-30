@@ -13,6 +13,7 @@ export class SiteZoomController {
   snapshot(): SiteZoomPreferences { return { ...this.preferences }; }
 
   bind(site: SiteKey, contents: WebContents): void {
+    contents.setZoomMode("isolated");
     this.contents.set(site, contents);
     contents.on("zoom-changed", (_event, direction) => this.change(site, contents, direction));
     contents.on("before-input-event", (event, input) => {

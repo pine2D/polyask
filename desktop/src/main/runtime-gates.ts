@@ -8,6 +8,7 @@ import { buildDiagnosticSnapshot, type DiagnosticSiteInput } from "./diagnostics
 import { startWindowTrace } from "./window-trace";
 import { startIdleThrottlingExperiment } from "./idle-throttling";
 import { startResourceTrace } from "./resource-trace";
+import { runtimeProcessDiagnostics } from "./runtime-process-diagnostics";
 import {
   StabilityMonitor,
   type StabilityEventInput,
@@ -90,6 +91,9 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
   window.webContents.on("render-process-gone", (_event, details) => {
     record({ type: "render-process-gone", code: `shell:${details.reason}` });
   });
+  const stopProcessDiagnostics = runtimeProcessDiagnostics.listen(app, processFailure => {
+    record({ type: "child-process-gone", processFailure });
+  });
 
   return {
     record,
@@ -110,6 +114,7 @@ export function startRuntimeGates(window: BrowserWindow): RuntimeGates {
       writeFileSync(diagnosticPath, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
     },
     dispose: () => {
+      stopProcessDiagnostics();
       stopIdleThrottling();
       stopWindowTrace();
       stopResourceTrace();

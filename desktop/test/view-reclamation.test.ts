@@ -38,6 +38,7 @@ function harness(initialUiState?: DesktopUiState) {
           setBounds: (value: unknown) => bounds.push({ id, value }),
           webContents: Object.assign(new EventEmitter(), { id,
             isDestroyed: () => closed.has(id), close: () => { closed.add(id); }, loadURL: async () => {}, focus() {},
+            setZoomMode: (mode: string) => assert.equal(mode, "isolated"),
             getZoomFactor: () => zoom, setZoomFactor: (value: number) => { zoom = value; }
           })
         };

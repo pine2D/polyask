@@ -10,10 +10,12 @@ import { DEFAULT_DISPLAY_PREFERENCES, metricsForDensity } from "../src/shared/di
 import { readSource } from "./fixtures";
 
 function contents() {
-  let zoom = 0.9;
+  let zoom = 0.9, mode = "default";
   return Object.assign(new EventEmitter(), {
     isDestroyed: () => false,
     getZoomFactor: () => zoom,
+    getZoomMode: () => mode,
+    setZoomMode: (value: string) => { mode = value; },
     setZoomFactor: (value: number) => { zoom = value; }
   });
 }
@@ -28,6 +30,30 @@ test("site zoom keys support Ctrl, Mac Command, plus aliases and reset without s
   for (const overrides of [{ control: false }, { alt: true }, { isComposing: true }, { type: "keyUp" }]) {
     assert.equal(siteZoomAction(key("+", overrides), "win32"), null);
   }
+});
+
+test("two views on a shared login origin retain independent zoom across navigation", () => {
+  let originZoom = 0.9;
+  const peer = () => {
+    const c = contents();
+    let isolatedZoom = 0.9;
+    c.getZoomFactor = () => c.getZoomMode() === "isolated" ? isolatedZoom : originZoom;
+    c.setZoomFactor = value => { if (c.getZoomMode() === "isolated") isolatedZoom = value; else originZoom = value; };
+    return c;
+  };
+  const first = peer(), second = peer();
+  const controller = new SiteZoomController(() => {});
+  controller.bind("claude", first as unknown as WebContents);
+  controller.bind("kimi", second as unknown as WebContents);
+  first.emit("zoom-changed", {}, "in");
+  assert.equal(first.getZoomFactor(), 1);
+  assert.equal(second.getZoomFactor(), 0.9, "shared login origin must not share site zoom");
+  first.emit("did-finish-load"); second.emit("did-finish-load");
+  assert.equal(first.getZoomFactor(), 1);
+  assert.equal(second.getZoomFactor(), 1, "second site restores its own default");
+  first.emit("zoom-changed", {}, "in");
+  assert.equal(second.getZoomFactor(), 1);
+  assert.equal(first.getZoomMode(), "isolated");
 });
 
 test("browser zoom steps stay bounded and tolerate Chromium floating-point factors", () => {

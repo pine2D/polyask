@@ -31,12 +31,13 @@ app.whenReady().then(async () => {
     ...await view.webContents.executeJavaScript('({ ...counts, visibility: document.visibilityState, width: innerWidth, height: innerHeight })')
   })));
   const phases = [];
-  // A/B/A checks reversibility; mixed checks the shared-window interaction.
+  // Toggle while already hidden: Electron 44.5.0 fixed this exact transition.
+  // Repeat A/B/A and keep a mixed phase to observe shared-window interaction.
+  window.hide();
   for (const [name, allowed] of [['baseline', [false, false, false]], ['all-throttled', [true, true, true]],
-    ['mixed', [true, true, false]], ['restored', [false, false, false]]]) {
-    window.show();
+    ['mixed', [true, true, false]], ['restored', [false, false, false]],
+    ['all-throttled-repeat', [true, true, true]], ['restored-repeat', [false, false, false]]]) {
     views.forEach((view, i) => view.webContents.setBackgroundThrottling(allowed[i]));
-    window.hide();
     await pause(1500);
     const before = await read();
     const started = Date.now();

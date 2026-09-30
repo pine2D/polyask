@@ -20,5 +20,5 @@ console.log(`Background throttling evidence: ${output}`);
 if (code !== 0) process.exitCode = 1;
 else {
   const report = JSON.parse(await readFile(join(output, 'report.json'), 'utf8'));
-  assert.deepEqual(report.phases.map(phase => phase.name), ['baseline', 'all-throttled', 'mixed', 'restored']);
+  assert.deepEqual(report.phases.map(phase => phase.name), ['baseline', 'all-throttled', 'mixed', 'restored', 'all-throttled-repeat', 'restored-repeat']);
 }

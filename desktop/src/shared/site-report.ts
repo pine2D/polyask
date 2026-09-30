@@ -1,6 +1,7 @@
 import type { SiteKey } from "./contracts";
 import type { SiteStatus } from "./protocol";
 import type { SiteHealth } from "./site-health";
+import { normalizeProcessFailure, type RuntimeProcessFailure } from "./runtime-process";
 
 export interface SiteReportInput {
   readonly version: string;
@@ -11,16 +12,24 @@ export interface SiteReportInput {
   readonly statuses: Readonly<Partial<Record<string, SiteStatus>>>;
   readonly health: Readonly<Partial<Record<SiteKey, SiteHealth>>>;
   readonly now: number;
+  readonly processFailures?: readonly RuntimeProcessFailure[];
 }
 
 // 可直接粘贴进报障 issue 的纯文本报告：版本 / 环境 / 显示缩放，每站的 phase、code、健康结论，
-// 以及每条 check 的 {name, kind, ok}。绝不包含对话内容、URL、账号信息——check.name 是本地化的
+// 每条 check 的 {name, kind, ok}，以及白名单进程类别/退出原因/数值错误码。绝不包含对话内容、URL、账号信息——check.name 是本地化的
 // diag_* 词条，不是页面文本；站点只写 key 与产品名，不写 host。
 export function buildSiteReport(input: SiteReportInput): string {
   const lines = [
     `PolyAsk Desktop ${input.version} (${input.distribution}) · ${input.platform} · scale ${input.scale}`,
     `generated ${new Date(input.now).toISOString()}`
   ];
+  for (const raw of (input.processFailures ?? []).slice(0, 7)) {
+    const failure = normalizeProcessFailure(raw);
+    if (!failure) continue;
+    lines.push(`runtime [${failure.processType}]: reason=${failure.reason}`
+      + (failure.exitCode !== undefined ? ` exitCode=${failure.exitCode}` : "")
+      + (failure.systemErrorCode !== undefined ? ` systemErrorCode=${failure.systemErrorCode}` : ""));
+  }
   for (const site of input.sites) {
     const status = input.statuses[site.key];
     const health = input.health[site.key];

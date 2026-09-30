@@ -41,3 +41,11 @@ test("stability monitor preserves chronological samples and events", () => {
   assert.equal(summary.failures[0]?.type, "unresponsive");
   assert.equal(summary.workingSetGrowthKb, 5);
 });
+
+test("child process failures are included in the real soak failure summary", () => {
+  const monitor = new StabilityMonitor();
+  monitor.record({ type: "child-process-gone", processFailure: { processType: "GPU", reason: "launch-failed", systemErrorCode: 5 } });
+  assert.equal(monitor.summary().failures.length, 1);
+  assert.deepEqual(monitor.summary().failures[0]?.processFailure,
+    { processType: "GPU", reason: "launch-failed", systemErrorCode: 5 });
+});

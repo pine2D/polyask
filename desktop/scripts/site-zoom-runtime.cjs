@@ -51,7 +51,7 @@ app.whenReady().then(async () => {
   const base = { maximized: false, layoutMode: 'overview', currentPage: 0, focusedByPage: { 0: 'claude' } };
   const zoom = new SiteZoomController(() => store.schedule({ ...base, siteZoom: zoom.snapshot() }));
   const views = new Map();
-  for (const [site, url] of [['claude', 'polyask-zoom-test://claude/'], ['kimi', 'polyask-zoom-test://kimi/']]) {
+  for (const [site, url] of [['claude', 'polyask-zoom-test://shared/claude'], ['kimi', 'polyask-zoom-test://shared/kimi']]) {
     const view = new WebContentsView({ webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
     win.contentView.addChildView(view);
     views.set(site, view);
@@ -88,6 +88,15 @@ app.whenReady().then(async () => {
   await first.reload();
   await new Promise(resolve => first.once('did-finish-load', resolve));
   assert.equal(factor(first), 1.1, 'reload must retain the manual override');
+  await first.loadURL('polyask-zoom-test://login/claude');
+  await second.loadURL('polyask-zoom-test://login/kimi');
+  assert.equal(first.getZoomMode(), 'isolated');
+  assert.equal(second.getZoomMode(), 'isolated');
+  assert.equal(factor(first), 1.1, 'login navigation retains first site zoom');
+  assert.equal(factor(second), 1, 'shared login origin retains second site zoom');
+  key(first, '+', ['control', 'shift']); await wait(() => factor(first) === 1.25);
+  assert.equal(factor(second), 1, 'shared login origin must not share zoom');
+  key(first, '-'); await wait(() => factor(first) === 1.1);
   store.flush();
   const saved = store.load();
   const restored = new SiteZoomController(() => {});
@@ -96,12 +105,12 @@ app.whenReady().then(async () => {
   win.contentView.addChildView(replacement);
   replacement.setBounds({ x: 0, y: 60, width: 600, height: 750 });
   restored.bind('claude', replacement.webContents);
-  await replacement.webContents.loadURL('polyask-zoom-test://claude/new');
+  await replacement.webContents.loadURL('polyask-zoom-test://login/restored');
   restored.apply('claude', replacement.webContents, 0.9);
   assert.equal(factor(replacement.webContents), 1.1, 'saved local state must restore on a new view');
   zoom.clear(); store.flush();
   assert.deepEqual(store.load().siteZoom, {});
-  writeFileSync(join(output, 'report.json'), JSON.stringify({ saved, checks: ['Ctrl+=', 'Ctrl++', 'Ctrl+-', 'Ctrl+0', 'Ctrl+wheel in/out', 'site isolation', 'shell unchanged', 'layout', 'reload', 'saved-state restore', 'local reset'] }, null, 2));
+  writeFileSync(join(output, 'report.json'), JSON.stringify({ electron: process.versions.electron, saved, checks: ['Ctrl+=', 'Ctrl++', 'Ctrl+-', 'Ctrl+0', 'Ctrl+wheel in/out', 'shared-origin isolation', 'shared login navigation', 'shell unchanged', 'layout', 'reload', 'saved-state restore', 'local reset'] }, null, 2));
   console.log('Site zoom passed: native keys/wheel, per-site isolation, layout/reload, saved-state restore and reset.');
   for (const view of [...views.values(), replacement]) view.webContents.close();
   store.dispose(); win.destroy(); app.quit();

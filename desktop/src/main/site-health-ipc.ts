@@ -2,6 +2,7 @@ import { ipcMain, type IpcMainInvokeEvent } from "electron";
 
 import { SITE_KEYS, type SiteKey } from "../shared/contracts";
 import type { ViewManager } from "./view-manager";
+import { runtimeProcessDiagnostics } from "./runtime-process-diagnostics";
 
 interface SiteHealthIpcOptions {
   readonly manager: ViewManager;
@@ -16,6 +17,10 @@ function siteList(value: unknown): SiteKey[] | null {
 }
 
 export function registerSiteHealthIpc(options: SiteHealthIpcOptions): () => void {
+  ipcMain.handle("polyask:runtime-process-failures", event => {
+    if (!options.trusted(event)) throw new Error("untrusted_sender");
+    return runtimeProcessDiagnostics.snapshot();
+  });
   ipcMain.handle("polyask:site-health", (event, value: unknown) => {
     if (!options.trusted(event)) throw new Error("untrusted_sender");
     const sites = siteList(value);
@@ -33,6 +38,7 @@ export function registerSiteHealthIpc(options: SiteHealthIpcOptions): () => void
     return options.manager.clearSiteData(value as SiteKey);
   });
   return () => {
+    ipcMain.removeHandler("polyask:runtime-process-failures");
     ipcMain.removeHandler("polyask:site-health");
     ipcMain.removeHandler("polyask:reload-site");
     ipcMain.removeHandler("polyask:clear-site-data");

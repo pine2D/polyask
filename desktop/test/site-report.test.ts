@@ -28,3 +28,13 @@ test("the site diagnostic report carries environment, per-site state and every c
   assert.equal(lines[7], "  - (no checks)");
   assert.doesNotMatch(report, /https?:\/\//, "报告不得包含 URL");
 });
+
+test("copied diagnostics include only normalized runtime process failure fields", () => {
+  const report = buildSiteReport({ version: "1.10.1", distribution: "installed", platform: "Win32", scale: 1,
+    sites: [], statuses: {}, health: {}, now: 0,
+    processFailures: [{ processType: "GPU", reason: "launch-failed", exitCode: 5, systemErrorCode: 5,
+      name: "private account", path: "/private", url: "https://private.invalid" },
+      { processType: "https://private.invalid", reason: "crashed" }] } as any);
+  assert.match(report, /runtime \[GPU\]: reason=launch-failed exitCode=5 systemErrorCode=5/);
+  assert.doesNotMatch(report, /private|https|name=|path=/);
+});

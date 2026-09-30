@@ -22,6 +22,7 @@
 - **所有已勾选站点都挂在视图树里并保持正尺寸**，非当前页的与当前页第一格用完全相同的矩形、压在其之下——不占屏幕、不抢鼠标。**不能只挂当前页**：未 `addChildView` 的 `WebContentsView` 页面视口恒 0×0（只 `setBounds` 同样是 0），`site-runtime/core.js` 的 `findComposer` 因 `r.top < innerHeight` 恒假而返回 null，群发对后台站点必然 `composer_not_found`，一路重投烧到截止线。
 - **层序靠「重挂即提升」**：`addChildView` 对已在树里的子视图是原地提升到最顶层（幂等、`children` 不增长）。**绝不要改成先 detach 再 attach**——全拆重挂实测会让被聚焦站点的渲染进程真的丢焦点。落点 `view-manager.ts` 的 `attach`/`detach`/`reconcile`。
 - 布局、缩放、槽位顺序、`WebContents` 生命周期归 main；renderer 只提交白名单意图。
+- 每站缩放由 `SiteZoomController` 在绑定视图时设置 `setZoomMode("isolated")`，随后应用既有本机比例；共享登录域也不互相传播缩放，模式跨导航保留。快捷键、滚轮与 UI 状态存储契约不变。
 - Windows 最大化窗口最小化会触发 `resize` 且内容区为 0×0（普通窗口最小化未见同样事件）。最小化或内容区宽高为零时必须保留站点原有 bounds，不计算自动聚焦；`restore` 再应用有效布局，包括最小化期间积累的显示偏好变更。否则网页会被缩到 1px，恢复时重新排版，并留下错误的空间不足提示。
 - 新建会话确认使用临时 `confirmation` surface：先移开原生站点视图并聚焦外壳，确认或取消后恢复 `sites`，再执行获准的新建会话。CSS 的 z-index 无法盖住 `WebContentsView`，不可只在站点 surface 上叠确认框；等待确认期间不接受其它外壳命令。
 
@@ -243,6 +244,8 @@ npm run soak -- --minutes=60
 - 界面采用集中列表、双版本比较、分段冲突按钮和最终汇总；应用期间阻止重复点击及导航，取消释放预览。确认导入按现有 Drive 机制传播，不新增同步线格式或持久化键。
 
 ### 资源观察边界
+
+- `runtime-process-diagnostics.ts` 在运行期监听 `app.child-process-gone`，忽略正常退出及未知枚举；按白名单进程类别最多保留七条最新故障，仅含类别、退出原因与有效数值错误码。窗口释放时清理监听和内存；不保存进程名、服务名、PID、路径或正文。可信 shell 的 `getRuntimeProcessFailures` 仅在复制 Alt+H 报告时读取，不改变站点健康结论，也不推断进程已恢复。显式 soak 才另写入对应 `child-process-gone` 事件并计为稳定性失败。
 
 - `POLYASK_RESOURCE_TRACE` 显式指向尚不存在的本地 JSONL 文件时，外壳就绪后每 5 秒记录一次进程资源及窗口状态，最长 30 分钟。普通运行不建文件、不挂监听、不采样；失败、背压、窗口关闭均停止并清理。它不自动退出应用、不调整节流，也不取代 Alt+H 的站点诊断报告。
 - 资源记录只含运行时版本/GPU 功能状态、窗口可见/最小化/聚焦状态、当前页、站点键/加载/节流状态，以及 PID/创建时间/CPU/工作集。只关联站点主帧 PID；子帧、worker 和其他未归属进程保留为未归属，不推算每站完整成本。同一 PID 多站共享时只记录一笔进程资源，工作集仍不是独占物理内存；新进程首笔 CPU 标为无有效间隔。不记录网址、正文、标题、账号或 IPC 载荷。

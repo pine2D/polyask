@@ -29,21 +29,22 @@ export function siteHealthActions(input: {
     onReloadSite: (site: SiteKey) => reload(site, () => shell.reloadSite(site)),
     onHardReloadSite: (site: SiteKey) => reload(site, () => shell.reloadSite(site, true)),
     onClearSiteData: (site: SiteKey) => reload(site, () => shell.clearSiteData(site)),
-    onCopyHealthReport: () => {
-      const report = buildSiteReport({
-        version: input.runtime.version,
-        distribution: input.runtime.distribution,
-        platform: navigator.platform,
-        scale: window.devicePixelRatio,
-        sites: input.sites.filter((site) => input.selected.has(site.key)),
-        statuses: input.statuses,
-        health: input.health,
-        now: Date.now()
-      });
-      void navigator.clipboard.writeText(report).then(
-        () => input.noteHealth(input.copy.healthReportCopied),
-        () => input.noteHealth(input.copy.healthReportCopyFailed)
-      );
+    onCopyHealthReport: async () => {
+      try {
+        const processFailures = await shell.getRuntimeProcessFailures();
+        const report = buildSiteReport({
+          version: input.runtime.version,
+          distribution: input.runtime.distribution,
+          platform: navigator.platform,
+          scale: window.devicePixelRatio,
+          sites: input.sites.filter((site) => input.selected.has(site.key)),
+          statuses: input.statuses,
+          health: input.health,
+          now: Date.now(), processFailures
+        });
+        await navigator.clipboard.writeText(report);
+        input.noteHealth(input.copy.healthReportCopied);
+      } catch { input.noteHealth(input.copy.healthReportCopyFailed); }
     }
   };
 }
