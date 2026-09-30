@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.11.0] - 2026-10-01
+
+验收限制：已通过 Linux 隔离 Electron 的同源缩放、诊断桥接及隐藏窗口生成/恢复后连续追问回归；WSL 无法进入真实最小化，允许节流下的真实生成、九站组合、Windows/macOS 原生操作及五种发行包原生安装尚未验收。本轮未验证真实 Drive 双设备同步或 Google Cloud 控制台指标；节流实验保持默认关闭。
+
 ### 修复
 
 - 隔离各站视图的缩放比例，进入共享登录域或重新导航时仍保留本站比例，避免同源视图相互影响。
@@ -1001,7 +1005,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.10.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/pine2D/polyask/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/pine2D/polyask/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/pine2D/polyask/compare/v1.9.0...v1.10.0
 [1.9.0]: https://github.com/pine2D/polyask/compare/v1.8.0...v1.9.0
