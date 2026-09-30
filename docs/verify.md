@@ -438,3 +438,13 @@ Electron 44.5.0、Linux/WSL、空白临时档案，未使用已有登录资料�
 已隐藏的三个重叠页面直接切换节流，按 baseline → all-throttled → mixed → restored → all-throttled-repeat → restored-repeat 重复观察，每段预热 1.5 秒再测约 3 秒。关闭时各页约 180 帧、60–61 次定时器；两次全部允许时各页均 0 帧、3 次定时器、visibility=hidden；混合时允许的两页 0 帧/3 次、未允许的一页约 180 帧/60 次；两次恢复均回到约 180 帧/60–61 次和 visible，视口始终正尺寸。该结果说明 Electron 44.5.0 下此切换路径符合预期，没有测量真实站点 CPU、能耗或长期稳定性；不与旧版不同切换步骤直接计算优化比例。
 
 772 项 TS/TSX 与 187 项脚本测试、独立 typecheck、仓库 verify、Linux 当前源码 package 与 smoke（shell=1、sites=9、attached=9）通过；独立代码审查无重要问题，数值边界、全部类别上限及真实 soak failure summary 回归均通过。真实站点最小化生成/恢复后再次发送、九站组合以及 Windows/macOS 原生设备仍未验收；节流实验继续默认关闭。全部离线测试实例已退出，原始报告留在系统临时目录，不入库。
+
+### 后续：ChatGPT 两轮真实生成回归
+
+用户追加授权最多两条无个人信息短问题。启动前读取此前 Linux 开发运行时的 Electron 43.4.0 归档二进制与本次 44.5.0 二进制的 Cookie 加密 fuse，两者均为 false；未使用发行包的 true 配置打开开发档案。重启 `npm start`，复用已授权 Linux 档案，实验环境变量仅作用于测试进程，实际版本与数据目录在主进程核验。只选 ChatGPT，经生产群发入口发送两条不同的合成问题，`tier:null`、无图、无重发；生产隔离上下文 `__AMS` 用于只读检查。
+
+当前 WSL 桌面调用 `BrowserWindow.minimize()` 后等待 2.5 秒仍为 `isMinimized=false`、可见；第一轮生成期间再次调用也未进入原生最小化。因此自动最小化节流路径仍未验收，未伪造 minimize 事件或放宽生产门槛。第一轮改用 `hide()` 作有限后台验证：已观察到 generating，窗口隐藏且站点节流为 false；随后真实回答完成，数据库副本与生产 `collectAnswers` 的页面 Markdown 完全一致，均为 454 字符。关闭节流时页面 visibility 仍为 visible，不把它混称为允许节流后的结果。
+
+`show()`/`restore()` 后窗口可见、站点节流仍为 false；第二轮在同一会话连续追问，提交确认来自 message，观察到 generating 后变为 complete，末条用户消息精确匹配，用户轮次仅增加一次、输入框为空。第二轮数据库副本与生产页面 Markdown 完全一致，均为 290 字符；第一轮原有 454 字符副本仍保留。第一轮在追问后 capture=interrupted 且封存，第二轮 capture=unknown 且未提前封存，未将通用生成探针 complete 当作历史完整性的证明，也未修改原 15 分钟采集预算。
+
+恢复测试前选站、布局、焦点站与页码，正常退出已核验可执行文件和数据目录的测试实例，回环端口均关闭，登录档案保留。本轮没有代码改动，没有测量 CPU/能耗，也未完成原生最小化、允许节流下的真实生成、九站组合或 Windows/macOS 验收；实验继续默认关闭。原始取证留在系统临时目录，不入库。
