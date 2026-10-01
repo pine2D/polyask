@@ -271,3 +271,18 @@ test('submission evidence rejects matching old DOM after an empty baseline', () 
   s.set({ user: node('Question'), text: 'Question', userCount: 1 });
   assert.equal(s.S.history.submitted('token'), false);
 });
+
+test('generation before the user DOM appears keeps observation alive without attributing an answer', () => {
+  const s = setup('gemini.google.com');
+  s.navigate('https://gemini.google.com/app');
+  s.S.history.begin('token', 'Question');
+  const waiting = s.S.history.snapshot('token');
+  assert.equal(waiting.owned, false);
+  assert.equal(waiting.generation, 'generating');
+  assert.equal(waiting.text, undefined);
+  const u = node('Question');
+  s.insert({ user: u, text: 'Question', answer: node('Delayed answer'), userCount: 1 });
+  assert.equal(s.S.history.snapshot('token').text, 'Delayed answer');
+  s.activate();
+  assert.equal(s.S.history.snapshot('token').ended, true);
+});

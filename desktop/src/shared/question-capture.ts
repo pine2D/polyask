@@ -21,7 +21,8 @@ export function normalizeHistorySnapshot(value: unknown, token: string): History
   if (!value || typeof value !== "object") return empty;
   const v = value as Record<string, unknown>;
   if (v.token !== token || typeof v.owned !== "boolean") return empty;
-  if (!v.owned) return { ...empty, ended: v.ended === true };
+  if (!v.owned) return { ...empty, ended: v.ended === true,
+    generation: v.ended !== true && v.generation === "generating" ? "generating" : null };
   if (v.text != null && typeof v.text !== "string") return empty;
   const points = typeof v.text === "string" ? [...v.text] : [];
   return { token, owned: true, text: points.slice(0, QUESTION_ANSWER_LIMIT).join("") || null,

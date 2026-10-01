@@ -91,7 +91,10 @@
   function read(e, a) {
     const empty = { token: e.token, owned: false };
     const turn = a?.historyTurn?.();
-    if (!bind(e, turn)) return { ...empty, ended: e.ended };
+    // Some sites show Stop before rendering the submitted user turn. This only
+    // keeps observation alive; no text or URL is attributed until bind succeeds.
+    if (!bind(e, turn)) return { ...empty, ended: e.ended,
+      generation: !e.ended && a?.generation?.() === "generating" ? "generating" : null };
     if (!turn.answer) return { ...empty, owned: true, generation: a.generation?.() === "generating" ? "generating" : null, url: location.href };
     if (e.answer && !same(e.answerRoot, e.answerKey, turn.answerRoot || turn.answer, turn.answerKey)) { stop(e); return { ...empty, ended: true }; }
     // Missing stop controls are not positive completion evidence. Keep the copy's

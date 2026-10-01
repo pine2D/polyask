@@ -125,6 +125,8 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
   4. SKIP 集剔除 `BUTTON` / `SVG` / `STYLE` / `SCRIPT` / `NOSCRIPT` / `SELECT` / `TEXTAREA` / `AUDIO` / `VIDEO`，以及 `aria-hidden="true"` 与 `role="button"` 的节点。
 - 五条实现硬规则：① 文本节点必须转义 `\` `` ` `` `*` `_` `[` `]`（同段的 `a_i` 与 `b_j` 会被下游渲染成强调/链接）；② 代码块语言名前瞻绝不吸收语义标签（ChatGPT 的 `h3` 直邻 `pre`，旧逻辑把「### Example」吞成语言名）；③ `firstTextNode` 要跳过空白垫片文本节点（Kimi 头部条首个文本节点是纯空白）；④ `PRE` 常被再包一层透明 `DIV`（Claude `overflow-x-auto` / Kimi syntax-highlighter）；⑤ 内容含反引号用双反引号 + 空格包裹，围栏代码含三个反引号时升级为四反引号。
 
+逐次提问副本的 `history.snapshot()` 在用户轮次尚未渲染、但停止控件已确认生成时，可返回 `owned:false, generation:"generating"`，仅用于主进程延长一次观察窗口。此分支不返回正文或地址；已结束、路由改变和手动操作仍终止采集，正文必须经 `bind()` 正向归属后才能保存。
+
 ## 图片载荷（`desktop/src/site-runtime/upload.js`）
 
 最多 **4 张**、仅 `image/png` 与 `image/jpeg`、单批总计 **≤10 MiB**（`MAX_BYTES`）。`dataUrl` 要过严格 base64 正则 + 解码后长度必须等于声明 `size` + PNG/JPEG 魔数校验 + `createImageBitmap` 真解码，任一不过报 `image_invalid`；`desktop/src/shared/images.ts` 的 `validateImageFiles` / `validateImages` 在**选图当下**先做一轮张数 / 类型 / 总大小 + base64 + 魔数校验（早于 `upload.js`，让用户当场知道选错了），**但不做 `createImageBitmap` 真解码**——那一层只在注入侧，两处数值必须一致。附件就绪靠「composer 锚点附近可见节点快照 diff + 400ms 稳定 + `role=alert` 错误文案检测」判定，**不是 sleep 等**；未给 deadline 时默认 15s 上限。
