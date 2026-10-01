@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.11.1] - 2026-10-01
+
+验收限制：Linux/WSL 开发态三站各完成两条合成提问，修复后 ChatGPT、Gemini、豆包回答副本均与页面全文一致。ChatGPT、豆包原报告中的失败未复现；Windows/macOS 原生环境、长会话、连续追问及五种发行包原生安装未在本轮验收，真实 Drive 同步与 Google Cloud 指标未在本轮核验。旧失败副本不会自动回填，节流实验仍默认关闭。
+
 ### 修复
 
 - 修复 Gemini 等站点先显示生成状态、后渲染用户消息时，回答副本观察提前结束的问题；未确认本轮归属的正文仍不保存。
@@ -1009,7 +1013,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.11.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.11.1...HEAD
+[1.11.1]: https://github.com/pine2D/polyask/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/pine2D/polyask/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/pine2D/polyask/compare/v1.10.0...v1.10.1
 [1.10.0]: https://github.com/pine2D/polyask/compare/v1.9.0...v1.10.0
