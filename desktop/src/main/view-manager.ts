@@ -1,6 +1,7 @@
 import { reclaimUnselectedViews } from "./view-reclamation";
 import { historyPanelWidth, coverSitesForHistory } from "./question-layout";
 import { SiteHistoryAccess } from "./site-history-access";
+import { clearSiteDataAndReload } from "./site-data-recovery";
 import {
   BrowserWindow,
   WebContentsView,
@@ -49,7 +50,8 @@ import {
 import {
   swapFocusedSite
 } from "./layout";
-import { GenerationMonitor, GENERATION_MISS_LIMIT, GENERATION_PROBE_INTERVAL } from "./generation-monitor";
+import { GenerationMonitor, GENERATION_MISS_LIMIT } from "./generation-monitor";
+import { generationObservationStatus, scheduleGenerationProbe } from "./generation-probe-scheduler";
 import { navigationDisposition } from "./navigation";
 import { SiteCommandChannel } from "./site-command-channel";
 import { createSiteView, diagnosticSitesForViews } from "./site-view";
@@ -87,6 +89,8 @@ export class ViewManager {
   private readonly runStatus = new Map<SiteKey, SiteStatus>();
   private readonly commands = new SiteCommandChannel();
   private capturePending: (site: SiteKey) => boolean = () => false;
+  private captureReleaseConfirmed: (site: SiteKey) => boolean = () => false;
+  private invalidateCaptureRelease: (sites: readonly SiteKey[]) => void = () => {};
   private readonly generation = new GenerationMonitor();
   private readonly generationTimers = new Map<SiteKey, NodeJS.Timeout>();
   private readonly generationDeadlines = new Map<SiteKey, number>();
@@ -320,27 +324,12 @@ export class ViewManager {
     return true;
   }
 
-  // Clears only Service Worker registrations and CacheStorage for the site's own
-  // origin — never cookies (keeps the sign-in) or localStorage/IndexedDB (keeps
-  // the site's own client-side preferences). Meant for a stuck/blank page whose
-  // service worker is serving a stale asset that a normal reload() cannot evict
-  // because reload() itself is served from that same cache.
   async clearSiteData(site: SiteKey): Promise<boolean> {
-    const view = this.views.get(site);
-    const definition = SITES.find((candidate) => candidate.key === site);
-    if (!view || view.webContents.isDestroyed() || !definition) return false;
-    if (!siteReloadAllowed(this.currentStatus(site).phase)) return false;
-    await this.siteSession.clearStorageData({
-      origin: `https://${definition.host}`,
-      storages: ["cachestorage", "serviceworkers"]
-    });
-    // await 期间用户可能取消勾选该站：releaseUnselectedViews 已销毁 webContents，上面那个 view 是悬垂引用。
-    const live = this.views.get(site);
-    if (!live || live.webContents.isDestroyed()) return false;
-    this.runStatus.delete(site);
-    this.updatePageStatus({ site, phase: "loading" });
-    live.webContents.reloadIgnoringCache();
-    return true;
+    return clearSiteDataAndReload(site, this.siteSession, () => this.views.get(site),
+      () => siteReloadAllowed(this.currentStatus(site).phase), () => {
+        this.runStatus.delete(site);
+        this.updatePageStatus({ site, phase: "loading" });
+      });
   }
 
   checkHealth(sites: readonly SiteKey[]): Promise<SiteHealth[]> {
@@ -354,7 +343,13 @@ export class ViewManager {
   }, () => this.layout());
   async navigate(site: SiteKey, url: string): Promise<void> { await this.historyAccess.navigate(site, url, true); }
 
-  setCapturePending(check: (site: SiteKey) => boolean): void { this.capturePending = check; }
+  setCapturePending(check: (site: SiteKey) => boolean,
+    releaseConfirmed: (site: SiteKey) => boolean = () => false,
+    invalidateRelease: (sites: readonly SiteKey[]) => void = () => {}): void {
+    this.capturePending = check;
+    this.captureReleaseConfirmed = releaseConfirmed;
+    this.invalidateCaptureRelease = invalidateRelease;
+  }
 
   markStatus(status: SiteStatus): void {
     this.runStatus.set(status.site, statusWithUnread(preserveSubmission(this.runStatus.get(status.site), status), this.isSiteVisible(status.site)));
@@ -362,10 +357,18 @@ export class ViewManager {
     void Promise.resolve().then(() => this.releaseUnselectedViews());
   }
 
+  resetRunStatus(): void {
+    this.cancelGenerationRun();
+    this.runStatus.clear();
+    for (const site of SITES) this.onStatus(this.currentStatus(site.key));
+    this.releaseUnselectedViews();
+  }
+
   // A retry reuses the run id, so only the resubmitted sites are rearmed and the
   // sites still streaming keep their timer, deadline and observed flag. A new run
   // id replaces only its target sites; other sites may still be finishing an older run.
   beginGenerationRun(runId: string, sites: readonly SiteKey[], submission = true): void {
+    this.invalidateCaptureRelease(sites);
     const resumed = this.generation.begin(runId, sites, submission);
     if (submission) beginSubmissionRun(resumed, this.runStatus, site => this.onStatus(this.currentStatus(site)));
     for (const site of sites) this.clearGenerationTracking(site);
@@ -544,19 +547,11 @@ export class ViewManager {
   }
 
   private scheduleGenerationProbe(runId: string, site: SiteKey, observed: boolean): void {
-    if (observed) this.generationMisses.delete(site);
-    else {
-      const misses = (this.generationMisses.get(site) ?? 0) + 1;
-      this.generationMisses.set(site, misses);
-      if (misses >= GENERATION_MISS_LIMIT) return;
-    }
-    if (Date.now() >= (this.generationDeadlines.get(site) ?? 0)) return;
-    const timer = setTimeout(() => {
-      this.generationTimers.delete(site);
-      void this.probeGeneration(runId, site);
-    }, GENERATION_PROBE_INTERVAL);
-    timer.unref?.();
-    this.generationTimers.set(site, timer);
+    scheduleGenerationProbe(runId, site, observed, {
+      misses: this.generationMisses, deadlines: this.generationDeadlines, timers: this.generationTimers,
+      stopped: () => this.markStatus(generationObservationStatus(this.currentStatus(site))),
+      probe: (run, key) => { void this.probeGeneration(run, key); }
+    });
   }
 
   private replaceView(site: SiteDefinition, view: WebContentsView, url: string): void {
@@ -700,6 +695,12 @@ export class ViewManager {
     reclaimUnselectedViews({
       views: this.views, selected: this.selected, status: site => this.currentStatus(site),
       capturePending: this.capturePending, detach: site => this.detach(site),
+      observationEnded: site => {
+        const deadline = this.generationDeadlines.get(site);
+        const stopped = deadline === undefined ? this.currentStatus(site).phase === "warning" :
+          (this.generationMisses.get(site) ?? 0) >= GENERATION_MISS_LIMIT || Date.now() >= deadline;
+        return stopped && this.captureReleaseConfirmed(site);
+      },
       pageStatus: this.pageStatus, runStatus: this.runStatus,
       forget: site => { this.generation.forget(site); this.clearGenerationTracking(site); }
     });

@@ -14,6 +14,7 @@ interface CaptureEntry {
 export class QuestionHistoryService {
   private lastRun: { lifecycle: number; runId: string; id: string } | null = null;
   private readonly active = new Map<SiteKey, CaptureEntry>();
+  private readonly releasableSites = new Map<SiteKey, number>();
   private reportFailure: (() => void) | null = null;
   constructor(readonly repository: QuestionRepository, private readonly options: {
     deviceId: () => string; now?: () => number; createId?: () => string; onFailure?: () => void;
@@ -58,8 +59,10 @@ export class QuestionHistoryService {
     }, null);
   }
   token(site: SiteKey): string | undefined { const e = this.active.get(site); return e?.lifecycle === this.repository.lifecycle ? e.token : undefined; }
+  releasable(site: SiteKey): boolean { return this.releasableSites.get(site) === this.repository.lifecycle; }
+  clearReleaseEvidence(sites: readonly SiteKey[]): void { for (const site of sites) this.releasableSites.delete(site); }
   delete(id: string): boolean {
-    for (const [site, entry] of this.active) if (entry.questionId === id) this.active.delete(site);
+    for (const [site, entry] of this.active) if (entry.questionId === id) { this.active.delete(site); this.releasableSites.delete(site); }
     return this.repository.delete(id, this.now(), this.options.deviceId());
   }
   targets(): { site: SiteKey; token: string }[] {
@@ -82,6 +85,7 @@ export class QuestionHistoryService {
       const now = Math.max(this.now(), current.updatedAt + 1);
       const submission = result.ok ? "submitted" : result.code === "submit_unconfirmed" ? "unconfirmed" : result.code === "cancelled" ? "cancelled" : "failed";
       e.ready = submission === "submitted" || submission === "unconfirmed";
+      this.releasableSites.delete(result.site);
       e.deadline = now + OBSERVATION_MS;
       this.repository.putAnswer({ ...current, submission, submissionCode: result.code ?? null,
         updatedAt: now, capture: e.ready ? "waiting" : "unavailable", sealedAt: e.ready ? null : now });
@@ -102,6 +106,7 @@ export class QuestionHistoryService {
         if (!v.ended && v.generation === "generating") e.generating = true;
         if (v.ended || now >= e.deadline) {
           this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: current.answerMarkdown ? "interrupted" : "unavailable" });
+          if (v.ended) this.releasableSites.set(site, this.repository.lifecycle);
           this.active.delete(site);
         }
         return;
@@ -120,11 +125,15 @@ export class QuestionHistoryService {
       if (text !== current.answerMarkdown || capture !== current.capture || conversationUrl !== current.conversationUrl || sealed) {
         this.repository.putAnswer(next, true, sealed || !current.answerMarkdown ? 0 : now + 30_000);
       }
-      if (sealed) this.active.delete(site);
+      if (sealed) {
+        if (complete || v.ended) this.releasableSites.set(site, this.repository.lifecycle);
+        this.active.delete(site);
+      }
     }, undefined);
   }
   cancel(sites: readonly SiteKey[] = [...this.active.keys()]): void {
     for (const site of sites) this.guarded(() => {
+      this.releasableSites.delete(site);
       const current = this.current(site);
       this.active.delete(site);
       if (!current) return;

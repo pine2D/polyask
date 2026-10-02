@@ -9,14 +9,24 @@ test("view protection includes pending submissions and synthesis awaiting save",
   let token: string | undefined = "pending-not-yet-ready";
   let synthesis: SiteKey | undefined = "kimi";
   let protectedSite!: (site: SiteKey) => boolean;
-  const history = { token: (site: SiteKey) => site === "claude" ? token : undefined, cancel() {} } as unknown as QuestionHistoryService;
-  const manager = { setCapturePending: (check: typeof protectedSite) => { protectedSite = check; } } as unknown as ViewManager;
+  let releasable!: (site: SiteKey) => boolean;
+  let invalidate!: (sites: readonly SiteKey[]) => void;
+  let invalidated: readonly SiteKey[] = [];
+  const history = { token: (site: SiteKey) => site === "claude" ? token : undefined,
+    releasable: (site: SiteKey) => site === "claude" && token === undefined,
+    clearReleaseEvidence: (sites: readonly SiteKey[]) => { invalidated = sites; }, cancel() {} } as unknown as QuestionHistoryService;
+  const manager = { setCapturePending: (check: typeof protectedSite, ready: typeof releasable, clear: typeof invalidate) => {
+    protectedSite = check; releasable = ready; invalidate = clear;
+  } } as unknown as ViewManager;
   const capture = createQuestionCapture(history, manager, site => synthesis === site);
   try {
     assert.equal(protectedSite("claude"), true);
     assert.equal(protectedSite("kimi"), true);
     token = undefined;
     assert.equal(protectedSite("claude"), false);
+    assert.equal(releasable("claude"), true);
+    invalidate(["claude"]);
+    assert.deepEqual(invalidated, ["claude"]);
     assert.equal(protectedSite("kimi"), true);
     synthesis = undefined;
     assert.equal(protectedSite("kimi"), false);

@@ -36,7 +36,7 @@ test("the app restores drafts locally and clears only after a confirmed send", (
   assert.match(hook, /loadDraft\(window\.localStorage\)/);
   assert.match(hook, /saveDraft\(window\.localStorage, text\)/);
   assert.match(app, /completed[\s\S]{0,300}result\.ok/);
-  assert.match(app, /clearDraft\(window\.localStorage\)/);
+  assert.match(readSource("src/renderer/local-data-reset.ts"), /clearDraft\(storage\)/);
 });
 
 test("a completed send clears only the exact unedited draft revision", async () => {

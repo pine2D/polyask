@@ -40,6 +40,7 @@ export class SynthesisService {
   private pending: PendingSynthesis | null = null;
   private candidate: SynthesisCandidate | null = null;
   private activeController: AbortController | null = null;
+  private generation = 0;
 
   constructor(private readonly options: SynthesisServiceOptions) {
     this.now = options.now ?? Date.now;
@@ -52,6 +53,14 @@ export class SynthesisService {
   cancel(): void {
     this.activeController?.abort();
     this.activeController = null;
+  }
+
+  reset(): void {
+    this.generation += 1;
+    this.cancel();
+    this.pending = null;
+    this.candidate = null;
+    this.options.onPendingChange?.();
   }
 
   async send(value: unknown): Promise<SynthesisSendResponse> {
@@ -72,6 +81,7 @@ export class SynthesisService {
       instruction: request.instruction,
       excerpt: request.excerpt
     });
+    this.generation += 1;
     this.options.beforeSend?.();
     this.activeController?.abort();
     const controller = new AbortController();
@@ -106,7 +116,9 @@ export class SynthesisService {
   async collect(): Promise<SynthesisCandidate> {
     const pending = this.pending;
     if (!pending || !this.options.archives.get(pending.archiveId)) throw new Error("synthesis_not_pending");
+    const generation = this.generation;
     const results = await this.options.collect([pending.targetSite], null);
+    if (this.pending !== pending || this.generation !== generation) throw new Error("synthesis_not_pending");
     const answer = results.find((result) => result.site === pending.targetSite && !!result.text?.trim());
     if (!answer?.text) throw new Error("synthesis_collect_failed");
     this.candidate = {

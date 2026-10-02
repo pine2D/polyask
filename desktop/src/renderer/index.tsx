@@ -44,7 +44,7 @@ import {
 } from "./display-preferences";
 import { ImagePicker } from "./image-picker";
 import { PageTabs } from "./page-tabs";
-import { clearDraft } from "./prompt-draft";
+import { resetLocalSession } from "./local-data-reset";
 import { useTemplateDeletion } from "./use-template-deletion";
 import { usePromptDraft } from "./use-prompt-draft";
 import { FeedbackProvider } from "./feedback-provider";
@@ -545,7 +545,7 @@ function App(): React.JSX.Element {
     return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={comparisonId} preferredId={comparisonId ?? synthesis.pending?.archiveId ?? null} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={sendSynthesisFromArchive} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { clearDraft(window.localStorage); setText(""); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis })} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (

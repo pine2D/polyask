@@ -289,10 +289,12 @@ test("answer collection uses the trusted shell and the existing read-only adapte
 
 test("answer generation monitoring is run-scoped and never changes navigation", () => {
   const ipc = readSource("src/main/shell-ipc.ts");
+  const result = readSource("src/main/broadcast-result.ts");
   const manager = readSource("src/main/view-manager.ts");
   const preload = readSource("src/preload/site.ts");
   assert.match(ipc, /manager\.beginGenerationRun\(request\.runId, request\.sites\)/);
-  assert.match(ipc, /watchGeneration\(request\.runId, result\.site\)/);
+  assert.match(ipc, /acceptBroadcastResult\(/);
+  assert.match(result, /manager\.watchGeneration\(runId, result\.site\)/);
   assert.match(ipc, /cancelGenerationRun\(sites\)/);
   assert.match(manager, /cmd: "generation"/);
   assert.match(preload, /parseGenerationState/);
@@ -327,6 +329,7 @@ test("navigation retires generation monitoring for that site only", () => {
 
 test("one unreadable generation probe never ends the watch", () => {
   const manager = readSource("src/main/view-manager.ts");
+  const scheduler = readSource("src/main/generation-probe-scheduler.ts");
   const probe = manager.slice(
     manager.indexOf("private async probeGeneration("),
     manager.indexOf("private replaceView(")
@@ -334,7 +337,8 @@ test("one unreadable generation probe never ends the watch", () => {
   assert.match(probe, /if \(state === null\) \{\s*this\.scheduleGenerationProbe\(runId, site, false\);/);
   assert.match(probe, /if \(!reachable \|\| !view\) \{\s*this\.scheduleGenerationProbe\(runId, site, false\);/);
   assert.match(probe, /if \(phase === "complete"\) return;/);
-  assert.match(probe, /misses >= GENERATION_MISS_LIMIT/);
+  assert.match(scheduler, /GENERATION_MISS_LIMIT/);
+  assert.match(scheduler, /schedule\.misses\.get\(site\)/);
   assert.doesNotMatch(probe, /state === null\) return;/);
 });
 
@@ -410,6 +414,7 @@ test("hard reload and clear-site-data self-rescue actions cross the trusted type
   const healthIpc = readSource("src/main/site-health-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
   const manager = readSource("src/main/view-manager.ts");
+  const recovery = readSource("src/main/site-data-recovery.ts");
   assert.match(healthIpc, /polyask:clear-site-data/);
   const reloadHandler = healthIpc.slice(
     healthIpc.indexOf('ipcMain.handle("polyask:reload-site"'),
@@ -436,10 +441,11 @@ test("hard reload and clear-site-data self-rescue actions cross the trusted type
     manager.indexOf("checkHealth(sites: readonly SiteKey[])")
   );
   assert.match(clearSiteData, /siteReloadAllowed\(this\.currentStatus\(site\)\.phase\)/);
-  assert.match(clearSiteData, /clearStorageData\(\{/);
-  assert.match(clearSiteData, /storages: \["cachestorage", "serviceworkers"\]/);
-  assert.doesNotMatch(clearSiteData, /"cookies"/);
-  assert.match(clearSiteData, /reloadIgnoringCache\(\)/);
+  assert.match(clearSiteData, /clearSiteDataAndReload\(/);
+  assert.match(recovery, /clearStorageData\(\{/);
+  assert.match(recovery, /storages: \["cachestorage", "serviceworkers"\]/);
+  assert.doesNotMatch(recovery, /"cookies"/);
+  assert.match(recovery, /reloadIgnoringCache\(\)/);
 });
 
 test("every main-process IPC handler guards its own sender", () => {
@@ -635,13 +641,11 @@ test("site responses are accepted only from a site view's main frame", () => {
 });
 
 test("clearSiteData re-resolves the view after awaiting storage clearing", () => {
-  const manager = readSource("src/main/view-manager.ts");
-  const start = manager.indexOf("async clearSiteData(");
-  const body = manager.slice(start, manager.indexOf("\n  }\n", start));
-  const awaitAt = body.indexOf("await this.siteSession.clearStorageData(");
-  const reget = body.indexOf("const live = this.views.get(site);", awaitAt);
+  const body = readSource("src/main/site-data-recovery.ts");
+  const awaitAt = body.indexOf("await siteSession.clearStorageData(");
+  const reget = body.indexOf("const live = getView();", awaitAt);
   assert.ok(awaitAt > 0 && reget > awaitAt, "await 之后必须重新取视图");
-  assert.match(body.slice(reget), /live\.webContents\.isDestroyed\(\)\) return false;/);
+  assert.match(body.slice(reget), /live !== view \|\| live\.webContents\.isDestroyed\(\) \|\| !reloadAllowed\(\)/);
   assert.doesNotMatch(body.slice(reget), /\bview\.webContents\.reloadIgnoringCache/);
 });
 

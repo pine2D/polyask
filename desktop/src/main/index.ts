@@ -319,7 +319,10 @@ async function createWindow(): Promise<void> {
       sendToShell("polyask:prompt-library", promptLibrary.getState());
     }
   });
-  const dataAdmin = new DataAdminService({ database, deviceId, sync });
+  const dataAdmin = new DataAdminService({ database, deviceId, sync,
+    beforeDisconnect: () => { coordinator.cancel(); synthesisCoordinator.cancel(); },
+    beforeWipe: () => { collection.clearRun(); synthesis.reset(); manager.resetRunStatus(); }
+  });
   createMenu();
   const disposeIpc = registerShellIpc({
     runtime: runtimeInfo,
@@ -450,7 +453,7 @@ else {
   app.on("window-all-closed", () => {
     if (process.platform !== "darwin") app.quit();
   });
-  app.on("before-quit", () => {
+  app.on("will-quit", () => {
     desktopDatabase?.close();
     desktopDatabase = null;
   });

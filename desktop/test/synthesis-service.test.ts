@@ -27,6 +27,24 @@ function fixture() {
   return { database, archives, record, setNow: (value: number) => { now = value; } };
 }
 
+test("local reset invalidates a collected synthesis candidate", async () => {
+  const { database, archives, record } = fixture();
+  try {
+    const service = new SynthesisService({
+      sites: SITES, archives, navigate: async () => undefined,
+      send: async () => [{ site: "claude", ok: true }],
+      collect: async () => [{ site: "claude", host: "claude.ai", label: "Claude", text: "Synthetic answer" }],
+      showTarget: () => undefined, recordHistory: () => undefined
+    });
+    await service.send({ archiveId: record.id, targetSite: "claude", tier: "fast", selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "Summarize" });
+    await service.collect();
+    service.reset();
+    assert.equal(service.getPending(), null);
+    await assert.rejects(service.save(false), /synthesis_not_collected/);
+    assert.equal(archives.get(record.id)?.synthesis, null);
+  } finally { database.close(); }
+});
+
 test("citation report uses the existing collect/save path and exports with original source IDs", async () => {
   const { database, archives, record } = fixture();
   const report = 'AI analysis: [S1] "One"; [S2] "Two". Verify manually.';

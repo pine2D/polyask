@@ -147,6 +147,8 @@ export class DesktopDatabase {
     });
     // DELETE 只把页挂进 freelist，提问与回答明文仍留在 .sqlite / WAL 里；重置的承诺是「本机清空」，收缩一次。
     this.database.exec("VACUUM");
+    const checkpoint = this.database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as { busy?: number } | undefined;
+    if (checkpoint?.busy) throw new Error("reset_wal_checkpoint_failed");
   }
 
   adoptImportedProfile(deviceId: string): void {

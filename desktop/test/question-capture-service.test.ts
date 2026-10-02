@@ -37,6 +37,42 @@ test("navigation flush waits for the active capture before the caller seals the 
   } finally { capture.dispose(); pending.resolve({ token, owned: false }); db.close(); }
 });
 
+test("starting another broadcast preserves an in-flight final snapshot before changing its token", async () => {
+  const { db, history, q, token } = fixture();
+  const pending = deferredSnapshot();
+  const capture = new QuestionCaptureService(history, () => pending.promise);
+  const request = { runId: "next", sites: ["claude" as const], text: "Next synthetic question", tier: null, images: [] };
+  try {
+    const tick = capture.tick();
+    const preparing = capture.prepareRun(request, 44_000);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(history.token("claude"), token);
+    pending.resolve({ token, owned: true, text: "Final captured text" });
+    const remaining = await preparing;
+    await tick;
+    assert.equal(db.questions.answers(q.id)[0].answerMarkdown, "Final captured text");
+    assert.notEqual(history.token("claude"), token);
+    assert.ok(remaining > 0 && remaining <= 44_000);
+  } finally { capture.dispose(); pending.resolve({ token, owned: false }); db.close(); }
+});
+
+test("local reset during the final flush prevents a late broadcast from starting", async () => {
+  const { db, history, token } = fixture();
+  const pending = deferredSnapshot();
+  const capture = new QuestionCaptureService(history, () => pending.promise);
+  try {
+    const tick = capture.tick();
+    const preparing = capture.prepareRun({ runId: "after-reset", sites: ["claude"],
+      text: "Should not be sent", tier: null, images: [] }, 44_000);
+    await new Promise(resolve => setImmediate(resolve));
+    db.questions.invalidateLifecycle();
+    pending.resolve({ token, owned: false });
+    await assert.rejects(preparing, /cancelled/);
+    await tick;
+    assert.equal(db.questions.search().items.length, 1);
+  } finally { capture.dispose(); pending.resolve({ token, owned: false }); db.close(); }
+});
+
 test("navigation flush is bounded even if an active reader never settles", async t => {
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: 1000 });
   const { db, history } = fixture();

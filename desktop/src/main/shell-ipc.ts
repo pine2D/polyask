@@ -31,6 +31,7 @@ import {
   type SiteResponseEnvelope
 } from "../shared/protocol";
 import { BroadcastCoordinator } from "./broadcast";
+import { acceptBroadcastResult } from "./broadcast-result";
 import { ArchiveService } from "./archive-service";
 import { CollectionService } from "./collection-service";
 import type { DataAdminService } from "./data-admin-service";
@@ -44,7 +45,7 @@ import { registerSiteHealthIpc } from "./site-health-ipc";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { showCommandMenu, showGroupMenu } from "./native-menus";
 import { SITES } from "./sites";
-import { statusForResult, statusForSending } from "./status";
+import { statusForSending } from "./status";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
 
@@ -186,30 +187,27 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
     const request = parseBroadcastRequest(value);
     if (!request) throw new Error("invalid_broadcast_request");
+    if (options.dataAdmin.isResetting) throw new Error("operation_busy");
     if (request.images.length && unsupportedImageSites(request.sites, SITES).length) {
       throw new Error("image_sites_unsupported");
     }
     return operationGate.run(async () => {
       // beginRun first: a stale retry throws before generation monitoring is touched.
       collection.beginRun(request.runId, request.sites);
+      const remaining = await capture.prepareRun(request, request.images.length ? 90_000 : 44_000);
+      const lifecycle = options.questions.repository.lifecycle;
       manager.beginGenerationRun(request.runId, request.sites);
       // Recorded before dispatch, matching the extension (console/console.js pushes
       // history ahead of sendAll): a question the user actually asked belongs in the
       // library even when every site fails.
       try { history.record(request.text); } catch { /* History storage must not block sending. */ }
-      options.questions.begin(request);
       try { publishPromptLibrary(); } catch { /* A history read failure must not cancel dispatch. */ }
       for (const site of request.sites) manager.markStatus(statusForSending(site, request.runId));
       const results = await coordinator.send(
         request,
         (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: options.questions.token(site) }, signal),
-        request.images.length ? 90_000 : 44_000,
-        (result) => {
-          options.questions.result(request.runId, result);
-          capture.start();
-          manager.markStatus(statusForResult(result.site, result, request.runId));
-          if (result.ok) manager.watchGeneration(request.runId, result.site);
-        },
+        remaining,
+        result => acceptBroadcastResult(lifecycle, request.runId, result, options.questions, capture, manager),
         { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
       );
       return results;
@@ -255,6 +253,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.handle("polyask:synthesis-send", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
+    if (options.dataAdmin.isResetting) throw new Error("operation_busy");
     return operationGate.run(() => synthesis.send(value));
   });
   ipcMain.handle("polyask:synthesis-collect", (event) => {
@@ -293,6 +292,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.handle("polyask:new-session", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
+    if (options.dataAdmin.isResetting) throw new Error("operation_busy");
     return operationGate.run(() => workspace.newSession(value));
   });
   ipcMain.handle("polyask:show-group-menu", (event) => {

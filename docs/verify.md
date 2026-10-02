@@ -30,6 +30,7 @@
 
 ## 离线回归
 
+- 本机重置的真实 Electron 外壳交互：在 `desktop/` 运行 `node --import tsx --test test/local-data-reset-interaction.check.ts`；测试自行编译合成夹具、在临时页面验证旧输入与综合状态清理，不访问真实站点、Drive 或用户档案。普通 `npm test` 不运行这项图形检查。
 - 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个同源本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、共享登录域导航、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
 - 进程诊断桥接实测：`xvfb-run -a node scripts/runtime-process-smoke.mjs`，在两个临时离线 Electron 窗口运行生产 runtime-gates、preload 与 site-health IPC。合成 `child-process-gone` 事件核对可信窗口取数、其它 sender 拒绝、报告白名单过滤及释放清理；不使实际 GPU/网络进程崩溃，不代表 Windows 原生启动失败复现。
 

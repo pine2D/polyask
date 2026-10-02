@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import type { ArchiveRecord } from "../shared/archive";
 import type {
@@ -23,19 +23,24 @@ export function useSynthesisFlow(lock: ExclusiveActionLock): {
   const [runState, setRunState] = useState<RunState>("idle");
   const [pending, setPending] = useState<PendingSynthesis | null>(null);
   const [candidate, setCandidate] = useState<SynthesisCandidate | null>(null);
+  const revision = useRef(0);
+  const pendingRef = useRef<PendingSynthesis | null>(null);
   const acceptPending = (value: PendingSynthesis | null) => {
+    revision.current += 1;
+    pendingRef.current = value;
     setPending(value);
-    if (!value) setCandidate(null);
+    setCandidate(null);
   };
   const send = async (request: SynthesisSendRequest, beforeSend: () => void): Promise<PendingSynthesis> => {
     const result = await lock.run(async () => {
       setRunState("sending");
+      const operation = ++revision.current;
       try {
         beforeSend();
         const response = await shell.sendSynthesis(request);
+        if (operation !== revision.current) throw new Error("synthesis_not_pending");
         if (!response.result.ok || !response.pending) throw new Error(response.result.code || "synthesis_send_failed");
-        setPending(response.pending);
-        setCandidate(null);
+        acceptPending(response.pending);
         return response.pending;
       } finally { setRunState("idle"); }
     });
@@ -44,14 +49,18 @@ export function useSynthesisFlow(lock: ExclusiveActionLock): {
   };
   const cancel = (): void => { setRunState("cancelling"); shell.cancel(); };
   const collect = async (): Promise<string> => {
-    if (!pending) throw new Error("synthesis_not_pending");
-    setCandidate(await shell.collectSynthesis());
-    return pending.archiveId;
+    const current = pendingRef.current;
+    if (!current) throw new Error("synthesis_not_pending");
+    const operation = revision.current;
+    const response = await shell.collectSynthesis();
+    if (operation !== revision.current) throw new Error("synthesis_not_pending");
+    setCandidate(response);
+    return current.archiveId;
   };
   const save = async (replaceExisting: boolean): Promise<ArchiveRecord> => {
+    const operation = revision.current;
     const record = await shell.saveSynthesis(replaceExisting);
-    setPending(null);
-    setCandidate(null);
+    if (operation === revision.current) acceptPending(null);
     return record;
   };
   return { pending, candidate, acceptPending, send, collect, save, runState, cancel };

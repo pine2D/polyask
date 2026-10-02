@@ -161,6 +161,7 @@ export const SITE_CODES = [
   "composer_not_found",
   "not_ready",
   "submit_unconfirmed",
+  "generation_unconfirmed",
   "timeout",
   "cancelled",
   "inject_failed",

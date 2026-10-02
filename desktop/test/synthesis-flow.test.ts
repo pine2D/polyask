@@ -15,7 +15,10 @@ test("synthesis holds the shared renderer lock and exposes cancel until the requ
   }).outputText, {
     exports: module.exports,
     require: (name: string) => name === "react"
-      ? { useState: (value: unknown) => [value, (next: unknown) => states.push(next)] }
+      ? {
+        useState: (value: unknown) => [value, (next: unknown) => states.push(next)],
+        useRef: (value: unknown) => ({ current: value })
+      }
       : { shell: { sendSynthesis: () => new Promise((resolve) => { finish = resolve; }), cancel: () => { cancelled = true; } } }
   });
   const lock = new ExclusiveActionLock();

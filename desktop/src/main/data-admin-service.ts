@@ -10,6 +10,8 @@ interface DataAdminOptions {
   readonly database: DesktopDatabase;
   readonly deviceId: () => string;
   readonly sync: DataAdminSync;
+  readonly beforeDisconnect?: () => void;
+  readonly beforeWipe?: () => void;
   readonly now?: () => number;
 }
 
@@ -22,6 +24,8 @@ interface DataAdminOptions {
 //   旧 fragment，继承本机不建模的设置键；换掉 deviceId 会让重置后首轮上传把那些键整体丢掉。
 export class DataAdminService {
   private readonly now: () => number;
+  private resetting = false;
+  get isResetting(): boolean { return this.resetting; }
 
   constructor(private readonly options: DataAdminOptions) {
     this.now = options.now ?? Date.now;
@@ -66,9 +70,15 @@ export class DataAdminService {
   }
 
   async resetLocal(): Promise<SyncStatus> {
-    this.options.database.questions.invalidateLifecycle();
-    await this.options.sync.disconnect();
-    this.options.database.resetLocalData();
-    return this.options.sync.status();
+    if (this.resetting) throw new Error("operation_busy");
+    this.resetting = true;
+    try {
+      this.options.database.questions.invalidateLifecycle();
+      this.options.beforeDisconnect?.();
+      await this.options.sync.disconnect();
+      this.options.beforeWipe?.();
+      this.options.database.resetLocalData();
+      return this.options.sync.status();
+    } finally { this.resetting = false; }
   }
 }

@@ -1,5 +1,6 @@
 import type { SiteKey } from "../shared/contracts";
 import type { HistorySnapshot } from "../shared/question-capture";
+import type { BroadcastRequest } from "../shared/protocol";
 import type { QuestionHistoryService } from "./question-history-service";
 
 /** Bounded, independent of the UI's single-run generation monitor. */
@@ -15,6 +16,14 @@ export class QuestionCaptureService {
     if (this.timer || this.running) return;
     this.timer = setTimeout(() => { this.timer = null; void this.tick(); }, 5_000);
     this.timer.unref();
+  }
+  async prepareRun(request: BroadcastRequest, budgetMs: number): Promise<number> {
+    const deadline = Date.now() + budgetMs;
+    const lifecycle = this.history.repository.lifecycle;
+    await this.flush(this.history.targets().map(entry => entry.site));
+    if (this.history.repository.lifecycle !== lifecycle) throw new Error("cancelled");
+    this.history.begin(request);
+    return Math.max(1, deadline - Date.now());
   }
   async flush(sites: readonly SiteKey[]): Promise<void> {
     const deadline = Date.now() + 2_500;

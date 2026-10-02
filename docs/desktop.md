@@ -18,7 +18,7 @@
 | Site preload | 隔离世界里加载站点运行时，收发 `site-command`/`site-response` | `desktop/src/preload/site.ts` |
 | 站点运行时 | 九站适配器与通用链（classic script、`__AMS` 全局） | `desktop/src/site-runtime/` |
 
-- Shell 是唯一的 `BrowserWindow`；每个**已勾选**站点一个 `WebContentsView`。视图按勾选懒建：没勾的站点不建视图、不加载页面；取消勾选释放视图（登录态活在持久化 session 里，重新勾选会重新加载并仍是登录态，**丢的是页面上的对话**）。发送中、已提交、生成中及警告态暂不释放；答案采集 token 未结束时同样保留。未选但忙碌的视图保持挂载与正尺寸、仅隐藏；状态更新及采集落库后重查并释放，无新增轮询，重新勾选及新发送按释放当时状态保护。生成监控按站点保留轮次，新轮不停止其它站旧回答的监控；取消仅终止尚在发送的站点监控和采集，已提交回答继续只读收尾。辅助综合独立监控完成、不中断群发统计，待采集/待保存的目标也保持保护，保存成功后再检查释放。
+- Shell 是唯一的 `BrowserWindow`；每个**已勾选**站点一个 `WebContentsView`。视图按勾选懒建：没勾的站点不建视图、不加载页面；取消勾选释放视图（登录态活在持久化 session 里，重新勾选会重新加载并仍是登录态，**丢的是页面上的对话**）。发送中及答案采集 token 未结束时保留；已提交、生成中及警告态须有明确结束证据才自动释放，监控超时仅显示未确认并保留页面。未选但忙碌的视图保持挂载与正尺寸、仅隐藏；状态更新及采集落库后重查并释放，无新增轮询，重新勾选及新发送按释放当时状态保护。生成监控按站点保留轮次，新轮不停止其它站旧回答的监控；取消仅终止尚在发送的站点监控和采集，已提交回答继续只读收尾。辅助综合独立监控完成、不中断群发统计，待采集/待保存的目标也保持保护，保存成功后再检查释放。
 - **所有已勾选站点都挂在视图树里并保持正尺寸**，非当前页的与当前页第一格用完全相同的矩形、压在其之下——不占屏幕、不抢鼠标。**不能只挂当前页**：未 `addChildView` 的 `WebContentsView` 页面视口恒 0×0（只 `setBounds` 同样是 0），`site-runtime/core.js` 的 `findComposer` 因 `r.top < innerHeight` 恒假而返回 null，群发对后台站点必然 `composer_not_found`，一路重投烧到截止线。
 - **层序靠「重挂即提升」**：`addChildView` 对已在树里的子视图是原地提升到最顶层（幂等、`children` 不增长）。**绝不要改成先 detach 再 attach**——全拆重挂实测会让被聚焦站点的渲染进程真的丢焦点。落点 `view-manager.ts` 的 `attach`/`detach`/`reconcile`。
 - 布局、缩放、槽位顺序、`WebContents` 生命周期归 main；renderer 只提交白名单意图。
@@ -85,7 +85,7 @@ i18n → core → tier → selection-match → send → upload → md → adapte
 
 **main 与站点运行时只产 `code`，绝不产用户可见文案**；判定认 `code`，**绝不正则匹配文案**。翻译只有两处落点：`shared/status-copy.ts` 的映射 + `shared/copy.ts` 的三语词条。
 
-`shared/protocol.ts` 的 `SITE_CODES`（18 个）与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
+`shared/protocol.ts` 的 `SITE_CODES`（19 个）与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
 
 | code | copy key | | code | copy key |
 | --- | --- | --- | --- | --- |
@@ -93,6 +93,7 @@ i18n → core → tier → selection-match → send → upload → md → adapte
 | `composer_not_found` | `composerNotFound` | | `renderer_crashed` | `crashed` |
 | `not_ready` | `siteNotReady` | | `image_invalid` | `imagePayloadInvalid` |
 | `submit_unconfirmed` | `submitUnconfirmed` | | `attachment_unsupported` | `attachmentUnsupported` |
+| `generation_unconfirmed` | `generationUnconfirmed` | | | |
 | `timeout` | `timedOut` | | `attachment_failed` | `attachmentFailed` |
 | `cancelled` | `cancelledStatus` | | `attachment_timeout` | `attachmentTimedOut` |
 | `inject_failed` | `injectFailed` | | `attachment_action_required` | `attachmentActionRequired` |
@@ -252,7 +253,7 @@ npm run soak -- --minutes=60
 - 资源记录只含运行时版本/GPU 功能状态、窗口可见/最小化/聚焦状态、当前页、站点键/加载/节流状态，以及 PID/创建时间/CPU/工作集。只关联站点主帧 PID；子帧、worker 和其他未归属进程保留为未归属，不推算每站完整成本。同一 PID 多站共享时只记录一笔进程资源，工作集仍不是独占物理内存；新进程首笔 CPU 标为无有效间隔。不记录网址、正文、标题、账号或 IPC 载荷。
 - `POLYASK_SOAK_REPORT` 显式启用时，runtime-gates 才累计稳定性事件并采样 `app.getAppMetrics()`；普通运行不保留无消费者的事件数组。站点状态反馈及诊断快照独立于该记录器。
 - soak 第一笔发生在启动期间，CPU 初次读取为零，不代表空闲；后续样本为两次读取之间的用量。各进程工作集相加不是去重后的独占物理内存，启动期增长不能直接判定为泄漏。
-- 已选站点保留页面会话；本轮已实现未选站点在生成与答案采集结束后的事件触发回收。历史完成状态未知时仍遵守既有最长 15 分钟采集观察预算，不以 UI 的 complete 提前关闭页面。已选站点休眠、销毁或新的后台可见性策略尚未实施，需单独决策与真机验证。
+- 已选站点保留页面会话；未选站点在监控结束且答案采集有明确完成或归属终止证据后事件触发回收。监控连续 5 次读不到状态或到达 45 秒／15 分钟观察上限时显示 `generation_unconfirmed`；若采集在固定 15 分钟预算到期仍无结束证据，页面继续保留，以免关闭可能仍在生成的回答。独立的手动释放入口、已选站点休眠及新的后台可见性策略尚未实施，需单独决策与真机验证。
 
 ### 提问历史存储与同步基础
 

@@ -7,7 +7,8 @@ export function createQuestionCapture(history: QuestionHistoryService, manager: 
   otherPending: (site: SiteKey) => boolean = () => false): QuestionCaptureService {
   // token() includes pending submissions, unlike targets() which only contains
   // entries ready to capture. A selection change must protect both stages.
-  manager.setCapturePending(site => history.token(site) !== undefined || otherPending(site));
+  manager.setCapturePending(site => history.token(site) !== undefined || otherPending(site),
+    site => history.releasable(site), sites => history.clearReleaseEvidence(sites));
   return new QuestionCaptureService(history,
     (site, token, deadline) => manager.historyAccess.snapshot(site, token, deadline),
     () => manager.releaseUnselectedViews());

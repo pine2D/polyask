@@ -12,7 +12,7 @@ function producerFiles(): string[] {
   const preload = "src/preload/site.ts";
   const requires = [...readSource(preload).matchAll(/^require\("([^"]+\.js)"\);$/gm)].map((m) => `src/preload/${m[1]}`);
   assert.ok(requires.length >= 5, `${preload} 的 require 列表读取失败或结构变了`);
-  return [...requires, preload, "src/main/view-manager.ts", "src/main/broadcast.ts", "src/main/collection-service.ts", "src/main/synthesis-service.ts"];
+  return [...requires, preload, "src/main/view-manager.ts", "src/main/generation-probe-scheduler.ts", "src/main/broadcast.ts", "src/main/collection-service.ts", "src/main/synthesis-service.ts"];
 }
 
 function producedCodes(): Map<string, string> {

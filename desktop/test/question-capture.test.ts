@@ -37,6 +37,23 @@ test("only current token snapshots persist and deletion prevents late capture re
     assert.deepEqual(db.questions.answers(q.id), []);
   } finally { db.close(); }
 });
+
+test("only observed completion permits releasing a page after generation probing expires", () => {
+  const db = DesktopDatabase.open(":memory:");
+  let now = 1000;
+  const history = new QuestionHistoryService(db.questions, { deviceId: () => "local", now: () => ++now });
+  try {
+    history.begin(request("complete"));
+    history.result("complete", { site: "claude", ok: true });
+    const token = history.token("claude")!;
+    assert.equal(history.releasable("claude"), false);
+    history.accept("claude", { token, owned: true, text: "Answer", generation: "generating" });
+    for (let i = 0; i < 3; i++) history.accept("claude", { token, owned: true, text: "Answer", generation: "complete" });
+    assert.equal(history.releasable("claude"), true);
+    history.begin(request("next"));
+    assert.equal(history.releasable("claude"), false);
+  } finally { db.close(); }
+});
 test("history database failures report separately without throwing into the sending chain", () => {
   const db = DesktopDatabase.open(":memory:");
   let failures = 0;
@@ -90,6 +107,7 @@ test('an owned turn with no answer becomes unavailable when its capture budget e
     assert.ok(a.sealedAt);
     assert.equal(a.capture, 'unavailable');
     assert.equal(history.targets().length, 0);
+    assert.equal(history.releasable('claude'), false);
   } finally { db.close(); }
 });
 

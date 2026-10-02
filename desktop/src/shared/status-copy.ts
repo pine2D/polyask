@@ -7,6 +7,7 @@ const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
   composer_not_found: "composerNotFound",
   not_ready: "siteNotReady",
   submit_unconfirmed: "submitUnconfirmed",
+  generation_unconfirmed: "generationUnconfirmed",
   timeout: "timedOut",
   cancelled: "cancelledStatus",
   inject_failed: "injectFailed",

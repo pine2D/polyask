@@ -7,6 +7,7 @@ interface ReclamationOptions {
   selected: readonly SiteKey[];
   status(site: SiteKey): SiteStatus;
   capturePending(site: SiteKey): boolean;
+  observationEnded(site: SiteKey): boolean;
   detach(site: SiteKey): void;
   pageStatus: Map<SiteKey, SiteStatus>;
   runStatus: Map<SiteKey, SiteStatus>;
@@ -19,7 +20,7 @@ export function reclaimUnselectedViews(options: ReclamationOptions): void {
     if (options.selected.includes(key)) continue;
     const phase = options.status(key).phase;
     // A submitted/warning result does not mean generation has finished.
-    if (["sending", "submitted", "generating", "warning"].includes(phase)) continue;
+    if (phase === "sending" || (["submitted", "generating", "warning"].includes(phase) && !options.observationEnded(key))) continue;
     if (options.capturePending(key)) continue;
     options.detach(key);
     options.views.delete(key);

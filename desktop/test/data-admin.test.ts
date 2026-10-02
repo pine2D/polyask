@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -72,6 +72,8 @@ test("resetting local data disconnects first, wipes only this device, and keeps 
   const events: string[] = [];
   const admin = new DataAdminService({
     database, deviceId: () => "device-a",
+    beforeDisconnect: () => { events.push(`cancel:rows=${database.archives.list().length}`); },
+    beforeWipe: () => { events.push(`runtime:rows=${database.archives.list().length}`); },
     sync: {
       disconnect: async () => { events.push(`disconnect:rows=${database.archives.list().length}`); return status(); },
       status: () => status({ connected: false })
@@ -79,7 +81,7 @@ test("resetting local data disconnects first, wipes only this device, and keeps 
   });
   try {
     const result = await admin.resetLocal();
-    assert.deepEqual(events, ["disconnect:rows=2"], "必须先断开、再清库（断开时数据仍在，撤销授权不依赖本机数据）");
+    assert.deepEqual(events, ["cancel:rows=2", "disconnect:rows=2", "runtime:rows=2"], "须先停止发送，再断开云端、失效旧运行态，最后清库");
     assert.equal(result.connected, false);
     assert.equal(database.history.list().length, 0);
     assert.equal(database.archives.list().length, 0);
@@ -90,5 +92,38 @@ test("resetting local data disconnects first, wipes only this device, and keeps 
     assert.equal(database.driveFiles.list().length, 0);
     assert.equal(database.meta.get("syncConfig"), null);
     assert.equal(database.meta.get("deviceId"), "device-a", "deviceId 保留：重连后据此继承本机在云端的旧设置键");
+  } finally { database.close(); }
+});
+
+test("local reset truncates WAL pages containing deleted answer text before returning", () => {
+  const directory = mkdtempSync(join(tmpdir(), "polyask-reset-wal-"));
+  const path = join(directory, "polyask.sqlite");
+  const marker = "RESET_WAL_SYNTHETIC_SECRET_2026";
+  const database = DesktopDatabase.open(path);
+  try {
+    new HistoryService(database.history, { deviceId: () => "device-a" }).record(marker);
+    assert.equal(readFileSync(`${path}-wal`).includes(marker), true);
+    database.resetLocalData();
+    assert.equal(database.history.list().length, 0);
+    assert.equal(readFileSync(path).includes(marker), false);
+    assert.equal(existsSync(`${path}-wal`) && readFileSync(`${path}-wal`).includes(marker), false);
+  } finally { database.close(); rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("a local reset remains exclusive while Drive disconnect is pending", async () => {
+  const database = seeded(":memory:");
+  let finish!: () => void;
+  let disconnects = 0;
+  const admin = new DataAdminService({ database, deviceId: () => "device-a",
+    sync: { disconnect: () => { disconnects++; return new Promise<SyncStatus>(resolve => { finish = () => resolve(status()); }); },
+      status: () => status() } });
+  try {
+    const first = admin.resetLocal();
+    assert.equal(admin.isResetting, true);
+    await assert.rejects(admin.resetLocal(), /operation_busy/);
+    assert.equal(disconnects, 1);
+    finish();
+    await first;
+    assert.equal(admin.isResetting, false);
   } finally { database.close(); }
 });
