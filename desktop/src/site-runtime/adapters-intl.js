@@ -118,10 +118,15 @@
         if (/(?:fable|opus)\s*[\d.]+$/i.test(t.trim())) return "fast"; // 窄屏思考关：无后缀
         return null;
       },
-      // 最后一条回答（真机审计锚点 2026-07：每条 AI 回答一个 .font-claude-response）。
-      // 思考折叠头与正文同在一个 grid（真机 2026-07-11：折叠头 .row-start-1 / 正文 .row-start-2），
-      // 取正文格，否则思考摘要文本会混入汇总复制；无思考时无该 grid，回退整块。
+      // 新版（2026-10-02）：正文块 data-perf-reply-text，所在轮次 assistant-message。
+      // 最后一个正文块是最终回答；只有思考/工具时不回退整轮或上一条回答。
+      // 旧版仍取 grid 正文 .row-start-2，排除 .row-start-1 的思考折叠头。
       answer: function () {
+        const modern = document.querySelectorAll('[data-testid="assistant-message"]');
+        if (modern.length) {
+          const blocks = modern[modern.length - 1].querySelectorAll('[data-perf-reply-text]');
+          return blocks[blocks.length - 1] || null;
+        }
         const els = document.querySelectorAll(".font-claude-response");
         if (!els.length) return null;
         const el = els[els.length - 1];

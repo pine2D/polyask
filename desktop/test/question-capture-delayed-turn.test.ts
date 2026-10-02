@@ -15,7 +15,7 @@ function fixture() {
   return { db, history, q, token, accept, at: (value: number) => { now = value; } };
 }
 
-test('delayed user rendering extends observation once and saves only the later owned answer', () => {
+test('delayed user rendering saves only the later owned answer within the fixed observation budget', () => {
   const s = fixture();
   try {
     s.at(6000);
@@ -26,18 +26,20 @@ test('delayed user rendering extends observation once and saves only the later o
     assert.equal(s.history.token('gemini'), s.token);
     s.at(120_000); s.accept({ owned: true, text: 'Delayed owned answer' });
     assert.equal(s.db.questions.answers(s.q.id)[0].answerMarkdown, 'Delayed owned answer');
-    s.at(906_001); s.accept({ owned: true, text: 'Final answer' });
+    s.at(901_002); s.accept({ owned: true, text: 'Final answer' });
     assert.equal(s.history.token('gemini'), undefined, 'owned progress must not extend the budget again');
     assert.equal(s.db.questions.answers(s.q.id)[0].capture, 'unknown');
   } finally { s.db.close(); }
 });
 
 for (const state of ['idle', 'complete', null]) {
-  test(`unowned ${state} cannot extend observation`, () => {
+  test(`unowned ${state} cannot attribute text or restart observation`, () => {
     const s = fixture();
     try {
       s.at(6000); s.accept({ owned: false, generation: state, text: 'Wrong' });
       s.at(61_000); s.accept({ owned: false });
+      assert.equal(s.history.token('gemini'), s.token);
+      s.at(901_002); s.accept({ owned: false, generation: state });
       assert.equal(s.history.token('gemini'), undefined);
       assert.equal(s.db.questions.answers(s.q.id)[0].capture, 'unavailable');
       assert.equal(s.db.questions.answers(s.q.id)[0].answerMarkdown, null);
@@ -45,12 +47,12 @@ for (const state of ['idle', 'complete', null]) {
   });
 }
 
-test('ended or mismatched-token generation cannot prolong an unavailable capture', () => {
+test('ended or mismatched-token generation cannot prolong capture beyond its fixed budget', () => {
   for (const override of [{ ended: true }, { token: 'old' }]) {
     const s = fixture();
     try {
       s.at(6000); s.accept({ owned: false, generation: 'generating', ...override });
-      s.at(61_000); s.accept({ owned: false });
+      s.at(901_002); s.accept({ owned: false });
       assert.equal(s.history.token('gemini'), undefined);
       assert.equal(s.db.questions.answers(s.q.id)[0].answerMarkdown, null);
     } finally { s.db.close(); }

@@ -4,7 +4,15 @@
   const S = window.__AMS;
   if (!S) return;
   let entry = null;
-  const normalize = text => String(text || "").replace(/[\u200b-\u200d\ufeff]/g, "").replace(/\s+/g, " ").trim();
+  const normalize = text => {
+    let value = String(text || "").replace(/[\u200b-\u200d\ufeff]/g, "").replace(/\s+/g, " ").trim();
+    // Doubao inserts typography spaces at Han/ASCII boundaries in user bubbles.
+    // Preserve English word spacing, numeric spacing and all substantive text.
+    if (/^(?:www\.)?doubao\.com$/.test(location.hostname)) value = value
+      .replace(/(\p{Script=Han}) +(?=[A-Za-z0-9])/gu, "$1")
+      .replace(/([A-Za-z0-9]) +(?=\p{Script=Han})/gu, "$1");
+    return value;
+  };
   const adapter = () => Object.entries(S.adapters || {}).find(([host]) =>
     location.hostname === host || location.hostname.endsWith("." + host))?.[1];
   const same = (node, key, other, otherKey) => node === other || (!!key && key === otherKey);

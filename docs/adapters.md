@@ -125,7 +125,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
   4. SKIP 集剔除 `BUTTON` / `SVG` / `STYLE` / `SCRIPT` / `NOSCRIPT` / `SELECT` / `TEXTAREA` / `AUDIO` / `VIDEO`，以及 `aria-hidden="true"` 与 `role="button"` 的节点。
 - 五条实现硬规则：① 文本节点必须转义 `\` `` ` `` `*` `_` `[` `]`（同段的 `a_i` 与 `b_j` 会被下游渲染成强调/链接）；② 代码块语言名前瞻绝不吸收语义标签（ChatGPT 的 `h3` 直邻 `pre`，旧逻辑把「### Example」吞成语言名）；③ `firstTextNode` 要跳过空白垫片文本节点（Kimi 头部条首个文本节点是纯空白）；④ `PRE` 常被再包一层透明 `DIV`（Claude `overflow-x-auto` / Kimi syntax-highlighter）；⑤ 内容含反引号用双反引号 + 空格包裹，围栏代码含三个反引号时升级为四反引号。
 
-逐次提问副本的 `history.snapshot()` 在用户轮次尚未渲染、但停止控件已确认生成时，可返回 `owned:false, generation:"generating"`，仅用于主进程延长一次观察窗口。此分支不返回正文或地址；已结束、路由改变和手动操作仍终止采集，正文必须经 `bind()` 正向归属后才能保存。
+逐次提问副本的 `history.snapshot()` 在用户轮次尚未渲染、但停止控件已确认生成时，可返回 `owned:false, generation:"generating"`，仅作为生成过程信号；主进程观察预算已固定，不再据此顺延。此分支不返回正文或地址；已结束、路由改变和手动操作仍终止采集，正文必须经 `bind()` 正向归属后才能保存。
 
 ## 图片载荷（`desktop/src/site-runtime/upload.js`）
 
@@ -171,7 +171,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - **档位项与模型项同为 `menuitemradio` 且同时在 DOM**（顶层 4 个模型 + 子菜单 5 个档位），`_effortItems()` 做**两层语义校验**：① 最近的带标签 `[role=group]` 或 `[role=menu]` 的 `aria-labelledby` 必须指回 effort 标题/入口的 `id`；② 文本须命中 `_EFFORT` 档位标签集（由低到高的有序表）。少一层都会把「最高档」点成模型——一个叫「Max Preview」的模型就能骗过纯文本校验。**入口自身没有 `id` 时直接抛「Claude: Effort 入口缺少 id，无法校验档位归属」**：Base UI 哪天不再自动生成 id，第 ① 层校验就失去判据，此时宁可红也不许退回纯文本校验（fail-closed）。`_setEffort()` 取 rank 最高的一项（撤掉 Max 自动退 Extra，再撤退 High），点完 `waitFor` 复读 `_label()` 命中 `_THINK` 才算成功，否则抛「Claude: 目标 effort 未生效」。
 - **「无 effort 入口静默 return」的例外已撤销（2026-08-31）**：控件仍在，只是选择子变了；入口缺失 / 档位为空一律 throw。旧的 `_thinkSwitch()` 裸开关分支同时删除（真机已无该开关）。
 - **模型菜单已下沉（2026-08）**：顶层保留 Fable 5 / Opus 5 / Sonnet 5 / Haiku 4.5，其余进「more models / 更多模型」子菜单，`_selectModel` 顶层等 900ms 找不到才展开子菜单；选中后 `sleep(700)` + **`escMenus()`**（子菜单不关会罩住输入框并让后续动作点空；Base UI 菜单 Escape 有效，与 Gemini/智谱/Kimi 三站不同）。
-- 发送键 `button[data-testid="chat-input-send"]`（真机 2026-08-31；`aria-label="Send message"` 随界面语言变，只当兜底），原生 click 有效；此前「拒绝合成点击」的结论是误判——当时点的是侧栏同名假按钮（见发送路径表）。**两个已知坑**：侧栏每条会话的 `More options for <标题>` 按钮标题含 send/发送 时会匹配同一选择器且纵向落在带内（真机带内 9 个）；长提示词把 ProseMirror 撑高后发送键会跌出旧的 240 纵向带（15 行即失效）。两者都由 `desktop/src/site-runtime/send.js` 处理。停止键 testid 是 `chat-input-stop`（`stop-button` 是 ChatGPT 的形状，Claude 上零命中）。`answer()` 取末条 `.font-claude-response` → `.row-start-2`（折叠的思考头在 `.row-start-1`），取不到回退整块。`attach` 走 `input[data-testid="file-upload"]` + `S.setInputFiles`。
+- 发送键 `button[data-testid="chat-input-send"]`（真机 2026-08-31；`aria-label="Send message"` 随界面语言变，只当兜底），原生 click 有效；此前「拒绝合成点击」的结论是误判——当时点的是侧栏同名假按钮（见发送路径表）。**两个已知坑**：侧栏每条会话的 `More options for <标题>` 按钮标题含 send/发送 时会匹配同一选择器且纵向落在带内（真机带内 9 个）；长提示词把 ProseMirror 撑高后发送键会跌出旧的 240 纵向带（15 行即失效）。两者都由 `desktop/src/site-runtime/send.js` 处理。停止键 testid 是 `chat-input-stop`（`stop-button` 是 ChatGPT 的形状，Claude 上零命中）。`answer()` 新版取末条 `[data-testid="assistant-message"]` 内最后一个 `[data-perf-reply-text]` 正文块（2026-10-02 真机：旧 `.font-claude-response` 已零命中）；只有思考/工具时返回 null，不回退旧回答。历史归属锁定助手容器及其 `data-turn-key`，允许正文块重绘。旧版仍取 `.font-claude-response` → `.row-start-2`（折叠的思考头在 `.row-start-1`），取不到回退旧容器。`attach` 走 `input[data-testid="file-upload"]` + `S.setInputFiles`。
 
 ### ChatGPT（`chatgpt.com`，**`desktop/src/site-runtime/adapters-intl2.js`**）
 
@@ -274,11 +274,13 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 `history.js` 保存提交前的用户消息基线与本轮 token；`history-adapters.js` 为九站注册只读 `historyTurn()`。DOM 插入时绑定唯一新增且文本匹配的用户轮次，只有其后的回答才能进入快照。空基线要求观察到新用户节点插入，出现多个新轮次即停止；首次非空回答前允许已脱离文档的乐观用户节点重挂。绑定正文后以回答所属容器跟踪 Markdown 子节点重绘，不接纳另一个回答容器。
 
-历史副本不再把 `generation()` 的「无停止键但存在回答节点」当成完成证据，也不根据文字静止时长宣称完成；无法确认时展示完成状态未知。首次生成信号或已归属正文出现后，主进程只延长一次有限观察预算。真实页面控件激活/直接输入前尽力读取最后安全正文并冻结；popstate/hashchange 或已绑定会话路由变化终止归属。监听随终止解除。按钮识别覆盖 button/a/role=button/menuitem，以及计算样式为 cursor:pointer 的自定义控件；普通正文选择不冻结。元宝、Kimi、千问、智谱、DeepSeek 的自定义控件须用可信鼠标/键盘事件验收，不得据离线通过宣称全覆盖。
+历史副本不再把 `generation()` 的「无停止键但存在回答节点」当成完成证据，也不根据文字静止时长宣称完成；无法确认时展示完成状态未知。提交结果就绪后，主进程固定观察 15 分钟；生成信号与用户节点均可能迟到，不以 45 秒内缺席提前封存，后续进度不顺延。真实页面控件激活/直接输入前尽力读取最后安全正文并冻结；popstate/hashchange 或已绑定会话路由变化终止归属。监听随终止解除。按钮识别覆盖 button/a/role=button/menuitem，以及计算样式为 cursor:pointer 的自定义控件；普通正文选择不冻结。元宝、Kimi、千问、智谱、DeepSeek 的自定义控件须用可信鼠标/键盘事件验收，不得据离线通过宣称全覆盖。
+
+豆包用户气泡会在汉字与 ASCII 字母、数字之间插入排版空格（2026-10-02 深度思考首问实测）；仅本站在这些边界对提交原文与显示文字作相同归一化，保留英文词间、数字间空格与实质字符。新增用户轮次、节点插入、前驱消息与路由的归属保护不变，不以全量去空格匹配问题。
 
 2026-09-21 登录开发态确认：DeepSeek 用户 `.ds-message` 还需含 `.ds-collapsible-text`，否则空 AI 节点被误算用户；千问用户正文为 `.question-text-card`；智谱为 `.conversation.question .question-txt`；Gemini 只拼接 `.query-text-line`，排除重复读屏文案。ChatGPT/Kimi 等允许同一回答容器内的 Markdown 节点替换，千问空回答占位不提前锁定容器。ChatGPT 首轮会先出现 `/c/WEB:…` 临时路由，只有正式 `/c/…` 才锁定及保存；用户轮次绑定前的启动重定向不锁定会话。原生/execCommand 注入可触发可信 beforeinput，绑定用户轮次前忽略该输入事件。元宝会话路径含代理与会话两段；智谱真实会话由 `cid` 查询参数标识，恢复只保留校验后的单个 24 位字母数字/下划线/连字符 cid，丢弃其它参数。
 
-Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址：仅空首屏的第一轮、同一个仍连接的用户节点、文本及轮次数匹配、尚无正文时，允许一次该路径间迁移；已有会话、节点替换、第二次迁移和浏览器导航仍终止归属。智谱正文/代码拆在多个 `.markdown-body`，返回其独立 `.answer-content-wrap`，排除 `.text-advance-thinking-content`；只有思考段时返回 null。其真实生成控件为输入框旁 `.enter.searching`，不能漏认而让纯思考在 45 秒后停止采集。
+Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址：仅空首屏的第一轮、同一个仍连接的用户节点、文本及轮次数匹配、尚无正文时，允许一次该路径间迁移；已有会话、节点替换、第二次迁移和浏览器导航仍终止归属。智谱正文/代码拆在多个 `.markdown-body`，返回其独立 `.answer-content-wrap`，排除 `.text-advance-thinking-content`；只有思考段时返回 null。其真实生成控件为输入框旁 `.enter.searching`，生成状态监控须识别该控件；历史副本已独立采用固定 15 分钟预算。
 
 **验收边界**：九站已取得登录页面结构和合成提交证据，但不等于九站所有路径通过。新会话、已有会话、相同文本、网页直接追问与重新生成须分别核对。ChatGPT/Gemini 思考段排除仍待复核；VM 测试只能证明代码分支。当前逐站结果与未闭合项见 docs/verify.md。
 

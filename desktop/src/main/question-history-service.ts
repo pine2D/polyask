@@ -5,6 +5,8 @@ import { normalizeHistorySnapshot, type HistorySnapshot } from "../shared/questi
 import type { QuestionAnswerRecord, QuestionRecord } from "../shared/question-history";
 import { QuestionRepository, questionAnswerId } from "./question-repository";
 
+const OBSERVATION_MS = 15 * 60_000;
+
 interface CaptureEntry {
   lifecycle: number; runId: string; token: string; answerId: string; questionId: string;
   started: number; deadline: number; generating: boolean; completions: number; ready: boolean;
@@ -47,7 +49,7 @@ export class QuestionHistoryService {
             submission: "pending", submissionCode: null, conversationUrl: null, answerMarkdown: null,
             capture: "waiting", captureCode: null, capturedAt: null, truncated: false, sealedAt: null });
           pending.set(site, { lifecycle: this.repository.lifecycle, runId: request.runId, token: randomUUID(), answerId, questionId: record.id,
-            started: now, deadline: now + 45_000, generating: false, completions: 0, ready: false });
+            started: now, deadline: now + OBSERVATION_MS, generating: false, completions: 0, ready: false });
         }
       });
       this.lastRun = { lifecycle: this.repository.lifecycle, runId: request.runId, id: record.id };
@@ -80,7 +82,7 @@ export class QuestionHistoryService {
       const now = Math.max(this.now(), current.updatedAt + 1);
       const submission = result.ok ? "submitted" : result.code === "submit_unconfirmed" ? "unconfirmed" : result.code === "cancelled" ? "cancelled" : "failed";
       e.ready = submission === "submitted" || submission === "unconfirmed";
-      e.deadline = now + 45_000;
+      e.deadline = now + OBSERVATION_MS;
       this.repository.putAnswer({ ...current, submission, submissionCode: result.code ?? null,
         updatedAt: now, capture: e.ready ? "waiting" : "unavailable", sealedAt: e.ready ? null : now });
       if (!e.ready) this.active.delete(result.site);
@@ -95,18 +97,16 @@ export class QuestionHistoryService {
       const now = Math.max(this.now(), current.updatedAt + 1);
       const v = normalizeHistorySnapshot(snapshot, e.token);
       if (!v.owned) {
-        // A positive Stop signal can precede user-message DOM. Extend observation
-        // once, without persisting any unowned text or navigation address.
-        if (!v.ended && v.generation === "generating" && !e.generating) {
-          e.deadline = now + 15 * 60_000; e.generating = true;
-        }
+        // Stop and user-message DOM can both appear late. The fixed observation
+        // budget starts at submission, without persisting unowned text or URLs.
+        if (!v.ended && v.generation === "generating") e.generating = true;
         if (v.ended || now >= e.deadline) {
           this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: current.answerMarkdown ? "interrupted" : "unavailable" });
           this.active.delete(site);
         }
         return;
       }
-      if (v.generation === "generating" || (v.text && v.text !== current.answerMarkdown)) { if (!e.generating) e.deadline = now + 15 * 60_000; e.generating = true; e.completions = 0; }
+      if (v.generation === "generating" || (v.text && v.text !== current.answerMarkdown)) { e.generating = true; e.completions = 0; }
       else if (v.generation === "complete" && e.generating) e.completions++;
       else if (v.generation === "idle") e.completions = 0;
       const complete = e.completions >= 3;

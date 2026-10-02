@@ -15,13 +15,13 @@
     "chatglm.cn": ".conversation.question .question-txt"
   };
   const answerRoots = {
-    "claude.ai": ".font-claude-response", "chatgpt.com": '[data-turn="assistant"], [data-chatgpt-selection-message-id]',
+    "claude.ai": '[data-testid="assistant-message"], .font-claude-response', "chatgpt.com": '[data-turn="assistant"], [data-chatgpt-selection-message-id]',
     "gemini.google.com": "model-response", "deepseek.com": ".ds-message",
     "doubao.com": "[data-message-id]", "qianwen.com": ".answer-common-card",
     "kimi.com": ".chat-content-item-assistant", "yuanbao.tencent.com": ".agent-chat__list__item--ai",
     "chatglm.cn": ".answer-content"
   };
-  const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || node?.getAttribute?.("data-content-search-unit-key") || null;
+  const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || node?.getAttribute?.("data-content-search-unit-key") || node?.getAttribute?.("data-turn-key") || null;
   for (const [host, selector] of Object.entries(users)) {
     const a = S.adapters[host];
     if (!a || typeof a.answer !== "function") continue;

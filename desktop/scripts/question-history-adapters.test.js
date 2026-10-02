@@ -88,3 +88,13 @@ test('ChatGPT keeps the search-unit answer root when selection metadata wraps th
   assert.equal(a.historyTurn().answerRoot, root);
   assert.equal(a.historyTurn().answerKey, 'answer-unit');
 });
+
+test('Claude modern reply uses its assistant-message root and stable turn key', () => {
+  const u = user('Synthetic question');
+  const a = fixture('claude.ai', '[data-testid="user-message"]', [u]);
+  const root = { getAttribute: name => name === 'data-turn-key' ? 'synthetic-assistant-turn' : null };
+  const markdown = { isConnected: true, closest: selector => selector.includes('[data-testid="assistant-message"]') ? root : null };
+  a.answer = () => markdown;
+  assert.equal(a.historyTurn().answerRoot, root);
+  assert.equal(a.historyTurn().answerKey, 'synthetic-assistant-turn');
+});

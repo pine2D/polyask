@@ -84,7 +84,7 @@ test('an owned turn with no answer becomes unavailable when its capture budget e
     const q = history.begin(request('empty'))!;
     history.result('empty', { site: 'claude', ok: true });
     const token = history.token('claude')!;
-    now += 60_000;
+    now += 15 * 60_000 + 2;
     history.accept('claude', { token, owned: true, generation: null });
     const a = db.questions.answers(q.id)[0];
     assert.ok(a.sealedAt);
@@ -93,7 +93,7 @@ test('an owned turn with no answer becomes unavailable when its capture budget e
   } finally { db.close(); }
 });
 
-test('thought-only generation extends once, expires unavailable and rejects late answers', () => {
+test('thought-only generation stays within the fixed budget, expires unavailable and rejects late answers', () => {
   const db = DesktopDatabase.open(':memory:');
   let now = 1000;
   const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => now });
