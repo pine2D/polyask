@@ -9,6 +9,7 @@ import {
   type StoredPromptTemplate
 } from "../shared/prompt-library";
 import type { HistoryService } from "./history-service";
+import { nextSyncTime } from "../shared/sync";
 import type { MetaRepository } from "./meta-repository";
 import type { StateRepository } from "./state-repository";
 
@@ -44,11 +45,12 @@ export class PromptLibraryService {
     if (!value || typeof value !== "object") throw new Error("invalid_prompt_template");
     const input = value as { id?: unknown; name?: unknown; text?: unknown };
     const id = typeof input.id === "string" && input.id.trim() ? input.id : this.createId();
+    const current = this.state.get<StoredPromptTemplate>(`${TEMPLATE_PREFIX}${id}`);
     const template = createPromptTemplate({
       id,
       name: typeof input.name === "string" ? input.name : "",
       text: typeof input.text === "string" ? input.text : ""
-    }, { now: this.now(), deviceId: this.deviceId() });
+    }, { now: current ? nextSyncTime(this.now(), current.updatedAt, "deletedAt" in current ? current.deletedAt : 0) : this.now(), deviceId: this.deviceId() });
     this.state.put(`${TEMPLATE_PREFIX}${template.id}`, template, template.updatedAt);
     return template;
   }
@@ -59,7 +61,7 @@ export class PromptLibraryService {
     }
     const current = this.state.get<unknown>(`${TEMPLATE_PREFIX}${value}`);
     if (!isStoredPromptTemplate(current) || "deletedAt" in current) throw new Error("prompt_template_not_found");
-    const deleted = tombstonePromptTemplate(current, this.now(), this.deviceId());
+    const deleted = tombstonePromptTemplate(current, nextSyncTime(this.now(), current.updatedAt), this.deviceId());
     return this.state.put(`${TEMPLATE_PREFIX}${value}`, deleted, deleted.updatedAt);
   }
 

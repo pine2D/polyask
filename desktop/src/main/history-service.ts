@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { PromptHistoryItem } from "../shared/prompt-library";
-import { utf8Preview, type HistoryRecord } from "../shared/sync";
+import { nextSyncTime, utf8Preview, type HistoryRecord } from "../shared/sync";
 import type { HistoryRepository } from "./history-repository";
 
 interface HistoryServiceOptions {
@@ -24,7 +24,7 @@ export class HistoryService {
     if (!text) throw new Error("invalid_history_text");
     const id = createHash("sha256").update(text).digest("hex");
     const current = this.repository.get(id);
-    const now = this.now();
+    const now = current ? nextSyncTime(this.now(), current.updatedAt, current.lastUsedAt, "deletedAt" in current ? current.deletedAt : 0) : this.now();
     const record: HistoryRecord = {
       id,
       textHash: id,

@@ -1,4 +1,4 @@
-import { SYNC_SCHEMA, utf8Preview, validSyncTime } from "./sync";
+import { nextSyncTime, SYNC_SCHEMA, utf8Preview, validSyncTime } from "./sync";
 
 export interface ArchiveResult {
   readonly host: string;
@@ -159,7 +159,7 @@ export function updateArchiveRecord(
     throw new Error("invalid_patch");
   }
   if (!validSyncTime(context.now) || !context.deviceId) throw new Error("invalid_archive_version");
-  const next = { ...record, updatedAt: context.now, deviceId: context.deviceId };
+  const next = { ...record, updatedAt: nextSyncTime(context.now, record.updatedAt), deviceId: context.deviceId };
   if (Object.hasOwn(patch, "favorite")) {
     if (typeof patch.favorite !== "boolean") throw new Error("invalid_favorite");
     next.favorite = patch.favorite;
@@ -258,11 +258,12 @@ export function tombstoneArchive(
   deviceId: string
 ): ArchiveTombstone {
   if (!validSyncTime(now) || !deviceId) throw new Error("invalid_tombstone");
+  const updatedAt = nextSyncTime(now, record.updatedAt, "deletedAt" in record ? record.deletedAt : 0);
   return {
     id: record.id,
     createdAt: record.createdAt,
-    updatedAt: now,
-    deletedAt: now,
+    updatedAt,
+    deletedAt: updatedAt,
     deviceId,
     schema: SYNC_SCHEMA
   };

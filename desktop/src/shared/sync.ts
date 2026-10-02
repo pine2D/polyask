@@ -89,6 +89,13 @@ export function validSyncTime(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 }
 
+export function nextSyncTime(now: number, ...current: number[]): number {
+  if (!validSyncTime(now) || current.some((value) => !validSyncTime(value))) throw new Error("invalid_sync_time");
+  const next = Math.max(now, ...current.map((value) => value + 1));
+  if (!validSyncTime(next)) throw new Error("invalid_sync_time");
+  return next;
+}
+
 function versionTime(value: Partial<VersionedSyncValue>): number {
   return Math.max(Number(value.updatedAt) || 0, Number(value.deletedAt) || 0);
 }
@@ -98,7 +105,8 @@ export function compareSyncVersion(
   right: Partial<VersionedSyncValue>
 ): number {
   return versionTime(left) - versionTime(right) ||
-    String(left.deviceId ?? "").localeCompare(String(right.deviceId ?? ""));
+    String(left.deviceId ?? "").localeCompare(String(right.deviceId ?? "")) ||
+    Number("deletedAt" in left) - Number("deletedAt" in right);
 }
 
 function newer<T extends VersionedSyncValue>(current: T | undefined, candidate: T): T {
@@ -196,13 +204,14 @@ export function tombstoneHistory(
   deviceId: string
 ): HistoryTombstone {
   if (!validSyncTime(now) || !deviceId) throw new Error("invalid_tombstone");
+  const updatedAt = nextSyncTime(now, record.updatedAt, record.lastUsedAt, "deletedAt" in record ? record.deletedAt : 0);
   return {
     id: record.id,
     textHash: record.textHash,
     createdAt: record.createdAt,
     lastUsedAt: record.lastUsedAt,
-    updatedAt: now,
-    deletedAt: now,
+    updatedAt,
+    deletedAt: updatedAt,
     deviceId,
     schema: SYNC_SCHEMA
   };

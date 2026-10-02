@@ -73,6 +73,9 @@ test("decision upload and deletion retain schema 2 and do not resurrect stale cl
     assert.equal(uploads[1].file.appProperties?.deleted, "1");
     assert.equal(repository.importDecision(decision), true);
     assert.deepEqual(database.decisions.get(decision.id), tombstone);
+    assert.equal(repository.pending(), 1, "a stale shared file queues the retained tombstone for repair");
+    await engine.syncNow();
+    assert.deepEqual(uploads[2].body, tombstone);
     assert.equal(repository.pending(), 0);
   } finally { database.close(); }
 });

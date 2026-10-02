@@ -179,7 +179,14 @@ export class SyncRepository {
   importArchive(value: unknown): boolean {
     if (!validArchive(value)) return false;
     const current = this.database.archives.get(value.id);
-    if (current && compareEntity(value, current) <= 0) return true;
+    if (current) {
+      const order = compareEntity(value, current);
+      if (order < 0) {
+        this.enqueue({ key: `archive:${current.id}`, kind: "archive", entityId: current.id, nextAt: 0, attempt: 0 });
+        return true;
+      }
+      if (order === 0) return true;
+    }
     this.database.archives.put(value, false);
     return true;
   }
@@ -188,7 +195,11 @@ export class SyncRepository {
     if (!isStoredDecision(value)) return false;
     const current = this.database.decisions.get(value.id);
     const order = current ? compareSyncVersion(value, current) : 1;
-    if (current && (order < 0 || (order === 0 && (!("deletedAt" in value) || "deletedAt" in current)))) return true;
+    if (current && order < 0) {
+      this.enqueue({ key: `decision:${current.id}`, kind: "decision", entityId: current.id, nextAt: 0, attempt: 0 });
+      return true;
+    }
+    if (current && order === 0) return true;
     this.database.decisions.put(value, false);
     return true;
   }

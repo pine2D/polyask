@@ -15,6 +15,7 @@ import {
   type WorkspaceState
 } from "../shared/workspace";
 import type { MetaRepository } from "./meta-repository";
+import { nextSyncTime } from "../shared/sync";
 import { SITES } from "./sites";
 import type { StateRepository } from "./state-repository";
 
@@ -124,11 +125,13 @@ export class WorkspaceService {
       throw new Error("duplicate_group_sites");
     }
     const sameName = existingGroups.find((group) => group.name === String(input.name ?? "").trim());
+    const id = requestedId ?? sameName?.id ?? this.createId();
+    const current = this.state.get<WorkspaceGroup>(`${GROUP_PREFIX}${id}`);
     const group = createWorkspaceGroup({
-      id: requestedId ?? sameName?.id ?? this.createId(),
+      id,
       name: typeof input.name === "string" ? input.name : "",
       sites
-    }, { now: this.now(), deviceId: this.deviceId() });
+    }, { now: current ? nextSyncTime(this.now(), current.updatedAt, "deletedAt" in current ? current.deletedAt : 0) : this.now(), deviceId: this.deviceId() });
     this.state.put(`${GROUP_PREFIX}${group.id}`, group, group.updatedAt);
     return group;
   }
@@ -137,7 +140,7 @@ export class WorkspaceService {
     if (typeof id !== "string" || !id.trim() || id.length > 128) throw new Error("invalid_group_id");
     const group = this.state.get<WorkspaceGroup>(`${GROUP_PREFIX}${id}`);
     if (!validGroup(group) || !isActiveWorkspaceGroup(group)) throw new Error("group_not_found");
-    const deleted = tombstoneWorkspaceGroup(group, this.now(), this.deviceId());
+    const deleted = tombstoneWorkspaceGroup(group, nextSyncTime(this.now(), group.updatedAt), this.deviceId());
     this.state.put(`${GROUP_PREFIX}${id}`, deleted, deleted.updatedAt);
     return deleted;
   }
@@ -156,7 +159,8 @@ export class WorkspaceService {
   }
 
   private writeWorkspace(selectedSites: readonly SiteKey[], tier: Tier): void {
-    const updatedAt = this.now();
+    const current = this.state.get<StoredWorkspace>(WORKSPACE_KEY);
+    const updatedAt = current ? nextSyncTime(this.now(), current.updatedAt) : this.now();
     this.state.put<StoredWorkspace>(WORKSPACE_KEY, {
       selectedSites,
       tier,

@@ -24,10 +24,17 @@ function answerTombstone(record: QuestionAnswerIdentity, now: number, deviceId: 
   return { ...tombstone(record, now, deviceId), questionId: record.questionId, site: record.site, attempt: record.attempt };
 }
 
+function foldQuestionSearch(value: unknown): string {
+  return String(value ?? "").normalize("NFC").toLowerCase()
+    .replaceAll("\u0307", "").replaceAll("\u0131", "i").normalize("NFC");
+}
+
 export class QuestionRepository {
   lifecycle = 0;
   invalidateLifecycle(): void { this.lifecycle++; }
-  constructor(private readonly db: DatabaseSync, private readonly outbox: OutboxRepository) {}
+  constructor(private readonly db: DatabaseSync, private readonly outbox: OutboxRepository) {
+    db.function("question_search_fold", { deterministic: true }, foldQuestionSearch);
+  }
   get(id: string): StoredQuestion | null {
     return readJson<StoredQuestion>(this.db.prepare("SELECT body FROM questions WHERE id = ?").get(id));
   }
@@ -51,7 +58,10 @@ export class QuestionRepository {
       if (current && !("deletedAt" in current) && !("deletedAt" in value) &&
         JSON.stringify([current.text, current.sites, current.requestedTier, current.inputImageCount, current.createdAt]) !==
         JSON.stringify([value.text, value.sites, value.requestedTier, value.inputImageCount, value.createdAt])) throw new Error("immutable_question");
-      if (current && compareSyncVersion(value, current) < 0 && (!("deletedAt" in value) || "deletedAt" in current)) return;
+      if (current && compareSyncVersion(value, current) < 0 && (!("deletedAt" in value) || "deletedAt" in current)) {
+        if (!enqueue) this.enqueue("question", current.id);
+        return;
+      }
       this.db.prepare(`INSERT INTO questions(id, body, sort_time, deleted_at) VALUES(?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET body=excluded.body, sort_time=excluded.sort_time, deleted_at=excluded.deleted_at`)
         .run(value.id, JSON.stringify(value), value.createdAt, "deletedAt" in value ? value.deletedAt : null);
@@ -77,11 +87,20 @@ export class QuestionRepository {
         enqueue = true;
       }
       if (parent && !("deletedAt" in parent) && !parent.sites.includes(value.site)) throw new Error("invalid_question_answer");
-      if (current && "deletedAt" in current && "deletedAt" in value && compareSyncVersion(value, current) <= 0) return;
+      if (current && "deletedAt" in current && "deletedAt" in value && compareSyncVersion(value, current) <= 0) {
+        if (!enqueue && compareSyncVersion(value, current) < 0) this.enqueue("questionAnswer", current.id);
+        return;
+      }
       if (current && !("deletedAt" in value)) {
-        if (compareSyncVersion(value, current) <= 0) return;
+        if (compareSyncVersion(value, current) <= 0) {
+          if (!enqueue && compareSyncVersion(value, current) < 0) this.enqueue("questionAnswer", current.id);
+          return;
+        }
         if (!("deletedAt" in current) && current.sealedAt !== null && !restore && (enqueue || value.sealedAt === null) &&
-          (value.answerMarkdown !== current.answerMarkdown || value.conversationUrl !== current.conversationUrl || value.capture !== current.capture)) return;
+          (value.answerMarkdown !== current.answerMarkdown || value.conversationUrl !== current.conversationUrl || value.capture !== current.capture)) {
+          if (!enqueue) this.enqueue("questionAnswer", current.id);
+          return;
+        }
       }
       this.db.prepare(`INSERT INTO question_answers(id,question_id,site,attempt,body,deleted_at) VALUES(?,?,?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET body=excluded.body, deleted_at=excluded.deleted_at`)
@@ -109,12 +128,12 @@ export class QuestionRepository {
     return { question, loadedAnswerId: selected?.id ?? null, answers: answers.map(a => full && !("deletedAt" in full) && a.id === full.id ? full : a) };
   }
   legacy(filters: QuestionFilters = {}): QuestionLegacyPage {
-    const query = (filters.query ?? "").trim().toLocaleLowerCase();
+    const query = foldQuestionSearch((filters.query ?? "").trim());
     let cursor: [number, string] | null = null;
     try { if (filters.cursor) cursor = JSON.parse(filters.cursor); } catch { throw new Error("invalid_question_query"); }
     if (query.length > 1000 || (cursor && (!Array.isArray(cursor) || cursor.length !== 2 || !Number.isSafeInteger(cursor[0]) || typeof cursor[1] !== "string"))) throw new Error("invalid_question_query");
     const rows = this.db.prepare(`SELECT h.id, h.sort_time, json_extract(h.body, '$.text') AS text FROM history h
-      WHERE h.deleted_at IS NULL AND (? = '' OR instr(lower(json_extract(h.body, '$.text')), ?) > 0)
+      WHERE h.deleted_at IS NULL AND (? = '' OR instr(question_search_fold(json_extract(h.body, '$.text')), ?) > 0)
       AND NOT EXISTS (SELECT 1 FROM questions q WHERE json_extract(q.body, '$.text') = json_extract(h.body, '$.text'))
       AND (? IS NULL OR h.sort_time < ? OR (h.sort_time = ? AND h.id > ?))
       ORDER BY h.sort_time DESC,h.id LIMIT 51`).all(query, query, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[1] ?? "");
@@ -130,9 +149,9 @@ export class QuestionRepository {
       try { cursor = JSON.parse(filters.cursor); } catch { throw new Error("invalid_question_query"); }
       if (!Array.isArray(cursor) || cursor.length !== 2 || !Number.isSafeInteger(cursor[0]) || typeof cursor[1] !== "string") throw new Error("invalid_question_query");
     }
-    const query = (filters.query ?? "").trim().toLocaleLowerCase();
+    const query = foldQuestionSearch((filters.query ?? "").trim());
     const records = this.db.prepare(`SELECT body FROM questions WHERE deleted_at IS NULL
-      AND (? = '' OR instr(lower(json_extract(body, '$.text')), ?) > 0)
+      AND (? = '' OR instr(question_search_fold(json_extract(body, '$.text')), ?) > 0)
       AND (? IS NULL OR sort_time < ? OR (sort_time = ? AND id > ?))
       ORDER BY sort_time DESC,id LIMIT ?`).all(query, query, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[1] ?? "", limit + 1)
       .flatMap(row => { const v = readJson<QuestionRecord>(row); return v ? [v] : []; });
