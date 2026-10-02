@@ -76,11 +76,14 @@
   // 隐藏节点（水印 UUID、翻译克隆等）一并带出，所见即所得必须用 innerText（textContent 仅作兜底）
   function visText(el) { return ((el && (el.innerText != null ? el.innerText : el.textContent)) || "").trim(); }
 
-  // 读输入框当前文本：textarea/input 取 .value（.textContent 是初始值不随输入更新），其余取 .textContent
+  // 读输入框当前文本：textarea/input 取 .value，其余优先 innerText 保留段落换行；不折叠词间空格。
   function readText(e) {
     if (!e) return "";
-    const v = (e.tagName === "TEXTAREA" || e.tagName === "INPUT") ? (e.value || "") : (e.textContent || "");
-    return v.trim();
+    const v = (e.tagName === "TEXTAREA" || e.tagName === "INPUT") ? (e.value || "") : (e.innerText ?? e.textContent ?? "");
+    return v.replace(/\r\n?/g, "\n").trim();
+  }
+  function promptMatches(el, text) {
+    return readText(el) === String(text || "").replace(/\r\n?/g, "\n").trim();
   }
 
   // 切换成功后把光标放回输入框
@@ -127,9 +130,11 @@
       }
       }
     }
-    // 硬校验（两条分支同样生效，textarea 的 native setter 也会被受控组件回滚）：注入彻底落空时框仍为空，绝不能走到下面"空框=已发送"的校验循环产生假成功
-    if (text.trim() && !readText(el)) return { ok: false, code: "inject_failed" };
+    // 硬校验本次内容，不能把受控组件回滚的旧非空草稿或部分注入当作成功；保留词间空格，仅统一换行。
+    if (!promptMatches(el, text)) return { ok: false, code: "inject_failed" };
     await sleep(250);
+    el = findComposer() || el;
+    if (!promptMatches(el, text)) return { ok: false, code: "inject_failed" };
     if (deadline && Date.now() >= deadline) return { ok: false, code: "timeout" };
     const a = pickAdapter();
     const confirmUntil = () => images && images.length ? deadline : deadline ? Math.min(deadline, Date.now() + 3000) : 0;
@@ -143,12 +148,13 @@
         const before = readText(el);
         if ((await a.submit(el, deadline)) !== false)
           return await confirmSubmitted(before, confirmUntil(), historyToken, watchMessage);
-      } catch (e) { return { ok: false, code: "error", reason: String((e && e.message) || e) }; }
+      } catch (e) { return { ok: false, code: e?.message === "inject_failed" ? "inject_failed" : "error", reason: String((e && e.message) || e) }; }
     }
     // 发送键定位在 send.js：纵向锚定输入区，横向择近，排除侧栏里的同名按钮。
     // 每次动作前检查绝对截止时间，防止主进程已报超时后才迟到发送。
     const btn = window.__AMS.sendBtn ? window.__AMS.sendBtn(el) : null;
     if (deadline && Date.now() >= deadline) return { ok: false, code: "timeout" };
+    if (!promptMatches(el, text)) return { ok: false, code: "inject_failed" };
     const before = readText(el);
     // 一旦发出提交动作，只读等待确认；不能用 Enter/第二次点击“补发”不确定的提交。
     if (btn && !btn.disabled && btn.getAttribute?.("aria-disabled") !== "true") btn.click();

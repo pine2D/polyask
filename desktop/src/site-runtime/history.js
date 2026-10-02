@@ -16,8 +16,12 @@
   const adapter = () => Object.entries(S.adapters || {}).find(([host]) =>
     location.hostname === host || location.hostname.endsWith("." + host))?.[1];
   const same = (node, key, other, otherKey) => node === other || (!!key && key === otherKey);
+  function wasInserted(e, user) {
+    for (let node = user; node; node = node.parentNode) if (e.inserted.has(node)) return true;
+    return false;
+  }
   function stop(e) {
-    e.ended = true; e.observer?.disconnect(); if (e.timer) clearTimeout(e.timer); e.inserted = [];
+    e.ended = true; e.observer?.disconnect(); if (e.timer) clearTimeout(e.timer); e.inserted = new WeakSet();
     for (const [target, name, handler] of e.listeners || []) target.removeEventListener?.(name, handler, true);
     e.listeners = [];
   }
@@ -84,8 +88,8 @@
     if (!e.user) {
       const old = e.baseline;
       if (old?.user && (same(old.user, old.userKey, turn.user, turn.userKey) || (!old.user.isConnected && !adjacent))) return false;
-      if (!old?.user && !e.inserted.some(node => node === turn.user || node.contains?.(turn.user))) return false;
-      e.user = turn.user; e.userKey = turn.userKey || null; e.inserted = [];
+      if (!old?.user && !wasInserted(e, turn.user)) return false;
+      e.user = turn.user; e.userKey = turn.userKey || null; e.inserted = new WeakSet();
     } else if (!same(e.user, e.userKey, turn.user, turn.userKey)) {
       // Optimistic message DOM may be replaced by the server turn before any answer.
       // The exact text and unique expected count above still have to match.
@@ -130,13 +134,14 @@
         const current = entry = { token, text: normalize(text), baseline, user: null, answer: null, userKey: null,
           answerKey: null, routeId: route().home ? null : route().id,
           canMigrate: /^(?:www\.)?kimi\.com$/.test(location.hostname) && route().home && !baseline?.user,
-          migrated: false, finalSnapshot: null, listeners: [], ended: false, inserted: [], observer: null, timer: null };
+          migrated: false, finalSnapshot: null, listeners: [], ended: false, inserted: new WeakSet(), observer: null, timer: null };
         watchInteraction(current, a);
         if (typeof MutationObserver === "function") {
           current.observer = new MutationObserver(records => {
             if (current.ended) return;
             if (!current.user) for (const record of records) for (const node of record.addedNodes) {
-              if (current.inserted.length < 500) current.inserted.push(node);
+              // Weak evidence cannot fill up or retain discarded hydration nodes.
+              current.inserted.add(node);
             }
             // Bind at insertion time without serializing every streaming mutation.
             try { bind(current, a.historyTurn()); } catch (_) { stop(current); }

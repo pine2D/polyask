@@ -27,7 +27,7 @@
 | `state()` | ✓ | 同步 | `"think"` / `"fast"` / `null`。只表示粗档位，不能证明模型版本/强度/开关精确 |
 | `selection(mode)` | | 同步只读 | 返回 `{outcome, observed?, model?}`；`preferred`/`alternative` 需精确模型及目标模式证据，`mode_only` 只证明模式，其他为 `unconfirmed`。不得开菜单或复用上轮缓存；未实现时由 `state()` 提供模式证据 |
 | `diagnose()` | ✓ | 同步 | 锚点命中报告，供巡检标芯片。只列**常驻**控件，会随对话阶段消失的控件不许列（否则巡检恒红误报）。**每条检查必须带 `kind`**，见下方「检查项的 `kind`」 |
-| `submit(el, deadline)` | | `async` | `false` = 发送键此刻不可用 → 落回通用链；**抛异常 = core 直接 `code:"error"` 终止、不回退**，所以内部必须自行判空返回 false。点击成功也要过 `confirmSubmitted` 才算成功 |
+| `submit(el, deadline)` | | `async` | `false` = 发送键此刻不可用 → 落回通用链；**抛异常 = core 直接终止、不回退**（输入在等待中回滚时报 `inject_failed`，其余异常报 `error`），所以内部必须自行判空返回 false。点击成功也要过 `confirmSubmitted` 才算成功 |
 | `inject(el, text)` | | 同步 | `false` = 交回通用注入链（beforeinput→execCommand→textContent）；**抛异常 = 通用链对本站不安全**（Kimi），core 直接报 `inject_failed` 不回退 |
 | `answer()` | | 同步 | 最后一条 AI 回答的**根节点**（或字符串）或 null；core 用 `desktop/src/site-runtime/md.js` 统一序列化为 Markdown，**逐站不维护 markdown 规则** |
 | `submitted(text)` | | 同步 | 「末条用户消息是不是我刚发的」。消费端是 `desktop/src/main/broadcast.ts` 的 `confirmSubmitted`（只读确认，页面重挂期间最多探 1.5s）；确认「未提交」后是否自动重发一次由模块常量 `POLYASK_KIMI_RESUBMIT` 决定，**当前为 `false`** |
@@ -272,7 +272,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 ## 逐次提问的只读副本
 
-`history.js` 保存提交前的用户消息基线与本轮 token；`history-adapters.js` 为九站注册只读 `historyTurn()`。DOM 插入时绑定唯一新增且文本匹配的用户轮次，只有其后的回答才能进入快照。空基线要求观察到新用户节点插入，出现多个新轮次即停止；首次非空回答前允许已脱离文档的乐观用户节点重挂。绑定正文后以回答所属容器跟踪 Markdown 子节点重绘，不接纳另一个回答容器。
+`history.js` 保存提交前的用户消息基线与本轮 token；`history-adapters.js` 为九站注册只读 `historyTurn()`。DOM 插入时绑定唯一新增且文本匹配的用户轮次，只有其后的回答才能进入快照。空基线要求观察到新用户节点插入，新增节点证据用 WeakSet 保存，避免页面初始化前 500 次无关插入耗尽容量；出现多个新轮次即停止。首次非空回答前允许已脱离文档的乐观用户节点重挂。绑定正文后以回答所属容器跟踪 Markdown 子节点重绘，不接纳另一个回答容器。
 
 历史副本不再把 `generation()` 的「无停止键但存在回答节点」当成完成证据，也不根据文字静止时长宣称完成；无法确认时展示完成状态未知。提交结果就绪后，主进程固定观察 15 分钟；生成信号与用户节点均可能迟到，不以 45 秒内缺席提前封存，后续进度不顺延。真实页面控件激活/直接输入前尽力读取最后安全正文并冻结；popstate/hashchange 或已绑定会话路由变化终止归属。监听随终止解除。按钮识别覆盖 button/a/role=button/menuitem，以及计算样式为 cursor:pointer 的自定义控件；普通正文选择不冻结。元宝、Kimi、千问、智谱、DeepSeek 的自定义控件须用可信鼠标/键盘事件验收，不得据离线通过宣称全覆盖。
 

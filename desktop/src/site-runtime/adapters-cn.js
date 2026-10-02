@@ -68,12 +68,17 @@
       // 仅换图标），流式中二次群发会点成停止、截断上一条回答——confirmSubmitted 会诚实报失败，retry 可恢复；
       // 图标判别太脆弱不做守卫，属窄窗口取舍。
       submit: async function (_el, deadline) {
+        checkDeadline(deadline);
+        const draft = () => _el?.value ?? _el?.innerText ?? _el?.textContent ?? "";
+        const before = draft();
         const b = await waitFor(() => {
           const el = [...document.querySelectorAll('[role="button"].ds-button--primary.ds-button--circle')].pop();
           return el && !el.classList.contains("ds-button--disabled") &&
             el.getAttribute("aria-disabled") !== "true" ? el : null;
-        }, Number(deadline) ? Math.max(0, Number(deadline) - Date.now()) : 10000);
+        }, Number(deadline) ? Math.max(0, Number(deadline) - Date.now()) : 10000, 120, deadline);
+        checkDeadline(deadline);
         if (!b) return false;
+        if (draft() !== before) throw new Error("inject_failed");
         b.click();
       },
       // 最后一条回答：.ds-message 为 AI 消息容器，正文取思考段（.ds-think-content）之外的最后一个 .ds-markdown

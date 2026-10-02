@@ -156,6 +156,9 @@ async function deepSeekMustWaitForSendButton() {
       querySelectorAll: (selector) => selector.includes("ds-button--primary") ? [button] : [],
     },
   };
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, "core.js"), "utf8"), context);
+  S.checkDeadline = context.window.__AMS.checkDeadline;
+  context.window.__AMS = S;
   vm.runInNewContext(fs.readFileSync(path.join(ROOT, "adapters-cn.js"), "utf8"), context);
   const result = await S.adapters["deepseek.com"].submit(null, 21000);
   assert.notEqual(result, false);
