@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [1.11.2] - 2026-10-02
+
 验收限制：Linux/WSL 开发态 ChatGPT、豆包深度思考首问回归副本与页面全文一致；Claude 新版正文读取已重启验证，但修复后新首问的完整发送到历史保存链路未完成验收。用户报告的 ChatGPT 漏采未复现；Windows/macOS 原生九站组合及五种发行包原生安装、真实 Drive 同步与 Google Cloud 指标未在本轮核验。旧空副本不会自动回填，节流实验仍默认关闭。
 
 ### 修复
@@ -1021,7 +1023,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.11.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.11.2...HEAD
+[1.11.2]: https://github.com/pine2D/polyask/compare/v1.11.1...v1.11.2
 [1.11.1]: https://github.com/pine2D/polyask/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/pine2D/polyask/compare/v1.10.1...v1.11.0
 [1.10.1]: https://github.com/pine2D/polyask/compare/v1.10.0...v1.10.1
