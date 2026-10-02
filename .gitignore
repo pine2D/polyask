@@ -21,10 +21,7 @@
 .codegraph/
 .serena/
 
-# 项目级设计 skills：安装载荷和引擎可重建，来源与操作说明入库。
-/.agents/skills/impeccable/
-/.agents/skills/native-feel-cross-platform-desktop/
-/.agents/skills/make-interfaces-feel-better/
+# Impeccable 在本项目生成的运行时产物；设计 skills 为用户级安装（~/.agents/skills）。
 /.impeccable/cache/
 /.impeccable/config.local.json
 /.impeccable/critique/

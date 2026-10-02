@@ -87,6 +87,7 @@
 
 ## 工具
 
+- 设计技能：impeccable、make-interfaces-feel-better、native-feel-cross-platform-desktop 自 2026-10-02 起为用户级安装（`~/.agents/skills`，Claude Code 与 Codex 共用，由本机更新脚本维护），不再随仓库安装或锁定版本；Impeccable 在本项目生成的 `.impeccable/` 运行时产物仍由 `.gitignore` 排除。
 - 资源归属记录：启动前设置 `POLYASK_RESOURCE_TRACE` 为尚不存在的本地 JSONL 路径，默认每 5 秒一笔，最长 30 分钟，关闭窗口即停止；不自动退出应用。启动期单列，CPU 首笔和每个新 PID/创建时间的首笔无有效区间，按 `cpuIntervalValid` 排除。进程数组按 PID 一笔，站点只关联主帧；不可把共享 PID 分别归到各站后再次求和，也不可将工作集总和称为独占内存。与 soak 分开运行，两者都读 `getAppMetrics` 会影响 CPU 采样区间。日志不含对话或网址。
 - 只读探针耗时：开发态按上文启用本机 9223 调试端口后，在 `desktop/` 运行 `node scripts/probe-performance.mjs 9223`。脚本串行对已加载站点的生产隔离上下文各采 5 次 `generation()`、`answer()`、`toMarkdown()`，仅返回耗时、布尔值、状态和视口，不发送提问、不切档、不保存正文；结果写入打印出的临时目录。无回答时 Markdown 项为 null，不能据此宣称长回答处理很快。它测同步函数耗时，不包含生产 IPC 往返；零毫秒可能只是计时精度不足。缺适配器/执行失败会非零退出，尚未加载的站点不会凭空计入覆盖。
 - 后台节流机制实验：在 `desktop/` 运行 `xvfb-run -a node scripts/background-throttling-lab.mjs`（有原生显示时可直接 `node`）。临时档案、三个重叠且正尺寸的本地页面，拦截 HTTP/HTTPS；窗口先隐藏，再按关闭→全部允许→混合→恢复关闭→再次全部允许→再次恢复切换，直接覆盖 Electron 44.5.0 修复的「已隐藏时重新允许节流」路径。测动画帧、定时器与可见性；输出原始报告，不以特定节流比例作通关条件。此工具不触碰生产策略，不能替代九站后台生成、最小化和 Windows/macOS 验收。
