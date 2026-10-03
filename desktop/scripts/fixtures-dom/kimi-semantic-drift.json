@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "host": "www.kimi.com",
+  "path": "/chat/id-1",
+  "promptToken": "POLYASK_PROMPT",
+  "source": "synthetic",
+  "capturedAt": "2026-10-03",
+  "note": "Hand-written selector drift: level-one class names renamed, author-role attributes kept; historyTurn falls back to semantic signals.",
+  "expect": { "userCount": 2, "userText": "POLYASK_PROMPT", "answer": true, "answerRoot": true, "locate": "semantic" }
+}

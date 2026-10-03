@@ -17,7 +17,8 @@ export type SiteHealthRunPhase =
 //   control = 切档控件在不在——红了多半是站点改版
 //   tier    = 当前档位读不读得出——**这条红不代表站点坏了**
 //   probe   = 探测本身出错（适配器缺席 / diagnose 抛异常）
-export type SiteCheckKind = "reach" | "control" | "tier" | "probe";
+//   capture = 回答采集的逐站选择器能否定位末条提问/回答（仅会话页）——**同样只提示，不代表站点坏了**
+export type SiteCheckKind = "reach" | "control" | "tier" | "probe" | "capture";
 
 export interface SiteDiagnosticCheck {
   readonly name: string;
@@ -25,7 +26,12 @@ export interface SiteDiagnosticCheck {
   readonly kind?: SiteCheckKind;
 }
 
-const CHECK_KINDS: readonly SiteCheckKind[] = ["reach", "control", "tier", "probe"];
+const CHECK_KINDS: readonly SiteCheckKind[] = ["reach", "control", "tier", "probe", "capture"];
+// 只提示、不决定可用性的检查：红了在详情页显示「提示」，仍进诊断报告与哨兵比对。
+const ADVISORY_KINDS: readonly SiteCheckKind[] = ["tier", "capture"];
+export function isAdvisoryCheck(check: Pick<SiteDiagnosticCheck, "kind">): boolean {
+  return ADVISORY_KINDS.includes(check.kind as SiteCheckKind);
+}
 
 // 缺省与未知值一律按 control 处理：新写的检查忘了标 kind 时仍然会告警（fail-loud），
 // 而不是被静默降级成提示——降级的方向必须是「保留现状」，绝不能制造假绿。
@@ -84,7 +90,8 @@ export function buildSiteHealth(input: HealthInput): SiteHealth {
     // 任何其它合法档位（千问 Qwen3.7+快速、Kimi Instant、元宝 Expert）都返回 null——
     // 那是设计如此，不是故障。旧实现「任一项红即 error」让这三站在完全正常时常态误报，
     // 反而把真正的改版信号淹掉了。tier 项仍在详情页以「提示」显示，也仍进哨兵的逐项比对。
-    const blocking = checks.filter((check) => check.kind !== "tier");
+    // capture 同理：采集选择器漂移只影响提问历史副本，群发照常可用；②③ 级兜底可能仍接得住。
+    const blocking = checks.filter((check) => !isAdvisoryCheck(check));
     state = blocking.length
       ? (blocking.every((check) => check.ok) ? "ready" : "error")
       : "ready";

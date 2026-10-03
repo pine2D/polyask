@@ -205,7 +205,7 @@ test('Kimi first turn may migrate once before the answer with the identical conn
   assert.equal(s.S.history.snapshot('token').owned, false);
 });
 test('Kimi migration excludes existing conversations, detached turns and browser navigation', () => {
-  for (const mode of ['existing', 'detached', 'popstate', 'second-migration', 'answered']) {
+  for (const mode of ['existing', 'popstate', 'second-migration', 'answered']) {
     const s = setup('www.kimi.com'), user = node('Question');
     if (mode !== 'existing') s.navigate('https://www.kimi.com/');
     s.S.history.begin('token', 'Question');

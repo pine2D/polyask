@@ -9,6 +9,8 @@ const MSG = {
   cs_switchFailGeneric: { en: "Switch failed",                                  zh_CN: "切换失败",                        zh_TW: "切換失敗" },
   cs_switchedThink:  { en: "Switched: Deep Think",                              zh_CN: "已切到：深度思考",                zh_TW: "已切到：深度思考" },
   cs_switchedFast:   { en: "Switched: Fast Model",                              zh_CN: "已切到：快速模型",                zh_TW: "已切到：快速模型" },
+  diag_captureAnswer:{ en: "Answer located",                                    zh_CN: "已定位回答",                      zh_TW: "已定位回答" },
+  diag_captureUser:  { en: "Question located",                                  zh_CN: "已定位提问",                      zh_TW: "已定位提問" },
   diag_composer:     { en: "Composer",                                          zh_CN: "输入框",                          zh_TW: "輸入框" },
   diag_deepThink:    { en: "DeepThink toggle",                                  zh_CN: "DeepThink 开关",                  zh_TW: "DeepThink 開關" },
   diag_intelEntry:   { en: "Intelligence entry",                                zh_CN: "Intelligence 入口",               zh_TW: "Intelligence 入口" },

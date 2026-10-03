@@ -1,4 +1,5 @@
 // 只读轮次配对。定位不到明确的用户消息时不提供历史快照。
+// 本文件是第 ① 级（逐站选择器）；找不到用户轮次时交给 history-locate.js 的 ②③ 级，方法由 history.js 冻结在 ctx.method 上。
 (function () {
   "use strict";
   const S = window.__AMS;
@@ -25,7 +26,17 @@
   for (const [host, selector] of Object.entries(users)) {
     const a = S.adapters[host];
     if (!a || typeof a.answer !== "function") continue;
-    a.historyTurn = function () {
+    // ctx 由 history.js begin() 建立：ctx.method 冻结后只跑那一级；未冻结时每次都按 ①②③ 依次试。这里只定位不冻结——
+    // 冻结只发生在基线命中（begin）或 bind() 首次确立本轮用户时，否则一次没被采纳的锚点命中会把 ① 永久挤出本轮。
+    // 无 ctx（巡检探针、采集脚本）时 ① 后 ②，不走需要问题原文的 ③。diag.js 用 { method: "selector" } 只看 ①。
+    a.historyTurn = function (ctx) {
+      const method = ctx?.method;
+      let turn = method && method !== "selector" ? null : selectorTurn.call(this);
+      if (turn?.user) turn.locate = "selector";
+      else if (method !== "selector") turn = S.historyLocate?.locate(ctx) || turn;
+      return turn?.user ? turn : { user: null, userCount: 0 };
+    };
+    function selectorTurn() {
       let nodes = [...document.querySelectorAll(selector)], userCount, previousUserKey;
       nodes = nodes.filter(node => !nodes.some(parent => parent !== node && parent.contains(node)));
       if (host === "deepseek.com") nodes = nodes.filter(node => node.querySelector(".ds-collapsible-text") && !node.querySelector(".ds-markdown"));
@@ -63,6 +74,6 @@
       const answerRoot = (host === "chatgpt.com" && answer?.closest?.('[data-content-search-unit-key]'))
         || answer?.closest?.(answerRoots[host]) || answer;
       return { user, userCount: userCount ?? nodes.length, previousUserKey, answer, answerRoot, text, userKey: key(user), answerKey: key(answerRoot) };
-    };
+    }
   }
 }());

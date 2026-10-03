@@ -71,6 +71,29 @@ test("包装幂等：重复执行 diag.js 不叠加通用检查", () => {
   assert.deepEqual(plain(adapter.diagnose().map((c) => c.name)), ["diag_composer", "orig"]);
 });
 
+test("采集定位探针：只在会话路由产出两条 kind:capture，只看第 ① 级（method:selector）", () => {
+  const seen = [];
+  let home = false, turn = { user: {}, answerRoot: {} };
+  const adapter = { diagnose: () => [], historyTurn: (ctx) => { seen.push(ctx); return turn; } };
+  const ctx = context({ querySelector: () => null }, { "f.com": adapter }, { el: true });
+  ctx.window.__AMS.history = { route: () => ({ home }) };
+  vm.runInNewContext(source("diag.js"), ctx);
+  assert.deepEqual(plain(adapter.diagnose()), [
+    { name: "diag_composer", ok: true, kind: "reach" },
+    { name: "diag_captureUser", ok: true, kind: "capture" },
+    { name: "diag_captureAnswer", ok: true, kind: "capture" },
+  ]);
+  assert.deepEqual(plain(seen), [{ method: "selector" }], "探针不得走 ②③ 级兜底");
+  turn = { user: {}, answer: null, answerRoot: null };
+  assert.deepEqual(plain(adapter.diagnose().slice(1).map((c) => c.ok)), [true, false]);
+  turn = { user: null, userCount: 0 };
+  assert.deepEqual(plain(adapter.diagnose().slice(1).map((c) => c.ok)), [false, false]);
+  adapter.historyTurn = () => { throw new Error("drift"); };
+  assert.deepEqual(plain(adapter.diagnose().slice(1).map((c) => c.ok)), [false, false], "historyTurn 抛异常只记红，不带走其它检查");
+  home = true;
+  assert.deepEqual(plain(adapter.diagnose().map((c) => c.name)), ["diag_composer"], "首页/新会话天然零命中，不产出探针");
+});
+
 test("preload 注入顺序：diag.js 在全部 adapters 分卷之后", () => {
   const js = preloadRequires();
   const di = js.findIndex((f) => /\/diag\.js$/.test(f));
@@ -105,7 +128,7 @@ test("集成：真实 DeepSeek 适配器包装后通用检查在前、原检查�
 // 九站每条检查都必须带合法 kind：desktop 的健康判定按 kind 决定「拦路 / 只是提示」，
 // 漏标一处该检查会被归成 control 继续报 error——方向安全但等于没修，只有这条断言看得见。
 test("九站 diagnose 的每条检查都带合法 kind，且恰有一条 reach", () => {
-  const KINDS = new Set(["reach", "control", "tier", "probe"]);
+  const KINDS = new Set(["reach", "control", "tier", "probe", "capture"]);
   const document = {
     querySelector: () => ({ getAttribute: () => "", textContent: "", className: "" }),
     querySelectorAll: () => [],
@@ -115,8 +138,11 @@ test("九站 diagnose 的每条检查都带合法 kind，且恰有一条 reach",
     waitFor: async () => null, findByText: () => null, openMenu() {}, clickEl() {},
     sleep: () => Promise.resolve(), escMenus() {},
   });
+  // 按 preload 顺序带上 history 三卷，并停在会话路由上：九站的 capture 探针真的产出，kind 才在本断言的覆盖面内。
+  Object.assign(ctx, { URL, location: { href: "https://example.test/chat/id-1", hostname: "example.test" } });
   for (const file of ["selection-match.js", "adapters-intl.js", "adapters-intl2.js",
-    "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js"]) vm.runInNewContext(source(file), ctx);
+    "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js",
+    "history.js", "history-locate.js", "history-adapters.js"]) vm.runInNewContext(source(file), ctx);
   vm.runInNewContext(source("diag.js"), ctx);
 
   const hosts = Object.keys(ctx.window.__AMS.adapters);
@@ -124,6 +150,7 @@ test("九站 diagnose 的每条检查都带合法 kind，且恰有一条 reach",
   for (const host of hosts) {
     const checks = plain(ctx.window.__AMS.adapters[host].diagnose());
     assert.ok(checks.length, `${host} 的 diagnose 返回空`);
+    assert.equal(checks.filter((c) => c.kind === "capture").length, 2, `${host} 在会话路由上必须产出两条 capture 探针`);
     for (const check of checks) {
       assert.ok(KINDS.has(check.kind), `${host} 的检查「${check.name}」缺少合法 kind（拿到 ${check.kind}）`);
     }

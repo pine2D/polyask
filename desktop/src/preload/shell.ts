@@ -5,6 +5,7 @@ import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, F
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
 import { contextBridge, ipcRenderer } from "electron";
 import type { RuntimeProcessFailure } from "../shared/runtime-process";
+import type { CaptureLocateCounts } from "../shared/question-capture";
 
 import { ipcErrorCode } from "../shared/ipc-error";
 
@@ -113,6 +114,7 @@ export interface PolyAskDesktopApi {
   syncDiagnostics(): Promise<SyncDiagnosticSnapshot>;
   checkSiteHealth(sites: readonly SiteKey[]): Promise<SiteHealth[]>;
   getRuntimeProcessFailures(): Promise<RuntimeProcessFailure[]>;
+  getCaptureLocateCounts(): Promise<CaptureLocateCounts>;
   reloadSite(site: SiteKey, ignoreCache?: boolean): Promise<boolean>;
   clearSiteData(site: SiteKey): Promise<boolean>;
   clearHistory(): Promise<number>;
@@ -212,6 +214,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   syncDiagnostics: () => invoke("polyask:sync-diagnostics"),
   checkSiteHealth: (sites: readonly SiteKey[]) => invoke("polyask:site-health", sites),
   getRuntimeProcessFailures: () => invoke("polyask:runtime-process-failures"),
+  getCaptureLocateCounts: () => invoke("polyask:capture-locate-counts"),
   reloadSite: (site: SiteKey, ignoreCache?: boolean) => invoke("polyask:reload-site", site, ignoreCache),
   clearSiteData: (site: SiteKey) => invoke("polyask:clear-site-data", site),
   clearHistory: () => invoke("polyask:clear-history"),

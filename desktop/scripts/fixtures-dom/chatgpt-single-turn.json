@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "host": "chatgpt.com",
+  "path": "/c/id-1",
+  "promptToken": "POLYASK_PROMPT",
+  "source": "captured",
+  "capturedAt": "2026-10-03",
+  "note": "Real page, one finished turn; root includes composer, excludes sidebar.",
+  "expect": {
+    "userCount": 1,
+    "userText": "POLYASK_PROMPT",
+    "answer": true,
+    "answerRoot": true,
+    "locate": "selector"
+  },
+  "stats": {
+    "elements": 252,
+    "texts": 58,
+    "promptHits": 1,
+    "droppedElements": 0,
+    "droppedAttrs": 142,
+    "truncated": false,
+    "marked": 3
+  }
+}

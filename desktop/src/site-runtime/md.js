@@ -4,7 +4,8 @@
 // 所见即所得；链接保留为 [文本](href)（引用 chip 因此带回来源 URL），href 中的圆括号会被
 // 百分号编码防止截断目标；表格转 GFM 管道表。
 // 图片不贴签名/临时 src（会产出死链或过期图），只保留 alt 占位，保证纯图回答 text 非空。
-// ponytail: 嵌套列表不缩进（平铺输出）——回答里深嵌套罕见，需要时再给 list 传递 depth。
+// 嵌套列表按层缩进（无序 2 空格、有序 3 空格，即父项标记宽度）；KaTeX 还原为 TeX（行内 $..$、块级 $$..$$），
+// 优先 data-latex，其次 annotation[encoding="application/x-tex"]，都没有则退回常规遍历。
 (function () {
   "use strict";
   const S = window.__AMS;
@@ -16,6 +17,7 @@
     const cs = getComputedStyle(el);
     return cs.display === "none" || cs.visibility === "hidden";
   };
+  let pad = ""; // 当前列表嵌套缩进：list() 进入子项时累加父项标记宽度，嵌套列表各行以此为前缀
   let pendingLang = ""; // 代码块语言名放在 pre 外部头部条的站点（如 DeepSeek）：前瞻吸收进围栏
   // 下一个"有实质内容"的兄弟是代码块？跳过纯空文本兄弟（Claude 的 opacity-0 复制按钮容器
   // drop() 剔不掉但 innerText 为空）；PRE 常被再包一层透明 DIV（Claude overflow-x-auto /
@@ -49,6 +51,18 @@
   // URL 归一化不编码圆括号，裸拼进 [文本](href) 会被 CommonMark 的括号配平规则截断目标
   // （真机实证：带查询参数的右括号 URL）。只编码目标本身，链接文本仍显示原始 href。
   function mdUrl(href) { return href.replace(/[()]/g, (c) => (c === "(" ? "%28" : "%29")); }
+  // KaTeX → TeX：.katex-display 为块级，.katex 为行内；取不到 TeX 返回 null 让常规遍历兜底
+  // （.katex-html 带 aria-hidden 会被 drop 跳过，annotation 是 display:none，只能直接读不能遍历）
+  function math(n) {
+    const cls = " " + (n.className || "").toString() + " ";
+    const display = cls.includes(" katex-display ");
+    if (!display && !cls.includes(" katex ")) return null;
+    const src = n.getAttribute("data-latex") ? n : n.querySelector("[data-latex]");
+    const ann = n.querySelector('annotation[encoding="application/x-tex"]');
+    const tex = ((src && src.getAttribute("data-latex")) || (ann && ann.textContent) || "").trim();
+    if (!tex) return null;
+    return display ? "\n$$\n" + tex + "\n$$\n\n" : "$" + tex.replace(/\s+/g, " ") + "$";
+  }
   function inline(node) {
     let out = "";
     for (const n of node.childNodes) {
@@ -56,6 +70,8 @@
       if (n.nodeType === 3) { out += n.nodeValue.replace(/\s+/g, " ").replace(/([\\`*_\[\]])/g, "\\$1"); continue; }
       if (n.nodeType !== 1 || drop(n)) continue;
       const tag = n.tagName.toUpperCase();
+      const tex = math(n);
+      if (tex !== null) { out += tex; continue; }
       // 语义标签绝不吸收：ChatGPT 的 h3 直邻 pre（真机实证），旧逻辑会把「### Example」吞成语言名
       if (!/^(H[1-6]|P|LI|UL|OL|TABLE|BLOCKQUOTE)$/.test(tag) && preAhead(n)) {
         const ft = firstTextNode(n); // 首个非空文本节点（绕开头部条里的空白垫片与按钮文本）
@@ -96,11 +112,30 @@
   }
   // 列表另起一行：前一段若是 div 段落或行内文字，"- " 不能粘在其行尾。
   // 站点自绘的项目符号（元宝 `•` / 有序项 `4.`）与本序列化器的标记重复，只保留后者。
+  // 列表项续行：围栏外的空行压掉、其余行补 cw 缩进（嵌套列表的行已自带 cw 前缀）；围栏代码块（含围栏行）逐字保留，
+  // 不补缩进也不压空行——toMarkdown 收尾把围栏行剥回第 0 列，代码正文因此与围栏同列、相对缩进不变。
+  // 围栏按 CommonMark 配对：收尾行只含反引号且不短于开头（backtickFence 保证正文里的反引号串都更短）。
+  function indentItem(text, cw) {
+    const out = [];
+    let fence = 0;
+    text.split("\n").forEach((l, k) => {
+      const m = /^[ \t]*(`{3,})(.*)$/.exec(l);
+      if (fence) { if (m && m[1].length >= fence && !m[2].trim()) fence = 0; out.push(l); return; }
+      if (m) { fence = m[1].length; out.push(l); return; }
+      if (k && !l) return;
+      out.push(k && !l.startsWith(cw) ? cw + l : l);
+    });
+    return out.join("\n");
+  }
   function list(el, ordered) {
+    const pad0 = pad, cw = pad0 + (ordered ? "   " : "  ");
     let out = "\n", i = (ordered && parseInt(el.getAttribute("start"), 10)) || 1;
     for (const li of [...el.children].filter((c) => c.tagName === "LI" && !drop(c))) {
       const marker = ordered ? new RegExp("^" + i + "[.)、]\\s*") : /^[•·●◦▪‣]\s*/;
-      out += (ordered ? (i++) + ". " : "- ") + inline(li).trim().replace(marker, "").replace(/\n{2,}/g, "\n  ") + "\n";
+      pad = cw; // 子项内的嵌套列表以父项标记宽度缩进
+      const text = inline(li).trim().replace(marker, "");
+      pad = pad0;
+      out += pad0 + (ordered ? (i++) + ". " : "- ") + indentItem(text, cw) + "\n";
     }
     return out + "\n";
   }
@@ -112,6 +147,8 @@
   }
   function block(el) {
     if (drop(el)) return "";
+    const tex = math(el);
+    if (tex !== null) return tex;
     const tag = el.tagName.toUpperCase();
     if (/^H[1-6]$/.test(tag)) return "\n" + "#".repeat(+tag[1]) + " " + inline(el).trim() + "\n\n";
     if (tag === "P") { const t = inline(el).trim(); return t ? t + "\n\n" : ""; }
@@ -131,14 +168,15 @@
     if (tag === "UL") return list(el, false);
     if (tag === "OL") return list(el, true);
     if (tag === "TABLE") return table(el);
-    if (tag === "BLOCKQUOTE") { const t = inline(el).trim(); return t ? t.split("\n").map((l) => "> " + l).join("\n") + "\n\n" : ""; }
+    // 引用块自成容器：内部列表从零缩进起算（外层列表项的续行缩进加在 "> " 之前；智谱 li>blockquote>ul，2026-10-03 真机）
+    if (tag === "BLOCKQUOTE") { const pad0 = pad; pad = ""; const t = inline(el).trim(); pad = pad0; return t ? t.split("\n").map((l) => "> " + l).join("\n") + "\n\n" : ""; }
     if (tag === "HR") return "---\n\n";
     if (paragraphDiv(el)) { const t = inline(el).trim(); return t ? "\n" + t + "\n\n" : ""; }
     return inline(el); // 透明容器（div/section/span…）
   }
   S.toMarkdown = function (root) {
     if (!root) return "";
-    pendingLang = "";
+    pendingLang = ""; pad = "";
     return block(root).replace(/[ \t]+\n/g, "\n").replace(/^[ \t]+(`{3,})/gm, "$1").replace(/\n{3,}/g, "\n\n").trim();
   };
 })();

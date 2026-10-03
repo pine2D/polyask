@@ -36,8 +36,14 @@ class El {
   get innerText() { return this.textContent; } // 桩：不做可见性折叠，够用于本文件的断言
   contains(node) { let p = node; while (p) { if (p === this) return true; p = p.parentNode; } return false; }
   _walk(out) { for (const c of this.children) { out.push(c); c._walk(out); } return out; }
-  querySelector(sel) { return this._walk([]).find((e) => e.tagName === sel.toUpperCase()) || null; }
-  querySelectorAll(sel) { return this._walk([]).filter((e) => e.tagName === sel.toUpperCase()); }
+  // 桩选择器：tag / [attr] / tag[attr="v"]（KaTeX 规则用到）
+  _match(sel) {
+    const m = sel.match(/^([a-z0-9]*)(?:\[([\w-]+)(?:="([^"]*)")?\])?$/i);
+    if (!m) throw new Error("桩不支持选择器 " + sel);
+    return (!m[1] || this.tagName === m[1].toUpperCase()) && (!m[2] || (this.getAttribute(m[2]) !== null && (m[3] === undefined || this.getAttribute(m[2]) === m[3])));
+  }
+  querySelector(sel) { return this._walk([]).find((e) => e._match(sel)) || null; }
+  querySelectorAll(sel) { return this._walk([]).filter((e) => e._match(sel)); }
 }
 function el(tag, attrs, ...kids) { return new El(tag, attrs, kids); }
 function md(root) {
@@ -113,6 +119,36 @@ function yuanbaoDivParagraphsAndDrawnMarkers() {
   assert.equal(md(root), "*lee* 的含义。\n\n- *in the lee of the hill*（山背风坡）\n- 第二项\n\n第一段\n\n第二段\n\n1. 甲\n2. 乙");
 }
 
+// 嵌套列表：无序按 2 空格、有序按 3 空格缩进，混合嵌套与多段落续行对齐父项正文
+function nestedListsIndentByDepth() {
+  const li = (...k) => el("li", null, ...k);
+  const root = el("ul", null,
+    li("甲", el("ul", null, li("甲一", el("ul", null, li("甲一a"))), li("甲二"))),
+    li("乙", el("ol", null, li("乙1", el("ul", null, li("乙1a"))), li("乙2"))),
+    li(el("p", null, "丙段一"), el("p", null, "丙段二")));
+  assert.equal(md(root), "- 甲\n  - 甲一\n    - 甲一a\n  - 甲二\n- 乙\n  1. 乙1\n     - 乙1a\n  2. 乙2\n- 丙段一\n  丙段二");
+  // 列表项里的引用块内再嵌列表：引用内从零缩进，"> " 前补外层续行缩进（智谱真机形态）
+  const quoted = el("ol", null, li(el("p", null, "甲"), el("blockquote", null, el("ul", null, li("一"), li("二"), li("三")))));
+  assert.equal(md(quoted), "1. 甲\n   > - 一\n   > - 二\n   > - 三");
+  // 列表项里的代码块逐字保留：续行缩进不进围栏、围栏内空行不压（「编号步骤 + 代码」，Python 缩进即语义）
+  const code = (text) => el("pre", null, el("code", { class: "language-python" }, text));
+  const steps = el("ol", null, li(el("p", null, "装:"), code("def f():\n    x = 1\n\n    return x")), li("下一步"));
+  assert.equal(md(steps), "1. 装:\n```python\ndef f():\n    x = 1\n\n    return x\n```\n2. 下一步");
+  const deep = el("ul", null, li("甲", el("ul", null, li(el("p", null, "例:"), code("if x:\n  y\nz")))));
+  assert.equal(md(deep), "- 甲\n  - 例:\n```python\nif x:\n  y\nz\n```");
+}
+
+// KaTeX：data-latex 优先，其次 annotation；行内 $..$、块级 $$..$$；.katex-html（aria-hidden）不重复输出
+function katexBecomesTex() {
+  const html = el("span", { class: "katex-html", "aria-hidden": "true" }, "a+b");
+  const viaAnn = (tex) => el("span", { class: "katex" }, el("span", { class: "katex-mathml" }, el("math", null, el("semantics", null, el("mrow", null, "a+b"), el("annotation", { encoding: "application/x-tex" }, tex)))), html);
+  assert.equal(md(el("p", null, "设 ", viaAnn("a_i+b"), " 成立")), "设 $a_i+b$ 成立");
+  assert.equal(md(el("p", null, el("span", { class: "katex", "data-latex": "x^2" }, html))), "$x^2$");
+  assert.equal(md(el("p", null, el("span", { class: "katex", "data-latex": "优先" }, el("annotation", { encoding: "application/x-tex" }, "次选")))), "$优先$");
+  assert.equal(md(el("div", null, el("p", null, "前"), el("span", { class: "katex-display" }, viaAnn("\\int_0^1 f")), el("p", null, "后"))), "前\n\n$$\n\\int_0^1 f\n$$\n\n后");
+  assert.equal(md(el("p", null, el("span", { class: "katex" }, html))), "", "无 TeX 来源时退回常规遍历（aria-hidden 的渲染层被跳过）");
+}
+
 // F083 回归：site-runtime/upload.js 的错误 alert 指纹必须独立于 token()（后者对普通提示 DIV 塌缩成
 // 同一个 ""），否则上传后新出现的、文案不同的错误会被误判成"已见过"而漏检，一路等到 deadline。
 async function distinctUploadErrorsFailFastNotAtDeadline() {
@@ -161,6 +197,10 @@ async function distinctUploadErrorsFailFastNotAtDeadline() {
   console.log("✓ 链接目标中的圆括号被百分号编码");
   yuanbaoDivParagraphsAndDrawnMarkers();
   console.log("✓ div 段落断行，列表另起一行且去掉站点自绘符号");
+  nestedListsIndentByDepth();
+  console.log("✓ 嵌套列表按层缩进（无序 2、有序 3）");
+  katexBecomesTex();
+  console.log("✓ KaTeX 还原为 TeX（data-latex 优先，行内/块级）");
   await distinctUploadErrorsFailFastNotAtDeadline();
   console.log("✓ 附件错误提示使用独立指纹，不同文案的新错误立即判失败");
 })().catch((error) => { console.error(error.stack || error); process.exitCode = 1; });

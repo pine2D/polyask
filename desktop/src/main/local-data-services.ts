@@ -1,4 +1,5 @@
 import { QuestionHistoryService } from "./question-history-service";
+import { captureLocateDiagnostics } from "./capture-locate-diagnostics";
 import { safeQuestionUrl } from "./question-navigation";
 import { BackupService } from "./backup-service";
 import { TaskFolderService } from "./task-folder-service";
@@ -16,7 +17,8 @@ export function createLocalDataServices(database: DesktopDatabase) {
     return database.meta.put("deviceId", randomUUID());
   };
   deviceId();
-  const questions = new QuestionHistoryService(database.questions, { deviceId, safeUrl: safeQuestionUrl });
+  const questions = new QuestionHistoryService(database.questions, { deviceId, safeUrl: safeQuestionUrl,
+    onLocate: (site, locate) => captureLocateDiagnostics.record(site, locate) });
   const archives = new ArchiveService(database.archives, { deviceId });
   const history = new HistoryService(database.history, { deviceId });
   const promptLibrary = new PromptLibraryService(database.state, database.meta, history);

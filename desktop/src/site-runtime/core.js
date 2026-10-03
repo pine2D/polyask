@@ -284,7 +284,7 @@
               selection = await resolveTier(tier, tierDeadline, !!imageMode); await sleep(deadline ? Math.min(200, Math.max(0, deadline - Date.now())) : 200);
             }
             if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout", ...(selection ? { selection } : {}) };
-            try { window.__AMS.history?.begin(msg.historyToken, msg.text, deadline); } catch (_) {}
+            try { window.__AMS.history?.begin(msg.historyToken, msg.text, deadline, { images: images.length }); } catch (_) {}
             const r = await submitPromptNow(msg.text || "", deadline, images, msg.historyToken);
             if (selection) r.selection = selection;
             if (r.ok && selection?.outcome === "unconfirmed") r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "host": "yuanbao.tencent.com",
+  "path": "/chat/naQivTmsDa/id-1",
+  "promptToken": "POLYASK_PROMPT",
+  "source": "captured",
+  "capturedAt": "2026-10-03",
+  "note": "Real page, one finished turn; root includes composer, excludes sidebar.",
+  "expect": {
+    "userCount": 1,
+    "userText": "POLYASK_PROMPT",
+    "answer": true,
+    "answerRoot": true,
+    "locate": "selector"
+  },
+  "stats": {
+    "elements": 306,
+    "texts": 105,
+    "promptHits": 1,
+    "droppedElements": 0,
+    "droppedAttrs": 190,
+    "truncated": false,
+    "marked": 3
+  }
+}

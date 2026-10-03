@@ -57,6 +57,7 @@ require("../site-runtime/adapters-cn3.js");
 require("../site-runtime/adapters-cn4.js");
 require("../site-runtime/generation.js");
 require("../site-runtime/history.js");
+require("../site-runtime/history-locate.js");
 require("../site-runtime/history-adapters.js");
 require("../site-runtime/diag.js");
 

@@ -1,7 +1,7 @@
 import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteStatus } from "../shared/protocol";
-import { siteReloadAllowed, summarizeSiteHealth, type SiteHealth, type SiteHealthState } from "../shared/site-health";
+import { isAdvisoryCheck, siteReloadAllowed, summarizeSiteHealth, type SiteHealth, type SiteHealthState } from "../shared/site-health";
 import { describeStatus } from "../shared/status-copy";
 import { BackIcon, ChevronDownIcon, CopyIcon, FocusIcon, ReloadIcon, TrashIcon } from "./icons";
 
@@ -72,7 +72,7 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
         {current.checks.length ? (
           <ul className="health-checks">
             {current.checks.map((check, index) => (
-              <li data-ok={check.ok ? "true" : check.kind === "tier" ? "advisory" : "false"} key={`${check.name}-${index}`}><span>{check.name}</span><small>{check.ok ? props.copy.healthCheckPassed : check.kind === "tier" ? props.copy.healthCheckAdvisory : props.copy.healthCheckFailed}</small></li>
+              <li data-ok={check.ok ? "true" : isAdvisoryCheck(check) ? "advisory" : "false"} key={`${check.name}-${index}`}><span>{check.name}</span><small>{check.ok ? props.copy.healthCheckPassed : isAdvisoryCheck(check) ? props.copy.healthCheckAdvisory : props.copy.healthCheckFailed}</small></li>
             ))}
           </ul>
         ) : <p>{props.copy.healthNoChecks}</p>}

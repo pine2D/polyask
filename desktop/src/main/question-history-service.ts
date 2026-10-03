@@ -9,7 +9,7 @@ const OBSERVATION_MS = 15 * 60_000;
 
 interface CaptureEntry {
   lifecycle: number; runId: string; token: string; answerId: string; questionId: string;
-  started: number; deadline: number; generating: boolean; completions: number; ready: boolean;
+  started: number; deadline: number; generating: boolean; completions: number; ready: boolean; located?: boolean;
 }
 export class QuestionHistoryService {
   private lastRun: { lifecycle: number; runId: string; id: string } | null = null;
@@ -19,6 +19,8 @@ export class QuestionHistoryService {
   constructor(readonly repository: QuestionRepository, private readonly options: {
     deviceId: () => string; now?: () => number; createId?: () => string; onFailure?: () => void;
     safeUrl?: (site: SiteKey, value: string) => string | null;
+    // 本轮首次归属成功时回报定位级别（诊断记账，每轮一次）。
+    onLocate?: (site: SiteKey, locate: NonNullable<HistorySnapshot["locate"]>) => void;
   }) {}
   private now(): number { return (this.options.now ?? Date.now)(); }
   setFailureHandler(handler: (() => void) | null): void { this.reportFailure = handler; }
@@ -111,6 +113,7 @@ export class QuestionHistoryService {
         }
         return;
       }
+      if (v.locate && !e.located) { e.located = true; try { this.options.onLocate?.(site, v.locate); } catch { /* Diagnostics only. */ } }
       if (v.generation === "generating" || (v.text && v.text !== current.answerMarkdown)) { e.generating = true; e.completions = 0; }
       else if (v.generation === "complete" && e.generating) e.completions++;
       else if (v.generation === "idle") e.completions = 0;

@@ -44,6 +44,7 @@
     "@types/react-dom": "^19.0.2",
     "css-loader": "^7.1.2",
     "electron": "44.5.0",
+    "jsdom": "29.1.1",
     "style-loader": "^4.0.0",
     "ts-loader": "^9.5.2",
     "tsx": "4.23.12",
