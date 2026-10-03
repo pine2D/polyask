@@ -17,7 +17,8 @@
     "doubao.com": '[class*="break-btn-"],#flow-end-msg-stop,[aria-label*="stop" i],[aria-label*="停止"]',
     "qianwen.com": '[aria-label*="stop" i],[aria-label*="停止"]',
     "kimi.com": '.send-button-container.stop,.stop-button,[class*="stop-button"],[aria-label*="stop" i],[aria-label*="停止"]',
-    "yuanbao.tencent.com": '#yuanbao-send-btn[aria-label="Stop Answering"],[aria-label="Stop"],[aria-label="停止"]',
+    // 中文界面为「停止回答」，类名 SendButton_sendStop__* 与界面语言无关（2026-10-03 真机）。
+    "yuanbao.tencent.com": '#yuanbao-send-btn[aria-label="Stop Answering"],#yuanbao-send-btn[aria-label="停止回答"],#yuanbao-send-btn[class*="sendStop"],[aria-label="Stop"],[aria-label="停止"]',
     "chatglm.cn": '.enter.searching,.stop-button,[aria-label*="stop" i],[aria-label*="停止"]',
   };
 

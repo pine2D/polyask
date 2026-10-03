@@ -108,6 +108,8 @@ for (const [host, selector] of [
   ['kimi.com', '.send-button-container.stop'],
   ['doubao.com', '[class*="break-btn-"]'],
   ['yuanbao.tencent.com', '#yuanbao-send-btn[aria-label="Stop Answering"]'],
+  ['yuanbao.tencent.com', '#yuanbao-send-btn[aria-label="停止回答"]'],
+  ['yuanbao.tencent.com', '#yuanbao-send-btn[class*="sendStop"]'],
   ['deepseek.com', '.ds-button--primary:has(svg path[d^="M2 4.88C2"])'],
 ]) {
   test(`${host} recognizes the verified September stop control, including thought-only replies`, () => {

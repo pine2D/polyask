@@ -6,11 +6,12 @@
   let entry = null;
   const normalize = text => {
     let value = String(text || "").replace(/[\u200b-\u200d\ufeff]/g, "").replace(/\s+/g, " ").trim();
-    // Doubao inserts typography spaces at Han/ASCII boundaries in user bubbles.
-    // Preserve English word spacing, numeric spacing and all substantive text.
+    // Doubao inserts typography spaces between Han and other glyphs in user bubbles,
+    // including quotes (`有没有 "x" 的`, 2026-10-03). Preserve English word spacing,
+    // numeric spacing and all substantive text.
     if (/^(?:www\.)?doubao\.com$/.test(location.hostname)) value = value
-      .replace(/(\p{Script=Han}) +(?=[A-Za-z0-9])/gu, "$1")
-      .replace(/([A-Za-z0-9]) +(?=\p{Script=Han})/gu, "$1");
+      .replace(/(\p{Script=Han}) +(?=\S)/gu, "$1")
+      .replace(/(\S) +(?=\p{Script=Han})/gu, "$1");
     return value;
   };
   const adapter = () => Object.entries(S.adapters || {}).find(([host]) =>
@@ -61,6 +62,12 @@
       if (event.type === "keydown" && !["Enter", " "].includes(event.key)) return;
       const control = event.composedPath?.().some(node => node.matches?.('button,a,[role="button"],[role="menuitem"]')
         || (node.nodeType === 1 && getComputedStyle(node).cursor === "pointer"));
+      // While the bound turn is still streaming, scroll/copy controls or a drafted
+      // follow-up would truncate the copy. New turns, route and answer changes still end it.
+      // Yuanbao hides its stop control once the composer holds a draft, so recent
+      // answer DOM growth also counts (streaming gaps are well under 2s).
+      const streaming = a?.generation?.() === "generating" || (!!e.changedAt && Date.now() - e.changedAt < 2_000);
+      if (e.user && streaming) return;
       if (!e.answer || control || event.type === "beforeinput") freeze();
     };
     for (const name of ["pointerdown", "click", "keydown", "beforeinput"]) {
@@ -144,7 +151,10 @@
               current.inserted.add(node);
             }
             // Bind at insertion time without serializing every streaming mutation.
-            try { bind(current, a.historyTurn()); } catch (_) { stop(current); }
+            try {
+              const turn = a.historyTurn(), root = turn?.answerRoot || turn?.answer;
+              if (bind(current, turn) && root?.contains && records.some(record => root.contains(record.target))) current.changedAt = Date.now();
+            } catch (_) { stop(current); }
           });
           current.observer.observe(document.documentElement, { childList: true, subtree: true });
           const expires = Math.min(Number(deadline) || Date.now() + 90_000, Date.now() + 90_000) + 15 * 60_000 + 45_000;

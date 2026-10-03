@@ -12,6 +12,16 @@ test('Doubao typography spacing still binds the uniquely inserted submitted user
   assert.equal(s.S.history.snapshot('token').text, 'Owned answer');
 });
 
+test('Doubao spacing around quotes next to Han still binds the submitted turn (2026-10-03)', () => {
+  const quoted = '英文中有没有"in the lee of pines"的用法？';
+  const shown = '英文中有没有 "in the lee of pines" 的用法？';
+  const s = setup('www.doubao.com'), user = node(shown);
+  s.S.history.begin('token', quoted);
+  s.insert({ user, text: shown, userCount: 1, userKey: 'new', answer: node('Owned answer'), answerKey: 'reply' });
+  assert.equal(s.S.history.submitted('token'), true);
+  assert.equal(s.S.history.snapshot('token').text, 'Owned answer');
+});
+
 for (const text of [rendered.replace('30FPS', '60FPS'), rendered.replace('CPU、GPU', 'CPU GPU')]) {
   test(`Doubao substantive changes cannot be attributed: ${text}`, () => {
     const s = setup('doubao.com');

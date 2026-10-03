@@ -94,12 +94,21 @@
     lines.splice(1, 0, "| " + cells(rows[0]).map(() => "---").join(" | ") + " |");
     return "\n" + lines.join("\n") + "\n\n";
   }
+  // 列表另起一行：前一段若是 div 段落或行内文字，"- " 不能粘在其行尾。
+  // 站点自绘的项目符号（元宝 `•` / 有序项 `4.`）与本序列化器的标记重复，只保留后者。
   function list(el, ordered) {
-    let out = "", i = 1;
+    let out = "\n", i = (ordered && parseInt(el.getAttribute("start"), 10)) || 1;
     for (const li of [...el.children].filter((c) => c.tagName === "LI" && !drop(c))) {
-      out += (ordered ? (i++) + ". " : "- ") + inline(li).trim().replace(/\n{2,}/g, "\n  ") + "\n";
+      const marker = ordered ? new RegExp("^" + i + "[.)、]\\s*") : /^[•·●◦▪‣]\s*/;
+      out += (ordered ? (i++) + ". " : "- ") + inline(li).trim().replace(marker, "").replace(/\n{2,}/g, "\n  ") + "\n";
     }
     return out + "\n";
+  }
+  // 站点用 div 当段落（元宝 .ybc-p，2026-10-03 真机）：只含行内内容且有文字的块级 div 按段落断行；
+  // 包裹块级子树的 div 仍是透明容器。
+  function paragraphDiv(el) {
+    if (el.tagName.toUpperCase() !== "DIV" || /^inline/.test(getComputedStyle(el).display) || !(el.textContent || "").trim()) return false;
+    return [...el.children].every((c) => c.tagName.toUpperCase() === "BR" || drop(c) || /^inline/.test(getComputedStyle(c).display));
   }
   function block(el) {
     if (drop(el)) return "";
@@ -124,6 +133,7 @@
     if (tag === "TABLE") return table(el);
     if (tag === "BLOCKQUOTE") { const t = inline(el).trim(); return t ? t.split("\n").map((l) => "> " + l).join("\n") + "\n\n" : ""; }
     if (tag === "HR") return "---\n\n";
+    if (paragraphDiv(el)) { const t = inline(el).trim(); return t ? "\n" + t + "\n\n" : ""; }
     return inline(el); // 透明容器（div/section/span…）
   }
   S.toMarkdown = function (root) {

@@ -186,6 +186,7 @@ test('custom pointer controls freeze copies while ordinary text selection does n
   s.S.history.snapshot('token');
   s.customActivate('text'); answer.text = 'Continued';
   assert.equal(s.S.history.snapshot('token').text, 'Continued');
+  s.S.adapters['example.test'].generation = () => 'complete';
   s.customActivate('pointer'); answer.text = 'Regenerated';
   assert.equal(s.S.history.snapshot('token').text, 'Continued');
   assert.equal(s.S.history.snapshot('token').ended, true);
@@ -283,6 +284,7 @@ test('generation before the user DOM appears keeps observation alive without att
   const u = node('Question');
   s.insert({ user: u, text: 'Question', answer: node('Delayed answer'), userCount: 1 });
   assert.equal(s.S.history.snapshot('token').text, 'Delayed answer');
+  s.S.adapters['gemini.google.com'].generation = () => 'complete';
   s.activate();
   assert.equal(s.S.history.snapshot('token').ended, true);
 });

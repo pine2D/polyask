@@ -48,7 +48,8 @@ function md(root) {
       let i = 0; return { nextNode: () => (i < collected.length ? collected[i++] : null) };
     },
   };
-  const getComputedStyle = () => ({ display: "block", visibility: "visible" });
+  const inlineTags = new Set(["SPAN", "EM", "STRONG", "A", "CODE", "IMG", "B", "I"]);
+  const getComputedStyle = (n) => ({ display: n.attrs.display || (inlineTags.has(n.tagName) ? "inline" : "block"), visibility: "visible" });
   const context = vm.createContext({
     window: { __AMS: {} }, __AMS_I18N__: { t: (key) => `desktop:${key}` }, document, getComputedStyle, NodeFilter: { SHOW_TEXT: 4 },
     location: { href: "https://chatgpt.com/c/1" }, URL, console,
@@ -101,6 +102,17 @@ function encodesParensInLinkTarget() {
   assert.equal(md(root), "来源 [src](https://s.ex/q?s=f%28x%29&p=1%29)");
 }
 
+// 2026-10-03 元宝：div 段落 + 自绘「•」/「4.」的列表，曾输出「地方”。 - •in the lee…」粘连行
+function yuanbaoDivParagraphsAndDrawnMarkers() {
+  const item = (dot, ...kids) => el("li", null, el("span", null, el("span", null, dot)), el("span", null, el("div", { class: "ybc-p" }, ...kids)));
+  const root = el("div", null,
+    el("div", { class: "ybc-p" }, el("em", null, "lee"), " 的含义。"), "\n",
+    el("ul", null, item("•", el("em", null, "in the lee of the hill"), "（山背风坡）"), item("•", "第二项")),
+    el("div", { class: "ybc-p" }, "第一段"), "\n", el("div", { class: "ybc-p" }, "第二段"),
+    el("ol", null, item("1.", "甲"), item("2.", "乙")));
+  assert.equal(md(root), "*lee* 的含义。\n\n- *in the lee of the hill*（山背风坡）\n- 第二项\n\n第一段\n\n第二段\n\n1. 甲\n2. 乙");
+}
+
 // F083 回归：site-runtime/upload.js 的错误 alert 指纹必须独立于 token()（后者对普通提示 DIV 塌缩成
 // 同一个 ""），否则上传后新出现的、文案不同的错误会被误判成"已见过"而漏检，一路等到 deadline。
 async function distinctUploadErrorsFailFastNotAtDeadline() {
@@ -147,6 +159,8 @@ async function distinctUploadErrorsFailFastNotAtDeadline() {
   console.log("✓ img 保留 alt 占位，纯图回答 text 非空");
   encodesParensInLinkTarget();
   console.log("✓ 链接目标中的圆括号被百分号编码");
+  yuanbaoDivParagraphsAndDrawnMarkers();
+  console.log("✓ div 段落断行，列表另起一行且去掉站点自绘符号");
   await distinctUploadErrorsFailFastNotAtDeadline();
   console.log("✓ 附件错误提示使用独立指纹，不同文案的新错误立即判失败");
 })().catch((error) => { console.error(error.stack || error); process.exitCode = 1; });
