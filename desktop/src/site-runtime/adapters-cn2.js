@@ -136,7 +136,8 @@
         if (!els.length) return null;
         const el = els[els.length - 1];
         const mds = [...el.querySelectorAll(".markdown")].filter((m) => !m.closest(".thinking-container"));
-        return mds[mds.length - 1] || el;
+        // 只有思考段、正文 .markdown 还没出现时返回 null：退回整条会把推理过程当正文写进副本（2026-10-03 真机）
+        return mds[mds.length - 1] || (el.querySelector(".thinking-container") ? null : el);
       },
     },
 

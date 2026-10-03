@@ -180,7 +180,33 @@ async function distinctUploadErrorsFailFastNotAtDeadline() {
   assert.ok(now < 5000, `独立指纹应立即识别新错误，不应一路等到 deadline 附近（实得 now=${now}）`);
 }
 
+// 2026-10-04 真机：ChatGPT 代码块不再是 pre——div[data-markdown-copy="code-block"] 内是头部条（语言名+按钮）与
+// display:block 的 code，或 CodeMirror 的逐行 div.cm-line。旧序列化把它拆成「Python」段落加行内代码/逐行段落。
+function chatgptCodeBlockContainerIsFenced() {
+  const head = el("div", { "data-markdown-copy": "exclude", class: "flex select-none" }, el("div", { class: "truncate" }, "Python"),
+    el("div", null, el("button", { "aria-label": "Copy" }, "Copy")));
+  const box = (body) => el("div", null, el("div", { "data-markdown-copy": "code-block" }, head, el("div", null, body)));
+  assert.equal(md(box(el("code", { class: "whitespace-pre! block", display: "block" }, el("span", null, 'tree = "pine"\nprint(tree)')))),
+    '```python\ntree = "pine"\nprint(tree)\n```');
+  const cm = el("div", { class: "cm-content", "data-language": "python" },
+    el("div", { class: "cm-line" }, el("span", null, "tree"), ' = "pine"'), el("div", { class: "cm-line" }, "print(tree)"));
+  assert.equal(md(box(el("div", { class: "cm-editor", display: "flex" }, cm))), '```python\ntree = "pine"\nprint(tree)\n```');
+}
+
+// 2026-10-03 真机：千问 react-syntax-highlighter 每行一个块级 span，行首是 span.linenumber（user-select:none），
+// 行尾自带 "\n" 文本。旧实现用 innerText，行号混进围栏、每行之间多一空行。
+function qianwenLineNumbersStayOutOfFence() {
+  const line = (n, ...kids) => el("span", { display: "block" }, el("span", { class: "linenumber react-syntax-highlighter-line-number", display: "block" }, String(n)), ...kids);
+  const root = el("pre", null, el("code", null, line(1, el("span", null, "pine "), el("span", { class: "token" }, "="), " 1", el("span", null, "\n")),
+    line(2, el("span", { class: "token" }, "print"), "(pine)")));
+  assert.equal(md(root), "```\npine = 1\nprint(pine)\n```");
+}
+
 (async () => {
+  chatgptCodeBlockContainerIsFenced();
+  console.log("✓ ChatGPT 新版代码块容器（code 块 / CodeMirror 逐行）转围栏并吸收语言名");
+  qianwenLineNumbersStayOutOfFence();
+  console.log("✓ 千问代码行号不进围栏、行间不多空行");
   escapesSpecialCharsInText();
   console.log("✓ 文本节点转义 \\ ` * _ [ ]");
   upgradesFenceWhenContentHasTripleBacktick();

@@ -164,6 +164,26 @@ test("Kimi migration still refuses a different connected user or a different tex
     assert.equal(S.history.snapshot("tok").ended, true);
   }));
 
+test("Kimi and Qianwen answer(): a thinking-only reply is not the answer yet", () => {
+  const kimi = replayHtml(page(KIMI_USER() + KIMI_ASSISTANT('<div class="thinking-container"><div class="markdown"><p>Thinking about the request</p></div></div>')),
+    { host: "www.kimi.com", path: "/chat/id-1" });
+  try {
+    assert.equal(kimi.adapter.answer(), null, "思考段不能退回成整条助手消息");
+    const turn = kimi.adapter.historyTurn();
+    assert.equal(turn.locate, "selector");
+    assert.equal(turn.answer, null);
+    kimi.document.querySelector(".chat-content-item-assistant").append(...nodes(kimi.document, '<div class="segment-content"><div class="markdown"><p>Paris</p></div></div>'));
+    assert.equal(kimi.S.toMarkdown(kimi.adapter.answer()), "Paris");
+  } finally { kimi.close(); }
+  const card = (inner) => `<div class="answer-common-card">${inner}</div>`;
+  const qianwen = replayHtml(page(card('<div class="thinkingContent-x1"><div class="qk-markdown"><p>Reasoning</p></div></div>')), { host: "www.qianwen.com", path: "/chat/id-1" });
+  try {
+    assert.equal(qianwen.adapter.answer(), null);
+    qianwen.document.querySelector(".answer-common-card").replaceChildren();
+    assert.equal(qianwen.adapter.answer(), qianwen.document.querySelector(".answer-common-card"), "空占位卡照旧返回卡本身");
+  } finally { qianwen.close(); }
+});
+
 test("anchor answer root with only a thinking markdown block yields no text", () =>
   withRun(page(""), KIMI_HOME, async (run) => {
     const { document, S } = run;

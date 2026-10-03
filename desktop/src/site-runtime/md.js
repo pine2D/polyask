@@ -36,6 +36,34 @@
     while (ft && !ft.nodeValue.trim()) ft = w.nextNode();
     return ft;
   }
+  // 代码块容器：PRE；ChatGPT 新版 div[data-markdown-copy="code-block"]（头部条 data-markdown-copy="exclude" 放语言名与按钮，
+  // 正文是 display:block 的 code，不再有 pre，2026-10-04 真机）；以及其它站同样写法的块级预格式 code。
+  const codeBox = (el) => el.getAttribute("data-markdown-copy") === "code-block";
+  function blockCode(el) {
+    if (el.tagName.toUpperCase() !== "CODE") return false;
+    const cs = getComputedStyle(el);
+    return cs.display === "block" && /^pre/.test(cs.whiteSpace || "");
+  }
+  // 代码正文：逐文本节点拼接，跳过行号栏（千问 react-syntax-highlighter 的 span.linenumber，user-select:none）、
+  // 头部条、按钮与隐藏件；块级子元素之间补一个换行（每行一个块的高亮器），已有换行不重复补——innerText 会给
+  // 「块级行 + 行尾 \n」各算一次，千问因此每行之间多一空行（2026-10-03 真机）。
+  const GUTTER = /(?:^|[-_])(?:line-?numbers?|gutters?)(?:$|[-_])/i;
+  function codeText(root) {
+    let out = "";
+    (function walk(node) {
+      for (const c of node.childNodes) {
+        if (c.nodeType === 3) { out += c.nodeValue; continue; }
+        if (c.nodeType !== 1 || drop(c) || c.getAttribute("data-markdown-copy") === "exclude") continue;
+        if (String(c.getAttribute("class") || "").split(/\s+/).some((token) => GUTTER.test(token))) continue;
+        const cs = getComputedStyle(c);
+        if (cs.userSelect === "none") continue;
+        if (c.tagName.toUpperCase() === "BR") { out += "\n"; continue; }
+        if (!/^(inline|contents)/.test(cs.display || "inline") && out && !out.endsWith("\n")) out += "\n";
+        walk(c);
+      }
+    })(root);
+    return out;
+  }
   function backtickFence(text, minimum) {
     const runs = (text.match(/`+/g) || []).map((x) => x.length);
     return "`".repeat(Math.max(minimum || 1, (runs.length ? Math.max(...runs) : 0) + 1));
@@ -84,7 +112,7 @@
         out += "[" + (alt || (typeof t === "function" ? t("md_image") : "图片")) + "]";
         continue;
       }
-      if (tag === "CODE") { // 内容自带反引号时用双反引号+空格包裹（CommonMark），防提前截断
+      if (tag === "CODE" && !blockCode(n)) { // 内容自带反引号时用双反引号+空格包裹（CommonMark），防提前截断
         const c = (n.textContent || "").trim();
         const fence = backtickFence(c, 1), pad = c.includes("`") ? " " : "";
         out += fence + pad + c + pad + fence; continue;
@@ -152,16 +180,21 @@
     const tag = el.tagName.toUpperCase();
     if (/^H[1-6]$/.test(tag)) return "\n" + "#".repeat(+tag[1]) + " " + inline(el).trim() + "\n\n";
     if (tag === "P") { const t = inline(el).trim(); return t ? t + "\n\n" : ""; }
-    if (tag === "PRE") { // 代码块：只取 code 本体（剔除站点加在 pre 头部的语言标签/复制按钮），语言进围栏
-      const code = el.querySelector("code") || el;
+    if (tag === "PRE" || codeBox(el) || blockCode(el)) { // 代码块：只取 code 本体（剔除站点加在头部的语言标签/复制按钮），语言进围栏
+      const code = (tag === "CODE" ? el : el.querySelector("code")) || el;
       let lang = ((code.className || "").toString().match(/language-([\w+-]+)/) || [])[1] || pendingLang;
-      if (!lang && code !== el) { // 语言头在 pre 内部且 code 无 class 的站点（真机实证：ChatGPT）
+      if (!lang && codeBox(el)) { // ChatGPT：头部条首段文字是语言名；CodeMirror 形态的编辑区另带 data-language
+        const head = el.querySelector('[data-markdown-copy="exclude"]'), ft = head && firstTextNode(head);
+        const t = ft ? ft.nodeValue.trim() : (el.querySelector("[data-language]")?.getAttribute("data-language") || "");
+        if (/^[A-Za-z0-9+#.-]{1,20}$/.test(t)) lang = t.toLowerCase();
+      }
+      if (!lang && code !== el) { // 语言头在容器内部且 code 无 class 的站点（真机实证：ChatGPT 旧版）
         const ft = firstTextNode(el);
         const t = ft && !code.contains(ft) ? ft.nodeValue.trim() : "";
         if (/^[A-Za-z0-9+#.-]{1,20}$/.test(t)) lang = t.toLowerCase();
       }
       pendingLang = "";
-      const body = (code.innerText || code.textContent || "").replace(/\n+$/, "");
+      const body = codeText(code).replace(/\n+$/, "");
       const fence = backtickFence(body, 3);
       return fence + lang + "\n" + body + "\n" + fence + "\n\n";
     }

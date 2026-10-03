@@ -179,7 +179,8 @@
         if (!cards.length) return null;
         const el = cards[cards.length - 1];
         const mds = [...el.querySelectorAll(".qk-markdown")].filter((m) => !m.closest('[class*="thinkingContent"]'));
-        return mds[mds.length - 1] || el;
+        // 只有思考段时返回 null，不退回含思考全文的整张卡（同 Kimi）；空占位卡仍返回卡本身
+        return mds[mds.length - 1] || (el.querySelector('[class*="thinkingContent"]') ? null : el);
       },
     },
   });
