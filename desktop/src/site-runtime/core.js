@@ -253,18 +253,8 @@
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (!msg || msg.source !== "AMS") return;
       if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode, false, Number(msg.deadline) || undefined);
-      if (msg.cmd === "getState") { const a = pickAdapter(); sendResponse({ state: getState(), canConfirm: !!(a && a.submitted) }); } if (msg.cmd === "wasSubmitted") { const a = pickAdapter(); let ok = false; try { ok = !!(a && a.submitted && a.submitted(msg.text || "")); } catch (e) {} sendResponse({ supported: !!(a && a.submitted), ok }); }
-      if (msg.cmd === "collectAnswer") { // 只读快照：adapter.answer 返回最后一条回答的根节点，通用序列化为 Markdown
-        let text = null;
-        try {
-          const a = pickAdapter();
-          const node = a && a.answer ? a.answer() : null;
-          text = typeof node === "string" ? node
-            : node ? (window.__AMS.toMarkdown ? window.__AMS.toMarkdown(node) : visText(node)) : null;
-        } catch (e) {}
-        sendResponse({ host: location.hostname, state: getState(), text: text || null });
-      }
-      if (msg.cmd === "diagnose") sendResponse({ checks: diagnose(), host: location.hostname });
+      // 只读命令（getState / wasSubmitted / collectAnswer / diagnose）在 read-commands.js；返回 true = 异步回包。
+      if (window.__AMS.readCommand?.(msg, sendResponse)) return true;
       if (msg.cmd === "submitPrompt") {
         serializeInteraction(async () => {
           try {
@@ -285,6 +275,7 @@
             }
             if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout", ...(selection ? { selection } : {}) };
             try { window.__AMS.history?.begin(msg.historyToken, msg.text, deadline, { images: images.length }); } catch (_) {}
+            window.__AMS.armGeneration?.(); // 本次提交的停止键锁存（generation.js）：短回答在两次 900ms 探测之间就结束时的正向证据
             const r = await submitPromptNow(msg.text || "", deadline, images, msg.historyToken);
             if (selection) r.selection = selection;
             if (r.ok && selection?.outcome === "unconfirmed") r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿

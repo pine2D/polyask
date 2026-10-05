@@ -65,7 +65,9 @@ export interface DiagnoseSiteCommand {
   readonly deadline: number;
 }
 
-export type GenerationState = "idle" | "generating" | "complete" | null;
+// complete_observed：读到完成，且站点运行时在本次提交后亲眼见过停止键（generation.js 的锁存）——
+// 短回答整段落在两次 900ms 探测之间时，它替代主进程自己没赶上的那次「generating」。
+export type GenerationState = "idle" | "generating" | "complete" | "complete_observed" | null;
 
 export interface GenerationSiteCommand {
   readonly source: "AMS";
@@ -244,7 +246,7 @@ export function parsePageIndex(value: unknown): number | null {
 }
 
 export function parseGenerationState(value: unknown): GenerationState {
-  return value === "idle" || value === "generating" || value === "complete" ? value : null;
+  return value === "idle" || value === "generating" || value === "complete" || value === "complete_observed" ? value : null;
 }
 
 export function parseBroadcastRequest(value: unknown): BroadcastRequest | null {

@@ -103,7 +103,8 @@ test("page IPC accepts only bounded non-negative integers", () => {
   assert.equal(parsePageIndex(10_000), null);
 });
 
-test("generation probes accept only the four read-only states", () => {
+test("generation probes accept only the five read-only states", () => {
+  assert.equal(parseGenerationState("complete_observed"), "complete_observed");
   assert.equal(parseGenerationState("idle"), "idle");
   assert.equal(parseGenerationState("generating"), "generating");
   assert.equal(parseGenerationState("complete"), "complete");

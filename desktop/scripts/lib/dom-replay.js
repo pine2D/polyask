@@ -34,6 +34,15 @@ function polyfill(window) {
     if (style.display) return style;
     return new Proxy(style, { get: (target, key) => key === "display" ? "inline" : Reflect.get(target, key) });
   };
+  // Navigation API（jsdom 未实现）只补 currentEntry.key 的槽位语义：pushState 换槽、replaceState 留槽，与 Chromium 一致。
+  // history-route.js 据此区分豆包 local_ → 正式 id 的 replace 与侧栏打开别的会话的 push；traverse 不建模。
+  if (!("navigation" in window)) {
+    let slots = 0;
+    const navigation = { currentEntry: { key: "slot-0" } };
+    const push = window.history.pushState.bind(window.history);
+    window.history.pushState = (...args) => { push(...args); navigation.currentEntry = { key: `slot-${++slots}` }; };
+    Object.defineProperty(window, "navigation", { configurable: true, value: navigation });
+  }
   if (typeof window.matchMedia !== "function") window.matchMedia = () => ({ matches: false, addEventListener() {}, removeEventListener() {} });
 }
 

@@ -41,7 +41,7 @@ test("chatglm-shaped title echo: a cached anchor on the top-bar title never seal
     run.adapter.generation = () => "generating";
     S.history.snapshot("tok");
     run.adapter.generation = () => null;
-    later(run, 2_100);
+    later(run, 3_100);
     const snapshot = S.history.snapshot("tok");
     assert.notEqual(snapshot.text, PROMPT, "问题原文绝不能被当作回答封存");
     assert.equal(snapshot.text, undefined, "同文两处时读正文的那次定位必须拿不准");
@@ -104,7 +104,7 @@ test("a keyless anchor root that never changed after binding is not sealed by qu
     run.adapter.generation = () => "generating";
     assert.equal(S.history.snapshot("tok").owned, true);
     run.adapter.generation = () => null;
-    later(run, 2_100);
+    later(run, 3_100);
     const snapshot = S.history.snapshot("tok");
     assert.equal(snapshot.text, undefined, "静止根（e.changedAt 从未赋值）不是流式长出来的回答");
     assert.equal(snapshot.ended, undefined);

@@ -64,8 +64,11 @@
         const order = user.compareDocumentPosition(answer);
         if ((order & 1) || !(order & 4) || user.contains(answer)) answer = null;
       }
+      // 豆包：只读唯一的消息正文容器，气泡里的时间戳/操作条/状态位不算原文（与 history-locate.js 的第 ② 级同取法）。
+      const doubaoText = host === "doubao.com" ? user.querySelectorAll?.('[data-testid="message_text_content"]') || [] : [];
       const textNode = host === "kimi.com" ? user.querySelector(".user-content") || user
-        : host === "chatgpt.com" ? user.querySelector('[data-user-message-bubble]') || user : user;
+        : host === "chatgpt.com" ? user.querySelector('[data-user-message-bubble]') || user
+        : doubaoText.length === 1 ? doubaoText[0] : user;
       const text = host === "gemini.google.com"
         ? [...user.querySelectorAll(".query-text-line")].map(node => node.innerText || node.textContent || "").join("\n")
         : textNode.innerText || textNode.textContent || "";

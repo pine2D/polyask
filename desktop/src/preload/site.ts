@@ -44,10 +44,12 @@ Object.defineProperty(globalThis, "chrome", {
 
 require("../site-runtime/i18n.js");
 require("../site-runtime/core.js");
+require("../site-runtime/read-commands.js");
 require("../site-runtime/tier.js");
 require("../site-runtime/selection-match.js");
 require("../site-runtime/send.js");
 require("../site-runtime/upload.js");
+require("../site-runtime/md-head.js");
 require("../site-runtime/md.js");
 require("../site-runtime/adapters-intl.js");
 require("../site-runtime/adapters-intl2.js");
@@ -56,6 +58,7 @@ require("../site-runtime/adapters-cn2.js");
 require("../site-runtime/adapters-cn3.js");
 require("../site-runtime/adapters-cn4.js");
 require("../site-runtime/generation.js");
+require("../site-runtime/history-route.js");
 require("../site-runtime/history.js");
 require("../site-runtime/history-locate.js");
 require("../site-runtime/history-adapters.js");
@@ -107,13 +110,15 @@ function normalizeDiagnostic(value: unknown): SiteDiagnosticResponse {
 
 function readGeneration(): SiteGenerationResponse {
   const runtime = (globalThis as typeof globalThis & {
-    __AMS?: { adapters?: Record<string, { generation?: () => unknown }> };
+    __AMS?: { adapters?: Record<string, { generation?: () => unknown }>; generationProbe?: () => unknown };
   }).__AMS;
   const host = location.hostname;
   const key = Object.keys(runtime?.adapters ?? {}).find((candidate) => host.includes(candidate));
   const adapter = key ? runtime?.adapters?.[key] : undefined;
   try {
-    return { state: parseGenerationState(adapter?.generation?.()) };
+    // generation.js 的 generationProbe 在 complete 上叠加本次提交的停止键锁存（complete_observed）；缺失时退回逐站钩子。
+    const probe = runtime?.generationProbe;
+    return { state: parseGenerationState(typeof probe === "function" ? probe() : adapter?.generation?.()) };
   } catch {
     return { state: null };
   }

@@ -8,7 +8,8 @@ const paths: Record<SiteKey, RegExp> = {
   chatgpt: /^\/c\/[a-zA-Z0-9_-]{8,128}\/?$/,
   gemini: /^\/app\/[a-zA-Z0-9_-]{8,128}\/?$/,
   deepseek: /^\/a\/chat\/s\/[a-zA-Z0-9_-]{8,128}\/?$/,
-  doubao: /^\/chat\/[a-zA-Z0-9_-]{8,128}\/?$/,
+  // 豆包新会话先 push /chat/local_<数字>（临时地址，服务端确认后 replace 成正式 id）：临时地址打不开原会话，不记录。
+  doubao: /^\/chat\/(?!local_)[a-zA-Z0-9_-]{8,128}\/?$/,
   qianwen: /^\/chat\/[a-zA-Z0-9_-]{8,128}\/?$/,
   kimi: /^\/chat\/[a-zA-Z0-9_-]{8,128}\/?$/,
   yuanbao: /^\/chat\/[a-zA-Z0-9_-]{8,128}(?:\/[a-zA-Z0-9_-]{8,128})?\/?$/,

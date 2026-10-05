@@ -142,7 +142,7 @@ test("九站 diagnose 的每条检查都带合法 kind，且恰有一条 reach",
   Object.assign(ctx, { URL, location: { href: "https://example.test/chat/id-1", hostname: "example.test" } });
   for (const file of ["selection-match.js", "adapters-intl.js", "adapters-intl2.js",
     "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js",
-    "history.js", "history-locate.js", "history-adapters.js"]) vm.runInNewContext(source(file), ctx);
+    "history-route.js", "history.js", "history-locate.js", "history-adapters.js"]) vm.runInNewContext(source(file), ctx);
   vm.runInNewContext(source("diag.js"), ctx);
 
   const hosts = Object.keys(ctx.window.__AMS.adapters);

@@ -11,31 +11,11 @@
   const S = window.__AMS;
   if (!S) return;
   const t = globalThis.__AMS_I18N__ ? globalThis.__AMS_I18N__.t : globalThis.t; // 与其余 site-runtime 文件同一取法；漏了这行 md_image 就是死词条
-  const SKIP = new Set(["BUTTON", "SVG", "STYLE", "SCRIPT", "NOSCRIPT", "SELECT", "TEXTAREA", "AUDIO", "VIDEO"]);
-  const drop = (el) => {
-    if (SKIP.has(el.tagName.toUpperCase()) || el.getAttribute("aria-hidden") === "true" || el.getAttribute("role") === "button") return true;
-    const cs = getComputedStyle(el);
-    return cs.display === "none" || cs.visibility === "hidden";
-  };
+  // 剔除规则（drop）、可见文字与代码块头部条的判定在 md-head.js（按 300 行上限拆出，preload 先于本卷注入）。
+  const { drop, visibleParts, preAhead, langHead, chromeHead, firstTextNode } = S.mdHead || {};
+  if (!drop) return;
   let pad = ""; // 当前列表嵌套缩进：list() 进入子项时累加父项标记宽度，嵌套列表各行以此为前缀
   let pendingLang = ""; // 代码块语言名放在 pre 外部头部条的站点（如 DeepSeek）：前瞻吸收进围栏
-  // 下一个"有实质内容"的兄弟是代码块？跳过纯空文本兄弟（Claude 的 opacity-0 复制按钮容器
-  // drop() 剔不掉但 innerText 为空）；PRE 常被再包一层透明 DIV（Claude overflow-x-auto /
-  // Kimi syntax-highlighter），故含 PRE 的 DIV 也算命中。真机取证 2026-07-11。
-  function preAhead(x) {
-    let s = x.nextElementSibling;
-    while (s && s.tagName.toUpperCase() !== "PRE" && !(s.innerText || "").trim()) s = s.nextElementSibling;
-    if (!s) return false;
-    const t = s.tagName.toUpperCase();
-    return t === "PRE" || (t === "DIV" && !!s.querySelector("pre"));
-  }
-  // 首个非空文本节点（头部条内常有纯空白文本节点垫在语言名前，真机实证：Kimi）
-  function firstTextNode(root) {
-    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-    let ft = w.nextNode();
-    while (ft && !ft.nodeValue.trim()) ft = w.nextNode();
-    return ft;
-  }
   // 代码块容器：PRE；ChatGPT 新版 div[data-markdown-copy="code-block"]（头部条 data-markdown-copy="exclude" 放语言名与按钮，
   // 正文是 display:block 的 code，不再有 pre，2026-10-04 真机）；以及其它站同样写法的块级预格式 code。
   const codeBox = (el) => el.getAttribute("data-markdown-copy") === "code-block";
@@ -68,8 +48,8 @@
     const runs = (text.match(/`+/g) || []).map((x) => x.length);
     return "`".repeat(Math.max(minimum || 1, (runs.length ? Math.max(...runs) : 0) + 1));
   }
-  function safeHref(node) {
-    const raw = node.getAttribute("href");
+  function safeHref(node) { return safeUrl(node.getAttribute("href")); }
+  function safeUrl(raw) {
     if (!raw) return "";
     try {
       const url = new URL(raw, location.href);
@@ -91,6 +71,29 @@
     if (!tex) return null;
     return display ? "\n$$\n" + tex + "\n$$\n\n" : "$" + tex.replace(/\s+/g, " ") + "$";
   }
+  // 引用/来源列表容器（按类名词元认，不按图片尺寸）：元宝 .hyc-common-markdown__ref-list 里 13×13 的来源图标没有 alt，
+  // 曾在副本里变成一串「[image]」（2026-10-04 真机）。只查到本次序列化的根为止；有 alt 的图与纯图回答照常留占位。
+  const CITE = /(?:^|[-_])(?:ref-list|citations?|cite)(?:$|[-_])/i;
+  let mdRoot = null;
+  function citation(n) {
+    for (let p = n.parentNode; p && p.nodeType === 1; p = p.parentNode) {
+      if (String(p.getAttribute("class") || "").split(/\s+/).some((token) => CITE.test(token))) return true;
+      if (p === mdRoot) break;
+    }
+    return false;
+  }
+  // 引用角标（智谱 span.source-item > .source-item-num-name「cma.gov.cn」+ .source-item-num-count「+2」，2026-10-04 Windows 真机）：
+  // 常规遍历把它粘在上一句末尾（「现象。cma.gov.cn+2」）。整块作一个引用：与前后文以空格隔开、内部各段以空格分开；
+  // 角标带绝对 http(s) 地址（href / data-url）时按链接约定写 [文本](href)，否则写 [文本]。只认完整类名词元 source-item。
+  const chip = (n) => String(n.getAttribute("class") || "").split(/\s+/).includes("source-item");
+  function chipLabel(n) { return visibleParts(n).join(" ").replace(/([\\`*_\[\]])/g, "\\$1"); }
+  function chipMd(n) {
+    const label = chipLabel(n);
+    if (!label) return "";
+    const raw = n.getAttribute("href") || n.getAttribute("data-url") || "";
+    const href = /^https?:\/\//i.test(raw) ? safeUrl(raw) : "";
+    return "[" + label + "]" + (href ? "(" + mdUrl(href) + ")" : "") + " ";
+  }
   function inline(node) {
     let out = "";
     for (const n of node.childNodes) {
@@ -100,15 +103,18 @@
       const tag = n.tagName.toUpperCase();
       const tex = math(n);
       if (tex !== null) { out += tex; continue; }
+      if (chip(n)) { const md = chipMd(n); if (md) out += (out && !/\s$/.test(out) ? " " : "") + md; continue; }
       // 语义标签绝不吸收：ChatGPT 的 h3 直邻 pre（真机实证），旧逻辑会把「### Example」吞成语言名
       if (!/^(H[1-6]|P|LI|UL|OL|TABLE|BLOCKQUOTE)$/.test(tag) && preAhead(n)) {
         const ft = firstTextNode(n); // 首个非空文本节点（绕开头部条里的空白垫片与按钮文本）
         const t = ft ? ft.nodeValue.trim() : "";
-        if (/^[A-Za-z0-9+#.-]{1,20}$/.test(t)) { pendingLang = t.toLowerCase(); continue; }
+        if (/^[A-Za-z0-9+#.-]{1,20}$/.test(t) && langHead(n, t)) { pendingLang = t.toLowerCase(); continue; }
+        if (chromeHead(n)) continue;
       }
       if (tag === "BR") { out += "\n"; continue; }
       if (tag === "IMG") { // 不贴 src（多为签名/临时短效 URL），只留 alt 占位保证 text 非空
         const alt = (n.getAttribute("alt") || "").trim().replace(/\s+/g, " ").replace(/([\\`*_\[\]])/g, "\\$1");
+        if (!alt && citation(n)) continue; // 引用角标里无 alt 的来源图标不是回答内容
         out += "[" + (alt || (typeof t === "function" ? t("md_image") : "图片")) + "]";
         continue;
       }
@@ -125,7 +131,11 @@
       }
       if (tag === "STRONG" || tag === "B") { const t = inline(n).trim(); out += t ? "**" + t + "**" : ""; continue; }
       if (tag === "EM" || tag === "I") { const t = inline(n).trim(); out += t ? "*" + t + "*" : ""; continue; }
-      out += block(n); // 行内位置遇到块级子树 → 按块处理（p/列表/表格断行得以保留）
+      // 行内位置遇到块级子树 → 按块处理（p/列表/表格断行得以保留）；围栏必须独占一行，前面有行内文字时先断行
+      // 块前的空白文本节点（Vue 模板缩进）不留在新行行首，否则代码块后的段落成了「  输出结果：」
+      const b = block(n);
+      if (b.trim()) out = out.replace(/(^|\n)[ \t]+$/, "$1");
+      out += (/^`{3,}/.test(b) && out && !out.endsWith("\n") ? "\n" : "") + b;
     }
     return out;
   }
@@ -209,7 +219,7 @@
   }
   S.toMarkdown = function (root) {
     if (!root) return "";
-    pendingLang = ""; pad = "";
+    pendingLang = ""; pad = ""; mdRoot = root;
     return block(root).replace(/[ \t]+\n/g, "\n").replace(/^[ \t]+(`{3,})/gm, "$1").replace(/\n{3,}/g, "\n\n").trim();
   };
 })();

@@ -101,12 +101,12 @@ for (const name of captured.filter((item) => EXPECT[item]?.firstTurn)) {
       await tick();
       let snapshot = run.S.history.snapshot("tok");
       if (want.owned && snapshot.text === undefined) {
-        // 无 key 的锚点根只认正向结束证据：见过停止键、之后它消失且回答容器 2 秒无变动，才读一次。
+        // 无 key 的锚点根只认正向结束证据：见过停止键、之后它消失且回答容器 3 秒无变动，才读一次。
         run.adapter.generation = () => "generating";
         run.S.history.snapshot("tok");
         run.adapter.generation = () => null;
         const now = run.window.Date.now;
-        run.window.Date.now = () => now() + 2_100;
+        run.window.Date.now = () => now() + 3_100;
         try { snapshot = run.S.history.snapshot("tok"); } finally { run.window.Date.now = now; }
       }
       assert.equal(snapshot.owned, want.owned);

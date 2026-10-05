@@ -55,12 +55,12 @@ function md(root) {
     },
   };
   const inlineTags = new Set(["SPAN", "EM", "STRONG", "A", "CODE", "IMG", "B", "I"]);
-  const getComputedStyle = (n) => ({ display: n.attrs.display || (inlineTags.has(n.tagName) ? "inline" : "block"), visibility: "visible" });
+  const getComputedStyle = (n) => ({ display: n.attrs.display || (inlineTags.has(n.tagName) ? "inline" : "block"), visibility: "visible", cursor: n.attrs.cursor || "auto" });
   const context = vm.createContext({
     window: { __AMS: {} }, __AMS_I18N__: { t: (key) => `desktop:${key}` }, document, getComputedStyle, NodeFilter: { SHOW_TEXT: 4 },
     location: { href: "https://chatgpt.com/c/1" }, URL, console,
   });
-  vm.runInContext(read("md.js"), context);
+  for (const file of ["md-head.js", "md.js"]) vm.runInContext(read(file), context);
   return context.window.__AMS.toMarkdown(root);
 }
 
@@ -202,7 +202,64 @@ function qianwenLineNumbersStayOutOfFence() {
   assert.equal(md(root), "```\npine = 1\nprint(pine)\n```");
 }
 
+// 2026-10-04 Windows 真机：智谱 answer-content-wrap > div > [div(markdown-body > ul), div(pre)]。装列表的透明 div 首个文本
+// 「Red」像语言名，旧前瞻把整张列表吸收成 pendingLang 跳过，副本只剩代码块。语言头只能是「整块就是那个词」。
+function listBeforeCodeIsNotSwallowedAsLanguage() {
+  const code = el("div", null, el("pre", null, el("code", null, 'print("mars")')));
+  const zhipu = el("div", { class: "answer-content-wrap" }, el("div", null,
+    el("div", null, el("div", { class: "markdown-body" }, el("ul", null, el("li", null, "Red"), el("li", null, "Blue")))), code));
+  assert.equal(md(zhipu), '- Red\n- Blue\n\n```\nprint("mars")\n```');
+  const prose = el("div", null, el("div", null, "Note", el("span", null, " this first")), el("div", null, el("pre", null, el("code", null, "x"))));
+  assert.equal(md(prose), "Note this first\n\n```\nx\n```", "首个文本像语言名、整块却不止这个词：不是语言头");
+  // 2026-10-04 Linux 真机智谱完整形态：代码块头部条的语言名是 <p class="language">，复制键是 cursor:pointer 的 div。
+  // 列表要保住，语言名照旧吸收、「复制」不漏进副本。
+  const real = el("div", { class: "answer-content-wrap" }, el("div", null,
+    el("div", null, el("div", { class: "markdown-body" }, el("ul", null, el("li", null, "Red"), el("li", null, "Blue")))),
+    el("div", null, el("div", { class: "code-no-artifacts" },
+      el("div", { class: "top-outer" }, el("div", { class: "top", display: "flex" },
+        el("p", { class: "language" }, "python"), el("div", { class: "copy-button", cursor: "pointer" }, el("span", null, "复制")))),
+      el("div", { class: "markdown-body md-code" }, el("div", { class: "language language-python" }, el("pre", null, el("code", null, 'print("red")'))))))));
+  assert.equal(md(real), '- Red\n- Blue\n\n```python\nprint("red")\n```');
+  const para = el("div", null, el("div", null, el("p", null, "Output")), el("div", null, el("pre", null, el("code", null, "x"))));
+  assert.equal(md(para), "Output\n\n```\nx\n```", "没有 lang 类名的段落即使只有一个词也是正文，不当语言名");
+  // 真语言头仍吸收：头部条里的复制/下载操作件（cursor:pointer）与空白垫片不算语言头文本（Kimi / DeepSeek 形态）
+  const head = el("div", null, "  ", el("span", null, "Python"), el("div", { cursor: "pointer" }, el("span", null, "Copy")));
+  assert.equal(md(el("div", null, head, el("div", null, el("pre", null, el("code", null, "x = 1"))))), "```python\nx = 1\n```");
+  // 整条头部可点（cursor 继承）、复制字样在非 pointer 的子块里：cursor 认不出操作件，靠操作件字样兜住，不把「python复制」漏成段落
+  const strip = el("div", { cursor: "pointer" }, el("span", null, "python"), el("div", null, el("span", null, "复制")));
+  assert.equal(md(el("div", null, strip, el("div", null, el("pre", null, el("code", null, "x = 1"))))), "```python\nx = 1\n```");
+}
+
+// 无语言名的头部条只在确有操作件时剔除：div 段落「运行」、只含链接（UA 样式默认 pointer）的段落紧挨代码块时是正文（2026-10-04 审查）。
+function proseBeforeCodeIsNotCopyChrome() {
+  const code = () => el("div", null, el("pre", null, el("code", null, "npm start")));
+  assert.equal(md(el("div", null, el("div", { class: "paragraph" }, "运行"), code())), "运行\n\n```\nnpm start\n```");
+  assert.equal(md(el("div", null, el("div", { class: "qk-md-paragraph" }, el("strong", null, "下载")), code())), "**下载**\n\n```\nnpm start\n```");
+  const link = el("a", { href: "https://example.com/install.sh", cursor: "pointer" }, "https://example.com/install.sh");
+  assert.equal(md(el("div", null, el("div", { class: "ybc-p" }, link), code())), "[https://example.com/install.sh](https://example.com/install.sh)\n\n```\nnpm start\n```");
+  const chrome = el("div", null, el("p", { class: "language" }), el("div", { class: "copy-button", cursor: "pointer" }, el("span", null, "复制")));
+  assert.equal(md(el("div", null, chrome, code())), "```\nnpm start\n```", "智谱空 p.language + 复制键照样剔除");
+}
+
+// 2026-10-04 真机：元宝引用角标 .hyc-common-markdown__ref-list 里 13×13、无 alt 的来源图标，副本里成了一串「[image]」。
+// 按容器剔除，不按尺寸：有 alt 的图、引用容器外的无 alt 图（纯图回答）照常留占位。
+function citationIconsAreNotImagePlaceholders() {
+  const ref = el("div", { class: "hyc-common-markdown__ref-list hyc-common-markdown__ref-list--merged" },
+    el("div", { class: "hyc-common-markdown__ref-list__trigger" }, el("div", { class: "hyc-common-markdown__ref-list__item" },
+      el("img", { class: "hyc-common-markdown__ref-list__item__icon", src: "https://cdn.ex/i.png" }))));
+  assert.equal(md(el("div", null, el("div", { class: "ybc-p" }, "背风一侧。", ref))), "背风一侧。");
+  const altInside = el("div", { class: "ref-list" }, el("img", { alt: "图表", src: "https://cdn.ex/c.png" }));
+  assert.equal(md(el("p", null, "见 ", altInside)), "见 [图表]");
+  assert.equal(md(el("div", { class: "markdown" }, el("img", { src: "https://cdn.ex/a.png", width: "13" }))), "[desktop:md_image]", "引用容器外的小图仍是内容");
+}
+
 (async () => {
+  proseBeforeCodeIsNotCopyChrome();
+  console.log("✓ 紧挨代码块的 div 段落与链接段落不被当成头部条剔除");
+  listBeforeCodeIsNotSwallowedAsLanguage();
+  console.log("✓ 透明容器装着列表时不被当成代码块语言头吞掉");
+  citationIconsAreNotImagePlaceholders();
+  console.log("✓ 引用容器里无 alt 的来源图标不输出图片占位");
   chatgptCodeBlockContainerIsFenced();
   console.log("✓ ChatGPT 新版代码块容器（code 块 / CodeMirror 逐行）转围栏并吸收语言名");
   qianwenLineNumbersStayOutOfFence();

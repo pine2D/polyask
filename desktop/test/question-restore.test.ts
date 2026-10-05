@@ -3,6 +3,7 @@ import test from "node:test";
 import { DesktopDatabase } from "../src/main/database";
 import { QuestionRestoreService } from "../src/main/question-restore-service";
 import { safeQuestionUrl } from "../src/main/question-navigation";
+import { questionAnswerId } from "../src/main/question-repository";
 import { questionFixture, questionAnswerFixture } from "./question-fixtures";
 
 test("history navigation permits recorded site conversations but rejects credentials and unrelated routes", () => {
@@ -66,4 +67,20 @@ test("verified Yuanbao and ChatGLM conversation routes retain only their identit
   assert.equal(safeQuestionUrl("chatglm", "https://chatglm.cn/main/alltoolsdetail?lang=zh&cid=0123456789abcdef01234567&tracking=1"), "https://chatglm.cn/main/alltoolsdetail?cid=0123456789abcdef01234567");
   assert.equal(safeQuestionUrl("chatglm", "https://chatglm.cn/main/alltoolsdetail?cid=bad"), null);
   assert.equal(safeQuestionUrl("chatglm", "https://chatglm.cn/main/alltoolsdetail?cid=0123456789abcdef01234567&cid=abcdef0123456789abcdef01"), null);
+});
+
+// 豆包新会话的 /chat/local_<数字> 是发送确认前的临时地址（2026-10-04 Windows 真机），打不开原会话：既不当作会话地址返回，也不落库。
+test("Doubao provisional local_ routes are never recorded as conversation URLs", () => {
+  assert.equal(safeQuestionUrl("doubao", "https://www.doubao.com/chat/38445437171009282?from=x"), "https://www.doubao.com/chat/38445437171009282");
+  for (const url of ["https://www.doubao.com/chat/local_6289182192238156", "https://www.doubao.com/chat/local_6289182192238156/"]) assert.equal(safeQuestionUrl("doubao", url), null);
+  const db = DesktopDatabase.open(":memory:");
+  try {
+    db.questions.put({ ...questionFixture(), sites: ["doubao"] });
+    const answer = { ...questionAnswerFixture(), site: "doubao" as const };
+    const id = questionAnswerId(answer.questionId, "doubao", answer.attempt);
+    db.questions.putAnswer({ ...answer, id, conversationUrl: "https://www.doubao.com/chat/local_6289182192238156" });
+    const stored = db.questions.getAnswer(id);
+    assert.ok(stored && !("deletedAt" in stored));
+    assert.equal(stored.conversationUrl, null);
+  } finally { db.close(); }
 });

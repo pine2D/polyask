@@ -108,9 +108,9 @@ test("an anchor root without a stable data key is not locked: read once after st
     run.document.querySelector(".row-a .body p").textContent = "Paris, final";
     await tick();
     const changed = run.S.history.snapshot("tok");
-    assert.equal(changed.text, undefined, "回答容器 2 秒内仍有增删时也不读");
+    assert.equal(changed.text, undefined, "回答容器 3 秒内仍有增删时也不读");
     const now = run.window.Date.now;
-    run.window.Date.now = () => now() + 2_100;
+    run.window.Date.now = () => now() + 3_100;
     const final = run.S.history.snapshot("tok");
     assert.equal(final.text, "Paris, final");
     assert.equal(final.ended, true);

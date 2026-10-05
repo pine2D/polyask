@@ -68,8 +68,10 @@ test("an anchor answer root without a stable key is read once after streaming an
   answer.text = "Final";
   assert.equal(s.S.history.snapshot("token").text, undefined, "回答根从没被观察到变动（changedAt 为空）时不读：静止根多半是回显");
   s.mutate([{ target: answer, addedNodes: [] }]);
-  assert.equal(s.S.history.snapshot("token").text, undefined, "变动后 2 秒内不读");
+  assert.equal(s.S.history.snapshot("token").text, undefined, "变动后 3 秒内不读");
   s.advance(2_100);
+  assert.equal(s.S.history.snapshot("token").text, undefined, "停止键消失后正文续长的实测间隔达 1.79s：2.1s 静止仍不够");
+  s.advance(1_000);
   const final = s.S.history.snapshot("token");
   assert.deepEqual({ text: final.text, ended: final.ended, locate: final.locate }, { text: "Final", ended: true, locate: "anchor" });
   answer.text = "Changed later";
@@ -84,4 +86,40 @@ test("an anchor answer root with a stable key is locked like any other root", ()
   assert.equal(s.S.history.snapshot("token").text, "First", "带 key 的根生成中也逐次读取");
   s.set({ user, text: "Question", answer: node("Other"), answerKey: "a-2", userCount: 1, locate: "anchor" });
   assert.equal(s.S.history.snapshot("token").ended, true, "换了回答根即停止");
+});
+
+test("a replaced keyless anchor root restarts the quiet window instead of inheriting the old root's silence", () => {
+  const s = setup("example.test", "https://example.test/");
+  const answer = node("Partial"), root = { ...node("root"), contains: (other) => other === answer || other === root };
+  const user = node("Question");
+  s.S.history.begin("token", "Question");
+  s.insert({ user, text: "Question", answer, answerRoot: root, userCount: 1, locate: "anchor" });
+  assert.equal(s.S.history.snapshot("token").generation, "generating");
+  s.S.adapters["example.test"].generation = () => null;
+  s.mutate([{ target: answer, addedNodes: [] }]);
+  s.advance(2_900);
+  const next = node("Rewritten"), other = { ...node("other root"), contains: (n) => n === next || n === other };
+  s.set({ user, text: "Question", answer: next, answerRoot: other, userCount: 1, locate: "anchor" });
+  assert.equal(s.S.history.snapshot("token").text, undefined, "换根时静默期从头算");
+  s.advance(200);
+  assert.equal(s.S.history.snapshot("token").text, undefined, "旧根的 3 秒静止不能替新根作证");
+  s.advance(3_000);
+  assert.equal(s.S.history.snapshot("token").text, "Rewritten");
+});
+
+test("slow observer batches are counted and reported as a number only", () => {
+  const s = setup("example.test", "https://example.test/chat/one");
+  const user = node("Question"), answer = node("Answer");
+  s.set({ user: node("Earlier"), text: "Earlier", userCount: 1 });
+  s.S.history.begin("token", "Question");
+  assert.equal("slowObserver" in s.S.history.snapshot("token"), false, "没有卡顿时不带字段");
+  const turn = { user, text: "Question", answer, answerKey: "a", userCount: 2 };
+  s.S.adapters["example.test"].historyTurn = (ctx) => { s.advance(ctx?.batch ? 300 : 0); return turn; };
+  s.mutate([{ target: answer, addedNodes: [] }]);
+  s.mutate([{ target: answer, addedNodes: [] }]);
+  s.S.adapters["example.test"].historyTurn = (ctx) => { s.advance(ctx?.batch ? 100 : 0); return turn; };
+  s.mutate([{ target: answer, addedNodes: [] }]);
+  const snapshot = s.S.history.snapshot("token");
+  assert.equal(snapshot.slowObserver, 2, "只计超过 250ms 的批次");
+  assert.equal(snapshot.text, "Answer");
 });

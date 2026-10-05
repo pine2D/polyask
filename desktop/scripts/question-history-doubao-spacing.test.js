@@ -50,3 +50,20 @@ test('typography tolerance is limited to Doubao and still rejects extra user tur
   s.insert({ user: node(rendered), text: rendered, userCount: 2, answer: node('Follow-up') });
   assert.equal(s.S.history.snapshot('token').ended, true);
 });
+
+// 2026-10-04 Windows：豆包新会话先 push /chat/local_<16 位>，确认后 replace 成服务端 id；旧实现把归属锁在 local 路由上，
+// replace 后判为换会话而结束采集，副本封存为 unavailable。
+test('Doubao provisional local_ chat route settles to the server id without ending the capture', () => {
+  const s = setup('www.doubao.com'), user = node('Question'), answer = node('Owned answer');
+  s.navigate('https://www.doubao.com/chat/');
+  s.S.history.begin('token', 'Question');
+  s.navigate('https://www.doubao.com/chat/local_1234567890123456');
+  s.insert({ user, text: 'Question', userCount: 1, userKey: 'new', answer, answerKey: 'reply' });
+  assert.equal(s.S.history.snapshot('token').text, 'Owned answer');
+  s.navigate('https://www.doubao.com/chat/38445259209793026', { replace: true });
+  const settled = s.S.history.snapshot('token');
+  assert.equal(settled.owned, true);
+  assert.equal(settled.text, 'Owned answer');
+  s.navigate('https://www.doubao.com/chat/40000000000000001');
+  assert.equal(s.S.history.snapshot('token').ended, true);
+});

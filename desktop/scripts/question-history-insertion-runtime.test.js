@@ -15,7 +15,7 @@ function runtime() {
     location: { hostname: "gemini.google.com", href: "https://gemini.google.com/app" },
     MutationObserver: class { constructor(fn) { mutation = fn; } observe() {} disconnect() {} }
   };
-  vm.runInNewContext(source("history.js"), context);
+  for (const file of ["history-route.js", "history.js"]) vm.runInNewContext(source(file), context);
   S.history.begin("current", "Question");
   return {
     history: S.history, turn: value => { turn = value; },

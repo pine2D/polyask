@@ -175,15 +175,21 @@
         }
         return input && Date.now() < end ? S.setInputFiles(input, files, el, deadline) : false;
       },
-      // 最后一条回答（chrome-dbg 真机审计 2026-07：AI 回答在 .agent-chat__conv--ai__speech_show，
-      // 正文 .hyc-common-markdown，需排除深度思考段 .hyc-component-deepsearch-cot__think 内的同类节点）
+      // 最后一条回答（chrome-dbg 真机审计 2026-07：AI 回答在 .agent-chat__conv--ai__speech_show，正文 .hyc-common-markdown）。
+      // 思考段同样渲染成 .hyc-common-markdown：新版是 .agent-process-timeline 里带 -style-cot 修饰的块（流式期间被当成正文、
+      // 旧过滤器 cot__think 命中 0，2026-10-04 真机），旧版在 deepsearch-cot__think 里。有带文字的思考正文/时间线而没有正文时
+      // 返回 null（还没有正文）；只剩 deep-search-agent__think__header 头部条（回复完成后常驻）时照旧退回整个回答容器，
+      // 否则非 markdown 的终态（繁忙/违规提示、卡片）永远读不到。
       answer: function () {
         const els = document.querySelectorAll(".agent-chat__conv--ai__speech_show");
         if (!els.length) return null;
         const host = els[els.length - 1];
-        const mds = [...host.querySelectorAll(".hyc-common-markdown")].filter((m) => !m.closest('[class*="cot__think"]'));
-        const pick = mds[mds.length - 1] || host;
-        return pick;
+        const THINK = '.agent-process-timeline,[data-agent-group-think-content],[class*="__think"],[class*="cot__think"]';
+        const mds = [...host.querySelectorAll(".hyc-common-markdown")]
+          .filter((m) => !m.classList.contains("hyc-common-markdown-style-cot") && !m.closest(THINK));
+        if (mds.length) return mds[mds.length - 1];
+        const BODY = '.hyc-common-markdown-style-cot,.agent-process-timeline,[data-agent-group-think-content],[class*="cot__think"]';
+        return [...host.querySelectorAll(BODY)].some((t) => (t.textContent || "").trim()) ? null : host;
       },
       // 新版发送键是 aria-label=Send 的 div；旧版 icon-font 已下线。不可用时落回 Enter+校验兜底。
       // 注入侧真机实证：元宝 beforeinput 不生效、execCommand 生效（既有回退链覆盖）

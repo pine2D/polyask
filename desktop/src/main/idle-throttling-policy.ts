@@ -39,7 +39,7 @@ export function createIdleThrottlingExperiment(options: Options) {
       if (disposed || token !== epoch || locked || !options.minimized()) return;
       const current = options.sites();
       if (!eligible(current) || current.length !== sites.length || current.some((site, i) => site.id !== sites[i].id)
-        || states.some(state => state !== 'idle' && state !== 'complete')) { restore(); return; }
+        || states.some(state => state !== 'idle' && state !== 'complete' && state !== 'complete_observed')) { restore(); return; }
       for (const site of current) {
         if (applied.has(site.id)) continue;
         applied.set(site.id, site);

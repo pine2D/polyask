@@ -14,7 +14,13 @@
     + '[data-author="assistant"],[data-sender="assistant"],[data-turn="assistant"],[data-testid="assistant-message"],[data-testid="bot-message"],model-response,assistant-message';
   // 排除区：导航、侧栏、页眉页脚、弹窗、输入区、隐藏节点。会话列表多半只有类名可认，
   // 只在它不包住输入框时才排除——整页布局壳的类名里也常带 sidebar。
-  const HARD = 'nav,aside,header,footer,form,dialog,textarea,input,select,script,style,noscript,template,[hidden],[aria-hidden="true"],'
+  // 弹窗库（aria-hidden 包的 hideOthers，Radix 等）在模态期间给弹窗以外的同层节点打 aria-hidden + data-aria-hidden：
+  // 豆包「下载电脑版」推广弹窗会这样盖住整个 <main>，一律排除则首问永远绑不上（D1，2026-10-05 Windows）。
+  // 但它对原本就 aria-hidden 的节点也照打标记（aria-hidden 1.2.6 源码），标记本身分不出新旧，
+  // 所以只豁免包住当前输入框的那一层（真隐藏的区域不会装着正在用的输入框），见 fenced()。
+  const HIDDEN = '[aria-hidden="true"]:not([data-aria-hidden])';
+  const MODAL_HIDDEN = '[aria-hidden="true"][data-aria-hidden]';
+  const HARD = `nav,aside,header,footer,form,dialog,textarea,input,select,script,style,noscript,template,[hidden],${HIDDEN},`
     + '[role="navigation"],[role="banner"],[role="complementary"],[role="dialog"],[role="alertdialog"],[aria-modal="true"],[contenteditable]:not([contenteditable="false"])';
   const LISTS = '[class*="sidebar" i],[class*="side-bar" i],[class*="conversation-list" i],[class*="session-list" i],[class*="history-list" i]';
   const CONTROLS = 'button,[role="button"],[role="toolbar"],[aria-hidden="true"],[hidden],svg,script,style,noscript,template';
@@ -37,13 +43,31 @@
   const norm = text => S.history?.normalize ? S.history.normalize(text)
     : String(text || "").replace(/[​-‍﻿]/g, "").replace(/\s+/g, " ").trim();
   const textOf = node => node?.innerText ?? node?.textContent ?? "";
-  // 用户文本：去掉读屏副本各一次（按出现位置删，不改 DOM）。
+  // 气泡里的时间戳与操作条不是用户原文：豆包新会话首问绑定后约 2–4 s，用户节点的 message_action_bar 才补插
+  // <time>今天 16:16</time>（2026-10-04 Windows 真机），读进来 bind() 就判「原文不符」结束本轮。认 <time> 标签，
+  // 以及 class / data-testid 里与 ACTION 同规则的操作条词元（豆包 message_action_bar、Kimi segment-user-action-row）。
+  const chrome = el => el.matches("time") || [el.getAttribute("class"), el.getAttribute("data-testid")]
+    .some(value => String(value || "").split(/\s+/).some(token => ACTION.test(token)));
+  const within = (el, root, test) => { for (let p = el.parentElement; p && p !== root; p = p.parentElement) if (test(p)) return true; return false; };
+  // 恰好一个消息正文容器时只读它（豆包 [data-testid="message_text_content"]，① 级 history-adapters.js 同取法）。
+  const TEXT_BOX = '[data-testid="message_text_content"]';
+  // 用户文本：去掉读屏副本（多在原文前，从前删）与时间戳/操作条（多在原文后，从后删），各按出现位置删一次，不改 DOM。
   function userText(node) {
+    const boxes = node?.querySelectorAll?.(TEXT_BOX) || [];
+    if (boxes.length === 1) node = boxes[0];
     let text = textOf(node);
-    for (const el of node?.querySelectorAll?.('[class*="sr-only"],[class*="visually-hidden"]') || []) {
-      if (!srOnly(el) || el.parentElement?.closest('[class*="sr-only"],[class*="visually-hidden"]')) continue;
-      const part = textOf(el), at = part ? text.indexOf(part) : -1;
+    const cut = (el, last) => {
+      const part = textOf(el), at = !part ? -1 : last ? text.lastIndexOf(part) : text.indexOf(part);
       if (at >= 0) text = text.slice(0, at) + " " + text.slice(at + part.length);
+    };
+    for (const el of node?.querySelectorAll?.('[class*="sr-only"],[class*="visually-hidden"]') || []) {
+      if (srOnly(el) && !el.parentElement?.closest('[class*="sr-only"],[class*="visually-hidden"]')) cut(el, false);
+    }
+    // 只删参与渲染的：display:none 的操作条（hover 前隐藏）不在外层 innerText 里，它自己的 innerText 却按规范退回
+    // textContent，照删会把原文里同文的一段（问题里的「复制」）删掉。外层本身未渲染时两者都是 textContent，照删。
+    const shown = el => typeof el.checkVisibility !== "function" || el.checkVisibility() || !node.checkVisibility();
+    for (const el of node?.querySelectorAll?.("time,[class],[data-testid]") || []) {
+      if (chrome(el) && !within(el, node, chrome) && !within(el, node, srOnly) && shown(el)) cut(el, true);
     }
     return text;
   }
@@ -58,8 +82,14 @@
     return nodes.filter(node => { for (let el = node.parentElement; el; el = el.parentElement) if (set.has(el)) return false; return true; });
   };
   const follows = (user, node) => !!(user.compareDocumentPosition(node) & 4) && !user.contains(node) && !node.contains(user);
-  const composerOf = () => {
-    try { return S.findComposer?.() || document.querySelector('textarea, [contenteditable="true"]'); } catch (_) { return null; }
+  // ctx.batch：history.js 在一批 MutationObserver 回调内给的缓存（同步回调内 DOM 不变），②③ 两级共用一次 findComposer。
+  const composerOf = (ctx) => {
+    const batch = ctx?.batch;
+    if (batch && "composer" in batch) return batch.composer;
+    let composer = null;
+    try { composer = S.findComposer?.() || document.querySelector('textarea, [contenteditable="true"]'); } catch (_) {}
+    if (batch) batch.composer = composer;
+    return composer;
   };
   // 会话列表类名只在它位于输入框列左右两侧时才排除：智谱的真会话区就叫 conversation-list-outer（与输入框水平重叠、
   // 不包住输入框，2026-10-03 真机），一律排除会把真气泡挡掉，只剩顶栏标题这类回显可认。量不到布局（视口 0×0）时照旧排除。
@@ -67,7 +97,7 @@
     const a = el.getBoundingClientRect?.(), b = composer?.getBoundingClientRect?.();
     return !(a?.width && b?.width) || a.right <= b.left || a.left >= b.right;
   };
-  const fenced = (el, composer) => el.matches(HARD) || srOnly(el)
+  const fenced = (el, composer) => el.matches(HARD) || srOnly(el) || (el.matches(MODAL_HIDDEN) && !(composer && el.contains(composer)))
     || (el.matches(LISTS) && !(composer && el.contains(composer)) && (!composer || beside(el, composer)));
   function excluded(node, composer) {
     if (composer && node.contains(composer)) return true;
@@ -99,8 +129,8 @@
   }
 
   // ② 语义信号：最外层用户节点计数、取末条；回答取其后最外层的末个助手节点。
-  function semantic() {
-    const composer = composerOf();
+  function semantic(ctx) {
+    const composer = composerOf(ctx);
     const users = outer([...document.querySelectorAll(USER)].filter(node => !excluded(node, composer)));
     const user = users.at(-1);
     if (!user?.isConnected) return null;
@@ -163,7 +193,7 @@
   }
   function anchor(ctx) {
     if (!ctx?.anchor || VIRTUAL.test(location.hostname)) return null;
-    const whole = norm(ctx.text), composer = composerOf();
+    const whole = norm(ctx.text), composer = composerOf(ctx);
     if (!whole || !composer) return null;
     const cache = ctx.cache || (ctx.cache = { user: null, raw: "", text: "", walked: 0 });
     // 缓存节点仍连接且文本未变就直接复用（比 textContent，不在热路径上反复触发 innerText 布局）；
@@ -184,10 +214,10 @@
     // ctx.method 已冻结时只跑那一级；未冻结时 ② 后 ③（③ 还要 begin() 判定的 ctx.anchor）。拿不准返回 null。
     locate(ctx) {
       const method = ctx?.method;
-      if (method === "semantic") return semantic();
+      if (method === "semantic") return semantic(ctx);
       if (method === "anchor") return anchor(ctx);
       if (method) return null;
-      return semantic() || anchor(ctx);
+      return semantic(ctx) || anchor(ctx);
     }
   };
 }());

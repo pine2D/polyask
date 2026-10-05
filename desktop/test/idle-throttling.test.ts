@@ -73,3 +73,7 @@ test('a phase change while waiting rejects an otherwise idle probe', async () =>
   h.sites[0].phase = 'submitted'; h.release(); await h.tick();
   assert.equal(h.sites[0].allowed, false); h.policy.dispose();
 });
+test('a latched short reply (complete_observed) counts as idle like complete', async () => {
+  const h = harness(); h.sites[0].state = 'complete_observed'; h.sites[1].state = 'complete';
+  h.minimize(); await h.tick(); assert.ok(h.sites.every(s => s.allowed)); h.policy.dispose();
+});

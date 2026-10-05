@@ -149,12 +149,29 @@
       },
       // 最后一条回答（chrome-dbg 真机审计 2026-07：消息容器 [data-message-id]，用户消息右对齐带
       // justify-end、AI 无；正文在 .md-box-root。注意豆包渲染会在中文与数字间插空格）
+      // 深度思考块是 data-plugin-identifier="block_type:10040 | thinking_block.scene:N" 的插件节点（正文块是 block_type:10000），
+      // 思考进度区 data-message-selection-module="thinking_progress"（think-collapse-block-<hash>）里同样用 MdBox 渲染，步骤标题
+      // （「正在思考」「规划说明结构」）也是 .md-box-root（2026-10-04 豆包前端包与真机属性）。取思考块之外的第一个正文；没有正文、只有思考块时
+      // 返回 null（同千问/Kimi），中途封存的副本才不会是一串思考标题；空占位消息仍返回消息本身。
       answer: function () {
         const msgs = [...document.querySelectorAll("[data-message-id]")]
           .filter((m) => !((m.className || "").includes("justify-end")) && !m.querySelector(".justify-end"));
         if (!msgs.length) return null;
-        const el = msgs[msgs.length - 1];
-        return el.querySelector(".md-box-root") || el;
+        const el = msgs[msgs.length - 1], THINK = '[data-plugin-identifier*="thinking_block"],[data-message-selection-module="thinking_progress"],[class*="think" i]';
+        const inThink = (node) => { const t = node.closest(THINK); return !!t && t !== el && el.contains(t); };
+        const body = [...el.querySelectorAll(".md-box-root")].find((m) => !inThink(m));
+        if (body) return body;
+        const thinks = [...el.querySelectorAll(THINK)].filter(inThink);
+        if (!thinks.length) return el;
+        // 思考块完成后折叠常驻，终态却不是 MdBox（繁忙/违规提示、卡片、图片）：取最后一个最外层思考块之后、自身不含思考块、有字或有图的
+        // 第一个兄弟（逐层向上找到消息为止）；一个都没有才是还在思考，返回 null。
+        const top = thinks.filter((x) => !thinks.some((o) => o !== x && o.contains(x))).pop();
+        for (let node = top; node && node !== el; node = node.parentElement) {
+          for (let s = node.nextElementSibling; s; s = s.nextElementSibling) {
+            if (!s.matches(THINK) && !s.querySelector(THINK) && ((s.textContent || "").trim() || s.querySelector("img"))) return s;
+          }
+        }
+        return null;
       },
     },
 
