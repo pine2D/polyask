@@ -207,6 +207,7 @@ function App(): React.JSX.Element {
     }
     const offStatus = shell.onStatus((status) => {
       setStatuses((current) => ({ ...current, [status.site]: status }));
+      broadcast.acceptStatus(status);
       // 站点自己发起的主帧导航（点登录跳 auth、被 302 到外部页）会把阶段打回 loading。
       // 此时旧的健康结论已不成立，必须失效——否则面板会长期展示一个过期的「可提问」。
       // 失效信号已经在这条 status 里，不需要新 IPC 通道。

@@ -37,7 +37,7 @@ function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promis
           setVisible: (value: boolean) => visibility.set(id, value),
           setBounds: (value: unknown) => bounds.push({ id, value }),
           webContents: Object.assign(new EventEmitter(), { id,
-            isDestroyed: () => closed.has(id), close: () => { closed.add(id); }, loadURL: async () => {}, focus() {},
+            isDestroyed: () => closed.has(id), close: () => { closed.add(id); view.webContents.emit("destroyed"); }, loadURL: async () => {}, focus() {},
             reloadIgnoringCache: () => { reloads.push(id); },
             setZoomMode: (mode: string) => assert.equal(mode, "isolated"),
             getZoomFactor: () => zoom, setZoomFactor: (value: number) => { zoom = value; }
@@ -51,6 +51,8 @@ function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promis
   });
   const manager = new module.exports.ViewManager(window, () => {}, (layout: unknown) => layouts.push(layout), undefined,
     { selectedSites: ["claude", "chatgpt", "gemini"], initialUiState, onUiStateChange: (state: DesktopUiState) => saved.push(state) });
+  // First loads run under the commit cap (SiteHistoryAccess.initialLoad); start from pages whose first load committed.
+  for (const page of contents) page.emit("did-navigate", {}, "https://example.invalid/", 200, "OK");
   return { manager, window, bounds, layouts, contents, saved, attached, visibility, reloads,
     setGeometry: (hidden: boolean, width: number, height: number) => { minimized = hidden; size = [width, height]; }
   };

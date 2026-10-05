@@ -28,8 +28,15 @@ function captureLocateLine(value: unknown): string | null {
   return parts.length ? `  capture-locate ${parts.join(" ")}` : null;
 }
 
+// 卡顿回调计数白名单行：只认正的安全整数。
+function slowObserverLine(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const count = (value as Record<string, unknown>).slowObserver;
+  return Number.isSafeInteger(count) && (count as number) > 0 ? `  capture-slow-observer ${count}` : null;
+}
+
 // 可直接粘贴进报障 issue 的纯文本报告：版本 / 环境 / 显示缩放，每站的 phase、code、健康结论，
-// 每条 check 的 {name, kind, ok}，白名单进程类别/退出原因/数值错误码，以及每站采集定位级别的计数。绝不包含对话内容、URL、账号信息——check.name 是本地化的
+// 每条 check 的 {name, kind, ok}，白名单进程类别/退出原因/数值错误码，以及每站采集定位级别与卡顿回调的计数。绝不包含对话内容、URL、账号信息——check.name 是本地化的
 // diag_* 词条，不是页面文本；站点只写 key 与产品名，不写 host。
 export function buildSiteReport(input: SiteReportInput): string {
   const lines = [
@@ -54,6 +61,8 @@ export function buildSiteReport(input: SiteReportInput): string {
     for (const check of checks) lines.push(`  - ${check.name} kind=${check.kind ?? "control"} ok=${check.ok}`);
     const locate = captureLocateLine(input.captureLocate?.[site.key]);
     if (locate) lines.push(locate);
+    const slow = slowObserverLine(input.captureLocate?.[site.key]);
+    if (slow) lines.push(slow);
   }
   return lines.join("\n");
 }

@@ -210,9 +210,13 @@ async function createWindow(): Promise<void> {
     database.meta,
     (site, url) => {
       if (!managerForWorkspace) throw new Error("view_manager_not_ready");
-      return managerForWorkspace.navigate(site, url);
+      return managerForWorkspace.navigate(site, url, "commit");
     },
-    { onNewSession: () => collectionForWorkspace?.clearRun() }
+    {
+      onNewSession: () => collectionForWorkspace?.clearRun(),
+      context: (site) => managerForWorkspace?.historyAccess.context(site)?.id,
+      abandon: (site, contentsId) => managerForWorkspace?.historyAccess.abandon(site, contentsId)
+    }
   );
   const workspaceState = workspace.getState();
   const uiStateStore = new UiStateStore(join(app.getPath("userData"), "desktop-ui-state.json"));

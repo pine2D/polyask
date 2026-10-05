@@ -1,5 +1,6 @@
 import { registerQuestionHistoryIpc } from "./question-history-ipc";
 import { createQuestionCapture } from "./question-capture-binding";
+import { cancelSubmissions, lateSentResult } from "./submission-upgrade";
 import type { QuestionHistoryService } from "./question-history-service";
 import type { BackupService } from "./backup-service";
 import { registerBackupIpc } from "./backup-ipc";
@@ -194,23 +195,23 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     return operationGate.run(async () => {
       // beginRun first: a stale retry throws before generation monitoring is touched.
       collection.beginRun(request.runId, request.sites);
-      const remaining = await capture.prepareRun(request, request.images.length ? 90_000 : 44_000);
+      const { remaining, dispatch, settled } = await capture.prepareRun(request, request.images.length ? 90_000 : 44_000, lateSentResult(manager, request.runId));
       const lifecycle = options.questions.repository.lifecycle;
-      manager.beginGenerationRun(request.runId, request.sites);
+      manager.beginGenerationRun(request.runId, dispatch.sites);
       // Recorded before dispatch, matching the extension (console/console.js pushes
       // history ahead of sendAll): a question the user actually asked belongs in the
       // library even when every site fails.
       try { history.record(request.text); } catch { /* History storage must not block sending. */ }
       try { publishPromptLibrary(); } catch { /* A history read failure must not cancel dispatch. */ }
-      for (const site of request.sites) manager.markStatus(statusForSending(site, request.runId));
+      for (const site of dispatch.sites) manager.markStatus(statusForSending(site, request.runId));
       const results = await coordinator.send(
-        request,
+        dispatch,
         (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: options.questions.token(site) }, signal),
         remaining,
         result => acceptBroadcastResult(lifecycle, request.runId, result, options.questions, capture, manager),
         { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
       );
-      return results;
+      return [...settled, ...results];
     });
   });
   ipcMain.handle("polyask:collect", (event, value: unknown) => {
@@ -316,8 +317,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.on("polyask:cancel", (event) => {
     if (trustedShell(event)) {
-      const sites = manager.getStatuses().filter(status => status.phase === "sending").map(status => status.site);
-      options.questions.cancel(sites);
+      const sites = cancelSubmissions(manager.getStatuses(), options.questions);
       coordinator.cancel();
       // Cancel reaches both dispatch paths; the synthesis coordinator is separate
       // from the broadcast one and would otherwise keep typing into a site.

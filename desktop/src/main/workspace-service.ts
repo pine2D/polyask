@@ -20,6 +20,14 @@ import { SITES } from "./sites";
 import type { StateRepository } from "./state-repository";
 
 const WORKSPACE_KEY = "workspace";
+// 新会话占着 OperationGate 等各站主帧提交的硬上限。Windows 真机 18 次新会话导航（两轮×9 站）里
+// 发起→did-navigate 为 96–3557ms（最慢是锁屏下的 Gemini），常态 ≤1.8s。原取 10s，2026-10-05 Windows 第 6 轮
+// 网络整体变慢时 ChatGPT 带 Cookie 的 HTML 约 13s 才回（页内 fetch 实测 13075ms），新会话超过 10s 被判 not_ready、
+// 实际只是慢：上限低于实测值。现取 20s ≈ 13s 的 1.5 倍（≥20% 余量），门的占用仍远低于 did-finish-load 的 23–48s。
+// 到点把该站报 not_ready、放开门之前，先经 abandon 中止仍未提交的导航并把该站钉成 load_failed：主帧没提交时
+// 旧文档（旧会话）还活着、preload 照常应答，不收口的话下一次群发会打进旧会话，卡住的导航日后再提交还会
+// 把发送/生成中的页面换掉（submit_unconfirmed → 用户重试 = 同一问题问两遍）。
+export const NEW_SESSION_COMMIT_CAP_MS = 20_000;
 const GROUP_PREFIX = "group:";
 
 interface StoredWorkspace {
@@ -40,6 +48,10 @@ interface WorkspaceServiceOptions {
   readonly createId?: () => string;
   readonly createDeviceId?: () => string;
   readonly onNewSession?: (sites: readonly SiteKey[]) => void;
+  readonly navigationCapMs?: number;
+  // 导航发起前取该站视图身份；到点时据此中止导航（视图已换掉则不动）。
+  readonly context?: (site: SiteKey) => number | undefined;
+  readonly abandon?: (site: SiteKey, contentsId: number) => void;
 }
 
 type NavigateSite = (site: SiteKey, url: string) => void | Promise<void>;
@@ -74,6 +86,9 @@ export class WorkspaceService {
   private readonly createId: () => string;
   private readonly createDeviceId: () => string;
   private readonly onNewSession: (sites: readonly SiteKey[]) => void;
+  private readonly navigationCapMs: number;
+  private readonly context: (site: SiteKey) => number | undefined;
+  private readonly abandon: (site: SiteKey, contentsId: number) => void;
 
   constructor(
     private readonly state: StateRepository,
@@ -85,6 +100,9 @@ export class WorkspaceService {
     this.createId = options.createId ?? randomUUID;
     this.createDeviceId = options.createDeviceId ?? randomUUID;
     this.onNewSession = options.onNewSession ?? (() => undefined);
+    this.navigationCapMs = options.navigationCapMs ?? NEW_SESSION_COMMIT_CAP_MS;
+    this.context = options.context ?? (() => undefined);
+    this.abandon = options.abandon ?? (() => undefined);
   }
 
   getState(): WorkspaceState {
@@ -151,11 +169,27 @@ export class WorkspaceService {
     const settled = await Promise.allSettled(sites.map((site) => {
       const definition = SITES.find((candidate) => candidate.key === site);
       if (!definition) throw new Error("unknown_site");
-      return this.navigate(site, definition.url);
+      const contentsId = this.context(site);
+      return this.capped(() => this.navigate(site, definition.url), () => {
+        if (contentsId !== undefined) this.abandon(site, contentsId);
+      });
     }));
     return sites.map((site, index) => settled[index].status === "fulfilled"
       ? { site, ok: true }
       : { site, ok: false, code: "not_ready" });
+  }
+
+  private capped(navigate: () => void | Promise<void>, onTimeout: () => void): Promise<void> {
+    // 先发起导航（同步抛出照旧让整批 reject，如 view_manager_not_ready），再起计时器。
+    const navigation = Promise.resolve(navigate());
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        // 先收口再放门：abandon 抛错也不能让这一站卡在「导航未提交、群发照常派发」的状态里不报。
+        try { onTimeout(); } finally { reject(new Error("navigation_timeout")); }
+      }, this.navigationCapMs);
+    });
+    return Promise.race([navigation, timeout]).finally(() => clearTimeout(timer));
   }
 
   private writeWorkspace(selectedSites: readonly SiteKey[], tier: Tier): void {

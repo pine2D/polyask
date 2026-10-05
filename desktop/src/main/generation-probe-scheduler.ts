@@ -33,3 +33,23 @@ export function generationObservationStatus(status: SiteStatus): SiteStatus {
     ? { ...status, phase: "warning", code: "generation_unconfirmed" }
     : status;
 }
+
+interface ProbeTracking {
+  timers: Map<SiteKey, NodeJS.Timeout>;
+  deadlines: Map<SiteKey, number>;
+  observed: Set<SiteKey>;
+  misses: Map<SiteKey, number>;
+}
+
+/** 清掉本站（不传 site 则全部）的探测计时器、截止时间、已见生成中与连续未读计数。 */
+export function clearProbeTracking(tracking: ProbeTracking, site?: SiteKey): void {
+  const sites = site === undefined ? [...tracking.timers.keys()] : [site];
+  for (const key of sites) {
+    const timer = tracking.timers.get(key);
+    if (timer) clearTimeout(timer);
+  }
+  for (const store of [tracking.timers, tracking.deadlines, tracking.observed, tracking.misses]) {
+    if (site === undefined) store.clear();
+    else store.delete(site);
+  }
+}

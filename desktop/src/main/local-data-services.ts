@@ -18,7 +18,8 @@ export function createLocalDataServices(database: DesktopDatabase) {
   };
   deviceId();
   const questions = new QuestionHistoryService(database.questions, { deviceId, safeUrl: safeQuestionUrl,
-    onLocate: (site, locate) => captureLocateDiagnostics.record(site, locate) });
+    onLocate: (site, locate) => captureLocateDiagnostics.record(site, locate),
+    onSlowObserver: (site, token, count) => captureLocateDiagnostics.recordSlow(site, token, count) });
   const archives = new ArchiveService(database.archives, { deviceId });
   const history = new HistoryService(database.history, { deviceId });
   const promptLibrary = new PromptLibraryService(database.state, database.meta, history);

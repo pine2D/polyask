@@ -51,7 +51,7 @@ import {
   swapFocusedSite
 } from "./layout";
 import { GenerationMonitor, GENERATION_MISS_LIMIT } from "./generation-monitor";
-import { generationObservationStatus, scheduleGenerationProbe } from "./generation-probe-scheduler";
+import { clearProbeTracking, generationObservationStatus, scheduleGenerationProbe } from "./generation-probe-scheduler";
 import { navigationDisposition } from "./navigation";
 import { SiteCommandChannel } from "./site-command-channel";
 import { createSiteView, diagnosticSitesForViews } from "./site-view";
@@ -287,11 +287,10 @@ export class ViewManager {
     const view = this.views.get(site);
     if (!view || view.webContents.isDestroyed()) return false;
     // 群发/生成进行中不许动历史，理由同 reload：会把正在写的回答连同页面一起丢掉。
-    if (!siteReloadAllowed(this.currentStatus(site).phase)) return false;
+    if (!siteReloadAllowed(this.currentStatus(site).phase) || this.historyAccess.navigating(site)) return false;
     const history = view.webContents.navigationHistory;
     if (offset === -1 ? !history.canGoBack() : !history.canGoForward()) return false;
-    this.runStatus.delete(site);
-    this.updatePageStatus({ site, phase: "loading" });
+    this.beginNavigation(site);
     if (offset === -1) history.goBack();
     else history.goForward();
     return true;
@@ -300,7 +299,7 @@ export class ViewManager {
   canNavigateHistory(site: SiteKey): SiteHistoryState {
     const view = this.views.get(site);
     if (!view || view.webContents.isDestroyed()) return { back: false, forward: false };
-    if (!siteReloadAllowed(this.currentStatus(site).phase)) return { back: false, forward: false };
+    if (!siteReloadAllowed(this.currentStatus(site).phase) || this.historyAccess.navigating(site)) return { back: false, forward: false };
     const history = view.webContents.navigationHistory;
     return { back: history.canGoBack(), forward: history.canGoForward() };
   }
@@ -316,32 +315,34 @@ export class ViewManager {
   reload(site: SiteKey, ignoreCache = false): boolean {
     const view = this.views.get(site);
     if (!view || view.webContents.isDestroyed()) return false;
-    if (!siteReloadAllowed(this.currentStatus(site).phase)) return false;
-    this.runStatus.delete(site);
-    this.updatePageStatus({ site, phase: "loading" });
+    if (!siteReloadAllowed(this.currentStatus(site).phase) || this.historyAccess.navigating(site)) return false;
+    this.beginNavigation(site, view.webContents);
     if (ignoreCache) view.webContents.reloadIgnoringCache();
     else view.webContents.reload();
     return true;
   }
 
+  private beginNavigation(site: SiteKey, reloading?: WebContents): void {
+    this.historyAccess.reloads.replace(site, reloading);
+    this.runStatus.delete(site);
+    this.updatePageStatus({ site, phase: "loading" });
+  }
+
   async clearSiteData(site: SiteKey): Promise<boolean> {
     return clearSiteDataAndReload(site, this.siteSession, () => this.views.get(site),
-      () => siteReloadAllowed(this.currentStatus(site).phase), () => {
-        this.runStatus.delete(site);
-        this.updatePageStatus({ site, phase: "loading" });
-      });
+      () => siteReloadAllowed(this.currentStatus(site).phase) && !this.historyAccess.navigating(site), contents => this.beginNavigation(site, contents));
   }
 
   checkHealth(sites: readonly SiteKey[]): Promise<SiteHealth[]> {
     return Promise.all(sites.map((site) => this.checkSiteHealth(site)));
   }
 
-  readonly historyAccess = new SiteHistoryAccess(site => this.views.get(site), this.commands, site => {
+  readonly historyAccess = new SiteHistoryAccess(site => this.views.get(site), this.commands, (site, abandoned) => {
     this.invalidateGeneration(site);
     this.runStatus.delete(site);
-    this.updatePageStatus({ site, phase: "loading" });
+    this.updatePageStatus(abandoned ? { site, phase: "failed", code: "load_failed" } : { site, phase: "loading" });
   }, () => this.layout());
-  async navigate(site: SiteKey, url: string): Promise<void> { await this.historyAccess.navigate(site, url, true); }
+  async navigate(site: SiteKey, url: string, until: "load" | "commit" = "load"): Promise<void> { await this.historyAccess.navigate(site, url, true, until); }
 
   setCapturePending(check: (site: SiteKey) => boolean,
     releaseConfirmed: (site: SiteKey) => boolean = () => false,
@@ -380,6 +381,7 @@ export class ViewManager {
     void this.probeGeneration(runId, site);
   }
 
+  onGenerationComplete(listener: GenerationMonitor["onComplete"]): void { this.generation.onComplete = listener; }
   invalidateGeneration(site: SiteKey): void {
     this.generation.forget(site);
     this.clearGenerationTracking(site);
@@ -392,20 +394,8 @@ export class ViewManager {
   }
 
   private clearGenerationTracking(site?: SiteKey): void {
-    if (site === undefined) {
-      for (const timer of this.generationTimers.values()) clearTimeout(timer);
-      this.generationTimers.clear();
-      this.generationDeadlines.clear();
-      this.generationObserved.clear();
-      this.generationMisses.clear();
-      return;
-    }
-    const timer = this.generationTimers.get(site);
-    if (timer) clearTimeout(timer);
-    this.generationTimers.delete(site);
-    this.generationDeadlines.delete(site);
-    this.generationObserved.delete(site);
-    this.generationMisses.delete(site);
+    clearProbeTracking({ timers: this.generationTimers, deadlines: this.generationDeadlines,
+      observed: this.generationObserved, misses: this.generationMisses }, site);
   }
 
   owns(contents: WebContents): SiteKey | null {
@@ -427,7 +417,7 @@ export class ViewManager {
     const pageFailure = this.pageFailureCode(site);
     if (pageFailure) return Promise.resolve({ ok: false, code: pageFailure });
     const definition = SITES.find((candidate) => candidate.key === site);
-    if (!definition || navigationDisposition(definition, view.webContents.getURL()) !== "site") {
+    if (!definition || this.historyAccess.reloads.watching(site) || navigationDisposition(definition, view.webContents.getURL()) !== "site") {
       return Promise.resolve({ ok: false, code: "not_ready" });
     }
     return this.commands.send(view.webContents, command, {
@@ -455,7 +445,7 @@ export class ViewManager {
     const pageFailure = this.pageFailureCode(site);
     if (pageFailure) return Promise.resolve({ code: pageFailure });
     const definition = SITES.find((candidate) => candidate.key === site);
-    if (!definition || navigationDisposition(definition, view.webContents.getURL()) !== "site") {
+    if (!definition || this.historyAccess.reloads.watching(site) || navigationDisposition(definition, view.webContents.getURL()) !== "site") {
       return Promise.resolve({ code: "not_ready" });
     }
     const command: CollectSiteCommand = { source: "AMS", cmd: "collect", deadline };
@@ -505,7 +495,8 @@ export class ViewManager {
   }
 
   private async probeGeneration(runId: string, site: SiteKey): Promise<void> {
-    if (!this.generation.accepts(runId, site)) return;
+    const ticket = this.generation.ticket(runId, site);
+    if (!ticket) return;
     const view = this.views.get(site);
     const definition = SITES.find((candidate) => candidate.key === site);
     const reachable = !!view && !view.webContents.isDestroyed() && !!definition &&
@@ -523,7 +514,7 @@ export class ViewManager {
     const response = await this.commands.send(view.webContents, command, {
       timeoutResult: { state: null }
     });
-    if (!this.generation.accepts(runId, site)) return;
+    if (!this.generation.holds(ticket, site)) return;
     const state = "state" in response ? parseGenerationState(response.state) : null;
     const phase = this.generation.accept(runId, site, state);
     if (!phase) return;
@@ -584,7 +575,7 @@ export class ViewManager {
     // 下一轮群发又会打进 0×0 视口。层序由调用方随后的 reconcileViews 归位。
     if (this.surface === "sites" && this.selected.includes(site.key)) this.attach(site.key);
     this.updatePageStatus({ site: site.key, phase: "loading" });
-    void view.webContents.loadURL(url);
+    this.historyAccess.initialLoad(site.key, view.webContents, url);
   }
 
   private layout(): void {

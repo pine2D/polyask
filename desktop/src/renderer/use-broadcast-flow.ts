@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 
 import type { SiteKey } from "../shared/contracts";
-import type { BroadcastPayload, BroadcastRequest } from "../shared/protocol";
+import type { BroadcastPayload, BroadcastRequest, SiteStatus } from "../shared/protocol";
 import {
   cancelledRunSites,
   completeRun,
@@ -28,6 +28,7 @@ export function useBroadcastFlow(
   readonly retry: (site?: SiteKey) => Promise<BroadcastRun | null>;
   readonly cancel: () => void;
   readonly invalidate: () => void;
+  readonly acceptStatus: (status: SiteStatus) => void;
   readonly runState: RunState;
   readonly retrySites: readonly SiteKey[];
   readonly failureCount: number;
@@ -54,9 +55,9 @@ export function useBroadcastFlow(
           sites: [...payload.sites],
           images: [...payload.images]
         };
-        const completed = completeRun(request, await shell.broadcast(request));
-        if (!state.commit(operation, completed)) return null;
-        setRun(state.run);
+        if (!state.commit(operation, completeRun(request, await shell.broadcast(request)))) return null;
+        const completed = state.run!;
+        setRun(completed);
         remember(completed);
         report(completed);
         return completed;
@@ -72,11 +73,12 @@ export function useBroadcastFlow(
     const request = current && retryRequest(current, site);
     if (!current || !request) return null;
     return runWithBroadcastLock(state, false, async (operation) => {
+      state.forgetSent(request.sites);
       syncState();
       try {
-        const merged = mergeRunResults(current, await shell.broadcast(request));
-        if (!state.commit(operation, merged)) return null;
-        setRun(state.run);
+        if (!state.commit(operation, mergeRunResults(current, await shell.broadcast(request)))) return null;
+        const merged = state.run!;
+        setRun(merged);
         remember(merged);
         report(merged);
         return merged;
@@ -90,6 +92,14 @@ export function useBroadcastFlow(
   const cancel = (): void => {
     cancelBroadcast(state, setRunState, shell.cancel);
   };
+  // 只读状态通道（effect 闭包只捕获首帧，这里只用稳定的 state / setRun / remember / report）：迟到确认升为已发送后去掉重试入口。
+  // 空闲时用现有汇总词条重播一次更正后的结果（aria-live 是读屏唯一的进度通道）；发送中的那轮由它自己的回包播报。
+  const acceptStatus = (status: SiteStatus): void => {
+    if (!state.acceptSubmission(status.site, status.submission) || !state.run) return;
+    setRun(state.run);
+    remember(state.run);
+    if (state.runState === "idle") report(state.run);
+  };
   const invalidate = (): void => {
     state.invalidate();
     syncState();
@@ -101,6 +111,7 @@ export function useBroadcastFlow(
     retry,
     cancel,
     invalidate,
+    acceptStatus,
     runState,
     retrySites: run ? retryRequest(run)?.sites ?? [] : [],
     failureCount: run ? failedRunSites(run).length : 0,

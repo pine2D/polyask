@@ -8,6 +8,7 @@ import { RuntimeProcessDiagnostics } from "../src/main/runtime-process-diagnosti
 
 function harness(report = false) {
   let retainedEvents = 0, samples = 0;
+  const paint = { started: [] as unknown[], stopped: 0 };
   const writes: string[] = [];
   const events = new Map<string, (...args: any[]) => void>();
   const timers: (() => void)[] = [];
@@ -24,6 +25,9 @@ function harness(report = false) {
       if (name === "./diagnostics") return { buildDiagnosticSnapshot: () => ({ ok: true }) };
       if (name === "./window-trace") return { startWindowTrace: () => () => {} };
       if (name === "./idle-throttling") return { startIdleThrottlingExperiment: () => () => {} };
+      if (name === "./paint-recovery") return { startPaintRecovery: (_window: unknown, source: unknown) => {
+        paint.started.push(source); return () => { paint.stopped++; };
+      } };
       if (name === "./resource-trace") return { startResourceTrace: () => () => {} };
       if (name === "./runtime-process-diagnostics") return { runtimeProcessDiagnostics: processDiagnostics };
       assert.equal(name, "./stability-monitor");
@@ -35,7 +39,7 @@ function harness(report = false) {
     }
   });
   const gates = module.exports.startRuntimeGates({ on: (key: string, fn: any) => events.set(key, fn), webContents: { on: (key: string, fn: any) => events.set(key, fn) } });
-  return { gates, events, timers, writes, app, processDiagnostics, retained: () => retainedEvents, samples: () => samples };
+  return { gates, events, timers, writes, app, processDiagnostics, paint, retained: () => retainedEvents, samples: () => samples };
 }
 
 test("normal runs do not retain diagnostic events or schedule resource sampling", () => {
@@ -66,4 +70,16 @@ test("explicit soak runs still retain events, sample metrics and write a summary
   assert.equal(h.samples(), 3);
   assert.equal(JSON.parse(h.writes.at(-1)!).kind, "summary");
   h.gates.dispose();
+});
+
+test("site views get paint recovery for the window's lifetime, restarted per source and stopped on dispose", () => {
+  const h = harness();
+  const source = { getDiagnosticSites: () => [], getLayout: () => ({}) };
+  h.gates.writeDiagnostic(source);
+  assert.deepEqual(h.paint.started, [source], "paint recovery is not an experiment flag: it must always start");
+  h.gates.writeDiagnostic(source);
+  assert.equal(h.paint.started.length, 2);
+  assert.equal(h.paint.stopped, 1, "a restart must stop the previous listeners first");
+  h.gates.dispose();
+  assert.equal(h.paint.stopped, 2);
 });

@@ -24,16 +24,20 @@ interface GenerationEntry {
 export class GenerationMonitor {
   private runId: string | null = null;
   private readonly entries = new Map<SiteKey, GenerationEntry>();
+  // 本轮某站第一次确认收口时回调一次（提问历史据此把副本标为完整回答）。回调异常不得打断探测。
+  onComplete: ((runId: string, site: SiteKey) => void) | null = null;
 
-  // Same-run retries preserve other sites' entries. Cancelling a dispatch
-  // invalidates its pending sites; shutdown invalidates every watch.
-  // A new run replaces only its own sites, retaining other unfinished turns.
-  // The return value concerns broadcast retry identity, not assisted watches.
+  // Same-run retries preserve other sites' entries but rearm every site they
+  // resubmit: a retried site's old generating/complete evidence belongs to the
+  // previous attempt, and keeping it showed "complete" ~1s after the retry
+  // (Windows R7a, Kimi/Doubao). Cancelling a dispatch invalidates its pending
+  // sites; shutdown invalidates every watch. A new run replaces only its own
+  // sites, retaining other unfinished turns. The return value concerns broadcast
+  // retry identity, not assisted watches.
   begin(runId: string, sites: readonly SiteKey[], rememberBroadcast = true): boolean {
     const resumed = this.runId === runId;
     if (rememberBroadcast) this.runId = runId;
     for (const site of sites) {
-      if (this.entries.get(site)?.runId === runId) continue;
       this.entries.set(site, { runId, observedGenerating: false, completeStreak: 0, phase: "submitted" });
     }
     return resumed;
@@ -55,6 +59,19 @@ export class GenerationMonitor {
     return this.entries.get(site)?.runId === runId;
   }
 
+  /**
+   * 探测票据：在途探测的回包只交给发出时的那一条目。同 runId 重试会用新条目重置本站（begin），
+   * 只比 runId 会让旧尝试的「生成中」回包落进新尝试（迟到确认刚开的监视 + 随后的重试）。
+   */
+  ticket(runId: string, site: SiteKey): object | null {
+    const entry = this.entries.get(site);
+    return entry?.runId === runId ? entry : null;
+  }
+
+  holds(ticket: object, site: SiteKey): boolean {
+    return this.entries.get(site) === ticket;
+  }
+
   accept(runId: string, site: SiteKey, state: GenerationState): SitePhase | null {
     const entry = this.entries.get(site);
     if (!entry || entry.runId !== runId) return null;
@@ -65,9 +82,15 @@ export class GenerationMonitor {
       entry.phase = "generating";
     } else if (state === "idle") {
       entry.completeStreak = 0;
-    } else if (state === "complete" && entry.observedGenerating) {
+    } else if (state === "complete_observed" || (state === "complete" && entry.observedGenerating)) {
+      // complete_observed 自带正向证据：站点在本次提交后见过停止键，只是落在两次探测之间。
+      // 仍走同一套连续确认，不因一次读数就收口。
+      entry.observedGenerating = true;
       entry.completeStreak += 1;
-      if (entry.completeStreak >= COMPLETE_CONFIRMATIONS) entry.phase = "complete";
+      if (entry.completeStreak >= COMPLETE_CONFIRMATIONS) {
+        entry.phase = "complete";
+        try { this.onComplete?.(runId, site); } catch { /* Saving history must never break monitoring. */ }
+      }
     }
     // state === null carries no information: it neither confirms nor resets the
     // streak, so an intermittent probe failure cannot strand a finished answer.

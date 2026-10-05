@@ -57,3 +57,34 @@ test("the diagnostic report adds a whitelisted capture-locate line with counts o
   assert.equal(lines[lines.indexOf("[claude] Claude: phase=unknown health=unknown") + 2], "  capture-locate selector=2");
   assert.doesNotMatch(report, /secret|private|https|semantic=/);
 });
+
+test("slow observer batches flow from snapshots to a numbers-only report line, counted by delta per capture", () => {
+  assert.equal(normalizeHistorySnapshot({ token: "t", owned: false, slowObserver: 2 }, "t").slowObserver, 2, "未归属的快照也带卡顿计数");
+  for (const bad of [0, -1, 1.5, "3", { n: 1 }]) {
+    assert.equal("slowObserver" in normalizeHistorySnapshot({ token: "t", owned: true, text: "A", slowObserver: bad }, "t"), false);
+  }
+  const db = DesktopDatabase.open(":memory:");
+  const counts = new CaptureLocateDiagnostics();
+  try {
+    let now = 1000;
+    const history = new QuestionHistoryService(db.questions, { deviceId: () => "test", now: () => now,
+      onSlowObserver: (site, token, count) => counts.recordSlow(site, token, count) });
+    history.begin({ runId: "run", sites: ["kimi"], text: "Question", tier: null, images: [] });
+    history.result("run", { site: "kimi", ok: true });
+    const kimi = history.token("kimi")!;
+    history.accept("kimi", { token: kimi, owned: false, slowObserver: 1 });
+    now += 1000; history.accept("kimi", { token: kimi, owned: true, text: "Par", slowObserver: 3 });
+    now += 1000; history.accept("kimi", { token: kimi, owned: true, text: "Paris", slowObserver: 3 });
+    assert.deepEqual(counts.snapshot(), { kimi: { slowObserver: 3 } }, "同一轮累计值反复上报只记增量");
+    counts.recordSlow("kimi", "next-token", 2);
+    counts.record("kimi", "anchor");
+    counts.recordSlow("kimi", "next-token", "9");
+    assert.deepEqual(counts.snapshot(), { kimi: { anchor: 1, slowObserver: 5 } });
+  } finally { db.close(); }
+  const report = buildSiteReport({ version: "1.0.0", distribution: "portable", platform: "Win32", scale: 1,
+    sites: [{ key: "kimi", label: "Kimi" }, { key: "claude", label: "Claude" }], statuses: {}, health: {}, now: 0,
+    captureLocate: { kimi: { anchor: 1, slowObserver: 5 }, claude: { slowObserver: "https://private.invalid" } as never } });
+  const lines = report.split("\n");
+  assert.equal(lines[lines.indexOf("[kimi] Kimi: phase=unknown health=unknown") + 3], "  capture-slow-observer 5");
+  assert.doesNotMatch(report, /private|https|claude.*slow/);
+});

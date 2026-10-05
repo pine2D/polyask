@@ -48,6 +48,8 @@ function harness(initialUiState?: DesktopUiState) {
   });
   const manager = new module.exports.ViewManager(window, () => {}, (layout: unknown) => layouts.push(layout), undefined,
     { selectedSites: ["claude", "chatgpt", "gemini"], initialUiState, onUiStateChange: (state: DesktopUiState) => saved.push(state) });
+  // First loads run under the commit cap (SiteHistoryAccess.initialLoad); start from pages whose first load committed.
+  for (const page of contents) page.emit("did-navigate", {}, "https://example.invalid/", 200, "OK");
   return { manager, window, bounds, layouts, contents, saved,
     setGeometry: (hidden: boolean, width: number, height: number) => { minimized = hidden; size = [width, height]; }
   };

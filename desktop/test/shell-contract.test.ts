@@ -292,7 +292,11 @@ test("answer generation monitoring is run-scoped and never changes navigation", 
   const result = readSource("src/main/broadcast-result.ts");
   const manager = readSource("src/main/view-manager.ts");
   const preload = readSource("src/preload/site.ts");
-  assert.match(ipc, /manager\.beginGenerationRun\(request\.runId, request\.sites\)/);
+  // 重试时 flush 刚迟到确认为已发送的站已从 dispatch 剔除：监视、发送中标记与派发都只针对 dispatch。
+  assert.match(ipc, /manager\.beginGenerationRun\(request\.runId, dispatch\.sites\)/);
+  assert.match(ipc, /for \(const site of dispatch\.sites\) manager\.markStatus\(statusForSending/);
+  assert.match(ipc, /coordinator\.send\(\s*dispatch,/);
+  assert.match(ipc, /prepareRun\(request, [^\n]*lateSentResult\(manager, request\.runId\)\)/);
   assert.match(ipc, /acceptBroadcastResult\(/);
   assert.match(result, /manager\.watchGeneration\(runId, result\.site\)/);
   assert.match(ipc, /cancelGenerationRun\(sites\)/);
@@ -378,6 +382,8 @@ test("assisted synthesis dispatches through its own coordinator and cancel reach
   assert.match(cancel, /synthesisCoordinator\.cancel\(\)/);
   assert.match(cancel, /manager\.cancelGenerationRun\(sites\)/);
   assert.match(cancel, /synthesis\.cancel\(\)/);
+  // 已回包「提交未确认」的站不在 sending 里：取消也要让它们的迟到确认作废（submission-upgrade.ts）。
+  assert.match(cancel, /const sites = cancelSubmissions\(manager\.getStatuses\(\), options\.questions\)/);
 });
 
 test("workspace surfaces detach site views without destroying their web contents", () => {

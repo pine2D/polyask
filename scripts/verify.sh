@@ -38,7 +38,7 @@ echo "[size] 检查 desktop/src 的 .ts/.tsx 单文件不超过 400 行（越界
 # 只接受「修 bug / 补安全断言」，不接受「加新功能」；上调超过 20 行的同批给出拆分 TODO。
 # 豁免只写死 copy.ts 一条（纯三语词条表，按行数拆没有意义）；不用通配，通配会让日后新建的文件自动逃逸。
 declare -A TS_RATCHET=(
-  [desktop/src/main/view-manager.ts]=748   # TODO 抽出 site-workspace-state / site-status-registry / generation-watcher 三块纯逻辑后压回 ≤400
+  [desktop/src/main/view-manager.ts]=737   # TODO 抽出 site-workspace-state / site-status-registry / generation-watcher 三块纯逻辑后压回 ≤400
   [desktop/src/renderer/index.tsx]=723     # TODO 抽出命令表（buildCommands）/ 站点健康动作 / 辅助综合流三块后压回 ≤400
   [desktop/src/main/index.ts]=548          # TODO 抽出 createServices（数据层装配）与 createMainWindow（窗口/菜单装配）后压回 ≤400
 )

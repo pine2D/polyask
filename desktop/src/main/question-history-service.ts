@@ -3,27 +3,46 @@ import type { SiteKey } from "../shared/contracts";
 import type { BroadcastRequest, SiteRunResult } from "../shared/protocol";
 import { normalizeHistorySnapshot, type HistorySnapshot } from "../shared/question-capture";
 import type { QuestionAnswerRecord, QuestionRecord } from "../shared/question-history";
+import { normalizeSelectionMetadata } from "../shared/selection";
 import { QuestionRepository, questionAnswerId } from "./question-repository";
 
 const OBSERVATION_MS = 15 * 60_000;
+// 封存前的增长否决：确认后第一次读到的正文只记候选，之后开始的一次读在 ≥SEAL_QUIET_MS 后读到逐字相同才封存。
+// 停止键消失后正文仍可能续长，实测最大 1.79s（ChatGPT，2026-10-04），留 ≥20% 余量取 3s，与 history.js 的 QUIET_MS 同源；
+// 元宝输入框有草稿时停止键隐藏而回答仍在流（监视可能误收口），续长的正文也由它否决。这是正向确认之上的否决，不是完成证据。
+export const SEAL_QUIET_MS = 3_000;
+/** 一次快照读取开始时取的号：seq 区分确认前/后，at 是读取开始时刻（候选比对按开始时刻算，保守）。 */
+export interface ReadMark { seq: number; at: number }
 
 interface CaptureEntry {
   lifecycle: number; runId: string; token: string; answerId: string; questionId: string;
-  started: number; deadline: number; generating: boolean; completions: number; ready: boolean; located?: boolean;
+  started: number; deadline: number; ready: boolean; located?: boolean;
+  // 外壳生成监视确认本轮回答已结束时的读序号（readMark）。只有之后才开始读的归属快照能据此封存为 complete。
+  confirmedAt: number | null;
+  // 确认之后第一次归属正文（at = 回包时刻，晚于正文采样）；被增长、截断、生成中或撤销确认清掉。
+  candidate: { text: string; at: number } | null;
+  // 迟到确认：本次回包时档位未确认（升级后照常记 tier_unconfirmed）；用户取消后不再升级（held）。
+  tierUnconfirmed?: boolean; held?: boolean;
 }
 export class QuestionHistoryService {
   private lastRun: { lifecycle: number; runId: string; id: string } | null = null;
   private readonly active = new Map<SiteKey, CaptureEntry>();
   private readonly releasableSites = new Map<SiteKey, number>();
   private reportFailure: (() => void) | null = null;
+  private reportSubmitted: ((runId: string, site: SiteKey) => void) | null = null;
+  private reads = 0;
   constructor(readonly repository: QuestionRepository, private readonly options: {
     deviceId: () => string; now?: () => number; createId?: () => string; onFailure?: () => void;
     safeUrl?: (site: SiteKey, value: string) => string | null;
     // 本轮首次归属成功时回报定位级别（诊断记账，每轮一次）。
     onLocate?: (site: SiteKey, locate: NonNullable<HistorySnapshot["locate"]>) => void;
+    // 站点运行时报来的本轮卡顿回调累计次数（诊断记账，同一轮重复上报由接收方按增量计）。
+    onSlowObserver?: (site: SiteKey, token: string, count: number) => void;
   }) {}
   private now(): number { return (this.options.now ?? Date.now)(); }
   setFailureHandler(handler: (() => void) | null): void { this.reportFailure = handler; }
+  /** 迟到确认：本次尝试回包「提交未确认」后，归属快照给出本轮用户消息的正向证据，记录已升为 submitted 时回调（外壳据此改状态、开生成监视）。 */
+  setSubmissionHandler(handler: ((runId: string, site: SiteKey) => void) | null): void { this.reportSubmitted = handler; }
   private guarded<T>(action: () => T, fallback: T): T {
     try { return action(); } catch { try { this.options.onFailure?.(); this.reportFailure?.(); } catch { /* Saving must never break sending. */ } return fallback; }
   }
@@ -52,7 +71,7 @@ export class QuestionHistoryService {
             submission: "pending", submissionCode: null, conversationUrl: null, answerMarkdown: null,
             capture: "waiting", captureCode: null, capturedAt: null, truncated: false, sealedAt: null });
           pending.set(site, { lifecycle: this.repository.lifecycle, runId: request.runId, token: randomUUID(), answerId, questionId: record.id,
-            started: now, deadline: now + OBSERVATION_MS, generating: false, completions: 0, ready: false });
+            started: now, deadline: now + OBSERVATION_MS, ready: false, confirmedAt: null, candidate: null });
         }
       });
       this.lastRun = { lifecycle: this.repository.lifecycle, runId: request.runId, id: record.id };
@@ -78,6 +97,26 @@ export class QuestionHistoryService {
     if (!q || "deletedAt" in q || !a || "deletedAt" in a || a.sealedAt !== null) { this.active.delete(site); return null; }
     return a;
   }
+  /** 每次快照读取开始前取号；accept 用它区分「确认之后才读到的正文」与确认前已在途的读取。 */
+  readMark(): ReadMark { return { seq: ++this.reads, at: this.now() }; }
+  /** 距最早一个候选可复读封存还要多久（ms）；没有候选时为 null。采集服务据此提前排下一轮读。 */
+  sealDelay(): number | null {
+    const due = [...this.active.values()].flatMap(e => e.candidate && e.lifecycle === this.repository.lifecycle ? [e.candidate.at + SEAL_QUIET_MS] : []);
+    return due.length ? Math.max(0, Math.min(...due) - this.now()) : null;
+  }
+  /**
+   * 正向完成证据：外壳 GenerationMonitor 对本轮（同 runId、本次尝试已回包 ready）确认了回答结束。
+   * 这里只记账不落库——封存要等之后开始的归属、未结束、非生成中的快照带着正文到来，且隔 SEAL_QUIET_MS 复读逐字相同（accept）。
+   * 绝不从正文静止推断完成。返回是否记下了确认。
+   */
+  complete(runId: string, site: SiteKey): boolean {
+    return this.guarded(() => {
+      const e = this.active.get(site);
+      if (!e || e.runId !== runId || !e.ready || !this.current(site)) return false;
+      e.confirmedAt = this.reads; e.candidate = null;
+      return true;
+    }, false);
+  }
   result(runId: string, result: SiteRunResult): void {
     this.guarded(() => {
       const e = this.active.get(result.site);
@@ -87,6 +126,7 @@ export class QuestionHistoryService {
       const now = Math.max(this.now(), current.updatedAt + 1);
       const submission = result.ok ? "submitted" : result.code === "submit_unconfirmed" ? "unconfirmed" : result.code === "cancelled" ? "cancelled" : "failed";
       e.ready = submission === "submitted" || submission === "unconfirmed";
+      e.tierUnconfirmed = normalizeSelectionMetadata(result).selection?.outcome === "unconfirmed";
       this.releasableSites.delete(result.site);
       e.deadline = now + OBSERVATION_MS;
       this.repository.putAnswer({ ...current, submission, submissionCode: result.code ?? null,
@@ -94,7 +134,7 @@ export class QuestionHistoryService {
       if (!e.ready) this.active.delete(result.site);
     }, undefined);
   }
-  accept(site: SiteKey, snapshot: HistorySnapshot): void {
+  accept(site: SiteKey, snapshot: HistorySnapshot, mark?: ReadMark): void {
     this.guarded(() => {
       const e = this.active.get(site);
       if (!e || e.token !== snapshot.token || !e.ready) return;
@@ -102,10 +142,11 @@ export class QuestionHistoryService {
       if (!current) return;
       const now = Math.max(this.now(), current.updatedAt + 1);
       const v = normalizeHistorySnapshot(snapshot, e.token);
+      if (v.slowObserver) { try { this.options.onSlowObserver?.(site, e.token, v.slowObserver); } catch { /* Diagnostics only. */ } }
       if (!v.owned) {
         // Stop and user-message DOM can both appear late. The fixed observation
         // budget starts at submission, without persisting unowned text or URLs.
-        if (!v.ended && v.generation === "generating") e.generating = true;
+        if (v.generation === "generating") { e.confirmedAt = null; e.candidate = null; }
         if (v.ended || now >= e.deadline) {
           this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: current.answerMarkdown ? "interrupted" : "unavailable" });
           if (v.ended) this.releasableSites.set(site, this.repository.lifecycle);
@@ -114,25 +155,45 @@ export class QuestionHistoryService {
         return;
       }
       if (v.locate && !e.located) { e.located = true; try { this.options.onLocate?.(site, v.locate); } catch { /* Diagnostics only. */ } }
-      if (v.generation === "generating" || (v.text && v.text !== current.answerMarkdown)) { e.generating = true; e.completions = 0; }
-      else if (v.generation === "complete" && e.generating) e.completions++;
-      else if (v.generation === "idle") e.completions = 0;
-      const complete = e.completions >= 3;
+      const truncated = v.truncated ?? current.truncated;
+      // 确认后又见生成中 = 证据被推翻，不再据此封存。已结束（冻结）的快照不知道冻结时刻，不算「确认之后」的正文。
+      if (v.generation === "generating") { e.confirmedAt = null; e.candidate = null; }
+      // 没带读序号的快照来历不明，按确认前在途处理（fail-closed）。
+      const fresh = e.confirmedAt !== null && mark !== undefined && mark.seq > e.confirmedAt;
+      const settled = fresh && !v.ended && v.generation !== "generating" && !!v.text?.trim() && !truncated;
+      let complete = false;
+      const candidate = e.candidate;
+      if (settled && candidate && candidate.text === v.text) complete = mark!.at - candidate.at >= SEAL_QUIET_MS;
+      else if (settled) e.candidate = { text: v.text!, at: now };
+      else if (fresh) e.candidate = null;
       const sealed = complete || !!v.ended || now >= e.deadline;
       const text = v.text?.trim() ? v.text : current.answerMarkdown;
-      const truncated = v.truncated ?? current.truncated;
-      const capture = complete && text && !truncated ? "complete" : text ? (v.generation === "generating" || truncated ? "partial" : "unknown") : sealed ? "unavailable" : "waiting";
+      const capture = complete ? "complete" : text ? (v.generation === "generating" || truncated ? "partial" : "unknown") : sealed ? "unavailable" : "waiting";
       const conversationUrl = v.url ? this.options.safeUrl?.(site, v.url) ?? null : current.conversationUrl;
+      // 迟到确认只升不降：与页内 history.submitted() 同一判据——本次 token 归属成功且不是原文锚点（锚点按本次原文找节点，循环论证）。
+      // 已结束（冻结）快照、观察期已过都不升。这里只改记录，绝不触发任何发送或重发。
+      // 用户取消（held）之后不再升级；档位未确认的照常记 tier_unconfirmed，与正常成功路径一致。
+      const upgraded = current.submission === "unconfirmed" && !e.held && !v.ended && now < e.deadline
+        && (v.locate === "selector" || v.locate === "semantic");
       const next: QuestionAnswerRecord = { ...current, answerMarkdown: text, conversationUrl, capture,
+        ...(upgraded ? { submission: "submitted" as const, submissionCode: e.tierUnconfirmed ? "tier_unconfirmed" : null } : {}),
         capturedAt: v.text ? now : current.capturedAt, truncated, sealedAt: sealed ? now : null, updatedAt: now };
-      if (text !== current.answerMarkdown || capture !== current.capture || conversationUrl !== current.conversationUrl || sealed) {
-        this.repository.putAnswer(next, true, sealed || !current.answerMarkdown ? 0 : now + 30_000);
+      if (upgraded || text !== current.answerMarkdown || capture !== current.capture || conversationUrl !== current.conversationUrl || sealed) {
+        this.repository.putAnswer(next, true, upgraded || sealed || !current.answerMarkdown ? 0 : now + 30_000);
       }
+      if (upgraded) { try { this.reportSubmitted?.(e.runId, site); } catch { /* Status display must never break saving. */ } }
       if (sealed) {
         if (complete || v.ended) this.releasableSites.set(site, this.repository.lifecycle);
         this.active.delete(site);
       }
     }, undefined);
+  }
+  /** 用户取消：这些站当前尝试的迟到确认作废（采集照常，只是不再从「提交未确认」升为已发送）。 */
+  holdSubmission(sites: readonly SiteKey[]): void {
+    for (const site of sites) {
+      const entry = this.active.get(site);
+      if (entry) entry.held = true;
+    }
   }
   cancel(sites: readonly SiteKey[] = [...this.active.keys()]): void {
     for (const site of sites) this.guarded(() => {

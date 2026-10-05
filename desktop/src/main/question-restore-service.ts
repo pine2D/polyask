@@ -5,6 +5,9 @@ import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/qu
 import { safeQuestionUrl } from "./question-navigation";
 import type { QuestionRepository } from "./question-repository";
 
+// 单站等主帧提交的上限，与新会话、重载同取 20s（取值依据见 reload-commit.ts）；总计仍受 30s deadline 约束。
+const RESTORE_SITE_CAP_MS = 20_000;
+
 interface RestoreOptions {
   selection: () => readonly SiteKey[];
   select: (sites: readonly SiteKey[]) => void;
@@ -81,7 +84,7 @@ export class QuestionRestoreService {
         this.inFlight.set(target.site, context?.id);
         try {
           const timeout = new Promise<never>((_, reject) => {
-            timer = setTimeout(() => { this.options.stop(target.site, context?.id); reject(new Error("timeout")); }, Math.min(15_000, Math.max(0, deadline - Date.now())));
+            timer = setTimeout(() => { this.options.stop(target.site, context?.id); reject(new Error("timeout")); }, Math.min(RESTORE_SITE_CAP_MS, Math.max(0, deadline - Date.now())));
           });
           await Promise.race([this.options.navigate(target.site, target.url), timeout]);
           finish(current() && this.options.context(target.site)?.id === context?.id ? "opened" : "cancelled");

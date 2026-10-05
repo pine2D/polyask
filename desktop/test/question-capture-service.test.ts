@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DesktopDatabase } from "../src/main/database";
-import { QuestionHistoryService } from "../src/main/question-history-service";
+import { QuestionHistoryService, SEAL_QUIET_MS } from "../src/main/question-history-service";
 import { QuestionCaptureService } from "../src/main/question-capture-service";
 import type { HistorySnapshot } from "../src/shared/question-capture";
 
@@ -48,8 +48,10 @@ test("starting another broadcast preserves an in-flight final snapshot before ch
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(history.token("claude"), token);
     pending.resolve({ token, owned: true, text: "Final captured text" });
-    const remaining = await preparing;
+    const { remaining, dispatch, settled } = await preparing;
     await tick;
+    assert.deepEqual(dispatch, request);
+    assert.deepEqual(settled, []);
     assert.equal(db.questions.answers(q.id)[0].answerMarkdown, "Final captured text");
     assert.notEqual(history.token("claude"), token);
     assert.ok(remaining > 0 && remaining <= 44_000);
@@ -126,7 +128,8 @@ test("flush captures a new token introduced while the previous poll is pending",
   } finally { capture.dispose(); pending.resolve({ token, owned: false }); db.close(); }
 });
 
-test("reclamation notification observes the persisted final answer", async () => {
+test("reclamation notification observes the persisted final answer", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: 1000 });
   const { db, history, q, token } = fixture();
   let checks = 0;
   const capture = new QuestionCaptureService(history,
@@ -141,7 +144,14 @@ test("reclamation notification observes the persisted final answer", async () =>
       }
     });
   try {
-    for (let i = 0; i < 4; i++) await capture.tick();
+    await capture.tick();
+    assert.equal(history.token("claude") !== undefined, true, "a snapshot alone must not claim completion");
+    history.complete("test-run", "claude");
+    await capture.tick();
+    assert.equal(history.token("claude") !== undefined, true, "the first confirmed read is only a seal candidate");
+    // The candidate time follows the record's monotonic updatedAt, so it can trail the clock by a millisecond.
+    t.mock.timers.tick(SEAL_QUIET_MS + 50);
+    for (let i = 0; i < 2; i++) await capture.tick();
     assert.equal(checks, 4);
     assert.equal(history.token("claude"), undefined);
   } finally { capture.dispose(); db.close(); }

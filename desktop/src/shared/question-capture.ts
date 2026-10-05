@@ -9,7 +9,9 @@ export type CaptureLocate = typeof CAPTURE_LOCATES[number];
 export function isCaptureLocate(value: unknown): value is CaptureLocate {
   return CAPTURE_LOCATES.includes(value as CaptureLocate);
 }
-export type CaptureLocateCounts = Partial<Record<SiteKey, Partial<Record<CaptureLocate, number>>>>;
+// slowObserver：站点运行时一批 MutationObserver 回调里定位 + 绑定超过 250ms 的累计次数（history.js，只是数字）。
+export type CaptureLocateRow = Partial<Record<CaptureLocate, number>> & { readonly slowObserver?: number };
+export type CaptureLocateCounts = Partial<Record<SiteKey, CaptureLocateRow>>;
 
 export interface HistorySnapshot {
   readonly token: string;
@@ -20,6 +22,7 @@ export interface HistorySnapshot {
   readonly ended?: boolean;
   readonly truncated?: boolean;
   readonly locate?: CaptureLocate;
+  readonly slowObserver?: number;
 }
 export interface HistorySnapshotCommand {
   readonly source: "AMS";
@@ -32,13 +35,14 @@ export function normalizeHistorySnapshot(value: unknown, token: string): History
   if (!value || typeof value !== "object") return empty;
   const v = value as Record<string, unknown>;
   if (v.token !== token || typeof v.owned !== "boolean") return empty;
+  const slow = Number.isSafeInteger(v.slowObserver) && (v.slowObserver as number) > 0 ? { slowObserver: v.slowObserver as number } : {};
   if (!v.owned) return { ...empty, ended: v.ended === true,
-    generation: v.ended !== true && v.generation === "generating" ? "generating" : null };
+    generation: v.ended !== true && v.generation === "generating" ? "generating" : null, ...slow };
   if (v.text != null && typeof v.text !== "string") return empty;
   const points = typeof v.text === "string" ? [...v.text] : [];
   return { token, owned: true, text: points.slice(0, QUESTION_ANSWER_LIMIT).join("") || null,
     url: typeof v.url === "string" && v.url.length <= 4096 ? v.url : null,
     generation: ["idle", "generating", "complete"].includes(String(v.generation)) ? v.generation as GenerationState : null,
     ended: v.ended === true, truncated: points.length > QUESTION_ANSWER_LIMIT || v.truncated === true,
-    ...(isCaptureLocate(v.locate) ? { locate: v.locate } : {}) };
+    ...(isCaptureLocate(v.locate) ? { locate: v.locate } : {}), ...slow };
 }

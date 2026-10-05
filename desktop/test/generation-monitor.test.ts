@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { GenerationMonitor } from "../src/main/generation-monitor";
+import type { SiteKey } from "../src/shared/contracts";
 
-function reachComplete(monitor: GenerationMonitor, runId: string, site: "claude" | "gemini"): void {
+function reachComplete(monitor: GenerationMonitor, runId: string, site: SiteKey): void {
   monitor.accept(runId, site, "generating");
   monitor.accept(runId, site, "complete");
   monitor.accept(runId, site, "complete");
@@ -73,14 +74,23 @@ test("retrying the same run keeps every existing site entry", () => {
   assert.equal(monitor.accepts("run-1", "gemini"), true);
 });
 
-test("a resumed run adds only the sites it is missing", () => {
+test("a resumed run rearms the sites it retries and keeps the others", () => {
+  // Windows R7a: a same-runId retry of an already-complete site showed "complete" 1.2s after
+  // resubmitting, because the first attempt's entry was kept.
   const monitor = new GenerationMonitor();
-  monitor.begin("run-1", ["claude"]);
+  monitor.begin("run-1", ["claude", "gemini", "kimi"]);
+  reachComplete(monitor, "run-1", "claude");
+  reachComplete(monitor, "run-1", "kimi");
+  monitor.accept("run-1", "gemini", "generating");
+  assert.equal(monitor.begin("run-1", ["claude", "doubao"]), true);
+  assert.equal(monitor.accept("run-1", "claude", "idle"), "submitted", "the retried site starts over");
+  assert.equal(monitor.accept("run-1", "claude", "complete"), "submitted", "old generating evidence does not carry over");
+  assert.equal(monitor.accept("run-1", "doubao", "idle"), "submitted");
+  assert.equal(monitor.accept("run-1", "kimi", "idle"), "complete", "a site not retried keeps its settled phase");
+  assert.equal(monitor.accept("run-1", "gemini", "complete"), "generating", "a site still streaming keeps its evidence");
   monitor.accept("run-1", "claude", "generating");
   reachComplete(monitor, "run-1", "claude");
-  assert.equal(monitor.begin("run-1", ["claude", "gemini"]), true);
-  assert.equal(monitor.accept("run-1", "claude", "idle"), "complete");
-  assert.equal(monitor.accept("run-1", "gemini", "idle"), "submitted");
+  assert.equal(monitor.accept("run-1", "claude", "idle"), "complete", "the retry settles on its own evidence");
 });
 
 test("invalidating a run rejects every late probe", () => {
@@ -144,4 +154,19 @@ test("cancelling a dispatch subset preserves already submitted older watches", (
   assert.equal(monitor.begin("new", ["gemini"]), false);
   reachComplete(monitor, "old", "claude");
   assert.equal(monitor.accept("old", "claude", "complete"), "complete");
+});
+
+test("a latched stop-control observation settles a short answer the probes never saw generating", () => {
+  const monitor = new GenerationMonitor();
+  monitor.begin("run-1", ["claude"]);
+  assert.equal(monitor.accept("run-1", "claude", "complete"), "submitted", "无证据的 complete 仍不收口");
+  assert.equal(monitor.accept("run-1", "claude", "complete_observed"), "submitted");
+  assert.equal(monitor.accept("run-1", "claude", "complete_observed"), "submitted");
+  assert.equal(monitor.accept("run-1", "claude", "complete_observed"), "complete", "仍要连续三次确认");
+  monitor.begin("run-2", ["claude"]);
+  assert.equal(monitor.accept("run-2", "claude", "complete_observed"), "submitted");
+  assert.equal(monitor.accept("run-2", "claude", "idle"), "submitted", "idle 照旧清零连击");
+  assert.equal(monitor.accept("run-2", "claude", "complete"), "submitted");
+  assert.equal(monitor.accept("run-2", "claude", "complete"), "submitted");
+  assert.equal(monitor.accept("run-2", "claude", "complete"), "complete", "锁存见证过生成后，普通 complete 也可收口");
 });

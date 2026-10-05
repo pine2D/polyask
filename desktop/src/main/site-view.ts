@@ -10,6 +10,7 @@ import { PostAuthReloadTracker } from "./auth-navigation";
 import { PageLifecycle } from "./page-lifecycle";
 import { navigationDisposition } from "./navigation";
 import { SiteNavigationPolicy } from "./navigation-guard";
+import { reassertPainting } from "./paint-recovery";
 
 interface SiteViewCallbacks {
   readonly onLoading: () => void;
@@ -123,6 +124,9 @@ export function createSiteView(
   // did-navigate 是主帧实际提交（loadURL/reload/window.open 改写的加载都会触发），是唯一
   // 可靠的「auth 流进入/退出」信号——按意图武装会给钓鱼跳板留缝。
   contents.on("did-navigate", (_event, url) => policy.commit(url));
+  // 被遮挡时提交的跨文档导航会让新文档的渲染部件以 hidden 诞生、永久停帧（I1，见 paint-recovery.ts）；
+  // 每次主帧提交后重申一次「不节流」把它救回来。当前值不是 false（空闲节流实验接管中）时不动。
+  contents.on("did-navigate", () => reassertPainting(contents));
   // window.open carries no originating frame, so it can come from any embedded
   // third-party frame. It is never allowed to raise a real window; the policy
   // only decides whether the target may replace the guarded view (same-site

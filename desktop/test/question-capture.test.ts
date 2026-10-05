@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { DesktopDatabase } from "../src/main/database";
-import { QuestionHistoryService } from "../src/main/question-history-service";
+import { QuestionHistoryService, SEAL_QUIET_MS } from "../src/main/question-history-service";
 
 const request = (runId: string, sites = ["claude"] as const) => ({ runId, sites, text: "Question", tier: null, images: [] });
 test("each send records once, retries append attempts and different sends preserve prior snapshots", () => {
@@ -48,7 +48,14 @@ test("only observed completion permits releasing a page after generation probing
     const token = history.token("claude")!;
     assert.equal(history.releasable("claude"), false);
     history.accept("claude", { token, owned: true, text: "Answer", generation: "generating" });
+    // A snapshot can no longer claim completion by itself; only the shell monitor's confirmation can.
     for (let i = 0; i < 3; i++) history.accept("claude", { token, owned: true, text: "Answer", generation: "complete" });
+    assert.equal(history.releasable("claude"), false);
+    assert.equal(history.complete("complete", "claude"), true);
+    history.accept("claude", { token, owned: true, text: "Answer", generation: null }, history.readMark());
+    assert.equal(history.releasable("claude"), false, "the first confirmed read is only a seal candidate");
+    now += SEAL_QUIET_MS;
+    history.accept("claude", { token, owned: true, text: "Answer", generation: null }, history.readMark());
     assert.equal(history.releasable("claude"), true);
     history.begin(request("next"));
     assert.equal(history.releasable("claude"), false);
