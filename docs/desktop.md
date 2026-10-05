@@ -20,6 +20,7 @@
 
 - Shell 是唯一的 `BrowserWindow`；每个**已勾选**站点一个 `WebContentsView`。视图按勾选懒建：没勾的站点不建视图、不加载页面；取消勾选释放视图（登录态活在持久化 session 里，重新勾选会重新加载并仍是登录态，**丢的是页面上的对话**）。发送中及答案采集 token 未结束时保留；已提交、生成中及警告态须有明确结束证据才自动释放，监控超时仅显示未确认并保留页面。未选但忙碌的视图保持挂载与正尺寸、仅隐藏；状态更新及采集落库后重查并释放，无新增轮询，重新勾选及新发送按释放当时状态保护。生成监控按站点保留轮次，新轮不停止其它站旧回答的监控；取消仅终止尚在发送的站点监控和采集，已提交回答继续只读收尾。辅助综合独立监控完成、不中断群发统计，待采集/待保存的目标也保持保护，保存成功后再检查释放。
 - **所有已勾选站点都挂在视图树里并保持正尺寸**，非当前页的与当前页第一格用完全相同的矩形、压在其之下——不占屏幕、不抢鼠标。**不能只挂当前页**：未 `addChildView` 的 `WebContentsView` 页面视口恒 0×0（只 `setBounds` 同样是 0），`site-runtime/core.js` 的 `findComposer` 因 `r.top < innerHeight` 恒假而返回 null，群发对后台站点必然 `composer_not_found`，一路重投烧到截止线。
+- **被遮挡时导航的视图会停帧，靠重申 `setBackgroundThrottling(false)` 救回**（2026-10-04 Linux+Windows 真机）：视图在被兄弟视图压住、或整个窗口被别的应用盖住/锁屏/最小化时完成一次跨文档导航，之后 rAF=0、ResizeObserver/IntersectionObserver/View Transitions 都停，定时器和 MutationObserver 照常，`visibilityState` 仍是 visible；窗口遮挡解除后当前页能自愈，后台页不会。Windows 上最小化还会让从未导航过的视图停帧。Chromium 在 `IsHidden` 分支里对 `setBackgroundThrottling(false)` 走 `ShowWithVisibility(kHiddenButPainting)`，所以在 get 已是 false 时再设一次就能恢复；`invalidate()` 无效，`capturePage` 在 Windows 上首次抛 `UnknownVizError`（随后视图恢复），都不能当恢复手段。落点：`paint-recovery.ts` 的 `reassertPainting` 只在视图未销毁、且 `getBackgroundThrottling()` 当前为 false 时重设（空闲节流实验设的 true 不覆盖）；`site-view.ts` 在每次主帧 `did-navigate` 调它；`startPaintRecovery` 在窗口 `restore`/`show`/`focus` 与 `powerMonitor` 的 `unlock-screen`/`resume` 时对全部视图重设一次、1s 后补一次（连发只留一个计时器），常开、不受实验开关控制，由 `runtime-gates.ts` 装配并随 dispose/窗口 closed 清理。Electron 没有「窗口不再被遮挡」事件：被别的应用盖住又露出、但用户没聚焦窗口时，要等下一次 `did-navigate` 或 `focus`。Linux 残留：Kimi/元宝/智谱后台新会话提交 10–20s 后掉到约 1 帧/秒（不是 0），重设与 `invalidate()` 都救不回，切到该页显示一次即恢复，机制未定位，Windows 稳态未见。
 - **层序靠「重挂即提升」**：`addChildView` 对已在树里的子视图是原地提升到最顶层（幂等、`children` 不增长）。**绝不要改成先 detach 再 attach**——全拆重挂实测会让被聚焦站点的渲染进程真的丢焦点。落点 `view-manager.ts` 的 `attach`/`detach`/`reconcile`。
 - 布局、缩放、槽位顺序、`WebContents` 生命周期归 main；renderer 只提交白名单意图。
 - 每站缩放由 `SiteZoomController` 在绑定视图时设置 `setZoomMode("isolated")`，随后应用既有本机比例；共享登录域也不互相传播缩放，模式跨导航保留。快捷键、滚轮与 UI 状态存储契约不变。
@@ -38,13 +39,13 @@
 
 ## 3. 站点运行时注入
 
-`desktop/src/preload/site.ts` 在隔离世界按**固定顺序**同步 require 18 条：
+`desktop/src/preload/site.ts` 在隔离世界按**固定顺序**同步 require 19 条：
 
 ```
-i18n → core → tier → selection-match → send → upload → md → adapters-intl → adapters-intl2 → adapters-cn → adapters-cn2 → adapters-cn3 → adapters-cn4 → generation → history → history-locate → history-adapters → diag
+i18n → core → read-commands → tier → selection-match → send → upload → md → adapters-intl → adapters-intl2 → adapters-cn → adapters-cn2 → adapters-cn3 → adapters-cn4 → generation → history → history-locate → history-adapters → diag
 ```
 
-- `tier.js`、`selection-match.js`、`send.js` 读 `window.__AMS`，必须排在 `core.js` 之后；候选匹配模块排在适配器之前；`generation.js` 与 `diag.js` 必须排在**全部适配器之后**——两者都按已填充的注册表逐 host 挂实现/包装，早了就静默缺席。
+- `read-commands.js` 承载只读命令 `getState`/`wasSubmitted`/`collectAnswer`/`diagnose`，挂 `__AMS.readCommand`；消息监听器仍只在 `core.js` 注册一次并委托给它（`desktop-shared-runtime.test.js` 数着），所以它必须紧跟 `core.js`。`tier.js`、`selection-match.js`、`send.js` 读 `window.__AMS`，必须排在 `core.js` 之后；候选匹配模块排在适配器之前；`generation.js` 与 `diag.js` 必须排在**全部适配器之后**——两者都按已填充的注册表逐 host 挂实现/包装，早了就静默缺席。
 - **chrome shim 只剩 `runtime.onMessage.addListener`** 一条（`core.js` 用它收命令），以不可写不可配置的属性装在 `globalThis.chrome` 上。
 - **locale 单向注入**：require 完成后由外壳调 `__AMS_I18N__.setLang(resolveLocale(navigator.language))`。全应用只有 `shared/locale.ts` 一份解析（`en` / `zhCN` / `zhTW`，前缀匹配，未命中的 `zh-*` 之外一律 `en`）；运行时不再自己猜语言。
 - 命令通道：main 用 `contents.send("polyask:site-command", {requestId, command})`，preload 回 `polyask:site-response`。**两端都只认主帧**——`shell-ipc.ts` 的接收侧显式判 `event.senderFrame?.parent !== null` 就丢弃，再由 `manager.owns(sender)` 校验来源视图；`SiteCommandChannel.receive` 还要求 `pending.contentsId === sender.id`。
@@ -63,12 +64,16 @@ i18n → core → tier → selection-match → send → upload → md → adapte
 - **epoch 取消**：`BroadcastCoordinator` 每次 `send` 自增 `epoch` 并换一个 `AbortController`；`cancel()` 自增 epoch 并 abort。每个 `await` 之后都核对 epoch，不一致立刻返回 `cancelled`。新写的长流程照此办理。
 - **可重试码只有两个**：`RETRIABLE = {composer_not_found, not_ready}`——只有它们代表「还没开始提交」，可在同一 deadline 内等 `min(500, 剩余)` 后重投。其它任何码（含新增的）默认不可重试。
 - **提交不确定 ≠ 可以重发**：`submit_unconfirmed` 走只读确认窗（下表），确认「已提交」返回成功；确认「未提交」也**只有在开关打开时**才允许自动重发一次。开关 `POLYASK_KIMI_RESUBMIT` 是 `broadcast.ts` 的模块常量，**当前为 `false`**，不是设置项——用户不该有能力打开一条尚未真机验证的自动重发路径。测试必须显式传 `resubmit`。
+- **迟到确认（只升不降，2026-10-04 用户拍板）**：`submit_unconfirmed` 的尝试仍记 `ready`、继续采集。之后第一份同时满足「本次尝试 token、`owned:true`、`locate` 为 `selector`/`semantic`（非 `anchor`）、未 `ended`、在 15 分钟观察期内」的快照（与页内 `history.submitted()` / `submissionEvidence:"message"` 同一判据）到来时，`QuestionHistoryService.accept` 把记录从 `unconfirmed` 改为 `submitted`、`submissionCode` 置 null（不新增码；回包时档位未确认的照常记 `tier_unconfirmed`，与正常成功路径一致），经 `setSubmissionHandler` 回调 `submission-upgrade.ts`：仅当外壳状态此刻仍是**同一 runId 的 `unconfirmed`**（未重试 / 未取消 / 未开新一轮）才 `markStatus` 为 `submitted` + `submissionEvidence:"message"`（档位未确认则 `warning` + `tier_unconfirmed`，渲染层结果同样带码），并 `watchGeneration` 让收口与封存照常走。渲染层 `BroadcastFlowState.acceptSubmission` 把同 runId 的 `state:"sent"` 记下，把该站 `submit_unconfirmed` 结果升为成功，重试入口消失；证据早于群发 IPC 回包到达时在提交时补上，重试的站与后续非 sent 状态作废证据。这条路径**不调用 `sendCommand` / `confirmSubmitted` / 任何 dispatch**（`test/submission-upgrade.test.ts` 断言）。**不要**为此给 Claude 等站加 `adapter.submitted()`：重发闸门按「实现了 submitted()」放行、不分站点；加了之后 Claude 首问在用户气泡出现前（实测延迟 6～13 秒）就会回 `supported:true, ok:false`。**同 runId 重试**：`polyask:broadcast` 先 `capture.prepareRun` flush 在采的站，这次 flush 可能正好把待重试站升为已发送；`lateSentResult` 认出外壳状态已是同 runId `sent` 的站，从 `dispatch` 剔除（不开新尝试、不 `beginGenerationRun`、不标发送中、不派发），直接回 `ok:true, submissionEvidence:"message"`。flush 仍没读到证据的站照常归新尝试（用户主动重试，问两遍的风险窗口从「永远」缩到几秒，不消除）。`GenerationMonitor.ticket/holds` 让在途生成探测的回包只落回发出时的条目，同 runId 重试重建的条目不收旧尝试的「生成中」。**取消**：`polyask:cancel` 只取消 `sending` 的站；`cancelSubmissions` 另把外壳状态为 `unconfirmed` 的站 `holdSubmission`——采集照常，但不再迟到升级。
 
 | 场景 | 值 | 落点 |
 | --- | --- | --- |
 | 群发绝对 deadline | 纯文本 44s / 带图 90s | `shell-ipc.ts` |
 | 辅助综合发送 | 44s，**硬编码、无带图分支** | `index.ts` |
 | 辅助综合等新会话 | 22s | `synthesis-service.ts` |
+| 新会话占 OperationGate 等主帧提交 | 等 `did-navigate` 而非 `did-finish-load`（旧文档的 `did-finish-load`/ERR_ABORTED 会让 `loadURL` 提前落地，提交模式下都不算数）；单站硬上限 20s（Windows 18 次实测 96–3557ms；2026-10-05 第 6 轮网络变慢时 ChatGPT 带 Cookie 的 HTML 约 13s，原 10s 低于实测把慢页面判成失败，现取约 1.5 倍），到点先 `historyAccess.abandon` 中止未提交导航并把该站钉成 `load_failed`（`stop()` 只产生被 `PageLifecycle` 忽略的 ERR_ABORTED，不显式钉住会停在 loading、群发打进旧会话），再报 `not_ready` 放门，外壳显示「N 站失败」（`newSessionPartial`），用户重载即恢复。Linux 实测占门 1.6–7.6s（= 最慢一站提交），旧写法按 `did-finish-load` 为 6.6–27.9s 且有站 25s 不落地；Windows 旧写法 23–48s、Claude 卡住无上限。辅助综合导航后立刻发送，仍等 `did-finish-load`（`ViewManager.navigate` 默认 `"load"`）。**真机（2026-10-05 第 7 轮）**：用 Fetch 卡住 DeepSeek 的文档请求，`newSession([deepseek, qianwen])` 用时 20019ms，DeepSeek 报 `not_ready` 并钉成 `load_failed`，同批千问 519ms ready；Claude 带 Cookie 的 HTML 真实挂起时 20036ms 同样收口（文档请求 20032ms ERR_ABORTED）。只证明到点会收口，**没有正向对照**：没测过延迟 13–18s 后放行的慢页面是否 ready、不被误杀。**取舍**：到点的 `abandon` 会把仍然可用的旧文档一起钉成 `load_failed` 并拒发（第 7 轮 Claude 的旧 `/new` 文档仍然活着、档位可读，照样被拒）；站点 HTML 一直挂起时，用户要等站点恢复后再点重载。这是为了防止群发打进旧会话的刻意取舍 | `workspace-service.ts`（`NEW_SESSION_COMMIT_CAP_MS`）、`navigation-commit.ts` |
+| 视图首次加载 / 重载 / 清缓存重载 / 清站点数据 | 不占门；等主帧提交上限 20s（Windows 重载实测 104–1776ms、新会话导航最慢 3557ms、第 6 轮慢网络下带 Cookie 的 HTML 约 13s；与新会话、历史恢复单站同档。视图首次加载（启动、重选后重建、`replaceView`）经 `SiteHistoryAccess.initialLoad` 挂同一只看门，第 6 轮重建的 Claude 视图曾停在 loading 12 分钟以上。旧代码无上限：Windows 上 Claude 主帧请求一直不回包，重载后停在 loading 11 分钟以上，期间补发的清缓存重载也没有落地），到点 `historyAccess.abandon` 钉 `load_failed`；渲染进程退出即解除看门（保留 `renderer_crashed`）。看门期间 `sendCommand`/`collect` 报可重试的 `not_ready`，群发在 deadline 内重试，不往将被替换或被中止的旧文档里打字。新会话/历史恢复等提交期间（`SiteHistoryAccess.navigating`）拒绝重载、后退/前进与清站点数据：Chromium 的 reload 会丢掉未提交的 loadURL、重载旧会话，它的 did-navigate 会被 `loadUntil` 当成本次提交；到点的 `abandon()`/`stop()` 解除。只管「等提交」：已拿到响应但不出帧、`readyState` 停在 interactive 的情形不在此列（靠 `paint-recovery.ts`）；Gemini 登录回跳后 `site-view.ts` 的 `PostAuthReloadTracker` 直接调 `contents.reload()`，不经 `ViewManager`，未接此上限。渲染层重载按钮只看 phase，提交期间点了主进程返回 false、无反馈。**真机（2026-10-05 第 7 轮）**：重建 DeepSeek 视图并卡住首个文档请求，两次分别在 20023ms、20015ms 钉成 `load_failed`，文档始终没有提交；看门期间发出的群发等到看门到点后才返回 `load_failed`，没有派发，被卡的请求已被 `stop()` 取消，之后产品重载约 506ms 回到 ready。Claude 真实挂起时两次重载分别在 20167ms、20172ms 收口，不再无限 loading。启动时九站正常 ready，`initialLoad` 没有误伤正常加载。看门期间 `sendCommand`/`collect` 返回可重试 `not_ready` 这一点没有直接日志，只是与最终结果一致；同样没有「慢但能落地」的正向对照 | `reload-commit.ts`（`RELOAD_COMMIT_CAP_MS`）、`site-history-access.ts` |
+| 提问历史恢复 | 等主帧提交；单站 20s（`RESTORE_SITE_CAP_MS`）、总计 30s，超时只 `stop()`、**不钉 `load_failed`**（该站 phase 停在 loading，未改，见 docs/verify.md 2026-10-04；20s 单站上限第 7 轮未在真机测到） | `question-restore-service.ts` |
 | 可重试码重投间隔 | `min(500ms, 剩余)` | `broadcast.ts` |
 | 只读提交确认窗 | 固定 `now+1.5s`，**独立于群发 deadline**（deadline 到点才收到 `submit_unconfirmed` 是常态，夹在内会归零）；单次探测 ≤300ms，无人应答（页面重挂）再问，连续 5 次明确未见判未提交 | `broadcast.ts` |
 | 回答采集（`collect`） | 每轮 8s | `collection-service.ts` |
@@ -161,7 +166,7 @@ i18n → core → tier → selection-match → send → upload → md → adapte
 - `diagnose()` 每条检查必须带 `kind`（`shared/site-health.ts` 的 `SiteCheckKind`）：`reach`（到不到得了站点）/ `control`（关键控件在不在）/ `tier`（当前档位读不读得出）/ `probe` / `capture`（会话页上第 ① 级采集选择器能否定位末条提问与回答根，见 docs/adapters.md「定位分级」）。缺省与未知值一律按 `control` 处理（fail-loud），漏标一处只会被归成 `control` 继续误报。
 - **只有 `tier`、`capture` 之外的红项决定站点可用性**（`checks.filter(check => !isAdvisoryCheck(check))`）。各站 `state()` 是刻意的偏函数：用户停在非预设的合法档位时可能返回 null，那不是故障；部分组合会被粗判归入 think/fast，精确边界见各站卡。`tier` 红项仍在详情页以提示显示。`capture` 红只说明提问历史副本的选择器漂移，群发照常可用，同样只提示。
 - 判定口径：只有站点给出明确登录证据才说「需要登录」，无法可靠判断一律「无法确认」，不拿 URL 或页面外观猜。单站正在发送或重载会破坏当前任务时禁用「重新加载」并说明原因。
-- **可复制诊断报告**（`shared/site-report.ts` 的 `buildSiteReport`）是切除扩展后唯一的结构化报障入口，**不得只可见不可复制**。内容边界：版本 / 发行形态 / 平台 / 显示缩放、每站的 `phase`+`code`+健康结论+`checkedAt`、每条 check 的 `{name, kind, ok}`、白名单进程类别/退出原因/数值错误码，以及每站 `capture-locate selector=… semantic=… anchor=…` 计数行（主进程内存计数，经 `polyask:capture-locate-counts` 读取，只认三个枚举键与正整数；读取失败只省略该行）。**绝不包含对话内容、URL、账号信息**——`check.name` 是本地化的 `diag_*` 词条不是页面文本，站点只写 key 与产品名不写 host。Drive 连接诊断另在设置页，同样走负向泄漏约束的白名单快照。
+- **可复制诊断报告**（`shared/site-report.ts` 的 `buildSiteReport`）是切除扩展后唯一的结构化报障入口，**不得只可见不可复制**。内容边界：版本 / 发行形态 / 平台 / 显示缩放、每站的 `phase`+`code`+健康结论+`checkedAt`、每条 check 的 `{name, kind, ok}`、白名单进程类别/退出原因/数值错误码，以及每站 `capture-locate selector=… semantic=… anchor=…` 计数行与 `capture-slow-observer N` 行（后者为 `history.js` 里 historyTurn 单次超过 250ms 的 MutationObserver 回调次数，只有正整数才输出；均为主进程内存计数，经 `polyask:capture-locate-counts` 读取，只认枚举键与正整数；读取失败只省略该行）。**绝不包含对话内容、URL、账号信息**——`check.name` 是本地化的 `diag_*` 词条不是页面文本，站点只写 key 与产品名不写 host。Drive 连接诊断另在设置页，同样走负向泄漏约束的白名单快照。
 
 ## 9. 源码文本守卫的明文规则
 
@@ -177,7 +182,7 @@ i18n → core → tier → selection-match → send → upload → md → adapte
 
 - **真实页面优先**：所有辅助界面服务于站点页面，不建立持续占宽的信息栏；应用身份由系统标题栏、任务栏/Dock 与应用菜单承担，不在高密度命令栏重复放品牌。
 - **一个动作，一份定义**：命令、快捷键、菜单项与可访问名称共用同一注册表（`shared/commands.ts`）。加动作先进注册表，不在某一处单开分支。
-- **状态不冒进**：`submitted` 只证明提问已提交，不能证明回答已生成完。没有可靠证据时只说「已发送」。生成态钩子 `generation()` 返回 `"idle" | "generating" | "complete" | null`，`null` = 无法可靠判断，界面停在「已发送」；**不得靠「文字一段时间没变」推断完成**；钩子保持同步只读。
+- **状态不冒进**：`submitted` 只证明提问已提交，不能证明回答已生成完。没有可靠证据时只说「已发送」。生成态钩子 `generation()` 返回 `"idle" | "generating" | "complete" | null`，`null` = 无法可靠判断，界面停在「已发送」；探针层（`generation.js` 的 `generationProbe`）另有 `complete_observed`：本次提交后亲眼见过停止键、且 `answer()` 是提交前基线之外的新节点，监控据此接受未在 900ms 采样里见到 generating 的短回答完成；**不得靠「文字一段时间没变」推断完成**；钩子保持同步只读。
 - **不中断运行**：切页签、聚焦站点、开关面板、打开命令面板都不重载站点、不终止生成。后台站点完成或失败时不自动切页、不抢焦点。
 - **职责边界**：左侧工作区管选站/预设/分组/健康与单站检查重载；设置页管 Drive、显示与数据设置、连接诊断、更新检查；命令面板只搜索并执行已有命令，不承载长期状态；页签只表达后台分页的发送/生成/完成/失败，不自动切页。新信息没有明确归属时**默认不进左侧工作区**。
 - 按需指南复用 `commands` 全页表面（`guide` 模式），从更多菜单或命令面板的 `open-getting-started` 打开；只解释并调用已有选站、诊断、聚焦输入与采集比较命令，不自动发送、不改默认选站、不写完成状态。关闭复用回到站点路径，指南内容独立滚动，不增加站点阅读时的常驻占位。
@@ -262,19 +267,19 @@ npm run soak -- --minutes=60
 Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或会话 URL；最高支持 schema 4，旧实体保持原格式。业务备份导出 version 2、兼容读取 version 1；子记录依赖父记录，缺依赖不能静默恢复。恢复已删除提问派生新身份并映射选中的副本，重复导入不复活再次删除的内容。
 
 
-提问历史 IPC 由 `question-history-ipc.ts` 注册并验证外壳身份；renderer 不接受任意导航地址，恢复只提交记录 ID / 尝试 ID，再用主进程生成的一次性预览令牌执行。实际导航前再次核对记录、站点选择及视图身份，受 OperationGate 保护；最多两站并发、单站 15s、总计 30s，缺地址不导航首页。快照轮询每 5s 启动，最多两个只读探针并发，探针 2.5s；提交成功或提交不确定的结果就绪后固定观察 15min，不依赖早期生成控件，后续进度不顺延；归属不明确时仅观察，不保存正文或地址。明确归属终止、取消或删除仍提前封存；未显示答案的记录可能等待完整观察期才标为未取得副本。切换会话前尽力在 2.5s 内保存：先等待在途采集；旧轮未覆盖的新 token 在同一剩余预算内补采，到期不阻塞导航。中间副本入 outbox 延后 30s，封存或首次文本立即可上传。运行时不把停止键缺失或正文静止当完成证据，无法正向确认结束的副本保留“完成状态未知”。
+提问历史 IPC 由 `question-history-ipc.ts` 注册并验证外壳身份；renderer 不接受任意导航地址，恢复只提交记录 ID / 尝试 ID，再用主进程生成的一次性预览令牌执行。实际导航前再次核对记录、站点选择及视图身份，受 OperationGate 保护；最多两站并发、单站 20s、总计 30s，缺地址不导航首页。快照轮询每 5s 启动，最多两个只读探针并发，探针 2.5s；提交成功或提交不确定的结果就绪后固定观察 15min，不依赖早期生成控件，后续进度不顺延；归属不明确时仅观察，不保存正文或地址。明确归属终止、取消或删除仍提前封存；未显示答案的记录可能等待完整观察期才标为未取得副本。切换会话前尽力在 2.5s 内保存：先等待在途采集；旧轮未覆盖的新 token 在同一剩余预算内补采，到期不阻塞导航。中间副本入 outbox 延后 30s，封存或首次文本立即可上传。运行时不把停止键缺失或正文静止当完成证据，无法正向确认结束的副本保留“完成状态未知”。“完整回答”唯一来源是外壳 `GenerationMonitor` 的收口确认（`onComplete`，`view-manager.ts` 的 `onGenerationComplete` 由 `question-capture-binding.ts` 接到 `QuestionCaptureService.complete`）：只认同 runId 且本次尝试已回包的条目，确认后立即补读（在途轮结束后马上再读），确认之后开始的归属、未结束、非生成中、带正文且未截断的快照先记候选，候选回包 ≥3s（`SEAL_QUIET_MS`，`question-history-service.ts`）后才开始的另一次读读到逐字相同的正文才封存为 complete（增长否决，防元宝草稿隐藏停止键的误收口与停止键消失后的尾部续长；采集服务按 `sealDelay()` 提前排复读）；没带读序号的快照不算确认之后；封存后不再被追问、取消或后续快照改写。不新增持久化键、不改 schema。
 
 右侧历史面板宽 360 CSS px，与左侧面板互斥。共享最小站点列宽决定窄窗全页；阅读副本/确认操作时原位置隐藏原生站点视图，保持挂载、正尺寸与既有禁用后台节流设置，退出恢复可见性（BrowserWindow 默认外壳不是可重排子视图）。历史卡片点击始终读取副本；恢复原站走独立按钮，忙碌时仅保留阅读和复制等只读操作。结果库 surface 会 detach 站点视图，因此其顶部入口仍在发送/辅助操作期间禁用并说明原因。列表只传摘要和尝试元数据，正文仅按选中尝试读取；旧文字历史独立查询分页，顶部提问库的最近文字行为保持不变。错误提示由三语 `question-copy.ts` 提供。
 
 历史再问只恢复文字，原图片不入库或同步；详情和列表显示请求附图数量（不等同于成功发送数量）。恢复带图问题或替换有附件的草稿须提示确认，并清除当前草稿附件与尚未完成的选图读取，防止与历史文字混用。
 
-分页发送统计：`SiteStatus.submission` 是运行期发送结果（runId/state/code），仅群发入口赋值；生成态更新保留它，页面故障仍覆盖站点表头但不覆盖发送结果。新 run 清除上一轮计数，同 runId 子集重试保留未重试站结果。分页绿色计数表示已提交，不宣称回答完成；失败、提交未确认、取消分别显示，逐站生成态与警告进入共享悬停提示和无障碍名称。该字段不持久化、不进入同步。
+分页发送统计：`SiteStatus.submission` 是运行期发送结果（runId/state/code），仅群发入口赋值；生成态更新保留它，页面故障仍覆盖站点表头但不覆盖发送结果。新 run 清除上一轮计数，同 runId 子集重试保留未重试站结果。生成监控同理：`GenerationMonitor.begin` 遇同 runId 时把**被重试的站**重置为 submitted、清掉旧的生成证据，未重试站的条目保留（2026-10-04 起；旧逻辑跳过同 runId 条目，Windows 实测重试后 1.2s 即显示 complete）。已知残留：重试时上一轮的生成探测若仍在途，回来后仍会被新条目接收，条目没有身份标识。分页绿色计数表示已提交，不宣称回答完成；失败、提交未确认、取消分别显示，逐站生成态与警告进入共享悬停提示和无障碍名称。该字段不持久化、不进入同步。
 
 历史列表每 5s 重读至已加载尾部，反映新增、删除与回答保存进度；以可见记录为滚动锚点。列表或详情请求未结束时不叠加轮询；返回、关闭、切换或删除使旧详情回包失效。
 
 ## 实验：最小化空闲节流（默认关闭）
 
-仅启动命令显式设置 `POLYASK_IDLE_THROTTLING_EXPERIMENT=1` 时启用，不增加持久化键或用户设置。`runtime-gates.ts` 装配 `idle-throttling.ts`，纯策略在 `idle-throttling-policy.ts`。每 5 秒检查一次，仅在原生 `isMinimized()` 为真、所有已挂载站点正尺寸且未加载、外壳阶段均为 ready/complete、逐站生产 generation 回包均为 idle/complete 时，才对所有站点允许 backgroundThrottling。每个探针限 2.5 秒；提交未确认、未知、失败、取消或任一站生成中均不准入。异步返回后重验窗口、epoch、成员和阶段。
+仅启动命令显式设置 `POLYASK_IDLE_THROTTLING_EXPERIMENT=1` 时启用，不增加持久化键或用户设置。`runtime-gates.ts` 装配 `idle-throttling.ts`，纯策略在 `idle-throttling-policy.ts`。每 5 秒检查一次，仅在原生 `isMinimized()` 为真、所有已挂载站点正尺寸且未加载、外壳阶段均为 ready/complete、逐站生产 generation 回包均为 idle/complete/complete_observed 时，才对所有站点允许 backgroundThrottling。每个探针限 2.5 秒；提交未确认、未知、失败、取消或任一站生成中均不准入。异步返回后重验窗口、epoch、成员和阶段。
 
 恢复/show 同步关闭节流。所有 submitPrompt 命令在通道 dispatch 前通知控制器并同步关闭全部站点节流；订阅按当时的视图成员核对，不能依赖周期登记，否则新建视图首个提交会漏唤醒。加载、主帧导航、同文档导航和视图增删也关闭节流；这些动作若发生于最小化期间，锁住直到下一次 restore/show。关闭窗口或释放控制器时清理监听、定时器、待回包及已设置的节流。默认关闭时不注册实验监听、不添加轮询。
 
