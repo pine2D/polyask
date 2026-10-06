@@ -68,7 +68,7 @@ function strictSelection(value: unknown, allowEmpty: boolean): SiteKey[] {
     seen.add(site);
   }
   if (!allowEmpty && seen.size === 0) throw new Error("no_selected_sites");
-  return SITE_KEYS.filter((site) => seen.has(site));
+  return [...seen];
 }
 
 function validTier(value: unknown): value is Tier {

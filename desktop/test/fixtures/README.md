@@ -15,6 +15,8 @@
 规则：**不要重新生成、不要按新校验「修正」它们**。`schema1-wire-format.test.ts` 会把全部样本喂给
 同步下行链路并要求逐条接收；任何一次校验收紧命中了存量形状，会先红在那里，而不是在用户的结果库里静默少几条。
 
+`schema1-state-site-order.json` 是 2026-10-06 新增的 Desktop 站点顺序样本（不是扩展生成），使用同版本的 `amsConsole.selected` 与 `amsConsole.siteOrder` 主机名数组；旧 schema 1 样本保持不变。`workspace-order-sync.test.ts` 覆盖顺序往返、旧客户端更新选择、未知主机与本机重置后的恢复。
+
 ## 新实体与备份
 
 - `schema2-*.json`：决策卡及删除标记，实体 schema 2。

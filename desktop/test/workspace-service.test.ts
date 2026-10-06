@@ -27,9 +27,9 @@ test("workspace defaults to all sites and persists strict selection and tier", (
   const { database, service } = fixture();
   try {
     assert.deepEqual(service.getState().selectedSites, SITES.map((site) => site.key));
-    assert.deepEqual(service.setSelection(["kimi", "claude"]).selectedSites, ["claude", "kimi"]);
+    assert.deepEqual(service.setSelection(["kimi", "claude"]).selectedSites, ["kimi", "claude"]);
     assert.equal(service.setTier("think").tier, "think");
-    assert.deepEqual(service.getState().selectedSites, ["claude", "kimi"]);
+    assert.deepEqual(service.getState().selectedSites, ["kimi", "claude"]);
     assert.equal(service.getState().tier, "think");
     assert.throws(() => service.setSelection(["claude", "claude"]), /duplicate_site/);
     assert.throws(() => service.setSelection(["unknown"]), /unknown_site/);
@@ -58,7 +58,7 @@ test("workspace groups reject invalid values and deletion writes a tombstone", (
     const saved = service.saveGroup({ name: "  Research  ", sites: ["kimi", "claude"] });
     assert.equal(saved.id, "group-1");
     assert.equal(saved.name, "Research");
-    assert.deepEqual(saved.sites, ["claude", "kimi"]);
+    assert.deepEqual(saved.sites, ["kimi", "claude"]);
     assert.deepEqual(service.getState().groups, [saved]);
 
     assert.throws(() => service.saveGroup({ name: "Empty", sites: [] }), /invalid_group_sites/);
@@ -88,7 +88,7 @@ test("workspace groups reject invalid values and deletion writes a tombstone", (
   }
 });
 
-test("new session returns canonical outcomes for every selected site", async () => {
+test("new session returns outcomes in the requested site order", async () => {
   const { database, navigations, service } = fixture();
   try {
     const results = await service.newSession(["claude", "kimi"]);
@@ -121,13 +121,13 @@ test("new session preserves all selected-site outcomes when one navigation fails
     );
     const results = await service.newSession(["deepseek", "claude", "kimi", "gemini", "chatgpt"]);
     assert.deepEqual(results, [
-      { site: "claude", ok: true },
-      { site: "chatgpt", ok: true },
-      { site: "gemini", ok: false, code: "not_ready" },
       { site: "deepseek", ok: true },
-      { site: "kimi", ok: true }
+      { site: "claude", ok: true },
+      { site: "kimi", ok: true },
+      { site: "gemini", ok: false, code: "not_ready" },
+      { site: "chatgpt", ok: true }
     ]);
-    assert.deepEqual(navigations, ["claude", "chatgpt", "gemini", "deepseek", "kimi"]);
+    assert.deepEqual(navigations, ["deepseek", "claude", "kimi", "gemini", "chatgpt"]);
   } finally {
     database.close();
   }
@@ -147,11 +147,11 @@ test("new session invalidates only after accepting a normalized selection", asyn
       options
     );
     await service.newSession(["kimi", "claude"]);
-    assert.deepEqual(invalidations, [["claude", "kimi"]]);
+    assert.deepEqual(invalidations, [["kimi", "claude"]]);
     await assert.rejects(() => service.newSession([]), /no_selected_sites/);
     await assert.rejects(() => service.newSession(["claude", "claude"]), /duplicate_site/);
     await assert.rejects(() => service.newSession(["unknown"]), /unknown_site/);
-    assert.deepEqual(invalidations, [["claude", "kimi"]]);
+    assert.deepEqual(invalidations, [["kimi", "claude"]]);
   } finally {
     database.close();
   }
@@ -170,7 +170,7 @@ test("new session invalidates the active run before the first navigation", async
 
     await service.newSession(["kimi", "claude"]);
 
-    assert.deepEqual(events, ["invalidate:claude,kimi", "navigate:claude", "navigate:kimi"]);
+    assert.deepEqual(events, ["invalidate:kimi,claude", "navigate:kimi", "navigate:claude"]);
   } finally {
     database.close();
   }

@@ -8,7 +8,7 @@ import { transformSync } from "esbuild";
 import { readSource } from "./fixtures";
 import type { DesktopUiState } from "../src/shared/desktop-ui-state";
 
-function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promise<void> = async () => {}) {
+function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promise<void> = async () => {}, selectedSites = ["claude", "chatgpt", "gemini"]) {
   const require = createRequire(resolve(__dirname, "../src/main/view-manager.ts"));
   const bounds: any[] = [];
   const layouts: any[] = [];
@@ -50,7 +50,7 @@ function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promis
     }
   });
   const manager = new module.exports.ViewManager(window, () => {}, (layout: unknown) => layouts.push(layout), undefined,
-    { selectedSites: ["claude", "chatgpt", "gemini"], initialUiState, onUiStateChange: (state: DesktopUiState) => saved.push(state) });
+    { selectedSites, initialUiState, onUiStateChange: (state: DesktopUiState) => saved.push(state) });
   // First loads run under the commit cap (SiteHistoryAccess.initialLoad); start from pages whose first load committed.
   for (const page of contents) page.emit("did-navigate", {}, "https://example.invalid/", 200, "OK");
   return { manager, window, bounds, layouts, contents, saved, attached, visibility, reloads,
@@ -59,6 +59,25 @@ function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promis
 }
 
 const turn = () => new Promise<void>(resolve => setImmediate(resolve));
+
+test("custom site order controls startup and both layouts without recreating live views", () => {
+  const h = harness(undefined, undefined, ["gemini", "chatgpt", "claude"]);
+  try {
+    assert.deepEqual(Array.from(h.manager.getLayout().placements, (p: any) => p.key), ["gemini", "chatgpt", "claude"]);
+    h.manager.markStatus({ site: "claude", phase: "generating" });
+    h.manager.setSelection(["chatgpt", "claude", "gemini"]);
+    assert.deepEqual(Array.from(h.manager.getLayout().placements, (p: any) => p.key), ["chatgpt", "claude", "gemini"]);
+    h.manager.setLayout("focus", "gemini");
+    assert.deepEqual(Array.from(h.manager.getLayout().placements, (p: any) => p.key), ["gemini", "chatgpt", "claude"]);
+    h.manager.setLayout("focus", "chatgpt");
+    const placements = Array.from(h.manager.getLayout().placements, (p: any) => p.key);
+    h.manager.setSelection(["chatgpt", "claude", "gemini"]);
+    assert.deepEqual(Array.from(h.manager.getLayout().placements, (p: any) => p.key), placements);
+    assert.equal(h.contents.length, 3);
+    assert.ok(h.contents.every(page => !page.isDestroyed()));
+    assert.equal(h.manager.getStatuses().find((s: any) => s.site === "claude").phase, "generating");
+  } finally { h.window.emit("closed"); }
+});
 
 test("site data clear does not reload a page that started generating during the await", async () => {
   let finishClear!: () => void;

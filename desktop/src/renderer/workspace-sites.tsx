@@ -8,7 +8,7 @@ import {
   type ActiveWorkspaceGroup
 } from "../shared/workspace";
 import { SaveIcon, TrashIcon } from "./icons";
-import { SelectionMark } from "./selection-mark";
+import { SiteChecklist } from "./site-checklist";
 
 interface WorkspaceSitesProps {
   readonly copy: DesktopCopy;
@@ -26,7 +26,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   useEffect(() => setPendingDeleteId(null), [props.groups, props.selected]);
   const choices = workspacePresets(props.sites);
-  const selectedSites = props.sites.map((site) => site.key).filter((site) => props.selected.has(site));
+  const selectedSites = [...props.selected];
   const selectedSignature = groupSignature(selectedSites);
   const reservedSignatures = new Set(
     [choices.all, choices.intl, choices.domestic].map(groupSignature)
@@ -47,7 +47,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
     const next = new Set(props.selected);
     if (next.has(site)) next.delete(site);
     else next.add(site);
-    props.onSelectionChange(props.sites.map((item) => item.key).filter((key) => next.has(key)));
+    props.onSelectionChange([...next]);
   };
 
   return (
@@ -56,21 +56,13 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
         <div className="drawer-section-heading"><h2>{props.copy.scope}</h2></div>
         <div className="scope-presets" aria-label={props.copy.scope}>
           {presets.map(([label, presetSites]) => (
-            <button type="button" className="scope-preset" aria-pressed={groupSignature(presetSites) === selectedSignature} key={label} onClick={() => props.onSelectionChange(presetSites)}>{label}</button>
+            <button type="button" className="scope-preset" aria-pressed={groupSignature(presetSites) === selectedSignature} key={label} onClick={() => props.onSelectionChange([...selectedSites.filter((site) => presetSites.includes(site)), ...presetSites.filter((site) => !props.selected.has(site))])}>{label}</button>
           ))}
         </div>
       </section>
       <section className="drawer-section">
         <div className="drawer-section-heading"><h2>{props.copy.selectSites}</h2><span>{formatCopy(props.copy.selectedSummary, { selected: selectedSites.length, total: props.sites.length })}</span></div>
-        <div className="site-checklist">
-          {props.sites.map((site) => (
-            <label key={site.key} data-selected={props.selected.has(site.key)}>
-              <input className="sr-only" type="checkbox" name="scope-sites" value={site.key} checked={props.selected.has(site.key)} onChange={() => toggleSite(site.key)} />
-              <span>{site.label}</span>
-              <SelectionMark />
-            </label>
-          ))}
-        </div>
+        <SiteChecklist copy={props.copy} sites={props.sites} selected={props.selected} onToggle={toggleSite} onReorder={props.onSelectionChange} />
       </section>
       <section className="drawer-section group-section">
         <div className="drawer-section-heading"><h2>{props.copy.savedGroups}</h2><span>{props.groups.length}</span></div>
@@ -86,7 +78,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
               <div className="group-row" data-group-id={group.id} key={group.id}>
                 <button type="button" className="group-apply" data-hint={group.name} aria-pressed={groupSignature(group.sites) === selectedSignature} onClick={() => props.onSelectionChange(group.sites)}>
                   <strong>{group.name}</strong>
-                  <small>{props.sites.filter((site) => group.sites.includes(site.key)).map((site) => site.label).join(" · ")}</small>
+                  <small>{group.sites.map((key) => props.sites.find((site) => site.key === key)?.label).filter(Boolean).join(" · ")}</small>
                 </button>
                 <button type="button" data-hint={formatCopy(props.copy.deleteGroup, { group: group.name })} aria-label={formatCopy(props.copy.deleteGroup, { group: group.name })} onClick={() => setPendingDeleteId(group.id)}><TrashIcon /></button>
               </div>

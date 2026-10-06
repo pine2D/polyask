@@ -28,6 +28,10 @@
 
 细节回归 `scripts/interface-polish-visual.cjs` 由同一命令运行：以真实鼠标按压验证不可用操作无反馈但键盘可读原因、高频档位按钮尺寸稳定；对账三页选中底板边界，以 10% 播放速度检查过渡并中途反向；验证减少动态效果及本地合成图片预览/逐张删除到空的状态。输出明暗截图与 `details-report.json`。允许 `data:` 图片仅用于隔离夹具，仍禁止网络连接；不是上传或群发链路测试。
 
+站点排序回归 `scripts/site-order-visual.cjs` 同属该命令：覆盖三语键盘 ↑/↓、焦点保留、上下移按钮和首尾禁用、选中勾选标记；以真实 Chromium 鼠标输入启动拖动，截获原生拖动数据后完成放置，核对最终选站及页签说明顺序；检查 150% 缩放并输出截图。`workspace-order-ui.test.tsx` 补取消拖动、外部放置、连续选择的旧广播/回包及恢复快照迟到；`workspace-order-sync.test.ts` 以真实 SQLite 仓库验证跨设备投影、分组保序、旧客户端兼容、未知主机位置和重置后恢复；`view-reclamation.test.ts` 验证有序启动、布局及重排时保留视图和生成状态。
+
+2026-10-06 本轮：完整 Desktop 门禁 885 个 TypeScript 用例及 369 个运行时用例、独立 typecheck、仓库卫生门禁通过；隔离 Linux Electron 外壳全部 96 组布局及排序专项通过，已检查截图。一次并行运行在既有悬停提示检查超时，单独完整重跑通过，未修改该测试。未执行真实 Drive 双设备联网或 Windows/macOS 原生交互；合成外壳截图没有真实站点视图，视图复用由离线主进程回归覆盖。
+
 ## 离线回归
 
 - 本机重置的真实 Electron 外壳交互：在 `desktop/` 运行 `node --import tsx --test test/local-data-reset-interaction.check.ts`；测试自行编译合成夹具、在临时页面验证旧输入与综合状态清理，不访问真实站点、Drive 或用户档案。普通 `npm test` 不运行这项图形检查。

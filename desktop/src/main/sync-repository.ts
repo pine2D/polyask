@@ -29,6 +29,7 @@ import {
   type VersionedSyncValue
 } from "../shared/sync";
 import type { WorkspaceGroup } from "../shared/workspace";
+import { normalizeSelection } from "../shared/workspace";
 import type { DesktopDatabase } from "./database";
 import type { DriveFile } from "./drive-client";
 import { SITES } from "./sites";
@@ -98,6 +99,11 @@ export class SyncRepository {
         updatedAt: workspace.updatedAt,
         deviceId
       },
+      "amsConsole.siteOrder": {
+        value: projectedSiteOrder(workspace.selectedSites, remoteStates),
+        updatedAt: workspace.updatedAt,
+        deviceId
+      },
       "amsConsole.tier": { value: workspace.tier ?? "", updatedAt: workspace.updatedAt, deviceId }
     };
     // Groups whose cloud copy names a host this build cannot resolve are consumed
@@ -133,7 +139,7 @@ export class SyncRepository {
     const selectedSetting = merged.settings["amsConsole.selected"];
     const tierSetting = merged.settings["amsConsole.tier"];
     const current = this.database.state.get<StoredWorkspace>("workspace");
-    const selectedSites = selectionFromSetting(selectedSetting) ?? current?.selectedSites ?? [...SITE_KEYS];
+    const selectedSites = selectionFromSetting(selectedSetting, merged.settings["amsConsole.siteOrder"]) ?? current?.selectedSites ?? [...SITE_KEYS];
     const tier = tierSetting?.value === "fast" || tierSetting?.value === "think" ? tierSetting.value : null;
     const updatedAt = Math.max(selectedSetting?.updatedAt ?? 0, tierSetting?.updatedAt ?? 0, current?.updatedAt ?? 0);
     const deviceId = compareSyncVersion(selectedSetting ?? {}, tierSetting ?? {}) >= 0
@@ -282,6 +288,19 @@ function unknownSelection(remoteStates: Readonly<Record<string, StateFragment>>)
   return Object.fromEntries(Object.entries(hostMap(winner?.value)).filter(([host]) => !keyFor(host)));
 }
 
+function projectedSiteOrder(sites: readonly SiteKey[], remoteStates: Readonly<Record<string, StateFragment>>): string[] {
+  const known = sites.flatMap((key) => hostFor(key) ?? []);
+  const stored = mergeStateFragments(Object.values(remoteStates)).settings["amsConsole.siteOrder"]?.value;
+  if (!Array.isArray(stored)) return known;
+  const previous = [...new Set(stored.filter((host): host is string => typeof host === "string"))];
+  let index = 0;
+  // 只替换本版本认识的槽位；无本机修改时未知站点仍停在原位，不能同版本悄悄移到末尾。
+  const order = previous.flatMap((host) => keyFor(host)
+    ? index < known.length ? [known[index++]] : []
+    : [host]);
+  return [...order, ...known.slice(index)];
+}
+
 function groupsWithUnknownHosts(remoteStates: Readonly<Record<string, StateFragment>>): Set<string> {
   const ids = new Set<string>();
   for (const fragment of Object.values(remoteStates)) {
@@ -293,11 +312,15 @@ function groupsWithUnknownHosts(remoteStates: Readonly<Record<string, StateFragm
   return ids;
 }
 
-function selectionFromSetting(setting?: VersionedSyncValue): SiteKey[] | null {
+function selectionFromSetting(setting?: VersionedSyncValue, order?: VersionedSyncValue): SiteKey[] | null {
   if (!setting?.value || typeof setting.value !== "object" || Array.isArray(setting.value)) return null;
   const hosts = setting.value as Record<string, unknown>;
   const selected = new Set(Object.entries(hosts).flatMap(([host, enabled]) => enabled && keyFor(host) ? [keyFor(host)!] : []));
-  return SITE_KEYS.filter((key) => selected.has(key));
+  const fallback = SITE_KEYS.filter((key) => selected.has(key));
+  // 顺序与勾选同版本才是完整的一次选择；旧客户端更新勾选后不能沿用迟到的旧顺序。
+  if (!order || compareSyncVersion(setting, order) !== 0 || !Array.isArray(order.value)) return fallback;
+  return normalizeSelection([...order.value.flatMap((host) => typeof host === "string" ? keyFor(host) ?? [] : []), ...fallback])
+    .filter((key) => selected.has(key));
 }
 
 function syncGroup(value: VersionedSyncValue & { readonly id: string }): WorkspaceGroup | null {
@@ -305,7 +328,7 @@ function syncGroup(value: VersionedSyncValue & { readonly id: string }): Workspa
   const input = value as VersionedSyncValue & { readonly id: string; readonly name?: unknown; readonly hosts?: unknown };
   const name = typeof input.name === "string" ? input.name.trim() : "";
   const hosts = Array.isArray(input.hosts) ? input.hosts : [];
-  const sites = SITE_KEYS.filter((key) => hosts.includes(hostFor(key)));
+  const sites = normalizeSelection(hosts.flatMap((host) => typeof host === "string" ? keyFor(host) ?? [] : []));
   if (!name || !sites.length) return null;
   return { id: value.id, name, sites, updatedAt: value.updatedAt, deviceId: value.deviceId };
 }

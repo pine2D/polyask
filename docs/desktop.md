@@ -132,7 +132,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - 全页面共享底部反馈条（`WORKSPACE_FEEDBACK_HEIGHT = 32` CSS px）；主进程布局减去同一高度，避免原生站点遮挡。关闭按钮统一无边框、同尺寸图标、悬停浅底与键盘焦点环。工作台退场淡出期间保留原生视图预留宽度，结束后归还；原生站点 bounds 不做逐帧插值，其他侧栏与内容区仅短淡入，减少动态效果时取消。后台站点轮询只播报、不覆盖用户操作提示。群发汇总保留到用户关闭或下一项操作，复制成功提示 6 秒后收起。
 
 - 单页最多 4 个站点（`shared/site-pages.ts` 的 `SITE_PAGE_SIZE = 4`）。1–4 站动态排布，5–9 站按 3+2、3+3、4+3、4+4、3+3+3 均衡分页，避免只有一站的末页。换页只改叠放次序与 bounds，不销毁、不重载、不中断生成与滚动位置。
-- Overview（总览）是等权比较视图；Focus 是主次阅读视图，次要站点仍是实时可交互的 `WebContentsView`，不得降级成截图或状态卡。Overview 永远恢复固定产品顺序；Focus 记住每页最近主站。
+- Overview（总览）是等权比较视图；Focus 是主次阅读视图，次要站点仍是实时可交互的 `WebContentsView`，不得降级成截图或状态卡。Overview 恢复用户保存的已选站点顺序；Focus 记住每页最近主站。
 - 几何：Overview 1 站铺满、2 站左右、3 站三分、4 站 2×2；Focus 1 站铺满、2 站约 2:1、3–4 站左主右次。请求 Overview 但格宽 `<380` 或高 `<210` CSS px 时自动落 Focus（`main/layout.ts` 的 `GRID_TILE_MIN_WIDTH` / `GRID_TILE_MIN_HEIGHT`，按当前页实际站点数算）。
 - 密度令牌在 `shared/display.ts`：compact = 外壳高 52 / 标题条 24 / 边距 4 / 间距 4；comfortable = 64 / 32 / 8 / 8。提问框展开时外壳临时升到 120（comfortable 144），失焦或 Escape 后恢复，不永久挤压视图。所有尺寸走 4px 基础令牌，禁止逐组件散落魔数。
 - 页面缩放与密度相互独立：未手动调整的站点沿用 `siteScale`（`0.9` 或 `1`），Focus 主站默认 1（`zoomForSite`）。AI 页面取得输入焦点后，Ctrl++／−（macOS 同时支持 Command）及 Ctrl+鼠标滚轮按浏览器常用档位调整本站，范围 25%–500%；Ctrl+0 固定恢复本站 100%。`main/site-zoom.ts` 接收原生输入并调用 `webContents.setZoomFactor()`，不向远程页面暴露接口；手动比例优先于布局默认值，开关侧栏、翻页、切换 Focus、导航和视图重建均不覆盖。快捷键速查三语列出放大、缩小、恢复及滚轮说明；外壳取得焦点时仍沿用菜单的外壳缩放。
@@ -153,6 +153,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - **「重置全部本机数据」是本应用唯一的物理删除路径**，语义刻意不同：先 `sync.disconnect()` 断开 Drive，再 `database.resetLocalData()` 物理清空十张业务/同步表并只保留 `meta` 里的 `deviceId`。这里**不能用 tombstone**——tombstone 比云端记录新，重新连接后会赢过云端副本并上传，等于把云端也删了，与「重置不会删除云端数据」的承诺相反。`deviceId` 保留是因为本机在云端的旧 fragment 靠它找回，换掉会让重置后首轮上传把本机不建模的设置键整体丢掉。改这两条语义之前先改用户可见的承诺文案。
 - Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，文件夹和关联实体采用 schema 3，`SUPPORTED_SYNC_SCHEMA = 4` 表达客户端可识别的最高版本；state/history/archive 仍仅接受 schema 1，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
 - 出箱仍有记录时保持 `waiting`，不把“暂未到期”当空闲。按最早 `nextAt` 唤醒，限流遵守退避与 Retry-After；旧失败只更新相同 revision，不覆盖上传期间的新修改。断开或销毁取消定时器并使排队任务失效。
+- **站点顺序同步**：SQLite 复用 `workspace.selectedSites`，不新增业务键或 schema；`sync-repository.ts` 将顺序投影成 state fragment 的 `amsConsole.siteOrder` 主机名数组，与 `amsConsole.selected` 同时写入相同版本。拉取只采用与勾选版本一致的顺序，过滤未知/重复/未选项并按默认顺序补齐缺项；旧客户端更新勾选而保留旧顺序时回退默认排列。上传保留远端未知站点的勾选与顺序字段。分组 `hosts` 数组保序。备份沿用既有 workspace/group 字段，`resetLocalData` 随 `state_items` 和 `meta` 清除本机顺序，重连可从云端恢复；冻结兼容样本为 `desktop/test/fixtures/schema1-state-site-order.json`。
 - 加密 refresh token 先写同目录独占临时文件（0600），完成写入、同步与关闭后原子替换；失败清理临时文件，保留原令牌文件。无安全加密后端时仍仅保留进程内令牌。
 - 结果库过滤在 SQLite 执行，保持既有 searchText 的大小写与字面搜索语义；标签独立查询，不再为标签加载全部回答。历史每页批量读取尝试摘要，正文仍只随选中详情返回；不新增数据库字段或同步格式。
 - **schema 1 的线格式冻结在 `desktop/test/fixtures/schema1-*.json`**（每个文件 `{file, body}`，出自扩展时代的真实实现，代码保留在 tag `archive/extension-v0.25.1`）。**不要重新生成、不要按新校验「修正」它们**：`schema1-wire-format.test.ts` 把全部样本喂进下行链路并要求逐条接收，任何一次校验收紧命中存量形状会先红在那里，而不是在用户的结果库里静默少几条。新增决策卡 schema 2 另增 `schema2-decision*.json`，文件夹及关联 schema 3 另增 `schema3-folder*.json`；旧实体仍为 schema 1，冻结样本不变。
@@ -190,6 +191,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - **职责边界**：左侧工作区管选站/预设/分组/健康与单站检查重载；设置页管 Drive、显示与数据设置、连接诊断、更新检查；命令面板只搜索并执行已有命令，不承载长期状态；页签只表达后台分页的发送/生成/完成/失败，不自动切页。新信息没有明确归属时**默认不进左侧工作区**。
 - 按需指南复用 `commands` 全页表面（`guide` 模式），从更多菜单或命令面板的 `open-getting-started` 打开；只解释并调用已有选站、诊断、聚焦输入与采集比较命令，不自动发送、不改默认选站、不写完成状态。关闭复用回到站点路径，指南内容独立滚动，不增加站点阅读时的常驻占位。
 - **允许 0–9 个任意站点组合**，别假设用户总选 9 个。选择变化、切分组不得销毁仍被选择的站点视图；「新建会话」会丢站点页面里的未保存内容，执行前必须确认。
+- **已选站点的数组顺序就是排列与分页顺序**：`workspace.selectedSites`、分组的 `sites` 及 Drive 分组的 `hosts` 均保留输入顺序，不再按站点表重排。选择面板先列已选项，拖动手柄提交一次最终顺序，也可用上下移按钮或聚焦手柄后按 ↑/↓；取消勾选保留其余顺序，重新勾选追加末尾，范围预设保留仍在范围内的顺序。主进程沿数组顺序创建新视图，页面仍并行加载；已有页面排序不重建、不重载。聚焦模式保留切主站的槽位交换，选择未变化时不重置槽位顺序。
 - **本地数据层不引原生第三方依赖**（用 Electron 自带的 `node:sqlite`），降低三平台打包差异；OAuth refresh token 只经 `safeStorage` 持久化，Linux 后端不可用时只留进程内令牌并明确说明重启后需重新连接。
 - **不以技术绕过登录限制**：不改 User-Agent、不关 `webSecurity`、不复制浏览器 Cookie、不注入凭据。浏览器能登录而应用不能时，按嵌入式环境兼容问题保留诊断证据，不宣称已修复。
 - **生产包不留远程调试开关**，测试不依赖对外开放的调试端口；稳定性观测走 `app.getAppMetrics()` 周期采样加 `render-process-gone` / `unresponsive` / 加载失败事件（`main/runtime-gates.ts`，由环境变量 `POLYASK_SOAK_REPORT` / `POLYASK_DIAGNOSTICS_FILE` 一次性开启）。

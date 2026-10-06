@@ -35,6 +35,7 @@ app.whenReady().then(async () => {
   const check = (ok, message) => { if (!ok) failures.push(message); };
   await require('./settings-interaction-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
+  await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });
   const measure = () => run(`(() => {
     const visible = e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden';
     const selectors = ['.command-bar', '.command-bar > *', '.page-tabs button', '.scope-split', '.settings-card', '.settings-actions', '.sync-stage-list', '.workspace-drawer'];

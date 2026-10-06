@@ -7,10 +7,10 @@ import {
   tombstoneWorkspaceGroup
 } from "../src/shared/workspace";
 
-test("workspace selection accepts known sites only and keeps product order", () => {
+test("workspace selection accepts known sites only and keeps user order", () => {
   assert.deepEqual(
     normalizeSelection(["kimi", "claude", "unknown", "kimi"]),
-    ["claude", "kimi"]
+    ["kimi", "claude"]
   );
   assert.deepEqual(normalizeSelection(null), []);
 });
@@ -21,7 +21,7 @@ test("workspace groups normalize names and keep deletion tombstones", () => {
     { now: 1_000, deviceId: "device-a" }
   );
   assert.equal(group.name, "Research");
-  assert.deepEqual(group.sites, ["claude", "kimi"]);
+  assert.deepEqual(group.sites, ["kimi", "claude"]);
 
   const deleted = tombstoneWorkspaceGroup(group, 2_000, "device-b");
   assert.deepEqual(deleted, {

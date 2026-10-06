@@ -1,0 +1,26 @@
+{
+  "file": {
+    "id": "drive-state-site-order",
+    "name": "state-ordered-desktop.json",
+    "appProperties": { "app": "polyask", "schema": "1", "kind": "state", "id": "ordered-desktop" }
+  },
+  "body": {
+    "schema": 1,
+    "deviceId": "ordered-desktop",
+    "settings": {
+      "amsConsole.selected": {
+        "value": { "www.kimi.com": true, "claude.ai": true, "gemini.google.com": true },
+        "updatedAt": 50,
+        "deviceId": "ordered-desktop"
+      },
+      "amsConsole.siteOrder": {
+        "value": ["www.kimi.com", "claude.ai", "gemini.google.com"],
+        "updatedAt": 50,
+        "deviceId": "ordered-desktop"
+      },
+      "amsConsole.tier": { "value": "", "updatedAt": 50, "deviceId": "ordered-desktop" }
+    },
+    "templates": {},
+    "groups": {}
+  }
+}

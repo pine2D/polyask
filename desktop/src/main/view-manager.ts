@@ -11,6 +11,7 @@ import {
 
 import type { SiteDefinition, SiteKey, ViewPlacement } from "../shared/contracts";
 import { captureSiteFocus, type DesktopUiState } from "../shared/desktop-ui-state";
+import { normalizeSelection } from "../shared/workspace";
 import {
   DEFAULT_DISPLAY_PREFERENCES,
   type DisplayPreferences
@@ -118,21 +119,20 @@ export class ViewManager {
     private readonly onRuntimeEvent: (event: StabilityEventInput) => void = () => undefined,
     private readonly options: ViewManagerOptions = {}
   ) {
-    const selectedSites = new Set(options.selectedSites ?? SITES.map((site) => site.key));
-    this.selected = SITES.map((site) => site.key).filter((site) => selectedSites.has(site));
+    this.selected = normalizeSelection(options.selectedSites ?? SITES.map((site) => site.key));
+    this.focusOrder = [...this.selected];
+    this.focused = this.selected[0] ?? this.focused;
     const initial = options.initialUiState;
     this.siteZoom.restore(initial?.siteZoom);
+    this.focusedByPage = new Map(Object.entries(initial?.focusedByPage ?? {}).map(([page, site]) => [Number(page), site]));
     if (initial) {
       this.mode = initial.layoutMode;
       this.page = initial.currentPage;
-      for (const [page, site] of Object.entries(initial.focusedByPage)) {
-        this.focusedByPage.set(Number(page), site);
-      }
       const current = resolveSitePage(this.selected, this.page);
       this.page = current.page;
       this.pageCount = current.pageCount;
-      // Restoring: the remembered site wins. `this.focused` is still the field
-      // default here, so passing it as `current` would always shadow the memory.
+      // Restoring: the remembered site wins over the first selected site;
+      // passing the startup focus as `current` would shadow that memory.
       this.focused = resolveFocusedSite(
         current.keys,
         this.focusedByPage.get(current.page) ?? this.focused,
@@ -206,8 +206,8 @@ export class ViewManager {
   }
 
   setSelection(sites: readonly SiteKey[]): void {
-    const selected = new Set(sites);
-    this.selected = SITES.map((site) => site.key).filter((site) => selected.has(site));
+    if (sites.join(",") !== this.selected.join(",")) this.focusOrder = normalizeSelection(sites);
+    this.selected = normalizeSelection(sites);
     const current = resolveSitePage(this.selected, this.page);
     this.page = current.page;
     this.pageCount = current.pageCount;

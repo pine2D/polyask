@@ -44,7 +44,7 @@ export function normalizeSelection(value: unknown): SiteKey[] {
   const selected = new Set(value.filter((site): site is SiteKey =>
     typeof site === "string" && SITE_KEYS.includes(site as SiteKey)
   ));
-  return SITE_KEYS.filter((site) => selected.has(site));
+  return [...selected];
 }
 
 export function workspacePresets(

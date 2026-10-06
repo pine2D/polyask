@@ -13,20 +13,33 @@ export function useWorkspaceFlow(
   announce: (value: string) => void
 ) {
   const selectionRef = useRef<readonly SiteKey[]>([]);
+  const selectionRequest = useRef(0);
+  const pendingSelection = useRef<readonly SiteKey[] | null>(null);
   const [workspace, setWorkspace] = useState<WorkspaceState>(INITIAL_WORKSPACE);
   const accept = (value: WorkspaceState): void => {
-    selectionRef.current = value.selectedSites;
-    setWorkspace(value);
+    const selectedSites = pendingSelection.current ?? value.selectedSites;
+    selectionRef.current = selectedSites;
+    setWorkspace({ ...value, selectedSites });
   };
   const recover = (): void => {
+    pendingSelection.current = null;
+    const request = ++selectionRequest.current;
     announce(failedMessage);
-    void shell.bootstrap().then((state) => accept(state.workspace)).catch(() => undefined);
+    void shell.bootstrap().then((state) => {
+      if (request === selectionRequest.current) accept(state.workspace);
+    }).catch(() => undefined);
   };
   const changeSelection = (value: readonly SiteKey[]): void => {
-    const ordered = sites.map((site) => site.key).filter((key) => value.includes(key));
+    const ordered = [...new Set(value)].filter((key) => sites.some((site) => site.key === key));
+    const request = ++selectionRequest.current;
+    pendingSelection.current = ordered;
     selectionRef.current = ordered;
     setWorkspace((current) => ({ ...current, selectedSites: ordered }));
-    void shell.setSelection(ordered).then(accept).catch(recover);
+    void shell.setSelection(ordered).then((state) => {
+      if (request !== selectionRequest.current) return;
+      pendingSelection.current = null;
+      accept(state);
+    }).catch(() => { if (request === selectionRequest.current) recover(); });
   };
   const selected = useMemo(() => new Set(workspace.selectedSites), [workspace.selectedSites]);
   return {
@@ -37,7 +50,7 @@ export function useWorkspaceFlow(
     toggleSite: (site: SiteKey) => {
       const next = new Set(selectionRef.current);
       if (next.has(site)) next.delete(site); else next.add(site);
-      changeSelection(sites.map((item) => item.key).filter((key) => next.has(key)));
+      changeSelection([...next]);
     },
     changeTier: (tier: Tier) => {
       setWorkspace((current) => ({ ...current, tier }));
