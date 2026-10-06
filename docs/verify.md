@@ -863,7 +863,24 @@ Claude 新版适配器重启后，仅复读首轮已有页面：生产 `answer()
 
 ### 缺陷与观察
 
-- **首次加载被中止后重载无效（HEAD 既有）**：视图无已提交文档（URL 空、历史长度 1、主帧 origin null），`webContents.reload()` 不发起任何导航，看门 20s 后再钉 `load_failed`。用户只能点新会话或重新勾选站点。证据 `k4-deepseek-reload-after-firstload-fail.json`。
-- 保留旧文档时新会话仍返回 `not_ready`（外壳会报「N 站失败」），站点却是 ready、可发送。
+- **首次加载被中止后重载无效（HEAD 既有，已修复：无已提交文档时重载改为加载首页；2026-10-06 第二次复验 M1 通过）**：视图无已提交文档（URL 空、历史长度 1、主帧 origin null），`webContents.reload()` 不发起任何导航，看门 20s 后再钉 `load_failed`。用户只能点新会话或重新勾选站点。证据 `k4-deepseek-reload-after-firstload-fail.json`。
+- 保留旧文档时新会话仍返回 `not_ready`（外壳会报「N 站失败」），站点却是 ready、可发送。已修复：保留时按成功返回（2026-10-06 第二次复验 M2 通过）。
 - Claude 极短回答（「请只回答 OK」）首次探测即读到 complete，未见 generating / complete_observed，落在 `generation_unconfirmed`、未封存；同一文档上较长回答正常。与保留规则无关。
 - 保留规则要求地址完全相等：智谱（`?lang=zh`，会话在 `?cid=`）、Kimi（`?chat_enter_method=`）首页挂住时照旧钉失败——有意保守，忽略 query 会把智谱会话页当成首页。
+
+## 2026-10-06 Windows TestLab 第二次复验（首次加载后重载、保留时新会话算成功）
+
+部署 `1ead369…+worktree-860d740e7af2`（PID 33848，备份 `backup-20261006-113814`），guard 7 项通过、9 站登录正常。证据 scratchpad `retest11/`（不入库）。DeepSeek 场景用浏览器级 Fetch 只压 `chat.deepseek.com` 的 Document。
+
+| 项 | 结果 | 要点 |
+| --- | --- | --- |
+| M1a 视图重建、首次加载被中止后普通重载 | 通过 | 约 19.9s `load_failed`（getURL 空、origin null、历史长度 1）；放行后点重载 → 导航到首页，0.81s ready |
+| M1b 同上，清缓存重载 | 通过 | 0.94s ready，目标同为首页（这条路径走 `loadURL`，「忽略缓存」不生效；此时本无缓存文档） |
+| M1c 同上，清站点数据 | 通过 | 0.83s ready，登录保留 |
+| M2a 首页上新会话（挂住） | 通过 | 20035ms 返回 `ok:true`，站点保持 ready；随后单站群发 complete 封存、副本与页面一致 |
+| M2a 对照：会话内普通重载 | 通过 | getURL 非空仍走 `webContents.reload()`，留在原会话 |
+| M2b 会话中新会话（挂住） | 通过 | 20020ms `not_ready`、`load_failed`；重载 533ms 恢复且仍在原会话 |
+| M3 Claude | n/a | 本次 claude.ai 正常，新会话 890ms ok，保留分支无法自然复现 |
+| M4 九站 UI 群发 | 通过 | 9/9 complete 封存，副本与页面一致、2 行 python 一致；豆包无真实弹窗 |
+
+清理：Fetch 全部关闭，无 `__rt*` 残留，监听器与基线一致（仅 DeepSeek 视图因重建换了 webContents）。
