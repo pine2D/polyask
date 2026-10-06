@@ -825,3 +825,45 @@ Claude 新版适配器重启后，仅复读首轮已有页面：生产 `answer()
 - D-R7-1 的原因（推断为外部或账号侧，未证实）；D-R7-2 两份回答不同时副本取哪一份（考虑是否需要按用户选择认定）；D-R7-3 的原因（下次新会话采集 Gemini 的 did-finish-load、did-stop-loading 时序）。
 - Claude 单站群发、追问与九站回归中的 Claude 一格（第 4–7 轮都被挡住）、迟到升级在渲染层的表现：等 claude.ai 带 Cookie 的 HTML 恢复后补跑。
 - 第 6 轮「仍未证明」中与本轮无关的条目（`win:closed` 8→7 与 wc27 监听偏多、Alt+H 诊断报告 `capture-locate` 计数口径、「请求进行中 vs 挂死」的区分）以及第 5 轮遗留条目（千问只有卡片分支、测试器修正 ②③、豆包 rebase 阴性分支与 traverse、`POLYASK_KIMI_RESUBMIT` 与 F067）照旧未关闭。
+
+## 2026-10-05/06 Windows TestLab 后续核对（20 秒上限正向对照、恢复超时、就绪判据采证、元宝 A/B）
+
+实例同第七轮（PID 17840，代码与 `b60eb92` 一致）。证据：scratchpad `followups8/`、`ready9/`（不入库）。审计更正已并入。
+
+| 项 | 结果 | 要点 |
+| --- | --- | --- |
+| 20s 上限正向对照 | 通过 | DeepSeek 首个 Document 请求经浏览器级 Fetch 压 15s/18s 后放行：新会话（返回 ok）、产品重载、视图重建均几十毫秒内提交并 ready，无 load_failed；4 次观察越过 23.5s 无迟到 abandon（新会话 18s 那次只观察到 19.7s，代码上 `capped()` 提交即清计时器）。恢复提问历史压 15s → opened |
+| 恢复超时 | 发现缺陷，已在代码修复 | 压住不放 → 20012ms 返回 timeout，主进程只收到 `did-stop-loading`（无 did-fail-load / did-navigate），站点停在 loading，视图却是旧会话（complete、输入框可用）；产品重载 512ms 恢复。「下一次群发会打进旧会话」由代码推出，未真机发送。修复：超时与用户取消在途都走 `historyAccess.abandon`（钉 load_failed），回归 `desktop/test/question-restore.test.ts`；修复后的真机复测待做 |
+| 就绪判据采证 | 记录，不改代码 | 54 个站次 newSession，生产 `findComposer` 每 250ms 只读探测（只认新文档）。Gemini 编辑器（占位 textarea → 水合后的 div）提交后约 1–4s 出现，比 did-finish-load 早约 2–11s（n=5 精确；另 7 次只有上界，3 次超过 8s）；元宝早约 0.6s；ChatGPT、豆包水合后的编辑器反而比 did-finish-load 晚 0.7–2.1s（现行判据已先于编辑器报 ready）；DeepSeek、千问、Kimi 基本同时或更晚。Gemini 在 finish 之前发送 2 次：1 次 ok，1 次 submit_unconfirmed 后约 7s 才真正发出、经迟到确认升级、页上仅 1 条提问（原因未证实）。Gemini 慢网成因：文档/脚本 TTFB、传输与请求排队（stall）都出现过，h2/h3 都慢，经本机代理；上一轮「h3 同一连接」的说法不成立。全程工作站锁屏、窗口未聚焦、`POLYASK_IDLE_THROTTLING_EXPERIMENT=1`。用户决定不改判据，语义写入 docs/desktop.md |
+| 元宝 A/B | 未复现 | 10 次发送未出现。第七轮 W6 记录推断：两份回答是同一 `speech_show` 里两个 `.hyc-common-markdown`，`answer()` 取 DOM 末块（推断「回答 2」）；重新打开该会话有 PageTurning「1 / 2」翻页、默认第 1 页，副本可能与重新打开时默认看到的不是同一份（两份内容相同，未坐实）。`data-conv-multi-answer` 不能当信号。用户决定先观察，探针 `followups8/abprobe.js` 备用；不点偏好按钮 |
+| 豆包真实弹窗 | 未出现 | 每轮涉及豆包前先做只读弹窗检查 |
+
+副作用：采证中第一次九站新会话触发智谱阿里云滑块验证，智谱停在验证页（需用户手动验证；未碰滑块、未重试）；Claude 仍因带 Cookie 的 HTML 挂起停在 load_failed。
+
+### 仍未证明
+
+- 恢复超时/取消改走 abandon 后的真机行为。
+- Gemini 水合编辑器的稳定页面标识与非锁屏前台条件下的时序（判据不改，仅供将来参考）。
+- 元宝 A/B 两份内容不同时副本取哪份、用户选择后页面如何变化。
+
+## 2026-10-06 Windows TestLab 复验（中止后保留旧文档、恢复超时/取消钉失败）
+
+部署 `ed87c61…+worktree-62f356747ba1`（PID 29416，备份 `backup-20261006-100309`），staging 与部署目录一致、guard 7 项通过、9 站登录正常。证据 scratchpad `retest10/`（不入库）。DeepSeek 场景用浏览器级 Fetch 只压 `chat.deepseek.com` 的 Document、到上限不放行。
+
+| 项 | 结果 | 要点 |
+| --- | --- | --- |
+| K1 Claude 自然挂起 | 通过 | claude.ai 文档请求间歇挂住。/new 上重载挂住 → 20020ms 保留旧 /new 并 ready；/new 上新会话挂住 → 20038ms 返回 `not_ready`、站点 ready；随后只发 Claude 的群发 submitted、页上 1 条带 tag 提问。从会话页点新会话挂住 → 20045ms `load_failed`（符合预期），会话页上重载挂住 → 保留并 ready。02:26 起网络恢复，新会话 1300ms 成功 |
+| K2a 会话页点新会话（挂住） | 通过 | 20020ms `not_ready`、`load_failed`；此时群发 10ms 返回 `load_failed`、页面无 tag，旧会话未被写入；重载 522ms 恢复 |
+| K2b 首页点新会话（挂住） | 通过 | 20023ms `not_ready`，站点 ready（旧首页保留）；随后群发进入该首页，complete 封存、副本与页面一致 |
+| K2c 重载（挂住） | 通过 | 19962ms 保留旧文档并 ready |
+| K3a 恢复超时 | 通过 | 20027ms `timeout`，站点 `load_failed`（不再停在 loading）；重载 513ms 恢复 |
+| K3b 恢复中途取消 | 通过 | 5.1s 取消 → 5944ms `cancelled`，站点 `load_failed`；重载恢复 |
+| K4 视图重建后首次加载挂住 | 部分通过 | 19858ms `load_failed`（无已提交文档可保留，符合预期）；**但产品重载两次都无效**，约 20s 后仍 `load_failed`，靠新会话 201ms 恢复（见下） |
+| K5 九站 UI 群发 | 通过 | 新会话 9/9 ok，9/9 complete 封存，副本与页面一致、2 行 python 一致、无思考泄漏；豆包无真实弹窗。全程窗口最小化（非测试操作） |
+
+### 缺陷与观察
+
+- **首次加载被中止后重载无效（HEAD 既有）**：视图无已提交文档（URL 空、历史长度 1、主帧 origin null），`webContents.reload()` 不发起任何导航，看门 20s 后再钉 `load_failed`。用户只能点新会话或重新勾选站点。证据 `k4-deepseek-reload-after-firstload-fail.json`。
+- 保留旧文档时新会话仍返回 `not_ready`（外壳会报「N 站失败」），站点却是 ready、可发送。
+- Claude 极短回答（「请只回答 OK」）首次探测即读到 complete，未见 generating / complete_observed，落在 `generation_unconfirmed`、未封存；同一文档上较长回答正常。与保留规则无关。
+- 保留规则要求地址完全相等：智谱（`?lang=zh`，会话在 `?cid=`）、Kimi（`?chat_enter_method=`）首页挂住时照旧钉失败——有意保守，忽略 query 会把智谱会话页当成首页。
