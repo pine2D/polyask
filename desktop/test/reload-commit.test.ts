@@ -198,6 +198,28 @@ test("a hung reload of the page already on screen keeps that document ready inst
   } finally { h.window.emit("closed"); }
 });
 
+// 2026-10-06 Windows K4：首次加载被中止后视图里没有已提交文档，webContents.reload() 什么也不发起，重载永远恢复不了。
+test("reloading a view whose first load was abandoned loads the site home instead of a no-op reload", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness({ committed: false });
+  try {
+    const claude = h.views[0];
+    t.mock.timers.tick(RELOAD_COMMIT_CAP_MS);
+    assert.equal(h.status("claude").code, "load_failed");
+    const loads: string[] = [];
+    Object.assign(claude, { getURL: () => "", loadURL: async (url: string) => { loads.push(url); } });
+    for (const ignoreCache of [false, true]) {
+      assert.equal(h.manager.reload("claude", ignoreCache), true);
+      assert.equal(h.status("claude").phase, "loading");
+      claude.emit("did-navigate", {}, "https://claude.ai/new", 200, "OK");
+      t.mock.timers.tick(RELOAD_COMMIT_CAP_MS);
+      assert.equal(h.status("claude").phase, "loading", "the home load committed, so the cap did not fire");
+    }
+    assert.deepEqual(loads, [SITES.find((site) => site.key === "claude")!.url, SITES.find((site) => site.key === "claude")!.url]);
+    assert.deepEqual([...claude.calls], ["stop"], "no no-op reload() was issued");
+  } finally { h.window.emit("closed"); }
+});
+
 test("history restore and new session retire a pending reload watch before navigating", () => {
   const page = Object.assign(contents(4), { getURL: () => "https://claude.ai/chat/old", loadURL: () => new Promise<void>(() => {}) });
   const access = new SiteHistoryAccess(() => ({ webContents: page }) as never, {} as never, () => {});

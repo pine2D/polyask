@@ -441,17 +441,20 @@ test("hard reload and clear-site-data self-rescue actions cross the trusted type
   assert.match(preload, /clearSiteData\(site: SiteKey\): Promise<boolean>/);
   assert.match(preload, /\binvoke\("polyask:clear-site-data", site\)/);
   assert.match(manager, /reload\(site: SiteKey, ignoreCache = false\): boolean/);
-  assert.match(manager, /reloadIgnoringCache\(\)/);
+  // The actual (cache-ignoring) reload is issued by SiteHistoryAccess.reload under the commit watch.
+  assert.match(manager, /this\.beginNavigation\(site, view\.webContents, ignoreCache\)/);
+  assert.match(readSource("src/main/site-history-access.ts"), /if \(ignoreCache\) contents\.reloadIgnoringCache\(\);/);
   const clearSiteData = manager.slice(
     manager.indexOf("async clearSiteData(site: SiteKey)"),
     manager.indexOf("checkHealth(sites: readonly SiteKey[])")
   );
   assert.match(clearSiteData, /siteReloadAllowed\(this\.currentStatus\(site\)\.phase\)/);
   assert.match(clearSiteData, /clearSiteDataAndReload\(/);
+  assert.match(clearSiteData, /this\.beginNavigation\(site, contents, true\)/);
   assert.match(recovery, /clearStorageData\(\{/);
   assert.match(recovery, /storages: \["cachestorage", "serviceworkers"\]/);
   assert.doesNotMatch(recovery, /"cookies"/);
-  assert.match(recovery, /reloadIgnoringCache\(\)/);
+  assert.match(recovery, /reload\(live\.webContents\)/);
 });
 
 test("every main-process IPC handler guards its own sender", () => {

@@ -316,21 +316,20 @@ export class ViewManager {
     const view = this.views.get(site);
     if (!view || view.webContents.isDestroyed()) return false;
     if (!siteReloadAllowed(this.currentStatus(site).phase) || this.historyAccess.navigating(site)) return false;
-    this.beginNavigation(site, view.webContents);
-    if (ignoreCache) view.webContents.reloadIgnoringCache();
-    else view.webContents.reload();
+    this.beginNavigation(site, view.webContents, ignoreCache);
     return true;
   }
 
-  private beginNavigation(site: SiteKey, reloading?: WebContents): void {
-    this.historyAccess.reloads.replace(site, reloading);
+  private beginNavigation(site: SiteKey, reloading?: WebContents, ignoreCache = false): void {
+    this.historyAccess.reloads.replace(site);
     this.runStatus.delete(site);
     this.updatePageStatus({ site, phase: "loading" });
+    if (reloading) this.historyAccess.reload(site, reloading, ignoreCache);
   }
 
   async clearSiteData(site: SiteKey): Promise<boolean> {
     return clearSiteDataAndReload(site, this.siteSession, () => this.views.get(site),
-      () => siteReloadAllowed(this.currentStatus(site).phase) && !this.historyAccess.navigating(site), contents => this.beginNavigation(site, contents));
+      () => siteReloadAllowed(this.currentStatus(site).phase) && !this.historyAccess.navigating(site), contents => this.beginNavigation(site, contents, true));
   }
 
   checkHealth(sites: readonly SiteKey[]): Promise<SiteHealth[]> {

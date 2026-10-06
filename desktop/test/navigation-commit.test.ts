@@ -116,7 +116,7 @@ test("new session no longer holds the operation gate until every page finishes l
     const service = new WorkspaceService(database.state, database.meta, (site) => {
       if (site === "claude") return new Promise<void>(() => {}); // stuck waiting for a response
       return new Promise<void>((resolve) => commits.set(site, resolve));
-    }, { navigationCapMs: 40, context: (site) => ids[site], abandon: (site, id, target) => abandoned.push(`${site}:${id}:${target}`) });
+    }, { navigationCapMs: 40, context: (site) => ids[site], abandon: (site, id, target) => { abandoned.push(`${site}:${id}:${target}`); } });
     const gate = new OperationGate();
     const session = gate.run(() => service.newSession(["claude", "chatgpt", "kimi"]));
     await turn();
@@ -169,6 +169,19 @@ test("an abandoned navigation keeps the old document as ready only when it alrea
   assert.deepEqual(run(frame("https://claude.ai/new")), ["stop", "claude:failed"], "no target, no keep");
   assert.deepEqual(run(undefined, "https://claude.ai/new"), ["stop", "claude:failed"], "no committed document (first load)");
   assert.deepEqual(run({ url: "", origin: "" }, ""), ["stop", "claude:failed"]);
+});
+
+// 2026-10-06 Windows：保留了旧首页（站点 ready、可发送）却仍返回 not_ready，外壳报「N 站失败」。
+test("a new session kept on the old home page (abandon reports keep) counts as ok", { timeout: 3_000 }, async () => {
+  const database = DesktopDatabase.open(":memory:");
+  try {
+    const service = new WorkspaceService(database.state, database.meta, () => new Promise<void>(() => {}),
+      { navigationCapMs: 20, context: () => 5, abandon: (site) => site === "claude" });
+    assert.deepEqual(await service.newSession(["claude", "chatgpt"]), [
+      { site: "claude", ok: true },
+      { site: "chatgpt", ok: false, code: "not_ready" }
+    ]);
+  } finally { database.close(); }
 });
 
 test("the new-session cap keeps at least 20% margin over the slowest observed main-frame commit", () => {

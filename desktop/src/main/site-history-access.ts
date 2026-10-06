@@ -43,17 +43,29 @@ export class SiteHistoryAccess {
   // 新会话等提交超时：中止仍未提交的导航，并把该站钉成 load_failed。stop() 只产生 ERR_ABORTED（PageLifecycle 视为
   // 正常、不改阶段），不显式收口的话旧文档留在 loading 里、sendCommand 照常把群发打进旧会话。用户点重载即恢复。
   // target = 这次导航要去的地址；旧文档恰好就是它时保留并恢复就绪（见 keepsOldDocument）。
-  abandon(site: SiteKey, contentsId: number, target?: string): void {
+  // 返回 true = 保留了旧文档（它就是目标页），调用方可按成功处理。
+  abandon(site: SiteKey, contentsId: number, target?: string): boolean {
     const contents = this.view(site)?.webContents;
-    if (!contents || contents.isDestroyed() || contents.id !== contentsId) return;
+    if (!contents || contents.isDestroyed() || contents.id !== contentsId) return false;
     const keep = keepsOldDocument(contents, target);
     this.committing.delete(site);
     contents.stop();
     this.beforeNavigate(site, keep ? "ready" : "failed");
+    return keep;
   }
   // 视图首次加载（启动、重选后重建、replaceView）同样挂重载看门：主帧文档请求一直不回包时 Electron 不报
   // did-fail-load，PageLifecycle 会无限停在 loading，用户看不到重载入口（2026-10-05 Windows 第 6 轮，Claude 重建视图
   // 停在 loading 12 分钟以上）。到点 abandon 钉 load_failed；看门须在 loadURL 之前挂上。
+  // 重载（含清缓存重载、清站点数据）：先挂看门再发起。首次加载被中止后视图里没有已提交文档（getURL() 为空、
+  // 历史长度 1），webContents.reload() 什么也不发起，看门 20s 后再钉 load_failed，用户点重载永远恢复不了
+  // （2026-10-06 Windows K4）；这时改为重新加载站点首页。
+  reload(site: SiteKey, contents: WebContents, ignoreCache: boolean): void {
+    const home = SITES.find(item => item.key === site)?.url;
+    if (!contents.getURL() && home) { this.initialLoad(site, contents, home); return; }
+    this.reloads.replace(site, contents);
+    if (ignoreCache) contents.reloadIgnoringCache();
+    else contents.reload();
+  }
   initialLoad(site: SiteKey, contents: WebContents, url: string): void {
     this.reloads.replace(site, contents, url);
     void contents.loadURL(url);

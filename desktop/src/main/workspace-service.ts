@@ -51,7 +51,7 @@ interface WorkspaceServiceOptions {
   readonly navigationCapMs?: number;
   // 导航发起前取该站视图身份；到点时据此中止导航（视图已换掉则不动）。
   readonly context?: (site: SiteKey) => number | undefined;
-  readonly abandon?: (site: SiteKey, contentsId: number, target: string) => void;
+  readonly abandon?: (site: SiteKey, contentsId: number, target: string) => boolean | void;
 }
 
 type NavigateSite = (site: SiteKey, url: string) => void | Promise<void>;
@@ -88,7 +88,7 @@ export class WorkspaceService {
   private readonly onNewSession: (sites: readonly SiteKey[]) => void;
   private readonly navigationCapMs: number;
   private readonly context: (site: SiteKey) => number | undefined;
-  private readonly abandon: (site: SiteKey, contentsId: number, target: string) => void;
+  private readonly abandon: (site: SiteKey, contentsId: number, target: string) => boolean | void;
 
   constructor(
     private readonly state: StateRepository,
@@ -170,23 +170,24 @@ export class WorkspaceService {
       const definition = SITES.find((candidate) => candidate.key === site);
       if (!definition) throw new Error("unknown_site");
       const contentsId = this.context(site);
-      return this.capped(() => this.navigate(site, definition.url), () => {
-        if (contentsId !== undefined) this.abandon(site, contentsId, definition.url);
-      });
+      // 到点时旧文档恰好就是首页（本就停在新会话页）则保留并按成功返回，见 SiteHistoryAccess.keepsOldDocument。
+      return this.capped(() => this.navigate(site, definition.url),
+        () => contentsId !== undefined && this.abandon(site, contentsId, definition.url) === true);
     }));
     return sites.map((site, index) => settled[index].status === "fulfilled"
       ? { site, ok: true }
       : { site, ok: false, code: "not_ready" });
   }
 
-  private capped(navigate: () => void | Promise<void>, onTimeout: () => void): Promise<void> {
+  private capped(navigate: () => void | Promise<void>, onTimeout: () => boolean): Promise<void> {
     // 先发起导航（同步抛出照旧让整批 reject，如 view_manager_not_ready），再起计时器。
     const navigation = Promise.resolve(navigate());
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
+    const timeout = new Promise<void>((resolve, reject) => {
       timer = setTimeout(() => {
         // 先收口再放门：abandon 抛错也不能让这一站卡在「导航未提交、群发照常派发」的状态里不报。
-        try { onTimeout(); } finally { reject(new Error("navigation_timeout")); }
+        let kept = false;
+        try { kept = onTimeout(); } finally { if (kept) resolve(); else reject(new Error("navigation_timeout")); }
       }, this.navigationCapMs);
     });
     return Promise.race([navigation, timeout]).finally(() => clearTimeout(timer));
