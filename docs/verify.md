@@ -833,7 +833,7 @@ Claude 新版适配器重启后，仅复读首轮已有页面：生产 `answer()
 | 项 | 结果 | 要点 |
 | --- | --- | --- |
 | 20s 上限正向对照 | 通过 | DeepSeek 首个 Document 请求经浏览器级 Fetch 压 15s/18s 后放行：新会话（返回 ok）、产品重载、视图重建均几十毫秒内提交并 ready，无 load_failed；4 次观察越过 23.5s 无迟到 abandon（新会话 18s 那次只观察到 19.7s，代码上 `capped()` 提交即清计时器）。恢复提问历史压 15s → opened |
-| 恢复超时 | 发现缺陷，已在代码修复 | 压住不放 → 20012ms 返回 timeout，主进程只收到 `did-stop-loading`（无 did-fail-load / did-navigate），站点停在 loading，视图却是旧会话（complete、输入框可用）；产品重载 512ms 恢复。「下一次群发会打进旧会话」由代码推出，未真机发送。修复：超时与用户取消在途都走 `historyAccess.abandon`（钉 load_failed），回归 `desktop/test/question-restore.test.ts`；修复后的真机复测待做 |
+| 恢复超时 | 发现缺陷，已在代码修复 | 压住不放 → 20012ms 返回 timeout，主进程只收到 `did-stop-loading`（无 did-fail-load / did-navigate），站点停在 loading，视图却是旧会话（complete、输入框可用）；产品重载 512ms 恢复。「下一次群发会打进旧会话」由代码推出，未真机发送。修复：超时与用户取消在途都走 `historyAccess.abandon`（钉 load_failed），回归 `desktop/test/question-restore.test.ts`；2026-10-06 复验 K3 通过 |
 | 就绪判据采证 | 记录，不改代码 | 54 个站次 newSession，生产 `findComposer` 每 250ms 只读探测（只认新文档）。Gemini 编辑器（占位 textarea → 水合后的 div）提交后约 1–4s 出现，比 did-finish-load 早约 2–11s（n=5 精确；另 7 次只有上界，3 次超过 8s）；元宝早约 0.6s；ChatGPT、豆包水合后的编辑器反而比 did-finish-load 晚 0.7–2.1s（现行判据已先于编辑器报 ready）；DeepSeek、千问、Kimi 基本同时或更晚。Gemini 在 finish 之前发送 2 次：1 次 ok，1 次 submit_unconfirmed 后约 7s 才真正发出、经迟到确认升级、页上仅 1 条提问（原因未证实）。Gemini 慢网成因：文档/脚本 TTFB、传输与请求排队（stall）都出现过，h2/h3 都慢，经本机代理；上一轮「h3 同一连接」的说法不成立。全程工作站锁屏、窗口未聚焦、`POLYASK_IDLE_THROTTLING_EXPERIMENT=1`。用户决定不改判据，语义写入 docs/desktop.md |
 | 元宝 A/B | 未复现 | 10 次发送未出现。第七轮 W6 记录推断：两份回答是同一 `speech_show` 里两个 `.hyc-common-markdown`，`answer()` 取 DOM 末块（推断「回答 2」）；重新打开该会话有 PageTurning「1 / 2」翻页、默认第 1 页，副本可能与重新打开时默认看到的不是同一份（两份内容相同，未坐实）。`data-conv-multi-answer` 不能当信号。用户决定先观察，探针 `followups8/abprobe.js` 备用；不点偏好按钮 |
 | 豆包真实弹窗 | 未出现 | 每轮涉及豆包前先做只读弹窗检查 |
@@ -842,7 +842,6 @@ Claude 新版适配器重启后，仅复读首轮已有页面：生产 `answer()
 
 ### 仍未证明
 
-- 恢复超时/取消改走 abandon 后的真机行为。
 - Gemini 水合编辑器的稳定页面标识与非锁屏前台条件下的时序（判据不改，仅供将来参考）。
 - 元宝 A/B 两份内容不同时副本取哪份、用户选择后页面如何变化。
 
