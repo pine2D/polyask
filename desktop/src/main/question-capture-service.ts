@@ -9,6 +9,7 @@ export interface PreparedRun { remaining: number; dispatch: BroadcastRequest; se
 export class QuestionCaptureService {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private epoch = 0;
+  private preparationEpoch = 0;
   private running: Promise<void> | null = null;
   private rush = false;
   private observed = new Set<string>();
@@ -27,16 +28,26 @@ export class QuestionCaptureService {
   async prepareRun(request: BroadcastRequest, budgetMs: number,
     settle: (site: SiteKey) => SiteRunResult | null = () => null): Promise<PreparedRun> {
     const deadline = Date.now() + budgetMs;
-    const lifecycle = this.history.repository.lifecycle;
-    await this.flush(this.history.targets().map(entry => entry.site));
-    if (this.history.repository.lifecycle !== lifecycle) throw new Error("cancelled");
+    const lifecycle = this.history.repository.lifecycle, epoch = this.epoch;
+    const preparation = this.preparationEpoch;
+    const current = () => epoch === this.epoch && preparation === this.preparationEpoch && this.history.repository.lifecycle === lifecycle;
+    await this.flush(this.history.targets().map(entry => entry.site), deadline);
+    if (!current()) throw new Error("cancelled");
+    const delay = this.history.handoffDelay(request.sites);
+    // 正向完成候选只差静默复读时，先读完再换 token。等待与读取共用原发送预算，绝不为静止正文凭空确认。
+    if (delay !== null && delay + 50 < deadline - Date.now()) {
+      await new Promise<void>(resolve => setTimeout(resolve, Math.min(3_050, delay + 50)));
+      if (!current()) throw new Error("cancelled");
+      await this.flush(request.sites, deadline);
+    }
+    if (!current()) throw new Error("cancelled");
     const settled = request.sites.flatMap(site => settle(site) ?? []);
     const dispatch = settled.length ? { ...request, sites: request.sites.filter(site => !settled.some(r => r.site === site)) } : request;
     if (dispatch.sites.length) this.history.begin(dispatch);
     return { remaining: Math.max(1, deadline - Date.now()), dispatch, settled };
   }
-  async flush(sites: readonly SiteKey[]): Promise<void> {
-    const deadline = Date.now() + 2_500;
+  async flush(sites: readonly SiteKey[], until = Infinity): Promise<void> {
+    const deadline = Math.min(until, Date.now() + 2_500);
     const pending = this.running, observed = this.observed, epoch = this.epoch;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const capture = async () => {
@@ -104,6 +115,8 @@ export class QuestionCaptureService {
     if (!this.history.complete(runId, site)) return;
     if (this.running) this.rush = true; else void this.tick();
   }
+  // 取消尚未派发的新轮，不停止前轮已经发出的回答采集。
+  cancelPreparation(): void { this.preparationEpoch++; }
   dispose(): void {
     this.epoch++;
     this.rush = false;

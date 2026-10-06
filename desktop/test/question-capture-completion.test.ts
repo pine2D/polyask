@@ -219,7 +219,7 @@ test("generation monitor reports each site's settled completion once and binding
 
   let forwarded!: (runId: string, site: SiteKey) => void;
   const confirmed: string[] = [];
-  const history = { token: () => undefined, releasable: () => false, clearReleaseEvidence() {}, cancel() {}, targets: () => [], setSubmissionHandler() {},
+  const history = { token: () => undefined, releasable: () => false, clearReleaseEvidence() {}, cancel() {}, targets: () => [], setSubmissionHandler() {}, setGenerationResumeHandler() {},
     complete: (runId: string, site: SiteKey) => { confirmed.push(`${runId}:${site}`); return false; } } as unknown as QuestionHistoryService;
   const manager = { setCapturePending() {}, onGenerationComplete: (listener: typeof forwarded) => { forwarded = listener; } } as unknown as ViewManager;
   const capture = createQuestionCapture(history, manager);

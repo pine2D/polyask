@@ -33,6 +33,14 @@
     return r.bottom >= c.top - 360 && r.top <= c.bottom + 160;
   }
 
+  const claudeRoot = () => [...document.querySelectorAll('[data-testid="assistant-message"]')].at(-1);
+  const claudeKey = root => root?.closest?.('[data-turn-key]')?.getAttribute?.("data-turn-key") || null;
+  const claudeStreaming = () => location.hostname === "claude.ai" && claudeRoot()?.getAttribute?.("data-is-streaming") === "true";
+  const freshClaudeRoot = () => {
+    const root = claudeRoot(), key = claudeKey(root);
+    return !!root && (key && latch.baselineRootKey ? key !== latch.baselineRootKey : root !== latch.baselineRoot);
+  };
+  const newClaudeStream = () => claudeStreaming() && freshClaudeRoot();
   const stopVisible = (selector) => [...document.querySelectorAll(selector)].some(visibleNearComposer);
   for (const [host, selector] of Object.entries(stopSelectors)) {
     const adapter = S.adapters[host];
@@ -42,7 +50,7 @@
         if (!location.hostname.includes(host)) return null;
         const stop = stopVisible(selector);
         if (latch.selector === selector) latch.note(stop);
-        if (stop) return "generating";
+        if (stop || (latch.selector ? newClaudeStream() : claudeStreaming())) return "generating";
         if (typeof this.answer !== "function") return null;
         return this.answer() ? "complete" : "idle";
       } catch (e) {
@@ -59,7 +67,7 @@
   const SAMPLE_MS = 100; // 采样节流：流式渲染每秒数十批变更，停止键至少亮一帧以上，100ms 间隔不会漏
   // baseline：武装时 answer() 指向的节点（上一轮回答，首轮为 null）。锁存只证明「停止键出现过」，证明不了本轮出了新回答——
   // 请求失败、没插入新回答节点时 answer() 仍是上一轮那个，这时不升级，交回主进程原有的「亲眼见过 generating」规则。
-  const latch = { selector: null, blocked: false, seen: false, baseline: null, observer: null, timer: null, until: 0, last: 0, pending: null,
+  const latch = { selector: null, blocked: false, seen: false, baseline: null, baselineRoot: null, baselineRootKey: null, observer: null, timer: null, until: 0, last: 0, pending: null,
     disarm() {
       this.observer?.disconnect(); this.observer = null;
       if (this.timer) clearTimeout(this.timer);
@@ -74,7 +82,7 @@
     sample() {
       if (!this.selector || this.seen || Date.now() >= this.until) return;
       this.last = Date.now();
-      this.note(stopVisible(this.selector));
+      this.note(stopVisible(this.selector) || newClaudeStream());
     },
     throttled() {
       if (this.pending) return;
@@ -91,11 +99,13 @@
       if (!latch.selector) return;
       const adapter = S.adapters[entry[0]];
       try { latch.baseline = adapter && typeof adapter.answer === "function" ? adapter.answer() || null : null; } catch (e) { latch.baseline = null; }
+      latch.baselineRoot = location.hostname === "claude.ai" ? claudeRoot() || null : null;
+      latch.baselineRootKey = claudeKey(latch.baselineRoot);
       latch.blocked = stopVisible(latch.selector);
       if (typeof MutationObserver === "function") {
         latch.observer = new MutationObserver(() => latch.throttled());
         latch.observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true,
-          attributeFilter: ["class", "aria-label", "disabled", "data-testid", "id"] });
+          attributeFilter: ["class", "aria-label", "disabled", "data-testid", "data-is-streaming", "id"] });
       }
       latch.timer = setTimeout(() => latch.disarm(), LATCH_MS);
     } catch (e) { latch.disarm(); latch.selector = null; }
@@ -109,7 +119,7 @@
     if (state !== "complete" || !latch.seen || Date.now() >= latch.until) return state;
     let current = null;
     try { current = typeof adapter.answer === "function" ? adapter.answer() : null; } catch (e) { current = null; }
-    const fresh = !!current && current !== latch.baseline && current.isConnected !== false;
+    const fresh = !!current && current.isConnected !== false && (entry[0] === "claude.ai" ? freshClaudeRoot() : current !== latch.baseline);
     return fresh ? "complete_observed" : state;
   };
 }());

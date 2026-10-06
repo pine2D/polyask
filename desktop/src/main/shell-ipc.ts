@@ -317,7 +317,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.on("polyask:cancel", (event) => {
     if (trustedShell(event)) {
-      const sites = cancelSubmissions(manager.getStatuses(), options.questions);
+      const sites = cancelSubmissions(manager.getStatuses(), options.questions, capture);
       coordinator.cancel();
       // Cancel reaches both dispatch paths; the synthesis coordinator is separate
       // from the broadcast one and would otherwise keep typing into a site.

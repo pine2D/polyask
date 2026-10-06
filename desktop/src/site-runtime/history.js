@@ -15,8 +15,8 @@
     for (let node = user; node; node = node.parentNode) if (e.inserted.has(node)) return true;
     return false;
   }
-  function stop(e) {
-    e.ended = true; e.observer?.disconnect(); if (e.timer) clearTimeout(e.timer); if (e.soft) clearTimeout(e.soft); e.inserted = new WeakSet();
+  function stop(e, code = "turn_changed") {
+    e.captureCode = code; e.ended = true; e.observer?.disconnect(); if (e.timer) clearTimeout(e.timer); if (e.soft) clearTimeout(e.soft); e.inserted = new WeakSet();
     for (const [target, name, handler] of e.listeners || []) target.removeEventListener?.(name, handler, true);
     e.listeners = [];
   }
@@ -36,7 +36,7 @@
       const replaced = !e.user?.isConnected && e.user !== turn.user && Date.now() - e.boundAt <= 10_000;
       const migrating = eligible && !!e.user && (e.user.isConnected ? e.user === turn.user : replaced)
         && turn.userCount === 1 && normalize(turn.text) === e.text;
-      if (!migrating) { stop(e); return false; }
+      if (!migrating) { stop(e, "route_changed"); return false; }
       e.routeId = current.id; e.migrated = true;
       if (e.user !== turn.user) { e.user = turn.user; e.userKey = turn.userKey || null; }
     }
@@ -58,7 +58,7 @@
     if (!e.user) { stop(e); return; }
     const snapshot = read(e, a, true);
     if (snapshot.owned && snapshot.text) e.finalSnapshot = { ...snapshot, ended: true };
-    stop(e);
+    stop(e, "interaction");
   }
   function watchInteraction(e, a) {
     const freeze = () => settle(e, a);
@@ -73,12 +73,14 @@
       // answer DOM growth also counts (streaming gaps are well under 2s).
       const streaming = a?.generation?.() === "generating" || (!!e.changedAt && Date.now() - e.changedAt < 2_000);
       if (e.user && streaming) return;
-      if (!e.answer || control || event.type === "beforeinput") freeze();
+      // 草稿不是提交/再生成证据，保留本轮直到新用户消息出现或明确交互结束。
+      if (event.type === "beforeinput" && e.user) return;
+      if (!e.answer || control) freeze();
     };
     for (const name of ["pointerdown", "click", "keydown", "beforeinput"]) {
       document.addEventListener?.(name, activate, true); e.listeners.push([document, name, activate]);
     }
-    const navigate = () => stop(e);
+    const navigate = () => stop(e, "route_changed");
     for (const name of ["popstate", "hashchange"]) {
       window.addEventListener?.(name, navigate, true); e.listeners.push([window, name, navigate]);
     }
@@ -88,15 +90,16 @@
     const expected = (e.baseline?.userCount ?? 0) + 1;
     // Doubao virtualizes older DOM. Stable immediate-predecessor identity proves
     // adjacency even when the baseline node was recycled; route/text checks remain.
-    const adjacent = /^(?:www\.)?doubao\.com$/.test(location.hostname)
-      && !!e.baseline?.userKey && turn.previousUserKey === e.baseline.userKey
-      && !!turn.userKey && turn.userKey !== e.baseline.userKey;
+    const adjacent = !!e.baseline?.userKey && !!turn.userKey && turn.userKey !== e.baseline.userKey
+      && ((/^(?:www\.)?doubao\.com$/.test(location.hostname) && turn.previousUserKey === e.baseline.userKey) || e.appendKey === turn.userKey);
+    const bound = !!e.userKey && e.userKey === turn.userKey;
     // More than one new turn means a follow-up occurred before capture; never pick its last answer.
-    if (!Number.isSafeInteger(turn.userCount) || (!adjacent && turn.userCount !== expected)) {
+    if (!Number.isSafeInteger(turn.userCount) || (!adjacent && !bound && turn.userCount !== expected)) {
+      e.captureCode = "turn_unconfirmed";
       if (turn.userCount > expected || e.user) stop(e);
       return false;
     }
-    if (normalize(turn.text) !== e.text) { if (e.user) stop(e); return false; }
+    if (normalize(turn.text) !== e.text) { e.captureCode = "prompt_mismatch"; if (e.user) stop(e, "prompt_mismatch"); return false; }
     if (!e.user) {
       const old = e.baseline;
       if (old?.user && (same(old.user, old.userKey, turn.user, turn.userKey) || (!old.user.isConnected && !adjacent))) return false;
@@ -105,12 +108,15 @@
       e.user = turn.user; e.userKey = turn.userKey || null; e.inserted = new WeakSet(); e.boundAt = Date.now(); e.boundSlot = slot();
       // 定位方法在本轮用户首次确立时冻结：没被采纳的命中（如未插入的同文回显）不冻结，① 级仍可接管。
       if (e.locate && !e.locate.method) e.locate.method = turn.locate || null;
+    } else if (same(e.user, e.userKey, turn.user, turn.userKey)) {
+      e.user = turn.user; e.userKey = turn.userKey || e.userKey;
     } else if (!same(e.user, e.userKey, turn.user, turn.userKey)) {
       // Optimistic message DOM may be replaced by the server turn before any answer.
       // The exact text and unique expected count above still have to match.
-      if (!e.answer && !e.user.isConnected) { e.user = turn.user; e.userKey = turn.userKey || null; }
+      if (!e.answer && !e.user.isConnected && !(e.userKey && turn.userKey)) { e.user = turn.user; e.userKey = turn.userKey || null; }
       else { stop(e); return false; }
     }
+    e.captureCode = null;
     const currentRoute = route();
     if (!e.routeId && !currentRoute.home) e.routeId = currentRoute.id;
     if (!e.routeId && currentRoute.local && !e.localId) { e.localId = currentRoute.id; e.localSlot = slot(); }
@@ -162,17 +168,18 @@
     if (!bind(e, turn)) return { ...empty, ended: e.ended,
       generation: !e.ended && a?.generation?.() === "generating" ? "generating" : null };
     if (!turn.answer) {
+      e.captureCode = turn.answerRoot?.querySelector?.('details,[class*="think" i],[class*="reason" i]') ? "thinking_only" : "answer_pending";
       const generating = a.generation?.() === "generating";
       if (generating) e.sawGenerating = true;
       return { ...empty, owned: true, generation: generating ? "generating" : null, url: location.href, locate: turn.locate };
     }
     if (turn.locate === "anchor" && !turn.answerKey) return once(e, a, turn, force);
-    if (e.answer && !same(e.answerRoot, e.answerKey, turn.answerRoot || turn.answer, turn.answerKey)) { stop(e); return { ...empty, ended: true }; }
+    if (e.answer && !same(e.answerRoot, e.answerKey, turn.answerRoot || turn.answer, turn.answerKey)) { stop(e, "answer_changed"); return { ...empty, ended: true }; }
     // Missing stop controls are not positive completion evidence. Keep the copy's
     // completion unknown; user actions and route/turn identity end ownership explicitly.
     const generation = a.generation?.() === "generating" ? "generating" : null;
     const text = typeof turn.answer === "string" ? turn.answer : S.toMarkdown(turn.answer);
-    if (text?.trim()) { e.answer = turn.answer; e.answerRoot = turn.answerRoot || turn.answer; e.answerKey = turn.answerKey || null; }
+    if (text?.trim()) { e.answer = turn.answer; e.answerRoot = turn.answerRoot || turn.answer; e.answerKey = turn.answerKey || e.answerKey || null; }
     return { token: e.token, owned: true, text: text || null, url: location.href, generation, locate: turn.locate };
   }
   S.history = {
@@ -219,6 +226,7 @@
             current.locate.batch = {};
             try {
               const turn = locateTurn(current, a), root = turn?.answerRoot || turn?.answer;
+              if (!current.user && S.historyIdentity?.witnessedAppend(current.baseline, records, turn)) current.appendKey = turn.userKey;
               if (bind(current, turn) && root?.contains) {
                 // 回答容器的变动：内部增删、原地改写文本（characterData），以及回答根与用户气泡同批插入。
                 if (records.some(record => root.contains(record.target) || [...record.addedNodes].some(node => node.contains?.(root)))) current.changedAt = Date.now();
@@ -226,7 +234,7 @@
                 // 无 key 锚点根的正向证据：停止键可能只亮几秒，主进程每 5 秒才拉一次快照，在这里补采样。
                 if (current.locate.method === "anchor" && !current.sawGenerating && a.generation?.() === "generating") current.sawGenerating = true;
               }
-            } catch (_) { stop(current); }
+            } catch (_) { stop(current, "runtime_error"); }
             finally { current.locate.batch = null; if (Date.now() - started > SLOW_MS) current.slow = Math.min(current.slow + 1, Number.MAX_SAFE_INTEGER); }
           });
           current.observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
@@ -234,15 +242,18 @@
           // 无 key 锚点根始终没等到正向证据时的降级读：赶在主进程观察窗（提交结果起 15 分钟）收口前读一次。
           current.soft = setTimeout(() => { if (current.user && current.locate.method === "anchor" && !current.answer) settle(current, a); },
             Math.max(0, start + 12 * 60_000 - Date.now()));
-          current.timer = setTimeout(() => stop(current), Math.max(0, expires - Date.now()));
+          current.timer = setTimeout(() => stop(current, "capture_expired"), Math.max(0, expires - Date.now()));
         }
       } catch (_) { if (entry) stop(entry); entry = null; }
     },
     snapshot(token) {
       if (!entry || entry.token !== token) return { token, owned: false, ended: true };
       const slow = entry.slow ? { slowObserver: entry.slow } : {};
-      if (entry.ended) return { ...(entry.finalSnapshot || { token, owned: false, ended: true }), ...slow };
-      try { return { ...read(entry, adapter()), ...slow }; } catch (_) { return { token, owned: false, ...slow }; }
+      if (entry.ended) return { ...(entry.finalSnapshot || { token, owned: false, ended: true }), captureCode: entry.captureCode, ...slow };
+      try {
+        const value = read(entry, adapter());
+        return { ...value, captureCode: entry.captureCode || (!value.owned ? "turn_unconfirmed" : !value.text ? "answer_pending" : value.generation !== "generating" ? "completion_unconfirmed" : null), ...slow };
+      } catch (_) { return { token, owned: false, captureCode: "runtime_error", ...slow }; }
     }
   };
 }());

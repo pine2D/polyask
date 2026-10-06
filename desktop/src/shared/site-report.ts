@@ -2,7 +2,7 @@ import type { SiteKey } from "./contracts";
 import type { SiteStatus } from "./protocol";
 import type { SiteHealth } from "./site-health";
 import { normalizeProcessFailure, type RuntimeProcessFailure } from "./runtime-process";
-import { CAPTURE_LOCATES, type CaptureLocateCounts } from "./question-capture";
+import { CAPTURE_LOCATES, CAPTURE_REASONS, type CaptureLocateCounts } from "./question-capture";
 
 export interface SiteReportInput {
   readonly version: string;
@@ -26,6 +26,17 @@ function captureLocateLine(value: unknown): string | null {
     return Number.isSafeInteger(count) && (count as number) > 0 ? [`${locate}=${count}`] : [];
   });
   return parts.length ? `  capture-locate ${parts.join(" ")}` : null;
+}
+
+function captureReasonLine(value: unknown): string | null {
+  if (!value || typeof value !== "object") return null;
+  const row = (value as Record<string, unknown>).reasons;
+  if (!row || typeof row !== "object") return null;
+  const parts = CAPTURE_REASONS.flatMap(reason => {
+    const count = (row as Record<string, unknown>)[reason];
+    return Number.isSafeInteger(count) && (count as number) > 0 ? [`${reason}=${count}`] : [];
+  });
+  return parts.length ? `  capture-reason ${parts.join(" ")}` : null;
 }
 
 // 卡顿回调计数白名单行：只认正的安全整数。
@@ -61,6 +72,8 @@ export function buildSiteReport(input: SiteReportInput): string {
     for (const check of checks) lines.push(`  - ${check.name} kind=${check.kind ?? "control"} ok=${check.ok}`);
     const locate = captureLocateLine(input.captureLocate?.[site.key]);
     if (locate) lines.push(locate);
+    const reason = captureReasonLine(input.captureLocate?.[site.key]);
+    if (reason) lines.push(reason);
     const slow = slowObserverLine(input.captureLocate?.[site.key]);
     if (slow) lines.push(slow);
   }

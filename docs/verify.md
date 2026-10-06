@@ -887,3 +887,32 @@ Claude 新版适配器重启后，仅复读首轮已有页面：生产 `answer()
 | M4 九站 UI 群发 | 通过 | 9/9 complete 封存，副本与页面一致、2 行 python 一致；豆包无真实弹窗 |
 
 清理：Fetch 全部关闭，无 `__rt*` 残留，监听器与基线一致（仅 DeepSeek 视图因重建换了 webContents）。
+
+## 2026-10-06 历史采集修复：四站同会话连续追问
+
+Windows 独立 TestLab、PolyAsk 1.12.0、Electron 44.5.0。初测构建 `be75126…+worktree-f378659278d0`；豆包修复后为 `be75126…+worktree-4654a2c3a017`；审查修复后的最终构建为 `be75126…+worktree-3d44fe9fb29a`（PID 12172，备份 `backup-codex-20261006-173248`）。部署前正常退出本任务实例，备份应用 bundle 后更新；12 个构建文件与部署逐字节 hash 一致，runtime/main 与 manifest 一致，Cookie encryption fuse=49（Enabled）、7 个隔离 guard 用例通过。仅复用 TestLab profile，Drive 未连接且无已保存 token；未访问正式档案。初测窗口已最小化，最终构建复验在可见窗口；既有进程级节流实验开启，正式默认策略未改。
+
+生产 shell `polyask.broadcast` 入口、`tier:null`，逐站首问后两次同会话追问，不带图、不重发。每轮含独立合成标记、中文段落、两条建议和两行 `print`；每站三个 userKey 各异、落库会话地址一致。除最终 Claude 首问迟到确认外，外壳 complete 时立即读取页面并追问，此时前轮尚未封存；生产 prepareRun 的有界复读在约 3 秒后封存前轮，再提交追问。共实际发送 30 个合成问题：初测及豆包修复复验 16 个、最终构建四站三轮 12 个、取消用例前轮和极短追问各 1 个；另有 1 次在派发前取消的追问请求。
+
+| 站点 | 最终三轮结果 | 副本字符数 | 独立页面对拍 |
+| --- | --- | --- | --- |
+| Claude | 3/3 最终 submitted、complete、sealed；三轮均观察到新助手根 true→false | 264 / 276 / 283 | 正文无遗漏、代码逐字一致；页面额外字只有时间与语言标签 |
+| ChatGPT | 3/3 submitted、complete、sealed | 273 / 258 / 250 | 正文无遗漏、代码逐字一致；页面额外字只有语言标签与免责声明 |
+| 豆包（修复后） | 3/3 submitted、complete、sealed | 221 / 239 / 242 | 正文无遗漏、代码逐字一致；页面额外字只有时间与推荐追问 |
+| DeepSeek | 3/3 submitted、complete、sealed | 236 / 236 / 264 | 去除 Markdown 段落/序号及方括号转义后，双向全文相等；两行代码以普通文本逐字核对，无 pre/code 围栏可验 |
+
+最终 Claude 首问返回 `submit_unconfirmed`，没有重发；页面随后只出现 1 条本轮用户消息，采集以只读归属证据迟到升级为 submitted，完成并封存后才发送新的第 2/3 轮追问。首轮封存内容在后续追问与短答后仍未改变。其它三站及 Claude 后两轮均在封存前发起追问；Claude/ChatGPT/豆包页面用户数为 1/2/3，DeepSeek 最终为 1/2/2（580px 列内发生旧消息回收），三轮 key 与副本仍各自对应。该观察证明本次计数漂移下归属正确，不单独证明首次绑定前整页重建分支。
+
+对拍工具在主世界用 TreeWalker 独立读取页面用户气泡之后的可见文本、列表及 pre，不调用 adapter.answer/historyTurn/toMarkdown 生成期望正文；隔离上下文的 historyTurn 仅另记轮次身份。逐行有序双向核对，页面独有文字逐项审查，副本无思考泄漏。DeepSeek 页面末尾重复显示当前用户提问，旧读页脚本选了最后一个同标记节点，后两轮读空；修正为会话内第一个节点、在下一条合成提问前截止后重新只读核对。最终第三轮双链括号在副本中正常转义，正文对拍解码 `\[`/`\]` 后相等，代码另用原始字符串逐字核对。回读 Claude 首轮时也将 pre/list 的读取截止到下一条提问，避免误把后两轮代码计入首轮。没有为修正取证重发问题。
+
+真机发现并修复：豆包三轮把 `print("round3")` 改排成 `print ("round3")`，原文匹配一直报 prompt_mismatch，前两轮因追问封存为空 interrupted；不算通过。新增正例先 RED、再限制性归一化 GREEN，字面量内容、转义/未闭合引号、数字、英文词、额外轮次与其它站负例保留。重构建并重启 TestLab 后，上表三轮均通过。归属 key、路由、插入和前驱保护没有放宽。
+
+初次 Claude 极短补验是空会话首问，true 持续约 198ms；最终构建另在同会话第 5 轮发极短追问，实际观察到本轮新助手根 true 持续约 208ms 后 false，副本完整为 `OK`（2 字符），约 3 秒复读后 complete/sealed。它证明本次可采到短答正向证据；停止键与 true 都未被观察到时仍应完成未确认，false 单独不算证据。
+
+最终构建准备期取消：Claude 新前轮外壳 complete、尚未封存时立即发起追问，100ms 后通过生产 shell cancel 取消；约 3004ms 返回 `cancelled`。随后页面用户数保持 4，未出现追问标记、无追问历史记录，前轮仍 complete/sealed（165 字符）。取消没有把准备期新轮派发出去，也没有停止前轮采集。
+
+只读审查发现的五项问题均先以回归重现，再修复：准备期取消跨 IPC、不同稳定 key 的乐观换绑、Claude 前轮 true/同 key 重挂、豆包裸正则空格、DeepSeek 前驱自身 key。复核无剩余 Critical/Important/Minor；对应负例与最终构建真机证据分别记录，不把离线负例当成真机覆盖。
+
+最终源码门禁：仓库 verify、Desktop 完整测试（892 个 TS/renderer + 385 个 runtime，0 fail/skip）、独立 typecheck、package 与隔离 Xvfb smoke 均 exit 0，冒烟 shell=1、sites=9、attached=9。npm test 初次因沙箱禁止 tsx 临时 IPC 管道未启动，package 初次因沙箱网络限制未取到 Electron；按权限流程运行原命令。审查修复后全测曾因 shell-contract 仍预期旧取消参数而失败，更新契约断言后完整重跑通过。原始记录在系统临时目录 `polyask-history-native-20261006/`，不入库；测试问答保留在 TestLab，临时页面观察器与外壳状态监听已解除。
+
+未覆盖：其它五站的新三轮发送、真实 Drive 双设备、DeepSeek 首次绑定前整页虚拟回收与更长会话、真实思考暂停/续写撤销再确认、站内可信草稿/复制/滚动及切页/同文旧会话负例。上述保护有离线回归，不能把本轮短会话外推为全场景真机通过；用户最初报告的失败形态和当时版本仍未确定。

@@ -22,7 +22,26 @@
     "kimi.com": ".chat-content-item-assistant", "yuanbao.tencent.com": ".agent-chat__list__item--ai",
     "chatglm.cn": ".answer-content"
   };
-  const key = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || node?.getAttribute?.("data-content-search-unit-key") || node?.getAttribute?.("data-turn-key") || null;
+  const directKey = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || node?.getAttribute?.("data-content-search-unit-key") || node?.getAttribute?.("data-turn-key") || null;
+  // 真实脱敏 DOM：Claude/ChatGPT 的轮次 key、DeepSeek 的虚拟项 key 在气泡祖先上。只认逐消息属性，绝不用会话/列表 id。
+  const wrapperAttr = () => /(^|\.)deepseek\.com$/.test(location.hostname) ? "data-virtual-list-item-key"
+    : location.hostname === "claude.ai" ? "data-turn-key" : location.hostname === "chatgpt.com" ? "data-content-search-unit-key" : null;
+  function key(node) {
+    const attr = wrapperAttr();
+    if (attr) for (let el = node, depth = 0; el && depth < 8; el = el.parentElement, depth++) {
+      const value = el.getAttribute?.(attr); if (value) return value;
+    }
+    return directKey(node);
+  }
+  // 列表回收和追加可能在同一 MutationObserver 批里发生。previousSibling 记录的是插入瞬间的次序：
+  // 新用户槽必须紧接 begin 时已知的助手槽，且有不同的消息 key。整页 hydration/滚回旧槽不能作证。
+  function witnessedAppend(baseline, records, turn) {
+    if (!/(^|\.)deepseek\.com$/.test(location.hostname) || !baseline?.userKey || !turn?.userKey || turn.userKey === baseline.userKey) return false;
+    const previous = baseline.answerRoot?.closest?.("[data-virtual-list-item-key]");
+    return !!previous && !!baseline.answerKey && key(previous) === baseline.answerKey && records.some(record => record.previousSibling === previous
+      && [...record.addedNodes].some(node => node === turn.user || node.contains?.(turn.user)));
+  }
+  S.historyIdentity = { key, witnessedAppend };
   for (const [host, selector] of Object.entries(users)) {
     const a = S.adapters[host];
     if (!a || typeof a.answer !== "function") continue;
@@ -57,6 +76,7 @@
       }
       const user = nodes.at(-1);
       if (!user?.isConnected) return { user: null, userCount: 0 };
+      previousUserKey ??= key(nodes.at(-2));
       let answer = this.answer();
       // Disconnected/string answers cannot demonstrate their position in the conversation.
       if (!answer?.isConnected || typeof user.compareDocumentPosition !== "function") answer = null;
@@ -74,8 +94,14 @@
         : textNode.innerText || textNode.textContent || "";
       // ChatGPT adds its selection-message wrapper after streaming has begun.
       // The surrounding search unit exists from the first token and stays stable.
+      const follows = node => node?.isConnected && !user.contains(node) && (user.compareDocumentPosition(node) & 4) && !(user.compareDocumentPosition(node) & 1);
       const answerRoot = (host === "chatgpt.com" && answer?.closest?.('[data-content-search-unit-key]'))
-        || answer?.closest?.(answerRoots[host]) || answer;
+        || answer?.closest?.(answerRoots[host]) || answer
+        || [...document.querySelectorAll(answerRoots[host])].filter(follows).at(-1) || null;
+      // 用户轮次定位与正文定位分开。Claude 主标记漂移时只在已配对的助手根里找正文；不降级 userCount 来源。
+      if (!answer && host === "claude.ai" && answerRoot) {
+        answer = [...answerRoot.querySelectorAll('.standard-markdown')].filter(node => !node.closest('details,[class*="think" i],[class*="reason" i]')).at(-1) || null;
+      }
       return { user, userCount: userCount ?? nodes.length, previousUserKey, answer, answerRoot, text, userKey: key(user), answerKey: key(answerRoot) };
     }
   }

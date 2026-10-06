@@ -383,7 +383,7 @@ test("assisted synthesis dispatches through its own coordinator and cancel reach
   assert.match(cancel, /manager\.cancelGenerationRun\(sites\)/);
   assert.match(cancel, /synthesis\.cancel\(\)/);
   // 已回包「提交未确认」的站不在 sending 里：取消也要让它们的迟到确认作废（submission-upgrade.ts）。
-  assert.match(cancel, /const sites = cancelSubmissions\(manager\.getStatuses\(\), options\.questions\)/);
+  assert.match(cancel, /const sites = cancelSubmissions\(manager\.getStatuses\(\), options\.questions, capture\)/);
 });
 
 test("workspace surfaces detach site views without destroying their web contents", () => {

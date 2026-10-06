@@ -124,8 +124,8 @@
     return blocks.length === 1 ? blocks[0] : root;
   }
   function turn(user, userCount, root, locate, text = userText(user)) {
-    return { user, userCount, text, userKey: key(user), answer: root && content(root),
-      answerRoot: root, answerKey: root ? key(root) : null, locate };
+    return { user, userCount, text, userKey: S.historyIdentity?.key(user) || key(user), answer: root && content(root),
+      answerRoot: root, answerKey: root ? S.historyIdentity?.key(root) || key(root) : null, locate };
   }
 
   // ② 语义信号：最外层用户节点计数、取末条；回答取其后最外层的末个助手节点。

@@ -22,6 +22,38 @@ test('Doubao spacing around quotes next to Han still binds the submitted turn (2
   assert.equal(s.S.history.snapshot('token').text, 'Owned answer');
 });
 
+test('Doubao typography before call parentheses still binds the inserted user turn (2026-10-06)', () => {
+  const s = setup('www.doubao.com');
+  s.S.history.begin('token', '给两行 python 代码 print("round3") 和 print(2 + 3)。');
+  const text = '给两行 python 代码 print ("round3") 和 print (2 + 3)。';
+  s.insert({ user: node(text), text, userCount: 1, userKey: 'new', answer: node('Owned answer'), answerKey: 'reply' });
+  assert.equal(s.S.history.submitted('token'), true);
+  assert.equal(s.S.history.snapshot('token').text, 'Owned answer');
+});
+
+test('Doubao call spacing tolerance preserves quoted and substantive differences', () => {
+  for (const [submitted, displayed] of [
+    ['print("round (3)")', 'print ("round(3)")'],
+    ["print('round (3)')", "print ('round(3)')"],
+    ['print(`round (3)`)', 'print (`round(3)`)'],
+    ['print("a\\\"b (3)")', 'print ("a\\\"b(3)")'],
+    ['print("round (3)', 'print ("round(3)'],
+    ['const re = /foo (bar)/;', 'const re = /foo(bar)/;'],
+    ['const re = /foo[/]bar (baz)/;', 'const re = /foo[/]bar(baz)/;'],
+    ['print(2 + 3)', 'print (2 + 4)'],
+    ['print(1 2)', 'print (12)']
+  ]) {
+    const s = setup('doubao.com');
+    s.S.history.begin('token', submitted);
+    s.insert({ user: node(displayed), text: displayed, userCount: 1, answer: node('Wrong') });
+    assert.equal(s.S.history.snapshot('token').owned, false, submitted);
+  }
+  const other = setup('chatgpt.com');
+  other.S.history.begin('token', 'print(3)');
+  other.insert({ user: node('print (3)'), text: 'print (3)', userCount: 1, answer: node('Wrong') });
+  assert.equal(other.S.history.snapshot('token').owned, false);
+});
+
 for (const text of [rendered.replace('30FPS', '60FPS'), rendered.replace('CPU、GPU', 'CPU GPU')]) {
   test(`Doubao substantive changes cannot be attributed: ${text}`, () => {
     const s = setup('doubao.com');

@@ -14,7 +14,7 @@ test("view protection includes pending submissions and synthesis awaiting save",
   let invalidated: readonly SiteKey[] = [];
   const history = { token: (site: SiteKey) => site === "claude" ? token : undefined,
     releasable: (site: SiteKey) => site === "claude" && token === undefined,
-    clearReleaseEvidence: (sites: readonly SiteKey[]) => { invalidated = sites; }, cancel() {}, setSubmissionHandler() {} } as unknown as QuestionHistoryService;
+    clearReleaseEvidence: (sites: readonly SiteKey[]) => { invalidated = sites; }, cancel() {}, setSubmissionHandler() {}, setGenerationResumeHandler() {} } as unknown as QuestionHistoryService;
   const manager = { setCapturePending: (check: typeof protectedSite, ready: typeof releasable, clear: typeof invalidate) => {
     protectedSite = check; releasable = ready; invalidate = clear;
   }, onGenerationComplete() {} } as unknown as ViewManager;

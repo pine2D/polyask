@@ -6,17 +6,36 @@
   const S = window.__AMS;
   if (!S) return;
   const DOUBAO = /^(?:www\.)?doubao\.com$/;
+  function callSpacing(value) {
+    let output = "", quote = null, classDepth = 0;
+    for (let i = 0; i < value.length; i++) {
+      const char = value[i];
+      if (quote) {
+        output += char;
+        if (char === "\\" && i + 1 < value.length) output += value[++i];
+        else if (quote === "/" && char === "[") classDepth++;
+        else if (quote === "/" && char === "]") classDepth = Math.max(0, classDepth - 1);
+        else if (char === quote && !classDepth) quote = null;
+        continue;
+      }
+      if ('"\'`/'.includes(char)) quote = char;
+      // 2026-10-06 真机：print("x") 被排成 print ("x")。引号/正则内（含未闭合文本）不容忍此差异。
+      if (char === " " && /[A-Za-z0-9_]/.test(value[i - 1] || "") && value[i + 1] === "(") continue;
+      output += char;
+    }
+    return output;
+  }
   const normalize = text => {
     let value = String(text || "").replace(/[\u200b-\u200d\ufeff]/g, "").replace(/\s+/g, " ").trim();
     // Doubao inserts typography spaces between Han and other glyphs in user bubbles,
     // including quotes (`有没有 "x" 的`, 2026-10-03). Preserve English word spacing,
     // numeric spacing and all substantive text.
-    if (DOUBAO.test(location.hostname)) value = value
+    if (DOUBAO.test(location.hostname)) value = callSpacing(value)
       .replace(/(\p{Script=Han}) +(?=\S)/gu, "$1")
       .replace(/(\S) +(?=\p{Script=Han})/gu, "$1");
     return value;
   };
-  const same = (node, key, other, otherKey) => node === other || (!!key && key === otherKey);
+  const same = (node, key, other, otherKey) => key && otherKey ? key === otherKey : node === other;
   function route() {
     const url = new URL(location.href);
     const cid = url.hostname === "chatglm.cn" ? url.searchParams.get("cid") : null;

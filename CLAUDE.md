@@ -1,8 +1,8 @@
 # PolyAsk · AI 众答
 
-PolyAsk 是一个 Electron 桌面应用：把同一问题群发到 9 个真实 AI 站点并排比较。**切档可报错，群发不能断。** 发布物只有五个未签名的 Desktop 包；Chrome 扩展已停维并删除（tag `archive/extension-v0.25.1`）。
+PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点并排比较。**切档可报错，群发不能断。** 仅发五个未签名 Desktop 包；Chrome 扩展已停维并删除（tag `archive/extension-v0.25.1`）。
 
-<!-- 最后与代码核对：2026-10-02 · desktop/package.json v1.11.2。发版前重跑核对并更新这行。
+<!-- 最后与代码核对：2026-10-06 · desktop/package.json v1.12.0。发版前重核并更新。
      本文件 ≤11 KiB；新增硬约束先精简或外迁 docs/。 -->
 
 ## 按任务读取专题文档
@@ -21,17 +21,17 @@ PolyAsk 是一个 Electron 桌面应用：把同一问题群发到 9 个真实 A
 
 - **提交不确定 ≠ 可以重发**：命令超时、无回包、`submit_unconfirmed` 一律原样交给用户点 retry。**只有**实现了只读 `adapter.submitted(text)` 的站（目前仅 Kimi）、且 `wasSubmitted` 回包 `supported:true, ok:false` 明确确认「末条用户消息不是本次内容」，才允许自动重发一次；这条分支由 `broadcast.ts` 的常量 `POLYASK_KIMI_RESUBMIT` 拦着，**默认 `false`，F067 两条真机硬用例通过前不得打开**。回包形状不对一律按不支持处理（`normalizeSubmitted` fail-closed）。给没有 `submitted()` 的站加自动重发 = 同一个问题被问两遍且用户无从察觉。
 - **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删；清空历史/结果库也要留标记，否则其它设备会同步回来。**唯一例外是「重置全部本机数据」**：先断开 Drive、再物理清空本机库并保留 `deviceId`（tombstone 比云端记录新，重连后会赢过云端副本并上传，等于把云端也删了）。本机重置不删 Drive 数据；要改先改承诺文案。
-- **判定阈值绝不贴着实测值写**：`findComposer` 的高度阈值是 `>=16` 不是 `>=20`。标称 20px 的编辑器在显示缩放机器上实测 19.999998px，零余量的 `>=20` 筛掉唯一真编辑器 → 群发链空跑到 44s（v0.15.2 事故）。**凡拿实测值定阈值，一律留 ≥20% 余量**。
+- **实测阈值留 ≥20% 余量**：`findComposer` 高度用 `>=16`，不用 `>=20`。标称 20px 在缩放机器上实测 19.999998px，曾筛掉唯一编辑器、群发空等 44s（v0.15.2）。
 - **`deadline` 是绝对时间戳、全链路透传**：`shell-ipc.ts` 的群发入口（44s / 带图 90s）→ `broadcast.ts` → `site-command-channel.ts` → `preload/site.ts` → site-runtime `submitPrompt` → `adapter.submit`/`attach` → `confirmSubmitted`。**循环等待、以及 ≥1s 的固定等待，一律夹取**：`Math.min(x, Math.max(0, deadline - Date.now()))`。例外两处：「让渲染跟上」的毫秒级 sleep（单条 ≤500ms、不得叠成秒级）；提交后的只读确认窗（1.5s，deadline 到点才开始，夹了就归零）。切档 `think`/`fast` 同样接收绝对 deadline，群发内取总截止时间与 10s 切档上限的较早者；超时仅收菜单，不再选择模型或档位。
 - **群发预算只有一个真源**：`shell-ipc.ts` 群发入口的 44s/90s；`main/index.ts` 辅助发送回调的 44s 必须跟随（硬编码、无带图分支）。改预算先改那一处，再改 `docs/desktop.md` 的预算表。
 - **只产 `code`，不产用户可见文案**：site-runtime / preload / 主进程返回错误码，渲染层翻译；轮询认 `r.code`，**绝不正则匹配文案**。新增可见码三处落点：`shared/protocol.ts` 的 `SITE_CODES`、`shared/status-copy.ts` 的 `STATUS_COPY_KEY`（漏映射 typecheck 红）、`shared/copy.ts` 三语；`desktop/test/status-copy-coverage.test.ts` 双向对账。IPC 抛出的裸码经 `shared/ipc-error.ts` 剥掉 Electron 前缀后才到渲染层。
-- **`diagnose()` 每条检查必须带 `kind`**（`reach`/`control`/`tier`/`probe`/`capture`）。只让 **`tier`、`capture` 之外**的红项决定站点可用性（`shared/site-health.ts` 的 `isAdvisoryCheck`）——各站 `state()` 是刻意的偏函数，用户停在非预设的合法档位（千问 Qwen3.7-Max+快速、Kimi Instant、元宝 Thinking）都返回 null，那不是故障；`capture` 是提问历史的定位探针，只在会话路由上产出、只看第 ① 级选择器，红了说明副本在靠兜底或已抓空，群发照常可用。漏标会被归成 `control` 继续误报，`desktop/scripts/diag-runtime.test.js` 守着。
+- **`diagnose()` 每条检查必须带 `kind`**（`reach`/`control`/`tier`/`probe`/`capture`）。仅 **`tier`、`capture` 之外**的红项影响可用性（`shared/site-health.ts` 的 `isAdvisoryCheck`）。`state()` 是偏函数，合法非预设档位返回 null 不算故障；`capture` 仅在会话路由检查第 ① 级定位，红了仍可群发。漏标按 `control` 误报；各站例子见 `docs/adapters.md`，回归在 `diag-runtime.test.js`。
 - **适配器协议**：每站必需 `{think, fast, state, diagnose}` 四项，其余钩子可选、不实现 = 该能力静默降级。`state`/`selection`/`diagnose`/`answer`/`submitted` **只读同步，不得开菜单**。`return false` = 落回 core 通用链；`throw` = 通用链对本站不安全，core 直接失败**不回退**。全表与九站映射见 `docs/adapters.md`。
 - **切档控件缺失一律 `throw`，不要静默 `return`**——静默 return 会让 `runMode` 误报「已切到」。例外只有 4 处（DeepSeek 首屏 radio、Gemini 两处、千问已确认日常页面的无模型入口分支），全部写死在适配器里；加新例外前先读 `docs/adapters.md` 的例外清单。
 - **站点 UI 三条通用规则**（反例见 `docs/adapters.md`）：① 控件在下沉到二级子菜单，默认「顶层找不到 → 展开子菜单 → 再找」；② 同一 role 可能承载不同语义的列表，取列表必须校验语义，否则「最高档」被点成末位模型；③ **每个菜单动作自己 `escMenus()` 收尾**。
 - **群发取消（epoch）**：`broadcast.ts` 的 `epoch`。新写的长流程必须在每个 `await` 后核对 epoch，否则用户取消了、主进程还在往站点输入框里打字；`AbortSignal` 不替代 epoch 核对。
 - **站点视图内不产用户可见反馈**：site-runtime 的 `toast` 是 no-op，切档结果/失败原因走外壳状态通道与 `feedback-provider.tsx` / `bootstrap-state.tsx` 两处 sr-only `aria-live`（圆点变色对读屏不可见，这是唯一进度通道，不可删）。
-- **诊断报告是唯一报障入口**：`Alt+H`「复制诊断报告」（`shared/site-report.ts`）只含版本/系统/缩放/阶段码/`name-kind-ok`、每站 `capture-locate` 定位级别计数（三个枚举与计数）及白名单进程类别/退出原因/数值错误码；**可复制，不含对话、网址、账号或路径**。
+- **诊断报告是唯一报障入口**：`Alt+H`「复制诊断报告」（`shared/site-report.ts`）只含版本/系统/缩放/阶段码/`name-kind-ok`、每站定位/采集原因的固定枚举计数及卡顿数（详见 `docs/desktop.md`）、白名单进程类别/退出原因/数值错误码；**可复制，不含对话、网址、账号、路径、token 或消息 key**。
 - **新增持久化键要同时登记**：SQLite 仓库（`main/*-repository.ts`）、同步投影（`sync-repository.ts`）、本机重置（`database.ts` 的 `resetLocalData`）、线格式 fixture（`desktop/test/fixtures/` 只增不改）。漏一处，同步/重置/回填会静默失效。
 - **图片限额改任何一个数**，落点以 `scripts/test-image-limits.js` 的对账项与 `docs/adapters.md`「图片载荷」为准，别凭记忆列。
 - **加站点 / 新开适配器分卷**：登记落点见 `docs/adapters.md`（站点表 `main/sites.ts`、分卷注册键、`preload/site.ts` 的 require 顺序、issue 模板站点下拉），`scripts/test-site-selection.js` 与 `desktop/scripts/desktop-shared-runtime.test.js` 会红。

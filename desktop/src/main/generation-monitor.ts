@@ -43,6 +43,13 @@ export class GenerationMonitor {
     return resumed;
   }
 
+  reopen(runId: string, site: SiteKey): boolean {
+    const entry = this.entries.get(site);
+    if (!entry || entry.runId !== runId || entry.phase !== "complete") return false;
+    this.entries.set(site, { runId, observedGenerating: true, completeStreak: 0, phase: "generating" });
+    return true;
+  }
+
   invalidate(sites?: readonly SiteKey[]): void {
     if (!sites) { this.runId = null; this.entries.clear(); return; }
     for (const site of sites) {

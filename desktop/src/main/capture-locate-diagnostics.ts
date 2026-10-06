@@ -1,9 +1,15 @@
 import type { SiteKey } from "../shared/contracts";
-import { CAPTURE_LOCATES, isCaptureLocate, type CaptureLocate, type CaptureLocateCounts, type CaptureLocateRow } from "../shared/question-capture";
+import { CAPTURE_LOCATES, isCaptureLocate, isCaptureReason, type CaptureReason, type CaptureLocate, type CaptureLocateCounts, type CaptureLocateRow } from "../shared/question-capture";
 
 // 每个站点、每种定位级别各归属了几轮提问（每轮只记一次），以及站点运行时报来的卡顿回调次数。只在主进程内存里，
 // 随进程退出清零；不落库、不同步、不含任何内容，只供「复制诊断报告」看出哪站已在靠 ②③ 级兜底、哪站观察器在卡。
 export class CaptureLocateDiagnostics {
+  private readonly reasons = new Map<SiteKey, Partial<Record<CaptureReason, number>>>();
+  recordReason(site: SiteKey, reason: unknown): void {
+    if (!isCaptureReason(reason)) return;
+    const row = this.reasons.get(site) ?? {};
+    row[reason] = Math.min(Number.MAX_SAFE_INTEGER, (row[reason] ?? 0) + 1); this.reasons.set(site, row);
+  }
   private readonly counts = new Map<SiteKey, Map<CaptureLocate, number>>();
   // 卡顿回调：站点按轮次报累计值，同一轮反复上报只记增量；换轮（token 变）整笔计入。只留每站最近一轮，内存 O(站点数)。
   private readonly slow = new Map<SiteKey, { token: string; count: number; total: number }>();
@@ -23,16 +29,16 @@ export class CaptureLocateDiagnostics {
   }
   snapshot(): CaptureLocateCounts {
     const result: CaptureLocateCounts = {};
-    for (const site of new Set([...this.counts.keys(), ...this.slow.keys()])) {
+    for (const site of new Set([...this.counts.keys(), ...this.slow.keys(), ...this.reasons.keys()])) {
       const row = this.counts.get(site);
       const locates: CaptureLocateRow = row
         ? Object.fromEntries(CAPTURE_LOCATES.filter(locate => row.has(locate)).map(locate => [locate, row.get(locate)!])) : {};
       const slow = this.slow.get(site)?.total;
-      result[site] = slow ? { ...locates, slowObserver: slow } : locates;
+      result[site] = { ...locates, ...(slow ? { slowObserver: slow } : {}), ...(this.reasons.has(site) ? { reasons: { ...this.reasons.get(site) } } : {}) };
     }
     return result;
   }
-  clear(): void { this.counts.clear(); this.slow.clear(); }
+  clear(): void { this.counts.clear(); this.slow.clear(); this.reasons.clear(); }
 }
 
 export const captureLocateDiagnostics = new CaptureLocateDiagnostics();

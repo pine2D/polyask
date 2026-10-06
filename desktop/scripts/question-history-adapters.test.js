@@ -8,7 +8,7 @@ function fixture(host, selector, nodes) {
   const answer = { isConnected: true };
   const adapter = { answer: () => answer };
   vm.runInNewContext(source, { window: { __AMS: { adapters: { [host]: adapter } } },
-    document: { querySelectorAll: s => s === selector ? nodes : [] } });
+    location: {hostname: host}, document: { querySelectorAll: s => s === selector ? nodes : [] } });
   return adapter;
 }
 function user(text, children = {}) {

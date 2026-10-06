@@ -364,9 +364,6 @@ export class ViewManager {
     this.releaseUnselectedViews();
   }
 
-  // A retry reuses the run id, so only the resubmitted sites are rearmed and the
-  // sites still streaming keep their timer, deadline and observed flag. A new run
-  // id replaces only its target sites; other sites may still be finishing an older run.
   beginGenerationRun(runId: string, sites: readonly SiteKey[], submission = true): void {
     this.invalidateCaptureRelease(sites);
     const resumed = this.generation.begin(runId, sites, submission);
@@ -374,7 +371,8 @@ export class ViewManager {
     for (const site of sites) this.clearGenerationTracking(site);
   }
 
-  watchGeneration(runId: string, site: SiteKey): void {
+  watchGeneration(runId: string, site: SiteKey, resumed = false): void {
+    if (resumed && this.generation.reopen(runId, site)) this.clearGenerationTracking(site);
     if (!this.generation.accepts(runId, site) || this.generationDeadlines.has(site)) return;
     this.generationDeadlines.set(site, Date.now() + 45_000);
     void this.probeGeneration(runId, site);

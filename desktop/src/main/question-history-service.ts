@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { SiteKey } from "../shared/contracts";
 import type { BroadcastRequest, SiteRunResult } from "../shared/protocol";
-import { normalizeHistorySnapshot, type HistorySnapshot } from "../shared/question-capture";
+import { normalizeHistorySnapshot, type HistorySnapshot, type CaptureReason } from "../shared/question-capture";
 import type { QuestionAnswerRecord, QuestionRecord } from "../shared/question-history";
 import { normalizeSelectionMetadata } from "../shared/selection";
 import { QuestionRepository, questionAnswerId } from "./question-repository";
@@ -30,6 +30,7 @@ export class QuestionHistoryService {
   private readonly releasableSites = new Map<SiteKey, number>();
   private reportFailure: (() => void) | null = null;
   private reportSubmitted: ((runId: string, site: SiteKey) => void) | null = null;
+  private reportResumed: ((runId: string, site: SiteKey) => void) | null = null;
   private reads = 0;
   constructor(readonly repository: QuestionRepository, private readonly options: {
     deviceId: () => string; now?: () => number; createId?: () => string; onFailure?: () => void;
@@ -38,11 +39,18 @@ export class QuestionHistoryService {
     onLocate?: (site: SiteKey, locate: NonNullable<HistorySnapshot["locate"]>) => void;
     // 站点运行时报来的本轮卡顿回调累计次数（诊断记账，同一轮重复上报由接收方按增量计）。
     onSlowObserver?: (site: SiteKey, token: string, count: number) => void;
+    onReason?: (site: SiteKey, reason: NonNullable<HistorySnapshot["captureCode"]>) => void;
   }) {}
   private now(): number { return (this.options.now ?? Date.now)(); }
   setFailureHandler(handler: (() => void) | null): void { this.reportFailure = handler; }
   /** 迟到确认：本次尝试回包「提交未确认」后，归属快照给出本轮用户消息的正向证据，记录已升为 submitted 时回调（外壳据此改状态、开生成监视）。 */
   setSubmissionHandler(handler: ((runId: string, site: SiteKey) => void) | null): void { this.reportSubmitted = handler; }
+  setGenerationResumeHandler(handler: ((runId: string, site: SiteKey) => void) | null): void { this.reportResumed = handler; }
+  private revoke(site: SiteKey, entry: CaptureEntry): void {
+    const confirmed = entry.confirmedAt !== null;
+    entry.confirmedAt = null; entry.candidate = null;
+    if (confirmed) { try { this.reportResumed?.(entry.runId, site); } catch { /* Saving must never break monitoring. */ } }
+  }
   private guarded<T>(action: () => T, fallback: T): T {
     try { return action(); } catch { try { this.options.onFailure?.(); this.reportFailure?.(); } catch { /* Saving must never break sending. */ } return fallback; }
   }
@@ -52,7 +60,7 @@ export class QuestionHistoryService {
       const existing = this.lastRun?.runId === request.runId ? this.repository.get(this.lastRun.id) : null;
       if (this.lastRun?.runId === request.runId && !existing) return null;
       if (existing && ("deletedAt" in existing || existing.text !== request.text || request.sites.some(s => !existing.sites.includes(s)))) return null;
-      this.cancel(request.sites);
+      this.cancel(request.sites, "superseded");
       const now = this.now();
       const record: QuestionRecord = existing as QuestionRecord ?? {
         schema: 4, id: (this.options.createId ?? randomUUID)(), text: request.text, sites: [...request.sites],
@@ -104,6 +112,12 @@ export class QuestionHistoryService {
     const due = [...this.active.values()].flatMap(e => e.candidate && e.lifecycle === this.repository.lifecycle ? [e.candidate.at + SEAL_QUIET_MS] : []);
     return due.length ? Math.max(0, Math.min(...due) - this.now()) : null;
   }
+  /** 新轮交接只等目标站已确认的候选；取最后一个到期点，不因其它站仍在生成而阻塞。 */
+  handoffDelay(sites: readonly SiteKey[]): number | null {
+    const due = sites.flatMap(site => { const e = this.active.get(site);
+      return e?.candidate && e.lifecycle === this.repository.lifecycle ? [e.candidate.at + SEAL_QUIET_MS] : []; });
+    return due.length ? Math.max(0, Math.max(...due) - this.now()) : null;
+  }
   /**
    * 正向完成证据：外壳 GenerationMonitor 对本轮（同 runId、本次尝试已回包 ready）确认了回答结束。
    * 这里只记账不落库——封存要等之后开始的归属、未结束、非生成中的快照带着正文到来，且隔 SEAL_QUIET_MS 复读逐字相同（accept）。
@@ -142,22 +156,25 @@ export class QuestionHistoryService {
       if (!current) return;
       const now = Math.max(this.now(), current.updatedAt + 1);
       const v = normalizeHistorySnapshot(snapshot, e.token);
+      if (v.captureCode && v.captureCode !== current.captureCode) { try { this.options.onReason?.(site, v.captureCode); } catch { /* Diagnostics only. */ } }
       if (v.slowObserver) { try { this.options.onSlowObserver?.(site, e.token, v.slowObserver); } catch { /* Diagnostics only. */ } }
       if (!v.owned) {
         // Stop and user-message DOM can both appear late. The fixed observation
         // budget starts at submission, without persisting unowned text or URLs.
-        if (v.generation === "generating") { e.confirmedAt = null; e.candidate = null; }
+        if (v.generation === "generating") this.revoke(site, e);
         if (v.ended || now >= e.deadline) {
-          this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: current.answerMarkdown ? "interrupted" : "unavailable" });
+          this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: current.answerMarkdown ? "interrupted" : "unavailable", captureCode: v.captureCode ?? (now >= e.deadline ? "capture_expired" : "turn_unconfirmed") });
           if (v.ended) this.releasableSites.set(site, this.repository.lifecycle);
           this.active.delete(site);
+        } else if (v.captureCode && v.captureCode !== current.captureCode) {
+          this.repository.putAnswer({ ...current, updatedAt: now, captureCode: v.captureCode });
         }
         return;
       }
       if (v.locate && !e.located) { e.located = true; try { this.options.onLocate?.(site, v.locate); } catch { /* Diagnostics only. */ } }
       const truncated = v.truncated ?? current.truncated;
       // 确认后又见生成中 = 证据被推翻，不再据此封存。已结束（冻结）的快照不知道冻结时刻，不算「确认之后」的正文。
-      if (v.generation === "generating") { e.confirmedAt = null; e.candidate = null; }
+      if (v.generation === "generating") this.revoke(site, e);
       // 没带读序号的快照来历不明，按确认前在途处理（fail-closed）。
       const fresh = e.confirmedAt !== null && mark !== undefined && mark.seq > e.confirmedAt;
       const settled = fresh && !v.ended && v.generation !== "generating" && !!v.text?.trim() && !truncated;
@@ -175,10 +192,11 @@ export class QuestionHistoryService {
       // 用户取消（held）之后不再升级；档位未确认的照常记 tier_unconfirmed，与正常成功路径一致。
       const upgraded = current.submission === "unconfirmed" && !e.held && !v.ended && now < e.deadline
         && (v.locate === "selector" || v.locate === "semantic");
-      const next: QuestionAnswerRecord = { ...current, answerMarkdown: text, conversationUrl, capture,
+      const captureCode = complete ? null : now >= e.deadline ? "capture_expired" : v.captureCode ?? (text && !fresh ? "completion_unconfirmed" : current.captureCode);
+      const next: QuestionAnswerRecord = { ...current, answerMarkdown: text, conversationUrl, capture, captureCode,
         ...(upgraded ? { submission: "submitted" as const, submissionCode: e.tierUnconfirmed ? "tier_unconfirmed" : null } : {}),
         capturedAt: v.text ? now : current.capturedAt, truncated, sealedAt: sealed ? now : null, updatedAt: now };
-      if (upgraded || text !== current.answerMarkdown || capture !== current.capture || conversationUrl !== current.conversationUrl || sealed) {
+      if (upgraded || captureCode !== current.captureCode || text !== current.answerMarkdown || capture !== current.capture || conversationUrl !== current.conversationUrl || sealed) {
         this.repository.putAnswer(next, true, upgraded || sealed || !current.answerMarkdown ? 0 : now + 30_000);
       }
       if (upgraded) { try { this.reportSubmitted?.(e.runId, site); } catch { /* Status display must never break saving. */ } }
@@ -195,14 +213,14 @@ export class QuestionHistoryService {
       if (entry) entry.held = true;
     }
   }
-  cancel(sites: readonly SiteKey[] = [...this.active.keys()]): void {
+  cancel(sites: readonly SiteKey[] = [...this.active.keys()], reason: CaptureReason = "capture_cancelled"): void {
     for (const site of sites) this.guarded(() => {
       this.releasableSites.delete(site);
       const current = this.current(site);
       this.active.delete(site);
       if (!current) return;
       const now = Math.max(this.now(), current.updatedAt + 1);
-      this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: "interrupted", submission: current.submission === "pending" ? "cancelled" : current.submission });
+      this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: "interrupted", captureCode: reason, submission: current.submission === "pending" ? "cancelled" : current.submission });
     }, undefined);
   }
 }

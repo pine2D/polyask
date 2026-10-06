@@ -2,6 +2,7 @@ import type { SiteKey } from "../shared/contracts";
 import type { SiteRunResult, SiteStatus } from "../shared/protocol";
 import { normalizeSelectionMetadata } from "../shared/selection";
 import type { QuestionHistoryService } from "./question-history-service";
+import type { QuestionCaptureService } from "./question-capture-service";
 
 /** 迟到确认只用到的外壳能力：读状态、改状态、开生成监视。刻意不含 sendCommand / confirmSubmitted——这条路径不发送。 */
 export interface SubmissionUpgradeTarget {
@@ -57,7 +58,8 @@ export function lateSentResult(target: Pick<SubmissionUpgradeTarget, "getStatuse
  * 用户取消：发送中的站作废本次尝试；已回包「提交未确认」的站保留采集，但不再迟到升级（用户已叫停这一轮）。
  * 返回发送中的站，交给生成监视一并取消。
  */
-export function cancelSubmissions(statuses: readonly SiteStatus[], questions: QuestionHistoryService): SiteKey[] {
+export function cancelSubmissions(statuses: readonly SiteStatus[], questions: QuestionHistoryService, capture?: Pick<QuestionCaptureService, "cancelPreparation">): SiteKey[] {
+  capture?.cancelPreparation();
   const sending = statuses.filter(status => status.phase === "sending").map(status => status.site);
   questions.cancel(sending);
   questions.holdSubmission(statuses.filter(status => status.submission?.state === "unconfirmed").map(status => status.site));
