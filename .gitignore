@@ -16,6 +16,7 @@
 !/docs/verify.md
 
 # 本地工具状态
+/HANDOFF.md
 .superpowers/
 .spec-workflow/
 .codegraph/

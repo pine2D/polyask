@@ -2,7 +2,7 @@
 
 PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点并排比较。**切档可报错，群发不能断。** 仅发五个未签名 Desktop 包；Chrome 扩展已停维并删除（tag `archive/extension-v0.25.1`）。
 
-<!-- 最后与代码核对：2026-10-06 · desktop/package.json v1.12.0。发版前重核并更新。
+<!-- 最后与代码核对：2026-10-06 · desktop/package.json v1.13.0。发版前重核并更新。
      本文件 ≤11 KiB；新增硬约束先精简或外迁 docs/。 -->
 
 ## 按任务读取专题文档
