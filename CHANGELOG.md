@@ -8,6 +8,8 @@
 
 ## [未发布]
 
+## [1.12.0] - 2026-10-06
+
 ### 新增
 
 - 站点状态详情和诊断报告新增“已定位提问”“已定位回答”两项提示，可以看出提问历史是否还能按原有方式找到回答；这两项只作提示，不影响站点是否可用。
@@ -1065,7 +1067,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.11.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/pine2D/polyask/compare/v1.11.2...v1.12.0
 [1.11.2]: https://github.com/pine2D/polyask/compare/v1.11.1...v1.11.2
 [1.11.1]: https://github.com/pine2D/polyask/compare/v1.11.0...v1.11.1
 [1.11.0]: https://github.com/pine2D/polyask/compare/v1.10.1...v1.11.0
