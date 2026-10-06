@@ -50,3 +50,43 @@ test('large unmatched link delimiters stay readable without stalling the shell',
   assert.ok(render(input).includes(input));
   assert.ok(performance.now() - start < 1000, 'an unmatched delimiter run must not cause quadratic backtracking');
 });
+
+test('escaped punctuation stays literal and code may contain backticks', () => {
+  const html = render('a\\_i 与 b\\_j；\\*字面星号\\*；`` a`b ``');
+  assert.match(html, /a_i 与 b_j；\*字面星号\*；<code>a`b<\/code>/);
+  assert.doesNotMatch(html, /<em>|\\_/);
+});
+
+test('long URL labels are compact while full destinations and meaningful labels survive', () => {
+  const target = 'https://poe2db.tw/cn/Rune#:~:text=' + '%E6%A0%B9'.repeat(100);
+  const html = render(`[${target}](${target}) [配方资料](${target})`);
+  assert.equal((html.match(/href="https:\/\/poe2db.tw\/cn\/Rune#:~:text=/g) ?? []).length, 2);
+  assert.match(html, />poe2db.tw\/cn\/Rune<\/a>/);
+  assert.match(html, />配方资料<\/a>/);
+  assert.doesNotMatch(html, />https:\/\/poe2db/);
+  const code = render('```txt\n' + target + '\n```');
+  assert.ok(code.includes('<code>' + target));
+});
+
+test('reference links and empty labels use the same readable link renderer', () => {
+  const html = render('详情 [资料][doc] 与 [](https://two.example/a)\n\n[doc]: https://one.example/b');
+  assert.match(html, /href="https:\/\/one.example\/b"[^>]*>资料<\/a>/);
+  assert.match(html, /href="https:\/\/two.example\/a"[^>]*>two.example\/a<\/a>/);
+});
+
+test('long URL labels compact when capture encoded parentheses only in the destination', () => {
+  const label = 'https://example.com/wiki/Topic_(detail)?q=' + 'x'.repeat(100);
+  const target = label.replace(/\(/g, '%28').replace(/\)/g, '%29');
+  const html = render(`[${label}](${target})`);
+  assert.match(html, />example.com\/wiki\/Topic_%28detail%29<\/a>/);
+  assert.ok(html.includes(`href="${target}"`));
+});
+
+test('Mermaid fences expose preview controls and preserve source; ordinary code stays plain', () => {
+  const source = 'flowchart LR\n  A --> B\n\n\n  B --> C';
+  const html = render('```mermaid\n' + source + '\n```');
+  assert.match(html, /class="mermaid-preview"/);
+  assert.match(html, /aria-label="Copy diagram source"/);
+  assert.ok(html.includes('<code>' + source.replace(/>/g, '&gt;') + '</code>'));
+  assert.doesNotMatch(render('```js\nconsole.log(1)\n```'), /mermaid-preview/);
+});

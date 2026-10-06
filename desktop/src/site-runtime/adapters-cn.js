@@ -154,8 +154,9 @@
       // （「正在思考」「规划说明结构」）也是 .md-box-root（2026-10-04 豆包前端包与真机属性）。取思考块之外的第一个正文；没有正文、只有思考块时
       // 返回 null（同千问/Kimi），中途封存的副本才不会是一串思考标题；空占位消息仍返回消息本身。
       answer: function () {
+        // 与 history-adapters 的用户证据一致：正文内的 Mermaid 右对齐工具栏不代表用户消息。
         const msgs = [...document.querySelectorAll("[data-message-id]")]
-          .filter((m) => !((m.className || "").includes("justify-end")) && !m.querySelector(".justify-end"));
+          .filter((m) => !((m.className || "").includes("justify-end")) && !m.querySelector('[class*="justify-end"]:not(.md-box-root *,[data-testid="message_text_content"] *)'));
         if (!msgs.length) return null;
         const el = msgs[msgs.length - 1], THINK = '[data-plugin-identifier*="thinking_block"],[data-message-selection-module="thinking_progress"],[class*="think" i]';
         const inThink = (node) => { const t = node.closest(THINK); return !!t && t !== el && el.contains(t); };

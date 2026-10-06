@@ -22,7 +22,7 @@ bash scripts/release.sh --publish      # 推 v* tag；Release workflow 构建并
 
 `npm test` 自身第一步就是 `tsc --noEmit`，后面单跑 `npm run typecheck` 是同一件事跑第二遍；留着只为让本机命令行与 CI 的作业名逐条对得上，不是额外覆盖面。
 
-两条 audit 都要跑：`npm audit --omit=dev` 覆盖 react / react-dom / electron-squirrel-startup 这三项真正的运行时 npm 依赖，`node scripts/audit-runtime.mjs` 补上前者结构性看不到的 electron 本身（按 npm 惯例它总是 devDependency，却随每个发行包分发）。CI 的 verify 作业显式运行的是 `audit-runtime.mjs`，只对 Electron 运行时包的 high/critical 公告设门禁；它不替代 `npm audit --omit=dev`。后者仍需按上面的本机发版清单单独执行，不能把 CI 成功视作两项审计都通过。
+两条 audit 都要跑：`npm audit --omit=dev` 覆盖真正的运行时 npm 依赖（含 React、markdown-it、Mermaid），`node scripts/audit-runtime.mjs` 补上前者结构性看不到的 electron 本身（按 npm 惯例它总是 devDependency，却随每个发行包分发）。CI 的 verify 作业显式运行的是 `audit-runtime.mjs`，只对 Electron 运行时包的 high/critical 公告设门禁；它不替代 `npm audit --omit=dev`。后者仍需按上面的本机发版清单单独执行，不能把 CI 成功视作两项审计都通过。
 
 `--build-only` 是本机与 CI 共用的那条：跑 `scripts/verify.sh`、从 `CHANGELOG.md` 抠出本版段落写进 `dist/release-notes.md`、做三条 CHANGELOG 校验（版本段确有 `- ` 条目、`[未发布]` 比较链接从本次 tag 起算、本版链接存在），最后把固定信任尾段追加进正文。`.github/workflows/ci.yml` 的 verify 作业检出源码后先用 `actions/setup-node` 钉住 `desktop/.nvmrc` 的 Node（当前 24），紧接着就跑它——所以这三条校验每个 PR 都会过一遍，不是只在发版那天才生效。
 

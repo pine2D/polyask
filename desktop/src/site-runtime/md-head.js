@@ -33,7 +33,8 @@
     if (SKIP.has(el.tagName.toUpperCase()) || el.getAttribute("aria-hidden") === "true" || el.getAttribute("role") === "button"
       || cardChrome(el)) return true;
     const cs = getComputedStyle(el);
-    return cs.display === "none" || cs.visibility === "hidden";
+    // 透明导出卡/水印仍有尺寸和文字，opacity:0 也必须按不可见子树剔除。
+    return cs.display === "none" || cs.visibility === "hidden" || cs.opacity === "0";
   };
   function visibleParts(n) {
     const parts = [];

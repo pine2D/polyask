@@ -9,6 +9,7 @@
 @import "./decision.css";
 @import "./library.css";
 @import "./library-reading.css";
+@import "./markdown-reading.css";
 @import "./native-feel.css";
 
 :root {
@@ -396,15 +397,6 @@ kbd { opacity: .7; font: 10px system-ui; }
 .synthesis-workspace > footer span { flex: 1; overflow: hidden; color: var(--warning-ink); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .synthesis-workspace > footer button { min-height: 30px; padding: 0 10px; display: inline-flex; align-items: center; gap: 5px; border: 0; border-radius: 6px; color: var(--on-accent); background: var(--accent); }
 .synthesis-workspace > footer button:disabled { opacity: .45; }
-.markdown-preview { overflow-wrap: anywhere; font-size: 14px; line-height: 1.75; }
-.markdown-preview p { margin: 7px 0; white-space: pre-wrap; }
-.markdown-preview h3, .markdown-preview h4 { margin: 10px 0 4px; }
-.markdown-preview blockquote { margin: 7px 0; padding-left: 9px; border-left: 3px solid var(--border); color: var(--muted); }
-.markdown-preview pre { padding: 8px; overflow: auto; border-radius: 6px; background: #18181b; color: #f4f4f5; }
-.markdown-preview code { font-family: ui-monospace, "Cascadia Code", monospace; }
-.markdown-preview pre { font-size: 13px; line-height: 1.6; }
-.markdown-preview ul { margin: 7px 0; padding-left: 20px; }
-.markdown-preview li { margin: 2px 0; }
 .archive-status { padding: 2px 8px; overflow: hidden; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; background: var(--panel); }
 
 @media (prefers-reduced-motion: reduce) {

@@ -39,6 +39,7 @@
 .question-reader { overflow: auto; padding: 24px max(20px, calc((100% - 960px) / 2)); }
 .question-reader-intro h2 { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 19px; line-height: 1.6; font-weight: 600; }
 .question-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
+.question-actions .question-icon-action { width: 32px; padding: 4px; display: grid; place-items: center; }
 .question-site-tabs { display: flex; gap: 6px; overflow: auto; border-bottom: 1px solid var(--border); padding: 16px 0 10px; }
 .question-site-tabs button { white-space: nowrap; border-color: transparent; }
 .question-site-tabs button[aria-pressed="true"] { color: var(--accent); background: var(--selection-soft); border-color: var(--accent); }

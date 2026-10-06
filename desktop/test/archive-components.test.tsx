@@ -55,7 +55,7 @@ function occurrences(value: string, text: string): number {
 
 test("markdown preview groups consecutive bullets and separates bullet blocks around paragraphs", () => {
   const html = renderToStaticMarkup(
-    <MarkdownPreview value={"- Alpha\n* **Beta** and `code`\n\nParagraph\n\n- Gamma"} />
+    <MarkdownPreview value={"- Alpha\n- **Beta** and `code`\n\nParagraph\n\n- Gamma"} />
   );
   const firstList = html.indexOf("<ul>");
   const paragraph = html.indexOf("<p>Paragraph</p>");
@@ -68,13 +68,15 @@ test("markdown preview groups consecutive bullets and separates bullet blocks ar
   assert.ok(html.includes("<li><strong>Beta</strong> and <code>code</code></li>"));
 });
 
-test("markdown preview flushes bullet lists at block boundaries without parsing fenced code bullets", () => {
+test("markdown preview uses CommonMark list spacing and flushes at explicit block boundaries", () => {
   const html = renderToStaticMarkup(
     <MarkdownPreview value={[
       "- Before blank",
       "",
       "- Before paragraph",
+      "",
       "Paragraph",
+      "",
       "- Before heading",
       "# Heading",
       "- Before quote",
@@ -87,8 +89,7 @@ test("markdown preview flushes bullet lists at block boundaries without parsing 
     ].join("\n")} />
   );
   const expectedOrder = [
-    "<ul><li>Before blank</li></ul>",
-    "<ul><li>Before paragraph</li></ul>",
+    "<ul><li><p>Before blank</p></li><li><p>Before paragraph</p></li></ul>",
     "<p>Paragraph</p>",
     "<ul><li>Before heading</li></ul>",
     "<h3>Heading</h3>",
@@ -100,7 +101,7 @@ test("markdown preview flushes bullet lists at block boundaries without parsing 
   ];
   let previous = -1;
 
-  assert.equal(occurrences(html, "<ul>"), 6);
+  assert.equal(occurrences(html, "<ul>"), 5);
   assert.equal(occurrences(html, "<li>"), 6);
   assert.equal(occurrences(html, "- Code bullet"), 1);
   for (const fragment of expectedOrder) {

@@ -50,6 +50,7 @@ require("../site-runtime/selection-match.js");
 require("../site-runtime/send.js");
 require("../site-runtime/upload.js");
 require("../site-runtime/md-head.js");
+require("../site-runtime/md-diagram.js");
 require("../site-runtime/md.js");
 require("../site-runtime/adapters-intl.js");
 require("../site-runtime/adapters-intl2.js");

@@ -120,6 +120,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 - `answer()` 返回最后一条回答的根节点；快照**以点击时刻为准（不等流式）**，档位标注取收集时刻 `state()`；无回答的站如实标出，别让用户把错误占位贴给别人而不自知。
 - **可见文本必须用 `innerText` 不用 `textContent`**（`visText`）：`textContent` 会把站内/第三方脚本注入的隐藏节点（水印 UUID、翻译克隆）一并带出，所见即所得只能靠 `innerText`（`textContent` 仅兜底）。
+- Mermaid 由共享前置卷 `md-diagram.js` 读取，九站不另维护展示规则。明确的 `language-mermaid`、`data-language`/`data-lang`/`lang="mermaid"` 及 `pre.mermaid` 输出标准 mermaid 围栏；源码、缩进和内部空行保留。已核验的 `code-no-artifacts` 预览卡可只读取得其标记源码区（智谱代码区 `display:none`，预览在 `.mermaid-render`），整卡的标签、代码/预览切换、SVG 不重复写入正文。通用 Mermaid 类名词元、`data-mermaid`、预览属性，以及专用代码卡内的 `svg.mermaid-svg` 也标识图表；仅有明确图形而没有 DOM 源码时写空 mermaid 围栏，阅读层解释缺失（真机千问、DeepSeek、ChatGPT、Claude 本轮属于此类）。未指定任何语言的代码，仅当首行是明确的 flowchart/graph 方向声明或 sequenceDiagram/classDiagram/stateDiagram-v2/erDiagram 语法头才推断为 Mermaid（Gemini 本轮只有 Code snippet 标签）；明确指定其它语言时保持原样。通用双页签卡仅在 role=tab/tabpanel 与 aria-controls 明确配对、当前节点恰为页签与源码页的共同容器时，读取隐藏页中的语言标记源码（豆包真机为此形态）；多卡各自保留位置，无关联的隐藏代码仍跳过。隐藏及完全透明（opacity:0）的非图表子树仍跳过（豆包图表导出水印是透明常驻 DOM）；不点击切换、不发页面命令、不从 SVG 或页面框架内部状态反推源码。旧副本已丢失的图表源码不能回填。
 - **`answer` 必须排除思考段**，否则思考全文淹没正文。七站显式过滤后取最后一个，逐站排除锚点见站点卡。**例外两站待取证**：ChatGPT 与 Gemini 目前是「末条回答容器 → 第一个 `.markdown`」，没有任何思考段过滤——依赖「思考段不带 `.markdown`」这个未经真机确认的假设（F098）。改这两站的 `answer()` 前先真机看一眼开了思考的那轮回答里有几个 `.markdown`。
 - `md.js` 是**一个串行器通吃九站**（九站回答都是 md 渲染的标准 HTML），逐站不维护 markdown 规则；剔除规则 `drop()` 与代码块头部条（语言名 / 复制键）的判定按 300 行上限拆在前置卷 `md-head.js`（preload 先于 `md.js` 注入）。无语言名的头部条要同时满足「确有操作件（按钮/svg/role=button、从该层起才 pointer 的非链接节点、copy 类名、带 lang 类名的 p）」和「连操作件文字在内只剩操作件字样或空白」才整条剔除，div 段落「运行」与只含链接的段落照常保留。它的**四条输出契约**（下游依赖，改前先想清楚谁在用）：
   1. 表格 → GFM 管道表。
@@ -218,6 +219,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - `answer()` **从后往前遍历** `.ds-message`，直到找到第一条含非思考 `.ds-markdown` 的消息才返回（用户消息容器也是 `.ds-message`，靠这个回退跳过）。**别简化成 `msgs[msgs.length-1]`**。`attach` 走常驻 `input[type="file"][accept*=".png"]`（2026-07-23 真机：接受合成 change，上传后预览 `img.alt` 保留文件名）。
 
 ### 豆包（`www.doubao.com` / 键 `doubao.com`，`desktop/src/site-runtime/adapters-cn.js`）
+
+- Mermaid 卡的缩放工具栏使用 `justify-end`（2026-10-07 Windows 真机），并非用户消息；`answer()` 与 `historyTurn()` 的右对齐用户证据均排除 `.md-box-root` / `message_text_content` 正文中的后代，消息壳本身或正文外的气泡对齐布局仍有效。前后用户 key、计数、归属及封存规则不放宽；已结束的旧空副本不会改写。
 
 - 档位：think = `_select(/专家$/, "think")`、fast = `_select(/快速$/, "fast")`。**锚定的是后缀不是前缀**——菜单项实测带品牌与版本前缀（`豆包 2.1 Turbo 专家`），写成 `/^专家/` 会一项都匹配不上。**只切 composer 模式按钮的菜单项，无独立思考开关、无模型选择。**
 - `state()` 读模式按钮文本：`/专家$/` 或 `/^豆包\s+[\d.]/`→think、`/快速$/`→fast、**其余 → null**。「超能模式」是**历史档位**（2026-08-31 真机复核菜单只剩 `豆包 快速` / `豆包 2.1 Turbo专家` 两项），`state()` 里**没有它的判定分支**：它若回归会落进「其余 → null」，表现为档位读不出，统一编排保留未确认提示后继续发送。`^豆包\s+版本号` 这条分支是因为选中专家档后按钮只回显 `豆包 2.1 Turbo`、后缀被吃掉（真机 2026-08-26）。

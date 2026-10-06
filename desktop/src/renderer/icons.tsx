@@ -115,6 +115,22 @@ export function CopyIcon(): React.JSX.Element {
   return <Icon><rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" /></Icon>;
 }
 
+export function LinkIcon(): React.JSX.Element {
+  return <Icon><path d="m10 14 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0M16 8l1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" /></Icon>;
+}
+export function ExternalLinkIcon(): React.JSX.Element {
+  return <Icon><path d="M14 3h7v7M21 3l-9 9M10 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-5" /></Icon>;
+}
+export function ZoomInIcon(): React.JSX.Element {
+  return <Icon><circle cx="10" cy="10" r="7" /><path d="m15 15 6 6M7 10h6M10 7v6" /></Icon>;
+}
+export function ZoomOutIcon(): React.JSX.Element {
+  return <Icon><circle cx="10" cy="10" r="7" /><path d="m15 15 6 6M7 10h6" /></Icon>;
+}
+export function FitIcon(): React.JSX.Element {
+  return <Icon><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" /></Icon>;
+}
+
 export function DownloadIcon(): React.JSX.Element {
   return <Icon><path d="M12 3v12m-4-4 4 4 4-4M4 20h16" /></Icon>;
 }

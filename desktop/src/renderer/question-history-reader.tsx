@@ -5,6 +5,8 @@ import type { QuestionDetail } from '../shared/question-history';
 import { MarkdownPreview } from './markdown-preview';
 import { answerState } from './question-history-model';
 import { shell } from './shell-api';
+import { ExternalLinkIcon, LinkIcon } from './icons';
+import { safeMarkdownUrl } from './markdown-inline';
 export function QuestionHistoryReader({ detail, copy, sites, busy, onLoadAnswer, onRestore, onReask, onDelete, onAnnounce }: {
   detail: QuestionDetail; copy: DesktopCopy; sites: readonly SiteDefinition[]; busy: boolean;
   onLoadAnswer?: (id: string) => void;
@@ -15,6 +17,7 @@ export function QuestionHistoryReader({ detail, copy, sites, busy, onLoadAnswer,
   useEffect(() => { setSite(detail.question.sites[0]); setAttempt(null); }, [detail.question.id]);
   const answers = detail.answers.filter(answer => answer.site === site);
   const answer = answers.find(a => a.id === attempt) ?? answers.at(-1);
+  const conversationUrl = answer?.conversationUrl && safeMarkdownUrl(answer.conversationUrl) ? answer.conversationUrl : null;
   return <div className="question-reader">
     <header className="question-reader-intro">
       <time>{new Date(detail.question.createdAt).toLocaleString()}</time>
@@ -41,6 +44,12 @@ export function QuestionHistoryReader({ detail, copy, sites, busy, onLoadAnswer,
       {answer?.truncated && <p role="note">{copy.questionTruncated}</p>}
       <div className="question-actions">
         <button type="button" disabled={busy || !answer?.conversationUrl} data-hint={busy ? copy.questionReadOnlyBusy : !answer?.conversationUrl ? copy.questionMissing : copy.questionRestore} onClick={() => onRestore(answer?.id)}>{copy.questionRestore}</button>
+        <button type="button" className="question-icon-action" disabled={!conversationUrl} aria-label={copy.questionCopyLink} data-hint={conversationUrl ? copy.questionCopyLink : copy.questionMissing} onClick={() => {
+          if (conversationUrl) void navigator.clipboard.writeText(conversationUrl).then(() => onAnnounce(copy.questionLinkCopied)).catch(() => onAnnounce(copy.questionFailed));
+        }}><LinkIcon /></button>
+        <button type="button" className="question-icon-action" disabled={!conversationUrl} aria-label={copy.questionOpenBrowser} data-hint={conversationUrl ? copy.questionOpenBrowser : copy.questionMissing} onClick={() => {
+          if (conversationUrl) void shell.openExternal(conversationUrl).catch(() => onAnnounce(copy.questionFailed));
+        }}><ExternalLinkIcon /></button>
         <button type="button" disabled={!answer?.answerMarkdown} onClick={() => {
           void navigator.clipboard.writeText(answer?.answerMarkdown ?? '').then(() => onAnnounce(copy.questionCopied)).catch(() => onAnnounce(copy.questionFailed));
         }}>{copy.questionCopy}</button>

@@ -1,4 +1,5 @@
 import { QUESTION_COPY } from "./question-copy";
+import { READING_COPY } from "./reading-copy";
 import { LIBRARY_COPY } from "./library-copy";
 import { BACKUP_COPY } from "./backup-copy";
 import { TASK_FOLDER_COPY } from "./task-folder-copy";
@@ -18,6 +19,7 @@ export const COPY = {
     ...LIBRARY_COPY.en,
     ...BACKUP_COPY.en,
     ...QUESTION_COPY.en,
+    ...READING_COPY.en,
     ...ARCHIVE_COPY.en,
     ...DECISION_COPY.en,
     ...TASK_FOLDER_COPY.en,
@@ -178,6 +180,7 @@ export const COPY = {
     ...LIBRARY_COPY.zhCN,
     ...BACKUP_COPY.zhCN,
     ...QUESTION_COPY.zhCN,
+    ...READING_COPY.zhCN,
     ...ARCHIVE_COPY.zhCN,
     ...DECISION_COPY.zhCN,
     ...TASK_FOLDER_COPY.zhCN,
@@ -338,6 +341,7 @@ export const COPY = {
     ...LIBRARY_COPY.zhTW,
     ...BACKUP_COPY.zhTW,
     ...QUESTION_COPY.zhTW,
+    ...READING_COPY.zhTW,
     ...ARCHIVE_COPY.zhTW,
     ...DECISION_COPY.zhTW,
     ...TASK_FOLDER_COPY.zhTW,

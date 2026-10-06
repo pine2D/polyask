@@ -34,6 +34,8 @@
 
 ## 离线回归
 
+- 历史阅读专项：`node --import tsx --test test/markdown-reading-interaction.check.ts`（无显示服务器自行使用 Xvfb）。构建生产阅读器与合成数据，临时 Electron 档案、禁止联网，不访问用户数据库；验证三语 Mermaid 实际成图、源码复制、代码切换、缩放、缺失/无效/超限/配置指令回退、迟到源码切换、完整来源链接打开/复制及会话地址动作。截图留在系统临时目录，不入库。普通 `npm test` 的阅读和会话动作回归覆盖解析、当前尝试、缺地址及繁忙状态；`scripts/md-diagram.test.js` 通过九站生产 `historyTurn()` 定位夹具验证共用提取、隐藏非图表排除、只读及空行保真。图形专项不替代九站真实 DOM 形态验收。
+
 - 本机重置的真实 Electron 外壳交互：在 `desktop/` 运行 `node --import tsx --test test/local-data-reset-interaction.check.ts`；测试自行编译合成夹具、在临时页面验证旧输入与综合状态清理，不访问真实站点、Drive 或用户档案。普通 `npm test` 不运行这项图形检查。
 - 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个同源本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、共享登录域导航、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
 - 进程诊断桥接实测：`xvfb-run -a node scripts/runtime-process-smoke.mjs`，在两个临时离线 Electron 窗口运行生产 runtime-gates、preload 与 site-health IPC。合成 `child-process-gone` 事件核对可信窗口取数、其它 sender 拒绝、报告白名单过滤及释放清理；不使实际 GPU/网络进程崩溃，不代表 Windows 原生启动失败复现。
@@ -916,3 +918,13 @@ Windows 独立 TestLab、PolyAsk 1.12.0、Electron 44.5.0。初测构建 `be7512
 最终源码门禁：仓库 verify、Desktop 完整测试（892 个 TS/renderer + 385 个 runtime，0 fail/skip）、独立 typecheck、package 与隔离 Xvfb smoke 均 exit 0，冒烟 shell=1、sites=9、attached=9。npm test 初次因沙箱禁止 tsx 临时 IPC 管道未启动，package 初次因沙箱网络限制未取到 Electron；按权限流程运行原命令。审查修复后全测曾因 shell-contract 仍预期旧取消参数而失败，更新契约断言后完整重跑通过。原始记录在系统临时目录 `polyask-history-native-20261006/`，不入库；测试问答保留在 TestLab，临时页面观察器与外壳状态监听已解除。
 
 未覆盖：其它五站的新三轮发送、真实 Drive 双设备、DeepSeek 首次绑定前整页虚拟回收与更长会话、真实思考暂停/续写撤销再确认、站内可信草稿/复制/滚动及切页/同文旧会话负例。上述保护有离线回归，不能把本轮短会话外推为全场景真机通过；用户最初报告的失败形态和当时版本仍未确定。
+
+## 2026-10-07 历史阅读与 Mermaid 验收
+
+完整门禁 900 个 TS/renderer、400 个 runtime 用例（0 fail/skip），独立 typecheck、仓库 verify、package 与 Xvfb smoke 通过（shell=1、sites=9、attached=9）；生产依赖审计 0 漏洞。隔离 Electron 阅读专项通过简中、繁中、英文及明暗主题，已检查截图；覆盖实际 SVG 成图、源码/完整链接值、切换、缩放、错误/缺失/复杂度回退与迟到绘制。开发态 `npm start` 的九站生产 `__AMS` 均加载共享采集卷，离线回放用九站生产 `historyTurn()` 验证只读与源码空行。
+
+用户明确授权有方向的合成测试提问后，在独立 Windows TestLab 发送共 21 条无个人信息的流程图验收题，包含九站两轮及智谱、豆包针对性补验；没有自动重发。最终完成后的 DOM：智谱、Kimi、元宝保留标记源码，Gemini 的无语言代码通过确定语法头识别，豆包源码来自 `role` / `aria-controls` 明确关联的隐藏页签；五站副本取得源码。Claude、ChatGPT、DeepSeek、千问本轮完成后的页面仅保留图形，四站保存明确的源码缺失占位，ChatGPT 副本的缺失提示已在历史页核验；这不代表其它模型或回答形态永远没有 DOM 源码。
+
+真机发现的豆包图表工具栏误判用户、透明导出水印均先 RED→GREEN 再重构建重启补验；最终豆包副本 complete，88 字符原始源码保留，103 字符副本恰为 Mermaid 围栏，无水印或操作标签，Windows 历史页实际成图、无横向溢出。智谱历史成图和两项无文本会话图标也已核验，系统浏览器接受完整合成会话地址。原站采集不点击代码/预览，不从 SVG/框架内部状态反推源码；旧缺失源码副本不回填，复杂图超过保守预算时保留源码。
+
+复制的完整值由隔离 UI 断言；Windows 可信鼠标点击后 clipboard 写入返回成功，但该环境 Electron 原生读取返回无格式、PowerShell Get-Clipboard 报 ExternalException，未核验系统粘贴内容，不把不可用的读取当成功。未执行 macOS 原生验收、五种发行包安装或真实 Drive 双设备同步。原始 DOM、日志和截图留系统临时目录，不入库；测试登录档案保留，正式档案不参与。

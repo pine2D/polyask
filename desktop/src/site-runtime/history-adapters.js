@@ -65,7 +65,8 @@
         let attachment = false; userCount = 0;
         const turns = [];
         nodes = nodes.filter(node => {
-          const isUser = node.matches('[class*="justify-end"]') || node.querySelector('[class*="justify-end"]');
+          // 正文内的图表/代码工具栏也会右对齐，只有消息壳或正文外的气泡布局可作用户证据。
+          const isUser = node.matches('[class*="justify-end"]') || node.querySelector('[class*="justify-end"]:not(.md-box-root *,[data-testid="message_text_content"] *)');
           if (!isUser) { attachment = false; return false; }
           if (!attachment) { userCount++; turns.push(node); }
           else turns[turns.length - 1] = node;

@@ -100,6 +100,8 @@
       // 文本转义：成对的 * _ [ ] ` 会被下游渲染器解析成强调/链接（真机实证 a_i 与 b_j 同段即触发）
       if (n.nodeType === 3) { out += n.nodeValue.replace(/\s+/g, " ").replace(/([\\`*_\[\]])/g, "\\$1"); continue; }
       if (n.nodeType !== 1 || drop(n)) continue;
+      const diagram = S.mdDiagram?.(n, codeText, backtickFence, pendingLang);
+      if (diagram !== null && diagram !== undefined) { out += "\n" + diagram; pendingLang = ""; continue; }
       const tag = n.tagName.toUpperCase();
       const tex = math(n);
       if (tex !== null) { out += tex; continue; }
@@ -185,6 +187,8 @@
   }
   function block(el) {
     if (drop(el)) return "";
+    const diagram = S.mdDiagram?.(el, codeText, backtickFence, pendingLang);
+    if (diagram !== null && diagram !== undefined) { pendingLang = ""; return diagram; }
     const tex = math(el);
     if (tex !== null) return tex;
     const tag = el.tagName.toUpperCase();
@@ -220,6 +224,19 @@
   S.toMarkdown = function (root) {
     if (!root) return "";
     pendingLang = ""; pad = ""; mdRoot = root;
-    return block(root).replace(/[ \t]+\n/g, "\n").replace(/^[ \t]+(`{3,})/gm, "$1").replace(/\n{3,}/g, "\n\n").trim();
+    let fence = 0, blanks = 0;
+    const lines = [];
+    for (const line of block(root).split("\n")) {
+      const m = /^[ \t]*(`{3,})(.*)$/.exec(line);
+      if (fence) {
+        lines.push(line);
+        if (m && m[1].length >= fence && !m[2].trim()) fence = 0;
+        continue;
+      }
+      const clean = line.replace(/[ \t]+$/, "");
+      if (m) { fence = m[1].length; lines.push(clean.trimStart()); blanks = 0; }
+      else if (clean || ++blanks <= 1) { lines.push(clean); if (clean) blanks = 0; }
+    }
+    return lines.join("\n").trim();
   };
 })();

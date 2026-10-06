@@ -1,33 +1,42 @@
-import type { ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
+import { parseMarkdownInline, type MarkdownToken } from './markdown-parser';
+import { MarkdownLink } from './markdown-link';
 
 export function safeMarkdownUrl(value: string): string | null {
   try {
     const url = new URL(value);
-    return ['https:', 'http:'].includes(url.protocol) ? url.href : null;
+    return ['https:', 'http:'].includes(url.protocol) && !url.username && !url.password ? url.href : null;
   } catch { return null; }
 }
 
-/** React escapes raw HTML; only explicit external-link callbacks can navigate. */
-export function markdownInline(value: string, onOpenLink?: (url: string) => void, depth = 0): ReactNode[] {
-  if (depth > 8) return [value];
-  const tokens = /(`+)([^`]*?)\1|\*\*([^*]+)\*\*|__([^_]+)__|~~([^~]+)~~|\*([^*\n]+)\*|\[([^\[\]\n]+)\]\(([^()\s]*(?:\([^()\s]*\)[^()\s]*)*)\)/g;
-  const nodes: ReactNode[] = [];
-  let end = 0;
-  for (const match of value.matchAll(tokens)) {
-    if (match.index! > end) nodes.push(value.slice(end, match.index));
-    const key = match.index;
-    const inner = (text: string) => markdownInline(text, onOpenLink, depth + 1);
-    if (match[1]) nodes.push(<code key={key}>{match[2]}</code>);
-    else if (match[3] || match[4]) nodes.push(<strong key={key}>{inner(match[3] || match[4])}</strong>);
-    else if (match[5]) nodes.push(<del key={key}>{inner(match[5])}</del>);
-    else if (match[6]) nodes.push(<em key={key}>{inner(match[6])}</em>);
-    else {
-      const url = safeMarkdownUrl(match[8]);
-      nodes.push(url && onOpenLink ? <a key={key} href={url} title={url} onClick={event => { event.preventDefault(); onOpenLink(url); }}
-        onAuxClick={event => { event.preventDefault(); if (event.button === 1) onOpenLink(url); }}>{inner(match[7])}</a> : match[0]);
+export function inlineTokens(tokens: readonly MarkdownToken[], onOpenLink?: (url: string) => void): ReactNode[] {
+  let i = 0;
+  function read(): ReactNode[] {
+    const nodes: ReactNode[] = [];
+    while (i < tokens.length) {
+      const token = tokens[i++], key = i;
+      if (token.nesting === -1) break;
+      if (token.type === 'text' || token.type === 'html_inline') nodes.push(token.content);
+      else if (token.type === 'softbreak') nodes.push('\n');
+      else if (token.type === 'hardbreak') nodes.push(<br key={key} />);
+      else if (token.type === 'code_inline') nodes.push(<code key={key}>{token.content}</code>);
+      else if (token.type === 'image') nodes.push(`[${token.content}]`);
+      else if (token.nesting === 1) {
+        const start = i, children = read();
+        if (token.type === 'link_open') {
+          const href = safeMarkdownUrl(String(token.attrGet('href') ?? ''));
+          const labelTokens = tokens.slice(start, i - 1);
+          const label = labelTokens.every(t => t.type === 'text') ? labelTokens.map(t => t.content).join('') : null;
+          nodes.push(href && onOpenLink ? <MarkdownLink key={key} url={href} label={label} onOpenLink={onOpenLink}>{children}</MarkdownLink> : <span key={key}>{children}</span>);
+        } else if (['strong', 'em', 's'].includes(token.tag)) nodes.push(createElement(token.tag === 's' ? 'del' : token.tag, { key }, children));
+        else nodes.push(...children);
+      }
     }
-    end = match.index! + match[0].length;
+    return nodes;
   }
-  if (end < value.length) nodes.push(value.slice(end));
-  return nodes;
+  return read();
+}
+
+export function markdownInline(value: string, onOpenLink?: (url: string) => void): ReactNode[] {
+  return inlineTokens(parseMarkdownInline(value), onOpenLink);
 }
