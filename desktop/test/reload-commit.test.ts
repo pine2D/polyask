@@ -182,6 +182,22 @@ test("a view's first load gets the same cap: a hung document request ends in loa
   } finally { h.window.emit("closed"); }
 });
 
+test("a hung reload of the page already on screen keeps that document ready instead of pinning load_failed", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const h = harness();
+  try {
+    const claude = h.views[0];
+    claude.mainFrame = { url: "https://claude.ai/new", origin: "https://claude.ai" };
+    h.manager.markStatus({ site: "claude", phase: "ready" });
+    assert.equal(h.manager.reload("claude"), true);
+    assert.equal(h.status("claude").phase, "loading");
+    t.mock.timers.tick(RELOAD_COMMIT_CAP_MS);
+    assert.equal(claude.calls.at(-1), "stop", "the stuck reload is still stopped at the cap");
+    assert.deepEqual({ phase: h.status("claude").phase, code: h.status("claude").code ?? null }, { phase: "ready", code: null });
+    // A first load has no committed document to keep (see the first-load test above): still load_failed.
+  } finally { h.window.emit("closed"); }
+});
+
 test("history restore and new session retire a pending reload watch before navigating", () => {
   const page = Object.assign(contents(4), { getURL: () => "https://claude.ai/chat/old", loadURL: () => new Promise<void>(() => {}) });
   const access = new SiteHistoryAccess(() => ({ webContents: page }) as never, {} as never, () => {});
@@ -251,7 +267,7 @@ test("a pending new-session / restore commit refuses reload, back/forward and si
     assert.equal(h.status("claude").code, "load_failed");
     assert.equal(h.manager.reload("claude"), true, "the user can reload after the cap");
     claude.emit("did-navigate", {}, home, 200, "OK");
-    // 3) History restore's 15s timer uses stop(); it clears the guard too.
+    // 3) A plain stop() (history restore's fallback without a view id) clears the guard too.
     void h.manager.navigate("claude", home, "commit");
     h.manager.historyAccess.stop("claude", claude.id);
     assert.equal(h.manager.reload("claude"), true);

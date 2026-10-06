@@ -19,7 +19,8 @@ export function registerQuestionHistoryIpc(options: {
     select: sites => { manager.setSurface("sites"); workspace.setSelection(sites); options.publishWorkspace(); manager.setSurface("question-history"); },
     context: site => manager.historyAccess.context(site),
     navigate: (site, url) => manager.historyAccess.navigate(site, url),
-    stop: (site, contentsId) => manager.historyAccess.stop(site, contentsId),
+    // 拿不到视图身份时退回 stop()（abandon 只认发起导航时的那个页面）。
+    abandon: (site, contentsId, target) => contentsId === undefined ? manager.historyAccess.stop(site) : manager.historyAccess.abandon(site, contentsId, target),
     beforeNavigate: async sites => { await options.flush(sites); questions.cancel(sites); }
   });
   const id = (v: unknown): string => { if (!questionIdValid(v)) throw new Error("invalid_question"); return v; };

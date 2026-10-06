@@ -7,11 +7,12 @@ import type { SiteKey } from "../shared/contracts";
 // 18 次最慢 3557ms（锁屏下的 Gemini）；2026-10-05 第 6 轮网络变慢时 ChatGPT 带 Cookie 的 HTML 约 13s 才回。
 // 原取 15s，对 13s 不足 20% 余量；现取 20s（约 1.5 倍），与新会话、历史恢复的单站上限一致：多等几秒的代价只是
 // 多看一会儿 loading，误判的代价是把一个慢但能落地的页面中止掉。视图首次加载（createView）也走这只看门。
-// 到点经 abandon（SiteHistoryAccess.abandon：stop() + 钉成 load_failed）收口，绝不留在 loading；用户可以再点重载。
+// 到点经 abandon（SiteHistoryAccess.abandon：stop() + 钉成 load_failed；旧文档就是重载目标页时保留并恢复就绪）收口，绝不留在 loading。
 export const RELOAD_COMMIT_CAP_MS = 20_000;
 
 export interface ReloadContents {
   readonly id: number;
+  readonly mainFrame?: { readonly url?: string };
   isDestroyed(): boolean;
   on(event: string, listener: (...args: any[]) => void): unknown;
   removeListener(event: string, listener: (...args: any[]) => void): unknown;
@@ -20,7 +21,7 @@ export interface ReloadContents {
 export class ReloadCommitWatch {
   private readonly pending = new Map<SiteKey, () => void>();
 
-  constructor(private readonly abandon: (site: SiteKey, contentsId: number) => void,
+  constructor(private readonly abandon: (site: SiteKey, contentsId: number, target?: string) => void,
     private readonly capMs = RELOAD_COMMIT_CAP_MS) {}
 
   // 视图管理器发起的每次导航都先替换掉上一次重载的看门：新导航（后退/前进、新会话、历史恢复）有自己的上限，
@@ -29,7 +30,8 @@ export class ReloadCommitWatch {
   // （非 ERR_ABORTED：PageLifecycle 已钉成 failed）、渲染进程退出（已钉成 crashed，到点的 abandon 会把崩溃原因
   // 改写成 load_failed）、视图销毁、或下一次 replace。
   // 提交之后 did-finish-load 迟迟不来不归这里管，那是渲染/节流问题。
-  replace(site: SiteKey, contents?: ReloadContents): void {
+  // target 默认取挂门时已提交的地址（重载就是重新请求它）；首次加载由调用方传入要加载的地址。
+  replace(site: SiteKey, contents?: ReloadContents, target = contents?.mainFrame?.url): void {
     this.pending.get(site)?.();
     if (!contents) return;
     const onCommit = () => clear();
@@ -38,7 +40,7 @@ export class ReloadCommitWatch {
     };
     const timer = setTimeout(() => {
       clear();
-      if (!contents.isDestroyed()) this.abandon(site, contents.id);
+      if (!contents.isDestroyed()) this.abandon(site, contents.id, target);
     }, this.capMs);
     const clear = () => {
       clearTimeout(timer);

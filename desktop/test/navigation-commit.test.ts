@@ -116,7 +116,7 @@ test("new session no longer holds the operation gate until every page finishes l
     const service = new WorkspaceService(database.state, database.meta, (site) => {
       if (site === "claude") return new Promise<void>(() => {}); // stuck waiting for a response
       return new Promise<void>((resolve) => commits.set(site, resolve));
-    }, { navigationCapMs: 40, context: (site) => ids[site], abandon: (site, id) => abandoned.push(`${site}:${id}`) });
+    }, { navigationCapMs: 40, context: (site) => ids[site], abandon: (site, id, target) => abandoned.push(`${site}:${id}:${target}`) });
     const gate = new OperationGate();
     const session = gate.run(() => service.newSession(["claude", "chatgpt", "kimi"]));
     await turn();
@@ -128,7 +128,7 @@ test("new session no longer holds the operation gate until every page finishes l
       { site: "chatgpt", ok: true },
       { site: "kimi", ok: true }
     ]);
-    assert.deepEqual(abandoned, ["claude:11"], "the uncommitted navigation is abandoned before the gate opens; committed sites are untouched");
+    assert.deepEqual(abandoned, ["claude:11:https://claude.ai/new"], "the uncommitted navigation is abandoned (with its target, for the keep rule) before the gate opens; committed sites are untouched");
     assert.equal(await gate.run(async () => "broadcast"), "broadcast", "the gate is free once the cap expires");
   } finally {
     database.close();
@@ -141,16 +141,34 @@ test("abandoning an uncommitted navigation stops it and pins the site as load_fa
   const calls: string[] = [];
   const contents = Object.assign(h.contents, { stop: () => { stops++; calls.push("stop"); } });
   const access = new SiteHistoryAccess(() => ({ webContents: contents }) as never, {} as never,
-    (site, abandoned) => calls.push(`${site}:${abandoned ? "failed" : "loading"}`));
+    (site, abandoned) => calls.push(`${site}:${abandoned ?? "loading"}`));
   access.abandon("claude", 99);
   assert.equal(stops, 0, "a replaced view (different contents id) is left alone");
   access.abandon("claude", 4);
   assert.deepEqual(calls, ["stop", "claude:failed"], "stop first, then mark failed so a synchronous late event cannot win");
   // sendCommand's existing guard turns the failed phase into a certain, undispatched load_failed.
   const manager = readSource("src/main/view-manager.ts");
-  assert.match(manager, /abandoned \? \{ site, phase: "failed", code: "load_failed" \}/);
+  assert.match(manager, /abandoned === "failed" \? \{ site, phase: "failed", code: "load_failed" \}/);
   assert.match(manager, /if \(phase === "failed"\) return "load_failed";/);
-  assert.match(readSource("src/main/index.ts"), /abandon: \(site, contentsId\) => managerForWorkspace\?\.historyAccess\.abandon\(site, contentsId\)/);
+  assert.match(readSource("src/main/index.ts"), /abandon: \(site, contentsId, target\) => managerForWorkspace\?\.historyAccess\.abandon\(site, contentsId, target\)/);
+});
+
+// 2026-10-06 Windows：claude.ai 带 Cookie 的 HTML 一直不回包，新会话/重载每次 20s 后钉失败，可屏幕上那份 /new 页完好可用。
+test("an abandoned navigation keeps the old document as ready only when it already is the target page", () => {
+  const frame = (url: string, origin = new URL(url).origin) => ({ url, origin });
+  const run = (mainFrame: unknown, target?: string) => {
+    const calls: string[] = [];
+    const contents = { id: 4, isDestroyed: () => false, stop: () => calls.push("stop"), mainFrame };
+    const access = new SiteHistoryAccess(() => ({ webContents: contents }) as never, {} as never, (site, outcome) => calls.push(`${site}:${outcome}`));
+    access.abandon("claude", 4, target);
+    return calls;
+  };
+  assert.deepEqual(run(frame("https://claude.ai/new"), "https://claude.ai/new"), ["stop", "claude:ready"], "already on the new-chat page: nothing to lose");
+  assert.deepEqual(run(frame("https://claude.ai/chat/abc"), "https://claude.ai/new"), ["stop", "claude:failed"], "an old conversation must never receive the next broadcast");
+  assert.deepEqual(run(frame("https://claude.ai/new", "null"), "https://claude.ai/new"), ["stop", "claude:failed"], "an error page (opaque origin) is not a usable document");
+  assert.deepEqual(run(frame("https://claude.ai/new")), ["stop", "claude:failed"], "no target, no keep");
+  assert.deepEqual(run(undefined, "https://claude.ai/new"), ["stop", "claude:failed"], "no committed document (first load)");
+  assert.deepEqual(run({ url: "", origin: "" }, ""), ["stop", "claude:failed"]);
 });
 
 test("the new-session cap keeps at least 20% margin over the slowest observed main-frame commit", () => {

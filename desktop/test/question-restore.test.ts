@@ -18,7 +18,7 @@ test("restore requires current confirmation and never dispatches a question", as
   const visited: string[] = [];
   const restore = new QuestionRestoreService(db.questions, {
     selection: () => ["claude"], select: () => {}, context: () => ({ id: 1, url }),
-    navigate: async (_site, target) => { visited.push(target); url = target; }, stop: () => {}, beforeNavigate: async () => {}
+    navigate: async (_site, target) => { visited.push(target); url = target; }, abandon: () => {}, beforeNavigate: async () => {}
   });
   try {
     const preview = restore.preview("q-a");
@@ -41,7 +41,7 @@ test('restore rechecks the confirmed view after the snapshot flush yields', asyn
   let context = { id: 1, url: 'https://claude.ai/chat/87654321' }, release!: () => void;
   const visited: string[] = [];
   const restore = new QuestionRestoreService(db.questions, {
-    selection: () => ['claude'], select: () => {}, context: () => context, stop: () => {},
+    selection: () => ['claude'], select: () => {}, context: () => context, abandon: () => {},
     navigate: async (_site, url) => { visited.push(url); }, beforeNavigate: () => new Promise<void>(r => { release = r; })
   });
   try {
@@ -56,7 +56,7 @@ test('restoring one attempt uses the workspace canonical site order', async () =
   let selected: import('../src/shared/contracts').SiteKey[] = ['kimi'];
   const restore = new QuestionRestoreService(db.questions, {
     selection: () => selected, select: () => { selected = ['claude', 'kimi']; }, context: () => ({ id: 1, url: 'https://claude.ai/' }),
-    navigate: async () => {}, stop: () => {}, beforeNavigate: async () => {}
+    navigate: async () => {}, abandon: () => {}, beforeNavigate: async () => {}
   });
   try { assert.equal((await restore.restore(restore.preview('q-a', questionAnswerFixture().id).token, true))[0].state, 'opened'); }
   finally { db.close(); }
@@ -82,5 +82,39 @@ test("Doubao provisional local_ routes are never recorded as conversation URLs",
     const stored = db.questions.getAnswer(id);
     assert.ok(stored && !("deletedAt" in stored));
     assert.equal(stored.conversationUrl, null);
+  } finally { db.close(); }
+});
+
+// 2026-10-05 Windows：恢复超时只 stop()，Chromium 只发 did-stop-loading，站点停在 loading，视图里却还是旧会话、群发照常打进去。
+// 超时与用户取消都要和新会话超时一样 abandon（钉 load_failed），由视图身份限定到发起导航时的那个页面。
+test("a restore that never commits is abandoned (pinned load_failed) at the per-site cap, and so is a cancel in flight", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"] });
+  const db = DesktopDatabase.open(":memory:");
+  db.questions.put(questionFixture());
+  db.questions.putAnswer({ ...questionAnswerFixture(), conversationUrl: "https://claude.ai/chat/12345678" });
+  const abandoned: string[] = [];
+  let navigations = 0;
+  const restore = new QuestionRestoreService(db.questions, {
+    selection: () => ["claude"], select: () => {}, context: () => ({ id: 7, url: "https://claude.ai/chat/87654321" }),
+    navigate: () => { navigations++; return new Promise<void>(() => {}); },
+    abandon: (site, contentsId) => { abandoned.push(`${site}:${contentsId}`); }, beforeNavigate: async () => {}
+  });
+  const until = async (condition: () => boolean) => { for (let i = 0; i < 50 && !condition(); i++) await new Promise<void>((r) => setImmediate(r)); };
+  try {
+    const timedOut = restore.restore(restore.preview("q-a").token, true);
+    await until(() => navigations === 1);
+    t.mock.timers.tick(19_999);
+    assert.deepEqual(abandoned, []);
+    t.mock.timers.tick(1);
+    assert.equal((await timedOut)[0].state, "timeout");
+    assert.deepEqual(abandoned, ["claude:7"]);
+
+    const cancelled = restore.restore(restore.preview("q-a").token, true);
+    await until(() => navigations === 2);
+    restore.cancel();
+    assert.deepEqual(abandoned, ["claude:7", "claude:7"], "cancel abandons the site still waiting to commit");
+    t.mock.timers.tick(20_000);
+    assert.equal((await cancelled)[0].state, "cancelled");
+    assert.equal(abandoned.length, 2, "the cap does not abandon a second time after cancel");
   } finally { db.close(); }
 });

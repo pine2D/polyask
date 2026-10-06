@@ -13,13 +13,15 @@ interface RestoreOptions {
   select: (sites: readonly SiteKey[]) => void;
   context: (site: SiteKey) => { id: number; url: string } | null;
   navigate: (site: SiteKey, url: string) => Promise<void>;
-  stop: (site: SiteKey, contentsId?: number) => void;
+  // 中止仍未提交的恢复导航并把该站钉成 load_failed（与新会话超时同一路径）。只 stop() 时 Chromium 只发
+  // did-stop-loading，站点停在 loading、视图里却还是旧会话，群发照常打进去（2026-10-05 Windows 真机）。
+  abandon: (site: SiteKey, contentsId?: number, target?: string) => void;
   beforeNavigate: (sites: readonly SiteKey[]) => Promise<void>;
 }
 interface Plan { questionId: string; answerId?: string; signature: string; needsConfirmation: boolean }
 export class QuestionRestoreService {
   private readonly plans = new Map<string, Plan>();
-  private readonly inFlight = new Map<SiteKey, number | undefined>();
+  private readonly inFlight = new Map<SiteKey, { id?: number; url?: string }>();
   private epoch = 0;
   constructor(private readonly repository: QuestionRepository, private readonly options: RestoreOptions) {}
   private describe(questionId: string, answerId?: string) {
@@ -81,10 +83,10 @@ export class QuestionRestoreService {
         if (!target.url) { finish("missing_url"); continue; }
         if (this.options.context(target.site)?.url === target.url) { finish("already_open"); continue; }
         let timer: ReturnType<typeof setTimeout> | undefined;
-        this.inFlight.set(target.site, context?.id);
+        this.inFlight.set(target.site, { id: context?.id, url: target.url ?? undefined });
         try {
           const timeout = new Promise<never>((_, reject) => {
-            timer = setTimeout(() => { this.options.stop(target.site, context?.id); reject(new Error("timeout")); }, Math.min(RESTORE_SITE_CAP_MS, Math.max(0, deadline - Date.now())));
+            timer = setTimeout(() => { if (current()) this.options.abandon(target.site, context?.id, target.url ?? undefined); reject(new Error("timeout")); }, Math.min(RESTORE_SITE_CAP_MS, Math.max(0, deadline - Date.now())));
           });
           await Promise.race([this.options.navigate(target.site, target.url), timeout]);
           finish(current() && this.options.context(target.site)?.id === context?.id ? "opened" : "cancelled");
@@ -98,7 +100,7 @@ export class QuestionRestoreService {
   cancel(): void {
     this.epoch++;
     this.plans.clear();
-    for (const [site, contentsId] of this.inFlight) this.options.stop(site, contentsId);
+    for (const [site, pending] of this.inFlight) this.options.abandon(site, pending.id, pending.url);
     this.inFlight.clear();
   }
 }

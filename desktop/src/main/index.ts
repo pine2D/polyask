@@ -215,7 +215,7 @@ async function createWindow(): Promise<void> {
     {
       onNewSession: () => collectionForWorkspace?.clearRun(),
       context: (site) => managerForWorkspace?.historyAccess.context(site)?.id,
-      abandon: (site, contentsId) => managerForWorkspace?.historyAccess.abandon(site, contentsId)
+      abandon: (site, contentsId, target) => managerForWorkspace?.historyAccess.abandon(site, contentsId, target)
     }
   );
   const workspaceState = workspace.getState();

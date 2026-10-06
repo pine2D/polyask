@@ -51,7 +51,7 @@ interface WorkspaceServiceOptions {
   readonly navigationCapMs?: number;
   // 导航发起前取该站视图身份；到点时据此中止导航（视图已换掉则不动）。
   readonly context?: (site: SiteKey) => number | undefined;
-  readonly abandon?: (site: SiteKey, contentsId: number) => void;
+  readonly abandon?: (site: SiteKey, contentsId: number, target: string) => void;
 }
 
 type NavigateSite = (site: SiteKey, url: string) => void | Promise<void>;
@@ -88,7 +88,7 @@ export class WorkspaceService {
   private readonly onNewSession: (sites: readonly SiteKey[]) => void;
   private readonly navigationCapMs: number;
   private readonly context: (site: SiteKey) => number | undefined;
-  private readonly abandon: (site: SiteKey, contentsId: number) => void;
+  private readonly abandon: (site: SiteKey, contentsId: number, target: string) => void;
 
   constructor(
     private readonly state: StateRepository,
@@ -171,7 +171,7 @@ export class WorkspaceService {
       if (!definition) throw new Error("unknown_site");
       const contentsId = this.context(site);
       return this.capped(() => this.navigate(site, definition.url), () => {
-        if (contentsId !== undefined) this.abandon(site, contentsId);
+        if (contentsId !== undefined) this.abandon(site, contentsId, definition.url);
       });
     }));
     return sites.map((site, index) => settled[index].status === "fulfilled"

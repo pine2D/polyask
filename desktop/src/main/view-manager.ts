@@ -340,7 +340,7 @@ export class ViewManager {
   readonly historyAccess = new SiteHistoryAccess(site => this.views.get(site), this.commands, (site, abandoned) => {
     this.invalidateGeneration(site);
     this.runStatus.delete(site);
-    this.updatePageStatus(abandoned ? { site, phase: "failed", code: "load_failed" } : { site, phase: "loading" });
+    this.updatePageStatus(abandoned === "failed" ? { site, phase: "failed", code: "load_failed" } : { site, phase: abandoned ?? "loading" });
   }, () => this.layout());
   async navigate(site: SiteKey, url: string, until: "load" | "commit" = "load"): Promise<void> { await this.historyAccess.navigate(site, url, true, until); }
 
