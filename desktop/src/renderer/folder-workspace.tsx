@@ -23,7 +23,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [selected, setSelected] = useState<FolderContent | null>(null);
   const [detailRevision, setDetailRevision] = useState(0);
   const [newSource, setNewSource] = useState<ArchiveRecord | null>(null);
-  const [membership, setMembership] = useState<FolderTarget | null>(null);
+  const [membership, setMembership] = useState<(FolderTarget & { title: string }) | null>(null);
   const [tags, setTags] = useState<readonly string[]>([]);
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -74,7 +74,12 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     if (!record) { setFocused(false); setPane('list'); }
     setNewSource(null); setSelected(record ? { kind: 'decision', record } : null); refresh();
   };
-  const organize = () => navigate(() => { if (selected) { setDetailRevision(value => value + 1); setMembership({ kind: selected.kind, id: selected.record.id }); } });
+  const organize = () => navigate(() => { if (selected) { setDetailRevision(value => value + 1); setMembership({ kind: selected.kind, id: selected.record.id, title: selected.kind === 'decision' ? selected.record.title : selected.record.task || selected.record.text }); } });
+  const createdFolder = (folder: TaskFolder) => {
+    epoch.current++;
+    setFolders(items => [...items.filter(item => item.id !== folder.id), folder]);
+    refresh();
+  };
   const folderName = folders.find(folder => folder.id === filters.folderId)?.name
     ?? (filters.folderId === '__unfiled__' ? copy.folderUnfiled : copy.folderAll);
   return <section className="folder-workspace library" data-focused={focused} data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
@@ -100,6 +105,6 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       </div>
     </div>
     {message ? <div className="archive-status" role="status">{message}<button onClick={refresh}>{copy.retryShellLoad}</button></div> : null}
-    {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={membership} folders={folders} onCancel={() => setMembership(null)} onSaved={() => { setMembership(null); refresh(); }} /> : null}
+    {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={{ kind: membership.kind, id: membership.id }} targetTitle={membership.title} folders={folders} onCreated={createdFolder} onCancel={() => setMembership(null)} onSaved={() => { setMembership(null); refresh(); }} /> : null}
   </section>;
 }
