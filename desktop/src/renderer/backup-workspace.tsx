@@ -4,9 +4,13 @@ import type { BackupPreview } from "../shared/backup";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import { formatDateTime } from "../shared/format";
 import { ipcErrorCode } from "../shared/ipc-error";
-import { BackupComparison, backupKind, eligibleBackupSelection, initialBackupSelection } from "./backup-comparison";
+import { BackupComparison, backupKind, initialBackupSelection } from "./backup-comparison";
 import { registerDecisionNavigationGuard } from "./decision-navigation";
 import { shell } from "./shell-api";
+import { focusableControls } from "./focusable-controls";
+import { BackupDependencies } from './backup-dependencies';
+import { backupSkipCounts, visibleBackupSelection } from './backup-selection';
+import { useBackupSelectionPreview } from './use-backup-selection-preview';
 
 export function backupError(copy: DesktopCopy, error: unknown): string {
   const code = ipcErrorCode(error);
@@ -22,25 +26,29 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
   const [selected, setSelected] = useState(() => initialBackupSelection(preview.items));
   const [activeKey, setActiveKey] = useState(preview.items[0]?.key);
   const [filter, setFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState('all');
   const [confirming, setConfirming] = useState(false);
   const [applying, setApplying] = useState(false);
   const [error, setError] = useState("");
   const panel = useRef<HTMLDivElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
   const locked = useRef(false);
+  const locating = useRef<string | null>(null);
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
   const confirmingRef = useRef(confirming); confirmingRef.current = confirming;
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancel.current?.focus();
     const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && (event.isComposing || event.keyCode === 229)) { event.stopImmediatePropagation(); return; }
+      if (panel.current?.querySelector('[aria-haspopup="menu"][aria-expanded="true"]')) return;
       if (event.key === "Escape") {
         event.preventDefault(); event.stopImmediatePropagation();
         if (!locked.current) { if (confirmingRef.current) setConfirming(false); else onCloseRef.current(); }
       }
       if (event.key !== "Tab") return;
-      const controls = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled), [tabindex="0"]');
-      if (!controls?.length) { event.preventDefault(); panel.current?.focus(); return; }
+      const controls = panel.current ? focusableControls(panel.current) : [];
+      if (!controls.length) { event.preventDefault(); panel.current?.focus(); return; }
       const first = controls[0], last = controls[controls.length - 1];
       const inside = document.activeElement instanceof Node && panel.current?.contains(document.activeElement);
       if (!inside || (event.shiftKey && document.activeElement === first)) { event.preventDefault(); (event.shiftKey ? last : first).focus(); }
@@ -54,12 +62,24 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
     onCloseRef.current(); action();
   }), []);
   useEffect(() => { cancel.current?.focus(); }, [confirming]);
-  const visible = preview.items.filter((item) => filter === "all" || item.kind === filter);
+  const visible = preview.items.filter((item) => (filter === "all" || item.kind === filter)
+    && (statusFilter === 'all' || (statusFilter === 'blocked' ? item.blocked : item.status === statusFilter)));
   const active = visible.find((item) => item.key === activeKey) ?? visible[0];
-  const eligible = eligibleBackupSelection(preview.items, selected);
-  const summary = formatCopy(copy.backupSummary, { count: eligible.size, skipped: preview.items.length - eligible.size });
+  const counts = useBackupSelectionPreview(preview, selected);
+  const eligible = counts.eligible;
+  const countError = counts.error ? backupError(copy, counts.error) : '';
+  const bulkTargets = visible.filter(item => !item.blocked && (item.status === 'new' || item.status === 'conflict'));
+  const skipReasons = formatCopy(copy.backupSkipReasons, backupSkipCounts(preview.items, selected, eligible));
+  const summary = counts.pending ? copy.backupCalculating : formatCopy(copy.backupSummary, { count: eligible.size, skipped: preview.items.length - eligible.size });
+  const locate = (key: string) => { locating.current = key; setFilter('all'); setStatusFilter('all'); setActiveKey(key); };
+  useEffect(() => {
+    if (!locating.current || active?.key !== locating.current) return;
+    locating.current = null;
+    panel.current?.querySelector<HTMLElement>('.backup-comparison h3')?.focus();
+    panel.current?.querySelector<HTMLElement>('.backup-list [aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
+  }, [active?.key, filter, statusFilter]);
   const apply = async () => {
-    if (locked.current) return;
+    if (locked.current || counts.pending || counts.error || !eligible.size) return;
     locked.current = true; setApplying(true); setError("");
     try {
       const result = await shell.applyBackup(preview.token, [...selected]);
@@ -70,14 +90,22 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
   return createPortal(<div className="backup-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) { event.preventDefault(); panel.current?.focus(); } }}>
     <div className="backup-workspace" role="dialog" aria-modal="true" aria-labelledby="backup-review-title" tabIndex={-1} ref={panel} aria-busy={applying}>
       <header className="backup-header"><div><h2 id="backup-review-title">{confirming ? copy.backupConfirmTitle : copy.backupReview}</h2>{preview.filename ? <p className="backup-filename">{preview.filename}</p> : null}<p>{formatCopy(copy.backupDate, { date: formatDateTime(preview.exportedAt, locale) })}</p></div><button type="button" disabled={applying} ref={cancel} onClick={() => confirming ? setConfirming(false) : onClose()}>{copy.cancel}</button></header>
-      {error ? <p role="alert" className="backup-error">{error}</p> : null}
-      {confirming ? <section className="backup-summary"><h3>{summary}</h3><p>{copy.backupSyncNotice}</p><ul>{preview.items.filter((item) => eligible.has(item.key)).map((item) => <li key={item.key}>{backupKind(copy, item.kind)} · {item.title}{item.status === "deleted" ? ` · ${copy.backupRestoreDeleted}` : ""}</li>)}</ul></section> : <>
-        <nav className="backup-filters" aria-label={copy.backupAll}>{["all", ...new Set(preview.items.map((item) => item.kind))].map((kind) => <button key={kind} type="button" aria-pressed={filter === kind} onClick={() => setFilter(kind)}>{kind === "all" ? copy.backupAll : backupKind(copy, kind)}</button>)}</nav>
-        <div className="backup-body"><nav className="backup-list" aria-label={copy.backupReview}>{visible.map((item) => <button type="button" key={item.key} aria-current={active?.key === item.key ? "true" : undefined} onClick={() => setActiveKey(item.key)}><strong>{item.title}</strong><span>{backupKind(copy, item.kind)} · {item.status === "new" ? copy.backupNew : item.status === "same" ? copy.backupSame : item.status === "conflict" ? copy.backupConflict : copy.backupDeleted}</span><small>{item.note === "folder_reused" && selected.has(item.key) ? copy.backupReuseFolder : eligible.has(item.key) ? copy.backupInclude : item.status === "conflict" ? copy.backupKeepLocal : copy.backupSkipped}</small></button>)}</nav>
-          {active ? <BackupComparison copy={copy} item={active} selected={selected.has(active.key)} onSelect={(value) => setSelected((before) => { const next = new Set(before); if (value) next.add(active.key); else next.delete(active.key); return next; })} /> : <p>{copy.backupEmpty}</p>}
+      {error || countError ? <p role="alert" className="backup-error">{error || countError}</p> : null}
+      {confirming ? <section className="backup-summary"><h3>{summary}</h3><p>{copy.backupSyncNotice}</p><p>{skipReasons}</p><ul>{preview.items.filter((item) => eligible.has(item.key)).map((item) => <li key={item.key}>{backupKind(copy, item.kind)} · {item.title}{item.status === "deleted" ? ` · ${copy.backupRestoreDeleted}` : ""}</li>)}</ul></section> : <>
+        <div className="backup-filters"><label>{copy.backupType}<select aria-label={copy.backupType} value={filter} onChange={event => setFilter(event.target.value)}>{['all', ...new Set(preview.items.map(item => item.kind))].map(kind => <option key={kind} value={kind}>{kind === 'all' ? copy.backupAll : backupKind(copy, kind)}</option>)}</select></label>
+          <nav aria-label={copy.backupStatusFilter}>{[['all', copy.backupAll], ['conflict', copy.backupConflictsOnly], ['new', copy.backupNew], ['deleted', copy.backupDeleted], ['same', copy.backupSame], ['blocked', copy.backupDependencyBlocked]].map(([status, label]) => <button key={status} type="button" aria-pressed={statusFilter === status} onClick={() => setStatusFilter(status)}>{label}</button>)}</nav>
+        </div>
+        <div className="backup-bulk"><p role="status">{formatCopy(copy.backupVisibleScope, { count: visible.length, selected: visible.filter(item => eligible.has(item.key)).length })}</p><div>
+          <button type="button" disabled={!bulkTargets.length} onClick={() => setSelected(before => visibleBackupSelection(visible, before, true))}>{formatCopy(copy.backupSelectVisible, { count: bulkTargets.length })}</button>
+          <button type="button" disabled={!visible.some(item => selected.has(item.key))} onClick={() => setSelected(before => visibleBackupSelection(visible, before, false))}>{formatCopy(copy.backupClearVisible, { count: visible.length })}</button>
+        </div><p className="backup-muted">{copy.backupBulkNotice}</p></div>
+        <div className="backup-body"><nav className="backup-list" aria-label={copy.backupReview}>{visible.map((item) => <button type="button" key={item.key} data-backup-key={item.key} aria-current={active?.key === item.key ? "true" : undefined} onClick={() => setActiveKey(item.key)}><strong>{item.title}</strong><span>{backupKind(copy, item.kind)} · {item.status === "new" ? copy.backupNew : item.status === "same" ? copy.backupSame : item.status === "conflict" ? copy.backupConflict : copy.backupDeleted}</span><small>{counts.pending && selected.has(item.key) ? copy.backupCalculating : eligible.has(item.key) ? copy.backupInclude : item.note === "folder_reused" && selected.has(item.key) ? copy.backupReuseFolder : item.reusesIdentity && selected.has(item.key) ? copy.backupAlreadyRestored : selected.has(item.key) && !item.blocked && item.requires?.length ? copy.backupWaitDependency : item.status === "conflict" ? copy.backupKeepLocal : copy.backupSkipped}</small></button>)}</nav>
+          {active ? <BackupComparison copy={copy} locale={locale} item={active} selected={selected.has(active.key)} onSelect={(value) => setSelected((before) => { const next = new Set(before); if (value) next.add(active.key); else next.delete(active.key); return next; })}>
+            <BackupDependencies item={active} items={preview.items} selected={selected} eligible={eligible} copy={copy} onLocate={locate} onAdd={keys => setSelected(before => new Set([...before, ...keys]))} />
+          </BackupComparison> : <p>{copy.backupEmpty}</p>}
         </div>
       </>}
-      <footer className="backup-footer"><div><strong>{summary}</strong><p>{copy.backupSyncNotice}</p></div><button type="button" className="primary" disabled={applying || eligible.size === 0 || !!error} onClick={() => confirming ? void apply() : setConfirming(true)}>{applying ? copy.backupApplying : confirming ? copy.backupConfirm : copy.backupReviewSummary}</button></footer>
+      <footer className="backup-footer"><div><strong aria-live="polite">{summary}</strong><p>{copy.backupSyncNotice}</p></div><button type="button" className="primary" disabled={applying || counts.pending || eligible.size === 0 || !!error || !!countError} onClick={() => confirming ? void apply() : setConfirming(true)}>{applying ? copy.backupApplying : confirming ? copy.backupConfirm : copy.backupReviewSummary}</button></footer>
     </div>
   </div>, document.body);
 }

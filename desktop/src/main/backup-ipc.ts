@@ -4,10 +4,16 @@ import type { BackupService } from "./backup-service";
 import { readBackupFile, writeBackupFile } from "./backup-files";
 
 interface BackupIpcEvent {readonly sender:Electron.WebContents;readonly senderFrame:Electron.WebFrameMain|null}
-const CHANNELS=["polyask:backup-export","polyask:backup-preview","polyask:backup-apply","polyask:backup-cancel"] as const;
+const CHANNELS=["polyask:backup-export","polyask:backup-preview","polyask:backup-apply","polyask:backup-cancel","polyask:backup-selection-preview"] as const;
 const CODES=new Set(["backup_invalid","backup_version","backup_stale","backup_selection","backup_missing","backup_too_large",
   "backup_read_failed","backup_write_failed","backup_dependency","backup_busy","invalid_request"]);
 const token=(v:unknown):v is string=>typeof v==="string"&&v.length>0&&v.length<=128;
+function selection(value: unknown): { token: string; selectedKeys: string[] } {
+  if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("invalid_request");
+  const v=value as {token?:unknown;selectedKeys?:unknown};
+  if(!token(v.token)||!Array.isArray(v.selectedKeys)||v.selectedKeys.length>20_000||v.selectedKeys.some(k=>typeof k!=="string"||k.length>1024))throw new Error("invalid_request");
+  return { token: v.token, selectedKeys: v.selectedKeys };
+}
 
 export function registerBackupIpc(options:{readonly window:BrowserWindow;readonly backup:BackupService;
   readonly trusted:(event:BackupIpcEvent)=>boolean;readonly afterApply:()=>void}):()=>void {
@@ -36,9 +42,7 @@ export function registerBackupIpc(options:{readonly window:BrowserWindow;readonl
     return { ...options.backup.preview(document), filename: basename(result.filePaths[0]) };
   });
   handle(CHANNELS[2],value=>{
-    if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("invalid_request");
-    const v=value as {token?:unknown;selectedKeys?:unknown};
-    if(!token(v.token)||!Array.isArray(v.selectedKeys)||v.selectedKeys.length>20_000||v.selectedKeys.some(k=>typeof k!=="string"||k.length>1024))throw new Error("invalid_request");
+    const v=selection(value);
     const result=options.backup.apply(v.token,v.selectedKeys);
     // Committed data must not be reported as a failed import if view refresh fails.
     try {options.afterApply();}catch{console.warn("backup_refresh_failed");}
@@ -47,6 +51,10 @@ export function registerBackupIpc(options:{readonly window:BrowserWindow;readonl
   handle(CHANNELS[3],value=>{
     if(!token(value))throw new Error("invalid_request");
     options.backup.cancel(value);
+  });
+  handle(CHANNELS[4],value=>{
+    const v=selection(value);
+    return options.backup.previewSelection(v.token,v.selectedKeys);
   });
   return ()=>{disposed=true;for(const channel of CHANNELS)ipcMain.removeHandler(channel);};
 }

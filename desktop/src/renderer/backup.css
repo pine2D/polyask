@@ -3,13 +3,21 @@
 .backup-workspace button { font: inherit; color: inherit; background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; cursor: pointer; }
 .backup-workspace button:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
 .backup-workspace button:disabled { opacity: .45; cursor: default; }
-.backup-workspace :is(button,input):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.backup-workspace :is(button,input,select,summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .backup-header, .backup-footer { padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; flex-shrink: 0; }
 .backup-header { border-bottom: 1px solid var(--border); }
 .backup-header h2, .backup-comparison h3 { margin: 0 0 6px; }
 .backup-header p, .backup-footer p { color: var(--muted); margin: 5px 0 0; font-size: 12px; line-height: 1.6; }
 .backup-filters { display: flex; gap: 6px; padding: 12px 24px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
 .backup-filters button { font-size: 12px; padding: 6px 12px; border-color: transparent; }
+.backup-filters label { display: flex; gap: 8px; align-items: center; font-size: 12px; }
+.backup-filters select { font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 6px; max-width: 200px; }
+.backup-filters nav { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.backup-bulk { padding: 10px 24px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.backup-bulk > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.backup-bulk p { margin: 0 0 8px; font-size: 12px; line-height: 1.6; }
+.backup-bulk > p:last-child { margin: 8px 0 0; }
+.backup-bulk button { font-size: 12px; padding: 7px 10px; }
 .backup-workspace [aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
 .backup-body { display: grid; grid-template-columns: 250px minmax(0, 1fr); flex: 1; min-height: 0; }
 .backup-list { overflow: auto; padding: 12px; border-right: 1px solid var(--border); }
@@ -30,6 +38,18 @@
 .backup-versions h4 { margin: 0 0 16px; color: var(--muted); font-size: 12px; }
 .backup-data { margin: 0; font-size: 13px; }
 .backup-data > div { margin-bottom: 12px; }
+.backup-data > div[data-changed="true"] { border-left: 3px solid var(--accent); padding-left: 10px; }
+.backup-difference-count { font-size: 12px; color: var(--accent); }
+.backup-dependencies { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 0 0 16px; }
+.backup-dependencies h4 { font-size: 13px; margin: 0 0 8px; }
+.backup-dependencies ul { list-style: none; padding: 0; margin: 0; }
+.backup-dependencies li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; font-size: 12px; }
+.backup-dependencies li span, .backup-dependencies p { color: var(--muted); font-size: 12px; line-height: 1.6; }
+.backup-dependencies button { font-size: 12px; padding: 6px 8px; text-align: left; overflow-wrap: anywhere; }
+.backup-full-versions, .backup-raw-data { margin-top: 16px; }
+.backup-full-versions summary, .backup-raw-data summary { cursor: pointer; padding: 8px 0; font-size: 12px; }
+.backup-complete-versions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 12px 0; }
+.backup-raw-data pre { white-space: pre-wrap; overflow-wrap: anywhere; padding: 12px; background: var(--accent-soft); font-size: 12px; line-height: 1.6; }
 .backup-data dt { font-size: 11px; color: var(--muted); margin-bottom: 4px; overflow-wrap: anywhere; }
 .backup-data dd { margin: 0; }
 .backup-value { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; margin: 0; }
@@ -43,3 +63,4 @@
 .backup-summary li { padding: 8px 0; overflow-wrap: anywhere; }
 .backup-error { margin: 12px 24px; color: var(--danger-ink); }
 @media (max-width: 850px) { .backup-scrim { padding: 10px; } .backup-body { grid-template-columns: 190px minmax(0, 1fr); } .backup-comparison { padding: 16px; } .backup-versions { grid-template-columns: 1fr; } .backup-footer { gap: 12px; padding: 14px; } }
+@media (max-width: 850px) { .backup-complete-versions { grid-template-columns: 1fr; } .backup-bulk, .backup-filters { padding: 10px 14px; } }

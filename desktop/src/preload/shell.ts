@@ -1,6 +1,6 @@
 import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
 import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
-import type { BackupPreview, BackupApplyResult } from "../shared/backup";
+import type { BackupPreview, BackupApplyResult, BackupSelectionPreview } from "../shared/backup";
 import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
 import { contextBridge, ipcRenderer } from "electron";
@@ -59,6 +59,7 @@ export interface PolyAskDesktopApi {
   collectAnswers(request: CollectionRequest): Promise<CollectedAnswer[]>;
   exportBackup(): Promise<boolean>;
   previewBackup(): Promise<BackupPreview | null>;
+  previewBackupSelection(token: string, selectedKeys: readonly string[]): Promise<BackupSelectionPreview>;
   applyBackup(token: string, selectedKeys: readonly string[]): Promise<BackupApplyResult>;
   cancelBackup(token: string): Promise<void>;
   listFolders(): Promise<TaskFolder[]>;
@@ -156,6 +157,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   collectAnswers: (request: CollectionRequest) => invoke("polyask:collect", request),
   exportBackup: () => invoke("polyask:backup-export"),
   previewBackup: () => invoke("polyask:backup-preview"),
+  previewBackupSelection: (token: string, selectedKeys: readonly string[]) => invoke("polyask:backup-selection-preview", { token, selectedKeys }),
   applyBackup: (token: string, selectedKeys: readonly string[]) => invoke("polyask:backup-apply", { token, selectedKeys }),
   cancelBackup: (token: string) => invoke("polyask:backup-cancel", token),
   listFolders: () => invoke("polyask:folder-list"),

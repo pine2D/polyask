@@ -25,6 +25,9 @@ export interface BackupPreviewItem {
   readonly note?: BackupNote;
   readonly blocked?: boolean;
   readonly requires?: readonly string[];
+  /** Read-only preview hints; never persisted or included in exported documents. */
+  readonly source?: { readonly key: string; readonly title: string; readonly available: boolean };
+  readonly reusesIdentity?: boolean;
 }
 export interface BackupPreview {
   readonly token: string;
@@ -35,4 +38,7 @@ export interface BackupPreview {
 export interface BackupApplyResult {
   readonly imported: number;
   readonly skipped: number;
+}
+export interface BackupSelectionPreview extends BackupApplyResult {
+  readonly keys: readonly string[];
 }

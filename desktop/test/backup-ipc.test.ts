@@ -8,7 +8,7 @@ import * as path from "node:path";
 test("backup IPC uses native paths only, guards trust, handles cancel, and publishes after apply",async()=>{
   const handlers=new Map<string,(event:unknown,value?:unknown)=>Promise<unknown>>();
   const exported={exports:{} as {registerBackupIpc:(options:unknown)=>()=>void}};
-  let cancelled=true,reads=0,writes=0,applies=0,published=0;
+  let cancelled=true,reads=0,writes=0,applies=0,published=0,counts=0;
   let waitForOpen: Promise<void> | null = null;
   const code=transformSync(readSource("src/main/backup-ipc.ts"),{loader:"ts",format:"cjs"}).code;
   runInNewContext(code,{module:exported,exports:exported.exports,Date,require:(name:string)=>{
@@ -20,9 +20,10 @@ test("backup IPC uses native paths only, guards trust, handles cancel, and publi
     assert.equal(name,"./backup-files");
     return {readBackupFile:async(path:string)=>{assert.equal(path,"/chosen/backup.json");reads++;return {valid:true};},writeBackupFile:async(path:string)=>{assert.equal(path,"/chosen/export.json");writes++;}};
   }});
-  const backup={export:()=>({format:"polyask-backup"}),preview:()=>({token:"preview"}),apply:()=>{applies++;return {imported:1,skipped:0};},cancel:()=>{}};
+  const backup={export:()=>({format:"polyask-backup"}),preview:()=>({token:"preview"}),apply:()=>{applies++;return {imported:1,skipped:0};},cancel:()=>{},
+    previewSelection:(token:string,keys:string[])=>{assert.equal(token,'preview');assert.deepEqual(Array.from(keys),['archive:a']);counts++;return {imported:1,skipped:0,keys};}};
   const dispose=exported.exports.registerBackupIpc({window:{},backup,trusted:(e:unknown)=>e===true,afterApply:()=>{published++;}});
-  assert.equal(handlers.size,4);
+  assert.equal(handlers.size,5);
   for(const fn of handlers.values())await assert.rejects(fn(false,{}),/untrusted_sender/);
   assert.equal(await handlers.get("polyask:backup-preview")!(true,{path:"/untrusted"}),null);
   assert.equal(await handlers.get("polyask:backup-export")!(true),false);
@@ -33,6 +34,10 @@ test("backup IPC uses native paths only, guards trust, handles cancel, and publi
   assert.equal(await handlers.get("polyask:backup-export")!(true),true);
   assert.equal(reads+writes,2);
   await assert.rejects(handlers.get("polyask:backup-apply")!(true,{token:[],selectedKeys:[]}),/invalid_request/);
+  for(const invalid of [null,[],{token:[],selectedKeys:[]},{token:'preview',selectedKeys:'archive:a'},{token:'preview',selectedKeys:[{}]}])
+    await assert.rejects(handlers.get('polyask:backup-selection-preview')!(true,invalid),/invalid_request/);
+  const count=await handlers.get('polyask:backup-selection-preview')!(true,{token:'preview',selectedKeys:['archive:a']}) as any;
+  assert.equal(count.imported,1);assert.equal(counts,1);assert.equal(applies+published,0,'counting cannot restore or publish');
   await handlers.get("polyask:backup-apply")!(true,{token:"preview",selectedKeys:["archive:a"]});
   assert.equal(applies,1);assert.equal(published,1);
   let resolveOpen!: () => void;
