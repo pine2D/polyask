@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.14.0] - 2026-10-07
+
+验收范围：独立 Windows TestLab 的九站合成问答中，智谱、Kimi、元宝、Gemini、豆包取得 Mermaid 源码；Claude、ChatGPT、DeepSeek、千问本次完成态页面只保留图像，副本记录源码缺失提示。智谱、豆包历史图表预览及系统浏览器打开会话已实测；通用阅读界面通过简中、繁中、英文检查。
+
+验收限制：旧副本未保存的 Mermaid 源码不会自动回填，复杂图表超出限额时保留源码并提示。Windows 系统剪贴板粘贴回读、五种发行包的原生安装、真实 Drive 双设备同步与 Google Cloud 指标未在本轮核验；复制内容的完整性已通过界面断言检查。
+
 ### 新增
 
 - 提问历史的当前回答旁新增图标按钮，可复制该次对话链接，或在系统浏览器打开原会话；切换站点、尝试后使用对应地址。
@@ -1095,7 +1101,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.13.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/pine2D/polyask/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/pine2D/polyask/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/pine2D/polyask/compare/v1.11.2...v1.12.0
 [1.11.2]: https://github.com/pine2D/polyask/compare/v1.11.1...v1.11.2
