@@ -186,7 +186,7 @@ test("Doubao level one reads only the single message text container of the user 
     // 正文容器之外的同节点内容（时间戳、发送状态位）不进用户文本。
     user.insertAdjacentHTML("beforeend", '<div data-send-message-status="true"><time>今天 16:20</time></div>');
     const turn = run.adapter.historyTurn({ method: "selector" });
-    assert.equal(turn.user, user);
+    assert.equal((turn.user) === (user), true);
     assert.equal(run.S.history.normalize(turn.text), run.S.history.normalize(PROMPT));
   } finally { run.close(); }
 });

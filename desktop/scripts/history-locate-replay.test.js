@@ -40,7 +40,7 @@ const KIMI_HOME = { host: "www.kimi.com", path: "/" };
 
 test("selector drift: an empty conversation's first turn is recovered by the unique prompt anchor", () =>
   withRun(page(""), KIMI_HOME, async (run) => {
-    assert.equal(run.adapter.historyTurn().user, null, "第 ① 级选择器在漂移页面上必须零命中，用例才有意义");
+    assert.equal((run.adapter.historyTurn().user) === (null), true, "第 ① 级选择器在漂移页面上必须零命中，用例才有意义");
     const snapshot = await submit(run, turnHtml(PROMPT, "Paris"));
     assert.equal(snapshot.owned, true);
     assert.equal(snapshot.locate, "anchor");
@@ -94,7 +94,7 @@ test("multi-line prompts anchor on the smallest common ancestor of every line", 
     const snapshot = await submit(run, user + answer, { prompt });
     assert.equal(snapshot.owned, true);
     assert.equal(snapshot.text, "Joined");
-    assert.equal(run.adapter.historyTurn({ method: "anchor", anchor: true, text: prompt }).user, run.document.querySelector(".lines"));
+    assert.equal((run.adapter.historyTurn({ method: "anchor", anchor: true, text: prompt }).user) === (run.document.querySelector(".lines")), true);
   }));
 
 test("an anchor root without a stable data key is not locked: read once after streaming, then the copy ends", () =>
@@ -160,14 +160,14 @@ test("anchor only counts same-text nodes in the composer's main region, or horiz
   withRun(page("", { sidebar: `<div class="recent"><div class="item">${PROMPT}</div></div>` }), KIMI_HOME, async (run) => {
     const ctx = () => ({ method: "anchor", anchor: true, text: PROMPT, cache: null });
     for (const node of fragment(run.document, turnHtml(PROMPT, "Paris"))) run.document.querySelector(".thread").append(node);
-    assert.equal(run.adapter.historyTurn(ctx()).user, run.document.querySelector(".bubble"), "main 外的同文不计数，main 内唯一命中");
+    assert.equal((run.adapter.historyTurn(ctx()).user) === (run.document.querySelector(".bubble")), true, "main 外的同文不计数，main 内唯一命中");
     run.document.querySelector("main").replaceWith(...run.document.querySelector("main").childNodes);
-    assert.equal(run.adapter.historyTurn(ctx()).user, null, "没有 main、也量不到布局：两处同文 = 歧义");
+    assert.equal((run.adapter.historyTurn(ctx()).user) === (null), true, "没有 main、也量不到布局：两处同文 = 歧义");
     const rect = (left, right) => () => ({ left, right, width: right - left, top: 0, bottom: 10, height: 10 });
     run.document.querySelector(".editor").getBoundingClientRect = rect(300, 900);
     run.document.querySelector(".recent .item").getBoundingClientRect = rect(0, 260);
     run.document.querySelector(".bubble").getBoundingClientRect = rect(600, 880);
-    assert.equal(run.adapter.historyTurn(ctx()).user, run.document.querySelector(".bubble"), "与输入框水平不重叠的同文（侧栏）不计数");
+    assert.equal((run.adapter.historyTurn(ctx()).user) === (run.document.querySelector(".bubble")), true, "与输入框水平不重叠的同文（侧栏）不计数");
   }));
 
 test("a keyless anchor root is never sealed by quiet alone: no stop-control evidence means read once at the soft expiry", () =>

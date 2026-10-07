@@ -17,13 +17,13 @@ for (const name of listFixtures()) {
       assert.equal(typeof run.adapter?.historyTurn, "function", `${run.meta.host} 没有 historyTurn`);
       const turn = run.adapter.historyTurn();
       assert.equal(turn.userCount, expect.userCount);
-      if (expect.userText === null) assert.equal(turn.user, null);
+      if (expect.userText === null) assert.equal((turn.user) === (null), true);
       else {
-        assert.equal(turn.user, marked(run.document, "user"));
+        assert.equal((turn.user) === (marked(run.document, "user")), true);
         assert.equal(turn.text.replace(/\s+/g, " ").trim(), expect.userText.replace(/\s+/g, " "));
       }
-      assert.equal(turn.answer ?? null, expect.answer ? marked(run.document, "answer") : null);
-      if (expect.answerRoot) assert.equal(turn.answerRoot, marked(run.document, "answer-root"));
+      assert.equal((turn.answer ?? null) === (expect.answer ? marked(run.document, "answer") : null), true);
+      if (expect.answerRoot) assert.equal((turn.answerRoot) === (marked(run.document, "answer-root")), true);
       // 采集时没有 ③ 级的问题原文上下文，historyTurn() 只会给出 ① 或 ② 级；记了 locate 就逐个核对。
       if (expect.locate) assert.equal(turn.locate, expect.locate);
     } finally { run.close(); }
@@ -94,9 +94,9 @@ test("sanitizer output of a raw page passes the scan and still replays through p
   try {
     const turn = run.adapter.historyTurn();
     assert.equal(turn.userCount, 2);
-    assert.equal(turn.user, marked(run.document, "user"));
+    assert.equal((turn.user) === (marked(run.document, "user")), true);
     assert.equal(turn.text, "POLYASK_PROMPT");
-    assert.equal(turn.answer, marked(run.document, "answer"));
+    assert.equal((turn.answer) === (marked(run.document, "answer")), true);
     assert.equal(turn.userKey, "id-3");
     // 隐藏水印经 hidden 被 md.js 剔除：正文只剩段落占位一行。
     assert.equal(run.S.toMarkdown(turn.answer), "lorem ipsum dolor sit amet consectetur a");

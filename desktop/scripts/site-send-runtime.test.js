@@ -63,7 +63,7 @@ test("DeepSeek 图片档切到 Vision，且无正文时不返回用户消息", a
   const deepseek = context.window.__AMS.adapters["deepseek.com"];
   await deepseek.fastImage();
   assert.equal(selected, "Vision");
-  assert.equal(deepseek.answer(), null);
+  assert.equal((deepseek.answer()) === (null), true);
 });
 
 test("DeepSeek DeepThink 开关点击被吞时抛错，不静默成功", async () => {

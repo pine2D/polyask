@@ -75,7 +75,7 @@ test("Claude body fallback stays inside the assistant turn and excludes thinking
     assert.equal(turn.locate, "selector");
     assert.equal(turn.answer?.textContent, "Final body");
     turn.answer.remove();
-    assert.equal(r.adapter.historyTurn().answer, null);
+    assert.equal((r.adapter.historyTurn().answer) === (null), true);
   } finally { r.close(); }
 });
 

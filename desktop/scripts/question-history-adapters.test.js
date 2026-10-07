@@ -20,13 +20,13 @@ test('DeepSeek empty assistant placeholder is not counted as a user turn', () =>
   const emptyAssistant = user('');
   const a = fixture('deepseek.com', '.ds-message', [u, emptyAssistant]);
   assert.equal(a.historyTurn().userCount, 1);
-  assert.equal(a.historyTurn().user, u);
+  assert.equal((a.historyTurn().user) === (u), true);
 });
 for (const [host, selector] of [['qianwen.com', '.question-text-card'], ['chatglm.cn', '.conversation.question .question-txt']]) {
   test(`${host} binds the verified user text node instead of navigation or guessed class names`, () => {
     const u = user('Synthetic question');
     const a = fixture(host, selector, [u]);
-    assert.equal(a.historyTurn().user, u);
+    assert.equal((a.historyTurn().user) === (u), true);
     assert.equal(a.historyTurn().text, 'Synthetic question');
   });
 }
@@ -45,7 +45,7 @@ test('Doubao image bubbles followed by text count as one contiguous user turn', 
   const image = doubaoNode('', true), text = doubaoNode('Question');
   const a = fixture('doubao.com', '[data-message-id]', [image, text]);
   assert.equal(a.historyTurn().userCount, 1);
-  assert.equal(a.historyTurn().user, text);
+  assert.equal((a.historyTurn().user) === (text), true);
 });
 test('Doubao never merges separate text turns or images across an assistant response', () => {
   const image = doubaoNode('', true), reply = doubaoNode('Answer', false, true), text = doubaoNode('Question');
@@ -53,7 +53,7 @@ test('Doubao never merges separate text turns or images across an assistant resp
   assert.equal(fixture('doubao.com', '[data-message-id]', [text, doubaoNode('Question')]).historyTurn().userCount, 2);
   const a = fixture('doubao.com', '[data-message-id]', [text, reply, image]);
   assert.equal(a.historyTurn().userCount, 2);
-  assert.equal(a.historyTurn().user, image, 'a direct image follow-up must replace the latest user and end prior ownership');
+  assert.equal((a.historyTurn().user) === (image), true, 'a direct image follow-up must replace the latest user and end prior ownership');
 });
 test('Doubao predecessor uses the prior logical text turn, not its image bubble', () => {
   const old = doubaoNode('Earlier'), image = doubaoNode('', true), text = doubaoNode('Question');
@@ -72,7 +72,7 @@ test('ChatGPT binds the new user bubble without including copy controls or count
   assert.equal(a.historyTurn().userCount, 1);
   assert.equal(a.historyTurn().text, 'Synthetic question');
   const modern = fixture('chatgpt.com', selector, [bubble]);
-  assert.equal(modern.historyTurn().user, bubble);
+  assert.equal((modern.historyTurn().user) === (bubble), true);
 });
 test('ChatGPT keeps the search-unit answer root when selection metadata wraps the same streaming Markdown', () => {
   const bubble = user('Synthetic question');
@@ -82,10 +82,10 @@ test('ChatGPT keeps the search-unit answer root when selection metadata wraps th
   let selection = null;
   const markdown = { isConnected: true, closest: s => s === '[data-content-search-unit-key]' ? root : selection };
   a.answer = () => markdown;
-  assert.equal(a.historyTurn().answerRoot, root);
+  assert.equal((a.historyTurn().answerRoot) === (root), true);
   assert.equal(a.historyTurn().answerKey, 'answer-unit');
   selection = { getAttribute: () => 'selection-id' };
-  assert.equal(a.historyTurn().answerRoot, root);
+  assert.equal((a.historyTurn().answerRoot) === (root), true);
   assert.equal(a.historyTurn().answerKey, 'answer-unit');
 });
 
@@ -95,6 +95,6 @@ test('Claude modern reply uses its assistant-message root and stable turn key', 
   const root = { getAttribute: name => name === 'data-turn-key' ? 'synthetic-assistant-turn' : null };
   const markdown = { isConnected: true, closest: selector => selector.includes('[data-testid="assistant-message"]') ? root : null };
   a.answer = () => markdown;
-  assert.equal(a.historyTurn().answerRoot, root);
+  assert.equal((a.historyTurn().answerRoot) === (root), true);
   assert.equal(a.historyTurn().answerKey, 'synthetic-assistant-turn');
 });

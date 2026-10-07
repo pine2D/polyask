@@ -59,7 +59,7 @@ function fixture(options = {}) {
     return [];
   } };
   const S = { ...require("./lib/deadline-harness"), adapters: {},
-    openMenu(el) { assert.equal(el, trigger); if (!state.settled) return; state.open = true; state.clicks.push("trigger"); },
+    openMenu(el) { assert.equal(el === trigger, true); if (!state.settled) return; state.open = true; state.clicks.push("trigger"); },
     waitFor: async fn => fn(), sleep: async ms => { if (ms >= 500) state.settled = true; }, escMenus() { state.open = false; state.closed++; },
     findByText: (selector, re) => document.querySelectorAll(selector).find(node => re.test(node.textContent || "")),
   };

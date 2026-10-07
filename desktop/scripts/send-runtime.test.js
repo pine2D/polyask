@@ -94,7 +94,7 @@ function sendBtnMustDegradeWhenComputedStyleThrows() {
     getComputedStyle: () => { throw new Error("cross-origin"); },
   };
   vm.runInNewContext(source("send.js"), context);
-  assert.equal(context.window.__AMS.sendBtn(composer), send, "getComputedStyle 失败时必须退化而不是放弃");
+  assert.equal((context.window.__AMS.sendBtn(composer)) === (send), true, "getComputedStyle 失败时必须退化而不是放弃");
 }
 
 // 纵向带之外的候选必须排除；一个都不剩时返回 null（core 靠这个 null 落到 Enter 兜底）。

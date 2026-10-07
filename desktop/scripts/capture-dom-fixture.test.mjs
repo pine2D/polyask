@@ -54,8 +54,8 @@ test('isolated probe + main-world sanitizer produce a scannable, replayable fixt
   try {
     const turn = replay.adapter.historyTurn();
     assert.equal(turn.text, 'POLYASK_PROMPT');
-    assert.equal(turn.user, replay.document.querySelector('[data-polyask-expect~="user"]'));
-    assert.equal(turn.answer, replay.document.querySelector('[data-polyask-expect~="answer"]'));
-    assert.equal(turn.answerRoot, replay.document.querySelector('[data-polyask-expect~="answer-root"]'));
+    assert.equal((turn.user) === (replay.document.querySelector('[data-polyask-expect~="user"]')), true);
+    assert.equal((turn.answer) === (replay.document.querySelector('[data-polyask-expect~="answer"]')), true);
+    assert.equal((turn.answerRoot) === (replay.document.querySelector('[data-polyask-expect~="answer-root"]')), true);
   } finally { replay.close(); }
 });

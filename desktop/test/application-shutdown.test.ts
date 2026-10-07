@@ -17,7 +17,7 @@ test("a cancelled application quit leaves repositories usable until final shutdo
     // Electron emits before-quit before a dirty renderer may veto beforeunload.
     app.emit("before-quit");
     assert.equal(database.prepare("SELECT 1 AS value").get()?.value, 1);
-    assert.equal(context.desktopDatabase, database);
+    assert.equal(context.desktopDatabase === database, true);
     app.emit("will-quit");
     assert.equal(context.desktopDatabase, null);
     assert.throws(() => database.prepare("SELECT 1"), /database is not open/);

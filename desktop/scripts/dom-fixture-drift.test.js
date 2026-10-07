@@ -34,7 +34,7 @@ const EXPECT = {
 function drift(run) {
   assert.notEqual(DRIFTED, SOURCE, "选择器表替换失败：history-adapters.js 结构变了，先改这里的正则");
   vm.runInContext(`(function () {\n${DRIFTED}\n})()`, run.dom.getInternalVMContext(), { filename: "history-adapters.drifted.js" });
-  assert.equal(run.adapter.historyTurn({ method: "selector" }).user, null, "漂移后第 ① 级必须零命中，用例才有意义");
+  assert.equal((run.adapter.historyTurn({ method: "selector" }).user) === (null), true, "漂移后第 ① 级必须零命中，用例才有意义");
 }
 function relation(run, turn, expected) {
   const text = turn?.answer ? run.S.toMarkdown(turn.answer) : null;
@@ -68,7 +68,7 @@ for (const name of captured.filter((item) => EXPECT[item])) {
       assert.equal(relation(run, turn, expected), want.md);
       if ("frozenAnchor" in want) {
         const anchored = run.adapter.historyTurn({ method: "anchor", text: prompt, anchor: true, cache: null });
-        if (!want.frozenAnchor) assert.equal(anchored.user, null);
+        if (!want.frozenAnchor) assert.equal((anchored.user) === (null), true);
         else {
           assert.equal(anchored.userCount, want.frozenAnchor.uc);
           assert.equal(relation(run, anchored, expected), want.frozenAnchor.md);

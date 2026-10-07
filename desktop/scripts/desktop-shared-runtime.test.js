@@ -180,7 +180,7 @@ function sendBtnMustBeExposedByTheSharedRuntime() {
   vm.runInNewContext(source(`${SITE_RUNTIME}/send.js`), context);
   assert.equal(typeof context.window.__AMS.sendBtn, "function",
     "site-runtime/send.js 必须把 sendBtn 挂到 __AMS 上（漏登记时九站按钮路径静默退化成纯 Enter）");
-  assert.equal(context.window.__AMS.sendBtn(composer), button, "sendBtn 必须选出挨着输入框的发送键");
+  assert.equal((context.window.__AMS.sendBtn(composer)) === (button), true, "sendBtn 必须选出挨着输入框的发送键");
 }
 
 i18nMustExposeDesktopNamespace();

@@ -30,7 +30,7 @@ test("Kimi 走工具菜单取 file input 时收尾 escMenus 且等待夹取 dead
   const kimi = context.window.__AMS.adapters["kimi.com"], files = [{ name: "probe.png" }], composer = {};
   const deadline = Date.now() + 900; // < 1500，等待必须被夹到剩余预算
   assert.equal(await kimi.attach(files, composer, deadline), true);
-  assert.equal(attached.found, input);
+  assert.equal(attached.found === input, true);
   assert.equal(escCount, 1, "走 toolkit 分支必须收尾 escMenus，否则罩住输入框");
   assert.ok(waited > 0 && waited <= 900, "等待必须夹取到 deadline 剩余预算，不是硬编码 1500");
   assert.equal(kimi.submitted("新问题 第二行"), true);

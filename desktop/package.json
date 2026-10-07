@@ -19,10 +19,13 @@
     "prepare-portable": "node scripts/prepare-portable.mjs",
     "smoke": "node scripts/smoke.mjs",
     "soak": "node scripts/soak.mjs",
-    "test": "tsc --noEmit && tsx --test \"test/**/*.test.ts\" \"test/**/*.test.tsx\" && node --test \"scripts/*.test.{js,mjs}\"",
+    "test": "node scripts/test-safe.mjs",
+    "test:unit": "node scripts/test-safe.mjs unit",
+    "test:runtime": "node scripts/test-safe.mjs runtime",
+    "test:assertions": "node scripts/test-safe.mjs runtime scripts/assertion-safety.test.mjs scripts/test-safe.test.mjs",
     "typecheck": "tsc --noEmit",
-    "test:library-ui": "node scripts/library-visual.mjs",
-    "test:shell-ui": "node scripts/shell-visual.mjs"
+    "test:library-ui": "node scripts/test-safe.mjs command node scripts/library-visual.mjs",
+    "test:shell-ui": "node scripts/test-safe.mjs command node scripts/shell-visual.mjs"
   },
   "dependencies": {
     "electron-squirrel-startup": "1.0.1",

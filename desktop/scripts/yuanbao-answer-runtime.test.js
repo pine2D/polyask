@@ -26,25 +26,25 @@ function withRun(html, body) {
 
 test("Yuanbao thinking in the process timeline is never the answer, and a thinking-only reply has none yet", () =>
   withRun(speech(TIMELINE + HEADER), async (run) => {
-    assert.equal(run.adapter.answer(), null, "只有思考段：还没有正文，不能退回整个容器把推理过程写进副本");
+    assert.equal((run.adapter.answer()) === (null), true, "只有思考段：还没有正文，不能退回整个容器把推理过程写进副本");
     const summary = await run.send({ source: "AMS", cmd: "collectAnswer" });
     assert.equal(summary.text, null);
   }));
 
 test("Yuanbao answer skips the cot markdown and citation icons while keeping real images", () =>
   withRun(speech(TIMELINE + HEADER + BODY), async (run) => {
-    assert.equal(run.adapter.answer(), run.document.querySelector(".answer-md"));
+    assert.equal((run.adapter.answer()) === (run.document.querySelector(".answer-md")), true);
     const summary = await run.send({ source: "AMS", cmd: "collectAnswer" });
     assert.equal(summary.text, "It is a literary phrase.\n\nSee [chart] here.");
   }));
 
 test("Yuanbao falls back to the whole speech container only when neither thinking nor a timeline exists", () =>
   withRun(speech('<div class="plain">Plain reply</div>'), async (run) => {
-    assert.equal(run.adapter.answer(), run.document.querySelector(".agent-chat__conv--ai__speech_show"));
+    assert.equal((run.adapter.answer()) === (run.document.querySelector(".agent-chat__conv--ai__speech_show")), true);
   }));
 
 test("Yuanbao keeps a non-markdown final reply when only the persistent deep-search think header remains", () =>
   withRun(speech(HEADER + '<div class="notice">Service busy, try later</div>'), async (run) => {
-    assert.equal(run.adapter.answer(), run.document.querySelector(".agent-chat__conv--ai__speech_show"),
+    assert.equal((run.adapter.answer()) === (run.document.querySelector(".agent-chat__conv--ai__speech_show")), true,
       "头部条不是思考正文：不能让繁忙提示/卡片类终态恒为 null");
   }));

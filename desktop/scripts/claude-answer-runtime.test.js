@@ -16,17 +16,17 @@ const message = blocks => ({ querySelectorAll: selector => selector === '[data-p
 test('Claude reads the latest modern reply block without the retired font class', () => {
   const old = { text: 'Old answer' }, intro = { text: 'I will analyze this' }, final = { text: 'Final answer' };
   const a = fixture([message([old]), message([intro, final])]);
-  assert.equal(a.answer(), final);
+  assert.equal((a.answer()) === (final), true);
 });
 
 test('Claude modern thought-only turn cannot fall back to an older answer or whole thought container', () => {
   const old = { querySelector: () => null, text: 'Old answer' };
   const a = fixture([message([])], [old]);
-  assert.equal(a.answer(), null);
+  assert.equal((a.answer()) === (null), true);
 });
 
 test('Claude keeps the verified legacy grid-body fallback', () => {
   const body = { text: 'Legacy answer' };
   const old = { querySelector: selector => selector === '.row-start-2' ? body : null };
-  assert.equal(fixture([], [old]).answer(), body);
+  assert.equal((fixture([], [old]).answer()) === (body), true);
 });

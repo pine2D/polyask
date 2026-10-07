@@ -193,7 +193,7 @@ function newTurnMustBeCollected() {
     document: { querySelector: () => null,
       querySelectorAll: (s) => s === '[data-turn="assistant"]' ? turns : [] } };
   vm.runInNewContext(source("adapters-intl2.js"), context);
-  assert.equal(S.adapters["chatgpt.com"].answer(), markdown, "ChatGPT 新版 data-turn 回答必须可被汇总复制");
+  assert.equal((S.adapters["chatgpt.com"].answer()) === (markdown), true, "ChatGPT 新版 data-turn 回答必须可被汇总复制");
 }
 
 const selection = (adapter, mode) => {

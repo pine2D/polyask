@@ -25,7 +25,7 @@ function twentyPixelComposerMustBeFound() {
     matchMedia: () => ({ matches: true }), setTimeout, clearTimeout, Date,
   };
   vm.runInNewContext(source("core.js"), context);
-  assert.equal(context.window.__AMS.findComposer(), composer,
+  assert.equal((context.window.__AMS.findComposer()) === (composer), true,
     "Claude 新版 20px 单行编辑器必须被识别");
 }
 

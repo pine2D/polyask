@@ -12,6 +12,18 @@
 - 长期独立测试 `profile` 含用户手动登录的数据，保留复用；关闭测试不等于授权清空档案。正式档案不参与收尾扫描、复制或清理。本机原始记录保持库外；是否继续保留或删除，与是否提交 Git 分开处理。
 - 提交前同时核对工作树及本轮历史提交的文件清单、可疑凭据/个人路径和二进制产物。若真实敏感信息已进历史，删除当前文件并不消除历史，须另行说明暴露范围和处置；不擅自改写已存在提交。
 
+## 断言与测试内存防护
+
+2026-10-07，React/jsdom 测试将 DOM 元素直接与 `null` 比较；失败时 Node 24 展开节点上的 React Fiber，再计算巨大差异，耗尽 WSL 内存。自定义断言 message、`--max-old-space-size` 都不能限制这部分原生数组分配。不得用真实大 DOM 或多 GiB 分配重演事故。
+
+`npm test` 统一经 `scripts/test-safe.mjs`：先静态扫描，再 typecheck、TypeScript、运行时两套测试。单文件使用 `npm run test:unit -- test/example.test.tsx` / `npm run test:runtime -- scripts/example.test.js`；保护本身使用 `npm run test:assertions`。测试单 worker、每文件 60 秒超时、每阶段 15 分钟超时；每个 Node 测试进程预加载 `scripts/lib/assertion-safety.mjs`。静态检查分析 AST，只识别已知节点来源及简单别名，不能穷尽数据流；运行时保护在 Node 格式化前拒绝 DOM、Window、节点集合及嵌套节点，不展开 React Fiber，拒绝普通 getter/Proxy 或超过检查预算的对象（原生 Error.stack 除外，其它附带字段仍检查）。大数据比较先投影成必要的标量。
+
+安全写法保留原有严格语义：`assert.equal(el === null, true, message)`、`assert.equal(document.activeElement === button, true, message)`；回答文本、disabled、checked、数量仍直接比较对应标量。`assert.equal(el, null, message)`、直接比较两节点、把节点包入数组/对象后 deepEqual 都不允许。失败路径不得打印 DOM 或 Fiber。
+
+Linux 有可用的用户级 systemd 时，入口自动创建临时 scope，整个测试组 `MemoryMax=4G` / `MemorySwapMax=512M`；退出后不保留系统配置。离线 Node 门禁在无 systemd 的环境使用 `prlimit` 继承每进程 2 GiB `RLIMIT_DATA`，并限制 V8 旧生代 1 GiB；它覆盖原生匿名分配，但不是整个进程树的总内存上限。`prlimit` 不可用则失败退出，不自动无限额重跑。Windows/macOS 保留断言保护、串行及 V8 旧生代限制，OS 级原生内存上限尚未实现，不宣称与 Linux cgroup 等效。
+
+Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限额；`test:shell-ui` / `test:library-ui` 已统一接入。其它专项经 `node scripts/test-safe.mjs command node scripts/example.mjs`；`.check.ts` 经 `test:unit`。从受限 scope 运行脚本不等于整个 Codex/其它程序已受限；Codex 包装脚本、earlyoom、全局安装和持久系统配置另需明确授权。
+
 ## 结果库视觉与交互回归
 
 在 `desktop/` 运行 `npm run test:library-ui`；无显示服务器的 Linux 使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:library-ui`。脚本构建生产组件＋隔离内存夹具，使用临时 Electron profile，不读取用户数据库、不连接站点或 Drive。输出路径包含截图与 `report.json`，由脚本每次打印；临时产物留供检查，不入库。
@@ -34,15 +46,15 @@
 
 ## 离线回归
 
-- 历史阅读专项：`node --import tsx --test test/markdown-reading-interaction.check.ts`（无显示服务器自行使用 Xvfb）。构建生产阅读器与合成数据，临时 Electron 档案、禁止联网，不访问用户数据库；验证三语 Mermaid 实际成图、源码复制、代码切换、缩放、缺失/无效/超限/配置指令回退、迟到源码切换、完整来源链接打开/复制及会话地址动作。截图留在系统临时目录，不入库。普通 `npm test` 的阅读和会话动作回归覆盖解析、当前尝试、缺地址及繁忙状态；`scripts/md-diagram.test.js` 通过九站生产 `historyTurn()` 定位夹具验证共用提取、隐藏非图表排除、只读及空行保真。图形专项不替代九站真实 DOM 形态验收。
+- 历史阅读专项：`npm run test:unit -- test/markdown-reading-interaction.check.ts`（无显示服务器自行使用 Xvfb）。构建生产阅读器与合成数据，临时 Electron 档案、禁止联网，不访问用户数据库；验证三语 Mermaid 实际成图、源码复制、代码切换、缩放、缺失/无效/超限/配置指令回退、迟到源码切换、完整来源链接打开/复制及会话地址动作。截图留在系统临时目录，不入库。普通 `npm test` 的阅读和会话动作回归覆盖解析、当前尝试、缺地址及繁忙状态；`scripts/md-diagram.test.js` 通过九站生产 `historyTurn()` 定位夹具验证共用提取、隐藏非图表排除、只读及空行保真。图形专项不替代九站真实 DOM 形态验收。
 
-- 本机重置的真实 Electron 外壳交互：在 `desktop/` 运行 `node --import tsx --test test/local-data-reset-interaction.check.ts`；测试自行编译合成夹具、在临时页面验证旧输入与综合状态清理，不访问真实站点、Drive 或用户档案。普通 `npm test` 不运行这项图形检查。
-- 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个同源本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、共享登录域导航、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
-- 进程诊断桥接实测：`xvfb-run -a node scripts/runtime-process-smoke.mjs`，在两个临时离线 Electron 窗口运行生产 runtime-gates、preload 与 site-health IPC。合成 `child-process-gone` 事件核对可信窗口取数、其它 sender 拒绝、报告白名单过滤及释放清理；不使实际 GPU/网络进程崩溃，不代表 Windows 原生启动失败复现。
+- 本机重置的真实 Electron 外壳交互：在 `desktop/` 运行 `npm run test:unit -- test/local-data-reset-interaction.check.ts`；测试自行编译合成夹具、在临时页面验证旧输入与综合状态清理，不访问真实站点、Drive 或用户档案。普通 `npm test` 不运行这项图形检查。
+- 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/test-safe.mjs command node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个同源本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、共享登录域导航、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
+- 进程诊断桥接实测：`xvfb-run -a node scripts/test-safe.mjs command node scripts/runtime-process-smoke.mjs`，在两个临时离线 Electron 窗口运行生产 runtime-gates、preload 与 site-health IPC。合成 `child-process-gone` 事件核对可信窗口取数、其它 sender 拒绝、报告白名单过滤及释放清理；不使实际 GPU/网络进程崩溃，不代表 Windows 原生启动失败复现。
 
 - `test:shell-ui` 另覆盖 Windows/macOS/Linux 的确认按钮 DOM 顺序、取消默认焦点、Tab 圈定、IME Escape、焦点恢复，以及强制颜色与减少动态效果的 Chromium 媒体模拟。截图与断言来自 Linux Electron，不能证明 Windows/macOS 的原生字体、系统菜单、输入法候选窗或读屏行为；这些仍需对应实机验收。
 
-**两条互不重叠的门禁，顺序与职责写死**：`bash scripts/verify.sh` 是零 node_modules 依赖的仓库级卫生（`.js/.mjs` 语法、JSON、`.js` 300 行、`desktop/src` 的 `.ts/.tsx` 400 行棘轮、OAuth 凭据卫生、文档与 `.github` 引用、workflow YAML、根 `scripts/` 的五个跨端测试）；`cd desktop && npm test` 是 Desktop 门禁（首段 `tsc --noEmit`，其后 `tsx --test` 跑 `test/**/*.test.ts(x)`、`node --test` 跑 `scripts/*.test.{js,mjs}`——九站适配器离线回归及打包脚本测试就在后者里）。`verify.sh` 不跑 `npm test`，两条都要过；`npm test` 首段虽已含 typecheck，仍单跑一次 `npm run typecheck`（CI 也分两步，失败点更清楚）。动窗口/视图/preload 的改动另加 `npm run package && xvfb-run -a npm run smoke -- --skip-package`（在 `desktop/` 下运行，先打包当前源码，避免验证旧产物）。
+**两条互不重叠的门禁，顺序与职责写死**：`bash scripts/verify.sh` 是零 node_modules 依赖的仓库级卫生（`.js/.mjs` 语法、JSON、`.js` 300 行、`desktop/src` 的 `.ts/.tsx` 400 行棘轮、OAuth 凭据卫生、文档与 `.github` 引用、workflow YAML、根 `scripts/` 的五个跨端测试）；`cd desktop && npm test` 是 Desktop 门禁（先 DOM 断言静态检查，再 `tsc --noEmit`，其后带运行时保护、串行跑 `test/**/*.test.ts(x)` 与 `scripts/*.test.{js,mjs}`——九站适配器离线回归及打包脚本测试就在后者里）。`verify.sh` 不跑 `npm test`，两条都要过；`npm test` 已含 typecheck，仍单跑一次 `npm run typecheck`（CI 也分两步，失败点更清楚）。动窗口/视图/preload 的改动另加 `npm run package && xvfb-run -a npm run smoke -- --skip-package`（在 `desktop/` 下运行，先打包当前源码，避免验证旧产物；运行时专项同样遵循上述临时 scope 规则）。
 
 - 测试包含三种手法：直接调用生产模块的行为测试（含内存 SQLite 的仓储/备份/同步测试）、`vm.runInNewContext` 配 DOM 桩执行站点运行时、读取源码文本的契约守卫；React 组件还用 `renderToStaticMarkup` 检查输出。**不能把执行行为的测试都归为源码字符串断言**。只有守卫类测试依赖正则 / `indexOf` 等文本匹配，改 UI 的 class/id/顺序/CSS 数值可能打断这些检查。`verify.sh` 另跑 `node --check`、JSON parse、两档行数门禁、Desktop OAuth 凭据卫生、文档引用与测试登记检查、workflow YAML 解析、`git diff --check`。
 - **workflow YAML 检查**优先用 `actionlint`（连 `runs-on` 拼错、`needs` 指向不存在的 job 都查），没装则退化到 python3 + PyYAML 的纯语法解析，两者都缺时打印警告跳过（不阻断 verify）。本机想拿最强校验就装一个 actionlint（apt/brew 都有）——YAML 错误只能在推 tag 后由 GitHub 暴露，而 tag 不可覆盖 = 烧掉一个版本号。
@@ -102,7 +114,7 @@
 - 设计技能：impeccable、make-interfaces-feel-better、native-feel-cross-platform-desktop 自 2026-10-02 起为用户级安装（`~/.agents/skills`，Claude Code 与 Codex 共用，由本机更新脚本维护），不再随仓库安装或锁定版本；Impeccable 在本项目生成的 `.impeccable/` 运行时产物仍由 `.gitignore` 排除。
 - 资源归属记录：启动前设置 `POLYASK_RESOURCE_TRACE` 为尚不存在的本地 JSONL 路径，默认每 5 秒一笔，最长 30 分钟，关闭窗口即停止；不自动退出应用。启动期单列，CPU 首笔和每个新 PID/创建时间的首笔无有效区间，按 `cpuIntervalValid` 排除。进程数组按 PID 一笔，站点只关联主帧；不可把共享 PID 分别归到各站后再次求和，也不可将工作集总和称为独占内存。与 soak 分开运行，两者都读 `getAppMetrics` 会影响 CPU 采样区间。日志不含对话或网址。
 - 只读探针耗时：开发态按上文启用本机 9223 调试端口后，在 `desktop/` 运行 `node scripts/probe-performance.mjs 9223`。脚本串行对已加载站点的生产隔离上下文各采 5 次 `generation()`、`answer()`、`toMarkdown()`，仅返回耗时、布尔值、状态和视口，不发送提问、不切档、不保存正文；结果写入打印出的临时目录。无回答时 Markdown 项为 null，不能据此宣称长回答处理很快。它测同步函数耗时，不包含生产 IPC 往返；零毫秒可能只是计时精度不足。缺适配器/执行失败会非零退出，尚未加载的站点不会凭空计入覆盖。
-- 后台节流机制实验：在 `desktop/` 运行 `xvfb-run -a node scripts/background-throttling-lab.mjs`（有原生显示时可直接 `node`）。临时档案、三个重叠且正尺寸的本地页面，拦截 HTTP/HTTPS；窗口先隐藏，再按关闭→全部允许→混合→恢复关闭→再次全部允许→再次恢复切换，直接覆盖 Electron 44.5.0 修复的「已隐藏时重新允许节流」路径。测动画帧、定时器与可见性；输出原始报告，不以特定节流比例作通关条件。此工具不触碰生产策略，不能替代九站后台生成、最小化和 Windows/macOS 验收。
+- 后台节流机制实验：在 `desktop/` 运行 `xvfb-run -a node scripts/test-safe.mjs command node scripts/background-throttling-lab.mjs`（有原生显示时仅去掉 Xvfb 前缀，保留受限入口）。临时档案、三个重叠且正尺寸的本地页面，拦截 HTTP/HTTPS；窗口先隐藏，再按关闭→全部允许→混合→恢复关闭→再次全部允许→再次恢复切换，直接覆盖 Electron 44.5.0 修复的「已隐藏时重新允许节流」路径。测动画帧、定时器与可见性；输出原始报告，不以特定节流比例作通关条件。此工具不触碰生产策略，不能替代九站后台生成、最小化和 Windows/macOS 验收。
 
 2026-09-29 资源研究验收：Linux/WSL、Electron 43.4.0 开发态复用已授权档案，九站当前页面均无回答正文；约 165 秒共 34 笔资源样本，60 秒后进程工作集合计约 3.83–3.95 GiB，不能与此前 Xvfb 新档案样本作优化前后比较。九站生产生成探针各测 5 次，中位约 0–0.4ms；未测到 Markdown 转换，不能外推长会话性能。没有发送测试提问或切换模型，日志有部分网络解析/连接失败，不据此证明全部站点网络正常或已登录。
 
@@ -197,7 +209,7 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 
 ## 提问历史验收
 
-自动化覆盖 SQLite version 4、schema 4 上下行、备份格式 2/旧格式读取、终态删除、选择性恢复、归属 token、重复文本、草稿复用与 UI 结构。针对性命令：`cd desktop && node --import tsx --test --test-isolation=none test/question-*.test.ts test/question-*.test.tsx`；运行时：`node --test --test-isolation=none scripts/question-history-runtime.test.js`。
+自动化覆盖 SQLite version 4、schema 4 上下行、备份格式 2/旧格式读取、终态删除、选择性恢复、归属 token、重复文本、草稿复用与 UI 结构。针对性命令：`cd desktop && npm run test:unit -- "test/question-*.test.ts" "test/question-*.test.tsx"`；运行时：`npm run test:runtime -- scripts/question-history-runtime.test.js`。
 
 开发态须逐站检查新会话、已有会话连续两轮、相同提问、流式期间保存、瞬间完成、网页直接追问、登录重定向及地址恢复。另测打开副本期间原站视口保持正尺寸、切换页后生成继续、关闭/重启后副本仍可读。测试资料应标明合成数据；检查截图不能代替消息归属证据。Drive 用两台授权测试设备验收新增、删除、迟到副本与旧客户端 schema 保护，不向未授权账户上传测试内容。
 
@@ -274,7 +286,7 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 
 - 真实内存 SQLite 与延迟探针覆盖：切换前等待在途回答、2.5s 总预算、取消后拒收、旧轮进行中新 token 的补采。
 - Drive 使用真实同步引擎、内存库与模拟时钟/网络覆盖到期唤醒、连续编辑、revision 冲突、拉取故障退避、Retry-After、断开与重连；不等于真实双设备验收。
-- 历史真实 React 组件交互命令：`cd desktop && node --import tsx --test --test-isolation=none test/question-history-interaction.check.ts`。测试自行构建临时夹具并启动隔离 Electron，覆盖返回/Escape/关闭/切换/删除、多页刷新、慢列表与慢详情；详情菜单首个 Escape 只关闭菜单，原生 Tab/Shift+Tab 关闭菜单并保持历史页焦点顺序。阅读专项另验三语 1100/640/420px 工具栏布局、当前副本与整条提问的操作范围及图标复制完整正文；不连接站点或 Drive，不纳入普通 npm test 的无图形门禁。
+- 历史真实 React 组件交互命令：`cd desktop && npm run test:unit -- test/question-history-interaction.check.ts`。测试自行构建临时夹具并启动隔离 Electron，覆盖返回/Escape/关闭/切换/删除、多页刷新、慢列表与慢详情；详情菜单首个 Escape 只关闭菜单，原生 Tab/Shift+Tab 关闭菜单并保持历史页焦点顺序。阅读专项另验三语 1100/640/420px 工具栏布局、当前副本与整条提问的操作范围及图标复制完整正文；不连接站点或 Drive，不纳入普通 npm test 的无图形门禁。
 - 查询性能取 WSL/Linux 内存库 1,000 条合成结果、每条 34,500 字符正文、每题两站副本，11 次查询中位值。选择性结果搜索从约 343ms 降至约 133ms；并行开发负载下仅作该样本参考，不代表真实大库或原生 Windows 性能。历史每页 SQL 次数由 51 降为 2，但本轮耗时约 9.5→12.6ms，未测得延迟收益，不据此宣称加速。结果库未筛选全量列表仍有规模上限，后续分页需独立测量。
 - token 原子替换用真实临时文件与旧 inode 硬链接验证，另测替换失败时临时文件清理；未验证断电或原生系统密钥环故障。
 - 重启隔离 Linux 开发态，在真实九站的生产 `__AMS` 验证切档：Claude、ChatGPT、Gemini、DeepSeek、豆包、Kimi、元宝、智谱的快速→思考通过；九站均拒绝 1ms 到期预算下的切档。千问思考成功，快速仍报模型缺失：当前约 8.331s、独立基线约 8.346s，实际菜单仅提供 Qwen3.7-千问、Qwen3.7-Max、Qwen3.6-Flash，均无既定目标 Qwen3.8-Max；两版返回后等待 500ms，menu/dialog 节点均为空。此为已复现的原有模型不匹配，本轮未修改模型策略，不能宣称九站正常切档全部通过。本轮没有发送新提问；“切档预算耗尽后群发仍继续”由离线生产运行时回归验证。

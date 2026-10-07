@@ -27,7 +27,7 @@ test('metadata identifies oversized and excess tags before saving, and correctio
     await h.click(h.document.querySelector<HTMLButtonElement>('button[type="submit"]')!);
     assert.deepEqual(submitted, [], 'invalid tags never reach the save API');
     assert.equal(tags.getAttribute('aria-invalid'), 'true');
-    assert.equal(h.document.activeElement, tags);
+    assert.equal((h.document.activeElement) === (tags), true);
     assert.match(fieldDescription(h.document, tags), /Tag 1.*32 characters/);
     assert.match(h.document.querySelector('.archive-tag-counts')!.textContent!, /33 \/ 32/);
     await h.input(tags, Array(21).fill('same').join(', '));

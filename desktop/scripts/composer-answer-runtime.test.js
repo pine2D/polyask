@@ -12,8 +12,8 @@ function fixture(host) {
   return { editor, composer, selected: context.window.__AMS.findComposer() };
 }
 test('ChatGPT answer editor cannot replace the actual prompt composer when its canvas grows', () => {
-  const f = fixture('chatgpt.com'); assert.equal(f.selected, f.composer);
+  const f = fixture('chatgpt.com'); assert.equal(f.selected === f.composer, true);
 });
 test('other sites retain the existing composer geometry selection', () => {
-  const f = fixture('example.com'); assert.equal(f.selected, f.editor);
+  const f = fixture('example.com'); assert.equal(f.selected === f.editor, true);
 });

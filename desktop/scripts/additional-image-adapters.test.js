@@ -50,7 +50,11 @@ for (const [label, file, host] of [
   test(`${label} uses its chat image input and forwards all files and the original deadline`, async () => {
     const f = fixture(file, host), files = Array.from({ length: 4 }, (_, i) => ({ name: `${i}.png` })), el = {};
     assert.equal(await f.adapter.attach(files, el, 1800), true);
-    assert.deepEqual(f.result().attached, { node: f.input, files, el, deadline: 1800 });
+    const attached = f.result().attached;
+    assert.equal(attached.node === f.input, true);
+    assert.equal(attached.files === files, true);
+    assert.equal(attached.el === el, true);
+    assert.equal(attached.deadline, 1800);
     assert.ok(f.waits.every(ms => ms <= 800));
     assert.equal(f.listeners.size, 0);
     if (label !== '智谱') assert.equal(f.result().closed, 1);

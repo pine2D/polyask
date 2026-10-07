@@ -88,18 +88,18 @@ const dbPage = (inner) => '<main><div class="list_items">'
 
 for (const [label, thinking] of Object.entries(DB_THINKS)) test(`doubao: a reply that so far only holds the thinking steps is not the answer yet (${label})`, () =>
   withRun(dbPage(thinking), { host: "www.doubao.com", path: "/chat/38445437171009282" }, (run) => {
-    assert.equal(run.adapter.answer(), null, "思考中的步骤标题不能当正文");
-    assert.equal(run.adapter.historyTurn({ method: "selector" }).answer, null);
+    assert.equal((run.adapter.answer()) === (null), true, "思考中的步骤标题不能当正文");
+    assert.equal((run.adapter.historyTurn({ method: "selector" }).answer) === (null), true);
     run.document.querySelector('[data-container-type="block-v2"]').insertAdjacentHTML("beforeend", DB_BODY);
     assert.equal(run.S.toMarkdown(run.adapter.answer()), "Answer ipsum.", "正文出现后只取正文块");
     run.document.querySelector('[data-container-type="block-v2"]').replaceChildren();
-    assert.equal(run.adapter.answer(), run.document.querySelector('[data-message-id="id-2"]'), "空占位消息照旧返回消息本身");
+    assert.equal((run.adapter.answer()) === (run.document.querySelector('[data-message-id="id-2"]')), true, "空占位消息照旧返回消息本身");
   }));
 
 // 思考块完成后折叠常驻、终态却不是 MdBox（繁忙/违规提示、卡片、图片类结果）：退回思考块之后的那段内容，不是 null 也不带思考步骤（2026-10-04 审查）。
 for (const [label, thinking] of Object.entries(DB_THINKS)) test(`doubao: a finished thinking block followed by a non-MdBox reply yields that reply (${label})`, () =>
   withRun(dbPage(thinking + '<div class="notice-x"><span>Busy ipsum.</span></div>'), { host: "www.doubao.com", path: "/chat/38445437171009282" }, (run) => {
     const answer = run.adapter.answer();
-    assert.equal(answer, run.document.querySelector(".notice-x"));
+    assert.equal((answer) === (run.document.querySelector(".notice-x")), true);
     assert.equal(run.S.toMarkdown(answer), "Busy ipsum.");
   }));

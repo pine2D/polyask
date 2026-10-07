@@ -61,15 +61,15 @@ test("a class-named conversation list is only fenced when it sits beside the com
     const { document } = run;
     document.querySelector(".chatScrollContainer").append(...nodes(document, GLM_TURN));
     const ctx = () => ({ method: "anchor", anchor: true, text: PROMPT, cache: null });
-    assert.equal(run.adapter.historyTurn(ctx()).user, null, "量不到布局时会话列表类名照旧排除");
+    assert.equal((run.adapter.historyTurn(ctx()).user) === (null), true, "量不到布局时会话列表类名照旧排除");
     const list = document.querySelector(".conversation-list-outer");
     document.querySelector(".editor").getBoundingClientRect = () => ({ left: 320, right: 880, width: 560, top: 520, bottom: 560, height: 40 });
     list.getBoundingClientRect = () => ({ left: 300, right: 900, width: 600, top: 0, bottom: 500, height: 500 });
     const turn = run.adapter.historyTurn(ctx());
-    assert.equal(turn.user, document.querySelector(".q-row span"), "与输入框同列的会话区不是侧栏");
+    assert.equal((turn.user) === (document.querySelector(".q-row span")), true, "与输入框同列的会话区不是侧栏");
     assert.equal(run.S.toMarkdown(turn.answer), "Ginkgo resists pests.");
     list.getBoundingClientRect = () => ({ left: 0, right: 280, width: 280, top: 0, bottom: 500, height: 500 });
-    assert.equal(run.adapter.historyTurn(ctx()).user, null, "在输入框左右两侧的会话列表仍排除");
+    assert.equal((run.adapter.historyTurn(ctx()).user) === (null), true, "在输入框左右两侧的会话列表仍排除");
   }));
 
 test("chatglm real fixture with measurable layout: the anchor finds the real bubble but refuses attribution (userCount 2)", () => {
@@ -168,19 +168,19 @@ test("Kimi and Qianwen answer(): a thinking-only reply is not the answer yet", (
   const kimi = replayHtml(page(KIMI_USER() + KIMI_ASSISTANT('<div class="thinking-container"><div class="markdown"><p>Thinking about the request</p></div></div>')),
     { host: "www.kimi.com", path: "/chat/id-1" });
   try {
-    assert.equal(kimi.adapter.answer(), null, "思考段不能退回成整条助手消息");
+    assert.equal((kimi.adapter.answer()) === (null), true, "思考段不能退回成整条助手消息");
     const turn = kimi.adapter.historyTurn();
     assert.equal(turn.locate, "selector");
-    assert.equal(turn.answer, null);
+    assert.equal((turn.answer) === (null), true);
     kimi.document.querySelector(".chat-content-item-assistant").append(...nodes(kimi.document, '<div class="segment-content"><div class="markdown"><p>Paris</p></div></div>'));
     assert.equal(kimi.S.toMarkdown(kimi.adapter.answer()), "Paris");
   } finally { kimi.close(); }
   const card = (inner) => `<div class="answer-common-card">${inner}</div>`;
   const qianwen = replayHtml(page(card('<div class="thinkingContent-x1"><div class="qk-markdown"><p>Reasoning</p></div></div>')), { host: "www.qianwen.com", path: "/chat/id-1" });
   try {
-    assert.equal(qianwen.adapter.answer(), null);
+    assert.equal((qianwen.adapter.answer()) === (null), true);
     qianwen.document.querySelector(".answer-common-card").replaceChildren();
-    assert.equal(qianwen.adapter.answer(), qianwen.document.querySelector(".answer-common-card"), "空占位卡照旧返回卡本身");
+    assert.equal((qianwen.adapter.answer()) === (qianwen.document.querySelector(".answer-common-card")), true, "空占位卡照旧返回卡本身");
   } finally { qianwen.close(); }
 });
 

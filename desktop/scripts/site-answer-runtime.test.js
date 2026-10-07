@@ -16,7 +16,7 @@ test('ChatGLM returns the full split answer body and never falls back to thought
     globalThis: { __AMS_I18N__: { t: x => x } }
   });
   const a = S.adapters['chatglm.cn'];
-  assert.equal(a.answer(), null, 'thought-only content is not the answer');
+  assert.equal((a.answer()) === (null), true, 'thought-only content is not the answer');
   parts = [thought, paragraph, code, paragraph];
-  assert.equal(a.answer(), body, 'all body paragraphs and code share the returned container');
+  assert.equal((a.answer()) === (body), true, 'all body paragraphs and code share the returned container');
 });

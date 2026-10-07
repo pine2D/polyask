@@ -44,7 +44,7 @@ test('filling an empty or identical draft requires no redundant confirmation', a
     try {
       await h.click(h.document.querySelector<HTMLButtonElement>('.prompt-library-item button')!);
       assert.deepEqual(inserted, ['New template question']);
-      assert.equal(h.document.querySelector('[role="dialog"]'), null);
+      assert.equal((h.document.querySelector('[role="dialog"]')) === (null), true);
     } finally { await h.close(); }
   }
 });

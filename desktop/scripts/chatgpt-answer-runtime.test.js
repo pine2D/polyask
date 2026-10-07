@@ -14,12 +14,12 @@ function setup(matches) {
 }
 test('ChatGPT reads the newest verified assistant Markdown, excluding user bubbles and thought containers', () => {
   const old = {}, latest = {};
-  assert.equal(setup({ [modern]: [old, latest] }).answer(), latest);
-  assert.equal(setup({ '[data-user-message-bubble]': [{}], '[data-markdown-text-style="thought"]': [{}] }).answer(), null);
+  assert.equal((setup({ [modern]: [old, latest] }).answer()) === (latest), true);
+  assert.equal((setup({ '[data-user-message-bubble]': [{}], '[data-markdown-text-style="thought"]': [{}] }).answer()) === (null), true);
 });
 test('ChatGPT retains both older answer layouts', () => {
   for (const selector of ['[data-turn="assistant"]', '[data-message-author-role="assistant"]']) {
     const markdown = {}, turn = { querySelector: s => s === '.markdown' ? markdown : null };
-    assert.equal(setup({ [selector]: [turn] }).answer(), markdown);
+    assert.equal((setup({ [selector]: [turn] }).answer()) === (markdown), true);
   }
 });

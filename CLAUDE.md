@@ -11,7 +11,7 @@ PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点�
 | --- | --- |
 | 动 `desktop/src/site-runtime/`：注入/提交/切档/汇总、站点、图片、页面改版 | `docs/adapters.md`（契约、站点卡、图片限额、改版剧本） |
 | 动 `desktop/src/{main,preload,renderer}/`：视图、IPC、预算、错误码、数据与同步、安全、布局 | `docs/desktop.md`（进程边界、预算表、错误码全表、数据边界） |
-| 写回归测试、Desktop 开发态真机复现、负向对拍 | `docs/verify.md` |
+| 写回归测试、Desktop 开发态真机复现、负向对拍 | `desktop/AGENTS.md` + `docs/verify.md` |
 | 发版/tag、改用户文案或三语词条、Release 正文 | `docs/release.md`（含 i18n 落点表） |
 | 动 Drive OAuth 客户端、凭据注入 | `docs/desktop-oauth-security.md` |
 
@@ -44,8 +44,8 @@ PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点�
 
 ```bash
 bash scripts/verify.sh               # 零依赖仓库卫生：.js/.mjs 语法 + JSON + 300 行 + desktop/src 400 行棘轮 + OAuth 卫生 + 文档/.github 引用 + workflow YAML + 根 scripts 五个跨端测试 + diff --check
-cd desktop && npm test               # Desktop 门禁：tsc --noEmit + tsx --test（test/）+ node --test（scripts/*.test.{js,mjs}，含九站适配器回归）；verify.sh 不跑它
-cd desktop && npm run typecheck      # 与 npm test 首段重叠，CI 单独再跑是刻意的双保险
+cd desktop && npm test               # Desktop 门禁：断言检查 + tsc + 串行 TS/运行时测试（含九站回归）；受限入口，verify.sh 不跑它
+cd desktop && npm run typecheck      # 与 npm test 编译检查重叠，CI 单独再跑是刻意的双保险
 cd desktop && npm run package && xvfb-run -a npm run smoke -- --skip-package   # preload 的 require 仍解析、九站视图挂上
 bash scripts/prepare-release.sh auto # 推导版本、晋升 CHANGELOG、同步 Desktop package/lock（只改文件不 commit）
 bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布（--build-only 只校验源码并提取 Release 正文）

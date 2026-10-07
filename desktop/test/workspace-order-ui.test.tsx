@@ -50,7 +50,7 @@ test("keyboard moves and checkbox toggles retain the user's selected site order"
     handle.focus();
     await act(async () => handle.dispatchEvent(new h.window.KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     assert.deepEqual(selected, ["claude", "kimi", "gemini"]);
-    assert.equal(h.document.activeElement, handle);
+    assert.equal((h.document.activeElement) === (handle), true);
     await act(async () => h.document.querySelector<HTMLInputElement>('input[value="kimi"]')!.click());
     assert.deepEqual(selected, ["claude", "gemini"]);
     await act(async () => h.document.querySelector<HTMLInputElement>('input[value="kimi"]')!.click());
