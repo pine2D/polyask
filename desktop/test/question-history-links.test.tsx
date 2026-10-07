@@ -30,7 +30,9 @@ test('history toolbar separates current-copy actions from question actions and k
   const click = async (node: HTMLButtonElement) => act(async () => node.click());
   try {
     await render(true);
-    assert.equal(dom.window.document.querySelectorAll('.question-reader-intro button').length, 0, 'the heading has no duplicate actions');
+    assert.equal(dom.window.document.querySelectorAll('.question-reader-intro button:not(.question-original-actions button)').length, 0,
+      'the heading has no duplicate conversation or question actions');
+    assert.equal(dom.window.document.querySelectorAll('.question-original-actions button').length, 1, 'the prompt has its own original-copy action');
     assert.equal(dom.window.document.querySelectorAll('.question-reader-actions').length, 1);
     assert.ok(button('Copy conversation link'), 'copy icon is present');
     assert.ok(button('Open conversation in browser'));

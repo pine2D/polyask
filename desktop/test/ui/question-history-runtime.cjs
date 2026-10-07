@@ -1,8 +1,9 @@
-const { app, BrowserWindow, session } = require('electron');
+const { app, BrowserWindow, session, nativeTheme } = require('electron');
 const { join } = require('node:path');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
 app.whenReady().then(async () => {
+  nativeTheme.themeSource = 'light';
   session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_details, callback) => callback({ cancel: true }));
   const win = new BrowserWindow({ width: 1400, height: 900, show: false, webPreferences: { sandbox: true, contextIsolation: true } });
   let failed = false;

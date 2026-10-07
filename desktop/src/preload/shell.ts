@@ -1,4 +1,5 @@
 import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
+import type { QuestionArchiveRequest } from "../shared/question-archive";
 import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
 import type { BackupPreview, BackupApplyResult, BackupSelectionPreview } from "../shared/backup";
 import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
@@ -48,6 +49,7 @@ export interface PolyAskDesktopApi {
   listLegacyQuestions(filters?: QuestionFilters): Promise<QuestionLegacyPage>;
   listQuestions(filters: QuestionFilters): Promise<QuestionPage>;
   getQuestion(id: string, answerId?: string): Promise<QuestionDetail | null>;
+  createQuestionArchive(request: QuestionArchiveRequest): Promise<ArchiveRecord>;
   previewQuestion(questionId: string, answerId?: string): Promise<QuestionRestorePreview>;
   restoreQuestion(token: string, confirmed: boolean): Promise<QuestionRestoreResult[]>;
   cancelQuestionRestore(): Promise<void>;
@@ -147,6 +149,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   listLegacyQuestions: (filters?: QuestionFilters) => invoke("polyask:question-legacy", filters),
   listQuestions: (filters: QuestionFilters) => invoke("polyask:question-list", filters),
   getQuestion: (id: string, answerId?: string) => invoke("polyask:question-get", { questionId: id, answerId }),
+  createQuestionArchive: (request: QuestionArchiveRequest) => invoke("polyask:question-archive", request),
   previewQuestion: (questionId: string, answerId?: string) => invoke("polyask:question-preview", { questionId, answerId }),
   restoreQuestion: (token: string, confirmed: boolean) => invoke("polyask:question-restore", { token, confirmed }),
   cancelQuestionRestore: () => invoke("polyask:question-cancel"),

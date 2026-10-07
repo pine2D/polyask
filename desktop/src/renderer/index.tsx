@@ -41,6 +41,7 @@ import {
   applyDisplayPreferences,
   loadDisplayPreferences,
 } from "./display-preferences";
+import { useArchiveNavigation } from "./use-archive-navigation";
 import { ImagePicker } from "./image-picker";
 import { PageTabs } from "./page-tabs";
 import { resetLocalSession } from "./local-data-reset";
@@ -71,6 +72,7 @@ import { useSynthesisFlow } from "./use-synthesis-flow";
 import { useSynthesisRecovery } from "./use-synthesis-recovery";
 import { useWorkspaceFlow } from "./use-workspace-flow";
 import { shell } from "./shell-api";
+import { requestDecisionNavigation } from "./decision-navigation";
 import { currentPlatform, isMac } from "./platform";
 import "./styles.css";
 import "./settings.css";
@@ -133,7 +135,7 @@ function App(): React.JSX.Element {
   const [questionHistoryOpen, setQuestionHistoryOpen] = useState(false);
   const [questionHistoryBlocking, setQuestionHistoryBlocking] = useState(false);
   const closeQuestionHistory = (): void => { setQuestionHistoryOpen(false); shell.setSurface("sites"); };
-  const [comparisonId, setComparisonId] = useState<string | null>(null);
+  const archiveNavigation = useArchiveNavigation();
   const [settingsSection, setSettingsSection] = useState<"overview" | "drive-diagnostics">("overview");
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(INITIAL_SYNC);
@@ -185,7 +187,7 @@ function App(): React.JSX.Element {
   const imageSelection = useImageSelection(copy, runState === "idle" && !auxiliaryBusy, setAnnouncement);
   const synthesisRecovery = useSynthesisRecovery(copy, synthesis,
     () => { broadcast.invalidate(); changeSurface("sites"); },
-    () => { setComparisonId(null); changeSurface("archive"); });
+    () => { archiveNavigation.clear(); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
   const acceptDisplayPreferences = (value: DisplayPreferences): void => {
     applyDisplayPreferences(
@@ -368,7 +370,7 @@ function App(): React.JSX.Element {
   };
   const {collectAndCopy, collectSynthesis, collectAndCompare} = archiveCollectionActions({copy,
     capture: archiveCapture, synthesis, runAuxiliary, announce: setAnnouncement,
-    openArchive: id => { if (id) setComparisonId(id); changeSurface("archive"); }});
+    openArchive: id => { archiveNavigation.collection(id); changeSurface("archive"); }});
   const startNewSession = async (): Promise<void> => {
     if (pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     const selectedSites = [...selected];
@@ -470,7 +472,7 @@ function App(): React.JSX.Element {
     ...(selected.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
     "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
     "open-question-history": () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionHistoryOpen(true); },
-    "open-archive": () => { setComparisonId(null); changeSurface("archive"); },
+    "open-archive": () => { archiveNavigation.clear(); changeSurface("archive"); },
     ...(synthesis.pending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
     ...(broadcast.retrySites.length > 0 ? {
       "retry-failed": () => retryReview.request()
@@ -522,10 +524,10 @@ function App(): React.JSX.Element {
   }
 
   if (surface === "archive") {
-    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? comparisonId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
+    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { synthesisRecovery.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (
@@ -676,7 +678,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <QuestionHistory onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      <QuestionHistory onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
       {retryReview.review}
       {pendingNewSession && (
         <ConfirmDialog

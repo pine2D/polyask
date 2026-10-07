@@ -148,7 +148,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
     return state;
   };
-  const disposeQuestionIpc = registerQuestionHistoryIpc({ flush: sites => capture.flush(sites), questions: options.questions, manager, workspace, gate: operationGate, window, trusted: trustedShell, publishWorkspace });
+  const disposeQuestionIpc = registerQuestionHistoryIpc({ flush: sites => capture.flush(sites), questions: options.questions, archives: options.archives, manager, workspace, gate: operationGate, window, trusted: trustedShell, publishWorkspace });
   const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });

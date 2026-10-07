@@ -5,14 +5,18 @@ import type { QuestionHistoryService } from "./question-history-service";
 import type { ViewManager } from "./view-manager";
 import { QuestionRestoreService } from "./question-restore-service";
 import type { WorkspaceService } from "./workspace-service";
+import type { ArchiveService } from "./archive-service";
+import { QuestionArchiveService } from "./question-archive-service";
+import { SITES } from "./sites";
 
-const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-panel", "polyask:question-legacy"] as const;
+const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-panel", "polyask:question-legacy", "polyask:question-archive"] as const;
 export function registerQuestionHistoryIpc(options: {
-  questions: QuestionHistoryService; manager: ViewManager; workspace: WorkspaceService; gate: OperationGate;
+  questions: QuestionHistoryService; archives: ArchiveService; manager: ViewManager; workspace: WorkspaceService; gate: OperationGate;
   flush: (sites: readonly import("../shared/contracts").SiteKey[]) => Promise<void>;
   window: BrowserWindow; trusted: (event: IpcMainInvokeEvent) => boolean; publishWorkspace: () => unknown;
 }): () => void {
   const { questions, manager, workspace, gate } = options;
+  const archive = new QuestionArchiveService({questions:questions.repository, archives:options.archives, sites:SITES});
   questions.setFailureHandler(() => { if (!options.window.isDestroyed()) options.window.webContents.send("polyask:question-save-failed"); });
   const restore = new QuestionRestoreService(questions.repository, {
     selection: () => workspace.getState().selectedSites,
@@ -43,5 +47,6 @@ export function registerQuestionHistoryIpc(options: {
     if (value && ((value.query !== undefined && typeof value.query !== "string") || (value.cursor !== undefined && typeof value.cursor !== "string"))) throw new Error("invalid_question_query");
     return questions.repository.legacy(value ?? {});
   });
+  handle(channels[8], value => archive.create(value));
   return () => { questions.setFailureHandler(null); restore.cancel(); for (const channel of channels) ipcMain.removeHandler(channel); };
 }

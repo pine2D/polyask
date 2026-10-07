@@ -19,7 +19,7 @@ test('history keeps links reachable, preserves IME Escape, and ignores departed 
       });
       compiler.run((error, stats) => compiler.close(() => error || stats?.hasErrors() ? reject(error || new Error(stats?.toString({ all: false, errors: true }))) : resolve()));
     });
-    writeFileSync(join(output, 'index.html'), '<!doctype html><html><body><div id="root"></div><script src="bundle.js"></script></body></html>');
+    writeFileSync(join(output, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"></head><body><div id="root"></div><script src="bundle.js"></script></body></html>');
     const binary = require('electron') as string;
     const args = [join(__dirname, 'ui/question-history-runtime.cjs'), output];
     const linuxHeadless = process.platform === 'linux' && !process.env.DISPLAY;
