@@ -31,7 +31,9 @@ export function useLibraryPopover() {
       if (event.target instanceof Node && !panel.current?.contains(event.target) && !trigger.current?.contains(event.target)) close(false);
     };
     const key = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !event.isComposing) { event.preventDefault(); event.stopImmediatePropagation(); close(); }
+      if (event.key !== 'Escape') return;
+      if (event.isComposing || event.keyCode === 229) { event.stopImmediatePropagation(); return; }
+      event.preventDefault(); event.stopImmediatePropagation(); close();
     };
     window.addEventListener('pointerdown', pointer, true);
     window.addEventListener('keydown', key, true);

@@ -42,7 +42,7 @@ export function LibrarySelect({ name, label, value, options, onChange, disabled,
     popover.close(); onChange(option.value);
   };
   const keydown = (event: React.KeyboardEvent) => {
-    if (event.nativeEvent.isComposing) return;
+    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
     if (event.key === 'Tab') { if (popover.open) popover.close(); return; }
     if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
       event.preventDefault(); event.stopPropagation();

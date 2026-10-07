@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import webpack from 'webpack';
-test('history ignores departed detail requests and refreshes every loaded page without starving slow reads', { timeout: 90000 }, async () => {
+test('history keeps links reachable, preserves IME Escape, and ignores departed detail requests', { timeout: 90000 }, async () => {
   const output = mkdtempSync(join(tmpdir(), 'polyask-history-ui-'));
   const root = join(__dirname, '..');
   try {
@@ -25,6 +25,7 @@ test('history ignores departed detail requests and refreshes every loaded page w
     const linuxHeadless = process.platform === 'linux' && !process.env.DISPLAY;
     const result = spawnSync(linuxHeadless ? 'xvfb-run' : binary, linuxHeadless ? ['-a', binary, ...args] : args,
       { encoding: 'utf8', timeout: 60000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+    process.stdout.write(result.stdout);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${result.error ?? ''}`);
   } finally { rmSync(output, { recursive: true, force: true }); }
 });

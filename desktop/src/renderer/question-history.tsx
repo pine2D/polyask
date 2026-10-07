@@ -13,6 +13,7 @@ import { QuestionHistoryReader } from './question-history-reader';
 import { shell } from './shell-api';
 import './question-history.css';
 import { refreshQuestionPages } from './question-history-refresh';
+import { focusableControls } from './focusable-controls';
 
 type Confirmation = { title: string; message: string; label: string; run: () => void };
 export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0, busy, onOpen, onClose, onDraft, onBlockingChange }: {
@@ -68,6 +69,7 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
   useEffect(() => {
     if (!open || confirmation) return;
     const key = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && (e.isComposing || e.keyCode === 229)) { e.stopImmediatePropagation(); return; }
       // Portaled action menus handle Escape and Tab before the history surface.
       if (panel.current?.querySelector('[aria-haspopup="menu"][aria-expanded="true"]')) return;
       if (e.key === 'Escape') {
@@ -78,10 +80,11 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
         else close();
       }
       if (e.key === 'Tab' && full) {
-        const nodes = panel.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input, select, summary, [tabindex="0"]');
-        if (!nodes?.length) return;
+        const nodes = panel.current ? focusableControls(panel.current) : [];
+        if (!nodes.length) { e.preventDefault(); panel.current?.focus(); return; }
         const first = nodes[0], last = nodes[nodes.length - 1];
-        if (e.shiftKey && (document.activeElement === first || !panel.current?.contains(document.activeElement))) { e.preventDefault(); last.focus(); }
+        if (!panel.current?.contains(document.activeElement)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+        else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
         else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
       }
     };
@@ -181,7 +184,7 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
     finally { if (detailPending.current === request) detailPending.current = 0; }
   };
   if (!open) return null;
-  return <aside ref={panel} className={`question-history${full ? ' is-full' : ''}`} style={{ width: full ? undefined : QUESTION_PANEL_WIDTH }} aria-label={copy.questionHistory}>
+  return <aside ref={panel} tabIndex={-1} className={`question-history${full ? ' is-full' : ''}`} style={{ width: full ? undefined : QUESTION_PANEL_WIDTH }} aria-label={copy.questionHistory}>
     <header className="question-header"><h1>{detail ? copy.questionCopies : copy.questionHistory}</h1>
       {detail && <button type="button" onClick={leaveDetail}>{copy.questionBack}</button>}
       <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} onClick={close}><CloseIcon /></button>

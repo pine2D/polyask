@@ -124,6 +124,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 
 - 平台适配：`main/application-menu.ts` 生成系统菜单，macOS 的设置入口只位于应用菜单，保留服务、隐藏及窗口角色；现有命令绑定不变。外壳 `main/native-shell.ts` 使用系统编辑菜单，按 `editFlags` 启用操作，不接管远程站点。窗口背景在建窗与 `nativeTheme.updated` 时匹配外壳 canvas，关闭时移除主题监听。
 - 外壳 `renderer/platform.ts` 集中识别平台，仅用于外观与顺序，不作为权限依据。Windows 优先 Segoe UI Variable，macOS/Linux 使用对应系统字体；`shortcut-label.ts` 只格式化可见键名，不改命令注册或搜索。Windows 确认在取消之前，macOS/Linux 相反；DOM 与视觉顺序一致，破坏性确认默认聚焦取消，IME 组合输入时 Escape 不关闭弹框。
+- `focusable-controls.ts` 为局部焦点圈统一收集可见的链接、按钮、表单、summary、tabindex 和可编辑元素，过滤隐藏、禁用及折叠内容，遵守正 tabindex 顺序。历史全屏与文件夹弹框共用；门户菜单先处理退出并返回触发器。Escape 同时检查组合态和 229 键码，只拦截向外传播，保留输入法原生取消行为；图片面板普通 Escape 仍在冒泡阶段处理。
 - `native-feel.css` 限制工具栏文字选择但保留正文/输入可复制，支持系统增加对比度、强制颜色与减少动态效果；`usePresence` 同步尊重减少动态效果，不保留无动画的退场等待。原生适配技能来源及研究依据记录在 `.native-feel/`，不要求架构迁移、透明材质或自动更新。
 - 按钮按压采用即时静态反馈，不做全局缩放；`aria-disabled` 与原生 `disabled` 都不显示接受点击的反馈，前者仍可聚焦读取不可用原因。分页选中底板扣除容器内边距，与页按钮实际边界对齐。动态计数使用等宽数字；附件缩略图使用不占布局的中性内描边，高对比度时跟随系统颜色。细节技能的固定来源与项目取舍记录在 `.interface-polish/`。
 

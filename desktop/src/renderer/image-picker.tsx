@@ -62,13 +62,17 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
   const manageLabel = formatCopy(props.copy.manageImages, { count });
   useEffect(() => {
     if (!props.open) return;
+    const preserveIme = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && (event.isComposing || event.keyCode === 229)) event.stopImmediatePropagation();
+    };
     const close = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (trayRef.current?.contains(document.activeElement)) triggerRef.current?.focus();
       props.onOpenChange(false);
     };
+    window.addEventListener("keydown", preserveIme, true);
     window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
+    return () => { window.removeEventListener("keydown", preserveIme, true); window.removeEventListener("keydown", close); };
   }, [props.onOpenChange, props.open]);
   const choose = () => {
     if (props.disabled || !inputRef.current) return;

@@ -7,6 +7,7 @@ import { getCopy } from '../../src/shared/copy';
 import type { QuestionDetail, QuestionSummary } from '../../src/shared/question-history';
 import '../../src/renderer/styles.css';
 const copy = getCopy('en');
+const scenario = new URLSearchParams(location.search).get('scenario');
 const ticks = new Map<number, () => void>();
 let tickId = 0;
 window.setInterval = ((run: () => void) => { ticks.set(++tickId, run); return tickId; }) as typeof window.setInterval;
@@ -28,7 +29,12 @@ setShellApi({
   },
   deleteQuestion: async (id: string) => { rows = rows.filter(q => q.id !== id); },
   getQuestion: async (id: string): Promise<QuestionDetail> => {
-    const value = { question: rows.find(q => q.id === id)!, answers: [] };
+    const value: QuestionDetail = { question: rows.find(q => q.id === id)!, answers: scenario === 'source-links' ? [{
+      schema: 4, id: 'a0', questionId: id, site: 'claude', attempt: 1, createdAt: 1000, updatedAt: 2000, deviceId: 'fixture',
+      submission: 'submitted', submissionCode: null, conversationUrl: null, capture: 'complete', captureCode: null,
+      answerMarkdown: '[First source](https://example.com/first)\n\n[Second source](https://example.com/second)',
+      capturedAt: 2000, truncated: false, sealedAt: 2000
+    }] : [] };
     if (delay) await new Promise<void>(resolve => pending.push(resolve));
     return value;
   }
@@ -44,8 +50,24 @@ const click = async (selector: string) => { const node = document.querySelector<
 const cards = () => document.querySelectorAll('.question-main');
 async function run() {
   while (cards().length !== 50) await pause();
-  const scenario = new URLSearchParams(location.search).get('scenario');
-  if (scenario === 'pages') {
+  if (scenario === 'source-links') {
+    await click('.question-main');
+    check(document.querySelectorAll('.markdown-preview a[href]').length === 2, 'two plain source links rendered without diagram controls');
+    document.querySelector<HTMLButtonElement>(`button[aria-label="${copy.questionMenu}"]`)!.focus();
+    (window as any).historyNativeReady = true;
+    while (!(window as any).historyNativeDone) await pause();
+    check(!(window as any).historyNativeError, (window as any).historyNativeError);
+  } else if (scenario === 'ime-composing' || scenario === 'ime-229') {
+    await click('.question-main');
+    let hostEscapes = 0;
+    window.addEventListener('keydown', event => { if (event.key === 'Escape') hostEscapes++; });
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true,
+      ...(scenario === 'ime-composing' ? { isComposing: true } : { keyCode: 229 }) });
+    document.activeElement!.dispatchEvent(event); await pause();
+    check(!event.defaultPrevented, 'IME Escape must retain native candidate cancellation');
+    check(document.querySelector('.question-reader'), 'IME Escape must not leave history detail');
+    check(hostEscapes === 0, 'IME Escape must not propagate to host cancellation');
+  } else if (scenario === 'pages') {
     await click('.question-load-more'); check(cards().length === 100, 'second page loads');
     const scroller = document.querySelector<HTMLElement>('.question-scroll')!;
     scroller.scrollTop = 900; const scroll = scroller.scrollTop;
@@ -67,6 +89,7 @@ async function run() {
       await click(`button[aria-label="${copy.questionMenu}"]`);
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await pause();
       check(!document.querySelector('[role="menu"]') && document.querySelector('.question-reader'), 'first Escape closes only the action menu');
+      check(document.activeElement === document.querySelector(`button[aria-label="${copy.questionMenu}"]`), 'menu Escape returns focus to its trigger');
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await pause();
     }
     else if (scenario?.startsWith('menu-')) {
