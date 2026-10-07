@@ -12,6 +12,8 @@ import { SerialActions, type ActionFailure } from "./serial-actions";
 import { SynthesisWorkspace } from "./synthesis-workspace";
 import { requestDecisionNavigation } from "./decision-navigation";
 import { shell } from "./shell-api";
+import type { SynthesisDraftStore } from "./synthesis-draft";
+import type { SynthesisEditorRequest } from "./use-synthesis-recovery";
 
 export interface ArchiveSurfaceProps {
   readonly copy: DesktopCopy;
@@ -28,6 +30,9 @@ export interface ArchiveSurfaceProps {
   readonly onSendSynthesis: (request: SynthesisSendRequest) => Promise<void>;
   readonly onCollectSynthesis: () => Promise<void>;
   readonly onSaveSynthesis: (replaceExisting: boolean) => Promise<ArchiveRecord>;
+  readonly synthesisDrafts?: SynthesisDraftStore;
+  readonly synthesisEditorRequest?: SynthesisEditorRequest | null;
+  readonly onSynthesisEditorOpened?: () => void;
 }
 
 function downloadMarkdown(markdown: string, createdAt: number): void {
@@ -129,6 +134,12 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
   const [status, setStatus] = useState('');
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
+  useEffect(() => {
+    const request = props.synthesisEditorRequest;
+    if (request?.archiveId !== props.embeddedRecord.id) return;
+    setFollowUpHost(request.followUpHost); setSynthesisId(request.archiveId);
+    props.onSynthesisEditorOpened?.();
+  }, [props.synthesisEditorRequest, props.embeddedRecord.id]);
   const actionQueue = useRef<SerialActions | null>(null);
   if (!actionQueue.current) actionQueue.current = new SerialActions(setBusy, setStatus);
   useEffect(() => setSelected(props.embeddedRecord), [props.embeddedRecord]);
@@ -192,7 +203,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       onOpenSource={(url) => { void run(() => shell.openExternal(url), props.copy.archiveLoadFailed); }}
       pendingSynthesis={props.pendingSynthesis}
       synthesisCandidate={props.synthesisCandidate}
-      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
+      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} initialDraft={props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
       onSynthesize={() => requestDecisionNavigation(() => { setFollowUpHost(undefined); setSynthesisId(selected.id); })}
       onFollowUp={(host) => requestDecisionNavigation(() => { setFollowUpHost(host); setSynthesisId(selected.id); })}
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}

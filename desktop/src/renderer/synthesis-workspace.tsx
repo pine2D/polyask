@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ArchiveRecord } from "../shared/archive";
 import type { SiteDefinition } from "../shared/contracts";
@@ -13,6 +13,7 @@ import {
 } from "../shared/synthesis";
 import { LibrarySelect } from "./library-select";
 import { CloseIcon, SendIcon, SparklesIcon, StopIcon } from "./icons";
+import type { SynthesisDraft } from "./synthesis-draft";
 
 interface SynthesisWorkspaceProps {
   readonly copy: DesktopCopy;
@@ -23,15 +24,26 @@ interface SynthesisWorkspaceProps {
   readonly busy: boolean;
   readonly onCancel: () => void;
   readonly onSend: (request: SynthesisSendRequest) => void;
+  readonly initialDraft?: (SynthesisDraft & { readonly sourceChanged: boolean }) | null;
+  readonly onDraftChange?: (draft: SynthesisDraft) => void;
 }
 
 export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.Element {
   const successful = useMemo(() => props.record.results.filter((result) => !!result.text?.trim()), [props.record]);
-  const [selectedHosts, setSelectedHosts] = useState(() => props.followUpHost ? [props.followUpHost] : successful.map((result) => result.host));
-  const [targetSite, setTargetSite] = useState("");
-  const [tier, setTier] = useState<Tier>(props.defaultTier);
-  const [instruction, setInstruction] = useState(props.followUpHost ? "" : props.copy.synthesisDefaultInstruction);
-  const [excerpt, setExcerpt] = useState("");
+  const [selectedHosts, setSelectedHosts] = useState(() => props.initialDraft?.selectedHosts ?? (props.followUpHost ? [props.followUpHost] : successful.map((result) => result.host)));
+  const [targetSite, setTargetSite] = useState(props.initialDraft?.targetSite ?? "");
+  const [tier, setTier] = useState<Tier>(() => props.initialDraft ? props.initialDraft.tier : props.defaultTier);
+  const [instruction, setInstruction] = useState(props.initialDraft?.instruction ?? (props.followUpHost ? "" : props.copy.synthesisDefaultInstruction));
+  const [excerpt, setExcerpt] = useState(props.initialDraft?.excerpt ?? "");
+  const [sourceChanged, setSourceChanged] = useState(props.initialDraft?.sourceChanged ?? false);
+  const previousSource = useRef(props.record);
+  useEffect(() => {
+    if (selectedHosts.some(host => previousSource.current.results.find(result => result.host === host)?.text
+      !== props.record.results.find(result => result.host === host)?.text)) setSourceChanged(true);
+    previousSource.current = props.record;
+  }, [props.record, selectedHosts]);
+  useEffect(() => { props.onDraftChange?.({ selectedHosts, targetSite, tier, instruction, excerpt }); },
+    [selectedHosts, targetSite, tier, instruction, excerpt, props.onDraftChange]);
   const followUp = props.followUpHost !== undefined;
   const title = followUp ? props.copy.followUpTitle : props.copy.synthesisTitle;
   const selected = selectedSynthesisAnswers(props.record.results, selectedHosts);
@@ -50,6 +62,7 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
         <button className="panel-close" type="button" title={props.busy ? props.copy.cancel : props.copy.synthesisCancel} aria-label={props.busy ? props.copy.cancel : props.copy.synthesisCancel} onClick={props.onCancel}>{props.busy ? <StopIcon /> : <CloseIcon />}</button>
       </header>
       <div className="synthesis-config">
+        {sourceChanged ? <p className="synthesis-source-changed" role="status">{props.copy.synthesisSourceChanged}</p> : null}
         {followUp ? <>
           <p>{source ? `${answerSourceId(props.record.results.indexOf(source))} ${source.label}` : ""}</p>
           <label>{props.copy.followUpOriginal}<textarea name="follow-up-original" readOnly value={source?.text ?? ""} /></label>

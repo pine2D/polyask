@@ -29,7 +29,7 @@ interface CommandPaletteProps {
   readonly onExecute: (id: CommandId) => void;
   readonly onApplyGroup: (id: string) => void;
   readonly onInsertPrompt: (text: string) => void;
-  readonly onSaveTemplate: (input: { readonly name: string; readonly text: string }) => void;
+  readonly onSaveTemplate: (input: { readonly name: string; readonly text: string }) => void | Promise<boolean | void>;
   readonly onDeleteTemplate: (id: string) => void;
   readonly onClose: () => void;
 }
@@ -86,7 +86,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   };
   const onKeyDown = (event: React.KeyboardEvent): void => {
     const action = paletteKeyAction(event.key, event.nativeEvent.isComposing,
-      props.mode === "commands" && event.target === inputRef.current);
+      props.mode === "commands" && event.target === inputRef.current, event.nativeEvent.keyCode);
     if (!action) return;
     event.preventDefault();
     if (action === "close") props.onClose();
@@ -94,6 +94,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
     else if (visible.length) setActiveIndex((activeIndex + (action === "next" ? 1 : -1) + visible.length) % visible.length);
   };
   const onTabKeyDown = (event: React.KeyboardEvent, index: number): void => {
+    if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
     const action = pageTabKeyAction(event.key, index, PALETTE_MODES.length);
     if (!action) return;
     event.preventDefault();

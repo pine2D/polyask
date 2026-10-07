@@ -7,6 +7,7 @@ interface FeedbackAction { readonly label: string; readonly run: () => void; }
 
 interface FeedbackState {
   readonly setUndoAction: (action: FeedbackAction | null) => void;
+  readonly setNoticeAction: (action: FeedbackAction | null) => void;
   readonly announcement: string;
   readonly announcementSeq: number;
   readonly announce: (text: string, visible?: boolean, transient?: boolean) => void;
@@ -17,12 +18,13 @@ const FeedbackContext = createContext<FeedbackState | null>(null);
 export function FeedbackProvider({ children, copy }: { children: ReactNode; copy: DesktopCopy }): React.JSX.Element {
   const hintId = useId();
   const [undoAction, setUndoAction] = useState<FeedbackAction | null>(null);
+  const [noticeAction, setNoticeAction] = useState<FeedbackAction | null>(null);
   const [announced, setAnnounced] = useState({ text: "", seq: 0 });
   const [notice, setNotice] = useState({ text: "", seq: 0, transient: false });
   const hint = useControlHint(hintId, notice.seq);
   const announce = useCallback((text: string, visible = true, transient = false): void => {
     setAnnounced((current) => ({ text, seq: current.seq + 1 }));
-    if (visible) setNotice((current) => ({ text, seq: current.seq + 1, transient }));
+    if (visible) { setNoticeAction(null); setNotice((current) => ({ text, seq: current.seq + 1, transient })); }
   }, []);
   const clearNotice = useCallback((text: string): void => {
     setNotice((current) => current.text === text ? { ...current, text: "" } : current);
@@ -33,12 +35,14 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
     return () => clearTimeout(timer);
   }, [notice]);
   useEffect(() => { document.documentElement.style.setProperty("--feedback-height", `${WORKSPACE_FEEDBACK_HEIGHT}px`); }, []);
-  return <FeedbackContext.Provider value={{ announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction }}>
+  return <FeedbackContext.Provider value={{ announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction, setNoticeAction }}>
     {children}
     <div className="sr-only" aria-live="polite" aria-atomic="true" key={announced.seq}>{announced.text}</div>
-    <footer className="feedback-bar" data-hint-visible={!!hint} style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
-      <span id={hintId} role={hint ? "tooltip" : undefined} title={hint || notice.text}>{hint || notice.text || copy.feedbackReady}</span>
+    <footer className="feedback-bar" data-hint-visible={!!hint} data-has-notice={!!notice.text} style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
+      <span className="feedback-notice" hidden={!notice.text && !!hint} title={notice.text}>{notice.text || copy.feedbackReady}</span>
+      <span className="feedback-hint" id={hintId} role={hint ? "tooltip" : undefined} hidden={!hint} title={hint}>{hint}</span>
       {undoAction ? <button type="button" onClick={undoAction.run}>{undoAction.label}</button> : null}
+      {notice.text && noticeAction ? <button type="button" onClick={noticeAction.run}>{noticeAction.label}</button> : null}
       {notice.text ? <button type="button" onClick={() => setNotice((current) => ({ ...current, text: "" }))}>{copy.dismissFeedback}</button> : null}
     </footer>
   </FeedbackContext.Provider>;

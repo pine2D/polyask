@@ -17,13 +17,12 @@ import type {
   SiteHistoryState,
   SiteStatus
 } from "../shared/protocol";
-import { describeStatus, describeSynthesisSendCode, errorCode } from "../shared/status-copy";
+import { describeStatus, errorCode } from "../shared/status-copy";
 import type { SyncStatus } from "../shared/sync";
 import type { RuntimeInfo } from "../shared/runtime";
 import type { SiteHealth } from "../shared/site-health";
 import { siteHealthActions } from "./site-health-actions";
 import type { PromptLibraryState } from "../shared/prompt-library";
-import type { SynthesisSendRequest } from "../shared/synthesis";
 import { ArchiveSurface } from "./archive-surface";
 import { loadBootstrap, type BootstrapPhase } from "./bootstrap-model";
 import { BootstrapStateView } from "./bootstrap-state";
@@ -66,6 +65,7 @@ import { useArchiveCapture } from "./use-archive-capture";
 import { useBroadcastFlow } from "./use-broadcast-flow";
 import { useImageSelection } from "./use-image-selection";
 import { useSynthesisFlow } from "./use-synthesis-flow";
+import { useSynthesisRecovery } from "./use-synthesis-recovery";
 import { useWorkspaceFlow } from "./use-workspace-flow";
 import { shell } from "./shell-api";
 import { currentPlatform, isMac } from "./platform";
@@ -170,6 +170,9 @@ function App(): React.JSX.Element {
   );
   const { runState } = broadcast;
   const imageSelection = useImageSelection(copy, runState === "idle" && !auxiliaryBusy, setAnnouncement);
+  const synthesisRecovery = useSynthesisRecovery(copy, synthesis,
+    () => { broadcast.invalidate(); changeSurface("sites"); },
+    () => { setComparisonId(null); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
   const acceptDisplayPreferences = (value: DisplayPreferences): void => {
     applyDisplayPreferences(
@@ -526,27 +529,11 @@ function App(): React.JSX.Element {
     );
   }
 
-  // 辅助综合是唯一不经命令面板就往站点发送的路径。站点视图在归档面上处于 detach 态
-  // （未挂进视图树的 WebContentsView 视口恒 0×0，findComposer 恒 null，走满 44s 才报 timeout），
-  // 所以必须先切回 sites 再发；切走后归档面板已卸载，失败只能靠 announcement 通报。
-  const sendSynthesisFromArchive = async (request: SynthesisSendRequest): Promise<void> => {
-    try {
-      await synthesis.send(request, () => {
-        broadcast.invalidate();
-        changeSurface("sites");
-      });
-      setAnnouncement(request.excerpt !== undefined ? copy.followUpSent : copy.synthesisSent);
-    } catch (error) {
-      setAnnouncement(describeSynthesisSendCode(copy, errorCode(error)));
-      throw error;
-    }
-  };
-
   if (surface === "archive") {
-    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={comparisonId} preferredId={comparisonId ?? synthesis.pending?.archiveId ?? null} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={sendSynthesisFromArchive} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
+    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? comparisonId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis })} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { synthesisRecovery.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (
@@ -572,10 +559,12 @@ function App(): React.JSX.Element {
           changeSurface("sites");
           queueMicrotask(() => promptRef.current?.focus());
         }}
-        onSaveTemplate={(input) => {
-          void shell.savePromptTemplate(input)
-            .then((library) => { setPromptLibrary(library); setAnnouncement(copy.templateSaved, true, true); })
-            .catch(() => setAnnouncement(copy.promptLibrarySaveFailed));
+        onSaveTemplate={async (input) => {
+          try {
+            const library = await shell.savePromptTemplate(input);
+            setPromptLibrary(library); setAnnouncement(copy.templateSaved, true, true);
+            return true;
+          } catch { setAnnouncement(copy.promptLibrarySaveFailed); return false; }
         }}
         onDeleteTemplate={templateDeletion.request}
         onClose={() => changeSurface("sites")}
@@ -651,7 +640,7 @@ function App(): React.JSX.Element {
         onOpenHistory={() => questionHistoryOpen ? closeQuestionHistory() : executeCommand("open-question-history", commandActions.current)}
         onOpenArchive={() => executeCommand("open-archive", commandActions.current)}
         onRetry={() => executeCommand("retry-failed", commandActions.current)}
-        onPasteImages={(files) => { void imageSelection.choose(files); }}
+        onPasteImages={(files) => { void imageSelection.choose(files, "append"); }}
       />
       {drawerPresent ? (
         <WorkspaceDrawer

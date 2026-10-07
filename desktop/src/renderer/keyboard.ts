@@ -3,13 +3,14 @@ export interface PromptKeyEvent {
   readonly ctrlKey: boolean;
   readonly metaKey: boolean;
   readonly isComposing: boolean;
+  readonly keyCode?: number;
 }
 
 export function commandKeyAction(
   event: PromptKeyEvent,
   submitBlocked = false
 ): "submit" | "collapse" | null {
-  if (event.isComposing) return null;
+  if (event.isComposing || event.keyCode === 229) return null;
   if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
     return submitBlocked ? null : "submit";
   }
@@ -33,9 +34,10 @@ export function pageTabKeyAction(
 export function paletteKeyAction(
   key: string,
   isComposing: boolean,
-  inSearch: boolean
+  inSearch: boolean,
+  keyCode?: number
 ): "close" | "next" | "previous" | "execute" | null {
-  if (isComposing) return null;
+  if (isComposing || keyCode === 229) return null;
   if (key === "Escape") return "close";
   if (!inSearch) return null;
   if (key === "ArrowDown") return "next";

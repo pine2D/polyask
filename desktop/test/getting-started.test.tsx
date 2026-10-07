@@ -21,7 +21,7 @@ test("opening the guide renders four steps without executing commands or editing
     library={{templates:[],history:[]}} draft="Keep my draft" isMac={false}
     mode={"guide" as CommandPaletteMode} onModeChange={noop}
     onExecute={id => effects.push(id)} onApplyGroup={id => effects.push(id)}
-    onInsertPrompt={text => effects.push(text)} onSaveTemplate={() => effects.push("save")}
+    onInsertPrompt={text => effects.push(text)} onSaveTemplate={() => { effects.push("save"); }}
     onDeleteTemplate={id => effects.push(id)} onClose={noop}
   />);
   assert.match(html, /aria-label="开始使用"/);

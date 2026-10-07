@@ -4,6 +4,7 @@ import type { DesktopCopy } from "../shared/copy";
 import type { PromptHistoryItem, PromptTemplate } from "../shared/prompt-library";
 import { promptVariables } from "../shared/prompt-variables";
 import { PromptTemplateEditor } from "./prompt-template-editor";
+import { ConfirmDialog } from "./confirm-dialog";
 import { SaveIcon, TrashIcon } from "./icons";
 
 interface PromptLibraryProps {
@@ -12,7 +13,7 @@ interface PromptLibraryProps {
   readonly templates: readonly PromptTemplate[];
   readonly history: readonly PromptHistoryItem[];
   readonly onInsert: (text: string) => void;
-  readonly onSave: (input: { readonly name: string; readonly text: string }) => void;
+  readonly onSave: (input: { readonly name: string; readonly text: string }) => void | Promise<boolean | void>;
   readonly onDelete: (id: string) => void;
 }
 
@@ -20,9 +21,16 @@ export function PromptLibrary(props: PromptLibraryProps): React.JSX.Element {
   const [query, setQuery] = useState("");
   const [name, setName] = useState("");
   const [editing, setEditing] = useState<{ name: string; text: string } | null>(null);
+  const [pendingInsert, setPendingInsert] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const selectedButton = useRef<HTMLButtonElement | null>(null);
+  const insert = (text: string) => {
+    if (props.draft.trim() && props.draft !== text) setPendingInsert(text);
+    else props.onInsert(text);
+  };
   const choose = (item: { name: string; text: string }, button: HTMLButtonElement) => {
-    if (!promptVariables(item.text).length) { props.onInsert(item.text); return; }
+    if (!promptVariables(item.text).length) { insert(item.text); return; }
     selectedButton.current = button;
     setEditing(item);
   };
@@ -39,10 +47,15 @@ export function PromptLibrary(props: PromptLibraryProps): React.JSX.Element {
   const history = useMemo(() => props.history.filter((item) =>
     !needle || item.text.toLocaleLowerCase().includes(needle)
   ), [needle, props.history]);
-  const save = () => {
-    if (!name.trim() || !props.draft.trim()) return;
-    props.onSave({ name: name.trim(), text: props.draft });
-    setName("");
+  const save = async () => {
+    if (saving || !name.trim() || !props.draft.trim()) return;
+    setSaving(true); setSaveError("");
+    try {
+      const result = await props.onSave({ name: name.trim(), text: props.draft });
+      if (result === false) setSaveError(props.copy.promptLibrarySaveFailed);
+      else setName("");
+    } catch { setSaveError(props.copy.promptLibrarySaveFailed); }
+    finally { setSaving(false); }
   };
   return (
     <section id="prompt-library-panel" className="prompt-library" role="tabpanel" aria-labelledby="command-tab-library">
@@ -51,11 +64,12 @@ export function PromptLibrary(props: PromptLibraryProps): React.JSX.Element {
         <input type="search" autoComplete="off" value={query} placeholder={props.copy.promptLibrarySearch} onChange={(event) => setQuery(event.target.value)} />
       </label>
       <div className="prompt-template-save" hidden={!!editing}>
-        <input name="prompt-template-name" autoComplete="off" maxLength={80} value={name} placeholder={props.copy.promptTemplateName} aria-label={props.copy.promptTemplateName} onChange={(event) => setName(event.target.value)} />
-        <button type="button" disabled={!name.trim() || !props.draft.trim()} onClick={save}><SaveIcon />{props.copy.saveCurrentPrompt}</button>
+        <input name="prompt-template-name" autoComplete="off" maxLength={80} value={name} disabled={saving} placeholder={props.copy.promptTemplateName} aria-label={props.copy.promptTemplateName} onChange={(event) => { setName(event.target.value); setSaveError(""); }} />
+        <button type="button" disabled={saving || !name.trim() || !props.draft.trim()} onClick={() => { void save(); }}><SaveIcon />{props.copy.saveCurrentPrompt}</button>
       </div>
+      {saveError ? <p role="status">{saveError}</p> : null}
       <div className="prompt-library-results">
-        {editing ? <PromptTemplateEditor copy={props.copy} template={editing} onApply={props.onInsert} onBack={() => {
+        {editing ? <PromptTemplateEditor copy={props.copy} template={editing} onApply={insert} onBack={() => {
           setEditing(null);
           requestAnimationFrame(() => selectedButton.current?.focus());
         }} /> : null}
@@ -71,10 +85,13 @@ export function PromptLibrary(props: PromptLibraryProps): React.JSX.Element {
           </div>
         ))}
         {history.length ? <h2>{props.copy.recentQuestions}</h2> : null}
-        {history.map((item) => <button type="button" className="prompt-history-item" title={item.text} key={item.id} onClick={() => props.onInsert(item.text)}>{item.text}</button>)}
+        {history.map((item) => <button type="button" className="prompt-history-item" title={item.text} key={item.id} onClick={() => insert(item.text)}>{item.text}</button>)}
         {!matchedStarters.length && !templates.length && !history.length ? <p className="command-empty">{props.copy.promptLibraryEmpty}</p> : null}
         </div>
       </div>
+      {pendingInsert !== null ? <ConfirmDialog copy={props.copy} title={props.copy.templateReplaceTitle}
+        message={props.copy.templateReplace} confirmLabel={props.copy.templateReplaceAction} cancelLabel={props.copy.cancel}
+        onCancel={() => setPendingInsert(null)} onConfirm={() => { const value = pendingInsert; setPendingInsert(null); props.onInsert(value); }} /> : null}
     </section>
   );
 }

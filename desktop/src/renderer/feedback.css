@@ -14,4 +14,6 @@
 .comparison-filter { display: flex; align-items: center; gap: 6px; min-height: 28px; font-size: 12px; }
 .compare-trigger { display: flex; align-items: center; gap: 4px; }
 
-.feedback-bar[data-hint-visible="true"] > span { color: var(--muted); white-space: normal; line-height: 14px; max-height: 28px; }
+.feedback-bar .feedback-hint { color: var(--muted); white-space: normal; line-height: 14px; max-height: 28px; }
+.feedback-bar[data-has-notice="true"] .feedback-hint { flex: 0 1 45%; }
+.feedback-bar > span[hidden] { display: none; }

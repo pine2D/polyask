@@ -4,6 +4,7 @@ import vm from "node:vm";
 import ts from "typescript";
 import { ExclusiveActionLock } from "../src/renderer/broadcast-flow-state";
 import { readSource } from "./fixtures";
+import { createSynthesisDraftStore } from "../src/renderer/synthesis-draft";
 
 test("synthesis holds the shared renderer lock and exposes cancel until the request settles", async () => {
   const states: unknown[] = [];
@@ -19,6 +20,7 @@ test("synthesis holds the shared renderer lock and exposes cancel until the requ
         useState: (value: unknown) => [value, (next: unknown) => states.push(next)],
         useRef: (value: unknown) => ({ current: value })
       }
+      : name === "./synthesis-draft" ? { createSynthesisDraftStore }
       : { shell: { sendSynthesis: () => new Promise((resolve) => { finish = resolve; }), cancel: () => { cancelled = true; } } }
   });
   const lock = new ExclusiveActionLock();

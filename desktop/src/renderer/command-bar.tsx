@@ -91,6 +91,13 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
           const files = [...event.clipboardData.files].filter((file) => file.type.startsWith("image/"));
           if (files.length) props.onPasteImages(files);
         }}
+        onDragOver={(event) => {
+          if ([...event.dataTransfer.items].some(item => item.kind === "file" && item.type.startsWith("image/"))) event.preventDefault();
+        }}
+        onDrop={(event) => {
+          const files = [...event.dataTransfer.files].filter(file => file.type.startsWith("image/"));
+          if (files.length) { event.preventDefault(); props.onPasteImages(files); }
+        }}
         onFocus={() => props.onExpandedChange(true)}
         onBlur={() => props.onExpandedChange(false)}
         onKeyDown={(event) => {
@@ -98,7 +105,8 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
             key: event.key,
             ctrlKey: event.ctrlKey,
             metaKey: event.metaKey,
-            isComposing: event.nativeEvent.isComposing
+            isComposing: event.nativeEvent.isComposing,
+            keyCode: event.nativeEvent.keyCode
           }, busy);
           if (action === "submit") {
             event.preventDefault();

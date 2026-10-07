@@ -9,6 +9,7 @@ import type {
 import type { ExclusiveActionLock } from "./broadcast-flow-state";
 import type { RunState } from "./command-bar";
 import { shell } from "./shell-api";
+import { createSynthesisDraftStore, type SynthesisDraftStore } from "./synthesis-draft";
 
 export function useSynthesisFlow(lock: ExclusiveActionLock): {
   readonly runState: RunState;
@@ -19,12 +20,16 @@ export function useSynthesisFlow(lock: ExclusiveActionLock): {
   readonly send: (request: SynthesisSendRequest, beforeSend: () => void) => Promise<PendingSynthesis>;
   readonly collect: () => Promise<string>;
   readonly save: (replaceExisting: boolean) => Promise<ArchiveRecord>;
+  readonly drafts: SynthesisDraftStore;
+  readonly clearDrafts: () => void;
 } {
   const [runState, setRunState] = useState<RunState>("idle");
   const [pending, setPending] = useState<PendingSynthesis | null>(null);
   const [candidate, setCandidate] = useState<SynthesisCandidate | null>(null);
   const revision = useRef(0);
   const pendingRef = useRef<PendingSynthesis | null>(null);
+  const drafts = useRef<SynthesisDraftStore | null>(null);
+  if (!drafts.current) drafts.current = createSynthesisDraftStore();
   const acceptPending = (value: PendingSynthesis | null) => {
     revision.current += 1;
     pendingRef.current = value;
@@ -63,5 +68,6 @@ export function useSynthesisFlow(lock: ExclusiveActionLock): {
     if (operation === revision.current) acceptPending(null);
     return record;
   };
-  return { pending, candidate, acceptPending, send, collect, save, runState, cancel };
+  return { pending, candidate, acceptPending, send, collect, save, runState, cancel,
+    drafts: drafts.current, clearDrafts: () => drafts.current!.clear() };
 }
