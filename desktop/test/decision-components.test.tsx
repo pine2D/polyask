@@ -79,3 +79,23 @@ test('decision reading prioritizes the conclusion and editing uses the shared st
   assert.match(render(true), /role="combobox"/);
   assert.doesNotMatch(render(true), /<select/);
 });
+
+test("decision fields expose codepoint counts and specific errors through accessible descriptions", () => {
+  const copy = getCopy("en");
+  const value = { ...decisionInput(saved), title: "😀".repeat(161), conclusion: "", status: "final" as const,
+    evidence: [{ resultIndex: 0, excerpt: "invented" }] };
+  const errors = { title: "title_too_long", conclusion: "final_conclusion_required", "evidence-0": "excerpt_not_in_source" } as const;
+  const html = renderToStaticMarkup(<DecisionEditor {...{ errors }} copy={copy} value={value} saved={saved} source={source}
+    sourceFailed={false} editing busy={false} onChange={() => undefined} onOpenSource={() => undefined} />);
+  const { JSDOM } = require("jsdom");
+  const doc = new JSDOM(html).window.document as Document;
+  const title = doc.querySelector<HTMLInputElement>('[name="decision-title"]')!;
+  assert.equal(title.getAttribute("aria-invalid"), "true");
+  const descriptions = (node: Element) => node.getAttribute("aria-describedby")!.split(" ").map(id => doc.getElementById(id)!.textContent).join(" ");
+  assert.match(descriptions(title), /161 \/ 160/);
+  assert.match(descriptions(title), /Title must be 160 characters or fewer/);
+  assert.match(descriptions(doc.querySelector('[name="decision-conclusion"]')!), /Final cards need a conclusion/);
+  assert.match(descriptions(doc.querySelector('[name="decision-evidence-0"]')!), /excerpt must match the source exactly/);
+  assert.equal(title.hasAttribute("maxlength"), false);
+  assert.equal(doc.querySelectorAll('input[aria-describedby], textarea[aria-describedby]').length, 6);
+});

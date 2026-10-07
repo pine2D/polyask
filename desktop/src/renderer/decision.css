@@ -12,6 +12,12 @@
 .decision-editor h2 { font-size: 15px; margin: 0 0 10px; }
 .decision-editor label { display: grid; gap: 7px; font-size: 13px; }
 .decision-editor textarea { resize: vertical; line-height: 1.65; }
+.decision-field { display: grid; gap: 7px; min-width: 0; }
+.decision-field-hints { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; font-size: 12px; }
+.decision-count { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.decision-field-error { color: var(--danger-ink); font-size: 12px; margin: 0; overflow-wrap: anywhere; }
+.decision-field-hints .decision-field-error { flex: 1 1 200px; }
+.decision-editor input[aria-invalid="true"], .decision-editor textarea[aria-invalid="true"], .decision-excerpt blockquote[aria-invalid="true"] { border-color: var(--danger-ink); }
 .decision-meta { display: flex; align-items: center; gap: 20px; margin: 20px 0; }
 .decision-meta label { min-width: 120px; }
 .decision-meta p { color: var(--muted); font-size: 12px; }

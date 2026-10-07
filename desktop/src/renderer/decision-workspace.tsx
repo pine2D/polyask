@@ -3,7 +3,8 @@ import type { ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
 import type { DecisionInput, DecisionRecord, DecisionStatus } from "../shared/decision";
 import { formatDateTime } from "../shared/format";
-import { DecisionEditor, decisionInput, decisionStatuses, decisionStatusLabel, validDecisionDraft } from "./decision-editor";
+import { DecisionEditor, decisionInput, decisionStatuses, decisionStatusLabel } from "./decision-editor";
+import { validateDecisionDraft } from "./decision-validation";
 import { ConfirmDialog } from "./confirm-dialog";
 import { registerDecisionNavigationGuard, runApprovedDecisionNavigation } from "./decision-navigation";
 import { LibraryMenu } from "./library-menu";
@@ -39,10 +40,14 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
   const [busy, setBusy] = useState(false);
   useEffect(() => { onBusy?.(busy); return () => onBusy?.(false); }, [busy, onBusy]);
   const [message, setMessage] = useState("");
+  const [validationStarted, setValidationStarted] = useState(false);
+  const [validationAttempt, setValidationAttempt] = useState(0);
   const [confirmation, setConfirmation] = useState<{ text: string; action: () => void } | null>(null);
   const [revision, setRevision] = useState(0);
   const searchEpoch = useRef(0);
   const busyRef = useRef(false);
+  const workspaceRef = useRef<HTMLElement>(null);
+  const errors = validationStarted && value ? validateDecisionDraft(value, source, saved) : {};
   const dirty = editing && !!value && (!saved || JSON.stringify(value) !== JSON.stringify(decisionInput(saved)));
   const guard = (action: () => void) => {
     if (busyRef.current) return;
@@ -52,6 +57,10 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
     if (busyRef.current) return;
     if (dirty) setConfirmation({ text: copy.decisionDiscard, action }); else action();
   }), [dirty, copy.decisionDiscard]);
+  useEffect(() => {
+    if (!validationAttempt) return;
+    workspaceRef.current?.querySelector<HTMLElement>('.decision-editor [aria-invalid="true"]')?.focus();
+  }, [validationAttempt]);
   useEffect(() => {
     if (embedded) return;
     const epoch = ++searchEpoch.current;
@@ -87,17 +96,21 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
     finally { busyRef.current = false; setBusy(false); }
   };
   const select = (record: DecisionRecord) => guard(() => {
-    setSaved(record); setValue(decisionInput(record)); setEditing(false); setMessage("");
+    setSaved(record); setValue(decisionInput(record)); setEditing(false); setMessage(""); setValidationStarted(false);
   });
   const save = () => {
-    if (!value || !validDecisionDraft(value, source, saved)) { setMessage(copy.decisionValidation); return; }
+    if (!value) return;
+    if (Object.keys(validateDecisionDraft(value, source, saved)).length) {
+      setValidationStarted(true); setMessage(copy.decisionValidationReview); setValidationAttempt(count => count + 1); return;
+    }
     void run(async () => {
       const record = saved ? await shell.updateDecision(saved.id, value) : await shell.createDecision(value);
       setSaved(record); setValue(decisionInput(record)); setEditing(false); setRevision((count) => count + 1);
+      setValidationStarted(false);
       setMessage(copy.decisionSaved); onChanged?.(record);
     });
   };
-  const clearDetail = () => { setSaved(null); setValue(null); setEditing(false); setMessage(""); };
+  const clearDetail = () => { setSaved(null); setValue(null); setEditing(false); setMessage(""); setValidationStarted(false); };
   const remove = () => {
     if (!saved) return;
     setConfirmation({ text: copy.decisionDeleteConfirm, action: () => { void run(async () => {
@@ -110,7 +123,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
     const link = document.createElement("a"); link.href = url; link.download = `polyask-decision-${saved.id}.md`; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 5000);
   }); };
-  return <section className="archive-workspace decision-workspace" aria-label={copy.decisionTitle} aria-busy={busy}>
+  return <section ref={workspaceRef} className="archive-workspace decision-workspace" aria-label={copy.decisionTitle} aria-busy={busy}>
     {!embedded ? <header className="archive-toolbar decision-toolbar">
       <nav className="decision-tabs" aria-label={copy.archiveTitle}>
         <button type="button" disabled={busy} onClick={() => guard(() => onArchives())}>{copy.decisionArchives}</button>
@@ -138,7 +151,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
             <div className="library-decision-actions">
               {editing ? <>
                 {dirty ? <span>{copy.decisionUnsaved}</span> : null}
-                <button type="button" disabled={busy} onClick={() => guard(() => { if (saved) { setValue(decisionInput(saved)); setEditing(false); } else clearDetail(); })}>{copy.decisionCancel}</button>
+                <button type="button" disabled={busy} onClick={() => guard(() => { if (saved) { setValue(decisionInput(saved)); setEditing(false); setValidationStarted(false); } else clearDetail(); })}>{copy.decisionCancel}</button>
                 <button className="library-primary" type="button" disabled={busy} onClick={save}>{busy ? copy.librarySaving : copy.decisionSave}</button>
               </> : <>
                 {onOrganize ? <button type="button" disabled={busy} onClick={onOrganize}>{copy.libraryOrganize}</button> : null}
@@ -147,7 +160,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
               </>}
             </div>
           </div>
-          <DecisionEditor onOpenLink={url => { void run(() => shell.openExternal(url)); }} copy={copy} value={value} saved={saved} source={source} sourceFailed={sourceFailed} editing={editing} busy={busy} onChange={setValue} onOpenSource={() => guard(() => { if (source) onArchives(source); })} />
+          <DecisionEditor errors={errors} onOpenLink={url => { void run(() => shell.openExternal(url)); }} copy={copy} value={value} saved={saved} source={source} sourceFailed={sourceFailed} editing={editing} busy={busy} onChange={setValue} onOpenSource={() => guard(() => { if (source) onArchives(source); })} />
         </> : <div className="decision-placeholder">{items.length ? copy.decisionPick : copy.decisionEmpty}</div>}
       </main>
     </div>
