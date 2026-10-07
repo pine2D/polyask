@@ -7,7 +7,14 @@ import { COMMANDS, type CommandId } from "../shared/commands";
 import type { SiteDefinition } from "../shared/contracts";
 import type { CommandActions } from "./command-dispatcher";
 import { formatCopy, getCopy, resolveLocale } from "../shared/copy";
-import { unsupportedImageSites } from "../shared/images";
+import { imageSupportWarning } from './image-support-warning';
+import type { QuestionRunProgress } from '../shared/question-run-progress';
+import { useQuestionRunProgress } from './use-question-run-progress';
+import { useSiteHealthRefresh } from './use-site-health-refresh';
+import { useWorkbenchGuideFlow } from './use-workbench-guide-flow';
+import type { QuestionReadingRequest } from './question-reading-request';
+import { createComparisonDraftStore } from './comparison-draft-store';
+import { createLibrarySessionStore } from './library-session';
 import type {
   BootstrapState,
   DesktopSurface,
@@ -42,10 +49,11 @@ import {
 import { useDisplayPreferences } from "./use-display-preferences";
 import { useArchiveNavigation } from "./use-archive-navigation";
 import { ImagePicker } from "./image-picker";
-import { PageTabs } from "./page-tabs";
+import { WorkspaceProgress } from './workspace-progress';
 import { resetLocalSession } from "./local-data-reset";
 import { useTemplateDeletion } from "./use-template-deletion";
 import { usePromptDraft } from "./use-prompt-draft";
+import { useComposerSession } from "./use-composer-session";
 import { FeedbackProvider } from "./feedback-provider";
 import { broadcastFeedback } from "./broadcast-feedback";
 import { archiveCollectionActions } from "./archive-collection-actions";
@@ -70,6 +78,8 @@ import { useImageSelection } from "./use-image-selection";
 import { useSynthesisFlow } from "./use-synthesis-flow";
 import { useSynthesisRecovery } from "./use-synthesis-recovery";
 import { useWorkspaceFlow } from "./use-workspace-flow";
+import { useSiteParticipation } from './use-site-participation';
+import { useSitePageClose } from './use-site-page-close';
 import { shell } from "./shell-api";
 import { requestDecisionNavigation } from "./decision-navigation";
 import { currentPlatform, isMac } from "./platform";
@@ -112,7 +122,6 @@ function App(): React.JSX.Element {
   const requestedPage = useRef<{ readonly page: number; readonly inputMethod: "keyboard" | "pointer" } | null>(null);
   const actionLock = useRef<ExclusiveActionLock | null>(null);
   const commandActions = useRef<CommandActions>({});
-  const healthRequest = useRef(0);
   const lastOpenPanel = useRef<OpenWorkspacePanelState>(openWorkspacePanel("sites", "pointer"));
   if (!actionLock.current) actionLock.current = new ExclusiveActionLock();
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>("loading");
@@ -124,16 +133,20 @@ function App(): React.JSX.Element {
   const [pendingNewSession, setPendingNewSession] = useState<PendingSessionConfirmation | null>(null);
   const [statuses, setStatuses] = useState<Record<string, SiteStatus>>({});
   const [health, setHealth] = useState<Partial<Record<string, SiteHealth>>>({});
-  const [healthChecking, setHealthChecking] = useState(false);
   const [layout, setLayout] = useState<LayoutState>(INITIAL_LAYOUT);
   const { text, setText, revision: draftRevision, clearSent } = usePromptDraft();
   const [auxiliaryWorkBusy, setAuxiliaryBusy] = useState(false);
-  const [promptExpanded, setPromptExpanded] = useState(false);
   const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
   const [surface, setSurface] = useState<DesktopSurface>("sites");
   const [questionHistoryOpen, setQuestionHistoryOpen] = useState(false);
+  const [questionReadRequest, setQuestionReadRequest] = useState<QuestionReadingRequest | null>(null);
+  const [bootstrapProgress, setBootstrapProgress] = useState<QuestionRunProgress | null>(null);
+  const [comparisonDrafts] = useState(createComparisonDraftStore);
+  const [librarySession] = useState(createLibrarySessionStore);
+  const [libraryBlocking, setLibraryBlocking] = useState(false);
+  const blockLibrary = useCallback((value: boolean) => { if (value) commandActions.current = {}; setLibraryBlocking(value); }, []);
   const [questionHistoryBlocking, setQuestionHistoryBlocking] = useState(false);
-  const closeQuestionHistory = (): void => { setQuestionHistoryOpen(false); shell.setSurface("sites"); };
+  const closeQuestionHistory = (): void => { guideFlow.cancel(); setQuestionReadRequest(null); setQuestionHistoryOpen(false); shell.setSurface("sites"); };
   const archiveNavigation = useArchiveNavigation();
   const [settingsBlocking, setSettingsBlocking] = useState(false);
   const blockSettings = useCallback((value: boolean) => { if (value) commandActions.current = {}; setSettingsBlocking(value); }, []);
@@ -147,6 +160,7 @@ function App(): React.JSX.Element {
     loadCompletionNotifications(window.localStorage)
   );
   const { announcement, announce: setAnnouncement, clearNotice, healthFeedback, noteHealth } = useFeedback();
+  const { checking: healthChecking, refresh: refreshSiteHealth } = useSiteHealthRefresh(setHealth, () => setAnnouncement(copy.healthRequestFailed));
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
   const drawerOpen = panelState !== null;
   if (panelState) lastOpenPanel.current = panelState;
@@ -167,7 +181,15 @@ function App(): React.JSX.Element {
   };
   const synthesis = useSynthesisFlow(actionLock.current!);
   const auxiliaryBusy = auxiliaryWorkBusy || synthesis.runState !== "idle";
-  const archiveCapture = useArchiveCapture({ sites, selected, prompt: text });
+  const participation = useSiteParticipation({ opened: workspace.selectedSites, ready: bootstrapPhase === 'ready',
+    get busy() { return actionLock.current!.busy; }, openPages: async next => {
+      const accepted = await actionLock.current!.run(() => workspaceFlow.openPages(next));
+      if (!accepted) throw new Error('operation_busy');
+      return accepted;
+    },
+    onError: () => setAnnouncement(copy.workspaceActionFailed) });
+  const participating = useMemo(() => new Set(participation.participating), [participation.participating]);
+  const archiveCapture = useArchiveCapture({ sites, selected: participating, prompt: text });
   const broadcast = useBroadcastFlow(
     () => setAnnouncement(copy.failed),
     archiveCapture.remember,
@@ -175,6 +197,10 @@ function App(): React.JSX.Element {
     (run) => setAnnouncement(broadcastFeedback(copy, run))
   );
   const { runState } = broadcast;
+  const runProgress = useQuestionRunProgress(broadcast.runId, bootstrapProgress);
+  const pageClose = useSitePageClose({ copy, sites, busy: runState !== 'idle' || auxiliaryBusy || participation.pending, api: shell,
+    lock: actionLock.current!, onOpen: () => { commandActions.current = {}; changeSurface('confirmation'); },
+    onClose: () => { changeSurface('sites'); queueMicrotask(() => promptRef.current?.focus()); }, onWorkspace: workspaceFlow.accept, onAnnounce: setAnnouncement });
   const retryReview = useBroadcastRetryReview({copy, sites, flow: broadcast, lock: actionLock.current!,
     busy: runState !== "idle" || auxiliaryBusy, onOpen: () => { changeSurface("sites"); changeSurface("confirmation"); },
     onClose: () => changeSurface("sites"), onInspect: (site, active) => inspectBroadcastSite(site, {
@@ -187,11 +213,23 @@ function App(): React.JSX.Element {
     })});
   const imageSelection = useImageSelection(copy, runState === "idle" && !auxiliaryBusy, setAnnouncement);
   const synthesisRecovery = useSynthesisRecovery(copy, synthesis,
-    () => { broadcast.invalidate(); changeSurface("sites"); },
+    () => { runProgress.invalidate(); broadcast.invalidate(); changeSurface("sites"); },
     () => { archiveNavigation.clear(); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
   const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
   const acceptDisplayPreferences = display.accept;
+  const guideFlow = useWorkbenchGuideFlow({ copy, sites, health, storage: window.localStorage, fallbackDisplay: display.value,
+    ready: bootstrapPhase === 'ready', busy: runState !== 'idle' || auxiliaryBusy || participation.pending || healthChecking || libraryBlocking || settingsBlocking || questionHistoryBlocking,
+    participating: participation.participating, runId: broadcast.runId ?? runProgress.runId,
+    activeSites: broadcast.runId ? broadcast.activeSites : runProgress.value?.answers.map(answer => answer.site) ?? [], statuses, progress: runProgress.value,
+    onPersistenceFailure: () => setAnnouncement(copy.guidePreferenceFailed), onOpen: () => openPanel('sites', 'pointer'),
+    onChooseSites: () => openPanel('sites', 'pointer'), onCheckSites: keys => { void refreshSiteHealth(keys); },
+    onFocusSite: site => focusSite(site), onFocusPrompt: () => executeCommand('focus-prompt', commandActions.current),
+    onNavigate: request => {
+      if (!commandActions.current['open-question-history']) throw new Error('operation_busy');
+      executeCommand('open-question-history', commandActions.current);
+      setQuestionReadRequest({ ...request, source: 'guide', answerId: request.answerIds[0] });
+    } });
 
   const acceptBootstrap = (state: BootstrapState): void => {
     setRuntime(state.runtime);
@@ -203,6 +241,7 @@ function App(): React.JSX.Element {
     workspaceFlow.accept(state.workspace);
     setPromptLibrary(state.promptLibrary);
     synthesis.acceptPending(state.pendingSynthesis);
+    setBootstrapProgress(state.questionRunProgress ?? null);
     setSyncStatus(state.sync);
   };
   const bootstrap = async (): Promise<void> => {
@@ -265,7 +304,7 @@ function App(): React.JSX.Element {
     };
   }, [copy]);
 
-  const composerExpanded = promptExpanded;
+  const composer = useComposerSession(surface), composerExpanded = composer.expanded;
   useEffect(() => shell.setDrawerOpen(drawerPresent || imageTrayOpen), [drawerPresent, imageTrayOpen]);
   useEffect(() => shell.setComposerExpanded(composerExpanded), [composerExpanded]);
   useEffect(() => {
@@ -274,26 +313,9 @@ function App(): React.JSX.Element {
   }, [completionNotifications]);
 
   const scopeLabel = useMemo(
-    () => scopeDisplayName(workspace.selectedSites, workspace.groups, copy),
-    [copy, workspace.groups, workspace.selectedSites]
+    () => scopeDisplayName(participation.participating, workspace.groups, copy),
+    [copy, workspace.groups, participation.participating]
   );
-  const refreshSiteHealth = async (keys: readonly SiteHealth["site"][]): Promise<void> => {
-    if (!keys.length) return;
-    const request = ++healthRequest.current;
-    setHealthChecking(true);
-    try {
-      const results = await shell.checkSiteHealth(keys);
-      if (request !== healthRequest.current) return;
-      setHealth((current) => ({
-        ...current,
-        ...Object.fromEntries(results.map((result) => [result.site, result]))
-      }));
-    } catch {
-      if (request === healthRequest.current) setAnnouncement(copy.healthRequestFailed);
-    } finally {
-      if (request === healthRequest.current) setHealthChecking(false);
-    }
-  };
   const healthAttention = useMemo(
     () => new Set([
       ...Object.values(statuses).filter((status) => selected.has(status.site) && ["warning", "failed", "crashed"].includes(status.phase)).map((status) => status.site),
@@ -301,22 +323,12 @@ function App(): React.JSX.Element {
     ]).size,
     [health, selected, statuses]
   );
-  const unsupportedSites = useMemo(() => {
-    if (!images.length) return [];
-    const unsupported = new Set(unsupportedImageSites([...selected], sites));
-    return sites.filter((site) => unsupported.has(site.key));
-  }, [images.length, selected, sites]);
-  const imageWarning = unsupportedSites.length
-    ? formatCopy(copy.imageUnsupported, {
-      sites: new Intl.ListFormat(navigator.language, { style: "short", type: "conjunction" })
-        .format(unsupportedSites.map((site) => site.label))
-    })
-    : null;
+  const { unsupportedSites, imageWarning } = imageSupportWarning(copy, images.length, participating, sites, navigator.language);
 
   const submit = async (): Promise<void> => {
     const prompt = text.trim();
     const sentRevision = draftRevision.current;
-    if (!prompt || selected.size === 0 || runState !== "idle") return;
+    if (!prompt || !participation.currentSites().length || runState !== "idle" || participation.pending) return;
     await actionLock.current!.run(async () => {
       if (imageWarning) {
         setAnnouncement(imageWarning);
@@ -328,7 +340,7 @@ function App(): React.JSX.Element {
       const completed = await broadcast.send({
         text: prompt,
         tier: workspace.tier,
-        sites: [...selected],
+        sites: participation.currentSites(),
         images
       });
       if (completed && [...completed.results.values()].some((result) => result.ok)) {
@@ -345,7 +357,7 @@ function App(): React.JSX.Element {
     if (value !== "sites") {
       setQuestionHistoryOpen(false);
       imageSelection.invalidateAndClose();
-      setPromptExpanded(false);
+      if (value !== "confirmation" && value !== "question-history") composer.reset();
       if (drawerOpen) changeDrawerOpen(false);
     }
     setSurface(value);
@@ -364,7 +376,7 @@ function App(): React.JSX.Element {
   };
   const {collectAndCopy, collectSynthesis, collectAndCompare} = archiveCollectionActions({copy,
     capture: archiveCapture, synthesis, runAuxiliary, announce: setAnnouncement,
-    openArchive: id => { archiveNavigation.collection(id); changeSurface("archive"); }});
+    openArchive: (id, mode) => { if (id && mode === 'read') archiveNavigation.history(id, 'read'); else archiveNavigation.collection(id); changeSurface("archive"); }});
   const startNewSession = async (): Promise<void> => {
     if (pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     const selectedSites = [...selected];
@@ -373,6 +385,7 @@ function App(): React.JSX.Element {
     if (!approved) return;
     await runAuxiliary(async () => {
       broadcast.invalidate();
+      runProgress.invalidate();
       archiveCapture.invalidate();
       try {
         const results = await shell.newSession(selectedSites);
@@ -389,7 +402,7 @@ function App(): React.JSX.Element {
     try {
       const id = await shell.showGroupMenu();
       const group = workspace.groups.find((candidate) => candidate.id === id);
-      if (group) workspaceFlow.changeSelection(group.sites);
+      if (group) void participation.change(group.sites);
     } catch {
       setAnnouncement(copy.workspaceActionFailed);
     }
@@ -437,7 +450,7 @@ function App(): React.JSX.Element {
       .catch(() => setAnnouncement(copy.updatePageFailed));
   };
 
-  commandActions.current = pendingNewSession || questionHistoryBlocking || settingsBlocking || retryReview.open ? {} : {
+  commandActions.current = pendingNewSession || questionHistoryBlocking || settingsBlocking || libraryBlocking || retryReview.open || pageClose.blocking || participation.pending ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
     "open-sites": () => {
       openPanel("sites", "keyboard");
@@ -467,9 +480,9 @@ function App(): React.JSX.Element {
     },
     "set-think": () => { changeSurface("sites"); void workspaceFlow.changeTier("think"); },
     "set-fast": () => { changeSurface("sites"); void workspaceFlow.changeTier("fast"); },
-    ...(selected.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
+    ...(participating.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
     "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
-    "open-question-history": () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionHistoryOpen(true); },
+    "open-question-history": () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionReadRequest(null); setQuestionHistoryOpen(true); },
     "open-archive": () => { archiveNavigation.clear(); changeSurface("archive"); },
     ...(synthesis.pending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
     ...(broadcast.retrySites.length > 0 ? {
@@ -518,10 +531,10 @@ function App(): React.JSX.Element {
   }
 
   if (surface === "archive") {
-    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
+    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} synthesisSession={synthesis.session} comparisonDrafts={comparisonDrafts} session={librarySession} navigationRevision={archiveNavigation.revision} onArchiveEntered={guideFlow.archiveEntered} onBlockingChange={blockLibrary} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis, guide: guideFlow, onGuidePreferenceFailed: () => queueMicrotask(() => setAnnouncement(`${copy.localDataReset} ${copy.guidePreferenceFailed}`, true, true)) }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (
@@ -539,7 +552,7 @@ function App(): React.JSX.Element {
         onApplyGroup={(id) => {
           const group = workspace.groups.find((candidate) => candidate.id === id);
           if (!group) return;
-          workspaceFlow.changeSelection(group.sites);
+          void participation.change(group.sites);
           changeSurface("sites");
         }}
         onInsertPrompt={(value) => {
@@ -568,10 +581,10 @@ function App(): React.JSX.Element {
         text={text}
         tier={workspace.tier}
         runState={synthesis.runState !== "idle" ? synthesis.runState : runState}
-        auxiliaryBusy={auxiliaryBusy}
+        auxiliaryBusy={auxiliaryBusy || participation.pending}
         layoutMode={layout.mode}
         automaticFocus={layout.automaticFocus}
-        selectedCount={selected.size}
+        selectedCount={participating.size}
         failureCount={broadcast.failureCount}
         cancelledCount={broadcast.cancelledCount}
         uncertainCount={broadcast.uncertainSites.length}
@@ -579,23 +592,6 @@ function App(): React.JSX.Element {
         scopeLabel={scopeLabel}
         healthAttention={healthAttention}
         panelTab={panelState?.tab ?? null}
-        pageControl={layout.pageCount > 1 ? (
-          <PageTabs
-            copy={copy}
-            isMac={isMac}
-            sites={sites}
-            selectedSites={workspace.selectedSites}
-            statuses={statuses}
-            page={layout.page}
-            inputMethod={pageInputMethod}
-            onPageChange={(page, inputMethod) => {
-              requestedPage.current = { page, inputMethod };
-              setPageInputMethod(inputMethod);
-              setAnnouncement(formatCopy(copy.sitePageChanged, { page: page + 1, total: layout.pageCount }));
-              shell.setPage(page);
-            }}
-          />
-        ) : null}
         imageControl={(
           <ImagePicker
             copy={copy}
@@ -616,13 +612,13 @@ function App(): React.JSX.Element {
         syncStatus={syncStatus}
         isMac={isMac}
         expanded={composerExpanded}
-        onTextChange={setText}
+        draftRevision={draftRevision.current} onTextChange={setText}
         onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
         onSubmit={() => void submit()}
         onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}
         onTierChange={workspaceFlow.changeTier}
         onLayoutChange={setMode}
-        onExpandedChange={setPromptExpanded}
+        onExpandedChange={composer.setExpanded}
         onPanelChange={(tab) => tab ? openPanel(tab, "pointer") : changePanelState(null)}
         onShowGroupMenu={() => { void showGroupMenu(); }}
         onOpenMore={() => { void showMoreMenu(); }}
@@ -632,20 +628,36 @@ function App(): React.JSX.Element {
         onRetry={() => executeCommand("retry-failed", commandActions.current)}
         onPasteImages={(files) => { void imageSelection.choose(files, "append"); }}
       />
+      <WorkspaceProgress copy={copy} isMac={isMac} sites={sites} selectedSites={workspace.selectedSites}
+        statuses={statuses} page={layout.page} inputMethod={pageInputMethod} runId={broadcast.runId ?? runProgress.runId}
+        activeSites={broadcast.runId ? broadcast.activeSites : runProgress.value?.answers.map(answer => answer.site) ?? []}
+        progress={runProgress.value} idleControl={guideFlow.invite} onPageChange={(page, inputMethod) => {
+          requestedPage.current = { page, inputMethod }; setPageInputMethod(inputMethod);
+          setAnnouncement(formatCopy(copy.sitePageChanged, { page: page + 1, total: layout.pageCount })); shell.setPage(page);
+        }} onRead={() => {
+          const progress = runProgress.value;
+          if (!progress?.questionId || !commandActions.current['open-question-history']) return;
+          executeCommand('open-question-history', commandActions.current);
+          setQuestionReadRequest(old => ({ request: (old?.request ?? 0) + 1, questionId: progress.questionId!, answerId: progress.answers.find(answer => answer.hasText)?.id }));
+        }}/>
       {drawerPresent ? (
         <WorkspaceDrawer
           copy={copy}
           sites={sites}
           selected={selected}
+          participating={participating} participationBusy={runState !== 'idle' || auxiliaryBusy || participation.pending}
           groups={workspace.groups}
           statuses={statuses}
           health={health}
           healthChecking={healthChecking}
+          guideControl={guideFlow.panel}
           open={drawerOpen}
           state={panelState ?? lastOpenPanel.current}
           onStateChange={changePanelState}
-          onSelectionChange={workspaceFlow.changeSelection}
-          onSaveGroup={workspaceFlow.saveGroup}
+          onSelectionChange={value => { void participation.reorderOpened(value); }}
+          onParticipationChange={value => { void participation.change(value); }}
+          onCloseSitePage={site => { void pageClose.request(site); }}
+          onSaveGroup={name => workspaceFlow.saveGroup(name, participation.currentSites())}
           onDeleteGroup={workspaceFlow.deleteGroup}
           onCheckHealth={(keys) => { void refreshSiteHealth(keys); }}
           onFocusSite={(site) => {
@@ -662,7 +674,8 @@ function App(): React.JSX.Element {
         statuses={statuses}
         layout={layout}
         selected={selected}
-        onToggle={workspaceFlow.toggleSite}
+        participating={participating} participationBusy={runState !== 'idle' || auxiliaryBusy || participation.pending}
+        onToggle={site => { void participation.toggle(site); }}
         onFocus={(site) => setMode("focus", site)}
         onReload={(site) => { void shell.reloadSite(site); }}
         retrySites={broadcast.retrySites}
@@ -672,8 +685,9 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <QuestionHistory onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      <QuestionHistory openRequest={questionReadRequest} onReadAccepted={(id, request) => { if (questionReadRequest?.source === 'guide') guideFlow.readAccepted(id, request); }} onReadingCancelled={request => { if (questionReadRequest?.source === 'guide') guideFlow.cancel(request); }} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { guideFlow.archiveCreated(record.id, mode, selection.questionId, selection.answerIds); archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
       {retryReview.review}
+      {pageClose.dialog}
       {pendingNewSession && (
         <ConfirmDialog
           copy={copy}

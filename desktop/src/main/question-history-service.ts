@@ -5,6 +5,8 @@ import { normalizeHistorySnapshot, type HistorySnapshot, type CaptureReason } fr
 import type { QuestionAnswerRecord, QuestionRecord } from "../shared/question-history";
 import { normalizeSelectionMetadata } from "../shared/selection";
 import { QuestionRepository, questionAnswerId } from "./question-repository";
+import { QuestionRunProgressTracker } from './question-run-progress';
+import type { QuestionRunProgress } from '../shared/question-run-progress';
 
 const OBSERVATION_MS = 15 * 60_000;
 // 封存前的增长否决：确认后第一次读到的正文只记候选，之后开始的一次读在 ≥SEAL_QUIET_MS 后读到逐字相同才封存。
@@ -25,6 +27,7 @@ interface CaptureEntry {
   tierUnconfirmed?: boolean; held?: boolean;
 }
 export class QuestionHistoryService {
+  private readonly progress: QuestionRunProgressTracker;
   private lastRun: { lifecycle: number; runId: string; id: string } | null = null;
   private readonly active = new Map<SiteKey, CaptureEntry>();
   private readonly releasableSites = new Map<SiteKey, number>();
@@ -40,8 +43,12 @@ export class QuestionHistoryService {
     // 站点运行时报来的本轮卡顿回调累计次数（诊断记账，同一轮重复上报由接收方按增量计）。
     onSlowObserver?: (site: SiteKey, token: string, count: number) => void;
     onReason?: (site: SiteKey, reason: NonNullable<HistorySnapshot["captureCode"]>) => void;
-  }) {}
+  }) { this.progress = new QuestionRunProgressTracker(repository); }
   private now(): number { return (this.options.now ?? Date.now)(); }
+  getRunProgress(runId: string): QuestionRunProgress | null { this.progress.publish(); return this.progress.read(runId); }
+  getLastRunProgress(): QuestionRunProgress | null { this.progress.publish(); return this.progress.last(); }
+  publishRunProgress(): void { this.progress.publish(); }
+  setProgressHandler(handler: ((progress: QuestionRunProgress) => void) | null): void { this.progress.listen(handler); }
   setFailureHandler(handler: (() => void) | null): void { this.reportFailure = handler; }
   /** 迟到确认：本次尝试回包「提交未确认」后，归属快照给出本轮用户消息的正向证据，记录已升为 submitted 时回调（外壳据此改状态、开生成监视）。 */
   setSubmissionHandler(handler: ((runId: string, site: SiteKey) => void) | null): void { this.reportSubmitted = handler; }
@@ -52,10 +59,11 @@ export class QuestionHistoryService {
     if (confirmed) { try { this.reportResumed?.(entry.runId, site); } catch { /* Saving must never break monitoring. */ } }
   }
   private guarded<T>(action: () => T, fallback: T): T {
-    try { return action(); } catch { try { this.options.onFailure?.(); this.reportFailure?.(); } catch { /* Saving must never break sending. */ } return fallback; }
+    try { const value = action(); this.progress.publish(); return value; }
+    catch { this.progress.failed(); try { this.options.onFailure?.(); this.reportFailure?.(); } catch { /* Saving must never break sending. */ } return fallback; }
   }
   begin(request: BroadcastRequest): QuestionRecord | null {
-    return this.guarded(() => {
+    const record = this.guarded(() => {
       if (this.lastRun?.runId === request.runId && this.lastRun.lifecycle !== this.repository.lifecycle) return null;
       const existing = this.lastRun?.runId === request.runId ? this.repository.get(this.lastRun.id) : null;
       if (this.lastRun?.runId === request.runId && !existing) return null;
@@ -86,13 +94,17 @@ export class QuestionHistoryService {
       for (const [site, entry] of pending) this.active.set(site, entry);
       return record;
     }, null);
+    this.progress.begin(request.runId, record?.id ?? null);
+    return record;
   }
   token(site: SiteKey): string | undefined { const e = this.active.get(site); return e?.lifecycle === this.repository.lifecycle ? e.token : undefined; }
   releasable(site: SiteKey): boolean { return this.releasableSites.get(site) === this.repository.lifecycle; }
   clearReleaseEvidence(sites: readonly SiteKey[]): void { for (const site of sites) this.releasableSites.delete(site); }
   delete(id: string): boolean {
     for (const [site, entry] of this.active) if (entry.questionId === id) { this.active.delete(site); this.releasableSites.delete(site); }
-    return this.repository.delete(id, this.now(), this.options.deviceId());
+    const deleted = this.repository.delete(id, this.now(), this.options.deviceId());
+    this.progress.publish();
+    return deleted;
   }
   targets(): { site: SiteKey; token: string }[] {
     return [...this.active].filter(([, e]) => e.ready && e.lifecycle === this.repository.lifecycle).map(([site, e]) => ({ site, token: e.token }));

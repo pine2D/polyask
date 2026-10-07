@@ -1,0 +1,3 @@
+.site-order-label { min-width: 0; flex: 1; }
+.site-page-state { font-size: 11px; line-height: 1.35; color: var(--muted); overflow-wrap: anywhere; }
+.site-page-close { flex: 0 0 auto; min-width: var(--target-size); min-height: var(--target-size); padding: 2px; }

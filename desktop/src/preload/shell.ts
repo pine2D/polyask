@@ -1,9 +1,11 @@
 import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
 import type { QuestionArchiveRequest } from "../shared/question-archive";
+import type { SitePageClosePreview, SitePageCloseRequest, SitePageCloseResult } from '../shared/site-page';
+import type { QuestionRunProgress } from '../shared/question-run-progress';
 import type { LocalDataStats } from "../shared/local-data";
 import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
 import type { BackupPreview, BackupApplyResult, BackupSelectionPreview } from "../shared/backup";
-import type { TaskFolder, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
+import type { TaskFolder, TaskFolderSummary, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
 import { contextBridge, ipcRenderer } from "electron";
 import type { RuntimeProcessFailure } from "../shared/runtime-process";
@@ -46,6 +48,10 @@ import type {
 } from "../shared/synthesis";
 
 export interface PolyAskDesktopApi {
+  getQuestionRunProgress(runId: string): Promise<QuestionRunProgress | null>;
+  onQuestionRunProgress(listener: (progress: QuestionRunProgress) => void): () => void;
+  previewSitePageClose(site: SiteKey): Promise<SitePageClosePreview>;
+  closeSitePage(request: SitePageCloseRequest): Promise<SitePageCloseResult>;
   setQuestionPanel(open: boolean): Promise<void>;
   listLegacyQuestions(filters?: QuestionFilters): Promise<QuestionLegacyPage>;
   listQuestions(filters: QuestionFilters): Promise<QuestionPage>;
@@ -66,7 +72,7 @@ export interface PolyAskDesktopApi {
   previewBackupSelection(token: string, selectedKeys: readonly string[]): Promise<BackupSelectionPreview>;
   applyBackup(token: string, selectedKeys: readonly string[]): Promise<BackupApplyResult>;
   cancelBackup(token: string): Promise<void>;
-  listFolders(): Promise<TaskFolder[]>;
+  listFolders(): Promise<TaskFolderSummary[]>;
   createFolder(name: string): Promise<TaskFolder>;
   renameFolder(id: string, name: string): Promise<TaskFolder>;
   deleteFolder(id: string): Promise<void>;
@@ -147,6 +153,14 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  getQuestionRunProgress: (runId: string) => invoke('polyask:question-run-progress', runId),
+  onQuestionRunProgress: (listener: (progress: QuestionRunProgress) => void) => {
+    const handler = (_event: unknown, progress: QuestionRunProgress) => listener(progress);
+    ipcRenderer.on('polyask:question-run-progress', handler);
+    return () => ipcRenderer.removeListener('polyask:question-run-progress', handler);
+  },
+  previewSitePageClose: (site: SiteKey) => invoke('polyask:preview-site-page-close', site),
+  closeSitePage: (request: SitePageCloseRequest) => invoke('polyask:close-site-page', request),
   setQuestionPanel: (open: boolean) => invoke("polyask:question-panel", open),
   listLegacyQuestions: (filters?: QuestionFilters) => invoke("polyask:question-legacy", filters),
   listQuestions: (filters: QuestionFilters) => invoke("polyask:question-list", filters),

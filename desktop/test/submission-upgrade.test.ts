@@ -149,7 +149,7 @@ const unconfirmed = (runId = "run"): SiteStatus => statusForResult("claude", { o
 test("the shell status is upgraded only while it still shows this run as unconfirmed", () => {
   const upgraded = upgradedSubmissionStatus(unconfirmed(), "run");
   assert.deepEqual(upgraded, { site: "claude", phase: "submitted", selection, submissionEvidence: "message",
-    submission: { runId: "run", state: "sent", selection, submissionEvidence: "message" } });
+    submission: { runId: "run", state: "sent", selection, submissionEvidence: "message" }, generation: { runId: 'run', state: 'submitted' } });
   assert.equal(upgraded && "code" in upgraded, false);
   assert.equal(upgradedSubmissionStatus(unconfirmed("older"), "run"), null, "another run");
   assert.equal(upgradedSubmissionStatus(statusForSending("claude", "run"), "run"), null, "user already retried");

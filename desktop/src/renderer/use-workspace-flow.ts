@@ -29,25 +29,34 @@ export function useWorkspaceFlow(
       if (request === selectionRequest.current) accept(state.workspace);
     }).catch(() => undefined);
   };
-  const changeSelection = (value: readonly SiteKey[]): void => {
+  const openPages = async (value: readonly SiteKey[]): Promise<readonly SiteKey[]> => {
     const ordered = [...new Set(value)].filter((key) => sites.some((site) => site.key === key));
     const request = ++selectionRequest.current;
     pendingSelection.current = ordered;
     selectionRef.current = ordered;
     setWorkspace((current) => ({ ...current, selectedSites: ordered }));
-    void shell.setSelection(ordered).then((state) => {
-      if (request !== selectionRequest.current) return;
+    try {
+      const state = await shell.setSelection(ordered);
+      if (request !== selectionRequest.current) return selectionRef.current;
       pendingSelection.current = null;
       accept(state);
-    }).catch(() => { if (request === selectionRequest.current) recover(); });
+      return selectionRef.current;
+    } catch (error) {
+      if (request === selectionRequest.current) recover();
+      throw error;
+    }
   };
+  // Existing callers intentionally do not await deferred IPC acknowledgements.
+  const changeSelection = (value: readonly SiteKey[]): void => { void openPages(value).catch(() => undefined); };
   const selected = useMemo(() => new Set(workspace.selectedSites), [workspace.selectedSites]);
   return {
     workspace,
     selected,
     currentSelection: () => selectionRef.current,
     accept,
+    invalidate: () => { selectionRequest.current++; pendingSelection.current = null; },
     changeSelection,
+    openPages,
     toggleSite: (site: SiteKey) => {
       const next = new Set(selectionRef.current);
       if (next.has(site)) next.delete(site); else next.add(site);
@@ -57,9 +66,9 @@ export function useWorkspaceFlow(
       setWorkspace((current) => ({ ...current, tier }));
       void shell.setTier(tier).then(accept).catch(recover);
     },
-    saveGroup: async (name: string): Promise<boolean> => {
+    saveGroup: async (name: string, participating: readonly SiteKey[] = selectionRef.current): Promise<boolean> => {
       try {
-        accept(await shell.saveGroup({ name, sites: [...selectionRef.current] }));
+        accept(await shell.saveGroup({ name, sites: [...participating] }));
         return true;
       } catch {
         recover();

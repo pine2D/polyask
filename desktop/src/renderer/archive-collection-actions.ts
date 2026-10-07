@@ -7,7 +7,7 @@ import { shell } from './shell-api';
 export function archiveCollectionActions(options: {
   copy: DesktopCopy; capture: Pick<ReturnType<typeof useArchiveCapture>, 'capture'>; synthesis: Pick<ReturnType<typeof useSynthesisFlow>, 'collect'>;
   runAuxiliary: (action: () => Promise<void>) => Promise<void>;
-  openArchive: (comparisonId?: string) => void;
+  openArchive: (id?: string, mode?: 'read' | 'compare') => void;
   announce: (text: string, notice?: boolean, durable?: boolean) => void;
 }) {
   const collectAndCopy = () => options.runAuxiliary(async () => {
@@ -18,7 +18,7 @@ export function archiveCollectionActions(options: {
     } catch { options.announce(options.copy.archiveCollectFailed); }
   });
   const collectSynthesis = () => options.runAuxiliary(async () => {
-    try { await options.synthesis.collect(); options.openArchive(); }
+    try { const id = await options.synthesis.collect(); options.openArchive(id, 'read'); }
     catch { options.announce(options.copy.synthesisCollectFailed); }
   });
   const collectAndCompare = () => options.runAuxiliary(async () => {

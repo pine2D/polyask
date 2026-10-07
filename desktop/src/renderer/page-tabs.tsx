@@ -17,12 +17,20 @@ interface PageTabsProps {
   readonly page: number;
   readonly inputMethod: "keyboard" | "pointer";
   readonly onPageChange: (page: number, inputMethod: "keyboard" | "pointer") => void;
+  readonly showSiteNames?: boolean;
+  readonly alwaysVisible?: boolean;
+  readonly summaryRunId?: string | null;
 }
+
+const SHORT_NAMES: Record<SiteKey, string> = { claude: 'Claude', chatgpt: 'GPT', gemini: 'Gem', deepseek: 'DS',
+  doubao: '豆包', qianwen: '千问', kimi: 'Kimi', yuanbao: '元宝', chatglm: '智谱' };
 
 export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
   const buttons = useRef<Array<HTMLButtonElement | null>>([]);
   const pages = paginateSiteKeys(props.selectedSites);
-  if (pages.length <= 1) return null;
+  if (!pages.length || (pages.length <= 1 && !props.alwaysVisible)) return null;
+  const statuses = props.summaryRunId === undefined ? props.statuses : Object.fromEntries(
+    Object.entries(props.statuses).filter(([, status]) => status.submission?.runId === props.summaryRunId));
   let nextStart = 1;
 
   return (
@@ -36,10 +44,10 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
         const start = nextStart;
         nextStart += sites.length;
         const range = `${start}–${start + sites.length - 1}`;
-        const badges = pageSubmissionSummary(sites, props.statuses, props.copy);
+        const badges = pageSubmissionSummary(sites, statuses, props.copy);
         const label = [formatCopy(props.copy.sitePageLabel, { page: index + 1, range }), ...badges.map(b => b.label)].join(", ");
         const details = sites.map(key => pageSiteDetail(
-          props.sites?.find(site => site.key === key)?.label ?? key, props.statuses[key], props.copy
+          props.sites?.find(site => site.key === key)?.label ?? key, statuses[key], props.copy
         )).join("; ");
         const selected = index === props.page;
         return (
@@ -64,7 +72,7 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
               if (action.activate) props.onPageChange(action.focus, "keyboard");
             }}
           >
-            <span>{range}</span>
+            <span>{props.showSiteNames ? sites.map(site => SHORT_NAMES[site]).join(' · ') : range}</span>
             {badges.length > 0 && <span className="page-tab-badges" aria-hidden="true">{badges.map(badge => <i key={badge.state} className={`page-tab-badge ${badge.state}`}>
               <span>{badge.symbol}</span><span className="page-tab-count">{badge.count}</span>
             </i>)}</span>}

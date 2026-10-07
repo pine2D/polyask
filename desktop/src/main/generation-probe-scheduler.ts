@@ -29,9 +29,11 @@ export function scheduleGenerationProbe(
 }
 
 export function generationObservationStatus(status: SiteStatus): SiteStatus {
+  const generation = status.generation && ['submitted', 'generating'].includes(status.generation.state)
+    ? { ...status.generation, state: 'unconfirmed' as const } : status.generation;
+  const value = generation ? { ...status, generation } : status;
   return status.phase === "submitted" || status.phase === "generating"
-    ? { ...status, phase: "warning", code: "generation_unconfirmed" }
-    : status;
+    ? { ...value, phase: "warning", code: "generation_unconfirmed" } : value;
 }
 
 interface ProbeTracking {

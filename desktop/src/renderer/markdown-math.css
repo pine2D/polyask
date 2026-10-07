@@ -1,0 +1,17 @@
+.markdown-math { max-width: 100%; font-size: 12px; }
+.markdown-math-actions { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 2px 6px 2px 0; }
+.markdown-math-actions button { min-width: 28px; min-height: 28px; padding: 3px 8px; font-size: 12px; }
+.markdown-math-preview { display: inline-block; max-width: 100%; overflow-x: auto; vertical-align: middle; font-size: 1rem; }
+.markdown-math-preview math { color: inherit; }
+.markdown-math-source { overflow-wrap: anywhere; }
+.markdown-math [role="status"] { display: block; line-height: 1.5; margin: 4px 0; }
+.markdown-math [role="status"]:empty { display: none; }
+.markdown-math-block { margin: 1em 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; min-width: 0; }
+.markdown-math-block .markdown-math-actions { display: flex; }
+.markdown-math-block .markdown-math-preview { display: block; }
+.markdown-preview .markdown-math-block pre { margin: 8px 0 0; }
+.markdown-math-block pre .markdown-math-source { overflow-wrap: normal; }
+@media (forced-colors: active) {
+  .markdown-math-block { border-color: CanvasText; }
+  .markdown-math-preview math { color: CanvasText; }
+}

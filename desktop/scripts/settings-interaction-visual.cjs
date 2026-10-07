@@ -7,6 +7,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   win.setContentSize(1280, 900);
   await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale: 'zh-CN' } });
   await wait('!!document.querySelector(".settings-workspace")');
+  await run('document.querySelector("#settings-advanced-toggle").click()');
   await run('document.querySelector(".danger-zone input").focus()');
   for (const event of ['{key:"Escape",isComposing:true}', '{key:"Escape",keyCode:229}']) {
     await run(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', {...${event}, bubbles:true}))`);
@@ -26,12 +27,12 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   const hover = await run('getComputedStyle(document.querySelector(".confirm-actions .primary")).backgroundColor');
   if (hover !== button.background) failures.push(`confirmation hover lost primary background: ${hover}`);
   await shot('settings-confirm-hover');
-  await run('document.querySelector(".confirm-close").click()');
+  await run('document.querySelector(".confirm-actions button:not(.primary)").click()');
   await wait('!document.querySelector(".confirm-dialog")');
   assert.deepEqual(failures, []);
   // Deferred fixture operations let us observe progress without touching real data.
   await run('document.querySelector(".danger-zone .settings-actions button").click()');
-  await wait('!!document.querySelector(".confirm-dialog")');
+  await wait('!!document.querySelector("[data-local-confirm]:not(:disabled)")');
   await run('document.querySelector(".confirm-actions .primary").click()');
   await wait('document.querySelector(".danger-zone .settings-actions button").textContent === "正在清空…"');
   assert.equal(await run('document.querySelector(".local-reset button").disabled'), true);
@@ -40,7 +41,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   await wait('!document.querySelector(".local-reset button").disabled');
   assert.equal(await run('document.querySelector(".danger-zone .settings-actions").contains(document.querySelector(".local-reset"))'), false);
   assert.equal(await run('document.querySelector(".cloud-data-controls button").disabled'), true);
-  await run('document.querySelector(".cloud-data-controls input").focus()');
+  await run('document.querySelector(".cloud-data-controls input").scrollIntoView({block:"center"}); document.querySelector(".cloud-data-controls input").focus()');
   await win.webContents.insertText('DELETE');
   await wait('!document.querySelector(".cloud-data-controls button").disabled');
   await run('document.querySelector(".cloud-data-controls button").click()');
@@ -59,6 +60,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     win.setContentSize(width, 900);
     await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, diagnosticError: '1' } });
     await wait('!!document.querySelector(".sync-stage-list code")');
+    await run('document.querySelector("#settings-advanced-toggle").click()');
     await paint();
     const geometry = await run(`(() => {
       const card = document.querySelector('.cloud-data-row'), heading = card.querySelector('h2').getBoundingClientRect();

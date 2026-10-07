@@ -7,6 +7,7 @@ export const SYNTHESIS_PROMPT_LIMIT = 60_000;
 
 export interface SynthesisSendRequest {
   readonly archiveId: string;
+  readonly sourceUpdatedAt?: number;
   readonly targetSite: SiteKey;
   readonly tier: Tier;
   readonly selectedHosts: readonly string[];
@@ -33,6 +34,7 @@ export type SynthesisValidationCode =
   | "invalid_request"
   | "not_enough_answers"
   | "target_missing"
+  | "source_changed"
   | "too_long";
 
 interface PromptInput {
@@ -91,6 +93,10 @@ export function validateSynthesisRequest(
   if (!value || typeof value !== "object") return "invalid_request";
   const input = value as Partial<SynthesisSendRequest>;
   if (typeof input.archiveId !== "string" || !input.archiveId.trim() || input.archiveId.length > 128) return "invalid_request";
+  if (input.sourceUpdatedAt !== undefined) {
+    if (!Number.isSafeInteger(input.sourceUpdatedAt) || input.sourceUpdatedAt < 0) return 'invalid_request';
+    if (input.sourceUpdatedAt !== record.updatedAt) return 'source_changed';
+  }
   if (input.tier !== null && input.tier !== "fast" && input.tier !== "think") return "invalid_request";
   if (typeof input.instruction !== "string" || [...input.instruction].length > 4_000) return "invalid_request";
   if (!Array.isArray(input.selectedHosts) || input.selectedHosts.length > 9 ||

@@ -11,7 +11,7 @@ const STEPS: readonly { title: keyof DesktopCopy; body: keyof DesktopCopy; comma
   { title: "guideChooseTitle", body: "guideChooseBody", command: "open-sites" },
   { title: "guideLoginTitle", body: "guideLoginBody", command: "open-site-health" },
   { title: "guideAskTitle", body: "guideAskBody", command: "focus-prompt" },
-  { title: "guideCompareTitle", body: "guideCompareBody", command: "collect-compare" }
+  { title: "guideSavedCopiesTitle", body: "guideSavedCopiesBody", command: "open-question-history" }
 ];
 
 export function GettingStarted({ copy, commands, onExecute }: GettingStartedProps): React.JSX.Element {

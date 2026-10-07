@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { folderMembershipId, isFolderTarget, validFolderId, validFolderName,
-  type TaskFolder, type FolderTarget, type FolderMembershipChange, type FolderFilters, type FolderContent } from "../shared/task-folder";
+  type TaskFolder, type TaskFolderSummary, type FolderTarget, type FolderMembershipChange, type FolderFilters, type FolderContent } from "../shared/task-folder";
 import type { TaskFolderRepository } from "./task-folder-repository";
 import type { ArchiveService } from "./archive-service";
 import type { DecisionService } from "./decision-service";
@@ -13,7 +13,10 @@ export class TaskFolderService {
     private readonly decisions:DecisionService,private readonly options:Options) {
     this.now=options.now??Date.now;this.createId=options.createId??randomUUID;
   }
-  list():TaskFolder[] {return this.repository.list();}
+  list(): TaskFolderSummary[] {
+    const counts = this.repository.contentCounts();
+    return this.repository.list().map(folder => ({ ...folder, contentCount: counts.get(folder.id) ?? 0 }));
+  }
   create(name:unknown):TaskFolder {
     if (!validFolderName(name)) throw new Error("invalid_request");
     const now=this.now();

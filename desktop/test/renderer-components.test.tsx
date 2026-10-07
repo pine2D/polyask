@@ -298,8 +298,9 @@ test("command bar renders one compact command surface with stateful controls", (
   for (const label of ["Use site setting", "Fast", "Deep thinking"]) {
     assert.match(html, new RegExp(`aria-label="${label}"`));
     assert.match(html, new RegExp(`data-hint="${label}[^"]*"`));
-    assert.equal([...html.matchAll(new RegExp(label, "g"))].length, 2);
   }
+  assert.match(html, /data-current-tier[^>]*>Site<\/span>/);
+  assert.match(html, /Response mode for the next send: Use site setting/);
   assert.doesNotMatch(html, /<small>AI Answers<\/small>/);
   assert.match(html, /aria-controls="workspace-panel"/);
   assert.match(html, /aria-label="Custom · 9"/);
@@ -488,6 +489,7 @@ test("workspace drawer exposes compact presets, continuous selection and bound g
       copy={copy}
       sites={SITES}
       selected={new Set(["claude", "kimi"])}
+      participating={new Set(["claude", "kimi"])}
       groups={[{
         id: "research",
         name: "Research",
@@ -500,6 +502,7 @@ test("workspace drawer exposes compact presets, continuous selection and bound g
       healthChecking={false}
       onStateChange={noop}
       onSelectionChange={noop}
+      onParticipationChange={noop}
       onSaveGroup={async () => true}
       onDeleteGroup={noop}
       onCheckHealth={noop}
@@ -532,12 +535,14 @@ test("workspace health lists only sites in the current scope", () => {
       copy={getCopy("en")}
       sites={SITES}
       selected={new Set(["claude", "gemini"])}
+      participating={new Set(["claude", "gemini"])}
       groups={[]}
       statuses={{}}
       health={{}}
       healthChecking={false}
       onStateChange={noop}
       onSelectionChange={noop}
+      onParticipationChange={noop}
       onSaveGroup={async () => true}
       onDeleteGroup={noop}
       onCheckHealth={noop}
@@ -872,7 +877,7 @@ test("the dead polyask:focus-prompt IPC channel stays removed", () => {
   const shellPreload = readSource("src/preload/shell.ts");
   const app = readSource("src/renderer/index.tsx");
   assert.doesNotMatch(shellPreload, /focus-prompt/);
-  assert.doesNotMatch(app, /onFocusPrompt/);
+  assert.doesNotMatch(app, /shell\.onFocusPrompt\s*\(|polyask:focus-prompt/);
   assert.match(app, /"focus-prompt":\s*\(\)\s*=>\s*\{/);
 });
 

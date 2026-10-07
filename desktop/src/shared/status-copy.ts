@@ -8,6 +8,7 @@ const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
   not_ready: "siteNotReady",
   submit_unconfirmed: "submitUnconfirmed",
   generation_unconfirmed: "generationUnconfirmed",
+  source_changed: 'synthesisSourceVersionChanged',
   timeout: "timedOut",
   cancelled: "cancelledStatus",
   inject_failed: "injectFailed",
@@ -90,6 +91,7 @@ export function describeSynthesisSendCode(copy: DesktopCopy, code?: string): str
     case "cancelled": return copy.cancelledStatus;
     case "inject_failed": return copy.injectFailed;
     case "target_not_selected": return copy.synthesisTargetNotSelected;
+    case 'source_changed': return copy.synthesisSourceVersionChanged;
     default: return copy.synthesisSendFailed;
   }
 }

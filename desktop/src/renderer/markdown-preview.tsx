@@ -1,7 +1,10 @@
-import { createElement, type ReactNode } from 'react';
+import { createElement, useMemo, type ReactNode } from 'react';
 import { inlineTokens } from './markdown-inline';
 import { parseMarkdown, type MarkdownToken } from './markdown-parser';
 import { MermaidPreview } from './mermaid-preview';
+import { MarkdownCode } from './markdown-code';
+import { MarkdownMath } from './markdown-math';
+import { mathTokenValue } from './markdown-math-tokens';
 
 type LinkHandler = ((url: string) => void) | undefined;
 function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler): ReactNode[] {
@@ -12,9 +15,10 @@ function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler)
       const token = tokens[i++], key = i;
       if (token.nesting === -1) break;
       if (token.type === 'inline') nodes.push(...inlineTokens(token.children ?? [], onOpenLink));
+      else if (token.type === 'math_block') nodes.push(<MarkdownMath key={key} {...mathTokenValue(token)} block />);
       else if (token.type === 'fence' || token.type === 'code_block') {
         const language = token.info.trim().split(/\s/)[0], source = token.content.replace(/\n$/, '');
-        nodes.push(language.toLowerCase() === 'mermaid' ? <MermaidPreview key={key} source={source} /> : <pre key={key} data-language={language || undefined}><code>{source}</code></pre>);
+        nodes.push(language.toLowerCase() === 'mermaid' ? <MermaidPreview key={key} source={source} /> : <MarkdownCode key={key} source={token.content} language={language} />);
       } else if (token.type === 'hr') nodes.push(<hr key={key} />);
       else if (token.type === 'html_block') nodes.push(<p key={key}>{token.content}</p>);
       else if (token.nesting === 1) {
@@ -40,5 +44,6 @@ function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler)
 }
 
 export function MarkdownPreview({ value, onOpenLink }: { readonly value: string; readonly onOpenLink?: (url: string) => void }): React.JSX.Element {
-  return <div className="markdown-preview">{renderTokens(parseMarkdown(String(value ?? '')), onOpenLink)}</div>;
+  const tokens = useMemo(() => parseMarkdown(String(value ?? '')), [value]);
+  return <div className="markdown-preview">{renderTokens(tokens, onOpenLink)}</div>;
 }

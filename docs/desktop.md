@@ -18,8 +18,8 @@
 | Site preload | 隔离世界里加载站点运行时，收发 `site-command`/`site-response` | `desktop/src/preload/site.ts` |
 | 站点运行时 | 九站适配器与通用链（classic script、`__AMS` 全局） | `desktop/src/site-runtime/` |
 
-- Shell 是唯一的 `BrowserWindow`；每个**已勾选**站点一个 `WebContentsView`。视图按勾选懒建：没勾的站点不建视图、不加载页面；取消勾选释放视图（登录态活在持久化 session 里，重新勾选会重新加载并仍是登录态，**丢的是页面上的对话**）。发送中及答案采集 token 未结束时保留；已提交、生成中及警告态须有明确结束证据才自动释放，监控超时仅显示未确认并保留页面。未选但忙碌的视图保持挂载与正尺寸、仅隐藏；状态更新及采集落库后重查并释放，无新增轮询，重新勾选及新发送按释放当时状态保护。生成监控按站点保留轮次，新轮不停止其它站旧回答的监控；取消仅终止尚在发送的站点监控和采集，已提交回答继续只读收尾。辅助综合独立监控完成、不中断群发统计，待采集/待保存的目标也保持保护，保存成功后再检查释放。
-- **所有已勾选站点都挂在视图树里并保持正尺寸**，非当前页的与当前页第一格用完全相同的矩形、压在其之下——不占屏幕、不抢鼠标。**不能只挂当前页**：未 `addChildView` 的 `WebContentsView` 页面视口恒 0×0（只 `setBounds` 同样是 0），`site-runtime/core.js` 的 `findComposer` 因 `r.top < innerHeight` 恒假而返回 null，群发对后台站点必然 `composer_not_found`，一路重投烧到截止线。
+- Shell 是唯一的 `BrowserWindow`；每个**已打开**站点一个 `WebContentsView`，未打开的站点不建视图、不加载页面。`workspace.selectedSites` 继续持久化并同步打开页面的有序范围；本轮参与群发是 renderer 会话内的独立范围，不写新业务键。不参与仅排除后续群发与手动采集，仍保留页面、布局、聚焦和登录；新轮冻结发送范围，重试沿用原轮范围，不随新的参与选择缩减。明确关闭页面须预览并确认：受信 IPC 核对明确确认标志、当前页面身份及操作锁，发送、导航、生成或采集未结束时拒绝；关闭会丢当前页面对话，持久 session 登录仍保留。状态更新及采集落库后重查可回收视图，监控超时不当作生成结束证据。生成监控按站点保留轮次，新轮不停止其它站旧回答；取消仅终止尚在发送的站点监控和采集，已提交回答继续只读收尾。辅助综合独立监控完成，待采集/待保存的目标也保持保护。
+- **所有已打开站点都挂在视图树里并保持正尺寸**，非当前页的与当前页第一格用完全相同的矩形、压在其之下——不占屏幕、不抢鼠标。**不能只挂当前页**：未 `addChildView` 的 `WebContentsView` 页面视口恒 0×0（只 `setBounds` 同样是 0），`site-runtime/core.js` 的 `findComposer` 因 `r.top < innerHeight` 恒假而返回 null，群发对后台站点必然 `composer_not_found`，一路重投烧到截止线。
 - **被遮挡时导航的视图会停帧，靠重申 `setBackgroundThrottling(false)` 救回**（2026-10-04 Linux+Windows 真机）：视图在被兄弟视图压住、或整个窗口被别的应用盖住/锁屏/最小化时完成一次跨文档导航，之后 rAF=0、ResizeObserver/IntersectionObserver/View Transitions 都停，定时器和 MutationObserver 照常，`visibilityState` 仍是 visible；窗口遮挡解除后当前页能自愈，后台页不会。Windows 上最小化还会让从未导航过的视图停帧。Chromium 在 `IsHidden` 分支里对 `setBackgroundThrottling(false)` 走 `ShowWithVisibility(kHiddenButPainting)`，所以在 get 已是 false 时再设一次就能恢复；`invalidate()` 无效，`capturePage` 在 Windows 上首次抛 `UnknownVizError`（随后视图恢复），都不能当恢复手段。落点：`paint-recovery.ts` 的 `reassertPainting` 只在视图未销毁、且 `getBackgroundThrottling()` 当前为 false 时重设（空闲节流实验设的 true 不覆盖）；`site-view.ts` 在每次主帧 `did-navigate` 调它；`startPaintRecovery` 在窗口 `restore`/`show`/`focus` 与 `powerMonitor` 的 `unlock-screen`/`resume` 时对全部视图重设一次、1s 后补一次（连发只留一个计时器），常开、不受实验开关控制，由 `runtime-gates.ts` 装配并随 dispose/窗口 closed 清理。Electron 没有「窗口不再被遮挡」事件：被别的应用盖住又露出、但用户没聚焦窗口时，要等下一次 `did-navigate` 或 `focus`。Linux 残留：Kimi/元宝/智谱后台新会话提交 10–20s 后掉到约 1 帧/秒（不是 0），重设与 `invalidate()` 都救不回，切到该页显示一次即恢复，机制未定位，Windows 稳态未见。
 - **层序靠「重挂即提升」**：`addChildView` 对已在树里的子视图是原地提升到最顶层（幂等、`children` 不增长）。**绝不要改成先 detach 再 attach**——全拆重挂实测会让被聚焦站点的渲染进程真的丢焦点。落点 `view-manager.ts` 的 `attach`/`detach`/`reconcile`。
 - 布局、缩放、槽位顺序、`WebContents` 生命周期归 main；renderer 只提交白名单意图。
@@ -107,7 +107,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 | `inject_failed` | `injectFailed` | | `attachment_action_required` | `attachmentActionRequired` |
 | `no_view` | `siteUnavailable` | | `invalid_response` | `invalidResponse` |
 | `error` | `siteError` | | `adapter_unavailable` | `adapterUnavailable` |
-| `attachment_conflict` | `attachmentConflict` | | | |
+| `attachment_conflict` | `attachmentConflict` | | `source_changed` | `synthesisSourceVersionChanged` |
 
 采集码另走 `describeCollectionCode`：`no_answer` → `noAnswer`、`no_view` / `no_window` → `siteUnavailable`（`no_window` 是 Drive schema 1 线格式里带进来的旧码，语义与 `no_view` 相通）、`not_ready` → `siteNotReady`、`answer_truncated` → `answerTruncated`，其余落 `failed`。辅助综合发送另有 `describeSynthesisSendCode`，另处理 `target_not_selected` 与 `operation_busy`。
 
@@ -135,7 +135,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - 单页最多 4 个站点（`shared/site-pages.ts` 的 `SITE_PAGE_SIZE = 4`）。1–4 站动态排布，5–9 站按 3+2、3+3、4+3、4+4、3+3+3 均衡分页，避免只有一站的末页。换页只改叠放次序与 bounds，不销毁、不重载、不中断生成与滚动位置。
 - Overview（总览）是等权比较视图；Focus 是主次阅读视图，次要站点仍是实时可交互的 `WebContentsView`，不得降级成截图或状态卡。Overview 恢复用户保存的已选站点顺序；Focus 记住每页最近主站。
 - 几何：Overview 1 站铺满、2 站左右、3 站三分、4 站 2×2；Focus 1 站铺满、2 站约 2:1、3–4 站左主右次。请求 Overview 但格宽 `<380` 或高 `<210` CSS px 时自动落 Focus（`main/layout.ts` 的 `GRID_TILE_MIN_WIDTH` / `GRID_TILE_MIN_HEIGHT`，按当前页实际站点数算）。
-- 密度令牌在 `shared/display.ts`：compact = 外壳高 52 / 标题条 24 / 边距 4 / 间距 4；comfortable = 64 / 32 / 8 / 8。提问框展开时外壳临时升到 120（comfortable 144），失焦或 Escape 后恢复，不永久挤压视图。所有尺寸走 4px 基础令牌，禁止逐组件散落魔数。
+- 密度令牌在 `shared/display.ts`：compact = 外壳高 52 / 标题条 24 / 边距 4 / 间距 4；comfortable = 64 / 32 / 8 / 8。提问框显式展开时外壳临时升到 120（comfortable 144），附件、档位、工作台及普通失焦不收起；显式收起或非组合态 Escape 恢复，独立 surface 切换及本机重置结束本次编辑上下文。始终保留同一 textarea 的内容、选区和位置；确认覆盖及历史阅读不打断编辑。所有尺寸走 4px 基础令牌，禁止逐组件散落魔数。
 - 页面缩放与密度相互独立：未手动调整的站点沿用 `siteScale`（`0.9` 或 `1`），Focus 主站默认 1（`zoomForSite`）。AI 页面取得输入焦点后，Ctrl++／−（macOS 同时支持 Command）及 Ctrl+鼠标滚轮按浏览器常用档位调整本站，范围 25%–500%；Ctrl+0 固定恢复本站 100%。`main/site-zoom.ts` 接收原生输入并调用 `webContents.setZoomFactor()`，不向远程页面暴露接口；手动比例优先于布局默认值，开关侧栏、翻页、切换 Focus、导航和视图重建均不覆盖。快捷键速查三语列出放大、缩小、恢复及滚轮说明；外壳取得焦点时仍沿用菜单的外壳缩放。
 - 命令栏一条通用：Overview、Focus、窄窗共用同一套控件优先级。始终显示提问框、档位、发送/取消、站点名、是否参与群发与运行状态；空间允许时显示布局文字与选择数量；聚焦、重载等站点动作常驻标题右侧，后退仅在有可退历史时出现。紧凑模式交互目标不小于 24×24 CSS px，检测到粗指针切 comfortable。
 - 颜色与文字令牌集中在 `renderer/theme.css`，表面分为 canvas/panel/field，强调色配套 on-accent 前景，状态文字用独立 ink 色以保证明暗可读性；品牌沿用靛蓝：亮色 `#4f46e5`、暗色 `#a5a0ff`，成功 `#16a34a`、失败 `#dc2626`，其余用系统中性色；字体 `system-ui`，不捆绑字体。站点标题条按选择标签、状态圆点与文字、常驻操作排列；加载时底边显示不定进度细线，由真实 loading 阶段驱动，就绪或失败即停止，不显示估算百分比，减少动态效果时显示静态细线。不加装饰渐变与无信息动画。布局切换不为原生视图 bounds 伪造动画。
@@ -232,7 +232,11 @@ npm run soak -- --minutes=60
 
 辅助请求可带 excerpt，仅此模式允许一份来源。主进程在导航前验证逐字摘录属于选中的保存原文、追问非空、单一来源及完整载荷 ≤60,000 字符；目标仍须在当前选择范围。载荷使用原始 text（不是 task 标题）、固定来源编号和有围栏的摘录，标注仅为部分证据。普通综合仍要求两份回答。
 
-追问复用单站导航/发送、互斥与取消及综合采集/替换确认，不新增自动重试。保存结构不变：追问问题保存在 synthesis.instruction，摘录不单独存储；完整发送载荷沿用提问历史。此版本不提供追问树或多份综合历史，保存后界面仍称“综合结果”。
+追问复用单站导航/发送、互斥与取消及综合采集/替换确认，不新增自动重试。保存结构不变：追问问题保存在 synthesis.instruction，摘录不单独存储；完整发送载荷沿用提问历史。保存区统一称“补充分析”，可查看当时要求、目标、档位与时间；旧记录缺少发送证据则明确未知。提交、取回和保存分别呈现，不把发送成功当作已保存；保存后明确进入该结果的阅读面。此版本不提供追问树或多份分析历史。
+
+摘录只直接接受同一文本节点内唯一的原文字面片段；跨格式、重复或图形选择先打开已保存 Markdown 原文，由用户选择连续范围并确认。HTML textarea 的 LF 选区回映到原始 CRLF/CR 的 UTF-16 偏移，拒绝拆开代理对、空范围和身份/版本变化。摘录导航在来源读取前后都检查未保存编辑；确认等待结束后重新读取来源，重读期间新稿仍需另行确认，最终检查与导航之间不跨异步等待。导航与发送前重新核对保存来源，辅助发送可带临时 `sourceUpdatedAt`，导航后派发前再次检查，变化返回 `source_changed`，不发送旧材料。超过决策证据的 4,000 码点仍可追问，不截断正文；替换已有追问摘录先逐字展示旧新内容并确认。
+
+比较可就地展开，原文、两列比较及补充分析仅挂载当前面；各面和每个来源的阅读位置在会话内保留，换记录或明确新导航使旧上下文失效。人工对照按结论/依据/条件/成本保存会话内笔记和逐字来源，变化的来源需重新核对，笔记仍保留；形成决策仅填入草稿，用户明确保存才写库，不把字面相同或人工共识标为事实。
 
 ### 独立决策卡数据契约
 
@@ -253,6 +257,8 @@ npm run soak -- --minutes=60
 - Drive 新实体文件名和元数据 id 使用正文 id 的 SHA-256，拉取校验哈希后按原 id 建索引；不放标题和摘录，避免复合或 Unicode id 超出 Drive 属性长度。schema 1/2 冻结 fixture 不改，新增 schema 3 样本。
 - 数据迁移新增两表与索引，清空文件夹保留内容，清空结果或卡片保留文件夹。本机重置清两表，仍先断开 Drive 并保留 deviceId。文件夹界面与多选对话框不新增持久 UI 设置。
 - UI 搜索覆盖正文和摘录；编辑为显式保存，失败保留内存草稿。工作区切换和全局命令经过未保存确认；确认默认取消、Escape关闭、焦点圈定。应用异常退出不承诺恢复尚未保存的编辑。导出为单卡 Markdown，不等同于可恢复备份。
+- 混合列表搜索仍查询全部记录，前端稳定排序并每页显示至多 100 条，明确总数和范围，键盘可到最后一条。多选以 `kind:id` 区分对象，当前页选择与跨页数量可见；批量加入文件夹只添加关联，收藏仅对结果，混合导出保留各对象完整 Markdown。沿用已有单目标 IPC 串行处理，停止后等待当前请求结算、不启动下一项；部分失败可人工只重试失败项，导出不产生缺项文件。第一项 IPC 前同步阻断父导航，卸载后不继续写入或下载。
+- 筛选后的选中记录仍匹配时保留阅读，最新回包排除记录时也须经过当时的未保存确认；发起新的导航意图即作废旧回包，确认时再核对请求、意图及选择。会话内只保存筛选、排序、页码、列表滚动和阅读标识，不缓存全部正文或持久化多选；返回重新取最新记录，删除、明确导航及本机重置不复活旧阅读。
 
 ### 业务备份与恢复契约
 
@@ -273,7 +279,7 @@ npm run soak -- --minutes=60
 - 资源记录只含运行时版本/GPU 功能状态、窗口可见/最小化/聚焦状态、当前页、站点键/加载/节流状态，以及 PID/创建时间/CPU/工作集。只关联站点主帧 PID；子帧、worker 和其他未归属进程保留为未归属，不推算每站完整成本。同一 PID 多站共享时只记录一笔进程资源，工作集仍不是独占物理内存；新进程首笔 CPU 标为无有效间隔。不记录网址、正文、标题、账号或 IPC 载荷。
 - `POLYASK_SOAK_REPORT` 显式启用时，runtime-gates 才累计稳定性事件并采样 `app.getAppMetrics()`；普通运行不保留无消费者的事件数组。站点状态反馈及诊断快照独立于该记录器。
 - soak 第一笔发生在启动期间，CPU 初次读取为零，不代表空闲；后续样本为两次读取之间的用量。各进程工作集相加不是去重后的独占物理内存，启动期增长不能直接判定为泄漏。
-- 已选站点保留页面会话；未选站点在监控结束且答案采集有明确完成或归属终止证据后事件触发回收。监控连续 5 次读不到状态或到达 45 秒／15 分钟观察上限时显示 `generation_unconfirmed`；若采集在固定 15 分钟预算到期仍无结束证据，页面继续保留，以免关闭可能仍在生成的回答。独立的手动释放入口、已选站点休眠及新的后台可见性策略尚未实施，需单独决策与真机验证。
+- 已打开站点保留页面会话，不参与群发不回收；明确关闭且监控/采集具备结束证据后事件触发回收。监控连续 5 次读不到状态或到达 45 秒／15 分钟观察上限时显示 `generation_unconfirmed`；若采集在固定 15 分钟预算到期仍无结束证据，页面继续保留，以免关闭可能仍在生成的回答。已打开站点休眠及新的后台可见性策略尚未实施，需单独决策与真机验证。
 
 ### 提问历史存储与同步基础
 
@@ -293,6 +299,12 @@ Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或
 Mermaid 仅在需要预览时加载本地依赖，串行绘制、最多缓存 12 个结果，strict 安全级别与禁用 HTML 标签固定；回答配置指令不参与绘制。源码超过 20,000 字符、按换行/分号/`&` 保守计算超过 250 段（标签内也计数）、边数超过 200，或生成 SVG 超过 2 MB/视框超限时退回源码。复杂度在布局前检查，单行大量孤立节点也不能绕过；离开回答后尚未开始的任务跳过。生成图经本地 SVG 检查后作为 data 图片展示，外壳不插入原始图表 HTML；错误、源码缺失、超限明确提示，复制始终取原始源码。预览支持代码切换和 0.5–3 倍缩放，图表区域自行滚动。源码变更/组件卸载后迟到结果不覆盖新内容；旧副本中有 mermaid 围栏即可预览，已丢失源码的旧副本不会自动补采。新增依赖的兼容修补版本以 package/lock 的 overrides 固定（lodash-es、KaTeX），生产依赖审计须检查；不新增数据库键、同步 schema 或采集完成证据。
 
 分页发送统计：`SiteStatus.submission` 是运行期发送结果（runId/state/code），仅群发入口赋值；生成态更新保留它，页面故障仍覆盖站点表头但不覆盖发送结果。新 run 清除上一轮计数，同 runId 子集重试保留未重试站结果。生成监控同理：`GenerationMonitor.begin` 遇同 runId 时把**被重试的站**重置为 submitted、清掉旧的生成证据，未重试站的条目保留（2026-10-04 起；旧逻辑跳过同 runId 条目，Windows 实测重试后 1.2s 即显示 complete）。已知残留：重试时上一轮的生成探测若仍在途，回来后仍会被新条目接收，条目没有身份标识。分页绿色计数表示已提交，不宣称回答完成；失败、提交未确认、取消分别显示，逐站生成态与警告进入共享悬停提示和无障碍名称。该字段不持久化、不进入同步。
+
+整轮摘要另使用 `SiteStatus.generation` 的 runId/state 与每站最新保存尝试元数据，严格区分已提交、生成中及完整副本。`question-run-progress` 为受信只读 IPC/事件，SQL 仅取至多九站的 ID、状态、版本及正文是否存在，不加载正文/会话地址、不新增轮询；删除和重置也推送最新摘要。完整副本必须非空、未截断、采集 complete 且已封存；pending retry 不继承旧生成。推送优先于迟到 get、新轮/卸载/重置隔离旧回复。固定摘要行 32px，由外壳传同一几何真源给原生视图；页组显示短站名、完整可访问名及异常数量。阅读入口传准确提问/尝试 ID，只读已保存副本。
+
+首次两站提示可关闭，不自动选站、检查、发送或保存；永久指南仍可打开。只在用户选择两站后提供这两站的具名检查与登录/状态下一步；本轮有保存正文才提供阅读，两站完整封存后才提供比较。阅读须实际加载匹配副本，比较须用户确认保存两份并实际进入对应比较面，才记录完成；错误身份、取消、新尝试及迟到回执不能完成指南。版本和关闭/完成状态只写既有 `polyask.display` 本机白名单 envelope，显示偏好与指南互相保留；成功本机全重置清指南字段，普通清历史不清，SQLite/Drive/schema 不新增键。
+
+代码围栏先显示原代码和语言，逐块复制保留制表符和末尾换行，按需开启有限高亮；未知语言仍可完整复制。数学先显示完整源码，用户预览才在本地单 Worker 中解析，750ms 超时、4,096 字符/32 层/256 次展开界限及 `trust:false`，结果只接受有限安全 MathML；失败、超限或不支持保持源码，忙碌可手动重试，旧来源/卸载后的回复不回写。块公式缺少闭合标记的扫描按解析 state、容器行偏移及结束范围复用未命中，包含 paragraph silent lookahead，避免反复遍历全文；代码围栏、链接标签、货币及未闭合显式标记保持字面。正文未变化的父重绘复用组件内解析结果，不建立无界跨记录缓存。
 
 历史列表每 5s 重读至已加载尾部，反映新增、删除与回答保存进度；以可见记录为滚动锚点。列表或详情请求未结束时不叠加轮询；返回、关闭、切换或删除使旧详情回包失效。
 

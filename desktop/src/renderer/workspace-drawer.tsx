@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import type { DesktopCopy } from "../shared/copy";
@@ -19,6 +19,8 @@ interface WorkspaceDrawerProps {
   readonly copy: DesktopCopy;
   readonly sites: readonly SiteDefinition[];
   readonly selected: ReadonlySet<SiteKey>;
+  readonly participating: ReadonlySet<SiteKey>;
+  readonly participationBusy?: boolean;
   readonly groups: readonly ActiveWorkspaceGroup[];
   readonly statuses: Readonly<Record<string, SiteStatus>>;
   readonly health: Readonly<Partial<Record<SiteKey, SiteHealth>>>;
@@ -27,6 +29,8 @@ interface WorkspaceDrawerProps {
   readonly state: OpenWorkspacePanelState;
   readonly onStateChange: (state: OpenWorkspacePanelState | null) => void;
   readonly onSelectionChange: (sites: readonly SiteKey[]) => void;
+  readonly onParticipationChange: (sites: readonly SiteKey[]) => void;
+  readonly onCloseSitePage?: (site: SiteKey) => void;
   readonly onSaveGroup: (name: string) => Promise<boolean>;
   readonly onDeleteGroup: (id: string) => void;
   readonly onCheckHealth: (sites: readonly SiteKey[]) => void;
@@ -36,23 +40,25 @@ interface WorkspaceDrawerProps {
   readonly onClearSiteData: (site: SiteKey) => void;
   readonly onCopyHealthReport: () => void;
   readonly healthFeedback?: string;
+  readonly guideControl?: ReactNode;
 }
 
 export function WorkspaceDrawer(props: WorkspaceDrawerProps): React.JSX.Element {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   useEffect(() => {
     const escape = (event: KeyboardEvent) => {
+      if (!props.open || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
       if (event.key === "Escape") props.onStateChange(escapeWorkspacePanel(props.state));
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);
-  }, [props.onStateChange, props.state]);
+  }, [props.onStateChange, props.state, props.open]);
   const detailSite = props.state.detail
     ? props.sites.find((site) => site.key === props.state.detail)
     : null;
   const selectedSites = props.sites.filter((site) => props.selected.has(site.key));
   const selectTab = (tab: OpenWorkspacePanelState["tab"]): void => {
-    props.onStateChange({ ...props.state, tab, detail: null });
+    props.onStateChange({ ...props.state, tab, detail: null, sitesMode: 'select' });
   };
   const onTabKeyDown = (event: React.KeyboardEvent, index: number): void => {
     const action = pageTabKeyAction(event.key, index, 2);
@@ -83,7 +89,8 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps): React.JSX.Element 
         </div>
       </div>
       {props.state.tab === "sites" ? (
-        <div id="workspace-sites-panel" role="tabpanel" aria-labelledby="workspace-sites-tab"><WorkspaceSites {...props} /></div>
+        <div id="workspace-sites-panel" role="tabpanel" aria-labelledby="workspace-sites-tab">{props.guideControl}<WorkspaceSites {...props}
+          sitesMode={props.state.sitesMode ?? 'select'} onSitesModeChange={sitesMode => props.onStateChange({ ...props.state, sitesMode })} /></div>
       ) : (
         <div id="workspace-health-panel" role="tabpanel" aria-labelledby="workspace-health-tab">
           <SiteHealthPanel

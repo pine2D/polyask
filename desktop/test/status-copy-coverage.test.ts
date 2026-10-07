@@ -18,8 +18,14 @@ function producerFiles(): string[] {
 function producedCodes(): Map<string, string> {
   const produced = new Map<string, string>();
   for (const file of producerFiles()) {
-    for (const m of readSource(file).matchAll(/(?:\bcode:\s*|\.code\s*=\s*)"([a-z_]+)"/g)) {
+    const source = readSource(file);
+    for (const m of source.matchAll(/(?:\bcode:\s*|\.code\s*=\s*)"([a-z_]+)"/g)) {
       if (!produced.has(m[1])) produced.set(m[1], file);
+    }
+    // IPC 前置验证以 Error 传码；仅将已登记站点码纳入这条附加产出通道。
+    // 原有所有 code 属性仍做完整正向对账，不把其它数据业务错误混作站点状态码。
+    for (const m of source.matchAll(/new\s+Error\(["']([a-z_]+)["']\)/g)) {
+      if ((SITE_CODES as readonly string[]).includes(m[1]) && !produced.has(m[1])) produced.set(m[1], file);
     }
   }
   assert.ok(produced.size >= 10, `码抽取失效，实得 ${produced.size} 个（正则或文件清单坏了？）`);

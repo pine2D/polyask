@@ -34,10 +34,12 @@ export function useBroadcastFlow(
   readonly retrySites: readonly SiteKey[];
   readonly uncertainSites: readonly SiteKey[];
   readonly runId: string | null;
+  readonly activeSites: readonly SiteKey[];
   readonly failureCount: number;
   readonly cancelledCount: number;
 } {
   const [run, setRun] = useState<BroadcastRun | null>(null);
+  const [activeRequest, setActiveRequest] = useState<BroadcastRequest | null>(null);
   const [runState, setRunState] = useState<RunState>("idle");
   const state = useRef(new BroadcastFlowState()).current;
 
@@ -58,6 +60,7 @@ export function useBroadcastFlow(
           sites: [...payload.sites],
           images: [...payload.images]
         };
+        setActiveRequest(request);
         if (!state.commit(operation, completeRun(request, await shell.broadcast(request)))) return null;
         const completed = state.run!;
         setRun(completed);
@@ -106,6 +109,7 @@ export function useBroadcastFlow(
   };
   const invalidate = (): void => {
     state.invalidate();
+    setActiveRequest(null);
     syncState();
     forget();
   };
@@ -119,7 +123,8 @@ export function useBroadcastFlow(
     runState,
     retrySites: run ? run.request.sites.filter(site => run.results.get(site)?.ok !== true) : [],
     uncertainSites: run ? uncertainRunSites(run) : [],
-    runId: run?.request.runId ?? null,
+    runId: activeRequest?.runId ?? run?.request.runId ?? null,
+    activeSites: activeRequest?.sites ?? run?.request.sites ?? [],
     failureCount: run ? failedRunSites(run).length : 0,
     cancelledCount: run ? cancelledRunSites(run).length : 0
   };

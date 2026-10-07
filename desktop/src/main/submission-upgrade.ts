@@ -27,7 +27,7 @@ export function upgradedSubmissionStatus(previous: SiteStatus | undefined, runId
   if (!previous || !submission || submission.runId !== runId || submission.state !== "unconfirmed") return null;
   const metadata = sentMetadata(submission);
   return { site: previous.site, phase: metadata.code ? "warning" : "submitted", ...metadata,
-    submission: { runId, state: "sent", ...metadata } };
+    submission: { runId, state: "sent", ...metadata }, generation: { runId, state: 'submitted' } };
 }
 
 /**

@@ -1,18 +1,14 @@
 import {
   DEFAULT_DISPLAY_PREFERENCES,
-  parseDisplayPreferences,
+  WORKSPACE_PROGRESS_HEIGHT,
   type DisplayPreferences
 } from "../shared/display";
-
-const DISPLAY_STORAGE_KEY = "polyask.display";
-
-export interface DisplayStorage {
-  getItem(key: string): string | null;
-  setItem(key: string, value: string): void;
-}
+import { readLocalUiPreferences, writeDisplayPreferences, type LocalUiStorage } from './local-ui-preferences';
+export type DisplayStorage = LocalUiStorage;
 
 export interface DisplayDensityTarget {
   readonly dataset: { density?: string };
+  readonly style?: { setProperty: (name: string, value: string) => void };
 }
 
 export function loadDisplayPreferences(
@@ -22,23 +18,11 @@ export function loadDisplayPreferences(
   const fallback = coarsePointer
     ? { ...DEFAULT_DISPLAY_PREFERENCES, density: "comfortable" as const }
     : DEFAULT_DISPLAY_PREFERENCES;
-  try {
-    const raw = storage.getItem(DISPLAY_STORAGE_KEY);
-    return raw === null ? fallback : parseDisplayPreferences(JSON.parse(raw)) ?? fallback;
-  } catch {
-    return fallback;
-  }
+  return readLocalUiPreferences(storage, fallback).display;
 }
 
 export function saveDisplayPreferences(storage: DisplayStorage, value: unknown): boolean {
-  const preferences = parseDisplayPreferences(value);
-  if (!preferences) return false;
-  try {
-    storage.setItem(DISPLAY_STORAGE_KEY, JSON.stringify(preferences));
-    return true;
-  } catch {
-    return false;
-  }
+  return writeDisplayPreferences(storage, value);
 }
 
 export function applyDisplayDensity(
@@ -46,6 +30,7 @@ export function applyDisplayDensity(
   value: DisplayPreferences
 ): void {
   target.dataset.density = value.density;
+  target.style?.setProperty('--workspace-progress-height', `${WORKSPACE_PROGRESS_HEIGHT}px`);
 }
 
 export function applyDisplayPreferences(

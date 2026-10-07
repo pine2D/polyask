@@ -74,7 +74,7 @@ export function DecisionEditor({ copy, value, saved, source, sourceFailed, editi
         const evidence = saved?.evidence.find((old) => old.resultIndex === item.resultIndex);
         const result = source?.results[item.resultIndex];
         return <section className="decision-excerpt" key={index}>
-          <header><strong>{result?.label || evidence?.label || `#${item.resultIndex + 1}`}</strong>{editing ? <button type="button" disabled={busy} onClick={() => onChange({ ...value, evidence: value.evidence.filter((_old, itemIndex) => itemIndex !== index) })}>{copy.decisionRemoveEvidence}</button> : null}</header>
+          <header><strong>{`[S${item.resultIndex + 1}]`} {result?.label || evidence?.label || `#${item.resultIndex + 1}`}</strong>{editing ? <button type="button" disabled={busy} onClick={() => onChange({ ...value, evidence: value.evidence.filter((_old, itemIndex) => itemIndex !== index) })}>{copy.decisionRemoveEvidence}</button> : null}</header>
           {editing && source ? <div className="decision-field"><label htmlFor={fieldId(field)}>{copy.decisionEvidenceHint}</label><textarea {...aria(field)} name={`decision-${field}`} aria-label={`${copy.decisionEvidence}: ${result?.label || item.resultIndex + 1}`} disabled={busy} rows={4} value={item.excerpt} onChange={(event) => changeExcerpt(index, event.target.value)} />{hints(field, item.excerpt, 4000)}</div> : <><blockquote {...(editing ? aria(field) : {})} tabIndex={editing && errors[field] ? -1 : undefined}>{item.excerpt}</blockquote>{editing ? hints(field, item.excerpt, 4000) : null}</>}
         </section>;
       })}

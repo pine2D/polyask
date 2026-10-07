@@ -11,6 +11,8 @@ import { ConfirmDialog } from '../../src/renderer/confirm-dialog';
 import { FeedbackProvider } from '../../src/renderer/feedback-provider';
 import { currentPlatform, type DesktopPlatform } from '../../src/renderer/platform';
 import { usePresence } from '../../src/renderer/presence';
+import { useSiteParticipation } from '../../src/renderer/use-site-participation';
+import { useSitePageClose } from '../../src/renderer/use-site-page-close';
 import { setShellApi } from '../../src/renderer/shell-api';
 import { formatCopy, getCopy } from '../../src/shared/copy';
 import { createSyncDiagnosticSnapshot } from '../../src/shared/sync-diagnostics';
@@ -18,6 +20,7 @@ import type { SyncStatus } from '../../src/shared/sync';
 import type { Tier, SiteStatus } from '../../src/shared/protocol';
 import type { SiteKey } from '../../src/shared/contracts';
 import type { OpenWorkspacePanelState } from '../../src/renderer/workspace-panel-state';
+import type { LocalDataStats } from '../../src/shared/local-data';
 import { SITES } from '../../src/main/sites';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
@@ -67,10 +70,14 @@ if (stress) SITES.forEach((site, i) => {
     submission: { runId: 'fixture', state: (['failed', 'unconfirmed', 'sent'] as const)[i % 3] } };
 });
 const finishOperation = () => new Promise<void>(resolve => document.addEventListener('fixture:finish-operation', () => resolve(), { once: true }));
+let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders: 0, answers: 9, memberships: 0,
+  reset: { answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
+  getLocalDataStats: async () => dataStats,
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
   syncNow: async () => { await finishOperation(); return status; },
-  clearHistory: async () => { await finishOperation(); return 3; },
+  clearHistory: async () => { await finishOperation(); const count = dataStats.history;
+    dataStats = { ...dataStats, history: 0, answers: 0, reset: { ...dataStats.reset, answers: 0 } }; return count; },
   clearRemoteSync: async () => { await finishOperation(); return status; }
 } as any);
 
@@ -88,12 +95,19 @@ function Fixture(): React.JSX.Element {
   const [panel, setPanel] = useState<OpenWorkspacePanelState | null>({ tab: 'sites', detail: null, inputMethod: 'keyboard' });
   const [notifications, setNotifications] = useState(true);
   const [sent, setSent] = useState(false);
+  const participation = useSiteParticipation({ opened: selected, ready: true, busy: !!query.get('sending'),
+    openPages: async next => { setSelected(next); if (query.has('deferPageSelection')) await finishOperation(); return next; }, onError: noop });
+  const pageClose = useSitePageClose({ copy, sites: SITES, busy: !!query.get('sending') || participation.pending,
+    api: {
+      previewSitePageClose: async site => ({ site, contentsId: selected.includes(site) ? SITES.findIndex(item => item.key === site) + 1 : null, reason: null }),
+      closeSitePage: async request => ({ state: 'closed', workspace: { selectedSites: selected.filter(site => site !== request.site), groups: [], tier } })
+    }, onOpen: () => setPanel(null), onClose: () => queueMicrotask(() => promptRef.current?.focus()), onWorkspace: state => setSelected(state.selectedSites), onAnnounce: noop });
   if (query.get('surface') === 'settings') return <SettingsWorkspace copy={copy} locale={locale}
     status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={() => { document.body.dataset.settingsClosed = 'true'; }}
     onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications} />;
-  return <div className={`app-shell${expanded ? ' is-composer-expanded' : ''}`} data-sent={sent}>
+  return <div className={`app-shell${expanded ? ' is-composer-expanded' : ''}`} data-sent={sent} data-opened={selected.join(',')} data-participating={participation.participating.join(',')}>
     <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
-      layoutMode={layout} selectedCount={selected.length} failureCount={stress ? 6 : 0} cancelledCount={0}
+      layoutMode={layout} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0}
       scopeLabel={copy.allSites} healthAttention={0} panelTab={panel?.tab ?? null}
       pageControl={<PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}
       imageControl={<ImagePicker copy={copy} images={query.has('details') ? images : stress ? previewImages.slice(0, 1) : []} open={imagesOpen} disabled={false} warning={null} warningCount={0}
@@ -107,11 +121,15 @@ function Fixture(): React.JSX.Element {
       layout={{ mode: 'overview', focused: 'claude', page: 0, pageCount: 3,
         placements: SITES.slice(0, 2).map((site, i) => ({ key: site.key,
           bounds: { x: 340, y: 240 + i * 200, width: innerWidth - 360, height: 180 } })) }}
-      onToggle={noop} onFocus={noop} onReload={noop} onBack={noop} />
-    {panel && <WorkspaceDrawer copy={copy} sites={SITES} selected={new Set(selected)} groups={[]} statuses={{}}
-      health={{}} healthChecking={false} open state={panel} onStateChange={setPanel} onSelectionChange={setSelected}
+      participating={new Set(participation.participating)} participationBusy={participation.pending || !!query.get('sending')}
+      onToggle={site => { void participation.toggle(site); }} onFocus={noop} onReload={noop} onBack={noop} />
+    {panel && <WorkspaceDrawer copy={copy} sites={SITES} selected={new Set(selected)} participating={new Set(participation.participating)} groups={[]} statuses={{}}
+      participationBusy={participation.pending || !!query.get('sending')} onCloseSitePage={site => { void pageClose.request(site); }}
+      health={{}} healthChecking={false} open state={panel} onStateChange={setPanel} onSelectionChange={next => { void participation.reorderOpened(next); }}
+      onParticipationChange={next => { void participation.change(next); }}
       onSaveGroup={async () => true} onDeleteGroup={noop} onCheckHealth={noop} onFocusSite={noop}
       onReloadSite={noop} onHardReloadSite={noop} onClearSiteData={noop} onCopyHealthReport={noop} />}
+    {pageClose.dialog}
     <p style={{ position: 'absolute', top: 180, left: 360, color: 'var(--muted)' }}>UI fixture · 仅验证外壳，未加载 AI 站点</p>
   </div>;
 }

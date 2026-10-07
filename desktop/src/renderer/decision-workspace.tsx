@@ -15,6 +15,7 @@ interface Props {
   readonly onBusy?: (busy: boolean) => void;
   readonly onOrganize?: () => void;
   readonly initialRecord?: DecisionRecord;
+  readonly initialDraft?: DecisionInput;
   readonly onChanged?: (record?: DecisionRecord) => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
@@ -27,10 +28,10 @@ const newCard = (source: ArchiveRecord): DecisionInput => ({ archiveId: source.i
   title: [...(source.task || source.text)].slice(0, 160).join(""), conclusion: "", rationale: "",
   uncertainties: "", nextStep: "", status: "draft", evidence: [] });
 
-export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize, onBusy }: Props): React.JSX.Element {
+export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize, onBusy }: Props): React.JSX.Element {
   const [items, setItems] = useState<DecisionRecord[]>([]);
   const [saved, setSaved] = useState<DecisionRecord | null>(initialRecord ?? null);
-  const [value, setValue] = useState<DecisionInput | null>(() => initialSource ? newCard(initialSource) : initialRecord ? decisionInput(initialRecord) : null);
+  const [value, setValue] = useState<DecisionInput | null>(() => initialSource ? initialDraft?.archiveId === initialSource.id ? initialDraft : newCard(initialSource) : initialRecord ? decisionInput(initialRecord) : null);
   const [editing, setEditing] = useState(!!initialSource);
   const [source, setSource] = useState<ArchiveRecord | null | undefined>(initialSource ?? undefined);
   const [sourceFailed, setSourceFailed] = useState(false);
@@ -40,7 +41,8 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
   const [busy, setBusy] = useState(false);
   useEffect(() => { onBusy?.(busy); return () => onBusy?.(false); }, [busy, onBusy]);
   const [message, setMessage] = useState("");
-  const [validationStarted, setValidationStarted] = useState(false);
+  const [validationStarted, setValidationStarted] = useState(() => !!initialDraft
+    && Object.keys(validateDecisionDraft(initialDraft, initialSource, null)).length > 0);
   const [validationAttempt, setValidationAttempt] = useState(0);
   const [confirmation, setConfirmation] = useState<{ text: string; action: () => void } | null>(null);
   const [revision, setRevision] = useState(0);
@@ -49,6 +51,10 @@ export function DecisionWorkspace({ copy, locale, initialSource, onArchives, onC
   const workspaceRef = useRef<HTMLElement>(null);
   const errors = validationStarted && value ? validateDecisionDraft(value, source, saved) : {};
   const dirty = editing && !!value && (!saved || JSON.stringify(value) !== JSON.stringify(decisionInput(saved)));
+  useEffect(() => {
+    if (!initialRecord || initialSource || editing || dirty || busy || busyRef.current) return;
+    setSaved(initialRecord); setValue(decisionInput(initialRecord));
+  }, [initialRecord, initialSource, editing, dirty, busy]);
   const guard = (action: () => void) => {
     if (busyRef.current) return;
     if (dirty) setConfirmation({ text: copy.decisionDiscard, action: () => runApprovedDecisionNavigation(action) }); else action();

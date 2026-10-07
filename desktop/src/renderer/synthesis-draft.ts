@@ -14,6 +14,7 @@ export interface SynthesisDraftStore {
   version(archiveId: string, followUpHost?: string): number | null;
   remove(archiveId: string, followUpHost?: string, expectedVersion?: number | null): void;
   clear(): void;
+  review(record: ArchiveRecord, followUpHost?: string): void;
 }
 
 /** 仅保留当前会话的表单劳动，不写入同步库或本机存储。 */
@@ -37,7 +38,7 @@ export function createSynthesisDraftStore(): SynthesisDraftStore {
       if (!saved) return null;
       const available = record.results.filter(result => !!result.text?.trim());
       const selectedHosts = saved.draft.selectedHosts.filter(host => available.some(result => result.host === host));
-      const sourceChanged = saved.draft.selectedHosts.some(host =>
+      const sourceChanged = saved.record.updatedAt !== record.updatedAt || saved.draft.selectedHosts.some(host =>
         saved.record.results.find(result => result.host === host)?.text !== available.find(result => result.host === host)?.text);
       return { ...saved.draft, selectedHosts, sourceChanged };
     },
@@ -46,6 +47,10 @@ export function createSynthesisDraftStore(): SynthesisDraftStore {
       const id = key(archiveId, followUpHost);
       if (expectedVersion === undefined || (entries.get(id)?.version ?? null) === expectedVersion) entries.delete(id);
     },
-    clear() { entries.clear(); }
+    clear() { entries.clear(); },
+    review(record, followUpHost) {
+      const id = key(record.id, followUpHost), previous = entries.get(id);
+      if (previous) entries.set(id, { ...previous, record, currentRecord: record, version: ++version });
+    }
   };
 }

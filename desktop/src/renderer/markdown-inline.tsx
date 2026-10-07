@@ -1,6 +1,8 @@
 import { createElement, type ReactNode } from 'react';
 import { parseMarkdownInline, type MarkdownToken } from './markdown-parser';
 import { MarkdownLink } from './markdown-link';
+import { MarkdownMath } from './markdown-math';
+import { mathTokenValue } from './markdown-math-tokens';
 
 export function safeMarkdownUrl(value: string): string | null {
   try {
@@ -20,6 +22,7 @@ export function inlineTokens(tokens: readonly MarkdownToken[], onOpenLink?: (url
       else if (token.type === 'softbreak') nodes.push('\n');
       else if (token.type === 'hardbreak') nodes.push(<br key={key} />);
       else if (token.type === 'code_inline') nodes.push(<code key={key}>{token.content}</code>);
+      else if (token.type === 'math_inline') nodes.push(<MarkdownMath key={key} {...mathTokenValue(token)} />);
       else if (token.type === 'image') nodes.push(`[${token.content}]`);
       else if (token.nesting === 1) {
         const start = i, children = read();

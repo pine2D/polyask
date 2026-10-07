@@ -15,6 +15,11 @@ import { SYNTHESIS_COPY } from "./synthesis-copy";
 import { WORKSPACE_COPY } from "./workspace-copy";
 import { BROADCAST_RETRY_COPY } from "./broadcast-retry-copy";
 import { SETTINGS_RECOVERY_COPY } from "./settings-recovery-copy";
+import { COMPOSER_COPY } from "./composer-copy";
+import { SITE_PARTICIPATION_COPY } from "./site-participation-copy";
+import { COMPARISON_COPY } from "./comparison-copy";
+import { PAGE_PROGRESS_COPY } from "./page-progress-copy";
+import { WORKBENCH_GUIDANCE_COPY } from './workbench-guidance-copy';
 
 export const COPY = {
   en: {
@@ -34,6 +39,11 @@ export const COPY = {
     ...WORKSPACE_COPY.en,
     ...BROADCAST_RETRY_COPY.en,
     ...SETTINGS_RECOVERY_COPY.en,
+    ...COMPOSER_COPY.en,
+    ...SITE_PARTICIPATION_COPY.en,
+    ...COMPARISON_COPY.en,
+    ...PAGE_PROGRESS_COPY.en,
+    ...WORKBENCH_GUIDANCE_COPY.en,
     appTitle: "PolyAsk · AI Answers",
     startupFailedTitle: "PolyAsk could not start",
     startupFailedMessage: "Restart PolyAsk. If the problem continues, attach the diagnostic log when reporting it.",
@@ -197,6 +207,11 @@ export const COPY = {
     ...WORKSPACE_COPY.zhCN,
     ...BROADCAST_RETRY_COPY.zhCN,
     ...SETTINGS_RECOVERY_COPY.zhCN,
+    ...COMPOSER_COPY.zhCN,
+    ...SITE_PARTICIPATION_COPY.zhCN,
+    ...COMPARISON_COPY['zh-CN'],
+    ...PAGE_PROGRESS_COPY.zhCN,
+    ...WORKBENCH_GUIDANCE_COPY.zhCN,
     appTitle: "PolyAsk · AI 众答",
     startupFailedTitle: "PolyAsk 无法启动",
     startupFailedMessage: "请重启 PolyAsk。若问题仍然存在，请在反馈时附上诊断日志。",
@@ -360,6 +375,11 @@ export const COPY = {
     ...WORKSPACE_COPY.zhTW,
     ...BROADCAST_RETRY_COPY.zhTW,
     ...SETTINGS_RECOVERY_COPY.zhTW,
+    ...COMPOSER_COPY.zhTW,
+    ...SITE_PARTICIPATION_COPY.zhTW,
+    ...COMPARISON_COPY['zh-TW'],
+    ...PAGE_PROGRESS_COPY.zhTW,
+    ...WORKBENCH_GUIDANCE_COPY.zhTW,
     appTitle: "PolyAsk · AI 眾答",
     startupFailedTitle: "PolyAsk 無法啟動",
     startupFailedMessage: "請重新啟動 PolyAsk。若問題仍然存在，回報時請附上診斷記錄。",

@@ -149,7 +149,7 @@ test('a created folder remains visible in the library when association editing i
     await h.click(newButton); await h.input(h.document.querySelector<HTMLInputElement>('[name="folder-membership-name"]')!, 'Research 😀');
     await h.click(h.document.querySelector<HTMLButtonElement>('[data-action="create-folder"]')!);
     await h.click(h.document.querySelector<HTMLButtonElement>('.folder-modal header button')!);
-    assert.ok([...h.document.querySelectorAll('.folder-sidebar nav button')].some(button => button.textContent === 'Research 😀'),
+    assert.ok([...h.document.querySelectorAll('.folder-sidebar nav button')].some(button => button.querySelector('.library-folder-name')?.textContent === 'Research 😀'),
       'creating a folder updates the library even when no association is saved');
   } finally { setShellApi(null); await h.close(); }
 });
@@ -177,7 +177,7 @@ test('an older library refresh cannot remove a folder created during association
     await h.click(h.document.querySelector<HTMLButtonElement>('.folder-modal header button')!);
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
     await act(async () => { finishContents.splice(0).forEach(finish => finish()); });
-    assert.ok([...h.document.querySelectorAll('.folder-sidebar nav button')].some(button => button.textContent === 'Research 😀'),
+    assert.ok([...h.document.querySelectorAll('.folder-sidebar nav button')].some(button => button.querySelector('.library-folder-name')?.textContent === 'Research 😀'),
       'completing an earlier empty snapshot retains the newly created folder');
   } finally { setShellApi(null); await h.close(); }
 });

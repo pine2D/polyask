@@ -3,11 +3,13 @@ import { groupSignature, type ActiveWorkspaceGroup } from "../shared/workspace";
 
 export type WorkspacePanelTab = "sites" | "health";
 export type WorkspaceInputMethod = "pointer" | "keyboard";
+export type SitesMode = 'select' | 'order';
 
 export interface OpenWorkspacePanelState {
   readonly tab: WorkspacePanelTab;
   readonly detail: SiteKey | null;
   readonly inputMethod: WorkspaceInputMethod;
+  readonly sitesMode?: SitesMode;
 }
 
 export type WorkspacePanelState = OpenWorkspacePanelState | null;
@@ -32,17 +34,18 @@ export function openWorkspacePanel(
   tab: WorkspacePanelTab,
   inputMethod: WorkspaceInputMethod
 ): OpenWorkspacePanelState {
-  return { tab, detail: null, inputMethod };
+  return { tab, detail: null, inputMethod, sitesMode: 'select' };
 }
 
 export function showWorkspaceDetail(
   state: OpenWorkspacePanelState,
   detail: SiteKey
 ): OpenWorkspacePanelState {
-  return { ...state, tab: "health", detail };
+  return { ...state, tab: "health", detail, sitesMode: 'select' };
 }
 
 export function escapeWorkspacePanel(state: WorkspacePanelState): WorkspacePanelState {
   if (!state) return null;
+  if (state.tab === 'sites' && state.sitesMode === 'order') return { ...state, sitesMode: 'select' };
   return state.detail ? { ...state, detail: null } : null;
 }

@@ -527,7 +527,8 @@ test("assisted synthesis state and mutations stay behind the trusted shell bridg
   for (const channel of ["polyask:synthesis-send", "polyask:synthesis-collect", "polyask:synthesis-save"]) {
     assert.match(ipc, new RegExp(channel));
   }
-  assert.match(ipc, /pendingSynthesis: synthesis\.getPending\(\)/);
+  assert.match(ipc, /registerBootstrapIpc\(ipcMain, options, trustedShell\)/);
+  assert.match(readSource("src/main/bootstrap-ipc.ts"), /pendingSynthesis: options\.synthesis\.getPending\(\)/);
   assert.match(preload, /sendSynthesis/);
   assert.match(preload, /collectSynthesis/);
   assert.match(preload, /saveSynthesis/);

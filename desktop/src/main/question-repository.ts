@@ -1,4 +1,5 @@
 import { safeQuestionUrl } from "./question-navigation";
+import type { QuestionRunAnswerProgress } from '../shared/question-run-progress';
 import { createHash } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
 import { isStoredQuestion, isStoredQuestionAnswer, type QuestionAnswerIdentity, type QuestionAnswerRecord,
@@ -116,6 +117,26 @@ export class QuestionRepository {
     const parent = this.get(questionId);
     if (!parent || "deletedAt" in parent) return [];
     return this.allAnswers(questionId).filter((item): item is QuestionAnswerRecord => !("deletedAt" in item) && parent.sites.includes(item.site));
+  }
+  runAnswerProgress(questionId: string): QuestionRunAnswerProgress[] | null {
+    const parent = this.db.prepare("SELECT json_extract(body, '$.sites') AS sites FROM questions WHERE id = ? AND deleted_at IS NULL").get(questionId);
+    if (!parent || typeof parent.sites !== 'string') return null;
+    const sites = JSON.parse(parent.sites) as unknown;
+    if (!Array.isArray(sites)) return null;
+    // SQL只返回白名单字段；不将9份完整正文/URL送入JS后再剥除。
+    const rows = this.db.prepare(`SELECT a.id,a.site,a.attempt,
+      json_extract(a.body,'$.submission') AS submission, json_extract(a.body,'$.capture') AS capture,
+      length(json_extract(a.body,'$.answerMarkdown')) > 0 AS has_text,
+      json_extract(a.body,'$.truncated') AS truncated, json_extract(a.body,'$.sealedAt') AS sealed_at
+      FROM question_answers a WHERE a.question_id = ? AND a.deleted_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM question_answers b WHERE b.question_id=a.question_id
+        AND b.site=a.site AND b.deleted_at IS NULL AND b.attempt>a.attempt)
+      ORDER BY a.site LIMIT 9`).all(questionId);
+    return rows.filter(row => sites.includes(row.site)).map(row => ({
+      id: String(row.id), site: row.site as QuestionRunAnswerProgress['site'], attempt: Number(row.attempt),
+      submission: row.submission as QuestionRunAnswerProgress['submission'], capture: row.capture as QuestionRunAnswerProgress['capture'],
+      hasText: row.has_text === 1, truncated: row.truncated === 1, sealedAt: row.sealed_at === null ? null : Number(row.sealed_at)
+    }));
   }
   detail(id: string, answerId?: string): QuestionDetail | null {
     const question = this.get(id);

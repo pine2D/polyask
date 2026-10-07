@@ -59,6 +59,9 @@ import { SiteCommandChannel } from "./site-command-channel";
 import { createSiteView, diagnosticSitesForViews } from "./site-view";
 import { SITES } from "./sites";
 import { beginSubmissionRun, preserveSubmission, effectiveStatus, markStatusRead, statusWithUnread } from "./status";
+import { ensureSiteViews } from './ensure-site-views';
+import { generationEndedForRelease, protectedPagePhase } from './site-page-protection';
+import { sitePageCloseReason } from './view-reclamation';
 import type { StabilityEventInput } from "./stability-monitor";
 import { applyWorkspaceLayout, computeWorkspaceLayout } from "./workspace-layout";
 import { stackOrder } from "./view-visibility";
@@ -146,7 +149,7 @@ export class ViewManager {
     this.siteSession.setPermissionRequestHandler((_contents, permission, callback) =>
       callback(SITE_PERMISSION_ALLOWLIST.has(permission)));
 
-    this.ensureViews();
+    ensureSiteViews(this.selected, this.views, definition => this.createView(definition));
     this.reconcileViews();
     this.layout();
     window.on("resize", () => this.layout());
@@ -357,6 +360,16 @@ export class ViewManager {
     void Promise.resolve().then(() => this.releaseUnselectedViews());
   }
 
+  private observationEnded(site: SiteKey): boolean {
+    return generationEndedForRelease(this.currentStatus(site), this.generationDeadlines.get(site),
+      this.generationMisses.get(site) ?? 0, this.captureReleaseConfirmed(site));
+  }
+  sitePageCloseReason(site: SiteKey): ReturnType<typeof sitePageCloseReason> {
+    return sitePageCloseReason({ phase: protectedPagePhase(this.currentStatus(site)),
+      capturePending: this.capturePending(site), navigating: this.historyAccess.navigating(site),
+      observationEnded: this.observationEnded(site) });
+  }
+
   resetRunStatus(): void {
     this.cancelGenerationRun();
     this.runStatus.clear();
@@ -526,7 +539,7 @@ export class ViewManager {
       this.generationDeadlines.set(site, Date.now() + 15 * 60_000);
     }
     if ((phase === "generating" || phase === "complete") && this.currentStatus(site).phase !== phase) {
-      this.markStatus({ site, phase });
+      this.markStatus({ site, phase, generation: { runId, state: phase } });
     }
     // Only the settled terminal phase stops the watch — the debounce window
     // inside GenerationMonitor still reports "generating" and must keep polling.
@@ -668,27 +681,15 @@ export class ViewManager {
   // 顺序由 stackOrder 决定，后加的盖在上面，所以当前页永远压住后台页。
   // 只为**已勾选**站点建视图。此前无论勾几个站都会把九个站点全部建出来并加载完整 SPA，
   // 于是「少勾站点」根本不省内存——按真机实测单站平均约 250MB 工作集，只用 5 个站的人白付约 1GB。
-  private ensureViews(): void {
-    for (const key of this.selected) {
-      if (this.views.has(key)) continue;
-      const definition = SITES.find((site) => site.key === key);
-      if (definition) this.createView(definition);
-    }
-  }
 
-  // 取消勾选仅释放页面，登录保留在持久化 session；发送、生成和答案采集结束前不关闭。
+  // 明确关页才释放资源，登录保留在持久化 session；发送、生成和答案采集结束前不关闭。
   // 状态更新及采集落库后都会重查，不再等待下一次用户布局操作。
   releaseUnselectedViews(): void {
     if (this.window.isDestroyed()) return;
     reclaimUnselectedViews({
-      views: this.views, selected: this.selected, status: site => this.currentStatus(site),
+      views: this.views, selected: this.selected, status: site => ({ ...this.currentStatus(site), phase: protectedPagePhase(this.currentStatus(site)) }),
       capturePending: this.capturePending, detach: site => this.detach(site),
-      observationEnded: site => {
-        const deadline = this.generationDeadlines.get(site);
-        const stopped = deadline === undefined ? this.currentStatus(site).phase === "warning" :
-          (this.generationMisses.get(site) ?? 0) >= GENERATION_MISS_LIMIT || Date.now() >= deadline;
-        return stopped && this.captureReleaseConfirmed(site);
-      },
+      observationEnded: site => this.observationEnded(site), navigating: site => this.historyAccess.navigating(site),
       pageStatus: this.pageStatus, runStatus: this.runStatus,
       forget: site => { this.generation.forget(site); this.clearGenerationTracking(site); }
     });
@@ -696,7 +697,7 @@ export class ViewManager {
 
   private reconcileViews(): void {
     if (this.surface !== "sites" || this.window.isDestroyed()) return;
-    this.ensureViews();
+    ensureSiteViews(this.selected, this.views, definition => this.createView(definition));
     this.releaseUnselectedViews();
     for (const site of stackOrder([...this.views.keys()], this.visibleSites())) {
       this.attach(site); // 未选但忙碌的页保留正视口，仅隐藏；当前页仍排在最上层。

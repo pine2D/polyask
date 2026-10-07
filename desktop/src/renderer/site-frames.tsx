@@ -16,6 +16,8 @@ interface SiteFramesProps {
   readonly statuses: Readonly<Record<string, SiteStatus>>;
   readonly layout: LayoutState;
   readonly selected: ReadonlySet<SiteKey>;
+  readonly participating?: ReadonlySet<SiteKey>;
+  readonly participationBusy?: boolean;
   readonly onToggle: (site: SiteKey) => void;
   readonly onFocus: (site: SiteKey) => void;
   readonly onReload: (site: SiteKey) => void;
@@ -29,6 +31,7 @@ interface SiteFramesProps {
 
 export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
   const { copy, sites, statuses, layout, selected, onToggle, onFocus, onReload, history, onBack } = props;
+  const participating = props.participating ?? selected;
   return (
     <>
       <section
@@ -64,8 +67,9 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
               }}
             >
               <div className="tile-header">
-                <label className="site-select priority-p0" data-selected={selected.has(site.key)} data-hint={formatCopy(copy.selectSite, { site: site.label })}>
-                  <input className="sr-only" type="checkbox" name="sites" value={site.key} checked={selected.has(site.key)} onChange={() => onToggle(site.key)} />
+                <label className="site-select priority-p0" data-selected={participating.has(site.key)} data-hint={participating.has(site.key) ? formatCopy(copy.selectSite, { site: site.label }) : copy.sitePageRetained}>
+                  <input className="sr-only" type="checkbox" name="sites" value={site.key} checked={participating.has(site.key)} disabled={props.participationBusy}
+                    aria-label={`${copy.participationLabel}: ${site.label}`} aria-description={participating.has(site.key) ? undefined : copy.sitePageRetained} onChange={() => onToggle(site.key)} />
                   <SelectionMark /><span className="site-name">{site.label}</span>
                 </label>
                 <span className="site-status-dot priority-p0" data-hint={statusText} aria-hidden="true" />

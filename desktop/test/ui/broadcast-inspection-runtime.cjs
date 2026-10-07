@@ -39,11 +39,15 @@ app.whenReady().then(async () => {
     'main rejection must produce guidance without focus, scope mutation or resend');
   await until('!!document.querySelector(".site-choice[data-site-key=claude] label")', 'site scope');
   await click('.site-choice[data-site-key=claude] label');
+  result = await state();
+  check(result.selected.join() === 'claude,chatgpt' && result.selections === 0, 'exclusion retains the open page without a page selection write');
+  // External workspace removal remains distinct from the user's send checkbox.
+  await js('window.inspectionFixture.mainRemove("claude", true)');
   await until('window.inspectionFixture.state().selected.join() === "chatgpt"', 'A removed and B kept');
   await click('.uncertain-retry-trigger'); await click('[data-inspect-site=claude]');
   await until('document.querySelector(".feedback-notice")?.textContent.includes("Claude is not open")', 'named closed-site guidance');
   result = await state();
-  check(result.layouts.length === 0 && result.selections === 1 && result.selected.join() === 'chatgpt' && result.sends === 1,
+  check(result.layouts.length === 0 && result.selections === 0 && result.selected.join() === 'chatgpt' && result.sends === 1,
     'closed-site inspection cannot focus B, alter scope, or send');
   check(await js('document.querySelector(".site-choice[data-site-key=claude] label") !== null'), 'guidance opens the site list');
   await click('.site-choice[data-site-key=claude] label');
@@ -53,7 +57,7 @@ app.whenReady().then(async () => {
   await click('[data-inspect-site=claude]');
   await until('window.inspectionFixture.state().layouts.length === 1', 'requested original site focused');
   result = await state();
-  check(result.layouts[0].mode === 'focus' && result.layouts[0].site === 'claude' && result.selections === 2 && result.sends === 1,
+  check(result.layouts[0].mode === 'focus' && result.layouts[0].site === 'claude' && result.selections === 1 && result.sends === 1,
     'only explicit manual reselection permits focus A and never resends');
   writeFileSync(join(output, 'report.json'), JSON.stringify({ok:true, nativeInput:true, closedSiteBlocked:true, mainRejectionVisible:true,
     simulatedDriveRace:true, manualReselectionFocused:true, sends:result.sends}));

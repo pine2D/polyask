@@ -1,0 +1,24 @@
+.markdown-preview .markdown-code { margin: 1em 0; min-width: 0; }
+.markdown-code figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--panel); }
+.markdown-code-language { font: 600 12px/1.5 var(--font-mono, monospace); overflow-wrap: anywhere; }
+.markdown-code-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.markdown-code-actions button { min-height: 28px; min-width: 28px; padding: 3px 8px; font-size: 12px; }
+.markdown-preview .markdown-code pre { margin: 0; border-radius: 0 0 8px 8px; }
+.markdown-code-notice, .markdown-code > [role="status"] { display: block; margin: 5px 0 0; font-size: 12px; line-height: 1.5; }
+.markdown-code > [role="status"]:empty { display: none; }
+.markdown-code .code-keyword { color: #6946ae; font-weight: 600; }
+.markdown-code .code-string { color: #176544; }
+.markdown-code .code-number { color: #98400f; }
+.markdown-code .code-comment { color: #5c6470; font-style: italic; }
+@media (prefers-color-scheme: dark) {
+  .markdown-code .code-keyword { color: #c4a3ff; }
+  .markdown-code .code-string { color: #8ad5a8; }
+  .markdown-code .code-number { color: #f8bc8c; }
+  .markdown-code .code-comment { color: #a1aab7; }
+}
+@media (forced-colors: active) {
+  .markdown-code figcaption { border-color: CanvasText; background: Canvas; }
+  .markdown-code .code-keyword, .markdown-code .code-string, .markdown-code .code-number, .markdown-code .code-comment { color: CanvasText; }
+  .markdown-code .code-string { text-decoration: underline; }
+  .markdown-code .code-number { font-weight: 600; }
+}

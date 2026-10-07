@@ -26,7 +26,7 @@ test("scope display uses an exact group name, custom count, and empty selection"
 
 test("workspace panel retains input method and Escape returns through one panel", () => {
   const opened = openWorkspacePanel("health", "keyboard");
-  assert.deepEqual(opened, { tab: "health", detail: null, inputMethod: "keyboard" });
+  assert.deepEqual(opened, { tab: "health", detail: null, inputMethod: "keyboard", sitesMode: 'select' });
   const detail = showWorkspaceDetail(opened, "gemini");
   assert.equal(escapeWorkspacePanel(detail)?.detail, null);
   assert.equal(escapeWorkspacePanel(opened), null);

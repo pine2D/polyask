@@ -7,10 +7,12 @@ const renderer = (file: string) => readSource(`src/renderer/${file}`);
 test("desktop forms expose stable names and disable browser autofill where it is noise", () => {
   const files = [
     renderer("command-bar.tsx"),
+    renderer("prompt-composer.tsx"),
     renderer("archive-workspace.tsx"),
     renderer("archive-detail.tsx"),
     renderer("archive-metadata.tsx"),
     renderer("synthesis-workspace.tsx"),
+    renderer("synthesis-payload-preview.tsx"),
     renderer("settings-workspace.tsx"),
     renderer("workspace-drawer.tsx"),
     renderer("workspace-sites.tsx")

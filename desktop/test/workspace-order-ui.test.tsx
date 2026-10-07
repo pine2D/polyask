@@ -33,31 +33,40 @@ async function mount(element: React.JSX.Element) {
   };
 }
 
-test("keyboard moves and checkbox toggles retain the user's selected site order", async () => {
+test("keyboard moves retain page order while checkbox toggles only change broadcast participation", async () => {
   let selected: readonly SiteKey[] = [];
+  let participating: readonly SiteKey[] = [];
   function Fixture() {
     const [keys, setKeys] = useState<readonly SiteKey[]>(["kimi", "claude", "gemini"]);
+    const [members, setMembers] = useState<readonly SiteKey[]>(keys);
     selected = keys;
-    return <WorkspaceSites copy={getCopy("en")} sites={SITES} selected={new Set(keys)} groups={[]}
-      onSelectionChange={setKeys} onSaveGroup={async () => true} onDeleteGroup={() => {}} />;
+    participating = members;
+    return <WorkspaceSites copy={getCopy("en")} sites={SITES} selected={new Set(keys)} participating={new Set(members)} groups={[]}
+      onSelectionChange={next => { setKeys(next); setMembers(current => next.filter(key => current.includes(key))); }}
+      onParticipationChange={setMembers} onSaveGroup={async () => true} onDeleteGroup={() => {}} />;
   }
   const h = await mount(<Fixture />);
   try {
     const order = () => [...h.document.querySelectorAll<HTMLInputElement>('input[name="scope-sites"]:checked')].map(input => input.value);
     assert.deepEqual(order(), ["kimi", "claude", "gemini"]);
+    await act(async () => h.document.querySelector<HTMLButtonElement>('[data-sites-mode-toggle]')!.click());
     const handle = h.document.querySelector<HTMLButtonElement>('[data-site-key="claude"] .site-drag-handle');
     assert.ok(handle, "selected sites need a keyboard-accessible drag handle");
     handle.focus();
     await act(async () => handle.dispatchEvent(new h.window.KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true })));
     assert.deepEqual(selected, ["claude", "kimi", "gemini"]);
     assert.equal((h.document.activeElement) === (handle), true);
+    await act(async () => h.document.querySelector<HTMLButtonElement>('[data-sites-mode-toggle]')!.click());
     await act(async () => h.document.querySelector<HTMLInputElement>('input[value="kimi"]')!.click());
-    assert.deepEqual(selected, ["claude", "gemini"]);
+    assert.deepEqual(selected, ["claude", "kimi", "gemini"]);
+    assert.deepEqual(participating, ["claude", "gemini"]);
     await act(async () => h.document.querySelector<HTMLInputElement>('input[value="kimi"]')!.click());
-    assert.deepEqual(selected, ["claude", "gemini", "kimi"]);
+    assert.deepEqual(selected, ["claude", "kimi", "gemini"]);
+    assert.deepEqual(participating, ["claude", "gemini", "kimi"]);
+    await act(async () => h.document.querySelector<HTMLButtonElement>('[data-sites-mode-toggle]')!.click());
     const up = h.document.querySelector<HTMLButtonElement>('[data-site-key="kimi"] [data-move="up"]')!;
     await act(async () => up.click());
-    assert.deepEqual(selected, ["claude", "kimi", "gemini"]);
+    assert.deepEqual(selected, ["kimi", "claude", "gemini"]);
     assert.match(h.document.querySelector('[aria-live="polite"]')!.textContent!, /Kimi/);
   } finally { await h.close(); }
 });
@@ -66,11 +75,13 @@ test("internal drag commits once at drop; cancellation and foreign drops keep se
   const changes: SiteKey[][] = [];
   function Fixture() {
     const [keys, setKeys] = useState<readonly SiteKey[]>(["kimi", "claude", "gemini"]);
-    return <WorkspaceSites copy={getCopy("en")} sites={SITES} selected={new Set(keys)} groups={[]}
-      onSelectionChange={next => { changes.push([...next]); setKeys(next); }} onSaveGroup={async () => true} onDeleteGroup={() => {}} />;
+    return <WorkspaceSites copy={getCopy("en")} sites={SITES} selected={new Set(keys)} participating={new Set(keys)} groups={[]}
+      onSelectionChange={next => { changes.push([...next]); setKeys(next); }} onParticipationChange={() => {}}
+      onSaveGroup={async () => true} onDeleteGroup={() => {}} />;
   }
   const h = await mount(<Fixture />);
   try {
+    await act(async () => h.document.querySelector<HTMLButtonElement>('[data-sites-mode-toggle]')!.click());
     const handle = h.document.querySelector('[data-site-key="kimi"] .site-drag-handle');
     assert.ok(handle, "selected sites need a drag source");
     const target = h.document.querySelector('[data-site-key="gemini"]')!;

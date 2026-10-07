@@ -12,10 +12,22 @@ import { SerialActions, type ActionFailure } from "./serial-actions";
 import { SynthesisWorkspace } from "./synthesis-workspace";
 import { requestDecisionNavigation } from "./decision-navigation";
 import { shell } from "./shell-api";
-import type { SynthesisDraftStore } from "./synthesis-draft";
+import type { SynthesisDraft, SynthesisDraftStore } from "./synthesis-draft";
 import type { SynthesisEditorRequest } from "./use-synthesis-recovery";
+import type { LibraryReadingFocus } from './library-reading-focus';
+import type { DecisionInput } from '../shared/decision';
+import { useExcerptActions } from './use-excerpt-actions';
+import type { SynthesisSession } from './synthesis-session';
+import { createComparisonDraftStore, type ComparisonDraftStore } from './comparison-draft-store';
+import type { LibrarySessionStore } from './library-session';
+import { useArchiveReader, type ArchiveDetailView } from './archive-reader-session';
+export type { ArchiveDetailView } from './archive-reader-session';
 
 export interface ArchiveSurfaceProps {
+  readonly session?: LibrarySessionStore;
+  readonly navigationRevision?: number;
+  readonly onBlockingChange?: (blocked: boolean) => void;
+  readonly onArchiveEntered?: (archiveId: string, mode: ArchiveDetailView) => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly onClose: () => void;
@@ -27,6 +39,8 @@ export interface ArchiveSurfaceProps {
   readonly preferredId: string | null;
   readonly pendingSynthesis: PendingSynthesis | null;
   readonly synthesisCandidate: SynthesisCandidate | null;
+  readonly synthesisSession?: SynthesisSession | null;
+  readonly comparisonDrafts?: ComparisonDraftStore;
   readonly onSendSynthesis: (request: SynthesisSendRequest) => Promise<void>;
   readonly onCollectSynthesis: () => Promise<void>;
   readonly onSaveSynthesis: (replaceExisting: boolean) => Promise<ArchiveRecord>;
@@ -125,22 +139,39 @@ export function startArchiveFilterIntent<T>(
 }
 
 export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
-  return <FolderWorkspace {...props} renderArchive={(record, onChanged, onCreateDecision, onBusy, onSavedArchive, onOrganize) => <ArchiveRecordSurface key={record.id} {...props} onOrganize={onOrganize} onBusy={onBusy} onSavedArchive={onSavedArchive} preferredId={record.id} embeddedRecord={record} onChanged={onChanged} onCreateDecision={onCreateDecision} />} />;
+  const drafts = useRef<ComparisonDraftStore | null>(null);
+  if (!drafts.current) drafts.current = createComparisonDraftStore();
+  return <FolderWorkspace {...props} renderArchive={(record, onChanged, onCreateDecision, onBusy, onSavedArchive, onOrganize, readingFocus, readerNavigationKey) => <ArchiveRecordSurface key={`${record.id}:${readerNavigationKey ?? ""}`} {...props} comparisonDrafts={props.comparisonDrafts ?? drafts.current!} readingFocus={readingFocus} onOrganize={onOrganize} onBusy={onBusy} onSavedArchive={onSavedArchive} preferredId={record.id} embeddedRecord={record} onChanged={onChanged} onCreateDecision={onCreateDecision} />} />;
 }
 
-function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; onOrganize: () => void; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
+function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; readingFocus: LibraryReadingFocus; onOrganize: () => void; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
   const [selected, setSelected] = useState(props.embeddedRecord);
+  const reader = useArchiveReader(selected, selected.id === props.comparisonId,
+    props.session?.read().reader, value => props.session?.update({ reader: value }));
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
+  const entered = useRef<string | null>(null);
+  useEffect(() => {
+    if (synthesisId || reader.state.archiveId !== selected.id || selected.id !== props.embeddedRecord.id) { entered.current = null; return; }
+    const key = `${selected.id}:${reader.state.view}`;
+    if (entered.current === key || !props.onArchiveEntered) return;
+    entered.current = key; props.onArchiveEntered(selected.id, reader.state.view);
+  }, [selected.id, props.embeddedRecord.id, reader.state.view, synthesisId, props.onArchiveEntered]);
+  const [synthesisSeed, setSynthesisSeed] = useState<(SynthesisDraft & { sourceChanged: boolean }) | null>(null);
+  const excerpts = useExcerptActions({ copy: props.copy, busy, defaultTier: props.defaultTier, drafts: props.synthesisDrafts,
+    onStatus: setStatus, onDecision: props.onCreateDecision,
+    onFollowUp: (record, value, draft) => { setSelected(record); setSynthesisSeed(draft); setFollowUpHost(value.host); setSynthesisId(record.id); } });
   useEffect(() => {
     const request = props.synthesisEditorRequest;
     if (request?.archiveId !== props.embeddedRecord.id) return;
-    setFollowUpHost(request.followUpHost); setSynthesisId(request.archiveId);
+    setSynthesisSeed(null); setFollowUpHost(request.followUpHost); setSynthesisId(request.archiveId);
     props.onSynthesisEditorOpened?.();
   }, [props.synthesisEditorRequest, props.embeddedRecord.id]);
   const actionQueue = useRef<SerialActions | null>(null);
+  const sourceReadEpoch = useRef(0), sourceMounted = useRef(false);
+  useEffect(() => { sourceMounted.current = true; return () => { sourceMounted.current = false; sourceReadEpoch.current++; }; }, []);
   if (!actionQueue.current) actionQueue.current = new SerialActions(setBusy, setStatus);
   useEffect(() => setSelected(props.embeddedRecord), [props.embeddedRecord]);
   useEffect(() => { props.onBusy(busy); return () => props.onBusy(false); }, [busy, props.onBusy]);
@@ -155,15 +186,26 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
     return saved;
   };
   const patch = (value: ArchivePatch) => { void savePatch(value); };
+  const reloadSource = async () => {
+    const request = ++sourceReadEpoch.current, id = selected.id;
+    const record = await shell.getArchive(id);
+    if (!sourceMounted.current || request !== sourceReadEpoch.current) return null;
+    if (record?.id === id) setSelected(record);
+    return record;
+  };
 
 
 
   return (
-    <ArchiveWorkspace
+    <><ArchiveWorkspace
       embedded
       onOrganize={props.onOrganize}
+      readingFocus={props.readingFocus}
+      comparisonDrafts={props.comparisonDrafts}
+      reader={reader}
+      onCreateDecisionDraft={props.onCreateDecision}
       copy={props.copy}
-      onCreateDecision={() => props.onCreateDecision(selected)}
+      onCreateDecision={value => value ? excerpts.evidence(value) : props.onCreateDecision(selected)}
       locale={props.locale}
       items={[selected]}
       selected={selected}
@@ -203,15 +245,16 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       onOpenSource={(url) => { void run(() => shell.openExternal(url), props.copy.archiveLoadFailed); }}
       pendingSynthesis={props.pendingSynthesis}
       synthesisCandidate={props.synthesisCandidate}
-      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} initialDraft={props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
-      onSynthesize={() => requestDecisionNavigation(() => { setFollowUpHost(undefined); setSynthesisId(selected.id); })}
-      onFollowUp={(host) => requestDecisionNavigation(() => { setFollowUpHost(host); setSynthesisId(selected.id); })}
+      synthesisSession={props.synthesisSession}
+      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} initialDraft={synthesisSeed ?? props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onReloadSource={reloadSource} onSourceReviewed={() => props.synthesisDrafts?.review(selected, followUpHost)} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
+      onSynthesize={() => requestDecisionNavigation(() => { setSynthesisSeed(null); setFollowUpHost(undefined); setSynthesisId(selected.id); })}
+      onFollowUp={(host, value) => value ? excerpts.followUp(value) : requestDecisionNavigation(() => { setSynthesisSeed(null); setFollowUpHost(host); setSynthesisId(selected.id); })}
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}
       onSaveSynthesis={(replaceExisting) => { void run(async () => {
         const record = await props.onSaveSynthesis(replaceExisting);
         props.onSavedArchive(record);
         setStatus(props.copy.synthesisSavedDone);
       }, props.copy.archiveSaveFailed); }}
-    />
+    />{excerpts.dialog}</>
   );
 }

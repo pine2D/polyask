@@ -1,4 +1,7 @@
 import { registerQuestionHistoryIpc } from "./question-history-ipc";
+import { registerBootstrapIpc } from './bootstrap-ipc';
+import { registerSitePageIpc } from './site-page-ipc';
+import { SitePageService } from './site-page-service';
 import { createQuestionCapture } from "./question-capture-binding";
 import { cancelSubmissions, lateSentResult } from "./submission-upgrade";
 import type { QuestionHistoryService } from "./question-history-service";
@@ -55,7 +58,7 @@ interface ShellIpcEvent {
   readonly senderFrame: WebFrameMain | null;
 }
 
-interface ShellIpcOptions {
+export interface ShellIpcOptions {
   readonly runtime: RuntimeInfo;
   readonly copy: DesktopCopy;
   readonly window: BrowserWindow;
@@ -149,6 +152,11 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     return state;
   };
   const disposeQuestionIpc = registerQuestionHistoryIpc({ flush: sites => capture.flush(sites), questions: options.questions, archives: options.archives, manager, workspace, gate: operationGate, window, trusted: trustedShell, publishWorkspace });
+  const disposeSitePageIpc = registerSitePageIpc({ trusted: trustedShell, service: new SitePageService({
+    workspace, gate: operationGate, publish: publishWorkspace, release: () => manager.releaseUnselectedViews(),
+    identity: site => manager.historyAccess.context(site)?.id ?? null,
+    closeReason: site => manager.sitePageCloseReason(site)
+  }) });
   const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
@@ -157,27 +165,14 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   const disposeDataAdminIpc = registerDataAdminIpc({
     admin: options.dataAdmin,
     trusted: trustedShell,
-    afterHistoryChange: () => { publishPromptLibrary(); },
-    afterReset: () => { manager.siteZoom.clear(); publishWorkspace(); publishPromptLibrary(); }
+    afterHistoryChange: () => { options.questions.publishRunProgress(); publishPromptLibrary(); },
+    afterReset: () => { options.questions.publishRunProgress(); manager.siteZoom.clear(); publishWorkspace(); publishPromptLibrary(); }
   });
 
   // 速查面板按需拉取：菜单会随显示偏好重建，按需读永远是当前那一份。
   ipcMain.handle("polyask:menu-shortcuts", (event) =>
     trustedShell(event) ? applicationMenuShortcuts() : []);
-  ipcMain.handle("polyask:bootstrap", (event) => {
-    if (!trustedShell(event)) throw new Error("untrusted_sender");
-    return {
-      runtime: options.runtime,
-      sites: SITES,
-      statuses: manager.getStatuses(),
-      layout: manager.getLayout(),
-      display: manager.getDisplayPreferences(),
-      workspace: workspace.getState(),
-      promptLibrary: promptLibrary.getState(),
-      pendingSynthesis: synthesis.getPending(),
-      sync: sync.status()
-    };
-  });
+  registerBootstrapIpc(ipcMain, options, trustedShell);
   ipcMain.handle("polyask:set-display", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
     const display = parseDisplayPreferences(value);
@@ -386,6 +381,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
 
   return () => {
+    disposeSitePageIpc();
     disposeQuestionIpc();
     capture.dispose();
     disposeBackupIpc();

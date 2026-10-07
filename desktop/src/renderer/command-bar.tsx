@@ -3,9 +3,10 @@ import type { ReactNode, RefObject } from "react";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
-import { ChevronDownIcon, DeepThinkIcon, FastIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, SendIcon, SiteSettingIcon, StopIcon } from "./icons";
+import { ChevronDownIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, SendIcon, StopIcon } from "./icons";
 import { commandHint } from "./command-hint";
-import { commandKeyAction } from "./keyboard";
+import { PromptComposer } from "./prompt-composer";
+import { TierControls } from "./tier-controls";
 import type { WorkspacePanelTab } from "./workspace-panel-state";
 import { WorkspaceActions } from "./workspace-actions";
 
@@ -15,6 +16,7 @@ interface CommandBarProps {
   readonly copy: DesktopCopy;
   readonly promptRef: RefObject<HTMLTextAreaElement | null>;
   readonly text: string;
+  readonly draftRevision?: number;
   readonly tier: Tier;
   readonly runState: RunState;
   readonly auxiliaryBusy: boolean;
@@ -53,11 +55,6 @@ interface CommandBarProps {
 }
 
 export function CommandBar(props: CommandBarProps): React.JSX.Element {
-  const tierOptions = [
-    { value: null, label: props.copy.followSite, icon: "site-setting", glyph: <SiteSettingIcon /> },
-    { value: "fast", label: props.copy.fast, icon: "fast", glyph: <FastIcon /> },
-    { value: "think", label: props.copy.think, icon: "think", glyph: <DeepThinkIcon /> }
-  ] as const;
   const busy = props.runState !== "idle" || props.auxiliaryBusy;
   const sendLabel = formatCopy(props.selectedCount === 1 ? props.copy.sendToOneSite : props.copy.sendToSites, { count: props.selectedCount });
   const cancelLabel = props.runState === "cancelling" ? props.copy.cancelling : props.copy.cancel;
@@ -81,54 +78,13 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
         <button type="button" data-hint={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
       </div>
       {props.pageControl}
-      <textarea
-        className="priority-p0"
-        name="prompt"
-        autoComplete="off"
-        ref={props.promptRef}
-        rows={1}
-        value={props.text}
-        onChange={(event) => props.onTextChange(event.target.value)}
-        onPaste={(event) => {
-          const files = [...event.clipboardData.files].filter((file) => file.type.startsWith("image/"));
-          if (files.length) props.onPasteImages(files);
-        }}
-        onDragOver={(event) => {
-          if ([...event.dataTransfer.items].some(item => item.kind === "file" && item.type.startsWith("image/"))) event.preventDefault();
-        }}
-        onDrop={(event) => {
-          const files = [...event.dataTransfer.files].filter(file => file.type.startsWith("image/"));
-          if (files.length) { event.preventDefault(); props.onPasteImages(files); }
-        }}
-        onFocus={() => props.onExpandedChange(true)}
-        onBlur={() => props.onExpandedChange(false)}
-        onKeyDown={(event) => {
-          const action = commandKeyAction({
-            key: event.key,
-            ctrlKey: event.ctrlKey,
-            metaKey: event.metaKey,
-            isComposing: event.nativeEvent.isComposing,
-            keyCode: event.nativeEvent.keyCode
-          }, busy);
-          if (action === "submit") {
-            event.preventDefault();
-            props.onSubmit();
-          } else if (action === "collapse") {
-            props.onExpandedChange(false);
-          }
-        }}
-        placeholder={props.copy.promptPlaceholder}
-        data-hint={commandHint(props.copy.promptLabel, "focus-prompt", props.isMac)}
-        aria-label={props.copy.promptLabel}
-      />
+      <PromptComposer copy={props.copy} promptRef={props.promptRef} text={props.text} revision={props.draftRevision}
+        expanded={props.expanded} busy={busy} isMac={props.isMac} onTextChange={props.onTextChange}
+        onExpandedChange={props.onExpandedChange} onSubmit={props.onSubmit} onPasteImages={props.onPasteImages} />
       <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
         <HistoryIcon />
       </button>
-      <div className="tier-switch priority-p0" aria-label={props.copy.tierLabel}>
-        {tierOptions.map(({ value, label, icon, glyph }) => (
-          <button type="button" key={icon} data-hint={value === null ? label : commandHint(label, value === "think" ? "set-think" : "set-fast", props.isMac)} aria-label={label} aria-pressed={props.tier === value} data-tier-icon={icon} className={props.tier === value ? "active" : ""} onClick={() => props.onTierChange(value)}>{glyph}</button>
-        ))}
-      </div>
+      <TierControls copy={props.copy} tier={props.tier} isMac={props.isMac} onChange={props.onTierChange} />
       {props.imageControl}
       {props.runState !== "idle" ? (
         <button type="button" className="cancel primary-action priority-p0" data-hint={cancelLabel} aria-label={cancelLabel} disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{cancelLabel}</span></button>

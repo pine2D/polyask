@@ -1,3 +1,4 @@
+@import "./composer.css";
 @import "./theme.css";
 @import "./backup.css";
 @import "./workspace.css";
@@ -10,9 +11,16 @@
 @import "./library.css";
 @import "./library-reading.css";
 @import "./markdown-reading.css";
+@import "./markdown-code.css";
+@import "./markdown-math.css";
 @import "./native-feel.css";
 @import "./broadcast-retry-review.css";
 @import "./site-health-recovery.css";
+@import "./site-participation.css";
+@import "./workspace-progress.css";
+@import "./comparison-worksheet.css";
+@import "./library-scale.css";
+@import "./workbench-guide.css";
 
 :root {
   font-family: var(--font-ui);
@@ -418,12 +426,16 @@ kbd { opacity: .7; font: 10px system-ui; }
   .workspace-actions .retry-label { display: none; }
   .workspace-actions .compare-trigger, .workspace-actions .archive-trigger { width: var(--target-size); min-width: var(--target-size); }
   .workspace-entry .scope-split { flex: 1; min-width: calc(var(--target-size) * 2 + 2px); }
+  .command-bar > .workspace-entry { min-width: calc(var(--target-size) * 3 + 5px); }
+  .workspace-entry .health-trigger { flex: 0 0 var(--target-size); padding: 0; }
   .page-tabs button { flex-direction: column; gap: 0; padding: 0 4px; line-height: 12px; }
   .page-tab-badges { gap: 2px; }
   .page-tab-badge { min-width: 10px; height: 12px; line-height: 12px; padding: 0; }
   .page-tab-count { display: none; }
 }
 @media (max-width: 1100px) {
+  .command-bar { grid-template-columns: auto auto minmax(160px, 1fr) auto auto auto auto auto; }
+  .command-bar.has-pages { grid-template-columns: auto auto auto minmax(160px, 1fr) auto auto auto auto auto; }
   .primary-action { min-width: var(--control-height); width: var(--control-height); padding: 0; }
   .primary-action > span { display: none; }
   .send.primary-action { width: auto; padding: 0 8px; }

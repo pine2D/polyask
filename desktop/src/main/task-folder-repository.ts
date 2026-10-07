@@ -22,6 +22,16 @@ export class TaskFolderRepository {
       .flatMap(row => {const v=readJson<unknown>(row);return isStoredTaskFolder(v) && !("deletedAt" in v) ? [v] : [];})
       .sort((a,b)=>a.name.localeCompare(b.name)||a.id.localeCompare(b.id));
   }
+  contentCounts(): ReadonlyMap<string, number> {
+    const rows = this.database.prepare(`SELECT m.folder_id AS folder_id, COUNT(*) AS count
+      FROM folder_memberships m JOIN folders f ON f.id = m.folder_id AND f.deleted_at IS NULL
+      JOIN (SELECT 'archive' AS kind, id FROM archives WHERE deleted_at IS NULL
+        UNION ALL SELECT 'decision' AS kind, id FROM decisions WHERE deleted_at IS NULL) target
+        ON target.kind = m.target_kind AND target.id = m.target_id
+      WHERE json_valid(m.body) AND json_type(m.body, '$.deletedAt') IS NULL
+      GROUP BY m.folder_id`).all();
+    return new Map(rows.map(row => [String(row.folder_id), Number(row.count)]));
+  }
   put(record: StoredTaskFolder, enqueue = true): StoredTaskFolder {
     if (!isStoredTaskFolder(record)) throw new Error("invalid_request");
     return this.transaction(() => {

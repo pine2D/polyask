@@ -9,6 +9,7 @@ export interface BroadcastOperation {
 
 export class ExclusiveActionLock {
   private active = false;
+  get busy(): boolean { return this.active; }
 
   async run<T>(action: () => Promise<T>): Promise<T | null> {
     if (this.active) return null;

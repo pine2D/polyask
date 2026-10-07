@@ -10,7 +10,9 @@ app.whenReady().then(async () => {
   win.setMenuBarVisibility(false);
   const errors = [], reports = [], failures = [];
   win.webContents.on('console-message', event => { if (event.level === 'error') errors.push(event.message); });
-  const run = source => win.webContents.executeJavaScript(source);
+  const run = source => win.webContents.executeJavaScript(source).catch(error => {
+    throw Error(`Synthetic shell evaluation failed: ${source.slice(0, 220)} (${String(error).slice(0, 180)})`);
+  });
   const paint = () => run('document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))');
   const wait = async source => {
     const deadline = Date.now() + 5000;
@@ -33,6 +35,12 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  if (process.argv.includes('--site-order-only')) {
+    await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });
+    assert.deepEqual(errors, []);
+    writeFileSync(join(output, 'report.json'), JSON.stringify({ scope: 'site-order-participation', failures, errors }, null, 2));
+    win.destroy(); app.quit(); return;
+  }
   await require('./settings-interaction-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });

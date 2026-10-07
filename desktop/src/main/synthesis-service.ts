@@ -70,6 +70,7 @@ export class SynthesisService {
     const error = validateSynthesisRequest(value, record);
     if (error) throw new Error(error);
     const request = value as SynthesisSendRequest;
+    const sourceUpdatedAt = request.sourceUpdatedAt;
     const site = this.options.sites.find((item) => item.key === request.targetSite);
     if (!site) throw new Error("target_missing");
     if (this.options.targetAvailable && !this.options.targetAvailable(site.key)) {
@@ -91,6 +92,13 @@ export class SynthesisService {
       this.options.showTarget(site.key);
       const navigationCode = await this.navigate(site.key, site.url, controller.signal);
       if (navigationCode) return { result: { site: site.key, ok: false, code: navigationCode }, pending: null };
+      if (controller.signal.aborted || this.activeController !== controller) return { result: { site: site.key, ok: false, code: 'cancelled' }, pending: null };
+      // 新 UI 传临时来源版本；导航期间来源变动不得把旧材料继续发出。
+      if (sourceUpdatedAt !== undefined) {
+        const current = this.options.archives.get(id);
+        if (!current) throw new Error('archive_not_found');
+        if (current.updatedAt !== sourceUpdatedAt) throw new Error('source_changed');
+      }
       const [result] = await this.options.send({ text, tier: request.tier, sites: [site.key], images: [] });
       const outcome = controller.signal.aborted
         ? { site: site.key, ok: false, code: "cancelled" }

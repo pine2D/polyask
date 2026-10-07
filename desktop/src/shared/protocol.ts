@@ -13,6 +13,7 @@ import type { RuntimeInfo } from "./runtime";
 import type { SyncStatus } from "./sync";
 import type { SiteDiagnosticCheck } from "./site-health";
 import type { WorkspaceState } from "./workspace";
+import type { QuestionRunProgress } from './question-run-progress';
 import type { SelectionMetadata } from "./selection";
 
 export type Tier = "think" | "fast" | null;
@@ -178,6 +179,7 @@ export const SITE_CODES = [
   "attachment_conflict",
   "invalid_response",
   "error",
+  "source_changed",
   "adapter_unavailable"
 ] as const;
 export type SiteCode = (typeof SITE_CODES)[number];
@@ -188,8 +190,14 @@ export interface SubmissionStatus extends SelectionMetadata {
   readonly code?: string;
 }
 
+export interface SiteGenerationStatus {
+  readonly runId: string;
+  readonly state: "submitted" | "generating" | "complete" | "unconfirmed";
+}
+
 export interface SiteStatus extends SelectionMetadata {
   readonly submission?: SubmissionStatus;
+  readonly generation?: SiteGenerationStatus;
   readonly site: SiteKey;
   readonly phase: SitePhase;
   readonly code?: string;
@@ -212,6 +220,7 @@ export interface LayoutState {
 }
 
 export interface BootstrapState {
+  readonly questionRunProgress?: QuestionRunProgress | null;
   readonly runtime: RuntimeInfo;
   readonly sites: readonly SiteDefinition[];
   readonly statuses: readonly SiteStatus[];

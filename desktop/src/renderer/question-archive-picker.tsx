@@ -11,13 +11,15 @@ import { shell } from './shell-api';
 
 // 未载入的正文是 null；capturedAt 是数据库已保存正文的元数据，最终仍由主进程核对。
 const available = (answer: QuestionAnswerRecord) => answer.capturedAt !== null && answer.capture !== 'unavailable';
-export function QuestionArchivePicker({ detail, answerId, copy, sites, locale, busy, onCancel, onCreated }: {
+export function QuestionArchivePicker({ detail, answerId, initialAnswerIds = [], copy, sites, locale, busy, onCancel, onCreated }: {
   detail: QuestionDetail; answerId: string; copy: DesktopCopy; sites: readonly SiteDefinition[];
   locale: QuestionArchiveLocale; busy: boolean; onCancel: () => void;
-  onCreated: (record: ArchiveRecord, mode: 'read' | 'compare') => void;
+  initialAnswerIds?: readonly string[];
+  onCreated: (record: ArchiveRecord, mode: 'read' | 'compare', selection: { questionId: string; answerIds: readonly string[] }) => void;
 }): React.JSX.Element {
   const [source, setSource] = useState(detail);
   const [selected, setSelected] = useState<string[]>(() => {
+    if (initialAnswerIds.length === 2) return [...initialAnswerIds];
     const answer = detail.answers.find(a => a.id === answerId);
     return answer && available(answer) && answer.answerMarkdown?.trim() ? [answer.id] : [];
   });
@@ -41,7 +43,8 @@ export function QuestionArchivePicker({ detail, answerId, copy, sites, locale, b
     try {
       const record = await shell.createQuestionArchive({ questionId: source.question.id, locale,
         answers: answers.map(answer => ({ answerId: answer.id, updatedAt: answer.updatedAt })) });
-      if (mounted.current && request === epoch.current && !latest.current.busy) latest.current.onCreated(record, mode);
+      if (mounted.current && request === epoch.current && !latest.current.busy) latest.current.onCreated(record, mode,
+        { questionId: source.question.id, answerIds: answers.map(answer => answer.id) });
     } catch (reason) {
       if (mounted.current && request === epoch.current) {
         const code = ipcErrorCode(reason);

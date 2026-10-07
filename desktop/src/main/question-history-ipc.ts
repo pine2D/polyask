@@ -9,7 +9,7 @@ import type { ArchiveService } from "./archive-service";
 import { QuestionArchiveService } from "./question-archive-service";
 import { SITES } from "./sites";
 
-const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-panel", "polyask:question-legacy", "polyask:question-archive"] as const;
+const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-panel", "polyask:question-legacy", "polyask:question-archive", 'polyask:question-run-progress'] as const;
 export function registerQuestionHistoryIpc(options: {
   questions: QuestionHistoryService; archives: ArchiveService; manager: ViewManager; workspace: WorkspaceService; gate: OperationGate;
   flush: (sites: readonly import("../shared/contracts").SiteKey[]) => Promise<void>;
@@ -18,6 +18,7 @@ export function registerQuestionHistoryIpc(options: {
   const { questions, manager, workspace, gate } = options;
   const archive = new QuestionArchiveService({questions:questions.repository, archives:options.archives, sites:SITES});
   questions.setFailureHandler(() => { if (!options.window.isDestroyed()) options.window.webContents.send("polyask:question-save-failed"); });
+  questions.setProgressHandler(progress => { if (!options.window.isDestroyed()) options.window.webContents.send('polyask:question-run-progress', progress); });
   const restore = new QuestionRestoreService(questions.repository, {
     selection: () => workspace.getState().selectedSites,
     select: sites => { manager.setSurface("sites"); workspace.setSelection(sites); options.publishWorkspace(); manager.setSurface("question-history"); },
@@ -48,5 +49,6 @@ export function registerQuestionHistoryIpc(options: {
     return questions.repository.legacy(value ?? {});
   });
   handle(channels[8], value => archive.create(value));
-  return () => { questions.setFailureHandler(null); restore.cancel(); for (const channel of channels) ipcMain.removeHandler(channel); };
+  handle(channels[9], value => questions.getRunProgress(id(value)));
+  return () => { questions.setFailureHandler(null); questions.setProgressHandler(null); restore.cancel(); for (const channel of channels) ipcMain.removeHandler(channel); };
 }

@@ -1,0 +1,10 @@
+.workbench-guide-invite { display: flex; align-items: center; gap: 4px; margin-left: auto; flex-shrink: 0; }
+.workbench-guide-invite button { min-height: 24px; padding: 1px 7px; font-size: 12px; }
+.workbench-guide-invite button:last-child { min-width: 24px; padding: 0; }
+.workbench-guide-panel { display: grid; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border); font-size: 12px; overflow-wrap: anywhere; }
+.workbench-guide-panel header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.workbench-guide-panel h2 { font-size: 14px; margin: 0; }
+.workbench-guide-panel p { margin: 0; line-height: 1.5; }
+.workbench-guide-panel button { min-height: 28px; white-space: normal; }
+.workbench-guide-panel header button { min-height: 24px; min-width: 24px; flex-shrink: 0; }
+.workbench-guide-panel ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }

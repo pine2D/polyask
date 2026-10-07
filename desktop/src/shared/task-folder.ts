@@ -9,6 +9,8 @@ interface FolderVersion {
   readonly schema: 3;
 }
 export interface TaskFolder extends FolderVersion { readonly name: string }
+/** 只读列表投影，不写入文件夹正文、同步线格式或备份。 */
+export interface TaskFolderSummary extends TaskFolder { readonly contentCount: number }
 export interface TaskFolderTombstone extends FolderVersion { readonly deletedAt: number }
 export type StoredTaskFolder = TaskFolder | TaskFolderTombstone;
 export interface FolderTarget { readonly kind: "archive" | "decision"; readonly id: string }

@@ -19,6 +19,7 @@ for (const approved of [false, true]) {
       confirmNewSession: (...args: unknown[]) => require("../src/renderer/session-confirmation").confirmNewSession(...args),
       runAuxiliary: (action: () => Promise<void>) => action(),
       broadcast: { invalidate() {} }, archiveCapture: { invalidate() {} },
+      runProgress: { invalidate: () => events.push("invalidate-progress") },
       shell: { newSession: async (sites: string[]) => { events.push("new-session"); assert.deepEqual([...sites], ["claude", "chatgpt", "deepseek"]); return []; } },
       copy: {}, formatCopy: () => "", setAnnouncement() {},
       workspaceFlow: { recover: () => assert.fail("unexpected failure") }
@@ -33,7 +34,7 @@ for (const approved of [false, true]) {
     assert.equal(pending, original, "重复调用不得替换仍在等待的确认");
     pending!.decide(approved);
     await result;
-    assert.deepEqual(events, approved ? ["confirmation", "sites", "new-session"] : ["confirmation", "sites"]);
+    assert.deepEqual(events, approved ? ["confirmation", "sites", "invalidate-progress", "new-session"] : ["confirmation", "sites"]);
     assert.equal(pending, null);
   });
 }
