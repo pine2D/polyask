@@ -8,6 +8,7 @@ import {
   failedRunSites,
   mergeRunResults,
   retryRequest,
+  uncertainRunSites,
   type BroadcastRun
 } from "./broadcast-run";
 import {
@@ -25,12 +26,14 @@ export function useBroadcastFlow(
   report: (run: BroadcastRun) => void
 ): {
   readonly send: (payload: BroadcastPayload) => Promise<BroadcastRun | null>;
-  readonly retry: (site?: SiteKey) => Promise<BroadcastRun | null>;
+  readonly retry: (sites?: SiteKey | readonly SiteKey[], uncertainConfirmed?: boolean, expectedRunId?: string) => Promise<BroadcastRun | null>;
   readonly cancel: () => void;
   readonly invalidate: () => void;
   readonly acceptStatus: (status: SiteStatus) => void;
   readonly runState: RunState;
   readonly retrySites: readonly SiteKey[];
+  readonly uncertainSites: readonly SiteKey[];
+  readonly runId: string | null;
   readonly failureCount: number;
   readonly cancelledCount: number;
 } {
@@ -68,9 +71,10 @@ export function useBroadcastFlow(
     }, () => setRunState(state.runState));
   };
 
-  const retry = async (site?: SiteKey): Promise<BroadcastRun | null> => {
+  const retry = async (sites?: SiteKey | readonly SiteKey[], uncertainConfirmed = false, expectedRunId?: string): Promise<BroadcastRun | null> => {
     const current = state.run;
-    const request = current && retryRequest(current, site);
+    if (expectedRunId !== undefined && expectedRunId !== current?.request.runId) return null;
+    const request = current && retryRequest(current, sites, uncertainConfirmed);
     if (!current || !request) return null;
     return runWithBroadcastLock(state, false, async (operation) => {
       state.forgetSent(request.sites);
@@ -113,7 +117,9 @@ export function useBroadcastFlow(
     invalidate,
     acceptStatus,
     runState,
-    retrySites: run ? retryRequest(run)?.sites ?? [] : [],
+    retrySites: run ? run.request.sites.filter(site => run.results.get(site)?.ok !== true) : [],
+    uncertainSites: run ? uncertainRunSites(run) : [],
+    runId: run?.request.runId ?? null,
     failureCount: run ? failedRunSites(run).length : 0,
     cancelledCount: run ? cancelledRunSites(run).length : 0
   };

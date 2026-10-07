@@ -47,7 +47,10 @@ import { resetLocalSession } from "./local-data-reset";
 import { useTemplateDeletion } from "./use-template-deletion";
 import { usePromptDraft } from "./use-prompt-draft";
 import { FeedbackProvider } from "./feedback-provider";
-import { failedRunSites, cancelledRunSites } from "./broadcast-run";
+import { broadcastFeedback } from "./broadcast-feedback";
+import { archiveCollectionActions } from "./archive-collection-actions";
+import { useBroadcastRetryReview } from "./use-broadcast-retry-review";
+import { inspectBroadcastSite } from "./broadcast-site-inspection";
 import { useFeedback } from "./use-feedback";
 import { usePresence } from "./presence";
 import { SiteFrames } from "./site-frames";
@@ -166,9 +169,19 @@ function App(): React.JSX.Element {
     () => setAnnouncement(copy.failed),
     archiveCapture.remember,
     archiveCapture.invalidate,
-    (run) => setAnnouncement(formatCopy(copy.broadcastSummary, { ok: [...run.results.values()].filter((result) => result.ok).length, failed: failedRunSites(run).length, cancelled: cancelledRunSites(run).length }))
+    (run) => setAnnouncement(broadcastFeedback(copy, run))
   );
   const { runState } = broadcast;
+  const retryReview = useBroadcastRetryReview({copy, sites, flow: broadcast, lock: actionLock.current!,
+    busy: runState !== "idle" || auxiliaryBusy, onOpen: () => { changeSurface("sites"); changeSurface("confirmation"); },
+    onClose: () => changeSurface("sites"), onInspect: (site, active) => inspectBroadcastSite(site, {
+      isSelected: key => workspaceFlow.currentSelection().includes(key), active, focus: async key => {
+        const accepted = await shell.inspectSite(key);
+        if (accepted === true && active()) { changeSurface("sites"); if (drawerOpen) changeDrawerOpen(false); }
+        return accepted;
+      },
+      unavailable: key => { changeSurface("sites"); openPanel("sites", "keyboard"); setAnnouncement(formatCopy(copy.retrySiteClosed, {site: sites.find(item => item.key === key)?.label ?? key})); }
+    })});
   const imageSelection = useImageSelection(copy, runState === "idle" && !auxiliaryBusy, setAnnouncement);
   const synthesisRecovery = useSynthesisRecovery(copy, synthesis,
     () => { broadcast.invalidate(); changeSurface("sites"); },
@@ -353,30 +366,9 @@ function App(): React.JSX.Element {
       }
     });
   };
-  const collectAndCopy = async (): Promise<void> => runAuxiliary(async () => {
-    try {
-      const record = await archiveCapture.capture();
-      const markdown = await shell.archiveMarkdown(record.id, navigator.language);
-      await navigator.clipboard.writeText(markdown);
-      setAnnouncement(copy.archiveCollected, true, true);
-    } catch {
-      setAnnouncement(copy.archiveCollectFailed);
-    }
-  });
-  const collectSynthesis = async (): Promise<void> => runAuxiliary(async () => {
-    try {
-      await synthesis.collect();
-      changeSurface("archive");
-    } catch { setAnnouncement(copy.synthesisCollectFailed); }
-  });
-  const collectAndCompare = async (): Promise<void> => runAuxiliary(async () => {
-    try {
-      const record = await archiveCapture.capture();
-      setComparisonId(record.id);
-      changeSurface("archive");
-      setAnnouncement(record.results.filter((answer) => answer.text?.trim()).length >= 2 ? copy.archiveSaved : copy.compareNeedsAnswers);
-    } catch { setAnnouncement(copy.archiveCollectFailed); }
-  });
+  const {collectAndCopy, collectSynthesis, collectAndCompare} = archiveCollectionActions({copy,
+    capture: archiveCapture, synthesis, runAuxiliary, announce: setAnnouncement,
+    openArchive: id => { if (id) setComparisonId(id); changeSurface("archive"); }});
   const startNewSession = async (): Promise<void> => {
     if (pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     const selectedSites = [...selected];
@@ -445,7 +437,7 @@ function App(): React.JSX.Element {
       .catch(() => setAnnouncement(copy.updatePageFailed));
   };
 
-  commandActions.current = pendingNewSession || questionHistoryBlocking ? {} : {
+  commandActions.current = pendingNewSession || questionHistoryBlocking || retryReview.open ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
     "open-sites": () => {
       openPanel("sites", "keyboard");
@@ -480,8 +472,8 @@ function App(): React.JSX.Element {
     "open-question-history": () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionHistoryOpen(true); },
     "open-archive": () => { setComparisonId(null); changeSurface("archive"); },
     ...(synthesis.pending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
-    ...(broadcast.failureCount + broadcast.cancelledCount > 0 ? {
-      "retry-failed": () => { changeSurface("sites"); void actionLock.current!.run(broadcast.retry); }
+    ...(broadcast.retrySites.length > 0 ? {
+      "retry-failed": () => retryReview.request()
     } : {}),
     ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
     ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
@@ -586,6 +578,8 @@ function App(): React.JSX.Element {
         selectedCount={selected.size}
         failureCount={broadcast.failureCount}
         cancelledCount={broadcast.cancelledCount}
+        uncertainCount={broadcast.uncertainSites.length}
+        onReviewUncertain={retryReview.reviewUncertain}
         scopeLabel={scopeLabel}
         healthAttention={healthAttention}
         panelTab={panelState?.tab ?? null}
@@ -676,12 +670,14 @@ function App(): React.JSX.Element {
         onFocus={(site) => setMode("focus", site)}
         onReload={(site) => { void shell.reloadSite(site); }}
         retrySites={broadcast.retrySites}
+        uncertainSites={broadcast.uncertainSites}
         retryDisabled={runState !== "idle" || auxiliaryBusy}
-        onRetry={(site) => { void actionLock.current!.run(() => broadcast.retry(site)); }}
+        onRetry={retryReview.request}
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
       <QuestionHistory onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      {retryReview.review}
       {pendingNewSession && (
         <ConfirmDialog
           copy={copy}

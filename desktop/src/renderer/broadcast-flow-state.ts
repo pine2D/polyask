@@ -1,6 +1,6 @@
 import type { SiteKey } from "../shared/contracts";
 import type { SubmissionStatus } from "../shared/protocol";
-import { acceptLateSubmission, type BroadcastRun } from "./broadcast-run";
+import { acceptSubmissionEvidence, type BroadcastRun } from "./broadcast-run";
 import type { RunState } from "./command-bar";
 
 export interface BroadcastOperation {
@@ -26,9 +26,9 @@ export class BroadcastFlowState {
   private activeGeneration: number | null = null;
   private currentRun: BroadcastRun | null = null;
   private phase: RunState = "idle";
-  // 状态通道上见到的「已发送」（站点 → runId）。群发 IPC 回包前就可能到（其它站还在发），提交结果时补上，
-  // 否则回包里的 submit_unconfirmed 会把重试入口又带回来。新一轮清空；重试的站和后续非 sent 状态各自作废。
-  private readonly sent = new Map<SiteKey, string>();
+  // 群发回包前可先收到同轮已发送证据，保留其档位/证据类型，避免不确定回包重新开放重试。
+  // 新一轮清空；重试的站和后续非 sent 状态各自作废。
+  private readonly sent = new Map<SiteKey, SubmissionStatus>();
 
   get run(): BroadcastRun | null {
     return this.currentRun;
@@ -62,9 +62,9 @@ export class BroadcastFlowState {
   acceptSubmission(site: SiteKey, submission: SubmissionStatus | undefined): boolean {
     if (!submission) return false;
     if (submission.state !== "sent") { this.sent.delete(site); return false; }
-    this.sent.set(site, submission.runId);
+    this.sent.set(site, submission);
     if (!this.currentRun) return false;
-    const next = acceptLateSubmission(this.currentRun, site, submission.runId);
+    const next = acceptSubmissionEvidence(this.currentRun, site, submission);
     if (next === this.currentRun) return false;
     this.currentRun = next;
     return true;
@@ -72,7 +72,7 @@ export class BroadcastFlowState {
 
   private withSent(run: BroadcastRun): BroadcastRun {
     let next = run;
-    for (const [site, runId] of this.sent) next = acceptLateSubmission(next, site, runId);
+    for (const [site, submission] of this.sent) next = acceptSubmissionEvidence(next, site, submission);
     return next;
   }
 

@@ -1,5 +1,5 @@
 import type { SiteKey } from "../shared/contracts";
-import type { BroadcastRequest, SiteRunResult } from "../shared/protocol";
+import type { BroadcastRequest, SiteRunResult, SubmissionStatus } from "../shared/protocol";
 import { normalizeSelectionMetadata } from "../shared/selection";
 
 export interface BroadcastRun {
@@ -35,8 +35,21 @@ export function mergeRunResults(
 export function failedRunSites(run: BroadcastRun): SiteKey[] {
   return run.request.sites.filter((site) => {
     const result = run.results.get(site);
-    return result?.ok === false && result.code !== "cancelled";
+    return result?.ok === false && !!result.code && PRE_SUBMIT_FAILURES.has(result.code);
   });
+}
+
+// 只收目前明确发生在提交动作前的失败；新增/缺失回包不能被推断为「未发送」。
+const PRE_SUBMIT_FAILURES = new Set([
+  "composer_not_found", "not_ready", "inject_failed", "no_view", "load_failed", "image_invalid",
+  "attachment_unsupported", "attachment_failed", "attachment_timeout", "attachment_action_required",
+  "attachment_conflict", "adapter_unavailable"
+]);
+
+export function uncertainRunSites(run: BroadcastRun): SiteKey[] {
+  // 取消可能发生在站点已提交、确认回包尚未到达时；没有可靠的提交前阶段证据。
+  const known = new Set(failedRunSites(run));
+  return run.request.sites.filter(site => run.results.get(site)?.ok !== true && !known.has(site));
 }
 
 export function cancelledRunSites(run: BroadcastRun): SiteKey[] {
@@ -59,8 +72,26 @@ export function acceptLateSubmission(run: BroadcastRun, site: SiteKey, runId: st
   return { request: run.request, results };
 }
 
-export function retryRequest(run: BroadcastRun, onlySite?: SiteKey): BroadcastRequest | null {
-  const sites = run.request.sites.filter((site) => (!onlySite || site === onlySite) && run.results.get(site)?.ok === false);
+// 同轮可信 sent 状态优先于缺失/不确定回包；这里只收证据，不触发发送。
+export function acceptSubmissionEvidence(run: BroadcastRun, site: SiteKey, submission: SubmissionStatus): BroadcastRun {
+  if (submission.state !== "sent" || run.request.runId !== submission.runId || !uncertainRunSites(run).includes(site)) return run;
+  const previous = run.results.get(site);
+  const metadata = { ...normalizeSelectionMetadata(previous), ...normalizeSelectionMetadata(submission) };
+  // 旧迟到确认协议只针对 submit_unconfirmed，证据来自页面上的本轮用户消息。
+  if (!metadata.submissionEvidence && previous?.code === "submit_unconfirmed") metadata.submissionEvidence = "message";
+  const results = new Map(run.results);
+  results.set(site, { site, ok: true, ...metadata,
+    ...(metadata.selection?.outcome === "unconfirmed" ? { code: "tier_unconfirmed" } : {}) });
+  return { request: run.request, results };
+}
+
+export function retryRequest(
+  run: BroadcastRun, selected?: SiteKey | readonly SiteKey[], uncertainConfirmed = false
+): BroadcastRequest | null {
+  const choices = selected === undefined ? null : new Set(typeof selected === "string" ? [selected] : selected);
+  const allowed = new Set([...failedRunSites(run),
+    ...(uncertainConfirmed && choices ? uncertainRunSites(run) : [])]);
+  const sites = run.request.sites.filter(site => (!choices || choices.has(site)) && allowed.has(site));
   return sites.length ? { ...run.request, sites } : null;
 }
 

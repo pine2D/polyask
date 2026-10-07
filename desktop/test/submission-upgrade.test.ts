@@ -336,7 +336,8 @@ test("renderer: late evidence survives the broadcast reply but not a retry or a 
   op = later.begin(true)!; later.commit(op, run()); later.settle(op);
   assert.equal(later.acceptSubmission("claude", { runId: "run", state: "unconfirmed" }), false);
   assert.equal(later.acceptSubmission("claude", { runId: "older", state: "sent" }), false);
-  assert.equal(retryRequest(later.run!)?.sites[0], "claude");
+  assert.equal(retryRequest(later.run!), null, "uncertain submissions require explicit review");
+  assert.equal(retryRequest(later.run!, "claude", true)?.sites[0], "claude");
   assert.equal(later.acceptSubmission("claude", sent), true);
   assert.equal(retryRequest(later.run!), null);
 

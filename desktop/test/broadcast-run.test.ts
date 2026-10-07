@@ -27,14 +27,14 @@ test("a two-site run retries only its failed site", () => {
   };
   const run = completeRun(request, [
     { site: "claude", ok: true },
-    { site: "kimi", ok: false, code: "submit_unconfirmed" }
+    { site: "kimi", ok: false, code: "composer_not_found" }
   ]);
 
   assert.deepEqual(failedRunSites(run), ["kimi"]);
   assert.deepEqual(retryRequest(run), { ...request, sites: ["kimi"] });
 });
 
-test("cancelled sites stay retryable without being counted as failed", () => {
+test("cancelled sites require explicit review without being counted as failed", () => {
   const request: BroadcastRequest = {
     runId: "run-cancelled",
     text: "compare",
@@ -44,13 +44,15 @@ test("cancelled sites stay retryable without being counted as failed", () => {
   };
   const run = completeRun(request, [
     { site: "claude", ok: false, code: "cancelled" },
-    { site: "chatgpt", ok: false, code: "timeout" },
+    { site: "chatgpt", ok: false, code: "inject_failed" },
     { site: "kimi", ok: true }
   ]);
 
   assert.deepEqual(failedRunSites(run), ["chatgpt"]);
   assert.deepEqual(cancelledRunSites(run), ["claude"]);
-  assert.deepEqual(retryRequest(run)?.sites, ["claude", "chatgpt"]);
+  assert.deepEqual(retryRequest(run)?.sites, ["chatgpt"]);
+  assert.equal(retryRequest(run, "claude"), null);
+  assert.deepEqual(retryRequest(run, "claude", true)?.sites, ["claude"]);
 });
 
 test("a completed run ignores successful results outside its frozen scope", () => {
@@ -80,9 +82,9 @@ test("a five-site retry merges results without changing the original scope", () 
   };
   const run = completeRun(request, [
     { site: "claude", ok: true },
-    { site: "chatgpt", ok: false, code: "submit_unconfirmed" },
+    { site: "chatgpt", ok: false, code: "composer_not_found" },
     { site: "gemini", ok: true },
-    { site: "kimi", ok: false, code: "timeout" },
+    { site: "kimi", ok: false, code: "inject_failed" },
     { site: "deepseek", ok: true }
   ]);
 
@@ -272,6 +274,7 @@ test("renderer action lock admits only one reentrant new-session action", async 
 test("an explicit single-site retry retains the frozen payload and never retries a successful site", () => {
   const request: BroadcastRequest = { runId: "one", text: "original", tier: "think", sites: ["claude", "kimi", "gemini"], images: [] };
   const run = completeRun(request, [{site:"claude",ok:true},{site:"kimi",ok:false,code:"submit_unconfirmed"},{site:"gemini",ok:false,code:"timeout"}]);
-  assert.deepEqual(retryRequest(run, "kimi"), {...request,sites:["kimi"]});
+  assert.equal(retryRequest(run, "kimi"), null);
+  assert.deepEqual(retryRequest(run, "kimi", true), {...request,sites:["kimi"]});
   assert.equal(retryRequest(run, "claude"), null);
 });

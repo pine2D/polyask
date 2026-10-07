@@ -10,6 +10,8 @@ interface WorkspaceActionsProps {
   readonly disabled: boolean;
   readonly failureCount: number;
   readonly cancelledCount: number;
+  readonly uncertainCount?: number;
+  readonly onReviewUncertain?: () => void;
   readonly synthesisPending: boolean;
   readonly syncStatus: SyncStatus;
   readonly onCompare?: () => void;
@@ -24,12 +26,10 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
   const compareHintId = useId();
   const compareBlocked = props.disabled ? props.copy.compareBusy : !props.onCompare ? props.copy.compareNeedsAnswers : null;
   const syncAttention = syncNeedsAttention(props.syncStatus);
-  const retryCount = props.failureCount + props.cancelledCount;
+  const retryCount = props.failureCount;
+  const uncertainCount = props.uncertainCount ?? props.cancelledCount;
   const attentionCount = (props.synthesisPending ? 1 : 0) + (syncAttention ? 1 : 0);
-  const retryLabel = !retryCount ? null
-    : props.failureCount && props.cancelledCount ? formatCopy(props.copy.retryFailedOrCancelledSites, { count: retryCount })
-    : props.cancelledCount ? formatCopy(props.copy.retryCancelledSites, { count: retryCount })
-    : formatCopy(props.copy.retryFailedSites, { count: retryCount });
+  const retryLabel = retryCount ? formatCopy(props.copy.retryFailedSites, { count: retryCount }) : null;
   const label = syncAttention
     ? `${props.copy.moreActions}: ${describeSync(props.copy, props.syncStatus)}`
     : props.copy.moreActions;
@@ -39,6 +39,11 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
         data-hint={commandHint(retryLabel, "retry-failed", props.isMac)} aria-label={retryLabel}
         disabled={props.disabled} onClick={props.onRetry}>
         <ReloadIcon /><span><span className="retry-label">{props.copy.retryCompact} · </span>{retryCount}</span>
+      </button> : null}
+      {uncertainCount ? <button type="button" className="uncertain-retry-trigger" disabled={props.disabled}
+        aria-label={formatCopy(props.copy.retryReviewAction, {count: uncertainCount})}
+        data-hint={formatCopy(props.copy.retryReviewAction, {count: uncertainCount})} onClick={props.onReviewUncertain}>
+        <span>{props.copy.retryReviewCompact}</span><span>{uncertainCount}</span>
       </button> : null}
       <button type="button" className="compare-trigger" data-hint={compareBlocked ?? props.copy.collectCompare}
         aria-label={props.copy.collectCompare} aria-disabled={!!compareBlocked}

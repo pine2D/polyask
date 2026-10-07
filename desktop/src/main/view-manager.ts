@@ -1,5 +1,6 @@
 import { reclaimUnselectedViews } from "./view-reclamation";
 import { historyPanelWidth, coverSitesForHistory } from "./question-layout";
+import { transitionSiteSurface } from "./site-surface";
 import { SiteHistoryAccess } from "./site-history-access";
 import { clearSiteDataAndReload } from "./site-data-recovery";
 import {
@@ -229,7 +230,8 @@ export class ViewManager {
     this.layout();
   }
 
-  setLayout(mode: "overview" | "focus", requestedFocus: SiteKey = this.focused): void {
+  setLayout(mode: "overview" | "focus", requestedFocus: SiteKey = this.focused): boolean {
+    if (mode === "focus" && !this.selected.includes(requestedFocus)) return false;
     const selectedIndex = this.selected.indexOf(requestedFocus);
     if (selectedIndex >= 0) this.page = resolveSitePageIndex(this.selected, requestedFocus);
     const current = resolveSitePage(this.selected, this.page);
@@ -247,20 +249,18 @@ export class ViewManager {
       const view = this.views.get(focused);
       if (view && !view.webContents.isDestroyed()) view.webContents.focus();
     }
+    return true;
   }
 
   setSurface(value: DesktopSurface): void {
     if (this.surface === value || this.window.isDestroyed()) return;
-    if (value !== "question-history" && value !== "sites" && (this.surface === "sites" || this.surface === "question-history")) {
-      for (const site of [...this.attached]) this.detach(site);
-    }
+    const previous = this.surface;
     this.surface = value;
-    coverSitesForHistory(this.window, value === "question-history");
-    if (value === "sites") {
-      this.reconcileViews();
-      this.clearVisibleUnread();
-      this.layout();
-    }
+    transitionSiteSurface(previous, value, {
+      detach: () => { for (const site of [...this.attached]) this.detach(site); },
+      cover: covered => coverSitesForHistory(this.window, covered),
+      restore: () => { this.reconcileViews(); this.clearVisibleUnread(); this.layout(); }
+    });
   }
 
   focusRelative(offset: -1 | 1): void {

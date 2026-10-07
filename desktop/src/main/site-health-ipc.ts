@@ -4,6 +4,7 @@ import { SITE_KEYS, type SiteKey } from "../shared/contracts";
 import type { ViewManager } from "./view-manager";
 import { runtimeProcessDiagnostics } from "./runtime-process-diagnostics";
 import { captureLocateDiagnostics } from "./capture-locate-diagnostics";
+import { registerSiteInspectionIpc } from "./site-inspection-ipc";
 
 interface SiteHealthIpcOptions {
   readonly manager: ViewManager;
@@ -18,6 +19,7 @@ function siteList(value: unknown): SiteKey[] | null {
 }
 
 export function registerSiteHealthIpc(options: SiteHealthIpcOptions): () => void {
+  const disposeInspection = registerSiteInspectionIpc(options);
   ipcMain.handle("polyask:runtime-process-failures", event => {
     if (!options.trusted(event)) throw new Error("untrusted_sender");
     return runtimeProcessDiagnostics.snapshot();
@@ -43,6 +45,7 @@ export function registerSiteHealthIpc(options: SiteHealthIpcOptions): () => void
     return options.manager.clearSiteData(value as SiteKey);
   });
   return () => {
+    disposeInspection();
     ipcMain.removeHandler("polyask:runtime-process-failures");
     ipcMain.removeHandler("polyask:capture-locate-counts");
     ipcMain.removeHandler("polyask:site-health");

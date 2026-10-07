@@ -412,12 +412,13 @@ test("workspace actions summarize pending attention on one More entry", () => {
   assert.match(attentionHtml, /data-attention-count="1"/);
   assert.equal([...attentionHtml.matchAll(/aria-label="More actions/g)].length, 1, "唯一一个 More 入口不应重复渲染 aria-label");
   assert.match(idleHtml, /class="archive-trigger"[^>]*aria-label="Open result library"/);
-  assert.match(attentionHtml, /aria-label="Retry 2 failed or cancelled sites"/, "重试数量必须出现在独立按钮的可访问名中");
+  assert.match(attentionHtml, /aria-label="Retry 1 failed sites"/, "默认重试只包含提交前失败站点");
+  assert.match(attentionHtml, /aria-label="Review 1 uncertain sites"/, "取消项必须由用户核对");
   assert.doesNotMatch(idleHtml, /data-attention-count/);
 });
 
-// F166：attentionCount 此前没有并入可访问名——补齐三选一的重试文案覆盖（纯失败/纯取消/两者混合）
-test("workspace actions retry label switches with failure/cancelled mix", () => {
+// F166：失败可重试，取消的提交结果未知；两类数量分别进入可访问名。
+test("workspace actions separate confirmed failures from cancellations needing review", () => {
   const copy = getCopy("en");
   const base = {
     copy,
@@ -431,8 +432,10 @@ test("workspace actions retry label switches with failure/cancelled mix", () => 
   const mixed = renderToStaticMarkup(<WorkspaceActions {...base} failureCount={1} cancelledCount={2} />);
 
   assert.match(failedOnly, /aria-label="Retry 2 failed sites"/);
-  assert.match(cancelledOnly, /aria-label="Retry 3 cancelled sites"/);
-  assert.match(mixed, /aria-label="Retry 3 failed or cancelled sites"/);
+  assert.match(cancelledOnly, /aria-label="Review 3 uncertain sites"/);
+  assert.doesNotMatch(cancelledOnly, /class="retry-trigger"/);
+  assert.match(mixed, /aria-label="Retry 1 failed sites"/);
+  assert.match(mixed, /aria-label="Review 2 uncertain sites"/);
 });
 
 test("image picker stays icon-first and exposes removable previews and scope warning", () => {

@@ -9,12 +9,21 @@ test("runtime diagnostics cross only the trusted shell bridge and handlers are r
   const expected = [{ processType: "GPU", reason: "crashed", exitCode: 1 }];
   const locate = { kimi: { anchor: 1 } };
   const trusted = {};
+  const inspection = {exports: {} as {registerSiteInspectionIpc: (options: unknown) => () => void}};
+  runInNewContext(transformSync(readSource("src/main/site-inspection-ipc.ts"), {loader: "ts", format: "cjs"}).code, {
+    module: inspection, exports: inspection.exports, require(name: string) {
+      if (name === "../shared/contracts") return {SITE_KEYS: ["kimi"]};
+      assert.equal(name, "electron");
+      return {ipcMain: {handle: (key: string, fn: any) => handlers.set(key, fn), removeHandler: (key: string) => handlers.delete(key)}};
+    }
+  });
   const module = { exports: {} as { registerSiteHealthIpc(options: unknown): () => void } };
   runInNewContext(transformSync(readSource("src/main/site-health-ipc.ts"), { loader: "ts", format: "cjs" }).code, {
     module, exports: module.exports, require(name: string) {
       if (name === "electron") return { ipcMain: { handle: (key: string, fn: any) => handlers.set(key, fn), removeHandler: (key: string) => handlers.delete(key) } };
       if (name === "../shared/contracts") return { SITE_KEYS: ["kimi"] };
       if (name === "./capture-locate-diagnostics") return { captureLocateDiagnostics: { snapshot: () => locate } };
+      if (name === "./site-inspection-ipc") return inspection.exports;
       assert.equal(name, "./runtime-process-diagnostics");
       return { runtimeProcessDiagnostics: { snapshot: () => expected } };
     }

@@ -65,10 +65,13 @@ test("comparison stays discoverable before answers are ready and while sending",
   assert.match(render({ onCompare: noop, runState: "sending" }), /class="compare-trigger"[^>]*aria-disabled="true"/);
 });
 
-test("retry is directly available only for failed or cancelled work and disabled during sending", () => {
+test("retry is available for pre-submit failures and cancellations require review", () => {
   assert.doesNotMatch(render(), /class="retry-trigger"/);
-  assert.match(render({ failureCount: 2, cancelledCount: 1 }), /class="retry-trigger"[^>]*aria-label="Retry 3 failed or cancelled sites"/);
+  assert.match(render({ failureCount: 2, cancelledCount: 1 }), /class="retry-trigger"[^>]*aria-label="Retry 2 failed sites"/);
+  assert.match(render({ cancelledCount: 1 }), /class="uncertain-retry-trigger"[^>]*aria-label="Review 1 uncertain sites"/);
+  assert.doesNotMatch(render({ cancelledCount: 1 }), /class="retry-trigger"/);
   assert.match(render({ failureCount: 1, runState: "sending" }), /class="retry-trigger"[^>]*disabled=""/);
+  assert.match(render({ cancelledCount: 1, runState: "sending" }), /class="uncertain-retry-trigger"[^>]*disabled=""/);
 });
 
 

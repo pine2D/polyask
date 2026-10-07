@@ -23,6 +23,8 @@ interface CommandBarProps {
   readonly selectedCount: number;
   readonly failureCount: number;
   readonly cancelledCount: number;
+  readonly uncertainCount?: number;
+  readonly onReviewUncertain?: () => void;
   readonly scopeLabel: string;
   readonly healthAttention: number;
   readonly panelTab: WorkspacePanelTab | null;
@@ -133,7 +135,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       ) : (
         <button type="button" className="send primary-action priority-p0" data-hint={props.sendBlockedReason ?? sendLabel} aria-label={sendLabel} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><span className="send-count" aria-hidden="true">{props.selectedCount}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}
-      <WorkspaceActions onCompare={props.onCompare} onRetry={props.onRetry} isMac={props.isMac} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} onOpenArchive={props.onOpenArchive} />
+      <WorkspaceActions onCompare={props.onCompare} onRetry={props.onRetry} uncertainCount={props.uncertainCount} onReviewUncertain={props.onReviewUncertain} isMac={props.isMac} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} onOpenArchive={props.onOpenArchive} />
     </header>
   );
 }

@@ -13,6 +13,7 @@ import { PRODUCTIVITY_COPY } from "./productivity-copy";
 import { SYNC_COPY } from "./sync-copy";
 import { SYNTHESIS_COPY } from "./synthesis-copy";
 import { WORKSPACE_COPY } from "./workspace-copy";
+import { BROADCAST_RETRY_COPY } from "./broadcast-retry-copy";
 
 export const COPY = {
   en: {
@@ -30,6 +31,7 @@ export const COPY = {
     ...DATA_ADMIN_COPY.en,
     ...SYNTHESIS_COPY.en,
     ...WORKSPACE_COPY.en,
+    ...BROADCAST_RETRY_COPY.en,
     appTitle: "PolyAsk · AI Answers",
     startupFailedTitle: "PolyAsk could not start",
     startupFailedMessage: "Restart PolyAsk. If the problem continues, attach the diagnostic log when reporting it.",
@@ -191,6 +193,7 @@ export const COPY = {
     ...DATA_ADMIN_COPY.zhCN,
     ...SYNTHESIS_COPY.zhCN,
     ...WORKSPACE_COPY.zhCN,
+    ...BROADCAST_RETRY_COPY.zhCN,
     appTitle: "PolyAsk · AI 众答",
     startupFailedTitle: "PolyAsk 无法启动",
     startupFailedMessage: "请重启 PolyAsk。若问题仍然存在，请在反馈时附上诊断日志。",
@@ -352,6 +355,7 @@ export const COPY = {
     ...DATA_ADMIN_COPY.zhTW,
     ...SYNTHESIS_COPY.zhTW,
     ...WORKSPACE_COPY.zhTW,
+    ...BROADCAST_RETRY_COPY.zhTW,
     appTitle: "PolyAsk · AI 眾答",
     startupFailedTitle: "PolyAsk 無法啟動",
     startupFailedMessage: "請重新啟動 PolyAsk。若問題仍然存在，回報時請附上診斷記錄。",

@@ -45,6 +45,7 @@ export function useWorkspaceFlow(
   return {
     workspace,
     selected,
+    currentSelection: () => selectionRef.current,
     accept,
     changeSelection,
     toggleSite: (site: SiteKey) => {

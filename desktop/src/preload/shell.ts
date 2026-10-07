@@ -89,6 +89,7 @@ export interface PolyAskDesktopApi {
   openExternal(url: string): Promise<void>;
   cancel(): void;
   setLayout(mode: "overview" | "focus", focused: SiteKey): void;
+  inspectSite(site: SiteKey): Promise<boolean>;
   setPage(page: number): void;
   stepPage(offset: -1 | 1): void;
   stepSite(offset: -1 | 1): void;
@@ -187,6 +188,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   openExternal: (url: string) => invoke("polyask:open-external", url),
   cancel: () => ipcRenderer.send("polyask:cancel"),
   setLayout: (mode: "overview" | "focus", focused: SiteKey) => ipcRenderer.send("polyask:set-layout", { mode, focused }),
+  inspectSite: (site: SiteKey) => invoke("polyask:inspect-site", site),
   setPage: (page: number) => ipcRenderer.send("polyask:set-page", page),
   stepPage: (offset: -1 | 1) => ipcRenderer.send("polyask:step-page", offset),
   stepSite: (offset: -1 | 1) => ipcRenderer.send("polyask:step-site", offset),
