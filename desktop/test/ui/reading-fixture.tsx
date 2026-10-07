@@ -10,13 +10,15 @@ import '../../src/renderer/question-history.css';
 const locale = new URLSearchParams(location.search).get('locale') ?? 'zh-CN';
 document.documentElement.lang = locale;
 const copy = getCopy(locale), clipboard: string[] = [], opened: string[] = [], notices: string[] = [];
+const restored: (string | undefined)[] = [];
+let reasked = 0, deleted = 0;
 Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (text: string) => { clipboard.push(text); } } });
 setShellApi({ openExternal: async (url: string) => { opened.push(url); } } as any);
 const root = createRoot(document.getElementById('root')!);
 let extra = 'flowchart LR\n Old --> Gone';
 const render = () => root.render(<section className="question-history is-full">
-  <QuestionHistoryReader detail={readingDetail} copy={copy} sites={[]} busy={false} onRestore={() => { throw Error('unexpected restore'); }}
-    onReask={() => {}} onDelete={() => {}} onAnnounce={text => notices.push(text)} />
+  <QuestionHistoryReader detail={readingDetail} copy={copy} sites={[]} busy={false} onRestore={id => restored.push(id)}
+    onReask={() => { reasked++; }} onDelete={() => { deleted++; }} onAnnounce={text => notices.push(text)} />
   <div id="diagram-cases"><MarkdownPreview value={'```mermaid\n' + extra + '\n```'} /></div>
 </section>);
 render();
@@ -30,6 +32,22 @@ const click = async (selector: string) => { const node = document.querySelector<
 const label = (text: string) => `button[aria-label="${text}"]`;
 const setSource = async (source: string) => { extra = source; render(); await pause(); };
 const cases = () => document.querySelector('#diagram-cases')!;
+function toolbarLayout() {
+  const toolbar = document.querySelector<HTMLElement>('.question-reader-actions')!;
+  const answer = toolbar.querySelector<HTMLElement>('.question-answer-actions')!.getBoundingClientRect();
+  const question = toolbar.querySelector<HTMLElement>('.question-prompt-actions')!.getBoundingClientRect();
+  check(!document.querySelector('.question-reader-intro button'), 'no duplicate heading actions');
+  if (window.innerWidth >= 900) check(Math.abs(answer.top - question.top) <= 1, 'wide toolbar stays on one row');
+  check(answer.right <= question.left + 1 || question.top >= answer.bottom, 'action groups never overlap');
+  for (const node of toolbar.querySelectorAll<HTMLElement>('button')) {
+    const rect = node.getBoundingClientRect();
+    check(rect.height >= 32 && rect.width >= 32, 'toolbar controls keep their click targets');
+    check(rect.left >= 0 && rect.right <= window.innerWidth, 'toolbar control stays within the viewport');
+  }
+  check(document.querySelector('.question-reader')!.scrollWidth <= document.querySelector('.question-reader')!.clientWidth + 1, 'toolbar does not cause horizontal overflow');
+  return { ok: true, width: window.innerWidth, wrapped: question.top > answer.top + 1 };
+}
+(window as any).historyToolbarLayout = toolbarLayout;
 async function run() {
   await until(() => document.querySelector('.question-answer .mermaid-canvas img'));
   const image = document.querySelector<HTMLImageElement>('.question-answer .mermaid-canvas img')!;
@@ -57,6 +75,21 @@ async function run() {
   check(!document.querySelector('.markdown-link-popover'), 'Escape closes full-link details');
   await click(label(copy.questionCopyLink)); check(clipboard.at(-1)?.endsWith('/second'), 'conversation copy uses current attempt');
   await click(label(copy.questionOpenBrowser)); check(opened.at(-1)?.endsWith('/second'), 'browser action uses current attempt');
+  await click(label(copy.questionCopy)); check(clipboard.at(-1) === readingDetail.answers[1].answerMarkdown, 'copy icon keeps the complete current answer');
+  check(document.querySelector(label(copy.questionCopy))?.textContent === '', 'copy answer has no visible text');
+  await click('.question-restore-split > button'); check(restored.at(-1) === 'a2', 'primary restores the current attempt');
+  await click(label(copy.questionRestoreOptions));
+  check(document.activeElement?.textContent === copy.questionRestoreAll, 'menu focuses its first action');
+  const menu = document.querySelector<HTMLElement>('[role="menu"]')!.getBoundingClientRect();
+  check(menu.left >= 0 && menu.right <= window.innerWidth, 'restore menu stays within viewport');
+  document.activeElement!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await pause();
+  check(!document.querySelector('[role="menu"]') && document.activeElement === document.querySelector(label(copy.questionRestoreOptions)), 'Escape returns focus to the trigger');
+  await click(label(copy.questionRestoreOptions)); await click('[role="menu"] button');
+  check(restored.at(-1) === undefined && restored.length === 2, 'dropdown restores the entire question');
+  await click('.question-prompt-actions > button'); check(reasked === 1, 'reuse question remains separate');
+  await click(label(copy.questionMenu)); await click('[role="menu"] button');
+  check(deleted === 1 && !document.querySelector('[role="menu"]'), 'delete delegates to the question confirmation and closes the menu');
+  toolbarLayout();
   await setSource('this is not a diagram');
   await until(() => cases().querySelector('.mermaid-notice')?.textContent === copy.readingDiagramFailed);
   check(cases().querySelector('pre')?.textContent === 'this is not a diagram', 'invalid syntax retains source');

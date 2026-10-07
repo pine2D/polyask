@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { MoreIcon } from './icons';
 import { useLibraryPopover } from './library-popover';
 
-export function LibraryMenu({ label, disabled, actions }: {
-  label: string; disabled?: boolean;
-  actions: readonly { label: string; run: () => void; danger?: boolean; disabled?: boolean }[];
+export function LibraryMenu({ label, disabled, actions, icon }: {
+  label: string; disabled?: boolean; icon?: React.JSX.Element;
+  actions: readonly { label: string; run: () => void; danger?: boolean; disabled?: boolean; hint?: string }[];
 }): React.JSX.Element {
   const popover = useLibraryPopover();
   const id = useId();
@@ -17,7 +17,7 @@ export function LibraryMenu({ label, disabled, actions }: {
     <button ref={popover.trigger} type="button" className="library-menu-trigger" aria-label={label} title={label}
       aria-haspopup="menu" aria-expanded={popover.open} aria-controls={popover.open ? id : undefined} disabled={disabled}
       onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); popover.setOpen(true); } }}
-      onClick={() => popover.open ? popover.close() : popover.setOpen(true)}><MoreIcon /></button>
+      onClick={() => popover.open ? popover.close() : popover.setOpen(true)}>{icon ?? <MoreIcon />}</button>
     {popover.open && createPortal(<div ref={popover.panel} id={id} role="menu" aria-label={label}
       className="library-popover library-action-menu" style={popover.position} onKeyDown={event => {
         if (event.key === 'Tab') { popover.close(); return; }
@@ -30,7 +30,7 @@ export function LibraryMenu({ label, disabled, actions }: {
         buttons[index]?.focus();
       }}>
       {actions.map(action => <button key={action.label} type="button" role="menuitem" tabIndex={-1}
-        className={action.danger ? 'danger' : ''} disabled={action.disabled}
+        className={action.danger ? 'danger' : ''} disabled={action.disabled} title={action.hint}
         onClick={() => { popover.close(); action.run(); }}>{action.label}</button>)}
     </div>, document.body)}
   </>;

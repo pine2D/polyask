@@ -274,7 +274,7 @@ Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 
 
 - 真实内存 SQLite 与延迟探针覆盖：切换前等待在途回答、2.5s 总预算、取消后拒收、旧轮进行中新 token 的补采。
 - Drive 使用真实同步引擎、内存库与模拟时钟/网络覆盖到期唤醒、连续编辑、revision 冲突、拉取故障退避、Retry-After、断开与重连；不等于真实双设备验收。
-- 历史真实 React 组件交互命令：`cd desktop && node --import tsx --test --test-isolation=none test/question-history-interaction.check.ts`。测试自行构建临时夹具并启动隔离 Electron，覆盖返回/Escape/关闭/切换/删除、多页刷新、慢列表与慢详情；不连接站点或 Drive，不纳入普通 npm test 的无图形门禁。
+- 历史真实 React 组件交互命令：`cd desktop && node --import tsx --test --test-isolation=none test/question-history-interaction.check.ts`。测试自行构建临时夹具并启动隔离 Electron，覆盖返回/Escape/关闭/切换/删除、多页刷新、慢列表与慢详情；详情菜单首个 Escape 只关闭菜单，原生 Tab/Shift+Tab 关闭菜单并保持历史页焦点顺序。阅读专项另验三语 1100/640/420px 工具栏布局、当前副本与整条提问的操作范围及图标复制完整正文；不连接站点或 Drive，不纳入普通 npm test 的无图形门禁。
 - 查询性能取 WSL/Linux 内存库 1,000 条合成结果、每条 34,500 字符正文、每题两站副本，11 次查询中位值。选择性结果搜索从约 343ms 降至约 133ms；并行开发负载下仅作该样本参考，不代表真实大库或原生 Windows 性能。历史每页 SQL 次数由 51 降为 2，但本轮耗时约 9.5→12.6ms，未测得延迟收益，不据此宣称加速。结果库未筛选全量列表仍有规模上限，后续分页需独立测量。
 - token 原子替换用真实临时文件与旧 inode 硬链接验证，另测替换失败时临时文件清理；未验证断电或原生系统密钥环故障。
 - 重启隔离 Linux 开发态，在真实九站的生产 `__AMS` 验证切档：Claude、ChatGPT、Gemini、DeepSeek、豆包、Kimi、元宝、智谱的快速→思考通过；九站均拒绝 1ms 到期预算下的切档。千问思考成功，快速仍报模型缺失：当前约 8.331s、独立基线约 8.346s，实际菜单仅提供 Qwen3.7-千问、Qwen3.7-Max、Qwen3.6-Flash，均无既定目标 Qwen3.8-Max；两版返回后等待 500ms，menu/dialog 节点均为空。此为已复现的原有模型不匹配，本轮未修改模型策略，不能宣称九站正常切档全部通过。本轮没有发送新提问；“切档预算耗尽后群发仍继续”由离线生产运行时回归验证。
@@ -928,3 +928,7 @@ Windows 独立 TestLab、PolyAsk 1.12.0、Electron 44.5.0。初测构建 `be7512
 真机发现的豆包图表工具栏误判用户、透明导出水印均先 RED→GREEN 再重构建重启补验；最终豆包副本 complete，88 字符原始源码保留，103 字符副本恰为 Mermaid 围栏，无水印或操作标签，Windows 历史页实际成图、无横向溢出。智谱历史成图和两项无文本会话图标也已核验，系统浏览器接受完整合成会话地址。原站采集不点击代码/预览，不从 SVG/框架内部状态反推源码；旧缺失源码副本不回填，复杂图超过保守预算时保留源码。
 
 复制的完整值由隔离 UI 断言；Windows 可信鼠标点击后 clipboard 写入返回成功，但该环境 Electron 原生读取返回无格式、PowerShell Get-Clipboard 报 ExternalException，未核验系统粘贴内容，不把不可用的读取当成功。未执行 macOS 原生验收、五种发行包安装或真实 Drive 双设备同步。原始 DOM、日志和截图留系统临时目录，不入库；测试登录档案保留，正式档案不参与。
+
+## 2026-10-07 历史工具栏合并验收
+
+完整 Desktop 门禁 900 个 TS/renderer、400 个 runtime 用例（0 fail/skip）及独立 typecheck 通过。隔离 Linux Electron 阅读专项通过三语、明暗主题和 1100/640/420px 布局，已检查宽窄截图；当前尝试恢复、全部站点恢复、三项图标动作及再问/删除作用域通过。生产历史页交互专项通过 10 个场景，包含菜单 Escape、原生 Tab/Shift+Tab、原有删除确认和迟到详情保护；新增菜单曾被父历史页抢先处理 Escape，修复后复验通过。使用临时合成数据，不访问正式档案；本轮没有重复 Windows/macOS 原生验收、真实站点导航或发行包安装。

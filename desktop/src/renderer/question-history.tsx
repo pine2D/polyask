@@ -68,6 +68,8 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
   useEffect(() => {
     if (!open || confirmation) return;
     const key = (e: KeyboardEvent) => {
+      // Portaled action menus handle Escape and Tab before the history surface.
+      if (panel.current?.querySelector('[aria-haspopup="menu"][aria-expanded="true"]')) return;
       if (e.key === 'Escape') {
         const menu = panel.current?.querySelector<HTMLDetailsElement>('details[open]');
         e.preventDefault(); e.stopImmediatePropagation();

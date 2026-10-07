@@ -63,13 +63,27 @@ async function run() {
   } else {
     await click('.question-main'); delay = true; await tick();
     if (scenario === 'back') await click('.question-header button');
-    else if (scenario === 'escape') { window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await pause(); }
+    else if (scenario === 'escape') {
+      await click(`button[aria-label="${copy.questionMenu}"]`);
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await pause();
+      check(!document.querySelector('[role="menu"]') && document.querySelector('.question-reader'), 'first Escape closes only the action menu');
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); await pause();
+    }
+    else if (scenario?.startsWith('menu-')) {
+      await click(`button[aria-label="${copy.questionMenu}"]`);
+      (window as any).historyTabReady = true;
+      while (document.querySelector('[role="menu"]')) await pause();
+      await pause();
+      const expected = scenario === 'menu-shift-tab' ? document.querySelector('.question-prompt-actions > button') : document.querySelector('.question-header button');
+      check(document.activeElement === expected, 'Tab closes the menu and stays within history in the expected order');
+    }
     else if (scenario === 'close') await click('.panel-close');
     else if (scenario === 'switch') {
       await click('.question-header button'); delay = false;
       await click('[data-question-id="q1"] .question-main');
     } else if (scenario === 'delete') {
-      await click('.question-reader-intro .question-actions button:last-child');
+      await click(`button[aria-label="${copy.questionMenu}"]`);
+      await click('[role="menu"] button');
       delay = false; await click('.confirm-actions .primary');
     }
     else if (scenario === 'slow-detail') { await tick(); await tick(); }
@@ -78,6 +92,7 @@ async function run() {
     else if (scenario === 'switch') check(document.querySelector('.question-reader h2')?.textContent === 'Question 1', 'old detail must not replace the new selection');
     else if (scenario === 'delete') check(!document.querySelector('.question-reader') && !document.querySelector('[data-question-id="q0"]'), 'late detail must not restore a deleted question');
     else if (scenario === 'slow-detail') check(pending.length === 0, 'detail polling must not replace an in-flight read');
+    else if (scenario?.startsWith('menu-')) check(document.querySelector('.question-reader'), 'Tab keeps the history detail open');
     else check(cards().length === 50, 'late detail cannot reopen after returning to list');
   }
 }
