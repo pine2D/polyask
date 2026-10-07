@@ -132,9 +132,30 @@
 .settings-control-hint:empty { display: none; }
 .local-reset { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); }
 .local-reset > .settings-control { margin-top: 0; }
+.settings-display fieldset { min-width: 0; margin: 16px 0 0; padding: 0; border: 0; }
+.settings-display legend { padding: 0; font-size: var(--font-control); font-weight: 600; }
+.settings-display fieldset > p { margin: 8px 0; font-size: var(--font-meta); line-height: 1.65; color: var(--muted); overflow-wrap: anywhere; }
+.settings-display-options { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+.settings-display-options label { min-height: 28px; display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-control); }
+.settings-display-options input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.settings-display-options input:disabled + span { color: var(--muted); }
+.settings-display > h2:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.settings-advanced > summary { min-height: 40px; padding: 12px 24px; font-size: 16px; font-weight: 600; cursor: pointer; overflow-wrap: anywhere; }
+.settings-advanced > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+.settings-advanced-hint { margin: 0; padding: 0 24px 16px; color: var(--muted); font-size: var(--font-meta); line-height: 1.65; overflow-wrap: anywhere; }
+.settings-advanced[open] > .settings-card { border-top: 1px solid var(--border); }
+.local-data-confirm { max-height: calc(100vh - 48px); overflow: auto; }
+.local-data-confirm > p { font-size: var(--font-meta); line-height: 1.65; overflow-wrap: anywhere; }
+.local-data-counts { margin: 12px 0; padding-left: 20px; font-size: var(--font-control); line-height: 1.7; font-variant-numeric: tabular-nums; }
+.local-counts-changed { color: var(--warning-ink); }
+.local-confirm-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.local-confirm-tools button { min-height: 28px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); background: var(--field); font: inherit; font-size: var(--font-meta); }
+.local-confirm-tools button:disabled { color: var(--muted); }
 @media (max-width: 760px) {
   .settings-body { grid-template-columns: minmax(0, 1fr); padding: 16px; }
   .settings-card { padding: 16px; }
+  .settings-advanced > summary { padding: 12px 16px; }
+  .settings-advanced-hint { padding: 0 16px 16px; }
   .settings-row, .sync-overview { grid-template-columns: minmax(0, 1fr); }
   .settings-row > :is(.settings-actions, button, .cloud-data-controls) { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 12px; }
   .settings-row > .settings-actions { justify-content: flex-start; }
@@ -157,4 +178,8 @@
   .settings-card .settings-control, .danger-zone input, .sync-stage-list li { border-color: ButtonText; }
   .settings-card .settings-control:disabled { color: GrayText; border-color: GrayText; }
   .settings-card :is(button, input):focus-visible { outline-color: Highlight; }
+  .settings-advanced > summary, .local-confirm-tools button { color: ButtonText; }
+  .settings-advanced > summary:focus-visible, .settings-display > h2:focus-visible { outline-color: Highlight; }
+  .settings-display-options input:disabled + span, .local-confirm-tools button:disabled { color: GrayText; }
+  .local-confirm-tools button { border-color: ButtonText; }
 }

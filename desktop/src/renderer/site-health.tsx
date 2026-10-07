@@ -4,6 +4,7 @@ import type { SiteStatus } from "../shared/protocol";
 import { isAdvisoryCheck, siteReloadAllowed, summarizeSiteHealth, type SiteHealth, type SiteHealthState } from "../shared/site-health";
 import { describeStatus } from "../shared/status-copy";
 import { BackIcon, ChevronDownIcon, CopyIcon, FocusIcon, ReloadIcon, TrashIcon } from "./icons";
+import { siteRecoveryAdvice, SITE_RECOVERY_COPY } from "./site-health-recovery";
 
 interface SiteHealthPanelProps {
   readonly copy: DesktopCopy;
@@ -57,11 +58,21 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
   if (detailSite) {
     const status = props.statuses[detailSite.key] ?? { site: detailSite.key, phase: "loading" as const };
     const current = props.health[detailSite.key] ?? { site: detailSite.key, state: "unknown" as const, checks: [] };
-    const reloadBlocked = !siteReloadAllowed(status.phase);
+    const advice = siteRecoveryAdvice(current, status);
+    const reloadBlocked = !siteReloadAllowed(status.phase) || !!(current.recent && !siteReloadAllowed(current.recent.phase));
+    const firstAction = () => advice.action === "check" ? props.onCheck([detailSite.key])
+      : advice.action === "reload" ? props.onReload(detailSite.key) : props.onFocus(detailSite.key);
     return (
       <section className="site-status-detail">
         <button type="button" className="detail-back" onClick={props.onBack}><BackIcon />{props.copy.backToSiteStatus}</button>
         <div className="health-detail-heading"><h2>{detailSite.label}</h2><span className="health-state" data-health-state={current.state}>{stateLabel(props.copy, current.state)}</span></div>
+        <div className="health-first-step" data-reason={advice.reason} data-advisory={advice.advisory}>
+          <h3>{props.copy.healthRecoveryTitle}</h3><p>{props.copy[SITE_RECOVERY_COPY[advice.reason]]}</p>
+          <button type="button" data-recovery-action={advice.action} disabled={advice.action === "check" ? props.checking : advice.action === "reload" && reloadBlocked} onClick={firstAction}>
+            {advice.action === "focus" ? <FocusIcon /> : <ReloadIcon />}
+            {advice.action === "focus" ? props.copy.healthFocusSite : advice.action === "check" ? props.copy.checkAgain : formatCopy(props.copy.reloadSite, { site: detailSite.label })}
+          </button>
+        </div>
         <dl className="health-facts">
           <div><dt>{props.copy.healthPageStatus}</dt><dd>{pageLabel(props.copy, current, status)}</dd></div>
           <div><dt>{props.copy.healthAvailability}</dt><dd data-health-state={current.state}>{stateLabel(props.copy, current.state)}</dd></div>
@@ -81,11 +92,14 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
           <button type="button" onClick={() => props.onFocus(detailSite.key)}><FocusIcon />{props.copy.healthFocusSite}</button>
           <button type="button" onClick={props.onCopyReport}><CopyIcon />{props.copy.healthCopyReport}</button>
         </div>
-        <div className="health-actions health-recovery">
-          <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.reloadSite, { site: detailSite.label })} onClick={() => props.onReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.reloadSite, { site: detailSite.label })}</button>
+        <details className="health-more-recovery" key={detailSite.key}>
+          <summary>{props.copy.healthRecoveryMore}</summary>
+          <div className="health-actions health-recovery">
+          {advice.action !== "reload" ? <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.reloadSite, { site: detailSite.label })} onClick={() => props.onReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.reloadSite, { site: detailSite.label })}</button> : null}
           <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? props.copy.healthReloadBlocked : formatCopy(props.copy.hardReloadSite, { site: detailSite.label })} onClick={() => props.onHardReload(detailSite.key)}><ReloadIcon />{formatCopy(props.copy.hardReloadSite, { site: detailSite.label })}</button>
           <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? props.copy.healthReloadBlocked : props.copy.clearSiteCacheHint} onClick={() => props.onClearData(detailSite.key)}><TrashIcon />{formatCopy(props.copy.clearSiteCache, { site: detailSite.label })}</button>
-        </div>
+          </div><p>{props.copy.healthRecoveryCacheScope}</p>
+        </details>
         {reloadBlocked ? <p className="health-blocked">{props.copy.healthReloadBlocked}</p> : null}
         <p className="health-feedback" role="status" aria-live="polite">{props.feedback ?? ""}</p>
       </section>

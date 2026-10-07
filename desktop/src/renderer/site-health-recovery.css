@@ -1,0 +1,17 @@
+.health-first-step { margin: 12px 0; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--field); }
+.health-first-step > h3 { margin: 0 0 6px; font-size: var(--font-control); }
+.health-first-step > p, .health-more-recovery > p { margin: 6px 0 12px; color: var(--muted); font-size: var(--font-meta); line-height: 1.65; overflow-wrap: anywhere; }
+.health-first-step > button { display: flex; align-items: center; gap: 6px; min-width: 24px; min-height: 28px; max-width: 100%; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); background: var(--panel); font: inherit; text-align: left; overflow-wrap: anywhere; }
+.health-first-step > button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.health-first-step > button:disabled { color: var(--muted); cursor: default; }
+.health-more-recovery { margin-top: 12px; border-top: 1px solid var(--border); }
+.health-more-recovery > summary { min-height: 28px; padding: 6px 0; font-size: var(--font-control); cursor: pointer; overflow-wrap: anywhere; }
+.health-more-recovery .health-recovery { margin-top: 4px; padding-top: 0; border-top: 0; }
+.health-more-recovery > p { margin-bottom: 0; }
+.health-first-step > button:focus-visible, .health-more-recovery > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (forced-colors: active) {
+  .health-first-step, .health-first-step > button, .health-more-recovery { border-color: ButtonText; }
+  .health-first-step > button, .health-more-recovery > summary { color: ButtonText; }
+  .health-first-step > button:disabled { color: GrayText; border-color: GrayText; }
+  .health-first-step > button:focus-visible, .health-more-recovery > summary:focus-visible { outline-color: Highlight; }
+}

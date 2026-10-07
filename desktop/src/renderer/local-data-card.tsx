@@ -1,11 +1,7 @@
-import { useState } from "react";
-
-import { formatCopy, type DesktopCopy } from "../shared/copy";
-import type { SyncStatus } from "../shared/sync";
-import { ConfirmDialog } from "./confirm-dialog";
-import { shell } from "./shell-api";
-
-type LocalDataAction = "history" | "archives" | "decisions" | "folders" | "reset";
+import type { DesktopCopy } from '../shared/copy';
+import type { SyncStatus } from '../shared/sync';
+import { LocalDataConfirm, LOCAL_DATA_COPY } from './local-data-confirm';
+import { useLocalDataConfirmation, type LocalDataAction } from './use-local-data-confirmation';
 
 interface LocalDataCardProps {
   readonly copy: DesktopCopy;
@@ -15,73 +11,23 @@ interface LocalDataCardProps {
   readonly onStatus: (status: SyncStatus) => void;
   /** 重置成功后由外壳清掉只存在渲染层的状态（提问草稿）。 */
   readonly onReset?: () => void;
+  readonly onBackup?: () => void;
 }
 
-const CONFIRM_COPY: Record<LocalDataAction, { readonly title: keyof DesktopCopy; readonly message: keyof DesktopCopy }> = {
-  history: { title: "clearHistoryConfirmTitle", message: "clearHistoryConfirmMessage" },
-  archives: { title: "clearArchivesConfirmTitle", message: "clearArchivesConfirmMessage" },
-  decisions: { title: "clearDecisionsConfirmTitle", message: "clearDecisionsConfirmMessage" },
-  folders: { title: "clearFoldersConfirmTitle", message: "clearFoldersConfirmMessage" },
-  reset: { title: "resetLocalConfirmTitle", message: "resetLocalConfirmMessage" }
-};
-
-// 破坏性入口都先过应用内确认框（沿用新建会话的样式，默认焦点在取消上），确认后才真的动数据。
+// 先核对活动数量，最终执行仍复用原有清空/重置服务和返回值。
 export function LocalDataCard(props: LocalDataCardProps): React.JSX.Element {
-  const [active, setActive] = useState<LocalDataAction | null>(null);
-  const [pending, setPending] = useState<LocalDataAction | null>(null);
-
-  const run = async (action: LocalDataAction): Promise<void> => {
-    setActive(action);
-    props.onBusy(true);
-    try {
-      if (action === "history") {
-        props.onFeedback(formatCopy(props.copy.localDataHistoryCleared, { count: await shell.clearHistory() }));
-      } else if (action === "archives") {
-        props.onFeedback(formatCopy(props.copy.localDataArchivesCleared, { count: await shell.clearArchives() }));
-      } else if (action === "decisions") {
-        props.onFeedback(formatCopy(props.copy.localDataDecisionsCleared, { count: await shell.clearDecisions() }));
-      } else if (action === "folders") {
-        props.onFeedback(formatCopy(props.copy.localDataFoldersCleared, { count: await shell.clearFolders() }));
-      } else {
-        props.onStatus(await shell.resetLocalData());
-        props.onReset?.();
-        props.onFeedback(props.copy.localDataReset);
-      }
-    } catch {
-      props.onFeedback(props.copy.localDataActionFailed);
-    } finally {
-      setActive(null);
-      props.onBusy(false);
-    }
-  };
-
-  return (
-    <section className="settings-card danger-zone" aria-labelledby="local-data-title">
-      <h2 id="local-data-title">{props.copy.localDataTitle}</h2>
-      <p>{props.copy.localDataDescription}</p>
-      <p className="settings-control-hint">{props.copy.localDataDeletionSync}</p>
-      <div className="settings-actions">
-        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("history")}>{active === "history" ? props.copy.localDataClearing : props.copy.clearHistoryAction}</button>
-        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("archives")}>{active === "archives" ? props.copy.localDataClearing : props.copy.clearArchivesAction}</button>
-        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("decisions")}>{active === "decisions" ? props.copy.localDataClearing : props.copy.clearDecisionsAction}</button>
-        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("folders")}>{active === "folders" ? props.copy.localDataClearing : props.copy.clearFoldersAction}</button>
-      </div>
-      {props.busy && !active ? <p className="settings-control-hint">{props.copy.settingsWait}</p> : null}
-      <div className="local-reset">
-        <p className="sync-privacy">{props.copy.localDataCloudUntouched}</p>
-        <button type="button" className="settings-control" disabled={props.busy} onClick={() => setPending("reset")}>{active === "reset" ? props.copy.localDataResetting : props.copy.resetLocalAction}</button>
-      </div>
-      {pending ? (
-        <ConfirmDialog
-          copy={props.copy}
-          title={props.copy[CONFIRM_COPY[pending].title]}
-          message={props.copy[CONFIRM_COPY[pending].message]}
-          confirmLabel={props.copy.localDataConfirm}
-          cancelLabel={props.copy.cancel}
-          onConfirm={() => { const action = pending; setPending(null); void run(action); }}
-          onCancel={() => setPending(null)}
-        />
-      ) : null}
-    </section>
-  );
+  const confirmation = useLocalDataConfirmation(props);
+  const active = confirmation.state?.executing ? confirmation.state.action : null;
+  const actionButton = (action: LocalDataAction) => <button key={action} type="button" className="settings-control" disabled={props.busy || !!active} onClick={() => confirmation.open(action)}>{active === action ? action === 'reset' ? props.copy.localDataResetting : props.copy.localDataClearing : props.copy[LOCAL_DATA_COPY[action].action]}</button>;
+  return <section className="settings-card danger-zone" aria-labelledby="local-data-title">
+    <h2 id="local-data-title">{props.copy.localDataTitle}</h2>
+    <p>{props.copy.localDataDescription}</p>
+    <p className="settings-control-hint">{props.copy.localDataDeletionSync}</p>
+    <div className="settings-actions">{(['history', 'archives', 'decisions', 'folders'] as const).map(actionButton)}</div>
+    {props.busy && !active ? <p className="settings-control-hint">{props.copy.settingsWait}</p> : null}
+    <div className="local-reset"><p className="sync-privacy">{props.copy.localDataCloudUntouched}</p>{actionButton('reset')}</div>
+    {confirmation.state ? <LocalDataConfirm copy={props.copy} state={confirmation.state} busy={props.busy}
+      onCancel={confirmation.cancel} onConfirm={confirmation.confirm} onRetry={confirmation.retry}
+      onBackup={props.onBackup ? () => { confirmation.cancel(); props.onBackup?.(); } : undefined} /> : null}
+  </section>;
 }

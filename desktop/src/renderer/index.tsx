@@ -1,5 +1,5 @@
 import { QuestionHistory } from "./question-history";
-import { StrictMode, useEffect, useMemo, useRef, useState } from "react";
+import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import { MORE_MENU_IDS } from "../shared/more-menu";
@@ -7,7 +7,6 @@ import { COMMANDS, type CommandId } from "../shared/commands";
 import type { SiteDefinition } from "../shared/contracts";
 import type { CommandActions } from "./command-dispatcher";
 import { formatCopy, getCopy, resolveLocale } from "../shared/copy";
-import type { DisplayPreferences } from "../shared/display";
 import { unsupportedImageSites } from "../shared/images";
 import type {
   BootstrapState,
@@ -38,9 +37,9 @@ import {
 } from "./completion-notification-preference";
 import {
   applyDisplayDensity,
-  applyDisplayPreferences,
   loadDisplayPreferences,
 } from "./display-preferences";
+import { useDisplayPreferences } from "./use-display-preferences";
 import { useArchiveNavigation } from "./use-archive-navigation";
 import { ImagePicker } from "./image-picker";
 import { PageTabs } from "./page-tabs";
@@ -136,7 +135,9 @@ function App(): React.JSX.Element {
   const [questionHistoryBlocking, setQuestionHistoryBlocking] = useState(false);
   const closeQuestionHistory = (): void => { setQuestionHistoryOpen(false); shell.setSurface("sites"); };
   const archiveNavigation = useArchiveNavigation();
-  const [settingsSection, setSettingsSection] = useState<"overview" | "drive-diagnostics">("overview");
+  const [settingsBlocking, setSettingsBlocking] = useState(false);
+  const blockSettings = useCallback((value: boolean) => { if (value) commandActions.current = {}; setSettingsBlocking(value); }, []);
+  const [settingsSection, setSettingsSection] = useState<{ section: "overview" | "drive-diagnostics" | "data" | "display"; request: number }>({ section: "overview", request: 0 });
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(INITIAL_SYNC);
   const [runtime, setRuntime] = useState<RuntimeInfo>(INITIAL_RUNTIME);
@@ -189,14 +190,8 @@ function App(): React.JSX.Element {
     () => { broadcast.invalidate(); changeSurface("sites"); },
     () => { archiveNavigation.clear(); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
-  const acceptDisplayPreferences = (value: DisplayPreferences): void => {
-    applyDisplayPreferences(
-      document.documentElement,
-      window.localStorage,
-      value,
-      () => setAnnouncement(copy.displayPreferencesFailed)
-    );
-  };
+  const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
+  const acceptDisplayPreferences = display.accept;
 
   const acceptBootstrap = (state: BootstrapState): void => {
     setRuntime(state.runtime);
@@ -219,8 +214,7 @@ function App(): React.JSX.Element {
     if (!bootstrapStarted.current) {
       bootstrapStarted.current = true;
       void bootstrap();
-      void shell.setDisplayPreferences(INITIAL_DISPLAY)
-        .then(acceptDisplayPreferences)
+      void display.save(INITIAL_DISPLAY)
         .catch(() => setAnnouncement(copy.displayPreferencesFailed));
     }
     const offStatus = shell.onStatus((status) => {
@@ -432,6 +426,10 @@ function App(): React.JSX.Element {
     setMode("focus", site);
   };
   const openLatestReleasePage = (): Promise<void> => shell.openExternal(LATEST_RELEASE_URL);
+  const openSettings = (section: typeof settingsSection.section): void => {
+    setSettingsSection(value => ({ section, request: value.request + 1 }));
+    changeSurface("settings");
+  };
   const checkForUpdates = (): void => {
     changeSurface("sites");
     void openLatestReleasePage()
@@ -439,7 +437,7 @@ function App(): React.JSX.Element {
       .catch(() => setAnnouncement(copy.updatePageFailed));
   };
 
-  commandActions.current = pendingNewSession || questionHistoryBlocking || retryReview.open ? {} : {
+  commandActions.current = pendingNewSession || questionHistoryBlocking || settingsBlocking || retryReview.open ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
     "open-sites": () => {
       openPanel("sites", "keyboard");
@@ -480,14 +478,10 @@ function App(): React.JSX.Element {
     ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
     ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
     ...(selected.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
-    "open-settings": () => {
-      setSettingsSection("overview");
-      changeSurface("settings");
-    },
-    "open-drive-diagnostics": () => {
-      setSettingsSection("drive-diagnostics");
-      changeSurface("settings");
-    },
+    "open-settings": () => openSettings("overview"),
+    "open-drive-diagnostics": () => openSettings("drive-diagnostics"),
+    "open-display-settings": () => openSettings("display"),
+    "open-data-settings": () => openSettings("data"),
     "open-shortcuts": () => openCommandSurface("shortcuts"),
     "open-getting-started": () => openCommandSurface("guide"),
     "check-updates": checkForUpdates
@@ -527,7 +521,7 @@ function App(): React.JSX.Element {
     return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} initialSection={settingsSection} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (

@@ -12,6 +12,7 @@ import { MetaRepository } from "./meta-repository";
 import { OutboxRepository } from "./outbox-repository";
 import { inTransaction } from "./repository-utils";
 import { StateRepository } from "./state-repository";
+import { readLocalDataStats } from "./local-data-stats";
 
 const SCHEMA_VERSION = 4;
 
@@ -114,6 +115,8 @@ export class DesktopDatabase {
   }
 
   transaction<T>(action: () => T): T { return inTransaction(this.database, action); }
+
+  localDataStats(): import('../shared/local-data').LocalDataStats { return readLocalDataStats(this.database); }
 
   businessSnapshot(): { table: string; id: string; body: unknown }[] {
     return ["questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items"].flatMap(table => {

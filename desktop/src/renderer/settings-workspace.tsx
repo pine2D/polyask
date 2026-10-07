@@ -10,9 +10,11 @@ import {
   type SyncDiagnosticSnapshot
 } from "../shared/sync-diagnostics";
 import type { RuntimeInfo } from "../shared/runtime";
+import type { DisplayPreferences } from "../shared/display";
 import { CloseIcon } from "./icons";
 import { BackupCard } from "./backup-workspace";
 import { LocalDataCard } from "./local-data-card";
+import { SettingsDisplay } from "./settings-display";
 import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
 import { shell } from "./shell-api";
@@ -28,8 +30,12 @@ interface SettingsWorkspaceProps {
   readonly onCheckUpdates?: () => void | Promise<void>;
   readonly completionNotifications?: boolean;
   readonly onCompletionNotificationsChange?: (enabled: boolean) => void;
-  readonly initialSection?: "overview" | "drive-diagnostics";
+  readonly display?: DisplayPreferences;
+  readonly onDisplayChange?: (preferences: DisplayPreferences) => Promise<void>;
+  readonly initialSection?: "overview" | "drive-diagnostics" | "data" | "display";
+  readonly sectionRequest?: number;
   readonly onLocalReset?: () => void;
+  readonly onBlockingChange?: (blocking: boolean) => void;
 }
 
 type SyncAction = () => Promise<SyncStatus>;
@@ -48,12 +54,24 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   );
   const [diagnosticsBusy, setDiagnosticsBusy] = useState(false);
   const [clearingCloud, setClearingCloud] = useState(false);
+  const [dataOpen, setDataOpen] = useState(() => props.initialSection === "data");
+  const [localWriting, setLocalWriting] = useState(false);
+  const [backupRequest, setBackupRequest] = useState(0);
   // Only a destructive write may hold the page hostage; waiting on browser
   // authorization (up to five minutes) must never lock the exit.
-  const closeLocked = clearingCloud;
+  const closeLocked = clearingCloud || localWriting;
+  const writes = useRef({ local: false, cloud: false });
   const pendingFocus = useRef(false);
   const busy = actionBusy || props.status.state === "syncing";
   const statusText = describeSync(props.copy, props.status);
+  const setWriteBlocking = (source: "local" | "cloud", value: boolean): void => {
+    const wasBlocking = writes.current.local || writes.current.cloud;
+    writes.current[source] = value;
+    const blocking = writes.current.local || writes.current.cloud;
+    // Notify the command gate synchronously, before the destructive IPC starts.
+    if (blocking !== wasBlocking) props.onBlockingChange?.(blocking);
+    if (source === "local") setLocalWriting(value); else setClearingCloud(value);
+  };
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
       if (event.isComposing || event.keyCode === 229) return;
@@ -66,10 +84,18 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     setDiagnostics(createSyncDiagnosticSnapshot(props.status, props.runtime));
   }, [props.runtime, props.status]);
   useEffect(() => {
-    if (props.initialSection !== "drive-diagnostics") return;
-    setDiagnosticsOpen(true);
-    queueMicrotask(() => document.getElementById("sync-diagnostics-toggle")?.focus());
-  }, [props.initialSection]);
+    const section = props.initialSection;
+    if (section === "data") setDataOpen(true);
+    if (section === "drive-diagnostics") setDiagnosticsOpen(true);
+    const id = section === "data" ? "settings-advanced-toggle" : section === "display" ? "settings-display-title"
+      : section === "drive-diagnostics" ? "sync-diagnostics-toggle" : null;
+    if (id) queueMicrotask(() => { const target = document.getElementById(id); target?.scrollIntoView({ block: "nearest" }); target?.focus(); });
+  }, [props.initialSection, props.sectionRequest]);
+  useEffect(() => {
+    if (!backupRequest) return;
+    const target = document.querySelector<HTMLButtonElement>('section[aria-labelledby="backup-card-title"] button');
+    target?.scrollIntoView({ block: "nearest" }); target?.focus();
+  }, [backupRequest]);
   useEffect(() => {
     // Background status pushes update the panel; only an explicit action moves focus.
     if (!pendingFocus.current) return;
@@ -212,6 +238,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             <p className="sync-privacy">{props.copy.syncPrivacy}</p>
           </section>
           <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
+          <SettingsDisplay copy={props.copy} display={props.display} busy={busy} onChange={props.onDisplayChange} />
           <label className="settings-card preference-card">
             <span className="preference-copy">
               <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
@@ -235,14 +262,17 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             <button type="button" className="settings-control" disabled={busy || !props.onCheckUpdates} onClick={() => { void checkUpdates(); }}>{props.copy.checkForUpdates}</button>
           </section>
         </div>
-        <div className="settings-group settings-data-group">
+        <details className="settings-group settings-data-group settings-advanced" open={dataOpen}>
+          <summary id="settings-advanced-toggle" onClick={(event) => { event.preventDefault(); if (!clearingCloud && !localWriting) setDataOpen(value => !value); }}>{props.copy.settingsAdvancedData}</summary>
+          <p className="settings-advanced-hint">{props.copy.settingsAdvancedHint}</p>
           <LocalDataCard
             copy={props.copy}
             busy={busy}
-            onBusy={setActionBusy}
+            onBusy={(value) => { setWriteBlocking("local", value); setActionBusy(value); }}
             onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
             onStatus={props.onStatus}
             onReset={props.onLocalReset}
+            onBackup={() => setBackupRequest(value => value + 1)}
           />
           <section className="settings-card settings-row danger-zone cloud-data-row" aria-labelledby="clear-sync-title">
             <div className="settings-description">
@@ -261,17 +291,18 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
                 aria-describedby={cloudBlocked ? "cloud-clear-hint" : undefined}
                 disabled={cloudDisabled}
                 onClick={() => {
-                  setClearingCloud(true);
+                  if (busy || writes.current.local || writes.current.cloud) return;
+                  setWriteBlocking("cloud", true);
                   void run(async () => {
                     const next = await shell.clearRemoteSync(confirmation);
                     setConfirmation("");
                     return next;
-                  }, "clear").finally(() => setClearingCloud(false));
+                  }, "clear").finally(() => setWriteBlocking("cloud", false));
                 }}
               >{clearingCloud ? props.copy.syncClearing : props.copy.syncClear}</button>
             </div>
           </section>
-        </div>
+        </details>
       </div>
       <footer className="archive-status" role="status" aria-live="polite">{progress || feedback}</footer>
     </main>

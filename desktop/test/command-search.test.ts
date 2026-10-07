@@ -25,7 +25,7 @@ test("command search is localized and keeps registry order", () => {
   );
   assert.deepEqual(
     searchCommands("显示", COMMANDS, getCopy("zh-CN")).map((item) => item.id),
-    ["show-page-1", "show-page-2", "show-page-3"]
+    ["show-page-1", "show-page-2", "show-page-3", "open-display-settings"]
   );
 });
 

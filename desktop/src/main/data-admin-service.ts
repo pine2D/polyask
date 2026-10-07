@@ -1,4 +1,5 @@
 import type { SyncStatus } from "../shared/sync";
+import type { LocalDataStats } from "../shared/local-data";
 import type { DesktopDatabase } from "./database";
 
 interface DataAdminSync {
@@ -29,6 +30,10 @@ export class DataAdminService {
 
   constructor(private readonly options: DataAdminOptions) {
     this.now = options.now ?? Date.now;
+  }
+
+  stats(): LocalDataStats {
+    return this.options.database.localDataStats();
   }
 
   clearHistory(): number {

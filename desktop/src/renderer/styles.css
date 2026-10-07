@@ -12,6 +12,7 @@
 @import "./markdown-reading.css";
 @import "./native-feel.css";
 @import "./broadcast-retry-review.css";
+@import "./site-health-recovery.css";
 
 :root {
   font-family: var(--font-ui);
@@ -105,10 +106,10 @@ button { cursor: default; }
 .command-results > button:hover, .command-results > button.active { background: var(--accent-soft); }
 .command-results > button > span { min-width: 0; display: grid; gap: 2px; }
 .command-results strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.command-results small { color: var(--muted); font-size: 10px; }
+.command-results small { color: var(--muted); font-size: 12px; }
 .command-results kbd { flex: 0 0 auto; padding: 3px 6px; border: 1px solid var(--border); border-radius: 5px; }
 .command-empty { margin: 28px 0; color: var(--muted); text-align: center; }
-.command-palette > footer { padding: 7px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 10px; }
+.command-palette > footer { padding: 7px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
 .prompt-library { min-height: 0; grid-row: 2 / -1; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .prompt-template-save { padding: 0 12px 8px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
 .prompt-template-save input, .prompt-template-save button {
@@ -119,7 +120,7 @@ button { cursor: default; }
 .prompt-template-save button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
 .prompt-template-save button:disabled { opacity: .42; }
 .prompt-library-results { min-height: 120px; padding: 2px 8px 10px; overflow: auto; }
-.prompt-library-results h2 { margin: 8px 6px 3px; color: var(--muted); font-size: 10px; font-weight: 600; }
+.prompt-library-results h2 { margin: 8px 6px 3px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .prompt-library-item { display: grid; grid-template-columns: minmax(0, 1fr) 34px; gap: 2px; }
 .prompt-library-item button, .prompt-history-item {
   min-width: 0; min-height: 42px; padding: 6px 9px; border: 0; border-radius: 7px; color: inherit; background: transparent;
@@ -130,7 +131,7 @@ button { cursor: default; }
 .prompt-library-item strong, .prompt-library-item small, .prompt-history-item {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.prompt-library-item small { color: var(--muted); font-size: 10px; }
+.prompt-library-item small { color: var(--muted); font-size: 12px; }
 .prompt-history-item { width: 100%; display: block; text-align: left; }
 .app-shell { background: var(--canvas); }
 .shell-bootstrap { width: 100%; height: var(--shell-height); }

@@ -559,8 +559,9 @@ test("Drive diagnostics use the existing trusted sync bridge", () => {
 test("Drive diagnostics command opens and targets the settings diagnostic section", () => {
   const renderer = readSource("src/renderer/index.tsx");
   assert.match(renderer, /"open-drive-diagnostics": \(\) =>/);
-  assert.match(renderer, /setSettingsSection\("drive-diagnostics"\)/);
-  assert.match(renderer, /initialSection=\{settingsSection\}/);
+  assert.match(renderer, /"open-drive-diagnostics": \(\) => openSettings\("drive-diagnostics"\)/);
+  assert.match(renderer, /initialSection=\{settingsSection\.section\}/);
+  assert.match(renderer, /sectionRequest=\{settingsSection\.request\}/);
 });
 
 test("windows and linux auto-hide the native menu bar", () => {

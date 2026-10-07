@@ -24,6 +24,8 @@ export type CommandId =
   | "retry-failed"
   | "new-session"
   | "open-settings"
+  | "open-display-settings"
+  | "open-data-settings"
   | "open-drive-diagnostics"
   | "open-shortcuts"
   | "open-getting-started"
@@ -79,6 +81,8 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "retry-failed", labelKey: "retryFailedCommand", group: "results", accelerator: "Alt+R" },
   { id: "new-session", labelKey: "newSessionSelected", group: "compose", accelerator: "Alt+N" },
   { id: "open-settings", labelKey: "settings", group: "app", accelerator: "Control+,", macAccelerator: "Command+," },
+  { id: "open-display-settings", labelKey: "settingsDisplayTitle", group: "app" },
+  { id: "open-data-settings", labelKey: "settingsAdvancedData", group: "app" },
   { id: "open-drive-diagnostics", labelKey: "openDriveDiagnostics", group: "app" },
   { id: "open-shortcuts", labelKey: "keyboardShortcuts", group: "app" },
   { id: "open-getting-started", labelKey: "gettingStarted", group: "app" },
