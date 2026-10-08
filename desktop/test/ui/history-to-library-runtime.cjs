@@ -90,7 +90,7 @@ app.whenReady().then(async () => {
   const copyPrompt = async () => {
     const expected = await js('window.historyFixture.prompt');
     await clipboard.writeText('PolyAsk native fixture: pending original copy');
-    await click('.question-original-actions button:last-child');
+    await click('[data-action=copy-question]');
     let actual = await clipboard.readText();
     const initialLength = actual.length;
     let rounds = 0;
@@ -106,7 +106,7 @@ app.whenReady().then(async () => {
     check(exact, 'native clipboard must contain the complete original prompt (see clipboard.json and clipboard-failure.png)');
   };
   const organize = async () => {
-    await click('.question-prompt-actions > button:first-child');
+    await click('[data-action=organize-saved-answer]');
     await until('!!document.querySelector(".question-archive-picker [role=dialog]")', 'copy picker');
   };
   const state = () => js('window.historyFixture.state()');
@@ -118,21 +118,29 @@ app.whenReady().then(async () => {
       const measure = await js(`(()=>{const r=document.querySelector('.question-reader'),h=document.querySelector('.question-prompt h2');
         return {viewport:innerWidth,reader:r.clientWidth,overflow:r.scrollWidth-r.clientWidth,summary:h.classList.contains('is-summary'),
           height:h.getBoundingClientRect().height,line:parseFloat(getComputedStyle(h).lineHeight),dark:matchMedia('(prefers-color-scheme: dark)').matches};})()`);
-      const evidence = { name, ...measure }; geometry.push(evidence);
+      const icons = await js(`Array.from(document.querySelectorAll('.question-reader-actions .library-menu-trigger')).map(n=>{
+        const b=n.getBoundingClientRect(),s=n.querySelector('svg').getBoundingClientRect();
+        return {dx:s.x+s.width/2-b.x-b.width/2,dy:s.y+s.height/2-b.y-b.height/2};})`);
+      check(icons.length === 2 && icons.every(p=>Math.abs(p.dx)<.5&&Math.abs(p.dy)<.5), `${name}: menu icons are centered`);
+      await click('.question-prompt-actions .library-menu-trigger');
+      const danger = await js(`(()=>{const s=getComputedStyle(document.querySelector('.library-action-menu button.danger'));return {border:s.borderTopWidth,margin:s.marginTop};})()`);
+      check(danger.border === '0px' && danger.margin === '0px', `${name}: single deletion has no separator`);
+      await key('Escape');
+      const evidence = { name, ...measure, icons, danger }; geometry.push(evidence);
       writeFileSync(join(output, 'geometry.json'), JSON.stringify(geometry, null, 2));
       check(measure.summary && measure.height <= measure.line * 3 + 1, `${name}: prompt summary must stay within three lines`);
       check(measure.overflow <= 1, `${name}: saved reading must have no horizontal overflow (${measure.overflow}px)`);
       check(measure.dark === (theme === 'dark'), `${name}: native theme must match`);
-      await click('.question-original-actions button:first-child');
+      await click('.question-prompt > button');
       check(await js('document.querySelector(".question-prompt h2").textContent === window.historyFixture.prompt'), `${name}: expand must retain all original text`);
       await copyPrompt();
-      await click('.question-original-actions button:first-child');
+      await click('.question-prompt > button');
       await organize();
       const picker = await js(`(()=>{const d=document.querySelector('.question-archive-picker [role=dialog]'),r=d.getBoundingClientRect();
         return {left:r.left,right:r.right,viewport:innerWidth,overflow:d.scrollWidth-d.clientWidth};})()`);
       check(picker.left >= -1 && picker.right <= picker.viewport + 1 && picker.overflow <= 1, `${name}: picker must fit the viewport`);
       await key('Escape');
-      check(await js('document.activeElement === document.querySelector(".question-prompt-actions > button:first-child")'), `${name}: picker Escape returns focus`);
+      check(await js('document.activeElement === document.querySelector("[data-action=organize-saved-answer]")'), `${name}: picker Escape returns focus`);
       evidence.picker = picker;
       writeFileSync(join(output, 'geometry.json'), JSON.stringify(geometry, null, 2));
       if (width === 420 || zoom > 1) {
@@ -246,7 +254,7 @@ app.whenReady().then(async () => {
   lastStep = 'prompt-copy-reask';
   await click('.question-main'); await until('!!document.querySelector(".markdown-preview")', 'detail before reask');
   await js('document.querySelector(".question-reader").scrollTop=0'); await pause();
-  await copyPrompt(); await click('.question-prompt-actions > button:nth-child(2)');
+  await copyPrompt(); await click('[data-action=reask-question]');
   check((await state()).draftExact && await js('!document.querySelector(".question-history")'), 'reask passes the complete original and closes history');
   console.log(JSON.stringify({ scenario: 'late-replies-and-full-reask', ok: true, ...await state() }));
   win.destroy(); app.exit(0);

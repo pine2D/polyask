@@ -13,12 +13,16 @@ app.whenReady().then(async () => {
   const paint = () => run('new Promise(done=>requestAnimationFrame(()=>requestAnimationFrame(done)))');
   win.webContents.on('console-message', (_event, level, message) => { if (level >= 2) console.error(String(message).slice(0, 300)); });
   const check = (ok, message) => { if (!ok) throw Error(message); };
-  const wait = async source => { for (let i = 0; i < 150; i++) { if (await run(source)) return; await paint(); } throw Error(`Timeout: ${source}`); };
+  const wait = async source => { for (let i = 0; i < 150; i++) { if (await run(source)) return; await paint(); } throw Error(`Timeout: ${source}; ${JSON.stringify(await run('({click:window.nativeClick,state:window.progressFixture.state(),panel:!!document.querySelector(".question-history")})'))}`); };
   const click = async selector => {
-    win.focus(); await wait('document.hasFocus()');
+    win.focus(); win.webContents.focus(); await wait('document.hasFocus()');
     const point = await run(`(()=>{const n=document.querySelector(${JSON.stringify(selector)});n.scrollIntoView({block:'nearest',inline:'nearest'});const r=n.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+    await run(`window.nativeClick=null;document.querySelector(${JSON.stringify(selector)}).addEventListener('click',e=>window.nativeClick={trusted:e.isTrusted,tag:e.target.tagName},{once:true})`);
     const z = win.webContents.getZoomFactor();
+    win.webContents.sendInputEvent({ type: 'mouseMove', x: Math.round(point.x*z), y: Math.round(point.y*z) });
+    await new Promise(done=>setTimeout(done,40));
     for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, button: 'left', clickCount: 1, x: Math.round(point.x*z), y: Math.round(point.y*z) }); await paint();
+    await wait('!!window.nativeClick?.trusted');
   };
   const views = new Map();
   for (const site of ['claude', 'kimi']) {
@@ -28,17 +32,26 @@ app.whenReady().then(async () => {
   const reports = [];
   for (const locale of ['en', 'zh-CN', 'zh-TW']) for (const density of ['compact', 'comfortable']) {
     win.webContents.setZoomFactor(1); win.setContentSize(1200, 900);
+    for (const view of views.values()) view.setVisible(true);
     await win.loadFile(join(output, 'index.html'), { query: { locale, density } }); await wait('document.querySelectorAll("[role=tab]").length===3');
     for (const expanded of [false, true]) for (const zoom of [1, 1.5]) {
       win.webContents.setZoomFactor(zoom); await run(`window.progressFixture.expanded(${expanded})`); await paint();
-      const size = await run('({width:innerWidth,height:innerHeight,bottom:document.querySelector(".workspace-progress").getBoundingClientRect().bottom})');
+      const size = await run('({width:innerWidth,height:innerHeight,footerTop:document.querySelector(".feedback-bar").getBoundingClientRect().top,bottom:document.querySelector("[data-composer]").getBoundingClientRect().bottom})');
       const layout = computeWorkspaceLayout({ ...size, density, composerExpanded: expanded, drawerOpen: false,
         requestedMode: 'overview', focused: 'claude', overviewOrder: ['claude','kimi'], focusOrder: ['claude','kimi'] });
-      check(Math.abs(layout.placements[0].bounds.y-size.bottom)<1, 'CSS strip and main native origin agree exactly once');
+      check(Math.abs(layout.placements[0].bounds.y-size.bottom)<1, 'CSS composer and main native origin agree without a progress strip');
+      check(layout.placements.every(p => p.bounds.y+p.bounds.height <= size.footerTop), 'native views leave the footer unobscured');
+      check(await run('!!document.querySelector(".feedback-bar .run-progress")'), 'run progress lives in the existing footer');
       applyWorkspaceLayout({ siteZoom: { apply() {} }, views, placements: layout.placements, metrics: layout.metrics,
         zoom, display: { density, siteScale: 1 }, mode: layout.mode, focused: 'claude' });
-      const dimensions = await Promise.all([...views.values()].map(view => view.webContents.executeJavaScript('({w:innerWidth,h:innerHeight})')));
-      check(dimensions.every(d=>d.w>0&&d.h>0), 'real native renderers retain positive viewports');
+      // 原生 resize 不与外壳渲染帧同步；有界等待实际子视口完成更新。
+      let dimensions;
+      for (let i=0;i<25;i++) {
+        dimensions = await Promise.all([...views.values()].map(view => view.webContents.executeJavaScript('({w:innerWidth,h:innerHeight})')));
+        if (dimensions.every(d=>d.w>0&&d.h>0)) break;
+        await new Promise(done=>setTimeout(done,20));
+      }
+      check(dimensions.every(d=>d.w>0&&d.h>0), 'real native renderers retain positive viewports: '+JSON.stringify(dimensions));
     }
     win.webContents.setZoomFactor(1); await run('window.progressFixture.expanded(false); window.progressFixture.evidence("waiting")'); await paint();
     check(await run('document.querySelector("[data-progress=ended]").textContent.includes("1/3")&&document.querySelector("[data-progress=complete]").textContent.includes("0/3")'), 'positive generation is separate from stored copies');
@@ -46,8 +59,9 @@ app.whenReady().then(async () => {
     await run('document.querySelector("[role=tab]").focus()');
     win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Right' }); win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Right' }); await paint();
     check(await run('document.activeElement.dataset.page==="1"&&document.getElementById("site-page-tab-0").getAttribute("aria-selected")==="true"'), 'manual native tab activation');
-    for (const view of views.values()) view.setVisible(false);
     await run('window.progressFixture.evidence("partial")'); await paint(); await click('[name=read-run-copies]');
+    check(await run('!!window.nativeClick?.trusted'), 'reading uses a trusted native click');
+    for (const view of views.values()) view.setVisible(false);
     await wait('document.querySelector(".markdown-preview")?.textContent.includes("Saved Claude body")');
     const state = await run('window.progressFixture.state()'); check(state.reads===1&&state.live===0, 'reading does not collect or submit');
     writeFileSync(join(output, `${locale}-${density}.png`), (await win.webContents.capturePage()).toPNG());

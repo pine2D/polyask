@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 
 import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import type { DesktopCopy } from "../shared/copy";
@@ -40,7 +40,6 @@ interface WorkspaceDrawerProps {
   readonly onClearSiteData: (site: SiteKey) => void;
   readonly onCopyHealthReport: () => void;
   readonly healthFeedback?: string;
-  readonly guideControl?: ReactNode;
 }
 
 export function WorkspaceDrawer(props: WorkspaceDrawerProps): React.JSX.Element {
@@ -89,7 +88,7 @@ export function WorkspaceDrawer(props: WorkspaceDrawerProps): React.JSX.Element 
         </div>
       </div>
       {props.state.tab === "sites" ? (
-        <div id="workspace-sites-panel" role="tabpanel" aria-labelledby="workspace-sites-tab">{props.guideControl}<WorkspaceSites {...props}
+        <div id="workspace-sites-panel" role="tabpanel" aria-labelledby="workspace-sites-tab"><WorkspaceSites {...props}
           sitesMode={props.state.sitesMode ?? 'select'} onSitesModeChange={sitesMode => props.onStateChange({ ...props.state, sitesMode })} /></div>
       ) : (
         <div id="workspace-health-panel" role="tabpanel" aria-labelledby="workspace-health-tab">

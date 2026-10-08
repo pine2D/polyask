@@ -1,11 +1,10 @@
-.workspace-progress { position: relative; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 0 8px; border-bottom: 1px solid var(--border); background: var(--panel); overflow-x: auto; white-space: nowrap; }
-.workspace-progress .page-tabs { height: 26px; flex-shrink: 0; }
-.workspace-progress .page-tabs button { min-width: max-content; padding: 0 7px; }
-.run-progress { display: flex; align-items: center; gap: 10px; min-width: max-content; font-size: 11px; }
+.feedback-workspace:empty { display: none; }
+.feedback-workspace { flex: 1; min-width: 0; }
+.feedback-bar[data-has-notice="false"]:has(.run-progress) .feedback-notice:not([hidden]) { display: none; }
+.run-progress { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; font-size: 11px; white-space: nowrap; }
+.run-progress-facts { display: flex; align-items: center; gap: 10px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .run-progress-fact { color: var(--muted); font-variant-numeric: tabular-nums; }
 .run-progress-fact.failed { color: var(--danger-ink); }
 .run-progress-fact.unconfirmed { color: var(--warning-ink); }
-.run-progress button { min-height: 24px; padding: 1px 7px; font-size: 11px; }
-.app-shell .workspace-drawer { top: calc(var(--shell-height) + var(--workspace-progress-height, 0px)); }
-.app-shell.is-composer-expanded .workspace-drawer { top: calc(var(--composer-expanded-height) + var(--workspace-progress-height, 0px)); }
-.workspace-progress .page-tabs button { flex-direction: row; }
+.run-progress button { flex-shrink: 0; min-height: 24px; padding: 1px 7px; border: 0; border-radius: 4px; color: var(--accent); background: var(--accent-soft); font-size: 11px; }
+.run-progress button:disabled { color: var(--muted); background: transparent; }

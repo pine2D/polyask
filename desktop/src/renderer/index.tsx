@@ -11,7 +11,6 @@ import { imageSupportWarning } from './image-support-warning';
 import type { QuestionRunProgress } from '../shared/question-run-progress';
 import { useQuestionRunProgress } from './use-question-run-progress';
 import { useSiteHealthRefresh } from './use-site-health-refresh';
-import { useWorkbenchGuideFlow } from './use-workbench-guide-flow';
 import type { QuestionReadingRequest } from './question-reading-request';
 import { createComparisonDraftStore } from './comparison-draft-store';
 import { createLibrarySessionStore } from './library-session';
@@ -49,6 +48,7 @@ import {
 import { useDisplayPreferences } from "./use-display-preferences";
 import { useArchiveNavigation } from "./use-archive-navigation";
 import { ImagePicker } from "./image-picker";
+import { PageTabs } from './page-tabs';
 import { WorkspaceProgress } from './workspace-progress';
 import { resetLocalSession } from "./local-data-reset";
 import { useTemplateDeletion } from "./use-template-deletion";
@@ -146,7 +146,7 @@ function App(): React.JSX.Element {
   const [libraryBlocking, setLibraryBlocking] = useState(false);
   const blockLibrary = useCallback((value: boolean) => { if (value) commandActions.current = {}; setLibraryBlocking(value); }, []);
   const [questionHistoryBlocking, setQuestionHistoryBlocking] = useState(false);
-  const closeQuestionHistory = (): void => { guideFlow.cancel(); setQuestionReadRequest(null); setQuestionHistoryOpen(false); shell.setSurface("sites"); };
+  const closeQuestionHistory = (): void => { setQuestionReadRequest(null); setQuestionHistoryOpen(false); shell.setSurface("sites"); };
   const archiveNavigation = useArchiveNavigation();
   const [settingsBlocking, setSettingsBlocking] = useState(false);
   const blockSettings = useCallback((value: boolean) => { if (value) commandActions.current = {}; setSettingsBlocking(value); }, []);
@@ -218,19 +218,6 @@ function App(): React.JSX.Element {
   const { images, open: imageTrayOpen } = imageSelection;
   const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
   const acceptDisplayPreferences = display.accept;
-  const guideFlow = useWorkbenchGuideFlow({ copy, sites, health, storage: window.localStorage, fallbackDisplay: display.value,
-    ready: bootstrapPhase === 'ready', busy: runState !== 'idle' || auxiliaryBusy || participation.pending || healthChecking || libraryBlocking || settingsBlocking || questionHistoryBlocking,
-    participating: participation.participating, runId: broadcast.runId ?? runProgress.runId,
-    activeSites: broadcast.runId ? broadcast.activeSites : runProgress.value?.answers.map(answer => answer.site) ?? [], statuses, progress: runProgress.value,
-    onPersistenceFailure: () => setAnnouncement(copy.guidePreferenceFailed), onOpen: () => openPanel('sites', 'pointer'),
-    onChooseSites: () => openPanel('sites', 'pointer'), onCheckSites: keys => { void refreshSiteHealth(keys); },
-    onFocusSite: site => focusSite(site), onFocusPrompt: () => executeCommand('focus-prompt', commandActions.current),
-    onNavigate: request => {
-      if (!commandActions.current['open-question-history']) throw new Error('operation_busy');
-      executeCommand('open-question-history', commandActions.current);
-      setQuestionReadRequest({ ...request, source: 'guide', answerId: request.answerIds[0] });
-    } });
-
   const acceptBootstrap = (state: BootstrapState): void => {
     setRuntime(state.runtime);
     setSites(state.sites);
@@ -531,10 +518,10 @@ function App(): React.JSX.Element {
   }
 
   if (surface === "archive") {
-    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} synthesisSession={synthesis.session} comparisonDrafts={comparisonDrafts} session={librarySession} navigationRevision={archiveNavigation.revision} onArchiveEntered={guideFlow.archiveEntered} onBlockingChange={blockLibrary} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
+    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} synthesisSession={synthesis.session} comparisonDrafts={comparisonDrafts} session={librarySession} navigationRevision={archiveNavigation.revision} onBlockingChange={blockLibrary} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis, guide: guideFlow, onGuidePreferenceFailed: () => queueMicrotask(() => setAnnouncement(`${copy.localDataReset} ${copy.guidePreferenceFailed}`, true, true)) }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (
@@ -607,6 +594,12 @@ function App(): React.JSX.Element {
             onAdjustScope={() => { imageSelection.setOpen(false); changeDrawerOpen(true); }}
           />
         )}
+        pageControl={layout.pageCount > 1 ? <PageTabs copy={copy} isMac={isMac} sites={sites} selectedSites={workspace.selectedSites}
+          statuses={statuses} page={layout.page} inputMethod={pageInputMethod} summaryRunId={broadcast.runId ?? runProgress.runId}
+          onPageChange={(page, inputMethod) => {
+            requestedPage.current = { page, inputMethod }; setPageInputMethod(inputMethod);
+            setAnnouncement(formatCopy(copy.sitePageChanged, { page: page + 1, total: layout.pageCount })); shell.setPage(page);
+          }}/> : null}
         sendBlockedReason={imageWarning}
         synthesisPending={!!synthesis.pending}
         syncStatus={syncStatus}
@@ -628,13 +621,9 @@ function App(): React.JSX.Element {
         onRetry={() => executeCommand("retry-failed", commandActions.current)}
         onPasteImages={(files) => { void imageSelection.choose(files, "append"); }}
       />
-      <WorkspaceProgress copy={copy} isMac={isMac} sites={sites} selectedSites={workspace.selectedSites}
-        statuses={statuses} page={layout.page} inputMethod={pageInputMethod} runId={broadcast.runId ?? runProgress.runId}
+      <WorkspaceProgress copy={copy} statuses={statuses} runId={broadcast.runId ?? runProgress.runId}
         activeSites={broadcast.runId ? broadcast.activeSites : runProgress.value?.answers.map(answer => answer.site) ?? []}
-        progress={runProgress.value} idleControl={guideFlow.invite} onPageChange={(page, inputMethod) => {
-          requestedPage.current = { page, inputMethod }; setPageInputMethod(inputMethod);
-          setAnnouncement(formatCopy(copy.sitePageChanged, { page: page + 1, total: layout.pageCount })); shell.setPage(page);
-        }} onRead={() => {
+        progress={runProgress.value} onRead={() => {
           const progress = runProgress.value;
           if (!progress?.questionId || !commandActions.current['open-question-history']) return;
           executeCommand('open-question-history', commandActions.current);
@@ -650,7 +639,6 @@ function App(): React.JSX.Element {
           statuses={statuses}
           health={health}
           healthChecking={healthChecking}
-          guideControl={guideFlow.panel}
           open={drawerOpen}
           state={panelState ?? lastOpenPanel.current}
           onStateChange={changePanelState}
@@ -685,7 +673,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <QuestionHistory openRequest={questionReadRequest} onReadAccepted={(id, request) => { if (questionReadRequest?.source === 'guide') guideFlow.readAccepted(id, request); }} onReadingCancelled={request => { if (questionReadRequest?.source === 'guide') guideFlow.cancel(request); }} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { guideFlow.archiveCreated(record.id, mode, selection.questionId, selection.answerIds); archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      <QuestionHistory openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
       {retryReview.review}
       {pageClose.dialog}
       {pendingNewSession && (

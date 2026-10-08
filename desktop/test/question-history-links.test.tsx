@@ -30,9 +30,10 @@ test('history toolbar separates current-copy actions from question actions and k
   const click = async (node: HTMLButtonElement) => act(async () => node.click());
   try {
     await render(true);
-    assert.equal(dom.window.document.querySelectorAll('.question-reader-intro button:not(.question-original-actions button)').length, 0,
+    assert.equal(dom.window.document.querySelectorAll('.question-reader-intro button').length, 0,
       'the heading has no duplicate conversation or question actions');
-    assert.equal(dom.window.document.querySelectorAll('.question-original-actions button').length, 1, 'the prompt has its own original-copy action');
+    assert.equal(button('Copy original question').textContent, '', 'original-copy action uses an accessible icon');
+    assert.equal(button('Copy original question').disabled, false);
     assert.equal(dom.window.document.querySelectorAll('.question-reader-actions').length, 1);
     assert.ok(button('Copy conversation link'), 'copy icon is present');
     assert.ok(button('Open conversation in browser'));
@@ -48,6 +49,8 @@ test('history toolbar separates current-copy actions from question actions and k
     assert.deepEqual(copied, ['https://www.kimi.com/chat/second']);
     assert.deepEqual(opened, copied);
     assert.deepEqual(restored, [], 'read-only actions do not restore site views');
+    await click(button('Copy original question'));
+    assert.equal(copied.at(-1), detail.question.text, 'original-copy action preserves the complete question');
     await click(button('Copy answer'));
     assert.equal(copied.at(-1), 'Saved answer a2');
     await render(false);

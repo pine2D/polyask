@@ -1,10 +1,10 @@
 export const SITE_PARTICIPATION_COPY = {
   en: {
-    participationLabel: 'Participate in broadcast',
-    participationSummary: 'Open {opened} · Participating {participating}',
-    participationSessionHint: 'This choice affects future broadcasts during this app session. Pages stay open.',
+    participationLabel: 'Send to',
+    participationSummary: 'Sending to {participating} sites',
+    participationSessionHint: 'Uncheck a site to skip future broadcasts in this app session. Its page stays open; close it to release resources.',
     participationResourcesHint: 'Pages kept open still use resources. Close a page to release it.',
-    sitePageRetained: 'Kept open, excluded',
+    sitePageRetained: 'Page open, skipped',
     sitePageClosed: 'Page closed',
     closeSitePage: 'Close {site} page',
     sitePageCloseTitle: 'Close {site}?',
@@ -25,11 +25,11 @@ export const SITE_PARTICIPATION_COPY = {
     siteOrderSaveHint: 'Each move is saved immediately. Finishing only exits adjustment.'
   },
   zhCN: {
-    participationLabel: '参与群发',
-    participationSummary: '打开 {opened} · 参与 {participating}',
-    participationSessionHint: '此选择影响本次打开应用期间的后续群发，页面保持打开。',
+    participationLabel: '发送站点',
+    participationSummary: '发送到 {participating} 站',
+    participationSessionHint: '取消勾选后，本次使用期间不再发送到该站；页面仍保留，关闭可释放资源。',
     participationResourcesHint: '保留打开的页面仍占资源；关闭页面可以释放。',
-    sitePageRetained: '保留页面，不参与',
+    sitePageRetained: '保留页面，不发送',
     sitePageClosed: '页面已关闭',
     closeSitePage: '关闭 {site} 页面',
     sitePageCloseTitle: '关闭 {site}？',
@@ -50,11 +50,11 @@ export const SITE_PARTICIPATION_COPY = {
     siteOrderSaveHint: '每次移动立即保存；完成只退出调整。'
   },
   zhTW: {
-    participationLabel: '參與群發',
-    participationSummary: '開啟 {opened} · 參與 {participating}',
-    participationSessionHint: '此選擇影響本次開啟應用程式期間的後續群發，頁面保持開啟。',
+    participationLabel: '傳送網站',
+    participationSummary: '傳送至 {participating} 站',
+    participationSessionHint: '取消勾選後，本次使用期間不再傳送至該站；頁面仍保留，關閉可釋放資源。',
     participationResourcesHint: '保留開啟的頁面仍占資源；關閉頁面可以釋放。',
-    sitePageRetained: '保留頁面，不參與',
+    sitePageRetained: '保留頁面，不傳送',
     sitePageClosed: '頁面已關閉',
     closeSitePage: '關閉 {site} 頁面',
     sitePageCloseTitle: '關閉 {site}？',

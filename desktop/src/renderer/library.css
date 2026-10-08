@@ -70,7 +70,7 @@
 .library-options p { padding: 8px 10px; color: var(--muted); }
 .library-action-menu button { border: 0; border-radius: 5px; background: transparent; color: inherit; text-align: left; padding: 9px 10px; min-height: 36px; font: inherit; }
 .library-action-menu button:hover, .library-action-menu button:focus-visible { background: var(--accent-soft); }
-.library-action-menu button.danger { color: var(--danger-ink); border-top: 1px solid var(--border); margin-top: 4px; }
+.library-action-menu button.danger { color: var(--danger-ink); }
 .library-popover :focus-visible, .library :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 1200px) {
   .library .folder-columns { grid-template-columns: 280px minmax(0, 1fr); }
@@ -89,3 +89,6 @@
 }
 
 .library .folder-detail .archive-body { grid-template-columns: minmax(0, 1fr); }
+
+.library-menu-trigger, .library .library-menu-trigger { justify-content: center; }
+.library-action-menu button:not(.danger) + button.danger { border-top: 1px solid var(--border); margin-top: 4px; }

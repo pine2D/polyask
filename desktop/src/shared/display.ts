@@ -1,6 +1,5 @@
 export const MIN_SITE_COLUMN_WIDTH = 380;
 export const WORKSPACE_FEEDBACK_HEIGHT = 32;
-export const WORKSPACE_PROGRESS_HEIGHT = 32;
 
 export type Density = "compact" | "comfortable";
 export type SiteScale = 0.9 | 1;
@@ -38,7 +37,7 @@ export function metricsForDensity(density: Density): DisplayMetrics {
 
 export function shellHeightForComposer(density: Density, expanded: boolean): number {
   const composer = expanded ? density === "compact" ? 120 : 144 : metricsForDensity(density).shellHeight;
-  return composer + WORKSPACE_PROGRESS_HEIGHT;
+  return composer;
 }
 
 export function zoomForSite(

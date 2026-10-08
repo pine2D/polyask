@@ -39,8 +39,6 @@
 .question-reader { overflow: auto; padding: 24px max(20px, calc((100% - 960px) / 2)); }
 .question-reader-intro h2 { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 19px; line-height: 1.6; font-weight: 600; }
 .question-prompt h2.is-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
-.question-original-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.question-original-actions button { font-size: 12px; }
 .question-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 .question-actions .question-icon-action { width: 32px; padding: 4px; display: grid; place-items: center; }
 .question-reader-actions { align-items: center; gap: 12px 24px; }
@@ -68,3 +66,8 @@
 .question-archive-choices select { width: 100%; min-width: 0; padding: 6px; color: inherit; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
 .question-archive-picker .confirm-actions { flex-wrap: wrap; }
 .question-archive-picker [role="alert"] { color: var(--danger-ink); }
+
+.question-prompt { display: flex; align-items: flex-start; gap: 8px; }
+.question-prompt h2 { flex: 1; min-width: 0; }
+.question-prompt > button { flex-shrink: 0; margin-top: 3px; font-size: 12px; }
+.question-reader-actions .library-menu-trigger { justify-content: center; }

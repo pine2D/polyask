@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client';
 import { useState } from 'react';
+import { PageTabs } from '../../src/renderer/page-tabs';
 import { WorkspaceProgress } from '../../src/renderer/workspace-progress';
 import { QuestionHistory } from '../../src/renderer/question-history';
 import { FeedbackProvider } from '../../src/renderer/feedback-provider';
@@ -12,6 +13,7 @@ import { SITES } from '../../src/main/sites';
 import type { QuestionRunProgress } from '../../src/shared/question-run-progress';
 import type { SiteStatus } from '../../src/shared/protocol';
 import '../../src/renderer/styles.css';
+import '../../src/renderer/feedback.css';
 
 const query = new URLSearchParams(location.search), copy = getCopy(query.get('locale') || 'en');
 applyDisplayDensity(document.documentElement, { density: query.get('density') === 'comfortable' ? 'comfortable' : 'compact', siteScale: 1 });
@@ -44,9 +46,11 @@ function Fixture() {
       deepseek: { site: 'deepseek', phase: 'cancelled', submission: { runId: 'current', state: 'cancelled' } } });
   } };
   return <FeedbackProvider copy={copy}><main className={`app-shell${expanded ? ' is-composer-expanded' : ''}`}>
-    <div style={{ height: expanded ? query.get('density') === 'comfortable' ? 144 : 120 : query.get('density') === 'comfortable' ? 64 : 52 }}/>
-    <WorkspaceProgress copy={copy} sites={SITES} selectedSites={SITE_KEYS} statuses={statuses} page={page} inputMethod="keyboard"
-      runId="current" activeSites={['claude', 'kimi', 'deepseek']} progress={flow.value} onPageChange={setPage}
+    <div data-composer style={{ height: expanded ? query.get('density') === 'comfortable' ? 144 : 120 : query.get('density') === 'comfortable' ? 64 : 52 }}>
+      <PageTabs copy={copy} sites={SITES} selectedSites={SITE_KEYS} statuses={statuses} page={page} inputMethod="keyboard" summaryRunId="current" onPageChange={setPage}/>
+    </div>
+    <WorkspaceProgress copy={copy} statuses={statuses}
+      runId="current" activeSites={['claude', 'kimi', 'deepseek']} progress={flow.value}
       onRead={() => { setRequest({ request: (request?.request ?? 0) + 1, questionId: 'question', answerId: 'answer-claude' }); setOpen(true); }}/>
     <QuestionHistory open={open} openRequest={request} copy={copy} sites={SITES} draft="" busy={false}
       onBlockingChange={() => {}} onOpen={() => setOpen(true)} onClose={() => setOpen(false)} onDraft={() => {}}/>

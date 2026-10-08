@@ -80,11 +80,11 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
         </div>
       </section>
       <section className="drawer-section">
-        <div className="drawer-section-heading"><h2>{props.copy.participationLabel}</h2><span>{formatCopy(props.copy.participationSummary, { opened: props.selected.size, participating: selectedSites.length })}</span></div>
-        <button type="button" ref={modeButton} data-sites-mode-toggle aria-pressed={mode === 'order'} aria-controls="site-checklist"
+        <div className="drawer-section-heading"><h2>{props.copy.participationLabel}</h2><span>{formatCopy(props.copy.participationSummary, { opened: props.selected.size, participating: selectedSites.length })}</span>
+        <button type="button" ref={modeButton} data-sites-mode-toggle aria-pressed={mode === 'order'} aria-controls="site-checklist" className="scope-preset site-order-toggle"
           disabled={props.participationBusy || (mode === 'select' && props.selected.size === 0)} onClick={() => changeMode(mode === 'order' ? 'select' : 'order')}>
-          {mode === 'order' ? props.copy.finishSiteOrder : props.copy.adjustSiteOrder}</button>
-        {mode === 'select' ? <><p>{props.copy.participationSessionHint}</p><p>{props.copy.participationResourcesHint}</p></> : <p>{props.copy.siteOrderSaveHint}</p>}
+          {mode === 'order' ? props.copy.finishSiteOrder : props.copy.adjustSiteOrder}</button></div>
+        {mode === 'select' ? <p>{props.copy.participationSessionHint}</p> : <p>{props.copy.siteOrderSaveHint}</p>}
         <SiteChecklist copy={props.copy} sites={props.sites} selected={props.selected} participating={props.participating} mode={mode} disabled={props.participationBusy} onToggle={toggleSite} onReorder={props.onSelectionChange} onCloseSitePage={props.onCloseSitePage} />
       </section>
       <section className="drawer-section group-section" hidden={mode === 'order'}>

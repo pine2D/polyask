@@ -20,7 +20,6 @@
 @import "./workspace-progress.css";
 @import "./comparison-worksheet.css";
 @import "./library-scale.css";
-@import "./workbench-guide.css";
 
 :root {
   font-family: var(--font-ui);

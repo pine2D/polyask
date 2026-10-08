@@ -1,6 +1,5 @@
 import {
   DEFAULT_DISPLAY_PREFERENCES,
-  WORKSPACE_PROGRESS_HEIGHT,
   type DisplayPreferences
 } from "../shared/display";
 import { readLocalUiPreferences, writeDisplayPreferences, type LocalUiStorage } from './local-ui-preferences';
@@ -30,7 +29,6 @@ export function applyDisplayDensity(
   value: DisplayPreferences
 ): void {
   target.dataset.density = value.density;
-  target.style?.setProperty('--workspace-progress-height', `${WORKSPACE_PROGRESS_HEIGHT}px`);
 }
 
 export function applyDisplayPreferences(

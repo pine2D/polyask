@@ -76,11 +76,11 @@ test("fit scale keeps only a focused primary at one hundred percent", () => {
   assert.equal(zoomForSite({ density: "compact", siteScale: 1 }, "focus", false), 1);
 });
 
-test("composer expansion includes the fixed progress strip in every state", () => {
-  assert.equal(shellHeightForComposer("compact", false), 84);
-  assert.equal(shellHeightForComposer("compact", true), 152);
-  assert.equal(shellHeightForComposer("comfortable", false), 96);
-  assert.equal(shellHeightForComposer("comfortable", true), 176);
+test("composer expansion reserves only the visible toolbar in every density", () => {
+  assert.equal(shellHeightForComposer("compact", false), 52);
+  assert.equal(shellHeightForComposer("compact", true), 120);
+  assert.equal(shellHeightForComposer("comfortable", false), 64);
+  assert.equal(shellHeightForComposer("comfortable", true), 144);
 });
 
 test("stored display preferences survive reload and malformed values fall back", () => {

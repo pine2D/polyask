@@ -4,9 +4,9 @@ import { shell } from './shell-api';
 import { ChevronDownIcon, CopyIcon, ExternalLinkIcon, LinkIcon } from './icons';
 import { LibraryMenu } from './library-menu';
 
-export function QuestionHistoryActions({ questionId, answer, site, conversationUrl, canRestoreAll, ready, copy, busy,
+export function QuestionHistoryActions({ questionId, prompt, answer, site, conversationUrl, canRestoreAll, ready, copy, busy,
   onRestore, onReask, onDelete, onAnnounce, onOrganize }: {
-  questionId: string; answer?: QuestionAnswerRecord; site: string; conversationUrl: string | null;
+  questionId: string; prompt: string; answer?: QuestionAnswerRecord; site: string; conversationUrl: string | null;
   canRestoreAll: boolean; ready: boolean; copy: DesktopCopy; busy: boolean;
   onRestore: (id?: string) => void; onReask: () => void; onDelete: () => void;
   onAnnounce: (text: string) => void; onOrganize?: () => void;
@@ -29,8 +29,11 @@ export function QuestionHistoryActions({ questionId, answer, site, conversationU
       }}><CopyIcon /></button>
     </div>
     <div className="question-prompt-actions">
-      {onOrganize && <button type="button" disabled={busy || !ready || !answer?.answerMarkdown} onClick={onOrganize}>{copy.questionOrganize}</button>}
-      <button type="button" disabled={busy} onClick={onReask}>{copy.questionReask}</button>
+      <button type="button" className="question-icon-action" data-action="copy-question" aria-label={copy.questionCopyPrompt} data-hint={copy.questionCopyPrompt} onClick={() => {
+        void navigator.clipboard.writeText(prompt).then(() => onAnnounce(copy.questionPromptCopied)).catch(() => onAnnounce(copy.questionFailed));
+      }}><CopyIcon /></button>
+      {onOrganize && <button type="button" data-action="organize-saved-answer" disabled={busy || !ready || !answer?.answerMarkdown} onClick={onOrganize}>{copy.questionOrganize}</button>}
+      <button type="button" data-action="reask-question" disabled={busy} onClick={onReask}>{copy.questionReask}</button>
       <LibraryMenu key={questionId} label={copy.questionMenu} disabled={busy}
         actions={[{ label: copy.questionDeleteRecord, danger: true, run: onDelete }]} />
     </div>

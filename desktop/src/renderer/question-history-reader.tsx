@@ -43,7 +43,7 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
   return <div className="question-reader" ref={scroller} onScroll={remember}>
     <header className="question-reader-intro">
       <time>{new Date(detail.question.createdAt).toLocaleString()}</time>
-      <QuestionPrompt text={detail.question.text} copy={copy} onAnnounce={onAnnounce} />
+      <QuestionPrompt text={detail.question.text} copy={copy} />
       {detail.question.inputImageCount > 0 && <p>{formatCopy(copy.questionImages, { count: detail.question.inputImageCount })}</p>}
     </header>
     <div className="question-site-tabs" role="group" aria-label={copy.sitesCompact}>
@@ -60,7 +60,7 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
       </div>
       <p className="question-note">{copy.questionSnapshotNote}</p>
       {answer?.truncated && <p role="note">{copy.questionTruncated}</p>}
-      <QuestionHistoryActions questionId={detail.question.id} answer={answer} site={site} conversationUrl={conversationUrl}
+      <QuestionHistoryActions questionId={detail.question.id} prompt={detail.question.text} answer={answer} site={site} conversationUrl={conversationUrl}
         canRestoreAll={canRestoreAll} ready={ready} copy={copy} busy={busy} onRestore={onRestore} onReask={onReask}
         onDelete={onDelete} onAnnounce={onAnnounce} onOrganize={onOrganize && answer ? () => onOrganize(answer.id) : undefined} />
       {!answer?.conversationUrl && <p className="question-note">{copy.questionMissing}</p>}

@@ -1,8 +1,8 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 
-export function QuestionPrompt({ text, copy, onAnnounce }: {
-  text: string; copy: DesktopCopy; onAnnounce: (text: string) => void;
+export function QuestionPrompt({ text, copy }: {
+  text: string; copy: DesktopCopy;
 }): React.JSX.Element {
   const [expanded, setExpanded] = useState(false), id = useId();
   const root = useRef<HTMLDivElement>(null);
@@ -15,16 +15,12 @@ export function QuestionPrompt({ text, copy, onAnnounce }: {
   }, [expanded]);
   return <div ref={root} className="question-prompt">
     <h2 id={id} className={long && !expanded ? 'is-summary' : undefined}>{long && !expanded ? `${summary}${[...text].length > 180 ? '…' : ''}` : text}</h2>
-    <div className="question-original-actions">
-      {long && <button type="button" aria-expanded={expanded} aria-controls={id} onClick={() => {
-        const reader = root.current?.closest<HTMLElement>('.question-reader');
-        const node = reader?.querySelector('.question-site-tabs');
-        if (reader && node && node.getBoundingClientRect().top < reader.getBoundingClientRect().top)
-          anchor.current = { reader, node, top: node.getBoundingClientRect().top };
-        setExpanded(value => !value);
-      }}>{expanded ? copy.questionCollapse : copy.questionExpand}</button>}
-      <button type="button" onClick={() => { void navigator.clipboard.writeText(text)
-        .then(() => onAnnounce(copy.questionPromptCopied)).catch(() => onAnnounce(copy.questionFailed)); }}>{copy.questionCopyPrompt}</button>
-    </div>
+    {long && <button type="button" aria-expanded={expanded} aria-controls={id} onClick={() => {
+      const reader = root.current?.closest<HTMLElement>('.question-reader');
+      const node = reader?.querySelector('.question-site-tabs');
+      if (reader && node && node.getBoundingClientRect().top < reader.getBoundingClientRect().top)
+        anchor.current = { reader, node, top: node.getBoundingClientRect().top };
+      setExpanded(value => !value);
+    }}>{expanded ? copy.questionCollapse : copy.questionExpand}</button>}
   </div>;
 }

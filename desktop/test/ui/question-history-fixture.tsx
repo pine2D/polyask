@@ -97,7 +97,7 @@ async function run() {
       (window as any).historyTabReady = true;
       while (document.querySelector('[role="menu"]')) await pause();
       await pause();
-      const expected = scenario === 'menu-shift-tab' ? document.querySelector('.question-prompt-actions > button') : document.querySelector('.question-header button');
+      const expected = scenario === 'menu-shift-tab' ? Array.from(document.querySelectorAll('.question-prompt-actions > button')).find(node => node.textContent === copy.questionReask) : document.querySelector('.question-header button');
       check(document.activeElement === expected, 'Tab closes the menu and stays within history in the expected order');
     }
     else if (scenario === 'close') await click('.panel-close');
