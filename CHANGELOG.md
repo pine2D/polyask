@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.15.2] - 2026-10-08
+
+验收范围：Linux/WSL 下通过 1,363 项应用测试、417 项运行时测试及打包冒烟。生产外壳的五个真实本地网页视图完成 15 条展开意图检查，明暗主题完成 26 项输入框检查；八组动效检查保留编辑上下文，网页每次开合只调整两次尺寸。
+
+验收限制：Windows 原生分组切换焦点路径、Windows/macOS 原生输入法与读屏、五种发行包的实机安装未在本轮核验。输入框及面板动效使用既有短过渡，原生网页布局仍在开合边界调整。
+
 ### 修复
 
 - 提问框及搜索、名称、备注等文字输入统一采用浅底、紧阴影与低饱和底线，移除散开的柔光和紫色外圈；鼠标与键盘聚焦保持一致，错误、只读、禁用及系统高对比度状态保留独立反馈。
@@ -1153,7 +1159,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.15.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.15.2...HEAD
+[1.15.2]: https://github.com/pine2D/polyask/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/pine2D/polyask/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/pine2D/polyask/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/pine2D/polyask/compare/v1.13.0...v1.14.0
