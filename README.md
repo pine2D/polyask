@@ -49,7 +49,7 @@ PolyAsk 是个桌面应用。它把 Claude、ChatGPT、Gemini、DeepSeek、豆�
 | 站点 | 深度思考 | 快速 |
 |---|---|---|
 | Claude | Fable 5.1，思考强度最高档（现在是 Max） | Opus 5.5，Medium 强度 |
-| ChatGPT | GPT-5.6 Sol，思考强度最高档 | GPT-5.6 Sol，最低档 |
+| ChatGPT | GPT-6，思考强度最高档 | GPT-6，最低档 |
 | Gemini | 最新的 Pro，扩展思考 | 最新的 Flash |
 | DeepSeek | 深度思考开 | 深度思考关 |
 | 豆包 | 专家 | 快速 |
@@ -57,6 +57,8 @@ PolyAsk 是个桌面应用。它把 Claude、ChatGPT、Gemini、DeepSeek、豆�
 | Kimi | K3，极致 | K3，标准 |
 | 元宝 | Hy4 preview（站点只给专家模式） | Hy3，即时 |
 | 智谱清言 | 极致，没有这档就用深度 | 快速 |
+
+ChatGPT 尚未提供 GPT-6 的账号会使用已知备用 GPT-5.6 Sol；未知或歧义模型不会自动选择。
 
 部分适配器会从在场选项中选择最高档或目标模型。只有名称和控件仍符合适配规则时才能跟随变化，不能保证网站新增模型或改版后自动兼容。
 

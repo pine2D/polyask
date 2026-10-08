@@ -4,102 +4,9 @@
 // site-runtime/adapters-intl2.js（ChatGPT）的离线回归。2026-08-31 改版把档位从「Effort 子菜单里的
 // menuitemradio 列表」换成「Power 项上的一根 5 格滑块」，键盘驱动；这里把出事那天的 DOM 做成假对象。
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
 const vm = require("node:vm");
 
-const source = (file) => fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8");
-
-// 真机 2026-08-31 的档名与位次（0..4）。0–3 档的档名只出现在 describedby 的朗读文本里，
-// 不在任何可选中的节点上——这正是「不许拿标签判档、只认 X of N」的由来。
-const TIERS = ["Instant", "Medium", "High", "Extra High", "Pro"];
-
-function chatGptCase(options) {
-  const opts = options || {};
-  const clicked = [], keys = [];
-  const state = { open: false, value: opts.value == null ? 2 : opts.value };
-  const attr = (map) => ({ getAttribute: (name) => (name in map ? map[name] : null) });
-
-  const desc = { id: "_r_desc_", get textContent() { return opts.description ?? (TIERS[state.value] + ", " + (state.value + 1) + " of 5."); } };
-  const slider = Object.assign({ tagName: "SPAN" }, {
-    getAttribute: (name) => name === "aria-valuenow" ? (opts.missingNow ? null : String(state.value))
-      : name === "aria-valuemin" ? "0" : name === "aria-valuemax" ? "4" : name === "role" ? "slider" : null,
-  });
-  const power = {
-    closest: selector => selector === '[role="menu"]' ? root : null,
-    getBoundingClientRect: () => ({ width: opts.hiddenPower ? 0 : 200, height: 32 }),
-    getAttribute: (name) => name === "aria-label" ? "Power" : name === "aria-describedby" ? "_r_desc_" : null,
-    querySelector: (selector) => selector === '[role="slider"]' ? (opts.dropSlider ? null : slider)
-      : selector === "[data-model-reasoning-effort-slider]" ? {} : null,
-    focus() {},
-    dispatchEvent(event) {
-      if (event.type !== "keydown") return true;
-      keys.push(event.key);
-      if (event.key === "ArrowRight") state.value = Math.min(4, state.value + 1); // 端点饱和，不越界
-      if (event.key === "ArrowLeft") state.value = Math.max(0, state.value - 1);
-      return true; // End / Home 真机无效：这里同样刻意不实现，写了就红
-    },
-  };
-  const radio = (spec) => ({ textContent: spec.text,
-    getBoundingClientRect: () => ({ width: spec.hidden ? 0 : 100, height: 32 }),
-    getAttribute: name => name === "aria-checked" ? String(spec.checked === true)
-      : name === "aria-disabled" && spec.disabled ? "true" : null,
-    click() { clicked.push(spec.text); if (!opts.swallowed) {
-      for (const entry of specs) entry.checked = entry === spec;
-      state.open = false;
-    } },
-  });
-  const specs = opts.models || [{ text: "GPT-5.6 Sol", checked: true }, { text: "GPT-5.5" }];
-  const models = specs.map(radio);
-  const selectModel = Object.assign({ textContent: "Pro", querySelector: () => null,
-    click() { clicked.push("select-model"); } }, attr({ "aria-label": "Select model" }));
-  // 菜单开着时 pill 显示控件名而不是档名——旧 _anchor 的文本前置校验就是栽在这里
-  const pill = { className: "__composer-pill",
-    get innerText() { return state.open ? (opts.openLabel || "Thinking effort") : (opts.pill || TIERS[state.value]); },
-    get textContent() { return (opts.measurement || "") + this.innerText; },
-    set textContent(value) { opts.pill = value; },
-    getAttribute: (name) => name === "aria-haspopup" ? "menu"
-      : name === "aria-expanded" ? String(state.open) : null };
-
-  const menuItems = opts.dropPower ? [selectModel] : [selectModel, power];
-  const root = { querySelectorAll: selector => selector === '[role="menuitemradio"]' && state.open ? models : [] };
-  const outsider = radio({ text: "GPT-5.6 Sol", checked: true });
-  const document = {
-    getElementById: (id) => (id === "_r_desc_" ? desc : null),
-    querySelector: (selector) => {
-      if (selector === 'button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') return opts.modern && !opts.missing ? pill : null;
-      if (selector === 'button.__composer-pill[aria-haspopup="menu"]') return !opts.modern && !opts.missing ? pill : null;
-      if (selector.includes("composer-intelligence-picker-content")) return state.open && !opts.modern ? root : null;
-      return null;
-    },
-    querySelectorAll: (selector) => {
-      if (selector === '[role="menuitem"]') return state.open ? menuItems : [];
-      if (selector === '[role="menuitemradio"]') return state.open ? [...models, ...(opts.outsideModel ? [outsider] : [])] : [];
-      return [];
-    },
-  };
-  const S = fakeRuntime(document, clicked, () => { state.open = true; }, () => { state.open = false; });
-  class FakeKeyboardEvent { constructor(type, init) { this.type = type; Object.assign(this, init); } }
-  const context = { window: { __AMS: S }, t: (key) => key, document, console, KeyboardEvent: FakeKeyboardEvent };
-  for (const file of ["selection-match.js", "adapters-intl2.js"]) vm.runInNewContext(source(file), context);
-  return { adapter: S.adapters["chatgpt.com"], S, clicked, keys, state, models, pill };
-}
-
-// escMenus 必须是计数器而非空桩——「每个菜单动作自己收尾」是硬约束，空桩让违反者永远绿。
-function fakeRuntime(document, clicked, onOpen, onClose) {
-  const findByText = (selector, re, root) =>
-    [...(root || document).querySelectorAll(selector)].find((n) => re.test((n.textContent || "").trim())) || null;
-  const runtime = {
-    ...require("./lib/deadline-harness"), adapters: {}, findByText, sleep: async () => {}, escCount: 0,
-    escMenus() { runtime.escCount++; document.__closed = true; onClose?.(); },
-    waitFor: async (fn, timeout = 3500, step = 120) => {
-      for (let waited = 0; ; waited += step) { const v = fn(); if (v) return v; if (waited >= timeout) return null; }
-    },
-    openMenu: (el) => onOpen(el),
-    clickEl: (el) => { clicked.push(el); return true; },
-  };
-  return runtime;
-}
+const { chatGptCase, source } = require("./lib/intl2-harness");
 
 // think 走滑块最右端、fast 走最左端；两端都不许点到模型 radio
 async function sliderMustBeDrivenToBothEdges() {
@@ -150,7 +57,7 @@ function entryCheckMustSurviveLabelDrift() {
 async function modelSelectionMustBeIdempotent() {
   const same = chatGptCase({});
   await same.adapter.think();
-  assert.deepEqual(same.clicked, [], "已是 GPT-5.6 Sol 时不该点任何东西");
+  assert.deepEqual(same.clicked, [], "已是 GPT-6 时不该点任何东西");
   const other = chatGptCase({ models: [{ text: "GPT-5.6 Sol" }, { text: "GPT-5.5", checked: true }] });
   await other.adapter.think();
   assert.ok(other.clicked.includes("GPT-5.6 Sol"), "模型不对时必须点中维护的目标 radio");
@@ -167,7 +74,7 @@ async function modernTriggerMustSwitchBothTiers() {
 }
 
 function modernStateMustIgnoreMeasurementAndOpenMenu() {
-  for (const [pill, expected] of [["最新 - 中", "fast"], ["5.6 Sol Pro", "think"], ["5.5Pro", null], ["未知", null]]) {
+  for (const [pill, expected] of [["GPT-6 Pro", "think"], ["GPT-6 Instant", "fast"], ["GPT-6.1 Sol Pro", null], ["最新 - 中", "fast"], ["5.6 Sol Pro", "think"], ["5.5Pro", null], ["未知", null]]) {
     const c = chatGptCase({ modern: true, pill, measurement: "Medium", openLabel: "Pro" });
     assert.equal(c.adapter.state(), expected, "只读可见档位，隐藏测量文字不得参与判定：" + pill);
     assert.equal(c.clicked.length, 0, "读状态不得操作菜单");
@@ -229,11 +136,11 @@ function preciseSelectionNeedsCurrentModelAndEndpoint() {
   const c = chatGptCase({ value: 4 });
   assert.deepEqual(selection(c.adapter, "think"), { outcome: "mode_only", observed: "think" });
   c.state.open = true;
-  assert.deepEqual(selection(c.adapter, "think"), { outcome: "preferred", observed: "think", model: "GPT-5.6 Sol" });
+  assert.deepEqual(selection(c.adapter, "think"), { outcome: "preferred", observed: "think", model: "GPT-6" });
   c.state.value = 2;
   assert.equal(selection(c.adapter, "think").outcome, "unconfirmed", "中间强度不能冒充精确端点");
   c.state.value = 0;
-  assert.deepEqual(selection(c.adapter, "fast"), { outcome: "preferred", observed: "fast", model: "GPT-5.6 Sol" });
+  assert.deepEqual(selection(c.adapter, "fast"), { outcome: "preferred", observed: "fast", model: "GPT-6" });
   c.state.open = false;
   assert.deepEqual(selection(c.adapter, "fast"), { outcome: "mode_only", observed: "fast" }, "关菜单后不得缓存刚读到的模型");
   assert.equal(c.clicked.length, 0);
@@ -263,9 +170,41 @@ async function unrelatedModelRadioCannotSupplyAMissingModel() {
   assert.ok(!c.clicked.includes("GPT-5.6 Sol"));
 }
 
+async function gpt6MustWinAndLegacyMustRemainAnAlternative() {
+  for (const [models, model, outcome, clickedLabel = model] of [
+    [[{ text: "GPT-6" }], "GPT-6", "preferred"],
+    [[{ text: "6" }, { text: "GPT-5.6 Sol", checked: true }], "GPT-6", "preferred", "6"],
+    [[{ text: "GPT-5.6 Sol", checked: true }, { text: "GPT-6" }], "GPT-6", "preferred"],
+    [[{ text: "GPT-5.6 Sol" }], "GPT-5.6 Sol", "alternative"],
+    [[{ text: "GPT-6", disabled: true }, { text: "GPT-5.6 Sol" }], "GPT-5.6 Sol", "alternative"],
+  ]) {
+    const c = chatGptCase({ models });
+    await c.adapter.think();
+    assert.equal(c.clicked.includes(clickedLabel), true);
+    assert.equal(c.state.value, 4);
+    c.state.open = true;
+    assert.deepEqual(selection(c.adapter, "think"), { outcome, observed: "think", model });
+  }
+  for (const models of [[{ text: "GPT-6" }, { text: "GPT-6" }, { text: "GPT-5.6 Sol" }],
+    [{ text: "GPT-6" }, { text: "6" }], [{ text: "6.1" }], [{ text: "6 Astra" }],
+    [{ text: "GPT-6.1 Sol" }], [{ text: "GPT-7" }]]) {
+    await assert.rejects(() => chatGptCase({ models }).adapter.think(), /未找到模型/);
+  }
+}
+
+async function availableSliderRangeMustDefineBothEdges() {
+  for (const [min, max] of [[0, 3], [1, 5]]) {
+    const c = chatGptCase({ min, max });
+    await c.adapter.think(); assert.equal(c.state.value, max);
+    await c.adapter.fast(); assert.equal(c.state.value, min);
+    c.state.open = true;
+    assert.deepEqual(selection(c.adapter, "fast"), { outcome: "preferred", observed: "fast", model: "GPT-6" });
+  }
+}
+
 let failed = 0;
 (async () => {
-  const tests = [sliderMustBeDrivenToBothEdges, sliderMustBeIdempotentAtEdge, missingSliderMustThrow,
+  const tests = [gpt6MustWinAndLegacyMustRemainAnAlternative, availableSliderRangeMustDefineBothEdges, sliderMustBeDrivenToBothEdges, sliderMustBeIdempotentAtEdge, missingSliderMustThrow,
     openMenuPillMustNotBeReadAsTier, entryCheckMustSurviveLabelDrift, modelSelectionMustBeIdempotent,
     newTurnMustBeCollected, modernTriggerMustSwitchBothTiers,
     modernStateMustIgnoreMeasurementAndOpenMenu, missingTriggerMustRemainFailure,

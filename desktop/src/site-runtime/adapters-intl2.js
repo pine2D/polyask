@@ -20,7 +20,7 @@
       _OPEN_PILL: /^(thinking effort|思考(强度|力度)?)$/i,
       // 旧模型会把版本前缀并进 pill（实测如 5.5Pro / 5.5Instant），先剥掉再判档。
       _tier: function (text) {
-        return (text || "").trim().replace(/^(?:gpt-?)?5\.[3456](?:\s*sol)?/i, "").trim();
+        return (text || "").trim().replace(/^(?:gpt-?)?(?:6(?![\d.]|\s*sol)|5\.[3456](?:\s*sol)?)/i, "").trim();
       },
       // 2026-09-28：新版去掉 __composer-pill，改用专属 data 属性；旧版选择子保留兜底。
       // 不按档位文本定位，菜单展开时按钮显示的是控件名。
@@ -95,7 +95,9 @@
       },
       // 模型 radio 与滑块同时常驻菜单（Advanced 视图不必展开也在 DOM，真机 2026-08-31）：先直接找，
       // 找不到再点 aria-label="Select model" 入口展开一次。已选中就不点——点了会连带把菜单收掉。
-      _MODELS: [{ model: "GPT-5.6 Sol", aliases: ["GPT-5.6 Sol"] }],
+      // GPT-6 已上线 ChatGPT；旧账号尚未灰度时保留已知的 GPT-5.6 Sol。
+      _MODELS: [{ model: "GPT-6", aliases: ["GPT-6", "6"] },
+        { model: "GPT-5.6 Sol", aliases: ["GPT-5.6 Sol"] }],
       _modelItems: function () {
         const root = document.querySelector('[data-testid="composer-intelligence-picker-content"]') ||
           this._power()?.closest('[role="menu"]');
@@ -152,6 +154,7 @@
         // 新版含 visibility:hidden 的测量副本（Thinking effort），只读可见标签。
         const raw = (a.innerText != null ? a.innerText : a.textContent || "").trim();
         if (!raw || this._OPEN_PILL.test(raw)) return null; // 菜单开着：pill 是控件名，非终态
+        if (/^(?:gpt-?)?6[\d.]|^(?:gpt-?)?6\s+(?:sol|astra)/i.test(raw)) return null;
         const t = this._tier(raw);
         if (/instant|medium|极速|即时|均衡|中/i.test(t)) return "fast"; // Instant/Medium
         if (/(?:gpt-?)?5\.[345](?!\d)|\bo3\b/i.test(raw)) return null; // 旧模型高档不能冒充 5.6 think
@@ -164,7 +167,8 @@
         if (observed !== mode) return observed ? { outcome: "unconfirmed", observed } : { outcome: "unconfirmed" };
         const match = this._selectedModel();
         // 粗档位不能证明滑块端点；菜单关着读不到模型时仅确认模式，不缓存先前读数。
-        return level && match ? { outcome: "preferred", observed, model: match.model } : { outcome: "mode_only", observed };
+        return level && match ? { outcome: match.model === this._MODELS[0].model ? "preferred" : "alternative",
+          observed, model: match.model } : { outcome: "mode_only", observed };
       },
       // 2026-09 新版用语义 data 属性；限定 assistant 区块，排除用户气泡和思考段。
       // 保留 section[data-turn] 与 data-message-author-role 两种旧布局。

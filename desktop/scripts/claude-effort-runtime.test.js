@@ -41,7 +41,7 @@ function claudeEffortCase(options) {
   S.clickEl = (el) => {
     clicked.push(el);
     if (models.includes(el)) state.model = el.modelName;
-    else if (!opts.ignoreEffort) state.effort = el.textContent;
+    else if (!opts.ignoreEffort) state.effort = opts.displayEffort?.[el.textContent] || el.textContent;
     state.label = "Model: " + state.model + " · " + state.effort;
     return true;
   };
@@ -117,6 +117,18 @@ async function claudeInlineEffortGroup() {
   }
 }
 
+// 2026-10-08 真机：默认项 textContent 是 MediumRecommended，闭合按钮只显示 Medium。
+async function claudeRecommendedCopyMustNotBecomeTheEffortLabel() {
+  const c = claudeEffortCase({ tiers: ["Low", "MediumRecommended", "High", "Extra", "Max4× or more usage"],
+    displayEffort: { MediumRecommended: "Medium", "Max4× or more usage": "Max" } });
+  await c.adapter.fast();
+  assert.equal(c.state.label, "Model: Opus 5.5 · Medium");
+  assert.equal(c.adapter.state(), "fast");
+  await c.adapter.think();
+  assert.equal(c.state.label, "Model: Fable 5.1 · Max");
+  assert.ok(!c.clicked.some(el => el.textContent === "Max Preview"));
+}
+
 // 档位项与模型项同为 menuitemradio：容器不对的「Max Preview」绝不能被当成最高档点下去
 async function claudeEffortMustIgnoreModelRadios() {
   const c = claudeEffortCase({ tiers: [] }); // 子菜单展开了但一个档位都没有
@@ -141,7 +153,7 @@ async function claudeMissingEffortMustThrow() {
 
 let failed = 0;
 (async () => {
-  const tests = [claudeInlineEffortGroup, claudeFastMustSelectOpusAndResetEffort, claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
+  const tests = [claudeRecommendedCopyMustNotBecomeTheEffortLabel, claudeInlineEffortGroup, claudeFastMustSelectOpusAndResetEffort, claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
     claudeEffortWithoutTriggerIdMustThrow, claudeMissingEffortMustThrow];
   for (const test of tests) {
     try { await test(); }

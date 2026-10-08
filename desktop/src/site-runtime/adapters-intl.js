@@ -87,7 +87,8 @@
           const want = dflt ? items.find((x) => x.rank === 1) : items.reduce((a, b) => (b.rank > a.rank ? b : a));
           if (!want) { escMenus(); throw new Error("Claude: 默认档 effort 未找到"); }
           if (want.el.getAttribute("aria-checked") !== "true") { tierAction(deadline, () => clickEl(want.el)); await sleep(450, deadline); }
-          const head = ((want.el.textContent || "").trim().match(/^[A-Za-z\u4e00-\u9fff]+/) || [""])[0].replace(/default$/i, "");
+          // 真机 2026-10-08：MediumRecommended 连写；只取已知档名，说明文字不参与复读。
+          const head = this._EFFORT[want.rank].exec((want.el.textContent || "").trim())[0];
           const re = dflt ? new RegExp(head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : this._THINK;
           const ok = await waitFor(() => re.test(this._label()), 1200, 120, deadline); // 点击被吞时不许静默成功
           escMenus();
