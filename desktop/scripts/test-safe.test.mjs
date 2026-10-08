@@ -1,16 +1,28 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { buildTestPlan, linuxBoundary } from './test-safe.mjs';
 
 const root = resolve('synthetic-desktop');
+
+test('Node preload uses a file URL rather than interpreting a Windows drive as an ESM protocol', () => {
+  for (const mode of [[], ['unit'], ['runtime'], ['command', 'node', '-e', '']]) {
+    for (const step of buildTestPlan(mode, root)) {
+      const specifier = step.args[step.args.indexOf('--import') + 1];
+      assert.equal(URL.canParse(specifier), true, 'Node preload must use an absolute URL on every platform');
+      assert.equal(new URL(specifier).protocol, 'file:');
+      assert.equal(fileURLToPath(specifier), resolve(root, 'scripts/lib/assertion-safety.mjs'));
+    }
+  }
+});
 
 test('selected unit tests run only after the DOM assertion check, with preload and one worker', () => {
   const plan = buildTestPlan(['unit', 'test/example.test.tsx'], root);
   assert.equal(plan.length, 2);
   assert.equal(plan[0].args.some(arg => arg.endsWith('check-dom-assertions.mjs')), true);
   assert.equal(plan[1].args.includes('--test-concurrency=1'), true);
-  assert.equal(plan[1].args.includes(resolve(root, 'scripts/lib/assertion-safety.mjs')), true);
+  assert.equal(plan[1].args.includes(pathToFileURL(resolve(root, 'scripts/lib/assertion-safety.mjs')).href), true);
   assert.equal(plan[1].args.includes('test/example.test.tsx'), true);
   assert.equal(plan[1].args.includes('tsx'), true);
 });
@@ -22,7 +34,7 @@ test('full gate keeps typecheck and both test suites; neither suite can omit the
   const tests = plan.filter(step => step.args.includes('--test'));
   assert.equal(tests.length, 2);
   assert.equal(tests.every(step => step.args.includes('--test-concurrency=1') &&
-    step.args.includes(resolve(root, 'scripts/lib/assertion-safety.mjs'))), true);
+    step.args.includes(pathToFileURL(resolve(root, 'scripts/lib/assertion-safety.mjs')).href)), true);
 });
 
 test('test selectors cannot inject Node flags or silently select no test', () => {

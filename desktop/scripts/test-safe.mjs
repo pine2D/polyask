@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const script = fileURLToPath(import.meta.url);
@@ -10,7 +10,7 @@ const heap = '--max-old-space-size=1024';
 
 export function buildTestPlan(args = [], directory = root) {
   const [mode = 'all', ...targets] = args;
-  const guard = resolve(directory, 'scripts/lib/assertion-safety.mjs');
+  const guard = pathToFileURL(resolve(directory, 'scripts/lib/assertion-safety.mjs')).href;
   const node = (...parameters) => ({ command: process.execPath, args: [heap, '--import', guard, ...parameters] });
   const checker = node(resolve(directory, 'scripts/check-dom-assertions.mjs'));
   const tests = (...parameters) => node('--test', '--test-concurrency=1', '--test-timeout=60000', ...parameters);

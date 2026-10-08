@@ -3,7 +3,6 @@ import legacyAssert from 'node:assert';
 import { createRequire } from 'node:module';
 import { inspect } from 'node:util';
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import './lib/assertion-safety.mjs';
 import { checkDomAssertions } from './lib/dom-assertion-check.mjs';
@@ -37,7 +36,7 @@ test('Assert instances cannot opt into an unguarded full diff', () => {
 });
 
 test('the actual Node preload blocks unsafe failure without invoking custom inspection', () => {
-  const guard = fileURLToPath(new URL('./lib/assertion-safety.mjs', import.meta.url));
+  const guard = new URL('./lib/assertion-safety.mjs', import.meta.url).href;
   const code = `const assert = require('node:assert/strict');
     const inspect = require('node:util').inspect;
     const node = { nodeType: 1, nodeName: 'BUTTON', [inspect.custom]() { throw Error('INSPECT_CALLED'); } };
