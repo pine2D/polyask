@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.15.1] - 2026-10-08
+
+验收范围：Linux/WSL 下通过 1,356 项应用与界面测试、417 项运行时测试，以及 96 种外壳布局和三语原生交互检查。四个真实本地网页视图的八组明暗主题、密度与缩放测试录到连续开合中间帧，输入区未覆盖网页；每个网页整个开合只调整两次尺寸。ChatGPT、Claude、Gemini 使用生产适配器完成真实页面快→思→快复验，本轮未发送提问。
+
+验收限制：Windows/macOS 原生交互、五种发行包的原生安装、物理输入法与读屏、九站实网满载流畅度、真实 Drive 双设备同步及 Google Cloud 指标未在本轮核验。原生网页布局仍在开合边界调整，不保证整个网页网格连续插值；网页模型菜单也可能因账号灰度而不同。
+
 ### 修复
 
 - 提问框聚焦改为无描边浅底、局部柔光与四周淡阴影，明暗主题分别调整；键盘定位保留短底线，强制颜色模式使用系统焦点提示。
@@ -1141,7 +1147,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.15.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.15.1...HEAD
+[1.15.1]: https://github.com/pine2D/polyask/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/pine2D/polyask/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/pine2D/polyask/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/pine2D/polyask/compare/v1.12.0...v1.13.0
