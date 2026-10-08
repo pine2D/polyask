@@ -77,12 +77,36 @@ test("packaged desktop builds ignore developer OAuth environment variables", asy
   assert.match(source, /environment:\s*app\.isPackaged\s*\?\s*undefined\s*:\s*process\.env/);
 });
 
-test("the loopback page reports receipt without claiming Drive is connected", () => {
-  assert.match(OAUTH_CALLBACK_HTML, /Authorization received/);
-  assert.match(OAUTH_CALLBACK_HTML, /已收到授权/);
-  assert.match(OAUTH_CALLBACK_HTML, /已收到授權/);
+test("the default callback reports receipt without claiming Drive is connected", () => {
+  assert.match(OAUTH_CALLBACK_HTML, /Google Drive authorization received/i);
   assert.match(OAUTH_CALLBACK_HTML, /return to PolyAsk to see the result/i);
   assert.doesNotMatch(OAUTH_CALLBACK_HTML, /successfully connected/i);
+});
+
+test("the callback uses one app locale and distinguishes denial without exposing callback values", async () => {
+  for (const [locale, lang, receipt, denial] of [
+    ["en-GB", "en", "Google Drive authorization received", "Authorization not completed"],
+    ["zh-CN", "zh-CN", "已收到 Google Drive 授权", "未完成授权"],
+    ["zh-HK", "zh-TW", "已收到 Google Drive 授權", "尚未完成授權"]
+  ]) {
+    for (const denied of [false, true]) {
+      const receiver = await listenLoopback(locale);
+      try {
+        receiver.expect("private-state");
+        const response = await fetch(`http://127.0.0.1:${receiver.port}/?state=private-state&${denied ? 'error=private-denial' : 'code=private-code'}`);
+        const html = await response.text();
+        assert.equal(response.status, 200);
+        assert.match(html, new RegExp(`<html lang="${lang}">`));
+        assert.equal(html.includes(denied ? denial : receipt), true);
+        assert.equal(html.includes(denied ? receipt : denial), false);
+        assert.doesNotMatch(html, /private-state|private-code|private-denial|<script|https?:\/\//);
+        assert.match(html, /name="viewport"/);
+        assert.match(html, /prefers-color-scheme: dark/);
+        assert.equal(response.headers.get("cache-control"), "no-store");
+        assert.equal((await receiver.receive).error, denied ? "private-denial" : undefined);
+      } finally { await receiver.close(); }
+    }
+  }
 });
 
 test("the loopback receiver rejects a mismatched state before resolving, so the real callback still wins", async () => {

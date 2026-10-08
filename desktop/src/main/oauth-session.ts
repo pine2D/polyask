@@ -9,6 +9,7 @@ import {
 import type { TokenStore } from "./token-store";
 
 interface OAuthSessionOptions {
+  readonly locale?: string;
   readonly credentials: OAuthClientCredentials | null;
   readonly scope: string;
   readonly tokenStore: TokenStore;
@@ -41,6 +42,7 @@ export class OAuthSession implements AccessTokenProvider {
     const token = await (this.options.authorize ?? authorizeWithPkce)({
       ...credentials,
       scope: this.options.scope,
+      locale: this.options.locale,
       openExternal: this.options.openExternal,
       fetch: this.options.fetch
     });

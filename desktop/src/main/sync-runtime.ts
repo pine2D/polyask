@@ -38,6 +38,7 @@ export async function createSyncRuntime(options: SyncRuntimeOptions): Promise<Sy
     decrypt: async (value) => (await safeStorage.decryptStringAsync(value)).result
   });
   const oauth = new OAuthSession({
+    locale: app.getLocale(),
     credentials,
     scope: "https://www.googleapis.com/auth/drive.appdata",
     tokenStore,

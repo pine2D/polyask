@@ -195,6 +195,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - **允许 0–9 个任意站点组合**，别假设用户总选 9 个。选择变化、切分组不得销毁仍被选择的站点视图；「新建会话」会丢站点页面里的未保存内容，执行前必须确认。
 - **已选站点的数组顺序就是排列与分页顺序**：`workspace.selectedSites`、分组的 `sites` 及 Drive 分组的 `hosts` 均保留输入顺序，不再按站点表重排。选择面板先列已选项，拖动手柄提交一次最终顺序，也可用上下移按钮或聚焦手柄后按 ↑/↓；取消勾选保留其余顺序，重新勾选追加末尾，范围预设保留仍在范围内的顺序。主进程沿数组顺序创建新视图，页面仍并行加载；已有页面排序不重建、不重载。聚焦模式保留切主站的槽位交换，选择未变化时不重置槽位顺序。
 - **本地数据层不引原生第三方依赖**（用 Electron 自带的 `node:sqlite`），降低三平台打包差异；OAuth refresh token 只经 `safeStorage` 持久化，Linux 后端不可用时只留进程内令牌并明确说明重启后需重新连接。
+- OAuth 回环收到匹配 state 的授权响应后，返回本地生成的单语明暗卡片，语言经 `resolveLocale(app.getLocale())` 选择；收到授权与拒绝分开呈现。只报告授权响应已收到，令牌交换、保存与 Drive 验证仍由应用完成；页面不展示回调参数，不加载外部资源，不引入唤回协议。
 - **不以技术绕过登录限制**：不改 User-Agent、不关 `webSecurity`、不复制浏览器 Cookie、不注入凭据。浏览器能登录而应用不能时，按嵌入式环境兼容问题保留诊断证据，不宣称已修复。
 - **生产包不留远程调试开关**，测试不依赖对外开放的调试端口；稳定性观测走 `app.getAppMetrics()` 周期采样加 `render-process-gone` / `unresponsive` / 加载失败事件（`main/runtime-gates.ts`，由环境变量 `POLYASK_SOAK_REPORT` / `POLYASK_DIAGNOSTICS_FILE` 一次性开启）。
 - **可访问性是功能要求不是装饰**：键盘焦点、读屏播报、高对比度、reduced motion、中文输入法合成态，与布局同级。仅用键盘要能完成群发、取消、回到提问框、换主站、换站点页与重载。

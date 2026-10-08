@@ -1,6 +1,7 @@
 import { createHash, randomBytes as nodeRandomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
+import { renderOAuthCallbackPage } from './oauth-callback-page';
 
 export type RandomBytes = (size: number) => Buffer;
 
@@ -40,10 +41,7 @@ const CLIENT_SECRET = /^[A-Za-z0-9._~-]{8,256}$/;
 const encode = (value: Buffer) => value.toString("base64url");
 const NETWORK_TIMEOUT_MS = 30_000;
 
-export const OAUTH_CALLBACK_HTML = `<!doctype html><meta charset="utf-8"><title>PolyAsk</title>
-<p>Authorization received. PolyAsk is verifying the connection; return to PolyAsk to see the result.</p>
-<p lang="zh-CN">已收到授权。PolyAsk 正在验证连接，请返回应用查看结果。</p>
-<p lang="zh-TW">已收到授權。PolyAsk 正在驗證連線，請返回應用程式查看結果。</p>`;
+export const OAUTH_CALLBACK_HTML = renderOAuthCallbackPage();
 
 export async function buildAuthorizationRequest(input: BuildAuthorizationInput): Promise<AuthorizationRequest> {
   if (!CLIENT_ID.test(input.clientId) || !Number.isInteger(input.port) || input.port < 1 || input.port > 65_535) {
@@ -100,7 +98,7 @@ interface LoopbackReceiver {
   close(): Promise<void>;
 }
 
-export async function listenLoopback(): Promise<LoopbackReceiver> {
+export async function listenLoopback(locale = 'en'): Promise<LoopbackReceiver> {
   let resolve!: (value: { code?: string; state?: string; error?: string }) => void;
   const receive = new Promise<{ code?: string; state?: string; error?: string }>((done) => { resolve = done; });
   let expectedState: string | undefined;
@@ -112,7 +110,7 @@ export async function listenLoopback(): Promise<LoopbackReceiver> {
     if (!code && !error) { response.writeHead(404).end(); return; }
     if (expectedState !== undefined && state !== expectedState) { response.writeHead(404).end(); return; }
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", Connection: "close" });
-    response.end(OAUTH_CALLBACK_HTML);
+    response.end(renderOAuthCallbackPage(locale, !!error));
     resolve({ code, state, error });
   });
   await new Promise<void>((resolveReady, reject) => {
@@ -130,6 +128,7 @@ export async function listenLoopback(): Promise<LoopbackReceiver> {
 }
 
 interface AuthorizeInput {
+  readonly locale?: string;
   readonly clientId: string;
   readonly clientSecret: string;
   readonly scope: string;
@@ -141,7 +140,7 @@ interface AuthorizeInput {
 }
 
 export async function authorizeWithPkce(input: AuthorizeInput): Promise<TokenSet> {
-  const receiver = await (input.listen ?? listenLoopback)();
+  const receiver = await (input.listen ? input.listen() : listenLoopback(input.locale));
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     const request = await buildAuthorizationRequest({ clientId: input.clientId, port: receiver.port, scope: input.scope });

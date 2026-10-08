@@ -140,6 +140,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 | --- | --- |
 | `desktop/src/shared/copy.ts` | 主表。`en` / `zhCN` / `zhTW` 三档，外壳通用词条直接写在这里，并把下面各分表 `...` 展开合并 |
 | `desktop/src/shared/*-copy.ts` 分表 | 按领域拆的词条：archive / backup / command / data-admin / decision / library / productivity / prompt-library / sync / synthesis / task-folder / workspace，各自导出 `{ en, zhCN, zhTW }` 供主表合并 |
+| `desktop/src/main/oauth-callback-page.ts` | 系统浏览器中的本地 OAuth 回调卡片：三语经同一 locale 解析器选择，收到与拒绝均不宣称 Drive 已连接 |
 
 `desktop/src/shared/status-copy.ts` **不是**第三张词条表，它是 `SiteCode → keyof DesktopCopy` 的映射（`STATUS_COPY_KEY`），把机器码翻译成主表里的某个键。 选择与提交证据的附加说明也在这里组合，使用 `copy.ts` 的 `selection*` / `submissionMessage` / `submissionComposer` 三语键；保持“页面本轮消息已出现”与“仅输入框变化”的确认程度，不写成服务端已接收。
 
