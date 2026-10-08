@@ -1,4 +1,5 @@
 @import "./composer.css";
+@import "./panel-motion.css";
 @import "./theme.css";
 @import "./backup.css";
 @import "./workspace.css";
@@ -454,11 +455,6 @@ kbd { opacity: .7; font: 10px system-ui; }
 .prompt-variable-editor button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .prompt-variable-editor button:disabled { opacity: .42; }
 
-/* 原生站点 bounds 同步切换；外壳只做短淡入，避免双层位移与大片扫屏。 */
-@starting-style {
-  .workspace-drawer[data-state="open"], .image-tray, .question-history, .surface-stage { opacity: 0; transform: none; }
-}
-.image-tray, .question-history { transition: opacity 160ms var(--ease-out); }
 @media (prefers-reduced-motion: reduce) {
   .workspace-drawer, .image-tray, .question-history, .surface-stage { transition: none; }
 }

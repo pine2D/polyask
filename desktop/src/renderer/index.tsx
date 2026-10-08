@@ -53,14 +53,13 @@ import { WorkspaceProgress } from './workspace-progress';
 import { resetLocalSession } from "./local-data-reset";
 import { useTemplateDeletion } from "./use-template-deletion";
 import { usePromptDraft } from "./use-prompt-draft";
-import { useComposerSession } from "./use-composer-session";
+import { useWorkspaceMotion } from "./use-workspace-motion";
 import { FeedbackProvider } from "./feedback-provider";
 import { broadcastFeedback } from "./broadcast-feedback";
 import { archiveCollectionActions } from "./archive-collection-actions";
 import { useBroadcastRetryReview } from "./use-broadcast-retry-review";
 import { inspectBroadcastSite } from "./broadcast-site-inspection";
 import { useFeedback } from "./use-feedback";
-import { usePresence } from "./presence";
 import { SiteFrames } from "./site-frames";
 import { SettingsWorkspace } from "./settings-workspace";
 import { nextSiteForStatus } from "./site-navigation";
@@ -146,7 +145,7 @@ function App(): React.JSX.Element {
   const [libraryBlocking, setLibraryBlocking] = useState(false);
   const blockLibrary = useCallback((value: boolean) => { if (value) commandActions.current = {}; setLibraryBlocking(value); }, []);
   const [questionHistoryBlocking, setQuestionHistoryBlocking] = useState(false);
-  const closeQuestionHistory = (): void => { setQuestionReadRequest(null); setQuestionHistoryOpen(false); shell.setSurface("sites"); };
+  const closeQuestionHistory = (): void => { setQuestionReadRequest(null); setQuestionHistoryOpen(false); };
   const archiveNavigation = useArchiveNavigation();
   const [settingsBlocking, setSettingsBlocking] = useState(false);
   const blockSettings = useCallback((value: boolean) => { if (value) commandActions.current = {}; setSettingsBlocking(value); }, []);
@@ -164,7 +163,6 @@ function App(): React.JSX.Element {
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
   const drawerOpen = panelState !== null;
   if (panelState) lastOpenPanel.current = panelState;
-  const drawerPresent = usePresence(drawerOpen, 160);
   const workspaceFlow = useWorkspaceFlow(sites, copy.workspaceActionFailed, setAnnouncement);
   const { workspace, selected } = workspaceFlow;
   const changePanelState = (value: WorkspacePanelState): void => {
@@ -291,9 +289,8 @@ function App(): React.JSX.Element {
     };
   }, [copy]);
 
-  const composer = useComposerSession(surface), composerExpanded = composer.expanded;
-  useEffect(() => shell.setDrawerOpen(drawerPresent || imageTrayOpen), [drawerPresent, imageTrayOpen]);
-  useEffect(() => shell.setComposerExpanded(composerExpanded), [composerExpanded]);
+  const { composer, drawerPresent } = useWorkspaceMotion(surface, drawerOpen, lastOpenPanel.current.inputMethod, imageSelection.present, { layout, density: display.value.density, covered: surface === 'confirmation' });
+  const composerExpanded = composer.expanded;
   useEffect(() => {
     saveCompletionNotifications(window.localStorage, completionNotifications);
     shell.setCompletionNotifications(completionNotifications);
@@ -561,7 +558,7 @@ function App(): React.JSX.Element {
   }
 
   return (
-    <main className={`app-shell${composerExpanded ? " is-composer-expanded" : ""}${drawerOpen ? " has-drawer" : ""}`}>
+    <main className={`app-shell${composer.reservedExpanded ? " is-composer-expanded" : ""}${drawerOpen ? " has-drawer" : ""}`}>
       <CommandBar
         copy={copy}
         promptRef={promptRef}
@@ -584,6 +581,7 @@ function App(): React.JSX.Element {
             copy={copy}
             images={images}
             open={imageTrayOpen}
+            present={imageSelection.present}
             disabled={runState !== "idle" || auxiliaryBusy}
             warning={imageWarning}
             warningCount={unsupportedSites.length}
@@ -605,6 +603,8 @@ function App(): React.JSX.Element {
         syncStatus={syncStatus}
         isMac={isMac}
         expanded={composerExpanded}
+        reservedExpanded={composer.reservedExpanded}
+        revealedExpanded={composer.revealedExpanded}
         draftRevision={draftRevision.current} onTextChange={setText}
         onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
         onSubmit={() => void submit()}
@@ -673,7 +673,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <QuestionHistory openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      <QuestionHistory active={surface === 'sites'} openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
       {retryReview.review}
       {pageClose.dialog}
       {pendingNewSession && (

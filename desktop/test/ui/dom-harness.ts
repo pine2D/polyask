@@ -5,6 +5,8 @@ export async function mountDom(element: ReactNode) {
   const { JSDOM } = require('jsdom');
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'https://polyask.test/' });
   dom.window.HTMLElement.prototype.scrollIntoView ??= () => undefined;
+  dom.window.matchMedia ??= (query: string) => ({ media: query, matches: false, onchange: null,
+    addEventListener() {}, removeEventListener() {}, addListener() {}, removeListener() {}, dispatchEvent: () => true });
   const descriptors = new Map<string, PropertyDescriptor | undefined>();
   const browserGlobals = ['window', 'document', 'HTMLElement', 'Element', 'Node', 'MutationObserver',
     'KeyboardEvent', 'Event', 'File', 'FileReader', 'navigator'] as const;

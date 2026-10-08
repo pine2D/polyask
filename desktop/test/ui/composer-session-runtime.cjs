@@ -19,12 +19,14 @@ app.whenReady().then(async () => {
   };
   const paint = () => run('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
   const click = async selector => {
-    const point = await run(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}})()`);
+    // During a reversal the textarea retains its final size, clipped by the animated wrapper.
+    const point = await run(`(()=>{const e=document.querySelector(${JSON.stringify(selector)}),r=(e.matches('textarea')?e.parentElement:e).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}})()`);
     assert.equal(point.width >= 24 && point.height >= 24, true, 'native target has a usable size');
-    win.focus(); await wait('document.hasFocus()');
+    win.focus(); win.webContents.focus(); await wait('document.hasFocus()');
     const zoom = win.webContents.getZoomFactor();
     for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, button: 'left', clickCount: 1, x: Math.round(point.x * zoom), y: Math.round(point.y * zoom) });
     await paint();
+    if (selector === 'textarea') assert.equal(await run('document.activeElement===document.querySelector("textarea")'), true, 'trusted click hits the visible editor during motion');
   };
   const position = () => run('(()=>{const e=document.querySelector("textarea");return {start:e.selectionStart,end:e.selectionEnd,direction:e.selectionDirection,scroll:e.scrollTop,value:e.value}})()');
   const reports = [];
@@ -36,13 +38,15 @@ app.whenReady().then(async () => {
     await click('textarea');
     const draft = 'Long question / 长问题 / 長問題\n'.repeat(40);
     await win.webContents.insertText(draft);
-    await wait('document.querySelector("textarea").value.length>500');
+    // Set up the synthetic selection only after the controlled input commit and entry settle.
+    await wait(`document.querySelector("#composer-inputs").textContent!=="0"&&document.querySelector("textarea").value.length>500&&Math.abs(document.querySelector(".prompt-composer").getBoundingClientRect().height-${density === 'compact' ? 112 : 136})<1`);
+    await paint();
     // Explicit fixture setup of selection and scroll; subsequent actions use trusted native pointer/keys.
     await run('(()=>{const e=document.querySelector("textarea");e.setSelectionRange(17,43,"backward");e.scrollTop=190})()');
     const before = await position();
     for (const selector of ['[data-tier-icon="fast"]', '[data-tier-icon="think"]', '[name="attachment-control"]']) {
       await click(selector);
-      assert.deepEqual(await position(), before, 'editing context survives trusted action');
+      assert.deepEqual(await position(), before, `editing context survives trusted action: ${selector}`);
       assert.equal(await run('document.querySelector(".command-bar").classList.contains("is-expanded")'), true);
     }
     assert.equal(await run('JSON.parse(document.querySelector("#composer-transitions").textContent).includes(false)'), false);

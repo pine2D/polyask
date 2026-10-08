@@ -3,6 +3,7 @@ import type { DesktopCopy } from "../shared/copy";
 import { ChevronDownIcon } from "./icons";
 import { commandHint } from "./command-hint";
 import { commandKeyAction } from "./keyboard";
+import { useFocusMethod } from "./use-focus-method";
 
 interface ComposerSnapshot {
   readonly revision: string | number;
@@ -17,6 +18,7 @@ interface PromptComposerProps {
   readonly text: string;
   readonly revision?: number;
   readonly expanded: boolean;
+  readonly revealedExpanded?: boolean;
   readonly busy: boolean;
   readonly isMac: boolean;
   readonly onTextChange: (value: string) => void;
@@ -28,6 +30,7 @@ interface PromptComposerProps {
 /** 原生文件框、档位与附件只移焦点；展开由明确动作和表面会话控制。 */
 export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
   const id = useId();
+  const focusMethod = useFocusMethod();
   const saved = useRef<ComposerSnapshot | null>(null);
   const pending = useRef<ComposerSnapshot | null>(null);
   const revision = props.revision ?? props.text;
@@ -41,7 +44,7 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
     const area = props.promptRef.current;
     if (snapshot?.revision === revision && area && document.activeElement === area) restore(snapshot, area);
   });
-  return <div className="prompt-composer priority-p0">
+  return <div className="prompt-composer priority-p0" data-expanded={props.revealedExpanded ?? props.expanded} data-focus-method={focusMethod}>
     <textarea id={id} name="prompt" autoComplete="off" ref={props.promptRef} rows={1}
       value={props.text} onChange={event => props.onTextChange(event.target.value)}
       onPaste={event => {

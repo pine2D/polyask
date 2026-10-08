@@ -11,6 +11,7 @@ import { ConfirmDialog } from '../../src/renderer/confirm-dialog';
 import { FeedbackProvider } from '../../src/renderer/feedback-provider';
 import { currentPlatform, type DesktopPlatform } from '../../src/renderer/platform';
 import { usePresence } from '../../src/renderer/presence';
+import { useComposerSession } from '../../src/renderer/use-composer-session';
 import { useSiteParticipation } from '../../src/renderer/use-site-participation';
 import { useSitePageClose } from '../../src/renderer/use-site-page-close';
 import { setShellApi } from '../../src/renderer/shell-api';
@@ -85,7 +86,7 @@ function Fixture(): React.JSX.Element {
   const promptRef = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState('比较不同方案的依据、风险与适用条件。 / Compare evidence, risks, and trade-offs.');
   const [tier, setTier] = useState<Tier>('think');
-  const [expanded, setExpanded] = useState(false);
+  const { expanded, reservedExpanded, setExpanded } = useComposerSession('sites');
   const [layout, setLayout] = useState<'overview' | 'focus'>('overview');
   const [page, setPage] = useState(0);
   const [inputMethod, setInputMethod] = useState<'keyboard' | 'pointer'>('keyboard');
@@ -105,14 +106,14 @@ function Fixture(): React.JSX.Element {
   if (query.get('surface') === 'settings') return <SettingsWorkspace copy={copy} locale={locale}
     status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={() => { document.body.dataset.settingsClosed = 'true'; }}
     onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications} />;
-  return <div className={`app-shell${expanded ? ' is-composer-expanded' : ''}`} data-sent={sent} data-opened={selected.join(',')} data-participating={participation.participating.join(',')}>
+  return <div className={`app-shell${reservedExpanded ? ' is-composer-expanded' : ''}`} data-sent={sent} data-opened={selected.join(',')} data-participating={participation.participating.join(',')}>
     <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
       layoutMode={layout} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0}
       scopeLabel={copy.allSites} healthAttention={0} panelTab={panel?.tab ?? null}
       pageControl={<PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}
       imageControl={<ImagePicker copy={copy} images={query.has('details') ? images : stress ? previewImages.slice(0, 1) : []} open={imagesOpen} disabled={false} warning={null} warningCount={0}
         error={null} onOpenChange={open => { setImagesOpen(open); if (open) setPanel(null); }} onFiles={noop} onRemove={index => setImages(current => current.filter((_, i) => i !== index))} onAdjustScope={noop} />}
-      sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded}
+      sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded} reservedExpanded={reservedExpanded}
       onTextChange={setText} onSubmit={() => setSent(true)} onCompare={query.has('blocked') ? undefined : noop} onRetry={noop} onCancel={noop}
       onTierChange={setTier} onLayoutChange={setLayout} onExpandedChange={setExpanded}
       onPanelChange={tab => setPanel(tab ? { tab, detail: null, inputMethod: 'keyboard' } : null)}

@@ -111,7 +111,13 @@ async function run() {
     }
     else if (scenario === 'slow-detail') { await tick(); await tick(); }
     delay = false; pending.shift()!(); await pause();
-    if (scenario === 'close') check(!document.querySelector('.question-history'), 'late detail cannot reopen closed history');
+    if (scenario === 'close') {
+      const closing = document.querySelector('.question-history');
+      check(!closing || closing.getAttribute('data-state') === 'closed' && closing.hasAttribute('inert'), 'late detail cannot reactivate exiting history');
+      const deadline = Date.now() + 1000;
+      while (document.querySelector('.question-history') && Date.now() < deadline) await pause();
+      check(!document.querySelector('.question-history'), 'late detail cannot reopen closed history');
+    }
     else if (scenario === 'switch') check(document.querySelector('.question-reader h2')?.textContent === 'Question 1', 'old detail must not replace the new selection');
     else if (scenario === 'delete') check(!document.querySelector('.question-reader') && !document.querySelector('[data-question-id="q0"]'), 'late detail must not restore a deleted question');
     else if (scenario === 'slow-detail') check(pending.length === 0, 'detail polling must not replace an in-flight read');

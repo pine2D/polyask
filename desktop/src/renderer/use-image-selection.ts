@@ -3,6 +3,8 @@ import { useRef, useState } from "react";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import { validateImageFiles, type DesktopImage, type ImageInputError } from "../shared/images";
 import { readDesktopImages } from "./image-picker";
+import { usePresence } from "./presence";
+import { PANEL_EXIT_MS } from "./motion";
 
 function errorCopy(copy: DesktopCopy, code: ImageInputError): string {
   return {
@@ -26,6 +28,7 @@ export function useImageSelection(
   readonly images: readonly DesktopImage[];
   readonly error: string | null;
   readonly open: boolean;
+  readonly present: boolean;
   readonly setOpen: (value: boolean) => void;
   readonly choose: (files: readonly File[], mode?: "append" | "replace") => Promise<void>;
   readonly remove: (index: number) => void;
@@ -38,6 +41,7 @@ export function useImageSelection(
   const [images, setImages] = useState<readonly DesktopImage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const present = usePresence(open && images.length > 0, PANEL_EXIT_MS);
   const choose = async (files: readonly File[], mode: "append" | "replace" = "replace") => {
     const blocked = imageSelectionBlockedMessage(copy, idle);
     if (blocked) { announce(blocked); return; }
@@ -79,5 +83,5 @@ export function useImageSelection(
     setOpen(false);
   };
   const clear = () => { invalidateAndClose(); currentImages.current = []; setImages([]); setError(null); };
-  return { images, error, open, setOpen, choose, remove, clear, invalidateAndClose };
+  return { images, error, open, present, setOpen, choose, remove, clear, invalidateAndClose };
 }

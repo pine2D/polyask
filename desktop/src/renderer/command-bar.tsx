@@ -37,6 +37,8 @@ interface CommandBarProps {
   readonly syncStatus: SyncStatus;
   readonly isMac: boolean;
   readonly expanded: boolean;
+  readonly reservedExpanded?: boolean;
+  readonly revealedExpanded?: boolean;
   readonly onTextChange: (value: string) => void;
   readonly onOpenHistory?: () => void;
   readonly historyOpen?: boolean;
@@ -62,7 +64,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
   const healthOpen = props.panelTab === "health";
 
   return (
-    <header className={`command-bar${props.pageControl ? " has-pages" : ""}${props.expanded ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
+    <header className={`command-bar${props.pageControl ? " has-pages" : ""}${(props.reservedExpanded ?? props.expanded) ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
       <div className="workspace-entry priority-p0">
         <div className="scope-split">
           <button type="button" className="scope-main" data-hint={workbenchOpen ? props.copy.closeWorkbench : commandHint(props.scopeLabel, "open-sites", props.isMac)} aria-label={workbenchOpen ? props.copy.closeWorkbench : props.scopeLabel} aria-expanded={workbenchOpen} aria-controls="workspace-panel" onClick={() => props.onPanelChange(workbenchOpen ? null : "sites")}>
@@ -79,7 +81,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       </div>
       {props.pageControl}
       <PromptComposer copy={props.copy} promptRef={props.promptRef} text={props.text} revision={props.draftRevision}
-        expanded={props.expanded} busy={busy} isMac={props.isMac} onTextChange={props.onTextChange}
+        expanded={props.expanded} revealedExpanded={props.revealedExpanded} busy={busy} isMac={props.isMac} onTextChange={props.onTextChange}
         onExpandedChange={props.onExpandedChange} onSubmit={props.onSubmit} onPasteImages={props.onPasteImages} />
       <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
         <HistoryIcon />

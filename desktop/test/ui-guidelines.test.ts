@@ -61,7 +61,8 @@ test("main-menu page changes are announced while renderer-requested changes stay
 test("workspace drawers retain a closing state long enough for interruptible transitions", () => {
   const app = renderer("index.tsx");
   const drawer = renderer("workspace-drawer.tsx");
-  assert.match(app, /usePresence\(drawerOpen/);
+  assert.match(app, /useWorkspaceMotion\(/);
+  assert.match(renderer("use-workspace-motion.ts"), /usePresence\(drawerOpen/);
   assert.match(drawer, /data-state=\{props\.open \? "open" : "closed"\}/);
 });
 

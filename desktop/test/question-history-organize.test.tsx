@@ -117,14 +117,19 @@ test('changed copies require a source refresh and explicit review before retryin
 });
 
 test('departed history or new surface suppresses late creation navigation without undoing writes', async () => {
-  for (const departure of ['back', 'closed', 'busy'] as const) {
+  for (const departure of ['back', 'closed', 'reopened', 'inactive', 'busy'] as const) {
     const pending = deferred<ArchiveRecord>(); const opened: string[] = [];
     const h = await historyMount({ createQuestionArchive: () => pending.promise },
       { onArchiveCreated: (value: ArchiveRecord) => opened.push(value.id) });
     try {
       await open(h); await organize(h); await h.click(action(h, 'read'));
       if (departure === 'back') await h.click(h.button(copy.questionBack));
-      else await h.rerender(departure === 'closed' ? { open: false } : { busy: true });
+      else if (departure === 'inactive') await h.rerender({ active: false });
+      else if (departure === 'busy') await h.rerender({ busy: true });
+      else {
+        await h.rerender({ open: false });
+        if (departure === 'reopened') await h.rerender({ open: true });
+      }
       await act(async () => pending.resolve(record));
       assert.deepEqual(opened, [], `${departure} must invalidate old navigation intent`);
     } finally { await h.close(); }

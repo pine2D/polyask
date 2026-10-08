@@ -13,6 +13,7 @@ interface ImagePickerProps {
   readonly copy: DesktopCopy;
   readonly images: readonly DesktopImage[];
   readonly open: boolean;
+  readonly present?: boolean;
   readonly disabled: boolean;
   readonly warning: string | null;
   readonly warningCount: number;
@@ -111,8 +112,9 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
         {props.warning || props.error ? <span className="image-attention-dot" aria-hidden="true" /> : null}
       </button>
       {props.warning || props.error ? <span className="sr-only" role="alert">{props.error ?? props.warning}</span> : null}
-      {trayOpen ? (
-        <div ref={trayRef} id="image-tray" className="image-tray" role="region" aria-label={manageLabel}>
+      {(props.present ?? trayOpen) ? (
+        <div ref={trayRef} id="image-tray" className="image-tray" data-state={trayOpen ? "open" : "closed"}
+          inert={!trayOpen} aria-hidden={trayOpen ? undefined : true} role="region" aria-label={manageLabel}>
           <div className="image-tray-heading">
             <span>{manageLabel}</span>
             <button type="button" className="image-replace" disabled={props.disabled} onClick={choose}><ReplaceImagesIcon /><span>{props.copy.replaceImages}</span></button>

@@ -20,10 +20,13 @@ import './question-history.css';
 import { refreshQuestionPages } from './question-history-refresh';
 import { focusableControls } from './focusable-controls';
 import { guideComparisonChoices, type QuestionReadingRequest } from './question-reading-request';
+import { usePresence } from './presence';
+import { PANEL_EXIT_MS } from './motion';
 
 type Confirmation = { title: string; message: string; label: string; run: () => void };
-export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0, busy, onOpen, onClose, onDraft, onBlockingChange, onArchiveCreated, openRequest, onReadAccepted, onReadingCancelled, locale = navigator.language }: {
+export function QuestionHistory({ open, active = true, copy, sites, draft, draftImageCount = 0, busy, onOpen, onClose, onDraft, onBlockingChange, onArchiveCreated, openRequest, onReadAccepted, onReadingCancelled, locale = navigator.language }: {
   open: boolean; copy: DesktopCopy; sites: readonly SiteDefinition[]; draft: string; draftImageCount?: number; busy: boolean;
+  active?: boolean;
   onBlockingChange: (value: boolean) => void;
   onOpen: () => void; onClose: () => void; onDraft: (text: string) => void;
   onArchiveCreated?: (record: ArchiveRecord, mode: 'read' | 'compare', selection: { questionId: string; answerIds: readonly string[] }) => void; locale?: string;
@@ -32,6 +35,7 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
   onReadingCancelled?: (request: number) => void;
 }): React.JSX.Element | null {
   const { announce, setUndoAction } = useGlobalFeedback();
+  const present = usePresence(open, PANEL_EXIT_MS, active);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState<QuestionPage>({ items: [], cursor: null });
   const [loading, setLoading] = useState(false);
@@ -54,7 +58,7 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
   const anchor = useRef<{ id: string; top: number } | null>(null);
   const leaveDetail = useCallback(() => { detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; setOrganizing(null); setGuideChoices([]); setDetail(null); setDetailView(null); }, []);
   const back = () => { if (openRequest?.source === 'guide') onReadingCancelled?.(openRequest.request); leaveDetail(); };
-  const close = () => { leaveDetail(); sequence.current++; listPending.current = 0; closeRef.current(); };
+  const close = () => { sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; closeRef.current(); };
   useLayoutEffect(() => {
     const saved = anchor.current; anchor.current = null;
     if (!saved || !scroll.current) return;
@@ -63,9 +67,12 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
   }, [page]);
   const panel = useRef<HTMLElement>(null), opener = useRef<HTMLElement | null>(null);
   const full = narrow || !!detailView || !!confirmation || restoring;
+  const lastFull = useRef(full); if (open) lastFull.current = full;
+  const renderedFull = open ? full : lastFull.current;
+  const covered = useRef(false);
   const disabled = busy || restoring;
-  useEffect(() => { onBlockingChange(!!confirmation || restoring || !!organizing); return () => onBlockingChange(false); }, [confirmation, restoring, organizing, onBlockingChange]);
-  useEffect(() => { if (busy) { archiveEpoch.current++; setOrganizing(null); } }, [busy]);
+  useEffect(() => { onBlockingChange(open && (!!confirmation || restoring || !!organizing)); return () => onBlockingChange(false); }, [open, confirmation, restoring, organizing, onBlockingChange]);
+  useEffect(() => { if (busy || !open || !active) { archiveEpoch.current++; setOrganizing(null); } }, [busy, open, active]);
   const closeRef = useRef(onClose); closeRef.current = onClose;
   useEffect(() => shell.onQuestionSaveFailed(() => announce(copy.questionSaveFailed)), [copy, announce]);
   useEffect(() => {
@@ -79,12 +86,17 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
     return () => { sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; (document.querySelector<HTMLButtonElement>(".question-trigger") ?? opener.current)?.focus(); };
   }, [open]);
   useEffect(() => {
-    const surface = questionHistorySurface(open, full);
-    if (!surface) { leaveDetail(); setConfirmation(null); return; }
-    void shell.setQuestionPanel(!full).catch(() => announce(copy.questionFailed));
+    const surface = questionHistorySurface(present, renderedFull);
+    if (!surface) {
+      leaveDetail(); setConfirmation(null);
+      if (covered.current) { covered.current = false; if (active) shell.setSurface('sites'); }
+      return;
+    }
+    covered.current = true;
+    void shell.setQuestionPanel(!renderedFull).catch(() => announce(copy.questionFailed));
     shell.setSurface(surface);
     return () => { void shell.setQuestionPanel(false).catch(() => {}); };
-  }, [open, full, copy, announce]);
+  }, [present, renderedFull, active, copy, announce]);
   useEffect(() => {
     if (!open || confirmation || organizing) return;
     const key = (e: KeyboardEvent) => {
@@ -250,8 +262,9 @@ export function QuestionHistory({ open, copy, sites, draft, draftImageCount = 0,
     } catch { if (request === detailSequence.current) setError(copy.questionFailed); }
     finally { if (detailPending.current === request) detailPending.current = 0; }
   };
-  if (!open) return null;
-  return <aside ref={panel} tabIndex={-1} className={`question-history${full ? ' is-full' : ''}`} style={{ width: full ? undefined : QUESTION_PANEL_WIDTH }} aria-label={copy.questionHistory}>
+  if (!present) return null;
+  return <aside ref={panel} tabIndex={-1} className={`question-history${renderedFull ? ' is-full' : ''}`} style={{ width: renderedFull ? undefined : QUESTION_PANEL_WIDTH }}
+    data-state={open ? 'open' : 'closed'} inert={!open} aria-hidden={open ? undefined : true} aria-label={copy.questionHistory}>
     <header className="question-header"><h1>{detailView ? copy.questionCopies : copy.questionHistory}</h1>
       {detailView && <button type="button" onClick={back}>{copy.questionBack}</button>}
       <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} onClick={close}><CloseIcon /></button>

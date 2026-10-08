@@ -1,0 +1,20 @@
+/* Native view geometry changes once at the entry/exit boundary; only DOM panels move. */
+.workspace-drawer, .image-tray { --panel-offset: -6px; }
+.question-history { --panel-offset: 6px; }
+.workspace-drawer[data-state], .image-tray[data-state], .question-history[data-state] {
+  opacity: 1; transform: translateX(0);
+  transition: opacity 180ms var(--ease-out), transform 180ms var(--ease-out);
+}
+.workspace-drawer[data-state="closed"], .image-tray[data-state="closed"], .question-history[data-state="closed"] {
+  opacity: 0; transform: translateX(var(--panel-offset)); pointer-events: none;
+  transition-duration: 140ms;
+}
+@starting-style {
+  .workspace-drawer[data-state="open"], .image-tray[data-state="open"], .question-history[data-state="open"] {
+    opacity: 0; transform: translateX(var(--panel-offset));
+  }
+}
+.workspace-drawer[data-input-method="keyboard"] { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .workspace-drawer[data-state], .image-tray[data-state], .question-history[data-state] { transition: none; transform: none; }
+}

@@ -8,7 +8,9 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   const check = (ok, message) => { if (!ok) failures.push(message); };
   const finish = () => run('document.getAnimations().forEach(animation => animation.finish())');
   const pointer = async (selector, press = true) => {
-    const point = await run(`(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}; })()`);
+    win.focus(); win.webContents.focus(); await wait('document.hasFocus()');
+    const zoom = win.webContents.getZoomFactor();
+    const point = await run(`(() => { const r = document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:Math.round((r.x+r.width/2)*${zoom}),y:Math.round((r.y+r.height/2)*${zoom})}; })()`);
     win.webContents.sendInputEvent({ type: 'mouseMove', ...point });
     if (press) win.webContents.sendInputEvent({ type: 'mouseDown', button: 'left', clickCount: 1, ...point });
     return point;
@@ -60,6 +62,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
           values: [s.borderTopLeftRadius, s.borderTopRightRadius, s.borderBottomRightRadius, s.borderBottomLeftRadius].map(parseFloat) };
       })()`);
       const outer = selector === '.scope-main' ? [0, 3] : [1, 2];
+      evidence.push({ theme, selector, corners });
       check(corners.hover && corners.values.every((value, index) => value === (outer.includes(index) ? corners.radius : 0)), `${theme}: ${selector} hover corners escape frame`);
       check(corners.overflow === 'visible', `${theme}: split frame clips keyboard focus`);
       await shot(`scope-hover-${theme}-${selector.slice(1)}`);
@@ -70,6 +73,8 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     const disabledAfter = await visualState('.compare-trigger');
     check(JSON.stringify(disabledBefore) === JSON.stringify(disabledAfter), `${theme}: unavailable action shows press feedback`);
     release(disabledPoint);
+    // Deliver the queued click (which dismisses hints) before the explicit focus action.
+    await paint();
     await run('document.querySelector(".compare-trigger").blur(); document.querySelector(".compare-trigger").focus()');
     await wait('!!document.querySelector(".feedback-bar [role=tooltip]")');
     check(await run('document.querySelector(".feedback-bar [role=tooltip]").textContent === document.querySelector(".compare-trigger").dataset.hint'), `${theme}: unavailable reason missing`);
