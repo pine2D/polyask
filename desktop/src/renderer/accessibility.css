@@ -1,3 +1,4 @@
+@import './fields.css';
 button, input, textarea, select {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;

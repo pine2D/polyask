@@ -2,7 +2,8 @@ const {app,BrowserWindow,ipcMain,nativeTheme,session}=require('electron');
 const {join}=require('node:path'),{writeFileSync}=require('node:fs'),assert=require('node:assert/strict');
 const output=process.argv[2];app.setPath('userData',join(output,'profile'));
 app.whenReady().then(async()=>{
-  for(const s of [session.defaultSession,session.fromPartition('persist:polyask-sites')]) s.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_d,cb)=>cb({cancel:true}));
+  let blocked=0;
+  for(const s of [session.defaultSession,session.fromPartition('persist:polyask-sites')]) s.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_d,cb)=>{blocked++;cb({cancel:true})});
   const win=new BrowserWindow({show:true,width:1600,height:1000,webPreferences:{preload:join(output,'preload.cjs'),sandbox:true,contextIsolation:true}});
   win.setMenuBarVisibility(false);
   const run=s=>win.webContents.executeJavaScript(s),pause=ms=>new Promise(r=>setTimeout(r,ms));
@@ -17,6 +18,8 @@ app.whenReady().then(async()=>{
     win.webContents.send('polyask:layout',layout);
   },()=>{}, {selectedSites:['claude','chatgpt','deepseek','gemini']});
   const views=win.contentView.children.filter(v=>v.webContents&&v.webContents!==win.webContents);
+  const startupEnd=Date.now()+5000;
+  while(blocked<views.length||views.some(v=>v.webContents.isLoadingMainFrame())){if(Date.now()>startupEnd)throw Error('Blocked startup loads did not settle');await pause(20)}
   for(const v of views)await v.webContents.loadURL('data:text/html,'+encodeURIComponent('<body style="margin:0;background:#f4f5f8;color:#626575;font:16px system-ui;padding:24px">本地网页视图 · 不联网<script>window.resizeCount=0;addEventListener("resize",()=>resizeCount++)</script>'));
   const trusted=e=>e.sender===win.webContents;
   ipcMain.on('polyask:set-composer-expanded',(e,v)=>{if(trusted(e))delay?setTimeout(()=>manager.setComposerExpanded(v),delay):manager.setComposerExpanded(v)});
@@ -62,8 +65,8 @@ app.whenReady().then(async()=>{
     const before=await position();
     await click('[data-tier-icon="think"]');assert.deepEqual(await position(),before,'selection and scroll survive tier action');
     await click('textarea');
-    const style=await run('(()=>{const e=document.querySelector("textarea"),s=getComputedStyle(e),p=getComputedStyle(e.parentElement);return{outline:s.outlineStyle,border:s.borderColor,shadow:p.boxShadow,method:e.parentElement.dataset.focusMethod}})()');
-    assert.equal(style.outline,'none');assert.equal(style.border,'rgba(0, 0, 0, 0)');assert.notEqual(style.shadow,'none');assert.equal(style.method,'pointer');
+    const style=await run('(()=>{const e=document.querySelector("textarea"),s=getComputedStyle(e),p=getComputedStyle(e.parentElement);return{outline:s.outlineStyle,border:s.borderColor,shadow:p.boxShadow}})()');
+    assert.equal(style.outline,'none');assert.equal(style.border,'rgba(0, 0, 0, 0)');assert.notEqual(style.shadow,'none');
     if(zoom===1){const r=await run('(()=>{const r=document.querySelector(".prompt-composer").getBoundingClientRect();return{x:Math.floor(r.x)-12,y:0,width:Math.ceil(r.width)+24,height:Math.ceil(r.bottom)+12}})()');writeFileSync(join(output,`${theme}-${density}.png`),(await win.webContents.capturePage(r)).toPNG())}
     const closing=await trace('[data-composer-toggle]');
     assert.equal(Math.abs(closing.at(-1).height-low)<1,true,'composer reaches its collapsed height');
@@ -107,9 +110,8 @@ app.whenReady().then(async()=>{
   for(const type of ['keyDown','keyUp'])win.webContents.sendInputEvent({type,keyCode:'Tab'});
   for(const type of ['keyDown','keyUp'])win.webContents.sendInputEvent({type,keyCode:'Tab',modifiers:['shift']});
   await wait('document.activeElement===document.querySelector("textarea")');
-  assert.equal(await run('document.querySelector(".prompt-composer").dataset.focusMethod'),'keyboard');
-  assert.equal(await run('getComputedStyle(document.querySelector(".prompt-composer"),"::after").height'),'3px');
+  assert.equal(await run('getComputedStyle(document.querySelector(".prompt-composer")).boxShadow.includes("inset")'),true,'keyboard focus retains the same bottom edge');
   writeFileSync(join(output,'report.json'),JSON.stringify(reports,null,2));
   console.log(`Native motion passed: ${reports.length} theme/density/zoom scenarios; delayed layout, four real views, selection, reversal, panels, reduced motion, forced colors and keyboard focus.`);
   win.destroy();app.exit(0);
-}).catch(e=>{console.error(e.message);app.exit(1)});
+}).catch(e=>{console.error(e.stack);app.exit(1)});

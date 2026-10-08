@@ -1,0 +1,42 @@
+/* 仅外壳文字输入：浅底、紧阴影和内底线；提问框由容器承载，避免双重焦点。 */
+:is(#root, .library-popover) :is(textarea:not([name="prompt"]), input:where(:not([type]),
+  [type="text"], [type="search"], [type="email"], [type="password"],
+  [type="url"], [type="tel"], [type="number"])) {
+  border: 1px solid transparent; border-radius: var(--radius-control);
+  background: var(--field); color: var(--text); outline: none;
+  box-shadow: var(--field-shadow);
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+  &:focus {
+    outline: none;
+    background: color-mix(in srgb, var(--accent) 2%, var(--field));
+    box-shadow: inset 0 -2px var(--field-focus-line), var(--field-focus-shadow);
+  }
+  &[readonly] { background: var(--panel-muted); }
+  &[aria-invalid="true"] {
+    border-color: var(--danger-ink);
+    box-shadow: inset 0 -2px var(--danger-ink), var(--field-shadow);
+  }
+  &[aria-invalid="true"]:focus { box-shadow: inset 0 -2px var(--danger-ink), var(--field-focus-shadow); }
+  &:disabled { opacity: .55; box-shadow: none; }
+  @media (prefers-reduced-motion: reduce) { transition: none; }
+}
+#root .prompt-composer { background: var(--field); box-shadow: var(--field-shadow); }
+#root .prompt-composer:has(> textarea:focus) {
+  outline: none;
+  background: color-mix(in srgb, var(--accent) 2%, var(--field));
+  box-shadow: inset 0 -2px var(--field-focus-line), var(--field-focus-shadow);
+}
+@media (forced-colors: active) {
+  :is(#root, .library-popover) :is(textarea:not([name="prompt"]), input:where(:not([type]),
+    [type="text"], [type="search"], [type="email"], [type="password"],
+    [type="url"], [type="tel"], [type="number"])) {
+    border: 1px solid CanvasText; background: Canvas; box-shadow: none;
+    &:focus { background: Canvas; box-shadow: none; outline: 2px solid Highlight; outline-offset: -2px; }
+    &[aria-invalid="true"] { border-color: LinkText; }
+    &:disabled { opacity: 1; border-color: GrayText; color: GrayText; }
+  }
+  #root .prompt-composer { border: 1px solid CanvasText; background: Canvas; box-shadow: none; }
+  #root .prompt-composer:has(> textarea:focus) {
+    background: Canvas; box-shadow: none; outline: 2px solid Highlight; outline-offset: -2px;
+  }
+}

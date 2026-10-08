@@ -67,7 +67,8 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
       if (event.key === "Escape" && (event.isComposing || event.keyCode === 229)) event.stopImmediatePropagation();
     };
     const close = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      event.preventDefault();
       if (trayRef.current?.contains(document.activeElement)) triggerRef.current?.focus();
       props.onOpenChange(false);
     };

@@ -28,13 +28,16 @@ async function composerSession() {
   const h = await mountDom(<Session />);
   const area = h.document.querySelector('textarea')!;
   const focus = async (node: HTMLElement) => { await act(async () => node.focus()); };
-  return { ...h, area, transitions, focus };
+  const enter = async () => { await act(async () => {
+    area.dispatchEvent(new h.window.MouseEvent('pointerdown', { button: 0, bubbles: true })); area.focus();
+  }); };
+  return { ...h, area, transitions, focus, enter };
 }
 
 test('tier and attachment focus keep the same expanded prompt and editing position', async () => {
   const h = await composerSession();
   try {
-    await h.focus(h.area);
+    await h.enter();
     h.area.setSelectionRange(12, 25, 'backward'); h.area.scrollTop = 72;
     for (const selector of ['[data-tier-icon="fast"]', '[data-tier-icon="think"]', '[name="attachments"]']) {
       const button = h.document.querySelector<HTMLButtonElement>(selector)!;
@@ -52,7 +55,7 @@ test('tier and attachment focus keep the same expanded prompt and editing positi
 test('a null-relatedTarget blur keeps editing expanded and restores the saved position only on refocus', async () => {
   const h = await composerSession();
   try {
-    await h.focus(h.area);
+    await h.enter();
     h.area.setSelectionRange(19, 37, 'forward'); h.area.scrollTop = 88;
     await act(async () => h.area.blur());
     assert.equal(h.document.querySelector('.command-bar')!.classList.contains('is-expanded'), true);
@@ -66,7 +69,7 @@ test('a null-relatedTarget blur keeps editing expanded and restores the saved po
 test('explicit collapse remains collapsed with focus on its control and current mode is visible', async () => {
   const h = await composerSession();
   try {
-    await h.focus(h.area);
+    await h.enter();
     const toggle = h.document.querySelector<HTMLButtonElement>('[data-composer-toggle]');
     assert.equal(toggle === null, false, 'the editing session needs an explicit expand/collapse control');
     await h.focus(toggle!); await h.click(toggle!);

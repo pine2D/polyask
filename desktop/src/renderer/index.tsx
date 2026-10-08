@@ -53,6 +53,7 @@ import { WorkspaceProgress } from './workspace-progress';
 import { resetLocalSession } from "./local-data-reset";
 import { useTemplateDeletion } from "./use-template-deletion";
 import { usePromptDraft } from "./use-prompt-draft";
+import { focusPromptForEditing, restoreWorkbenchFocus } from "./composer-activation";
 import { useWorkspaceMotion } from "./use-workspace-motion";
 import { FeedbackProvider } from "./feedback-provider";
 import { broadcastFeedback } from "./broadcast-feedback";
@@ -198,7 +199,7 @@ function App(): React.JSX.Element {
   const runProgress = useQuestionRunProgress(broadcast.runId, bootstrapProgress);
   const pageClose = useSitePageClose({ copy, sites, busy: runState !== 'idle' || auxiliaryBusy || participation.pending, api: shell,
     lock: actionLock.current!, onOpen: () => { commandActions.current = {}; changeSurface('confirmation'); },
-    onClose: () => { changeSurface('sites'); queueMicrotask(() => promptRef.current?.focus()); }, onWorkspace: workspaceFlow.accept, onAnnounce: setAnnouncement });
+    onClose: () => { changeSurface('sites'); restoreWorkbenchFocus(); }, onWorkspace: workspaceFlow.accept, onAnnounce: setAnnouncement });
   const retryReview = useBroadcastRetryReview({copy, sites, flow: broadcast, lock: actionLock.current!,
     busy: runState !== "idle" || auxiliaryBusy, onOpen: () => { changeSurface("sites"); changeSurface("confirmation"); },
     onClose: () => changeSurface("sites"), onInspect: (site, active) => inspectBroadcastSite(site, {
@@ -460,7 +461,7 @@ function App(): React.JSX.Element {
     "focus-prompt": () => {
       changeSurface("sites");
       if (drawerOpen) changeDrawerOpen(false);
-      queueMicrotask(() => promptRef.current?.focus());
+      focusPromptForEditing(promptRef, composer.setExpanded);
     },
     "set-think": () => { changeSurface("sites"); void workspaceFlow.changeTier("think"); },
     "set-fast": () => { changeSurface("sites"); void workspaceFlow.changeTier("fast"); },
@@ -542,7 +543,7 @@ function App(): React.JSX.Element {
         onInsertPrompt={(value) => {
           setText(value);
           changeSurface("sites");
-          queueMicrotask(() => promptRef.current?.focus());
+          focusPromptForEditing(promptRef, composer.setExpanded);
         }}
         onSaveTemplate={async (input) => {
           try {
@@ -673,7 +674,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <QuestionHistory active={surface === 'sites'} openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); queueMicrotask(() => promptRef.current?.focus()); }} />
+      <QuestionHistory active={surface === 'sites'} openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); focusPromptForEditing(promptRef, composer.setExpanded); }} />
       {retryReview.review}
       {pageClose.dialog}
       {pendingNewSession && (

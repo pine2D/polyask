@@ -3,7 +3,7 @@ import type { DesktopCopy } from "../shared/copy";
 import { ChevronDownIcon } from "./icons";
 import { commandHint } from "./command-hint";
 import { commandKeyAction } from "./keyboard";
-import { useFocusMethod } from "./use-focus-method";
+import { useComposerEntry } from "./composer-activation";
 
 interface ComposerSnapshot {
   readonly revision: string | number;
@@ -30,7 +30,7 @@ interface PromptComposerProps {
 /** 原生文件框、档位与附件只移焦点；展开由明确动作和表面会话控制。 */
 export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
   const id = useId();
-  const focusMethod = useFocusMethod();
+  const takeKeyboardEntry = useComposerEntry(props.promptRef);
   const saved = useRef<ComposerSnapshot | null>(null);
   const pending = useRef<ComposerSnapshot | null>(null);
   const revision = props.revision ?? props.text;
@@ -44,7 +44,7 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
     const area = props.promptRef.current;
     if (snapshot?.revision === revision && area && document.activeElement === area) restore(snapshot, area);
   });
-  return <div className="prompt-composer priority-p0" data-expanded={props.revealedExpanded ?? props.expanded} data-focus-method={focusMethod}>
+  return <div className="prompt-composer priority-p0" data-expanded={props.revealedExpanded ?? props.expanded}>
     <textarea id={id} name="prompt" autoComplete="off" ref={props.promptRef} rows={1}
       value={props.text} onChange={event => props.onTextChange(event.target.value)}
       onPaste={event => {
@@ -61,11 +61,13 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
       onFocus={event => {
         const snapshot = saved.current;
         if (snapshot?.revision === revision) {
-          if (props.expanded) restore(snapshot, event.currentTarget);
-          else pending.current = snapshot;
+          restore(snapshot, event.currentTarget);
+          pending.current = snapshot;
         }
-        if (!props.expanded) props.onExpandedChange(true);
+        if (takeKeyboardEntry() && !props.expanded) props.onExpandedChange(true);
       }}
+      onPointerDown={event => { if (event.button === 0 && !props.expanded) props.onExpandedChange(true); }}
+      onClick={() => { if (!props.expanded) props.onExpandedChange(true); }}
       onBlur={event => {
         const area = event.currentTarget;
         saved.current = { revision, start: area.selectionStart, end: area.selectionEnd,
@@ -76,7 +78,7 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
           metaKey: event.metaKey, isComposing: event.nativeEvent.isComposing,
           keyCode: event.nativeEvent.keyCode }, props.busy);
         if (action === "submit") { event.preventDefault(); props.onSubmit(); }
-        else if (action === "collapse") { event.preventDefault(); props.onExpandedChange(false); }
+        else if (action === "collapse" && props.expanded) { event.preventDefault(); props.onExpandedChange(false); }
       }} placeholder={props.copy.promptPlaceholder}
       data-hint={commandHint(props.copy.promptLabel, "focus-prompt", props.isMac)} aria-label={props.copy.promptLabel} />
     <button type="button" data-composer-toggle aria-controls={id} aria-expanded={props.expanded}
