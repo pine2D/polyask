@@ -1,0 +1,22 @@
+{
+  "file": {
+    "id": "drive-state-preferences",
+    "name": "state-preferences-desktop.json",
+    "appProperties": { "app": "polyask", "schema": "1", "kind": "state", "id": "preferences-desktop" }
+  },
+  "body": {
+    "schema": 1,
+    "deviceId": "preferences-desktop",
+    "settings": {
+      "polyask.preference.completionNotifications": { "value": true, "updatedAt": 50, "deviceId": "preferences-desktop" },
+      "polyask.preference.density": { "value": "comfortable", "updatedAt": 60, "deviceId": "preferences-desktop" },
+      "polyask.preference.siteScale": { "value": 1, "updatedAt": 70, "deviceId": "preferences-desktop" },
+      "polyask.preference.layoutMode": { "value": "focus", "updatedAt": 80, "deviceId": "preferences-desktop" },
+      "polyask.preference.siteZoom.kimi": { "value": 1.25, "updatedAt": 90, "deviceId": "preferences-desktop" },
+      "polyask.preference.siteZoom.claude": { "value": 0.8, "updatedAt": 95, "deviceId": "preferences-desktop" },
+      "polyask.preference.workbenchGuide": { "value": { "version": 1, "disposition": "completed" }, "updatedAt": 100, "deviceId": "preferences-desktop" }
+    },
+    "templates": {},
+    "groups": {}
+  }
+}

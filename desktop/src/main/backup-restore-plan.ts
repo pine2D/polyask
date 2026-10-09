@@ -8,6 +8,8 @@ type Body = Record<string, any>;
 export const backupEntryKey = (entry: Pick<BackupEntry, 'kind' | 'id'>) => `${entry.kind}:${entry.id}`;
 export const activeBackupBody = (body: Body | null | undefined) => !!body && !('deletedAt' in body);
 export const restoredBackupId = (id: string, seed: unknown) => `restore-${createHash('sha256').update(JSON.stringify([id, seed])).digest('hex').slice(0, 40)}`;
+/** Imported drafts remain distinct branches from this device's autosaved form. */
+export const restoredDraftId = (entry: BackupEntry) => restoredBackupId(entry.id, ['draft', comparison(entry.body)]);
 
 export function questionRestoreSeed(id: string, entries: readonly BackupEntry[], snapshot: ReadonlyMap<string, Body>): unknown {
   const parent = snapshot.get(`question:${id}`);
@@ -29,6 +31,12 @@ export function planBackupRestore(entries: readonly BackupEntry[], source: Reado
     if (!selected.has(key)) continue;
     const original = snapshot.get(key);
     let body = { ...entry.body } as Body;
+    if (entry.kind === 'draft') {
+      body.id = restoredDraftId(entry);
+      // Re-imports keep later edits, and a deleted restored copy is terminal.
+      if (snapshot.has(`draft:${body.id}`)) continue;
+      if (activeBackupBody(original) && JSON.stringify(comparison(projectBody('draft', original))) === JSON.stringify(comparison(entry.body))) continue;
+    }
     if (entry.kind === 'folder' && original && !activeBackupBody(original)) {
       body.id = restoredBackupId(entry.id, original.deletedAt);
       folderMap.set(entry.id, body.id);
@@ -56,17 +64,17 @@ export function planBackupRestore(entries: readonly BackupEntry[], source: Reado
     }
     const id = String(body.id ?? entry.id), current = snapshot.get(`${entry.kind}:${id}`);
     if (entry.kind === 'workspace') body = inheritBackupParticipation(body, current);
-    if (activeBackupBody(current) && JSON.stringify(comparison(projectBody(entry.kind, current))) === JSON.stringify(comparison(body))) continue;
+    if (activeBackupBody(current) && JSON.stringify(comparison(projectBody(entry.kind, current, entry.id))) === JSON.stringify(comparison(body))) continue;
     const stamp = Math.max(options.now(), Number(body.updatedAt) + 1, Number(body.createdAt) || 0, Number(body.lastUsedAt ?? 0) + 1,
       Number(current?.updatedAt ?? 0) + 1, Number(current?.lastUsedAt ?? 0) + 1, Number(current?.deletedAt ?? 0) + 1, Number(original?.updatedAt ?? 0) + 1);
     if (!Number.isSafeInteger(stamp)) throw new Error('backup_invalid');
-    body = { ...body, updatedAt: stamp, deviceId: options.deviceId() };
+    body = { ...body, updatedAt: stamp, deviceId: entry.kind === 'draft' ? `backup:${id}` : options.deviceId() };
     if (entry.kind === 'workspace' && entry.body.participation) {
       const updatedAt = Math.max(stamp, Number(body.participation.updatedAt) + 1, Number(current?.participation?.updatedAt ?? 0) + 1);
       body.participation = { sites: body.participation.sites, updatedAt, deviceId: body.deviceId };
     }
     if (entry.kind === 'history') body.lastUsedAt = Math.max(stamp, body.lastUsedAt);
-    projectBody(entry.kind, body);
+    projectBody(entry.kind, body, entry.id);
     snapshot.set(`${entry.kind}:${id}`, body);
     writes.push({ kind: entry.kind, id, body, key });
   }

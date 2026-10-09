@@ -1,6 +1,9 @@
 export const DATA_ADMIN_COPY = {
   en: {
-    localDataDeletionSync: "Clearing these categories also deletes them on other devices when Google Drive syncs.",
+    clearDraftsAction: "Clear drafts", clearDraftsConfirmTitle: "Clear all drafts?",
+    clearDraftsConfirmMessage: "All saved drafts on this device will be deleted. Your current unsaved form remains open. Deletion markers sync to other devices when draft sync is enabled; shared preferences remain unchanged.",
+    localDataDraftsCleared: "Cleared {count} drafts", localDataDraftsCount: "Saved drafts: {count}", localDataPreferencesCount: "Shared preferences: {count}",
+    localDataDeletionSync: "Deletion markers sync to other devices through Google Drive. Draft deletion markers sync when draft sync is enabled.",
     localDataClearing: "Clearing…",
     localDataResetting: "Resetting local data…",
     clearDecisionsAction: "Clear decision cards",
@@ -8,7 +11,7 @@ export const DATA_ADMIN_COPY = {
     clearDecisionsConfirmMessage: "All decision cards and saved excerpts will be deleted. Source results are retained. The deletions sync to your other devices.",
     localDataDecisionsCleared: "Cleared {count} decision cards",
     localDataTitle: "Local data",
-    localDataDescription: "Clear this device's prompt history, saved results, decision cards, or folders, or reset all local data.",
+    localDataDescription: "Clear this device's prompt history, saved results, decision cards, folders, or saved drafts, or reset all local data.",
     localDataCloudUntouched: "Resetting never deletes data on Google Drive; reconnecting restores it.",
     clearHistoryAction: "Clear prompt history",
     clearHistoryConfirmTitle: "Clear prompt history?",
@@ -26,7 +29,10 @@ export const DATA_ADMIN_COPY = {
     localDataActionFailed: "Could not change local data"
   },
   zhCN: {
-    localDataDeletionSync: "清空以下分类后，删除会通过 Google Drive 同步到其他设备。",
+    clearDraftsAction: "清空草稿", clearDraftsConfirmTitle: "清空全部草稿？",
+    clearDraftsConfirmMessage: "本机保存的全部草稿将被删除，当前未保存的表单仍保持打开。启用草稿同步后，删除标记会同步到其他设备；共享偏好不受影响。",
+    localDataDraftsCleared: "已清空 {count} 条草稿", localDataDraftsCount: "已保存草稿：{count}", localDataPreferencesCount: "共享偏好：{count}",
+    localDataDeletionSync: "删除标记会通过 Google Drive 同步到其他设备；草稿的删除标记在启用草稿同步后传播。",
     localDataClearing: "正在清空…",
     localDataResetting: "正在重置本机数据…",
     clearDecisionsAction: "清空决策卡",
@@ -34,7 +40,7 @@ export const DATA_ADMIN_COPY = {
     clearDecisionsConfirmMessage: "全部决策卡及其摘录将被删除，来源归档仍保留。删除标记会同步到你的其它设备。",
     localDataDecisionsCleared: "已清空 {count} 张决策卡",
     localDataTitle: "本机数据",
-    localDataDescription: "分别清空本机的提问历史、结果库、决策卡或文件夹，或重置本机保存的全部数据。",
+    localDataDescription: "分别清空本机的提问历史、结果库、决策卡、文件夹或已保存草稿，或重置本机保存的全部数据。",
     localDataCloudUntouched: "重置不会删除 Google Drive 上的数据；重新连接后会恢复。",
     clearHistoryAction: "清空提问历史",
     clearHistoryConfirmTitle: "清空提问历史？",
@@ -52,7 +58,10 @@ export const DATA_ADMIN_COPY = {
     localDataActionFailed: "本机数据操作失败"
   },
   zhTW: {
-    localDataDeletionSync: "清空以下分類後，刪除會透過 Google Drive 同步到其他裝置。",
+    clearDraftsAction: "清空草稿", clearDraftsConfirmTitle: "清空全部草稿？",
+    clearDraftsConfirmMessage: "本機儲存的全部草稿將被刪除，目前未儲存的表單仍保持開啟。啟用草稿同步後，刪除標記會同步到其他裝置；共用偏好不受影響。",
+    localDataDraftsCleared: "已清空 {count} 筆草稿", localDataDraftsCount: "已儲存草稿：{count}", localDataPreferencesCount: "共用偏好：{count}",
+    localDataDeletionSync: "刪除標記會透過 Google Drive 同步到其他裝置；草稿的刪除標記在啟用草稿同步後傳播。",
     localDataClearing: "正在清空…",
     localDataResetting: "正在重設本機資料…",
     clearDecisionsAction: "清空決策卡",
@@ -60,7 +69,7 @@ export const DATA_ADMIN_COPY = {
     clearDecisionsConfirmMessage: "全部決策卡及其摘錄將被刪除，來源封存仍保留。刪除標記會同步到你的其他裝置。",
     localDataDecisionsCleared: "已清空 {count} 張決策卡",
     localDataTitle: "本機資料",
-    localDataDescription: "分別清空本機的提問歷史、結果庫、決策卡或資料夾，或重設本機保存的全部資料。",
+    localDataDescription: "分別清空本機的提問歷史、結果庫、決策卡、資料夾或已儲存草稿，或重設本機保存的全部資料。",
     localDataCloudUntouched: "重設不會刪除 Google Drive 上的資料；重新連線後會恢復。",
     clearHistoryAction: "清空提問歷史",
     clearHistoryConfirmTitle: "清空提問歷史？",

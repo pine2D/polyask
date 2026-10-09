@@ -46,6 +46,8 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 ## 离线回归
 
+- 偏好与草稿同步专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`，脚本启动独立 Xvfb，Linux 需要临时 cgroup。受保护入口构建生产外壳、preload、ViewManager 与 SQLite 服务，以两个独立设备库和真实 SyncEngine 的受控 Drive 传输验证三语设置、本机覆盖/跟随、旧缓存冷启动、问题及比较/决策/综合草稿的编辑、预览、确认恢复和重启。问题恢复还核对已加载及正在读取的附件清理，确认框遮住原生站点视图。HTTP/HTTPS 阻断，不发送真实提问、不访问用户库或 Google 账号；截图、报告及源码/构建哈希清单留在临时目录，验收期间源码变化会失败。真实 Drive 双设备及 Windows/macOS 原生交互仍需对应环境验收。
+
 - 输入框展开意图专项：`npm run test:unit -- test/composer-activation-native.check.ts` 编译生产外壳、preload 和 ViewManager，以临时档案及五个真实本地网页视图验证 Esc 后换页/恢复窗口、已聚焦重点击/聚焦命令、Tab、取消关页、附件单层 Esc、模板和历史回填；受控发送 IPC 核验按钮/快捷键成功后收起、部分成功、失败/取消/未确认保留，以及等待期间新草稿和清空后重输同文的保护。明暗主题比较搜索、编辑、设置及门户菜单等文字输入的焦点，并检查错误、只读、禁用、强制颜色与减少动态效果。`test/composer-activation.test.tsx` 另覆盖被阻止、组合态及失效 Tab 和选区恢复；`test/draft-send.test.ts` 覆盖发送结果和草稿修订的组合。截图与报告只留临时目录；这不替代 Windows 原生分组切换焦点、物理输入法或读屏验收。
 
 - 历史阅读专项：`npm run test:unit -- test/markdown-reading-interaction.check.ts`（无显示服务器自行使用 Xvfb）。构建生产 `QuestionHistoryReader`、`ArchiveDetail` 与合成数据，临时 Electron 档案、禁止联网，不访问用户数据库；三语各在历史与结果库核验六种长链接的短显、原目标打开、完整地址展开/复制及 Escape 关闭，验证 Mermaid 实际成图、源码复制、代码切换、缩放、缺失/无效/超限/配置指令回退、迟到源码切换、完整来源链接打开/复制及会话地址动作。截图留在系统临时目录，不入库。普通 `npm test` 的阅读和会话动作回归覆盖解析、当前尝试、缺地址及繁忙状态；`test/markdown-link-labels.test.tsx` 补充格式、换行、裸域名、显示/目标差异、Kimi 形态 DOM 经生产 Markdown 采集到共用阅读器的回归，以及有意义标题/文件名/独立代码的保真；`scripts/md-diagram.test.js` 通过九站生产 `historyTurn()` 定位夹具验证共用提取、隐藏非图表排除、只读及空行保真。图形专项不替代九站真实 DOM 形态验收。

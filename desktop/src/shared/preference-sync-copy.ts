@@ -1,0 +1,55 @@
+export const PREFERENCE_SYNC_COPY = {
+  en: {
+    preferenceSyncTitle: 'Preferences across devices',
+    preferenceSyncDescription: 'Choose which shared preferences this device follows. Notifications and guide progress always sync when Google Drive is connected.',
+    preferenceSyncDisplay: 'Display and reading',
+    preferenceSyncLayout: 'Default layout',
+    preferenceSyncSiteZoom: 'Zoom for each AI site',
+    preferenceSyncLocal: 'Use this device’s settings',
+    preferenceSyncFollow: 'Follow shared settings',
+    preferenceSyncFollowHint: 'Following uses the saved shared value. Later changes also apply to other devices that follow it.',
+    preferenceSyncLayoutHint: 'Choose the starting layout. A narrow window may still use Focus.',
+    preferenceSyncZoomHint: 'Manual zoom for each site is independent of the default reading scale.',
+    preferenceSyncNotification: 'Shared preference; applies when Google Drive sync is connected.',
+    preferenceSyncUpdating: 'Saving preferences…',
+    preferenceSyncFailed: 'Could not save preferences. Your last accepted settings are retained.',
+    draftSyncTitle: 'Sync unfinished drafts',
+    draftSyncDescription: 'Off by default. When enabled, draft text is stored in Google Drive. Drafts from another device appear as recovery copies; they never replace what you are editing. Images stay on this device.'
+  },
+  zhCN: {
+    preferenceSyncTitle: '跨设备偏好',
+    preferenceSyncDescription: '选择本机要跟随的共享设置。通知偏好和引导进度会在连接 Google Drive 后同步。',
+    preferenceSyncDisplay: '显示与阅读',
+    preferenceSyncLayout: '默认布局',
+    preferenceSyncSiteZoom: '各 AI 站点缩放',
+    preferenceSyncLocal: '使用本机设置',
+    preferenceSyncFollow: '跟随共享设置',
+    preferenceSyncFollowHint: '开启后采用已保存的共享值；后续修改也会应用到其他跟随的设备。',
+    preferenceSyncLayoutHint: '选择启动时的布局，窄窗口仍可能自动使用聚焦布局。',
+    preferenceSyncZoomHint: '各站手动缩放独立于默认阅读比例。',
+    preferenceSyncNotification: '共享偏好；连接 Google Drive 同步后应用。',
+    preferenceSyncUpdating: '正在保存偏好…',
+    preferenceSyncFailed: '偏好保存失败，仍使用上次已接受的设置。',
+    draftSyncTitle: '同步未发送草稿',
+    draftSyncDescription: '默认关闭。开启后，草稿文字会保存到 Google Drive。其他设备的草稿以恢复副本呈现，不会覆盖正在编辑的内容；图片仅留在本机。'
+  },
+  zhTW: {
+    preferenceSyncTitle: '跨裝置偏好',
+    preferenceSyncDescription: '選擇本機要跟隨的共用設定。通知偏好和引導進度會在連線 Google Drive 後同步。',
+    preferenceSyncDisplay: '顯示與閱讀',
+    preferenceSyncLayout: '預設版面',
+    preferenceSyncSiteZoom: '各 AI 網站縮放',
+    preferenceSyncLocal: '使用本機設定',
+    preferenceSyncFollow: '跟隨共用設定',
+    preferenceSyncFollowHint: '開啟後採用已儲存的共用值；後續修改也會套用到其他跟隨的裝置。',
+    preferenceSyncLayoutHint: '選擇啟動時的版面，窄視窗仍可能自動使用聚焦版面。',
+    preferenceSyncZoomHint: '各網站手動縮放獨立於預設閱讀比例。',
+    preferenceSyncNotification: '共用偏好；連線 Google Drive 同步後套用。',
+    preferenceSyncUpdating: '正在儲存偏好…',
+    preferenceSyncFailed: '偏好儲存失敗，仍使用上次已接受的設定。',
+    draftSyncTitle: '同步未傳送草稿',
+    draftSyncDescription: '預設關閉。開啟後，草稿文字會儲存到 Google Drive。其他裝置的草稿以恢復副本呈現，不會覆蓋正在編輯的內容；圖片僅留在本機。'
+  }
+} as const;
+
+export type PreferenceSyncCopy = { readonly [Key in keyof typeof PREFERENCE_SYNC_COPY.en]: string };

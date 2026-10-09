@@ -1,3 +1,5 @@
+import type { PreferenceRuntime } from './preference-runtime';
+import { registerPreferencesDraftsIpc } from './preferences-drafts-ipc';
 import { registerQuestionHistoryIpc } from "./question-history-ipc";
 import { registerBootstrapIpc } from './bootstrap-ipc';
 import { registerWorkspaceSelectionIpc } from './workspace-selection-ipc';
@@ -80,6 +82,7 @@ export interface ShellIpcOptions {
   readonly synthesis: SynthesisService;
   readonly sync: SyncEngine;
   readonly dataAdmin: DataAdminService;
+  readonly preferences?: PreferenceRuntime;
   readonly shellEntry: string;
   readonly applyDisplay: (value: DisplayPreferences) => DisplayPreferences;
   readonly setCompletionNotifications: (enabled: boolean) => void;
@@ -159,7 +162,9 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     identity: site => manager.historyAccess.context(site)?.id ?? null,
     closeReason: site => manager.sitePageCloseReason(site)
   }) });
-  const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); } });
+  const publishDrafts = () => { if (!window.isDestroyed()) window.webContents.send('polyask:drafts-changed'); };
+  const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
+  const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); options.preferences?.refresh(); publishDrafts(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
   const disposeSyncIpc = registerSyncIpc({ sync, runtime: options.runtime, trusted: trustedShell });
@@ -168,7 +173,8 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     admin: options.dataAdmin,
     trusted: trustedShell,
     afterHistoryChange: () => { options.questions.publishRunProgress(); publishPromptLibrary(); },
-    afterReset: () => { options.questions.publishRunProgress(); manager.siteZoom.clear(); publishWorkspace(); publishPromptLibrary(); }
+    afterDraftsChange: () => { options.preferences?.drafts.invalidate(); publishDrafts(); },
+    afterReset: () => { options.questions.publishRunProgress(); options.preferences?.reset(); manager.siteZoom.clear(); publishWorkspace(); publishPromptLibrary(); publishDrafts(); }
   });
 
   // 速查面板按需拉取：菜单会随显示偏好重建，按需读永远是当前那一份。
@@ -332,7 +338,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     const candidate = value as { mode?: unknown; focused?: unknown };
     if (candidate.mode !== "overview" && candidate.mode !== "focus") return;
     if (typeof candidate.focused !== "string" || !SITE_KEYS.includes(candidate.focused as SiteKey)) return;
-    manager.setLayout(candidate.mode, candidate.focused as SiteKey);
+    if (manager.setLayout(candidate.mode, candidate.focused as SiteKey)) options.preferences?.set('layoutMode', candidate.mode);
   });
   ipcMain.on("polyask:set-page", (event, value: unknown) => {
     if (!trustedShell(event)) return;
@@ -374,6 +380,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
 
   return () => {
+    disposePreferences();
     disposeSitePageIpc();
     disposeQuestionIpc();
     capture.dispose();

@@ -72,7 +72,7 @@ if (stress) SITES.forEach((site, i) => {
 });
 const finishOperation = () => new Promise<void>(resolve => document.addEventListener('fixture:finish-operation', () => resolve(), { once: true }));
 let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders: 0, answers: 9, memberships: 0,
-  reset: { answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
+  drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
   getLocalDataStats: async () => dataStats,
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),

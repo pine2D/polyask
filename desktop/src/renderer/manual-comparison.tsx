@@ -9,6 +9,9 @@ import { createComparisonDraftStore, type ComparisonDraftStore } from './compari
 import { ExcerptReplacementDialog } from './excerpt-replacement-dialog';
 import { requestDecisionNavigation } from './decision-navigation';
 import { shell } from './shell-api';
+import { usePersistentDraft } from './use-persistent-draft';
+import { DraftRecovery } from './draft-recovery';
+import { parseComparisonContent } from './editor-draft-content';
 
 export function useComparisonWorksheet(record: ArchiveRecord | undefined, provided?: ComparisonDraftStore) {
   const fallback = useRef<ComparisonDraftStore | null>(null);
@@ -20,6 +23,13 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; epoch.current++; }; }, []);
   useLayoutEffect(() => { setDraft(record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null); setReplacement(null); setOpen(false); epoch.current++; }, [record?.id, store]);
   const change = (next: ComparisonDraft) => { if (record?.id !== next.archiveId) return; epoch.current++; store.save(record, next); setDraft(next); };
+  const persistent = usePersistentDraft({ kind: 'comparison', context: record?.id ?? '',
+    title: [...(record?.task || record?.text || '')].slice(0, 160).join(''), content: draft,
+    sourceUpdatedAt: draft?.sourceUpdatedAt, enabled: !!record,
+    dirty: !!draft && (!!draft.quotes.length || !!draft.judgment || !!draft.nextStep ||
+      Object.values(draft.categories).some(v => v.length > 0) || Object.values(draft.notes).some(v => Object.values(v).some(Boolean))),
+    onRestore: value => { const restored = record && parseComparisonContent(value, record.id);
+      if (!restored) return false; change(restored); setOpen(true); return true; } });
   const replace = (value: ExactExcerpt) => {
     if (!record || !draft || !validateExcerpt(record, value) || [...value.excerpt].length > 4000) return;
     change({ ...draft, sourceUpdatedAt: record.updatedAt, quotes: [...draft.quotes.filter(old => old.resultIndex !== value.resultIndex), value] }); setOpen(true);
@@ -29,7 +39,7 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
     const previous = draft.quotes.find(old => old.resultIndex === value.resultIndex);
     if (previous && previous.excerpt !== value.excerpt) setReplacement(value); else replace(value);
   };
-  return { draft, change, open, setOpen, replacement, setReplacement, replace, add, epoch, mounted };
+  return { draft, change, open, setOpen, replacement, setReplacement, replace, add, epoch, mounted, recovery: persistent.recovery };
 }
 
 export function ManualComparison(props: {
@@ -66,6 +76,7 @@ export function ManualComparison(props: {
   return <>
     <details className="manual-comparison" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
       <summary>{copy.manualTitle}</summary><p>{copy.manualHint}</p>
+      <DraftRecovery {...worksheet.recovery} copy={copy} sourceUpdatedAt={record.updatedAt} busy={props.busy || checking} />
       {invalid ? <p className="manual-source-changed" role="status">{copy.manualSourceChanged}</p> : null}
       {invalid ? <ul className="manual-invalid-quotes">{draft.quotes.filter(value => !validateExcerpt(record, value)).map(value => <li key={value.resultIndex}>
         {answerSourceId(value.resultIndex)} {value.label}<button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => old.resultIndex !== value.resultIndex) })}>{copy.manualRemoveExcerpt}</button>

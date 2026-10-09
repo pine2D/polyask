@@ -4,12 +4,16 @@ import { isArchiveRecord } from "../shared/archive";
 import { BACKUP_KINDS, BACKUP_MAX_BYTES, BACKUP_MAX_ENTRIES, type BackupDocument, type BackupEntry, type BackupKind } from "../shared/backup";
 import { SITE_KEYS } from "../shared/contracts";
 import { isStoredDecision } from "../shared/decision";
+import { parseStoredDraft } from "../shared/drafts";
+import { isPreferenceKey, isVersionedPreference } from "../shared/preferences";
 import { isStoredPromptTemplate } from "../shared/prompt-library";
 import { isHistoryRecord, validSyncTime } from "../shared/sync";
 import { isStoredFolderMembership, isStoredTaskFolder } from "../shared/task-folder";
 import { parseStoredParticipation } from '../shared/workspace-participation';
 type Body = Record<string, any>;
 const fields: Record<BackupKind, string[]> = {
+  preference: ["value", "updatedAt"],
+  draft: ["format", "id", "kind", "context", "title", "content", "sourceUpdatedAt", "updatedAt"],
   question: ["id", "text", "sites", "requestedTier", "inputImageCount", "createdAt", "updatedAt", "schema"],
   questionAnswer: ["id", "questionId", "site", "attempt", "createdAt", "updatedAt", "schema", "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt"],
   history: ["id", "textHash", "text", "preview", "createdAt", "lastUsedAt", "updatedAt", "schema"],
@@ -23,7 +27,7 @@ const object = (v: unknown): v is Body => !!v && typeof v === "object" && !Array
 const pick = (v: Body, keys: string[]): Body => Object.fromEntries(keys.filter(k => Object.hasOwn(v, k)).map(k => [k, v[k]]));
 const idValid = (v: unknown): v is string => typeof v === "string" && !!v.trim() && v.length <= 512;
 function sites(v: unknown): boolean { return Array.isArray(v) && new Set(v).size === v.length && v.every(s => SITE_KEYS.includes(s)); }
-export function projectBody(kind: BackupKind, value: unknown): Body {
+export function projectBody(kind: BackupKind, value: unknown, id?: string): Body {
   if (!object(value) || "deletedAt" in value)
     throw new Error("backup_invalid");
   const b = pick(value, fields[kind]);
@@ -48,9 +52,11 @@ export function projectBody(kind: BackupKind, value: unknown): Body {
     b.evidence = b.evidence.map((r: Body) => object(r) ? pick(r, ["resultIndex", "excerpt", "host", "label", "capturedAt"]) : r);
   const stored = { ...b, deviceId: "backup" };
   let ok = validSyncTime(b.updatedAt);
-  if (kind !== "workspace")
+  if (kind !== "workspace" && kind !== "preference")
     ok = ok && idValid(b.id);
   switch (kind) {
+    case "preference": ok = ok && isPreferenceKey(id) && isVersionedPreference(id, stored); break;
+    case "draft": ok = ok && parseStoredDraft(stored) !== null; break;
     case "question": ok = ok && isStoredQuestion(stored); break;
     case "questionAnswer": ok = ok && isStoredQuestionAnswer(stored); break;
     case "history":
@@ -94,7 +100,7 @@ export function validateBackup(value: unknown): BackupDocument {
     throw new Error("backup_too_large");
   if (!object(value) || value.format !== "polyask-backup")
     throw new Error("backup_invalid");
-  if (value.version !== 1 && value.version !== 2)
+  if (value.version !== 1 && value.version !== 2 && value.version !== 3)
     throw new Error("backup_version");
   if (!validSyncTime(value.exportedAt) || !Array.isArray(value.entries) || value.entries.length > BACKUP_MAX_ENTRIES)
     throw new Error("backup_invalid");
@@ -103,12 +109,13 @@ export function validateBackup(value: unknown): BackupDocument {
     if (!object(e) || !BACKUP_KINDS.includes(e.kind) || !idValid(e.id))
       throw new Error("backup_invalid");
     if (value.version === 1 && (e.kind === "question" || e.kind === "questionAnswer")) throw new Error("backup_version");
+    if (value.version !== 3 && (e.kind === "preference" || e.kind === "draft")) throw new Error("backup_version");
     const kind = e.kind as BackupKind, key = `${kind}:${e.id}`;
     if (seen.has(key))
       throw new Error("backup_invalid");
     seen.add(key);
-    const body = projectBody(kind, e.body);
-    if (kind === "workspace" ? e.id !== "workspace" : body.id !== e.id)
+    const body = projectBody(kind, e.body, e.id);
+    if (kind === "workspace" ? e.id !== "workspace" : kind !== "preference" && body.id !== e.id)
       throw new Error("backup_invalid");
     return { kind, id: e.id, body };
   });

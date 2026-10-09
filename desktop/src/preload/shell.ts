@@ -1,3 +1,5 @@
+import type { PreferenceGroup, PreferenceKey, PreferenceSnapshot, PreferenceValues } from '../shared/preferences';
+import type { DraftInput, DraftKind, StoredDraft } from '../shared/drafts';
 import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
 import type { QuestionArchiveRequest } from "../shared/question-archive";
 import type { SitePageClosePreview, SitePageCloseRequest, SitePageCloseResult } from '../shared/site-page';
@@ -48,6 +50,17 @@ import type {
 } from "../shared/synthesis";
 
 export interface PolyAskDesktopApi {
+  getPreferences(): Promise<PreferenceSnapshot>;
+  seedPreferences(values: Partial<PreferenceValues>): Promise<PreferenceSnapshot>;
+  setPreference(key: PreferenceKey, value: unknown): Promise<PreferenceSnapshot>;
+  followPreferences(group: PreferenceGroup, enabled: boolean): Promise<PreferenceSnapshot>;
+  setDraftSync(enabled: boolean): Promise<PreferenceSnapshot>;
+  onPreferences(listener: (value: PreferenceSnapshot) => void): () => void;
+  listDrafts(kind?: DraftKind, context?: string): Promise<{ epoch: number; deviceId: string; drafts: StoredDraft[] }>;
+  saveDraft(input: DraftInput, epoch: number): Promise<StoredDraft>;
+  removeDraft(id: string, updatedAt: number, epoch: number): Promise<boolean>;
+  onDraftsChanged(listener: () => void): () => void;
+  clearDrafts(confirmed: true): Promise<number>;
   getQuestionRunProgress(runId: string): Promise<QuestionRunProgress | null>;
   onQuestionRunProgress(listener: (progress: QuestionRunProgress) => void): () => void;
   previewSitePageClose(site: SiteKey): Promise<SitePageClosePreview>;
@@ -154,6 +167,17 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  getPreferences: () => invoke('polyask:preferences'),
+  seedPreferences: (values: Partial<PreferenceValues>) => invoke('polyask:preferences-seed', values),
+  setPreference: (key: PreferenceKey, value: unknown) => invoke('polyask:preference-set', { key, value }),
+  followPreferences: (group: PreferenceGroup, enabled: boolean) => invoke('polyask:preferences-follow', { group, enabled }),
+  setDraftSync: (enabled: boolean) => invoke('polyask:draft-sync', enabled),
+  onPreferences: (listener: (value: PreferenceSnapshot) => void) => subscribe('polyask:preferences-changed', listener),
+  listDrafts: (kind?: DraftKind, context?: string) => invoke('polyask:draft-list', { kind, context }),
+  saveDraft: (input: DraftInput, epoch: number) => invoke('polyask:draft-save', { input, epoch }),
+  removeDraft: (id: string, updatedAt: number, epoch: number) => invoke('polyask:draft-remove', { id, updatedAt, epoch }),
+  onDraftsChanged: (listener: () => void) => subscribe('polyask:drafts-changed', listener),
+  clearDrafts: (confirmed: true) => invoke('polyask:clear-drafts', confirmed),
   getQuestionRunProgress: (runId: string) => invoke('polyask:question-run-progress', runId),
   onQuestionRunProgress: (listener: (progress: QuestionRunProgress) => void) => {
     const handler = (_event: unknown, progress: QuestionRunProgress) => listener(progress);

@@ -15,6 +15,8 @@ import { CloseIcon } from "./icons";
 import { BackupCard } from "./backup-workspace";
 import { LocalDataCard } from "./local-data-card";
 import { SettingsDisplay } from "./settings-display";
+import { PreferenceSyncSettings } from "./preference-sync-settings";
+import type { PreferenceSyncSettingsState } from "./use-synced-preferences";
 import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
 import { shell } from "./shell-api";
@@ -32,6 +34,7 @@ interface SettingsWorkspaceProps {
   readonly onCompletionNotificationsChange?: (enabled: boolean) => void;
   readonly display?: DisplayPreferences;
   readonly onDisplayChange?: (preferences: DisplayPreferences) => Promise<void>;
+  readonly preferenceSync?: PreferenceSyncSettingsState;
   readonly initialSection?: "overview" | "drive-diagnostics" | "data" | "display";
   readonly sectionRequest?: number;
   readonly onLocalReset?: () => void;
@@ -239,11 +242,12 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           </section>
           <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
           <SettingsDisplay copy={props.copy} display={props.display} busy={busy} onChange={props.onDisplayChange} />
+          {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} copy={props.copy} busy={busy} /> : null}
           <label className="settings-card preference-card">
             <span className="preference-copy">
               <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
               <p>{props.copy.completionNotificationsDescription}</p>
-              <small>{props.copy.localPreference}</small>
+              <small>{props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}</small>
             </span>
             <span className="preference-switch">
               <input
@@ -251,6 +255,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
                 name="completion-notifications"
                 aria-labelledby="completion-notifications-title"
                 checked={!!props.completionNotifications}
+                disabled={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
                 onChange={(event) => props.onCompletionNotificationsChange?.(event.target.checked)}
               />
               <span aria-hidden="true" />

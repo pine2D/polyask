@@ -1,0 +1,41 @@
+{
+  "file": {
+    "id": "drive-state-desktop-drafts",
+    "name": "state-desktop-draft-device-a.json",
+    "appProperties": { "app": "polyask", "schema": "1", "kind": "state", "id": "draft-device-a" }
+  },
+  "body": {
+    "schema": 1,
+    "deviceId": "draft-device-a",
+    "settings": {
+      "polyask.draft.draft-prompt-a": {
+        "value": { "format": 1, "id": "draft-prompt-a", "kind": "prompt", "context": "composer", "title": "", "content": { "text": "" } },
+        "updatedAt": 1756800000010,
+        "deviceId": "draft-device-a"
+      },
+      "polyask.draft.draft-comparison-a": {
+        "value": { "format": 1, "id": "draft-comparison-a", "kind": "comparison", "context": "archive-compare", "title": "未完成比较", "content": { "criteria": "", "notes": "保留尚未通过正式校验的劳动" }, "sourceUpdatedAt": 1756800000000 },
+        "updatedAt": 1756800000020,
+        "deviceId": "draft-device-a"
+      },
+      "polyask.draft.draft-decision-b": {
+        "value": { "format": 1, "id": "draft-decision-b", "kind": "decision", "context": "decision-new", "title": "", "content": { "title": "", "claim": "待核对", "status": "draft" } },
+        "updatedAt": 1756800000030,
+        "deviceId": "draft-device-b"
+      },
+      "polyask.draft.draft-synthesis-b": {
+        "value": { "format": 1, "id": "draft-synthesis-b", "kind": "synthesis", "context": "synthesis-current", "title": "辅助编辑", "content": { "prompt": "综合草稿", "followUp": "追问草稿", "target": "kimi" } },
+        "updatedAt": 1756800000040,
+        "deviceId": "draft-device-b"
+      },
+      "polyask.draft.draft-gone-a": {
+        "value": { "format": 1, "id": "draft-gone-a", "kind": "prompt", "context": "composer", "title": "", "content": null },
+        "updatedAt": 1756800000050,
+        "deviceId": "draft-device-a",
+        "deletedAt": 1756800000050
+      }
+    },
+    "templates": {},
+    "groups": {}
+  }
+}

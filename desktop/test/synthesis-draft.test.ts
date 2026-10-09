@@ -13,7 +13,7 @@ test('session drafts restore all fields independently for synthesis, follow-up, 
   store.save(source(), draft);
   store.save(source(), { ...draft, selectedHosts: ['claude.ai'], instruction: 'Precise follow-up' }, 'claude.ai');
   store.save(source('B'), { ...draft, instruction: 'Other record' });
-  assert.deepEqual(store.restore(source()), { ...draft, sourceChanged: false });
+  assert.deepEqual(store.restore(source()), { ...draft, sourceChanged: false, sourceUpdatedAt: 1 });
   assert.equal(store.restore(source(), 'claude.ai')!.instruction, 'Precise follow-up');
   assert.equal(store.restore(source('B'))!.instruction, 'Other record');
   store.remove('A');

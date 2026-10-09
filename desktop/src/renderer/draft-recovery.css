@@ -1,0 +1,14 @@
+.draft-recovery-entry { margin-block: 8px; }
+.draft-recovery-entry > summary { cursor: pointer; }
+.draft-recovery { min-width: 0; font-size: 13px; }
+.draft-copy-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 8px; }
+.draft-copy-list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding-block: 8px; border-bottom: 1px solid var(--border); }
+.draft-copy-list > li > span { overflow-wrap: anywhere; }
+.draft-copy-list small, .draft-copy-list time { color: var(--muted); }
+.draft-copy-list small { grid-column: 1; }
+.draft-copy-list time { grid-column: 1; font-variant-numeric: tabular-nums; }
+.draft-copy-list button { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+.draft-preview pre { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.5; padding: 12px; background: var(--field); border-radius: 4px; }
+.draft-preview h3 { margin-block: 12px 8px; }
+.draft-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.draft-confirm { padding-block: 8px; }

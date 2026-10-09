@@ -9,6 +9,7 @@ export const LOCAL_DATA_COPY: Record<LocalDataAction, { title: keyof DesktopCopy
   archives: { title: 'clearArchivesConfirmTitle', message: 'clearArchivesConfirmMessage', action: 'clearArchivesAction' },
   decisions: { title: 'clearDecisionsConfirmTitle', message: 'clearDecisionsConfirmMessage', action: 'clearDecisionsAction' },
   folders: { title: 'clearFoldersConfirmTitle', message: 'clearFoldersConfirmMessage', action: 'clearFoldersAction' },
+  drafts: { title: 'clearDraftsConfirmTitle', message: 'clearDraftsConfirmMessage', action: 'clearDraftsAction' },
   reset: { title: 'resetLocalConfirmTitle', message: 'resetLocalConfirmMessage', action: 'resetLocalAction' }
 };
 
@@ -41,9 +42,10 @@ export function LocalDataConfirm({ copy, state, busy, onCancel, onConfirm, onRet
     if (state.action === 'reset') rows.push([copy.localDataHistoryCount, stats.history], [copy.localDataArchivesCount, stats.archives],
       [copy.localDataDecisionsCount, stats.decisions], [copy.localDataFoldersCount, stats.folders], [copy.localDataAnswersCount, stats.reset.answers],
       [copy.localDataMembershipsCount, stats.reset.memberships], [copy.localDataTemplatesCount, stats.reset.templates],
-      [copy.localDataGroupsCount, stats.reset.groups], [copy.localDataWorkspaceCount, stats.reset.workspace]);
+      [copy.localDataGroupsCount, stats.reset.groups], [copy.localDataWorkspaceCount, stats.reset.workspace],
+      [copy.localDataDraftsCount, stats.drafts], [copy.localDataPreferencesCount, stats.reset.preferences]);
     else {
-      const labels = { history: copy.localDataHistoryCount, archives: copy.localDataArchivesCount, decisions: copy.localDataDecisionsCount, folders: copy.localDataFoldersCount };
+      const labels = { history: copy.localDataHistoryCount, archives: copy.localDataArchivesCount, decisions: copy.localDataDecisionsCount, folders: copy.localDataFoldersCount, drafts: copy.localDataDraftsCount };
       rows.push([labels[state.action], stats[state.action]]);
       if (state.action === 'history') rows.push([copy.localDataAnswersCount, stats.answers]);
       if (state.action === 'folders') rows.push([copy.localDataMembershipsCount, stats.memberships]);

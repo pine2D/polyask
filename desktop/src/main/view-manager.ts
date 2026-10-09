@@ -233,13 +233,13 @@ export class ViewManager {
     this.layout();
   }
 
-  setLayout(mode: "overview" | "focus", requestedFocus: SiteKey = this.focused): boolean {
+  setLayout(mode: "overview" | "focus", requestedFocus: SiteKey = this.focused, activate = true): boolean {
     if (mode === "focus" && !this.selected.includes(requestedFocus)) return false;
     const selectedIndex = this.selected.indexOf(requestedFocus);
     if (selectedIndex >= 0) this.page = resolveSitePageIndex(this.selected, requestedFocus);
     const current = resolveSitePage(this.selected, this.page);
     const focused = resolveFocusedSite(current.keys, requestedFocus, this.focusedByPage.get(current.page));
-    if (mode === "focus" && current.keys.includes(focused)) {
+    if (activate && mode === "focus" && current.keys.includes(focused)) {
       this.focusOrder = swapFocusedSite(this.focusOrder, this.focused, focused);
       this.focusedByPage.set(current.page, focused);
     }
@@ -248,7 +248,7 @@ export class ViewManager {
     this.reconcileViews();
     this.clearVisibleUnread();
     this.layout();
-    if (mode === "focus" && current.keys.includes(focused)) {
+    if (activate && mode === "focus" && current.keys.includes(focused)) {
       const view = this.views.get(focused);
       if (view && !view.webContents.isDestroyed()) view.webContents.focus();
     }

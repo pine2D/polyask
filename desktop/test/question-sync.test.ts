@@ -61,12 +61,12 @@ test("schema 4 future locks replay on upgrade and deletion wins against late ans
     assert.equal(s.scans(),1);
   } finally {s.database.close();}
 });
-test("backup v2 round-trips questions and attempts while refusing children without a parent", () => {
+test("backup v3 round-trips questions and attempts while refusing children without a parent", () => {
   const source=DesktopDatabase.open(":memory:"), receiver=DesktopDatabase.open(":memory:");
   try {
     source.questions.put(questionFixture()); source.questions.putAnswer(questionAnswerFixture());
     const document=new BackupService(source,{deviceId:()=>"a"}).export();
-    assert.equal(document.version,2);
+    assert.equal(document.version,3);
     assert.deepEqual(document.entries.map(e=>e.kind),["question","questionAnswer"]);
     assert.equal(JSON.stringify(document).includes("deviceId"),false);
     const service=new BackupService(receiver,{deviceId:()=>"b",now:()=>100});

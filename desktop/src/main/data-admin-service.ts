@@ -1,4 +1,5 @@
-import type { SyncStatus } from "../shared/sync";
+import { nextSyncTime, type SyncStatus } from "../shared/sync";
+import { parseStoredDraft } from "../shared/drafts";
 import type { LocalDataStats } from "../shared/local-data";
 import type { DesktopDatabase } from "./database";
 
@@ -72,6 +73,23 @@ export class DataAdminService {
       for (const folder of folders) this.options.database.folders.delete(folder.id, this.now(), this.options.deviceId());
     });
     return folders.length;
+  }
+
+  clearDrafts(): number {
+    return this.options.database.transaction(() => {
+      let cleared = 0;
+      for (const { key, value } of this.options.database.state.entries('draft:')) {
+        const draft = parseStoredDraft(value);
+        if (!draft) throw new Error('invalid_request');
+        if (draft.deletedAt !== undefined) continue;
+        const updatedAt = nextSyncTime(this.now(), draft.updatedAt);
+        // Keep the source branch identity; deleted content never becomes a local autosave.
+        const { sourceUpdatedAt, ...retained } = draft;
+        this.options.database.state.put(key, { ...retained, title: '', content: null, updatedAt, deletedAt: updatedAt }, updatedAt);
+        cleared++;
+      }
+      return cleared;
+    });
   }
 
   async resetLocal(): Promise<SyncStatus> {

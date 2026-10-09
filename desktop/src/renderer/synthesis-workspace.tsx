@@ -16,6 +16,10 @@ import { CloseIcon, SendIcon, SparklesIcon, StopIcon } from "./icons";
 import type { SynthesisDraft } from "./synthesis-draft";
 import { SynthesisPayloadPreview } from './synthesis-payload-preview';
 import { SynthesisSourceReview } from './synthesis-source-review';
+import type { DraftReceipt } from './draft-receipt';
+import { DraftRecovery } from './draft-recovery';
+import { parseSynthesisContent } from './editor-draft-content';
+import { usePersistentDraft } from './use-persistent-draft';
 
 interface SynthesisWorkspaceProps {
   readonly copy: DesktopCopy;
@@ -25,8 +29,8 @@ interface SynthesisWorkspaceProps {
   readonly followUpHost?: string;
   readonly busy: boolean;
   readonly onCancel: () => void;
-  readonly onSend: (request: SynthesisSendRequest) => void;
-  readonly initialDraft?: (SynthesisDraft & { readonly sourceChanged: boolean }) | null;
+  readonly onSend: (request: SynthesisSendRequest, draft?: DraftReceipt) => void | Promise<void>;
+  readonly initialDraft?: (SynthesisDraft & { readonly sourceChanged: boolean; readonly sourceUpdatedAt?: number }) | null;
   readonly onDraftChange?: (draft: SynthesisDraft) => void;
   readonly onReloadSource?: () => Promise<ArchiveRecord | null>;
   readonly onSourceReviewed?: () => void;
@@ -35,11 +39,18 @@ interface SynthesisWorkspaceProps {
 export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.Element {
   const successful = useMemo(() => props.record.results.filter((result) => !!result.text?.trim()), [props.record]);
   const [selectedHosts, setSelectedHosts] = useState(() => props.initialDraft?.selectedHosts ?? (props.followUpHost ? [props.followUpHost] : successful.map((result) => result.host)));
+  const missingHosts = selectedHosts.filter(host => !successful.some(result => result.host === host));
   const [targetSite, setTargetSite] = useState(props.initialDraft?.targetSite ?? "");
   const [tier, setTier] = useState<Tier>(() => props.initialDraft ? props.initialDraft.tier : props.defaultTier);
   const [instruction, setInstruction] = useState(props.initialDraft?.instruction ?? (props.followUpHost ? "" : props.copy.synthesisDefaultInstruction));
   const [excerpt, setExcerpt] = useState(props.initialDraft?.excerpt ?? "");
   const [sourceChanged, setSourceChanged] = useState(props.initialDraft?.sourceChanged ?? false);
+  const [draftSourceVersion, setDraftSourceVersion] = useState(props.initialDraft?.sourceUpdatedAt ?? props.record.updatedAt);
+  const defaultDraft = useRef<SynthesisDraft>({ selectedHosts: props.followUpHost ? [props.followUpHost] : successful.map(result => result.host),
+    targetSite: '', tier: props.defaultTier, instruction: props.followUpHost ? '' : props.copy.synthesisDefaultInstruction, excerpt: '' });
+  const [preparing, setPreparing] = useState(false);
+  const preparingRef = useRef(false), submitEpoch = useRef(0);
+  useEffect(() => () => { submitEpoch.current++; }, []);
   const previousSource = useRef(props.record);
   useEffect(() => {
     if (previousSource.current.updatedAt !== props.record.updatedAt || selectedHosts.some(host => previousSource.current.results.find(result => result.host === host)?.text
@@ -50,6 +61,18 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
     [selectedHosts, targetSite, tier, instruction, excerpt, props.onDraftChange]);
   const followUp = props.followUpHost !== undefined;
   const title = followUp ? props.copy.followUpTitle : props.copy.synthesisTitle;
+  const content: SynthesisDraft = { selectedHosts, targetSite, tier, instruction, excerpt };
+  const persistent = usePersistentDraft({ kind: 'synthesis', context: JSON.stringify([props.record.id, props.followUpHost ?? null]),
+    title, content, sourceUpdatedAt: draftSourceVersion, dirty: JSON.stringify(content) !== JSON.stringify(defaultDraft.current),
+    onRestore: (value, draft) => {
+      const restored = parseSynthesisContent(value);
+      if (!restored || (followUp && (restored.selectedHosts.length !== 1 || restored.selectedHosts[0] !== props.followUpHost))) return false;
+      setSelectedHosts([...restored.selectedHosts]); setTargetSite(restored.targetSite); setTier(restored.tier);
+      setInstruction(restored.instruction); setExcerpt(restored.excerpt);
+      setDraftSourceVersion(draft.sourceUpdatedAt ?? props.record.updatedAt);
+      setSourceChanged(draft.sourceUpdatedAt !== props.record.updatedAt ||
+        restored.selectedHosts.some(host => !successful.some(result => result.host === host))); return true;
+    } });
   const selected = selectedSynthesisAnswers(props.record.results, selectedHosts);
   const preview = useMemo(() => buildSynthesisPrompt({ record: props.record, selectedHosts, instruction, excerpt: followUp ? excerpt : undefined }),
     [props.record, selectedHosts, instruction, followUp, excerpt]);
@@ -60,6 +83,17 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
   const invalid = sourceChanged || (followUp ? selected.length !== 1 || invalidExcerpt : selected.length < 2) || !props.sites.some(site => site.key === targetSite) || tooLong;
   const toggle = (host: string) => setSelectedHosts((current) =>
     current.includes(host) ? current.filter((item) => item !== host) : [...current, host]);
+  const send = async () => {
+    if (props.busy || invalid || preparingRef.current) return;
+    const epoch = submitEpoch.current;
+    const request: SynthesisSendRequest = { archiveId: props.record.id, sourceUpdatedAt: props.record.updatedAt,
+      targetSite: targetSite as SynthesisSendRequest['targetSite'], tier, selectedHosts, instruction, ...(followUp ? { excerpt } : {}) };
+    preparingRef.current = true; setPreparing(true);
+    try {
+      const receipt = persistent.flush();
+      if (submitEpoch.current === epoch) await props.onSend(request, receipt);
+    } finally { if (submitEpoch.current === epoch) { preparingRef.current = false; setPreparing(false); } }
+  };
 
   return (
     <section className="synthesis-workspace" aria-label={title}>
@@ -70,7 +104,7 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
       <p className="synthesis-summary" data-synthesis-summary>{props.copy.synthesisCount.replace('{count}', String(selected.length))} → {props.sites.find(site => site.key === targetSite)?.label ?? props.copy.synthesisTargetMissing} · {tier === 'think' ? props.copy.think : tier === 'fast' ? props.copy.fast : props.copy.followSite}<br />{props.copy.synthesisNewConversation}</p>
       <div className="synthesis-config">
         <SynthesisSourceReview copy={props.copy} record={props.record} selectedHosts={selectedHosts} busy={props.busy} changed={sourceChanged}
-          excerpt={followUp ? excerpt : undefined} onReload={props.onReloadSource} onReviewed={() => { previousSource.current = props.record; setSourceChanged(false); props.onSourceReviewed?.(); }} />
+          excerpt={followUp ? excerpt : undefined} onReload={props.onReloadSource} onReviewed={() => { previousSource.current = props.record; setDraftSourceVersion(props.record.updatedAt); setSourceChanged(false); props.onSourceReviewed?.(); }} />
         {followUp ? <>
           <p>{source ? `${answerSourceId(props.record.results.indexOf(source))} ${source.label}` : ""}</p>
           <label>{props.copy.followUpOriginal}<textarea name="follow-up-original" readOnly value={source?.text ?? ""} /></label>
@@ -83,21 +117,26 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
             const label = `${answerSourceId(props.record.results.indexOf(result))} ${result.label} · ${state}`;
             return <label key={result.host}><input type="checkbox" name="synthesis-answer" value={result.host} checked={selectedHosts.includes(result.host)} onChange={() => toggle(result.host)} /><span title={label}>{label}</span></label>;
           })}
+          {missingHosts.map(host => <label key={host}><input type="checkbox" name="synthesis-answer" value={host} checked onChange={() => toggle(host)} />
+            <span>{host} · {props.copy.excerptSourceMissing}</span></label>)}
         </fieldset>}
         <small>{props.copy.synthesisCount.replace("{count}", String(selected.length))}</small>
         {selected.filter((result) => result.code === "answer_truncated").map((result) => <p className="answer-capture-warning" key={result.host}>{answerSourceId(props.record.results.indexOf(result))} {props.copy.answerTruncated}</p>)}
         <label>{props.copy.synthesisTarget}<LibrarySelect name="synthesis-target" label={props.copy.synthesisTarget} value={targetSite} disabled={props.busy}
-          options={[{ value: '', label: props.copy.synthesisTargetMissing }, ...props.sites.map(site => ({ value: site.key, label: site.label }))]} onChange={setTargetSite} /></label>
+          options={[{ value: '', label: props.copy.synthesisTargetMissing },
+            ...(targetSite && !props.sites.some(site => site.key === targetSite) ? [{ value: targetSite, label: `${props.copy.synthesisTargetMissing} (${targetSite})`, disabled: true }] : []),
+            ...props.sites.map(site => ({ value: site.key, label: site.label }))]} onChange={setTargetSite} /></label>
         <label>{props.copy.synthesisTier}<LibrarySelect name="synthesis-tier" label={props.copy.synthesisTier} value={tier ?? ''} disabled={props.busy}
           options={[{ value: '', label: props.copy.followSite }, { value: 'fast', label: props.copy.fast }, { value: 'think', label: props.copy.think }]} onChange={value => setTier(value === 'think' || value === 'fast' ? value : null)} /></label>
         <label>{followUp ? props.copy.followUpQuestion : props.copy.synthesisInstruction}<textarea name="synthesis-instruction" autoComplete="off" maxLength={4000} value={instruction} onChange={(event) => setInstruction(event.target.value)} /></label>
         {!followUp ? <button type="button" className="citation-preset" disabled={props.busy} onClick={() => setInstruction(props.copy.citationReportInstruction)}>{props.copy.citationReportPreset}</button> : null}
         <p className="citation-notice">{props.copy.citationReportNotice}</p>
       </div>
+      <DraftRecovery {...persistent.recovery} copy={props.copy} sourceUpdatedAt={props.record.updatedAt} busy={props.busy || preparing || persistent.recovery.busy} />
       <SynthesisPayloadPreview copy={props.copy} value={preview} codePointCount={codePointCount} />
       <footer>
         <span role="status" aria-live="polite">{tooLong ? props.copy.synthesisTooLong : followUp && invalid ? props.copy.followUpInvalid : !followUp && selected.length < 2 ? props.copy.synthesisNotEnough : props.busy ? props.copy.synthesisSending : ""}</span>
-        <button type="button" disabled={props.busy || invalid} onClick={() => props.onSend({ archiveId: props.record.id, sourceUpdatedAt: props.record.updatedAt, targetSite: targetSite as SynthesisSendRequest["targetSite"], tier, selectedHosts, instruction, ...(followUp ? { excerpt } : {}) })}><SendIcon />{followUp ? props.copy.followUpSend : props.copy.synthesisSend}</button>
+        <button type="button" disabled={props.busy || preparing || invalid} onClick={() => { void send().catch(() => undefined); }}><SendIcon />{followUp ? props.copy.followUpSend : props.copy.synthesisSend}</button>
       </footer>
     </section>
   );

@@ -9,6 +9,8 @@ export interface GuideNavigationRequest {
 }
 export interface WorkbenchGuideOptions extends Omit<WorkbenchGuideInput, 'preference' | 'dismissed'> {
   readonly storage: LocalUiStorage; readonly fallbackDisplay: DisplayPreferences;
+  readonly preference?: WorkbenchGuidePreference | null;
+  readonly onPreferenceChange?: (value: WorkbenchGuidePreference) => void | Promise<void>;
   readonly onPersistenceFailure: () => void;
   readonly onNavigate: (request: GuideNavigationRequest) => void;
 }
@@ -18,7 +20,8 @@ function scopeIdentity(input: WorkbenchGuideInput): string {
 }
 export function useWorkbenchGuide(options: WorkbenchGuideOptions) {
   const latest = useRef(options); latest.current = options;
-  const [preference, setPreference] = useState(() => readLocalUiPreferences(options.storage, options.fallbackDisplay).workbenchGuide);
+  const [preference, setPreference] = useState(() => options.preference !== undefined ? options.preference :
+    readLocalUiPreferences(options.storage, options.fallbackDisplay).workbenchGuide);
   const [dismissed, setDismissed] = useState(false), [, refresh] = useState(0);
   const preferenceRef = useRef(preference); preferenceRef.current = preference;
   const hidden = useRef(!!preference), mounted = useRef(true), sequence = useRef(0);
@@ -31,11 +34,24 @@ export function useWorkbenchGuide(options: WorkbenchGuideOptions) {
     mounted.current = true;
     return () => { mounted.current = false; pending.current = null; sequence.current++; };
   }, []);
+  useEffect(() => {
+    if (options.preference === undefined) return;
+    preferenceRef.current = options.preference; hidden.current = !!options.preference;
+    pending.current = null; sequence.current++;
+    setPreference(options.preference); setDismissed(false);
+  }, [options.preference]);
   const model = projectWorkbenchGuide({ ...options, preference, dismissed });
   const persist = (disposition: WorkbenchGuidePreference['disposition']): boolean => {
     const next = { version: 1, disposition } as const;
     hidden.current = true; preferenceRef.current = next; pending.current = null;
     setDismissed(true); setPreference(next); refresh(value => value + 1);
+    if (latest.current.onPreferenceChange) {
+      try {
+        const saved = latest.current.onPreferenceChange(next);
+        void Promise.resolve(saved).catch(() => { if (mounted.current) latest.current.onPersistenceFailure(); });
+        return true;
+      } catch { latest.current.onPersistenceFailure(); return false; }
+    }
     const saved = writeWorkbenchGuidePreference(latest.current.storage, next, latest.current.fallbackDisplay);
     if (!saved) latest.current.onPersistenceFailure();
     return saved;

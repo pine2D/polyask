@@ -19,6 +19,8 @@
 
 `schema1-state-participation.json` 是 2026-10-09 新增的发送勾选样本，`amsConsole.participating` 使用独立版本的主机名布尔映射。`participation-sync.test.ts` 覆盖未勾选、空范围、未知主机、本机重置与备份恢复；旧样本不修改。
 
+`schema1-state-preferences.json` 与 `schema1-state-drafts.json` 是 2026-10-09 新增的独立偏好和设备草稿分支样本，分别使用 `polyask.preference.*`、`polyask.draft.*` setting，沿用 state schema 1。未知扩展字段可由旧客户端保留；草稿墓碑保留身份和上下文，不保留正文。相应 repository、同步和备份测试覆盖版本合并、设备覆盖及删除终态。
+
 ## 新实体与备份
 
 - `schema2-*.json`：决策卡及删除标记，实体 schema 2。
@@ -32,3 +34,8 @@
 - `schema4-question.json` / `schema4-questionAnswer.json`：逐次提问与独立站点尝试；Drive 元数据 ID 为正文 ID 的 SHA-256，不附正文或 URL 预览。
 - `backup-format2.json`：包含新两类实体的业务备份；仍支持读取冻结的 version 1。
 - 当前识别上限为 `SUPPORTED_SYNC_SCHEMA = 4`，旧实体格式保持不变。
+
+## 偏好与草稿备份 v3
+
+- `backup-v3-preferences-drafts.json`：新增 `preference` 与 `draft` 两类业务条目，不包含设备显示覆盖、是否跟随同步、草稿同步开关或原设备身份。仍读取版本 1 和 2。
+- 恢复的草稿作为独立备份副本，保留关联上下文，避免与当前设备正在编辑的分支合并。

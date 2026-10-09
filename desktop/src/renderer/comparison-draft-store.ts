@@ -12,7 +12,7 @@ const clone = (draft: ComparisonDraft): ComparisonDraft => ({ ...draft, quotes: 
   categories: Object.fromEntries(Object.entries(draft.categories).map(([host, categories]) => [host, [...categories]])),
   notes: Object.fromEntries(COMPARISON_CATEGORIES.map(category => [category, { ...draft.notes[category] }])) as ComparisonDraft['notes'] });
 
-/** 人工笔记只驻留当前根会话；没有完整回答、数据库写入或存储键。 */
+/** 会话缓存保留表单位置；持久化与副本恢复由编辑器的草稿 hook 负责。 */
 export function createComparisonDraftStore(): ComparisonDraftStore {
   const entries = new Map<string, { draft: ComparisonDraft; version: number }>();
   let version = 0;

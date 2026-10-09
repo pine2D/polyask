@@ -1,0 +1,127 @@
+{
+  "format": "polyask-backup",
+  "version": 3,
+  "exportedAt": 30,
+  "entries": [
+    {
+      "kind": "preference",
+      "id": "density",
+      "body": {
+        "value": "comfortable",
+        "updatedAt": 10
+      }
+    },
+    {
+      "kind": "preference",
+      "id": "workbenchGuide",
+      "body": {
+        "value": null,
+        "updatedAt": 10
+      }
+    },
+    {
+      "kind": "draft",
+      "id": "prompt-fixture",
+      "body": {
+        "format": 1,
+        "id": "prompt-fixture",
+        "kind": "prompt",
+        "context": "prompt",
+        "title": "Unsent question",
+        "content": {
+          "text": "Draft question",
+          "sites": [
+            "claude",
+            "kimi"
+          ],
+          "tier": null
+        },
+        "updatedAt": 10
+      }
+    },
+    {
+      "kind": "draft",
+      "id": "comparison-fixture",
+      "body": {
+        "format": 1,
+        "id": "comparison-fixture",
+        "kind": "comparison",
+        "context": "archive-fixture",
+        "title": "Comparison notes",
+        "content": {
+          "archiveId": "archive-fixture",
+          "sourceUpdatedAt": 8,
+          "quotes": [],
+          "categories": {
+            "claude.ai": [
+              "conclusion"
+            ]
+          },
+          "notes": {
+            "conclusion": {
+              "claude.ai": "First observation"
+            },
+            "evidence": {},
+            "conditions": {},
+            "cost": {}
+          },
+          "judgment": "Compare the assumptions",
+          "nextStep": "Verify the source"
+        },
+        "sourceUpdatedAt": 8,
+        "updatedAt": 10
+      }
+    },
+    {
+      "kind": "draft",
+      "id": "decision-fixture",
+      "body": {
+        "format": 1,
+        "id": "decision-fixture",
+        "kind": "decision",
+        "context": "decision-fixture",
+        "title": "Decision notes",
+        "content": {
+          "archiveId": "archive-fixture",
+          "title": "Pending decision",
+          "conclusion": "A conclusion",
+          "rationale": "A reason",
+          "uncertainties": "Check the assumptions",
+          "nextStep": "Collect evidence",
+          "status": "draft",
+          "evidence": [
+            {
+              "resultIndex": 0,
+              "excerpt": "Saved source excerpt"
+            }
+          ]
+        },
+        "sourceUpdatedAt": 8,
+        "updatedAt": 10
+      }
+    },
+    {
+      "kind": "draft",
+      "id": "synthesis-fixture",
+      "body": {
+        "format": 1,
+        "id": "synthesis-fixture",
+        "kind": "synthesis",
+        "context": "archive-fixture:claude",
+        "title": "Synthesis notes",
+        "content": {
+          "instruction": "Summarize these sources",
+          "selectedHosts": [
+            "claude.ai",
+            "www.kimi.com"
+          ],
+          "excerpt": "First excerpt",
+          "targetSite": "claude",
+          "tier": null
+        },
+        "sourceUpdatedAt": 8,
+        "updatedAt": 10
+      }
+    }
+  ]
+}

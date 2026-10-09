@@ -11,7 +11,7 @@ import { mountDom } from './ui/dom-harness';
 
 const copy = { ...getCopy('en'), ...SETTINGS_RECOVERY_COPY.en };
 const stats = (history = 2): LocalDataStats => ({ history, archives: 3, decisions: 4, folders: 5,
-  answers: 7, memberships: 9, reset: { answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } });
+  answers: 7, memberships: 9, drafts: 0, reset: { preferences: 0, answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } });
 const noop = () => {};
 const mount = (feedback: (message: string) => void = noop, backup: () => void = noop) => mountDom(<LocalDataCard copy={copy} busy={false}
   onBusy={noop} onFeedback={feedback} onStatus={noop} {...{ onBackup: backup }} />);
@@ -122,7 +122,7 @@ test('an attached count change requires another explicit confirmation', async ()
 test('reset with zero business counts remains available and reports the service result', async () => {
   let resets = 0; const feedback: string[] = [];
   const empty: LocalDataStats = { history: 0, archives: 0, decisions: 0, folders: 0, answers: 0, memberships: 0,
-    reset: { answers: 0, memberships: 0, templates: 0, groups: 0, workspace: 0 } };
+    drafts: 0, reset: { preferences: 0, answers: 0, memberships: 0, templates: 0, groups: 0, workspace: 0 } };
   setShellApi({ getLocalDataStats: async () => empty, resetLocalData: async () => { resets++; return {}; } } as any);
   const h = await mount(message => feedback.push(message));
   try {

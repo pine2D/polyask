@@ -3,6 +3,7 @@ import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import { DraftRevision } from "../src/renderer/prompt-draft";
+import type { StoredDraft } from "../src/shared/drafts";
 import type { SiteRunResult } from "../src/shared/protocol";
 import { readSource } from "./fixtures";
 
@@ -26,18 +27,24 @@ for (const outcome of outcomes) for (const nextDraft of [null, "B", "A"]) test(`
   const sites = outcome.name === "partial success" ? ["claude", "chatgpt"] : ["claude"];
   let finish!: (value: unknown) => void;
   const response = new Promise((resolve) => { finish = resolve; });
+  const receipt = new Promise<StoredDraft | null>(() => {});
+  let flushes = 0, broadcasts = 0, clears = 0;
   const task = vm.runInNewContext(ts.transpileModule(`${body}\nsubmit();`, {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText, {
     text: "A", draftRevision: revision, runState:"idle",
     participation:{currentSites:()=>sites,pending:false},
     actionLock:{current:{run:(action:()=>Promise<void>)=>action()}}, imageWarning:null,
     imageSelection:{invalidateAndClose(){}}, workspace:{tier:null}, images:[],
-    broadcast:{send:(input:{sites:string[]})=>{assert.deepEqual([...input.sites],sites);return response;}},
-    clearSent:(sent:number)=>{if(revision.isCurrent(sent))draft="";},
+    flushDraft:()=>{flushes++;return receipt;},
+    broadcast:{send:(input:{sites:string[]})=>{broadcasts++;assert.deepEqual([...input.sites],sites);return response;}},
+    clearSent:(sent:number,saved:Promise<StoredDraft|null>)=>{clears++;assert.equal(saved,receipt);if(revision.isCurrent(sent))draft="";},
     composer:{reset:()=>{expanded=false;}}
   });
+  assert.equal(flushes, 1);
+  assert.equal(broadcasts, 1, "a pending draft receipt cannot block broadcast dispatch");
   assert.equal(expanded, true, "pending sends keep editing open");
   if (nextDraft !== null) { draft = nextDraft; revision.edit(); }
   finish(outcome.results === null ? null : {results:new Map(outcome.results.map(result=>[result.site,result]))}); await task;
   assert.equal(draft, nextDraft ?? (outcome.sent ? "" : "A"));
   assert.equal(expanded, nextDraft !== null || !outcome.sent);
+  assert.equal(clears, outcome.sent ? 1 : 0, "only a successful submission starts cleanup of its captured receipt");
 });

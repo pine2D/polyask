@@ -12,6 +12,7 @@ interface DataAdminIpcOptions {
   readonly trusted: (event: DataAdminIpcEvent) => boolean;
   readonly afterHistoryChange: () => void;
   readonly afterReset: () => void;
+  readonly afterDraftsChange?: () => void;
 }
 
 const CHANNELS = [
@@ -20,7 +21,8 @@ const CHANNELS = [
   "polyask:reset-local",
   "polyask:clear-decisions",
   "polyask:clear-folders",
-  "polyask:local-data-stats"
+  "polyask:local-data-stats",
+  "polyask:clear-drafts"
 ] as const;
 
 export function registerDataAdminIpc(options: DataAdminIpcOptions): () => void {
@@ -51,6 +53,13 @@ export function registerDataAdminIpc(options: DataAdminIpcOptions): () => void {
   ipcMain.handle(CHANNELS[5], (event) => {
     if (!options.trusted(event)) throw new Error("untrusted_sender");
     return options.admin.stats();
+  });
+  ipcMain.handle(CHANNELS[6], (event, confirmed: unknown) => {
+    if (!options.trusted(event)) throw new Error('untrusted_sender');
+    if (confirmed !== true) throw new Error('invalid_request');
+    const count = options.admin.clearDrafts();
+    options.afterDraftsChange?.();
+    return count;
   });
   // macOS 关窗后 activate 会重建窗口并重新注册，漏注销一条就 ipcMain.handle 重复注册直接抛错。
   return () => {

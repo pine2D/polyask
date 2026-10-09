@@ -1,23 +1,34 @@
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { formatDateTime } from '../shared/format';
+import type { BackupPreviewItem } from '../shared/backup';
 
-const OMIT = new Set(['id', 'schema', 'textHash', 'searchText', 'resultPreviews', 'preview']);
+const OMIT = new Set(['id', 'schema', 'format', 'context', 'textHash', 'searchText', 'resultPreviews', 'preview']);
 const FIELD_KEYS: Record<string, keyof DesktopCopy> = {
+  content: 'backupFieldContent', context: 'backupFieldContext', sourceUpdatedAt: 'backupFieldTime', value: 'backupFieldValue',
   participation: 'participationLabel',
   questionId: 'backupFieldId', site: 'backupFieldSite', attempt: 'backupFieldIndex', submission: 'decisionStatus', capture: 'decisionStatus', submissionCode: 'backupFieldCode', captureCode: 'backupFieldCode', answerMarkdown: 'backupFieldAnswers', conversationUrl: 'backupFieldUrl', requestedTier: 'backupFieldTier', sealedAt: 'backupFieldTime',
   task: 'archiveQuestion', text: 'backupFieldValue', title: 'decisionName', name: 'decisionName', conclusion: 'decisionConclusion', rationale: 'decisionRationale', uncertainties: 'decisionUncertainties', nextStep: 'decisionNextStep', evidence: 'decisionEvidence', status: 'decisionStatus', note: 'archiveNote', tags: 'archiveTags',
   results: 'backupFieldAnswers', source: 'backupFieldSource', host: 'backupFieldSite', label: 'decisionName', excerpt: 'backupFieldExcerpt', sites: 'backupFieldSites', selectedSites: 'backupFieldSites', tier: 'backupFieldTier', synthesis: 'backupFieldSynthesis', instruction: 'backupFieldInstruction', capturedAt: 'backupFieldTime', createdAt: 'backupFieldTime', updatedAt: 'backupFieldTime', lastUsedAt: 'backupFieldTime', ts: 'backupFieldTime', deletedAt: 'backupFieldDeletedAt', url: 'backupFieldUrl', kind: 'backupFieldKind', targetKind: 'backupFieldKind', code: 'backupFieldCode', state: 'decisionStatus', truncated: 'backupFieldTruncated', resultIndex: 'backupFieldIndex', favorite: 'backupFieldFavorite', folderId: 'backupFieldFolder', targetId: 'backupFieldTarget', archiveId: 'decisionSource', sourceTitle: 'decisionSource', hosts: 'backupFieldSites', winnerHost: 'archiveBestAnswer'
 };
-const KIND_KEYS: Record<string, keyof DesktopCopy> = { question: 'backupKindQuestion', questionAnswer: 'backupKindQuestionAnswer', history: 'backupKindHistory', archive: 'backupKindArchive', decision: 'backupKindDecision', folder: 'backupKindFolder', folderMembership: 'backupKindMembership', template: 'backupKindTemplate', group: 'backupKindGroup', workspace: 'backupKindWorkspace', page: 'backupSourcePage', selection: 'backupSourceSelection' };
+const KIND_KEYS: Record<string, keyof DesktopCopy> = { preference: 'backupKindPreference', draft: 'backupKindDraft', prompt: 'backupDraftPrompt', comparison: 'backupDraftComparison', synthesis: 'backupDraftSynthesis', question: 'backupKindQuestion', questionAnswer: 'backupKindQuestionAnswer', history: 'backupKindHistory', archive: 'backupKindArchive', decision: 'backupKindDecision', folder: 'backupKindFolder', folderMembership: 'backupKindMembership', template: 'backupKindTemplate', group: 'backupKindGroup', workspace: 'backupKindWorkspace', page: 'backupSourcePage', selection: 'backupSourceSelection' };
 const SITE_NAMES: Record<string, string> = { claude: 'Claude', 'claude.ai': 'Claude', chatgpt: 'ChatGPT', 'chatgpt.com': 'ChatGPT', gemini: 'Gemini', 'gemini.google.com': 'Gemini', deepseek: 'DeepSeek', 'chat.deepseek.com': 'DeepSeek', kimi: 'Kimi', 'www.kimi.com': 'Kimi' };
 const SITE_KEYS: Record<string, keyof DesktopCopy> = { doubao: 'backupSiteDoubao', 'www.doubao.com': 'backupSiteDoubao', qianwen: 'backupSiteQianwen', 'www.qianwen.com': 'backupSiteQianwen', yuanbao: 'backupSiteYuanbao', 'yuanbao.tencent.com': 'backupSiteYuanbao', chatglm: 'backupSiteChatglm', 'chatglm.cn': 'backupSiteChatglm' };
-const TIMES = new Set(['capturedAt', 'createdAt', 'updatedAt', 'lastUsedAt', 'sealedAt', 'deletedAt', 'ts']);
+const TIMES = new Set(['capturedAt', 'createdAt', 'updatedAt', 'sourceUpdatedAt', 'lastUsedAt', 'sealedAt', 'deletedAt', 'ts']);
 
 export function backupKind(copy: DesktopCopy, kind: string): string { return copy[KIND_KEYS[kind] ?? 'backupDetails']; }
+
+export function backupItemTitle(copy: DesktopCopy, item: Pick<BackupPreviewItem, 'kind' | 'id' | 'title'>): string {
+  if (item.kind !== 'preference') return item.title || backupKind(copy, item.kind);
+  const labels: Record<string, keyof DesktopCopy> = { density: 'densityMenu', siteScale: 'siteScaleMenu',
+    completionNotifications: 'completionNotifications', layoutMode: 'layoutLabel', workbenchGuide: 'gettingStarted' };
+  return item.id.startsWith('siteZoom.') ? `${copy.siteScaleMenu} · ${formatBackupValue(item.id.slice(9), 'site', copy, '')}`
+    : copy[labels[item.id] ?? 'backupKindPreference'];
+}
 
 export function formatBackupValue(value: unknown, field: string, copy: DesktopCopy, locale: string): string {
   if (value === null || value === undefined) return ['tier', 'requestedTier', 'state'].includes(field) ? copy.followSite : copy.backupNotSet;
   if (typeof value === 'boolean') return value ? copy.backupYes : copy.backupNo;
+  if (field === 'value' && typeof value === 'number') return `${Math.round(value * 100)}%`;
   if (typeof value === 'number' && TIMES.has(field) && Number.isSafeInteger(value) && value >= 0) {
     try { return formatDateTime(value, locale); } catch { return String(value); }
   }
@@ -25,6 +36,7 @@ export function formatBackupValue(value: unknown, field: string, copy: DesktopCo
   if (['site', 'host', 'hosts', 'sites', 'selectedSites', 'winnerHost'].includes(field)) return SITE_NAMES[text] ?? (SITE_KEYS[text] ? copy[SITE_KEYS[text]] : text);
   let enums: Record<string, keyof DesktopCopy> | undefined;
   if (field === 'status') enums = { draft: 'decisionDraft', verify: 'decisionVerify', final: 'decisionFinal' };
+  else if (field === 'value' && ['compact', 'comfortable', 'overview', 'focus'].includes(text)) enums = { compact: 'compactDensity', comfortable: 'comfortableDensity', overview: 'overview', focus: 'focus' };
   else if (['tier', 'requestedTier'].includes(field)) enums = { think: 'think', fast: 'fast' };
   else if (field === 'submission') enums = { pending: 'sending', submitted: 'submitted', failed: 'questionSubmissionFailed', unconfirmed: 'questionSubmissionUnconfirmed', cancelled: 'questionSubmissionCancelled' };
   else if (field === 'capture') enums = { waiting: 'questionStateWaiting', partial: 'questionStatePartial', complete: 'questionStateComplete', unknown: 'questionStateUnknown', unavailable: 'questionStateUnavailable', interrupted: 'questionStateInterrupted' };

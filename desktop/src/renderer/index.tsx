@@ -1,3 +1,5 @@
+import { useSyncedPreferences } from './use-synced-preferences';
+import { PromptDraftRecovery } from './prompt-draft-recovery';
 import { QuestionHistory } from "./question-history";
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -37,10 +39,6 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { confirmNewSession, type PendingSessionConfirmation } from "./session-confirmation";
 import { CommandPalette, type CommandPaletteMode } from "./command-palette";
 import { executeCommand } from "./command-dispatcher";
-import {
-  loadCompletionNotifications,
-  saveCompletionNotifications
-} from "./completion-notification-preference";
 import {
   applyDisplayDensity,
   loadDisplayPreferences,
@@ -134,7 +132,7 @@ function App(): React.JSX.Element {
   const [statuses, setStatuses] = useState<Record<string, SiteStatus>>({});
   const [health, setHealth] = useState<Partial<Record<string, SiteHealth>>>({});
   const [layout, setLayout] = useState<LayoutState>(INITIAL_LAYOUT);
-  const { text, setText, revision: draftRevision, clearSent } = usePromptDraft();
+  const { text, setText, revision: draftRevision, clearSent, recovery: promptRecovery, flushDraft } = usePromptDraft(copy);
   const [auxiliaryWorkBusy, setAuxiliaryBusy] = useState(false);
   const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
   const [surface, setSurface] = useState<DesktopSurface>("sites");
@@ -156,9 +154,6 @@ function App(): React.JSX.Element {
   const [runtime, setRuntime] = useState<RuntimeInfo>(INITIAL_RUNTIME);
   const [promptLibrary, setPromptLibrary] = useState<PromptLibraryState>(INITIAL_LIBRARY);
   const templateDeletion = useTemplateDeletion(promptLibrary, setPromptLibrary, copy);
-  const [completionNotifications, setCompletionNotifications] = useState(() =>
-    loadCompletionNotifications(window.localStorage)
-  );
   const { announcement, announce: setAnnouncement, clearNotice, healthFeedback, noteHealth } = useFeedback();
   const { checking: healthChecking, refresh: refreshSiteHealth } = useSiteHealthRefresh(setHealth, () => setAnnouncement(copy.healthRequestFailed));
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
@@ -211,6 +206,8 @@ function App(): React.JSX.Element {
     () => { archiveNavigation.clear(); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
   const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
+  const preferences = useSyncedPreferences({ display: display.value, onDisplay: display.accept, onPersistenceFailure: () => setAnnouncement(copy.displayPreferencesFailed) });
+  const { completionNotifications, onCompletionNotifications: setCompletionNotifications } = preferences;
   const acceptDisplayPreferences = display.accept;
   const acceptBootstrap = (state: BootstrapState): void => {
     setRuntime(state.runtime);
@@ -234,8 +231,6 @@ function App(): React.JSX.Element {
     if (!bootstrapStarted.current) {
       bootstrapStarted.current = true;
       void bootstrap();
-      void display.save(INITIAL_DISPLAY)
-        .catch(() => setAnnouncement(copy.displayPreferencesFailed));
     }
     const offStatus = shell.onStatus((status) => {
       setStatuses((current) => ({ ...current, [status.site]: status }));
@@ -287,10 +282,6 @@ function App(): React.JSX.Element {
 
   const { composer, drawerPresent } = useWorkspaceMotion(surface, drawerOpen, lastOpenPanel.current.inputMethod, imageSelection.present, { layout, density: display.value.density, covered: surface === 'confirmation' });
   const composerExpanded = composer.expanded;
-  useEffect(() => {
-    saveCompletionNotifications(window.localStorage, completionNotifications);
-    shell.setCompletionNotifications(completionNotifications);
-  }, [completionNotifications]);
 
   const scopeLabel = useMemo(
     () => scopeDisplayName(participation.participating, workspace.groups, copy),
@@ -317,6 +308,7 @@ function App(): React.JSX.Element {
         return;
       }
       imageSelection.invalidateAndClose();
+      const savedDraft = flushDraft();
       const completed = await broadcast.send({
         text: prompt,
         tier: workspace.tier,
@@ -325,7 +317,7 @@ function App(): React.JSX.Element {
       });
       if (completed && [...completed.results.values()].some((result) => result.ok)) {
         if (draftRevision.isCurrent(sentRevision)) composer.reset();
-        clearSent(sentRevision);
+        clearSent(sentRevision, savedDraft);
       }
     });
   };
@@ -515,7 +507,7 @@ function App(): React.JSX.Element {
     return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} synthesisSession={synthesis.session} comparisonDrafts={comparisonDrafts} session={librarySession} navigationRevision={archiveNavigation.revision} onBlockingChange={blockLibrary} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} preferenceSync={preferences.settings} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { void preferences.refresh(); workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (
@@ -602,7 +594,7 @@ function App(): React.JSX.Element {
         expanded={composerExpanded}
         reservedExpanded={composer.reservedExpanded}
         revealedExpanded={composer.revealedExpanded}
-        draftRevision={draftRevision.current} onTextChange={setText}
+        draftRevision={draftRevision.current} onTextChange={setText} draftRecovery={<PromptDraftRecovery recovery={promptRecovery} copy={copy} busy={runState !== 'idle' || auxiliaryBusy} onClearImages={imageSelection.clear} onBlockingChange={blocking => changeSurface(blocking ? 'confirmation' : 'sites')} />}
         onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
         onSubmit={() => void submit()}
         onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}

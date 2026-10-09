@@ -4,6 +4,7 @@ import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import type { SiteDefinition } from "../shared/contracts";
 import type { DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
+import type { DraftReceipt } from './draft-receipt';
 import { describeSynthesisSendCode, errorCode } from "../shared/status-copy";
 import type { PendingSynthesis, SynthesisCandidate, SynthesisSendRequest } from "../shared/synthesis";
 import { FolderWorkspace } from "./folder-workspace";
@@ -41,7 +42,7 @@ export interface ArchiveSurfaceProps {
   readonly synthesisCandidate: SynthesisCandidate | null;
   readonly synthesisSession?: SynthesisSession | null;
   readonly comparisonDrafts?: ComparisonDraftStore;
-  readonly onSendSynthesis: (request: SynthesisSendRequest) => Promise<void>;
+  readonly onSendSynthesis: (request: SynthesisSendRequest, draft?: DraftReceipt) => Promise<void>;
   readonly onCollectSynthesis: () => Promise<void>;
   readonly onSaveSynthesis: (replaceExisting: boolean) => Promise<ArchiveRecord>;
   readonly synthesisDrafts?: SynthesisDraftStore;
@@ -246,7 +247,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       pendingSynthesis={props.pendingSynthesis}
       synthesisCandidate={props.synthesisCandidate}
       synthesisSession={props.synthesisSession}
-      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} initialDraft={synthesisSeed ?? props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onReloadSource={reloadSource} onSourceReviewed={() => props.synthesisDrafts?.review(selected, followUpHost)} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request) => { void run(() => props.onSendSynthesis(request), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
+      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} initialDraft={synthesisSeed ?? props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onReloadSource={reloadSource} onSourceReviewed={() => props.synthesisDrafts?.review(selected, followUpHost)} onCancel={() => { if (busy) shell.cancel(); else setSynthesisId(null); }} onSend={(request, receipt) => { return run(() => props.onSendSynthesis(request, receipt), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
       onSynthesize={() => requestDecisionNavigation(() => { setSynthesisSeed(null); setFollowUpHost(undefined); setSynthesisId(selected.id); })}
       onFollowUp={(host, value) => value ? excerpts.followUp(value) : requestDecisionNavigation(() => { setSynthesisSeed(null); setFollowUpHost(host); setSynthesisId(selected.id); })}
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}

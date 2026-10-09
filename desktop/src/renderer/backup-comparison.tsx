@@ -1,6 +1,6 @@
 import type { BackupPreviewItem } from "../shared/backup";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
-import { backupKind, BusinessData, businessBackupData, changedBackupFields } from './backup-data';
+import { backupKind, backupItemTitle, BusinessData, businessBackupData, changedBackupFields } from './backup-data';
 export { backupKind } from './backup-data';
 export { initialBackupSelection, eligibleBackupSelection } from './backup-selection';
 
@@ -9,10 +9,10 @@ export function BackupComparison({ item, copy, selected, onSelect, locale = 'en'
 }): React.JSX.Element {
   const changed = changedBackupFields(item.local, item.backup);
   const fields = item.status === 'conflict' ? changed : undefined;
-  return <section className="backup-comparison" aria-label={item.title}>
-    <header><span className="backup-muted">{backupKind(copy, item.kind)}</span><h3 tabIndex={-1}>{item.title}</h3></header>
+  return <section className="backup-comparison" aria-label={backupItemTitle(copy, item)}>
+    <header><span className="backup-muted">{backupKind(copy, item.kind)}</span><h3 tabIndex={-1}>{backupItemTitle(copy, item)}</h3></header>
     <div className="backup-choice">
-      {item.blocked ? <p role="status">{copy.backupBlocked}</p> : item.status === "same" ? <p>{copy.backupSame}</p> : item.status === "conflict" ?
+      {item.blocked ? <p role="status">{item.kind === 'draft' ? copy.backupDraftBlocked : copy.backupBlocked}</p> : item.status === "same" ? <p>{copy.backupSame}</p> : item.status === "conflict" ?
         <div className="backup-segments" role="group" aria-label={copy.backupReview}>
           <button type="button" aria-pressed={!selected} onClick={() => onSelect(false)}>{copy.backupKeepLocal}</button>
           <button type="button" aria-pressed={selected} onClick={() => onSelect(true)}>{copy.backupUseIncoming}</button>
@@ -20,6 +20,8 @@ export function BackupComparison({ item, copy, selected, onSelect, locale = 'en'
       {item.note === "question_new_identity" ? <p>{copy.backupQuestionRemap}</p> : null}
       {item.note === "folder_reused" ? <p>{copy.backupFolderReused}</p> : null}
       {item.note === "folder_new_identity" ? <p>{copy.backupFolderRemap}</p> : null}
+      {item.note === 'draft_new_identity' && item.status !== 'same' ? <p>{copy.backupDraftRemap}</p> : null}
+      {item.note === 'draft_reused' && !item.blocked ? <p>{copy.backupDraftReused}</p> : null}
       {item.note === "dependency_required" && !item.blocked ? <p>{copy.backupDependency}</p> : null}
     </div>
     {children}

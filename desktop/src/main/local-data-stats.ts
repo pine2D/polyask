@@ -9,6 +9,8 @@ export function readLocalDataStats(database: DatabaseSync): LocalDataStats {
     (SELECT COUNT(*) FROM archives WHERE deleted_at IS NULL) AS archives,
     (SELECT COUNT(*) FROM decisions WHERE deleted_at IS NULL) AS decisions,
     (SELECT COUNT(*) FROM folders WHERE deleted_at IS NULL) AS folders,
+    (SELECT COUNT(*) FROM state_items WHERE deleted_at IS NULL AND substr(key,1,6)='draft:') AS drafts,
+    (SELECT COUNT(*) FROM state_items WHERE deleted_at IS NULL AND substr(key,1,11)='preference:') AS preferences,
     (SELECT COUNT(*) FROM question_answers a JOIN questions q ON q.id=a.question_id
       WHERE a.deleted_at IS NULL AND q.deleted_at IS NULL) AS answers,
     (SELECT COUNT(*) FROM folder_memberships m JOIN folders f ON f.id=m.folder_id
@@ -20,8 +22,8 @@ export function readLocalDataStats(database: DatabaseSync): LocalDataStats {
     (SELECT COUNT(*) FROM state_items WHERE deleted_at IS NULL AND key='workspace') AS workspace
   `).get()!;
   const result = {history:row.history,archives:row.archives,decisions:row.decisions,folders:row.folders,
-    answers:row.answers,memberships:row.memberships,reset:{answers:row.reset_answers,
-      memberships:row.reset_memberships,templates:row.templates,groups:row.groups,workspace:row.workspace}};
+    drafts:row.drafts,answers:row.answers,memberships:row.memberships,reset:{answers:row.reset_answers,
+      memberships:row.reset_memberships,templates:row.templates,groups:row.groups,preferences:row.preferences,workspace:row.workspace}};
   if (!isLocalDataStats(result)) throw new Error('invalid_request');
   return result;
 }

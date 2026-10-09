@@ -1,6 +1,7 @@
 import { applicationMenu } from "./application-menu";
 import { installNativeShell, initialShellBackground } from "./native-shell";
-import { createLocalDataServices } from "./local-data-services";
+import { createWindowDataServices } from './window-data-services';
+import type { PreferenceRuntime } from './preference-runtime';
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
@@ -25,11 +26,7 @@ import {
   DEFAULT_DISPLAY_PREFERENCES,
   type DisplayPreferences
 } from "../shared/display";
-import type { LayoutState, SiteStatus } from "../shared/protocol";
-import type { SyncStatus } from "../shared/sync";
 import type { RuntimeInfo } from "../shared/runtime";
-import type { PromptLibraryState } from "../shared/prompt-library";
-import type { WorkspaceState } from "../shared/workspace";
 import { BroadcastCoordinator } from "./broadcast";
 import { CollectionService } from "./collection-service";
 import { CompletionNotifier } from "./completion-notifier";
@@ -44,13 +41,9 @@ import {
 } from "./portable-profile";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { startRuntimeGates } from "./runtime-gates";
-import { DataAdminService } from "./data-admin-service";
 import { registerShellIpc } from "./shell-ipc";
 import { SITES } from "./sites";
 import { runStartup } from "./startup";
-import { sendTrackedSynthesis } from "./synthesis-generation";
-import { createSyncRuntime } from "./sync-runtime";
-import { SynthesisService } from "./synthesis-service";
 import { UiStateStore } from "./ui-state-store";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
@@ -135,12 +128,11 @@ const synthesisCoordinator = new BroadcastCoordinator();
 let mainWindow: BrowserWindow | null = null;
 let viewManager: ViewManager | null = null;
 let desktopDatabase: DesktopDatabase | null = null;
+let preferenceRuntime: PreferenceRuntime | null = null;
 
 if (app.isPackaged) app.commandLine.removeSwitch("remote-debugging-port");
 
-type ShellPayload = SiteStatus | LayoutState | DisplayPreferences | WorkspaceState | SyncStatus | PromptLibraryState;
-
-function sendToShell(channel: string, payload: ShellPayload): void {
+function sendToShell(channel: string, payload?: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
 }
 
@@ -195,7 +187,7 @@ function createMenu(): void {
   const copy = getCopy(app.getLocale());
   const display = viewManager?.getDisplayPreferences() ?? DEFAULT_DISPLAY_PREFERENCES;
   const template = applicationMenu(process.platform, copy, display,
-    (value) => { if (viewManager) applyDisplayPreferences(viewManager, value); }, dispatchAppCommand, app.name);
+    (value) => { if (preferenceRuntime) preferenceRuntime.setDisplay(value); else if (viewManager) applyDisplayPreferences(viewManager, value); }, dispatchAppCommand, app.name);
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
@@ -281,7 +273,7 @@ async function createWindow(): Promise<void> {
     {
       initialUiState,
       selectedSites: workspaceState.selectedSites,
-      onUiStateChange: (state) => uiStateStore.schedule(state),
+      onUiStateChange: (state) => { uiStateStore.schedule(state); preferenceRuntime?.captureUi(state); },
       // 站点视图里点到的外部链接交给用户自己的浏览器。视图本身绝不导航过去——格子里永远是这个站。
       // 复用 safeExternalUrl 的校验（只放行 http/https、拒带凭据的 URL）。
       openExternal: (url) => {
@@ -292,41 +284,13 @@ async function createWindow(): Promise<void> {
   );
   managerForWorkspace = manager;
   viewManager = manager;
-  const collection = new CollectionService(
-    SITES,
-    (site, deadline) => manager.collect(site, deadline)
-  );
+  const { archives, history, promptLibrary, decisions, folders, backup, questions, collection, preferences, synthesis, sync, dataAdmin } = await createWindowDataServices({
+    database, manager, workspace, coordinator, synthesisCoordinator, publish: sendToShell,
+    applyDisplay: value => applyDisplayPreferences(manager, value),
+    setNotifications: enabled => completionNotifier.setEnabled(enabled)
+  });
+  preferenceRuntime = preferences;
   collectionForWorkspace = collection;
-  const { deviceId, archives, history, promptLibrary, decisions, folders, backup, questions } = createLocalDataServices(database);
-  const synthesis = new SynthesisService({
-    sites: SITES,
-    archives,
-    navigate: (site, url) => manager.navigate(site, url),
-    send: request => sendTrackedSynthesis(request, manager, synthesisCoordinator, 44_000),
-    onPendingChange: () => manager.releaseUnselectedViews(),
-    collect: (sites, runId) => collection.collect(sites, runId),
-    targetAvailable: (site) => workspace.getState().selectedSites.includes(site),
-    beforeSend: () => collection.clearRun(),
-    showTarget: (site) => {
-      manager.setSurface("sites");
-      manager.setLayout("focus", site);
-    },
-    recordHistory: (text) => history.record(text)
-  });
-  const sync = await createSyncRuntime({
-    database,
-    workspace: () => workspace.getState(),
-    onStatus: (status) => sendToShell("polyask:sync-status", status),
-    onWorkspace: (state) => {
-      manager.setSelection(state.selectedSites);
-      sendToShell("polyask:workspace-state", state);
-      sendToShell("polyask:prompt-library", promptLibrary.getState());
-    }
-  });
-  const dataAdmin = new DataAdminService({ database, deviceId, sync,
-    beforeDisconnect: () => { coordinator.cancel(); synthesisCoordinator.cancel(); },
-    beforeWipe: () => { collection.clearRun(); synthesis.reset(); manager.resetRunStatus(); }
-  });
   createMenu();
   const disposeIpc = registerShellIpc({
     runtime: runtimeInfo,
@@ -343,10 +307,10 @@ async function createWindow(): Promise<void> {
     promptLibrary,
     synthesis,
     sync,
-    dataAdmin,
+    dataAdmin, preferences,
     shellEntry: MAIN_WINDOW_WEBPACK_ENTRY,
-    applyDisplay: (value) => applyDisplayPreferences(manager, value),
-    setCompletionNotifications: (enabled) => completionNotifier.setEnabled(enabled)
+    applyDisplay: (value) => preferences.setDisplay(value),
+    setCompletionNotifications: (enabled) => { preferences.set('completionNotifications', enabled); }
   });
   window.on("move", () => uiStateStore.schedule(manager.getUiState()));
   window.on("maximize", () => uiStateStore.schedule(manager.getUiState()));
@@ -366,6 +330,7 @@ async function createWindow(): Promise<void> {
     disposeIpc();
     mainWindow = null;
     viewManager = null;
+    preferenceRuntime = null;
   });
 }
 

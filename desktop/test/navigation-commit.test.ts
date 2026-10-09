@@ -196,7 +196,9 @@ test("the new-session cap keeps at least 20% margin over the slowest observed ma
 test("new session and history restore wait for commit; synthesis keeps waiting for the full load", () => {
   const main = readSource("src/main/index.ts");
   assert.match(main, /managerForWorkspace\.navigate\(site, url, "commit"\)/);
-  assert.match(main, /navigate: \(site, url\) => manager\.navigate\(site, url\),/, "synthesis sends right after navigating");
+  assert.match(main, /await createWindowDataServices\(/);
+  const services = readSource("src/main/window-data-services.ts");
+  assert.match(services, /navigate: \(site, url\) => manager\.navigate\(site, url\),/, "synthesis sends right after navigating");
   const manager = readSource("src/main/view-manager.ts");
   assert.match(manager, /async navigate\(site: SiteKey, url: string, until: "load" \| "commit" = "load"\)/);
   const history = readSource("src/main/question-history-ipc.ts");

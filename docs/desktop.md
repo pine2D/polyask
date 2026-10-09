@@ -152,8 +152,11 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - 模板删除先在外壳内等待 6 秒（跨页面保留撤销入口），到期才调用原有 tombstone 删除；撤销不写数据库，不新增持久键。等待期间退出应用保留模板。
 
 - 本机库是 `app.getPath("userData")/polyask.sqlite`（Electron 内置 `node:sqlite`），WAL、外键、参数化仓储、事务 outbox。SQLite user_version=3，增量新增 folders / folder_memberships 表，不改旧记录。表：`history`、`archives`、`decisions`、`folders`、`folder_memberships`、`state_items`、`outbox`、`drive_files`、`meta`。
-- **界面状态不进数据库也不进同步**：窗口范围、最大化、布局模式、当前页、每页聚焦站点及 `siteZoom` 各站手动缩放写在同目录的 `desktop-ui-state.json`（`ui-state-store.ts`，防抖 + 临时文件原子替换，损坏回退默认值、不阻止启动）。`siteZoom` 仅接收已登记站点的有限数值 0.25–5；旧文件缺失此字段即无手动覆盖，未勾选站点的比例仍保留。它属于本机界面设置，不登记为 SQLite 业务键或 Drive 同步字段；「重置全部本机数据」的 `shell-ipc.ts` 回调清除该字段及已加载视图的手动覆盖，回写同一文件。兼容 fixture 为 `desktop/test/fixtures/desktop-ui-site-zoom.json`。恢复时把窗口限制到当前显示器可见区域；页数因选站变化时把当前页夹到有效范围。不恢复抽屉、命令面板、确认框、发送中等瞬时状态。
-- **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删。`DataAdminService` 的「清空历史」「清空结果库」「清空决策卡」「清空任务文件夹」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
+- **本机界面状态与可同步偏好分开保存**：窗口范围、最大化、当前页、每页焦点仍仅保存在 `desktop-ui-state.json`，不跨设备同步。布局与逐站缩放从旧文件迁移到偏好库后由库决定有效值，文件仍记录本机视图快照。恢复窗口限制到可见显示器；不恢复临时抽屉、确认框或执行进度。
+- 共享偏好使用 `state_items` 的 `preference:<key>` 和 state schema 1 的 `polyask.preference.<key>` setting，每键独立版本；通知与引导状态共享，显示密度/默认比例、默认布局、各站手动比例分别可选跟随同步。`meta.devicePreferences` 保存本机覆盖与三个跟随开关，默认均为本机覆盖；不投影、不备份。旧 localStorage 和 UI 文件只补缺失值，已有共享通知/引导不被旧缓存覆盖；旧缓存共享种子用 updatedAt=0，后来到达的有效云端版本优先，用户显式保存取得当前单调版本；晚到显示迁移仍保留本机覆盖。只有用户明确选择布局才修改默认布局，辅助发送临时聚焦不写入默认值；远端布局应用不抢键盘焦点。
+- 草稿使用 `state_items` 的 `draft:<id>` 与 schema 1 setting `polyask.draft.<id>`，格式 1；种类为问题、人工比较、决策、综合（含独立追问上下文）。表单不含执行中状态或完整回答副本，每设备/种类/上下文独立分支。`meta.draftSyncEnabled` 默认关闭，只在开启后投影与接收草稿；关闭保留既有云端内容。编辑器自动保存本机，恢复先预览并核对来源，脏稿替换需确认，远端变化仅刷新候选副本。成功发送/保存按草稿 ID 和版本删除，不删之后新编辑；重置和清空使 IPC epoch 失效，旧保存不可复活被清数据。墓碑清空正文但保留身份，重新编辑产生新 ID。
+- 新键登记：`preferences-repository.ts` / `draft-repository.ts`、`sync-preferences.ts` / `sync-drafts.ts`、`database.resetLocalData()` 清空 state/meta，以及只增 fixture `schema1-state-preferences.json` / `schema1-state-drafts.json`。无需修改 SQLite schema；凭据、窗口与瞬时焦点保持本机。
+- **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删。`DataAdminService` 的「清空历史」「清空结果库」「清空决策卡」「清空任务文件夹」「清空草稿」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
 - **「重置全部本机数据」是本应用唯一的物理删除路径**，语义刻意不同：先 `sync.disconnect()` 断开 Drive，再 `database.resetLocalData()` 物理清空十张业务/同步表并只保留 `meta` 里的 `deviceId`。这里**不能用 tombstone**——tombstone 比云端记录新，重新连接后会赢过云端副本并上传，等于把云端也删了，与「重置不会删除云端数据」的承诺相反。`deviceId` 保留是因为本机在云端的旧 fragment 靠它找回，换掉会让重置后首轮上传把本机不建模的设置键整体丢掉。改这两条语义之前先改用户可见的承诺文案。
 - Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，文件夹和关联实体采用 schema 3，`SUPPORTED_SYNC_SCHEMA = 4` 表达客户端可识别的最高版本；state/history/archive 仍仅接受 schema 1，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
 - 出箱仍有记录时保持 `waiting`，不把“暂未到期”当空闲。按最早 `nextAt` 唤醒，限流遵守退避与 Retry-After；旧失败只更新相同 revision，不覆盖上传期间的新修改。断开或销毁取消定时器并使排队任务失效。
@@ -268,8 +271,8 @@ npm run soak -- --minutes=60
 
 ### 业务备份与恢复契约
 
-- `BackupService` 导出有效 history/archive/decision/folder/folderMembership/template/group/workspace/question/questionAnswer，独立 `polyask-backup` version 2（兼容读取 version 1）；不包含凭据、Cookie、设备身份、同步游标或 outbox。JSON 上限 32 MiB / 20,000 条。字段白名单及现有实体校验共同拒绝损坏数据，不导入删除指令。
-- 格式冻结样本 `desktop/test/fixtures/backup-format1.json` 覆盖八类业务数据；它独立于 Drive schema 1/2/3。恢复写入使用当前设备身份和递增版本，保留本机 deviceId，不从备份接收设备身份。
+- `BackupService` 导出有效 history/archive/decision/folder/folderMembership/template/group/workspace/question/questionAnswer/preference/draft，独立 `polyask-backup` version 3（兼容读取 version 1 和 2）；不包含凭据、Cookie、设备身份、同步游标或 outbox。JSON 上限 32 MiB / 20,000 条。字段白名单及现有实体校验共同拒绝损坏数据，不导入删除指令。
+- 格式冻结样本 `desktop/test/fixtures/backup-format1.json` 覆盖八类业务数据；它独立于 Drive schema 1/2/3。偏好恢复写入使用当前设备身份和递增版本；草稿恢复为稳定独立备份分支，不进入本机正在编辑的分支。保留本机 deviceId，不从备份接收设备身份。
 - 原生文件选择仅在主进程进行，可信 shell IPC 不接受渲染层路径；读取限制实际字节数，导出先写同目录临时文件再替换。预览只返回文件名，错误只返回机器码。
 - 预览不写库，冲突默认本机、删除默认跳过；最终显式确认选择。token 绑定全业务快照，期间本机编辑或同步变化使预览失效，必须重新导入。所有写入与 outbox 同一事务，失败全回滚；保留本机与内容相同条目不写入。
 - 文件夹删除为终态，明确恢复使用派生新身份并映射所选关联；重复导入复用已恢复文件夹，不覆盖后续编辑，也不复活再次删除的派生文件夹。缺失依赖的关联在预览提示并跳过，不能隐式恢复未选择的内容。
@@ -291,7 +294,7 @@ npm run soak -- --minutes=60
 
 逐次提问采用独立 `question` 和 `questionAnswer`（每站每次尝试）schema 4，SQLite version 4 新增 questions/question_answers。相同文字不同发送不合并，重试保留独立尝试；自动副本上限 200,000 码点，不改变手动采集上限。父子删除为终态 tombstone + outbox，迟到子记录遇已删除父立即转为 tombstone；本机重置清新两表且保留 deviceId。旧文字 history 仍为 schema 1。
 
-Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或会话 URL；最高支持 schema 4，旧实体保持原格式。业务备份导出 version 2、兼容读取 version 1；子记录依赖父记录，缺依赖不能静默恢复。恢复已删除提问派生新身份并映射选中的副本，重复导入不复活再次删除的内容。
+Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或会话 URL；最高支持 schema 4，旧实体保持原格式。业务备份导出 version 3、兼容读取 version 1 和 2；子记录依赖父记录，缺依赖不能静默恢复。恢复已删除提问派生新身份并映射选中的副本，重复导入不复活再次删除的内容。
 
 
 提问历史 IPC 由 `question-history-ipc.ts` 注册并验证外壳身份；renderer 不接受任意导航地址，恢复只提交记录 ID / 尝试 ID，再用主进程生成的一次性预览令牌执行。实际导航前再次核对记录、站点选择及视图身份，受 OperationGate 保护；最多两站并发、单站 20s、总计 30s，缺地址不导航首页。快照轮询每 5s 启动，最多两个只读探针并发，探针 2.5s；提交成功或提交不确定的结果就绪后固定观察 15min，不依赖早期生成控件，后续进度不顺延；归属不明确时仅观察，不保存正文或地址。明确归属终止、取消或删除仍提前封存；未显示答案的记录可能等待完整观察期才标为未取得副本。切换会话前尽力在 2.5s 内保存：先等待在途采集；旧轮未覆盖的新 token 在同一剩余预算内补采，到期不阻塞导航。中间副本入 outbox 延后 30s，封存或首次文本立即可上传。运行时不把停止键缺失或正文静止当完成证据，无法正向确认结束的副本保留“完成状态未知”。“完整回答”唯一来源是外壳 `GenerationMonitor` 的收口确认（`onComplete`，`view-manager.ts` 的 `onGenerationComplete` 由 `question-capture-binding.ts` 接到 `QuestionCaptureService.complete`）：只认同 runId 且本次尝试已回包的条目，确认后立即补读（在途轮结束后马上再读），确认之后开始的归属、未结束、非生成中、带正文且未截断的快照先记候选，候选回包 ≥3s（`SEAL_QUIET_MS`，`question-history-service.ts`）后才开始的另一次读读到逐字相同的正文才封存为 complete（增长否决，防元宝草稿隐藏停止键的误收口与停止键消失后的尾部续长；采集服务按 `sealDelay()` 提前排复读）；没带读序号的快照不算确认之后；封存后不再被追问、取消或后续快照改写。不新增持久化键、不改 schema。

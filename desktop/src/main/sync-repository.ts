@@ -1,3 +1,6 @@
+import { projectPreferences, applyPreferences } from './sync-preferences';
+import { projectDrafts, applyDrafts } from './sync-drafts';
+import { terminalDraftSettings } from './sync-draft-merge';
 import { isStoredQuestion, isStoredQuestionAnswer } from "../shared/question-history";
 import { createHash } from "node:crypto";
 
@@ -97,6 +100,8 @@ export class SyncRepository {
     }));
     const settings = {
       ...(previous?.settings ?? {}),
+      ...projectPreferences(this.database.state),
+      ...projectDrafts(this.database.state, this.database.meta),
       ...projectParticipation(workspace.participation, remoteStates),
       "amsConsole.selected": {
         value: { ...unknownSelection(remoteStates), ...selected },
@@ -148,7 +153,11 @@ export class SyncRepository {
     const updatedAt = Math.max(selectedSetting?.updatedAt ?? 0, tierSetting?.updatedAt ?? 0, current?.updatedAt ?? 0);
     const deviceId = compareSyncVersion(selectedSetting ?? {}, tierSetting ?? {}) >= 0
       ? selectedSetting?.deviceId : tierSetting?.deviceId;
-    let changed = false;
+    let changed = applyPreferences(this.database.state, merged.settings);
+    if (this.database.meta.get('draftSyncEnabled') === true) {
+      changed = applyDrafts(this.database.state, { ...merged.settings,
+        ...terminalDraftSettings([...Object.values(remoteStates), this.localStateFragment()]) }) || changed;
+    }
     const participationSetting = merged.settings[PARTICIPATION_SETTING];
     const participation = participationFromSetting(participationSetting) ?? current?.participation ?? (participationSetting
       ? { sites: [], updatedAt: participationSetting.updatedAt, deviceId: participationSetting.deviceId } : undefined);

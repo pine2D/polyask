@@ -32,6 +32,7 @@ interface CommandBarProps {
   readonly panelTab: WorkspacePanelTab | null;
   readonly pageControl?: ReactNode;
   readonly imageControl: ReactNode;
+  readonly draftRecovery?: ReactNode;
   readonly sendBlockedReason: string | null;
   readonly synthesisPending: boolean;
   readonly syncStatus: SyncStatus;
@@ -86,6 +87,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
         <HistoryIcon />
       </button>
+      {props.draftRecovery}
       <TierControls copy={props.copy} tier={props.tier} isMac={props.isMac} onChange={props.onTierChange} />
       {props.imageControl}
       {props.runState !== "idle" ? (

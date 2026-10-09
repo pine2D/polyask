@@ -9,6 +9,9 @@ import { ConfirmDialog } from "./confirm-dialog";
 import { registerDecisionNavigationGuard, runApprovedDecisionNavigation } from "./decision-navigation";
 import { LibraryMenu } from "./library-menu";
 import { shell } from "./shell-api";
+import { DraftRecovery } from './draft-recovery';
+import { parseDecisionContent } from './editor-draft-content';
+import { usePersistentDraft } from './use-persistent-draft';
 
 interface Props {
   readonly embedded?: boolean;
@@ -47,10 +50,24 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
   const [confirmation, setConfirmation] = useState<{ text: string; action: () => void } | null>(null);
   const [revision, setRevision] = useState(0);
   const searchEpoch = useRef(0);
+  const editRevision = useRef(0);
+  const initialBaseline = useRef(initialSource ? newCard(initialSource) : initialRecord ? decisionInput(initialRecord) : null);
   const busyRef = useRef(false);
   const workspaceRef = useRef<HTMLElement>(null);
   const errors = validationStarted && value ? validateDecisionDraft(value, source, saved) : {};
   const dirty = editing && !!value && (!saved || JSON.stringify(value) !== JSON.stringify(decisionInput(saved)));
+  const draftDirty = editing && !!value && JSON.stringify(value) !== JSON.stringify(saved ? decisionInput(saved) : initialBaseline.current);
+  const [draftSourceVersion, setDraftSourceVersion] = useState(initialRecord?.updatedAt ?? initialSource?.updatedAt);
+  const changeValue = (next: DecisionInput) => { editRevision.current++; setValue(next); };
+  const persistent = usePersistentDraft({ kind: 'decision', context: saved ? `decision:${saved.id}` : `archive:${value?.archiveId ?? ''}`,
+    title: [...(value?.title ?? '')].slice(0, 160).join(''), content: value, enabled: !!value && editing, dirty: draftDirty, sourceUpdatedAt: draftSourceVersion,
+    onRestore: (content, draft) => {
+      if (!value) return false;
+      const restored = parseDecisionContent(content, value.archiveId);
+      if (!restored) return false;
+      changeValue(restored); setEditing(true); setDraftSourceVersion(draft.sourceUpdatedAt ?? saved?.updatedAt ?? source?.updatedAt);
+      setValidationStarted(true); return true;
+    } });
   useEffect(() => {
     if (!initialRecord || initialSource || editing || dirty || busy || busyRef.current) return;
     setSaved(initialRecord); setValue(decisionInput(initialRecord));
@@ -102,6 +119,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
     finally { busyRef.current = false; setBusy(false); }
   };
   const select = (record: DecisionRecord) => guard(() => {
+    setDraftSourceVersion(record.updatedAt);
     setSaved(record); setValue(decisionInput(record)); setEditing(false); setMessage(""); setValidationStarted(false);
   });
   const save = () => {
@@ -110,8 +128,12 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
       setValidationStarted(true); setMessage(copy.decisionValidationReview); setValidationAttempt(count => count + 1); return;
     }
     void run(async () => {
+      const sentRevision = editRevision.current, sentDraft = persistent.flush();
       const record = saved ? await shell.updateDecision(saved.id, value) : await shell.createDecision(value);
-      setSaved(record); setValue(decisionInput(record)); setEditing(false); setRevision((count) => count + 1);
+      void persistent.clearSaved(sentDraft);
+      setSaved(record); setDraftSourceVersion(record.updatedAt);
+      if (editRevision.current === sentRevision) { setValue(decisionInput(record)); setEditing(false); }
+      setRevision((count) => count + 1);
       setValidationStarted(false);
       setMessage(copy.decisionSaved); onChanged?.(record);
     });
@@ -166,7 +188,8 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
               </>}
             </div>
           </div>
-          <DecisionEditor errors={errors} onOpenLink={url => { void run(() => shell.openExternal(url)); }} copy={copy} value={value} saved={saved} source={source} sourceFailed={sourceFailed} editing={editing} busy={busy} onChange={setValue} onOpenSource={() => guard(() => { if (source) onArchives(source); })} />
+          {editing && <DraftRecovery {...persistent.recovery} copy={copy} locale={locale} busy={busy || persistent.recovery.busy} sourceUpdatedAt={saved?.updatedAt ?? source?.updatedAt} />}
+          <DecisionEditor errors={errors} onOpenLink={url => { void run(() => shell.openExternal(url)); }} copy={copy} value={value} saved={saved} source={source} sourceFailed={sourceFailed} editing={editing} busy={busy} onChange={changeValue} onOpenSource={() => guard(() => { if (source) onArchives(source); })} />
         </> : <div className="decision-placeholder">{items.length ? copy.decisionPick : copy.decisionEmpty}</div>}
       </main>
     </div>

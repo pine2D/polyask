@@ -4,6 +4,7 @@ export const LOCAL_UI_STORAGE_KEY = 'polyask.display';
 export interface LocalUiStorage {
   getItem(key: string): string | null;
   setItem(key: string, value: string): void;
+  removeItem?(key: string): void;
 }
 export interface WorkbenchGuidePreference {
   readonly version: 1;

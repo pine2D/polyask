@@ -10,14 +10,14 @@ export interface SynthesisDraft {
 }
 export interface SynthesisDraftStore {
   save(record: ArchiveRecord, draft: SynthesisDraft, followUpHost?: string): void;
-  restore(record: ArchiveRecord, followUpHost?: string): (SynthesisDraft & { readonly sourceChanged: boolean }) | null;
+  restore(record: ArchiveRecord, followUpHost?: string): (SynthesisDraft & { readonly sourceChanged: boolean; readonly sourceUpdatedAt?: number }) | null;
   version(archiveId: string, followUpHost?: string): number | null;
   remove(archiveId: string, followUpHost?: string, expectedVersion?: number | null): void;
   clear(): void;
   review(record: ArchiveRecord, followUpHost?: string): void;
 }
 
-/** 仅保留当前会话的表单劳动，不写入同步库或本机存储。 */
+/** 会话缓存保留来源核对；独立持久化与恢复由编辑器的草稿 hook 负责。 */
 export function createSynthesisDraftStore(): SynthesisDraftStore {
   const entries = new Map<string, { record: ArchiveRecord; currentRecord: ArchiveRecord; draft: SynthesisDraft; version: number }>();
   let version = 0;
@@ -40,7 +40,7 @@ export function createSynthesisDraftStore(): SynthesisDraftStore {
       const selectedHosts = saved.draft.selectedHosts.filter(host => available.some(result => result.host === host));
       const sourceChanged = saved.record.updatedAt !== record.updatedAt || saved.draft.selectedHosts.some(host =>
         saved.record.results.find(result => result.host === host)?.text !== available.find(result => result.host === host)?.text);
-      return { ...saved.draft, selectedHosts, sourceChanged };
+      return { ...saved.draft, selectedHosts, sourceChanged, sourceUpdatedAt: saved.record.updatedAt };
     },
     version(archiveId, followUpHost) { return entries.get(key(archiveId, followUpHost))?.version ?? null; },
     remove(archiveId, followUpHost, expectedVersion) {

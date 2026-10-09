@@ -24,7 +24,7 @@ setShellApi(new Proxy({
   setSurface: (value: string) => { surfaces.push(value); },
   broadcast: async () => { sends++; return [{ site: "claude", ok: false, code: "submit_unconfirmed" }]; },
   getLocalDataStats: async () => ({ history: 1, archives: 0, decisions: 0, folders: 0, answers: 1, memberships: 0,
-    reset: { answers: 1, memberships: 0, templates: 0, groups: 0, workspace: 1 } }),
+    drafts: 0, reset: { preferences: 0, answers: 1, memberships: 0, templates: 0, groups: 0, workspace: 1 } }),
   resetLocalData: () => {
     resets++;
     const response = new Promise<typeof status>(resolve => { finishReset = () => resolve(status); });

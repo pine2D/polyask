@@ -23,7 +23,7 @@ export function LocalDataCard(props: LocalDataCardProps): React.JSX.Element {
     <h2 id="local-data-title">{props.copy.localDataTitle}</h2>
     <p>{props.copy.localDataDescription}</p>
     <p className="settings-control-hint">{props.copy.localDataDeletionSync}</p>
-    <div className="settings-actions">{(['history', 'archives', 'decisions', 'folders'] as const).map(actionButton)}</div>
+    <div className="settings-actions">{(['history', 'archives', 'decisions', 'folders', 'drafts'] as const).map(actionButton)}</div>
     {props.busy && !active ? <p className="settings-control-hint">{props.copy.settingsWait}</p> : null}
     <div className="local-reset"><p className="sync-privacy">{props.copy.localDataCloudUntouched}</p>{actionButton('reset')}</div>
     {confirmation.state ? <LocalDataConfirm copy={props.copy} state={confirmation.state} busy={props.busy}

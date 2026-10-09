@@ -28,7 +28,7 @@ export function settingsElement(patch: Partial<Props> = {}) {
 export function settingsShell(patch: Record<string, unknown> = {}) {
   setShellApi({ syncDiagnostics: async () => createSyncDiagnosticSnapshot(settingsStatus, settingsRuntime),
     getLocalDataStats: async () => ({ history: 2, archives: 3, decisions: 4, folders: 5, answers: 7, memberships: 9,
-      reset: { answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } }), ...patch } as any);
+      drafts: 0, reset: { preferences: 0, answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } }), ...patch } as any);
 }
 export async function mountSettings(patch: Partial<Props> = {}) {
   settingsShell();

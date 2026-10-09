@@ -49,7 +49,7 @@ test('statistics count every active category and distinguish orphan reset record
   try {
     const before={records:db.businessSnapshot(),outbox:db.outbox.ready(0),deviceId:db.meta.get('deviceId'),configuration:db.configuration()};
     assert.deepEqual(admin.stats(),{history:132,archives:1,decisions:1,folders:1,answers:3,memberships:2,
-      reset:{answers:5,memberships:4,templates:2,groups:1,workspace:1}});
+      drafts:0,reset:{preferences:0,answers:5,memberships:4,templates:2,groups:1,workspace:1}});
     assert.deepEqual({records:db.businessSnapshot(),outbox:db.outbox.ready(0),deviceId:db.meta.get('deviceId'),configuration:db.configuration()},before);
   } finally {db.close();}
 });
@@ -63,7 +63,7 @@ test('category counts match actual clear results and its dependent tombstones, i
     assert.equal(memberships.filter(value=>'deletedAt' in db.folders.getMembership(value.id)!).length,counts.memberships);
     assert.equal(admin.clearArchives(),counts.archives);assert.equal(admin.clearDecisions(),counts.decisions);
     assert.deepEqual(admin.stats(),{history:0,archives:0,decisions:0,folders:0,answers:0,memberships:0,
-      reset:{answers:2,memberships:2,templates:2,groups:1,workspace:1}});
+      drafts:0,reset:{preferences:0,answers:2,memberships:2,templates:2,groups:1,workspace:1}});
     assert.ok(db.outbox.count()>0);
   } finally {db.close();}
 });
@@ -73,7 +73,7 @@ test('local reset removes counted records and preserves device identity',async()
   try {
     const id=db.meta.get('deviceId');await admin.resetLocal();
     assert.deepEqual(admin.stats(),{history:0,archives:0,decisions:0,folders:0,answers:0,memberships:0,
-      reset:{answers:0,memberships:0,templates:0,groups:0,workspace:0}});
+      drafts:0,reset:{preferences:0,answers:0,memberships:0,templates:0,groups:0,workspace:0}});
     assert.equal(db.meta.get('deviceId'),id);assert.equal(db.outbox.count(),0);
   } finally {db.close();}
 });

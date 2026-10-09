@@ -23,7 +23,7 @@ let history = 2, holdCounts = false, statsFail = false, writeFail = false, displ
 let countReply: ((value: LocalDataStats) => void) | undefined, cloudReply: (() => void) | undefined;
 const calls = { clears: 0, exports: 0, resets: 0, closes: 0, display: [] as DisplayPreferences[], health: [] as string[], blocking: [] as boolean[] };
 const stats = (): LocalDataStats => ({ history, archives: 3, decisions: 4, folders: 5, answers: 7, memberships: 9,
-  reset: { answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } });
+  drafts: 0, reset: { preferences: 0, answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } });
 setShellApi({
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
   getLocalDataStats: async () => {

@@ -20,6 +20,7 @@
 @import "./site-participation.css";
 @import "./workspace-progress.css";
 @import "./comparison-worksheet.css";
+@import "./draft-recovery.css";
 @import "./library-scale.css";
 
 :root {

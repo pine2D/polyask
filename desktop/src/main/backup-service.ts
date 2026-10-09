@@ -2,8 +2,9 @@ import { createHash, randomUUID } from "node:crypto";
 import type { BackupApplyResult, BackupDocument, BackupEntry, BackupKind, BackupPreview, BackupPreviewItem, BackupSelectionPreview } from "../shared/backup";
 import { folderMembershipId } from "../shared/task-folder";
 import type { DesktopDatabase } from "./database";
+import { isPreferenceKey } from "../shared/preferences";
 import { comparison, inheritBackupParticipation, projectBody, validateBackup } from "./backup-validation";
-import { backupEntryKey as keyOf, activeBackupBody as active, restoredBackupId as restoredFolderId, questionRestoreSeed, planBackupRestore } from "./backup-restore-plan";
+import { backupEntryKey as keyOf, activeBackupBody as active, restoredBackupId as restoredFolderId, restoredDraftId, questionRestoreSeed, planBackupRestore } from "./backup-restore-plan";
 type Body = Record<string, any>;
 interface Plan {
   document: BackupDocument;
@@ -21,11 +22,18 @@ export class BackupService {
   }) { }
   private now(): number { return (this.options.now ?? Date.now)(); }
   private snapshot(): Map<string, Body> {
-    return new Map(this.database.businessSnapshot().map(row => {
+    const snapshot = new Map(this.database.businessSnapshot().map(row => {
       const kind: BackupKind = tableKind[row.table] ?? (row.id === "workspace" ? "workspace" : row.id.startsWith("template:") ? "template" : "group");
       const id = row.table === "state_items" && kind !== "workspace" ? row.id.slice(kind.length + 1) : row.id;
       return [`${kind}:${id}`, row.body as Body];
     }));
+    for (const prefix of ['preference:', 'draft:']) {
+      for (const { key, value } of this.database.state.entries<Body>(prefix)) {
+        if (prefix === 'preference:' && !isPreferenceKey(key.slice(prefix.length))) continue;
+        snapshot.set(key, value);
+      }
+    }
+    return snapshot;
   }
   private fingerprint(snapshot: Map<string, Body>): string { return createHash("sha256").update(JSON.stringify([...snapshot])).digest("hex"); }
   export(): BackupDocument {
@@ -35,9 +43,9 @@ export class BackupService {
         continue;
       const split = key.indexOf(":"), kind = key.slice(0, split) as BackupKind, id = key.slice(split + 1);
       if (kind === "questionAnswer" && !active(this.database.questions.get(body.questionId))) continue;
-      entries.push({ kind, id, body: projectBody(kind, body) });
+      entries.push({ kind, id, body: projectBody(kind, body, id) });
     }
-    return validateBackup({ format: "polyask-backup", version: 2, exportedAt: this.now(), entries });
+    return validateBackup({ format: "polyask-backup", version: 3, exportedAt: this.now(), entries });
   }
   preview(value: unknown): BackupPreview {
     const document = validateBackup(value), snapshot = this.snapshot();
@@ -57,11 +65,22 @@ export class BackupService {
           local = snapshot.get(`folderMembership:${backupBody.id}`) ?? local;
         }
       }
-      const status = !local ? "new" : !active(local) ? "deleted" : JSON.stringify(comparison(projectBody(e.kind, local))) === JSON.stringify(comparison(backupBody)) ? "same" : "conflict";
+      let status: BackupPreviewItem['status'] = !local ? "new" : !active(local) ? "deleted" : JSON.stringify(comparison(projectBody(e.kind, local, e.id))) === JSON.stringify(comparison(backupBody)) ? "same" : "conflict";
       let note: BackupPreviewItem["note"];
       let blocked = false;
       let reusesIdentity = false;
       let requires: string[] = [];
+      if (e.kind === 'draft') {
+        const mapped = snapshot.get(`draft:${restoredDraftId(e)}`);
+        note = 'draft_new_identity';
+        if (mapped) {
+          local = mapped;
+          blocked = !active(mapped);
+          reusesIdentity = active(mapped);
+          status = active(mapped) ? 'same' : 'deleted';
+          note = 'draft_reused';
+        }
+      }
       if (e.kind === "question" && questionRestoreSeed(e.id, document.entries, snapshot) !== null) {
         note = "question_new_identity";
         const mapped = snapshot.get(`question:${restoredFolderId(e.id, questionRestoreSeed(e.id, document.entries, snapshot))}`);
@@ -87,7 +106,7 @@ export class BackupService {
           note = "dependency_required";
         blocked = dependencies.some(k => !active(snapshot.get(k)) && !documentKeys.has(k));
       }
-      const business = local ? active(local) ? comparison(projectBody(e.kind, local)) : { deletedAt: local.deletedAt } : null;
+      const business = local ? active(local) ? comparison(projectBody(e.kind, local, e.id)) : { deletedAt: local.deletedAt } : null;
       const source = e.kind === "decision" ? { key: `archive:${e.body.archiveId}`, title: String(e.body.sourceTitle), available: active(snapshot.get(`archive:${e.body.archiveId}`)) } : undefined;
       return { key, kind: e.kind, id: e.id, title: String(e.body.title ?? e.body.name ?? e.body.task ?? e.body.text ?? e.id).slice(0, 160), status, local: business, backup: comparison(backupBody), ...(note ? { note } : {}), ...(blocked ? { blocked } : {}), ...(requires.length ? { requires } : {}), ...(source ? { source } : {}), ...(reusesIdentity ? { reusesIdentity: true } : {}) };
     });
