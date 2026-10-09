@@ -33,6 +33,8 @@ import { normalizeSelection } from "../shared/workspace";
 import type { DesktopDatabase } from "./database";
 import type { DriveFile } from "./drive-client";
 import { SITES } from "./sites";
+import { PARTICIPATION_SETTING, type StoredParticipation } from '../shared/workspace-participation';
+import { participationFromSetting, projectParticipation } from './sync-participation';
 
 export interface SyncConfig {
   readonly connected: boolean;
@@ -55,6 +57,7 @@ export interface SyncConfig {
 
 interface StoredWorkspace {
   readonly selectedSites: readonly SiteKey[];
+  readonly participation?: StoredParticipation;
   readonly tier: Tier;
   readonly updatedAt: number;
   readonly deviceId: string;
@@ -94,6 +97,7 @@ export class SyncRepository {
     }));
     const settings = {
       ...(previous?.settings ?? {}),
+      ...projectParticipation(workspace.participation, remoteStates),
       "amsConsole.selected": {
         value: { ...unknownSelection(remoteStates), ...selected },
         updatedAt: workspace.updatedAt,
@@ -145,9 +149,13 @@ export class SyncRepository {
     const deviceId = compareSyncVersion(selectedSetting ?? {}, tierSetting ?? {}) >= 0
       ? selectedSetting?.deviceId : tierSetting?.deviceId;
     let changed = false;
-    const nextWorkspace = { selectedSites, tier, updatedAt, deviceId: deviceId || current?.deviceId || this.deviceId() };
+    const participationSetting = merged.settings[PARTICIPATION_SETTING];
+    const participation = participationFromSetting(participationSetting) ?? current?.participation ?? (participationSetting
+      ? { sites: [], updatedAt: participationSetting.updatedAt, deviceId: participationSetting.deviceId } : undefined);
+    const nextWorkspace = { selectedSites, tier, updatedAt, deviceId: deviceId || current?.deviceId || this.deviceId(),
+      ...(participation ? { participation } : {}) };
     if (JSON.stringify(nextWorkspace) !== JSON.stringify(current)) {
-      this.database.state.put("workspace", nextWorkspace, updatedAt, false);
+      this.database.state.put("workspace", nextWorkspace, Math.max(updatedAt, participation?.updatedAt ?? 0), false);
       changed = true;
     }
     for (const group of Object.values(merged.materialized.groups)) {

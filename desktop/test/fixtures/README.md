@@ -17,6 +17,8 @@
 
 `schema1-state-site-order.json` 是 2026-10-06 新增的 Desktop 站点顺序样本（不是扩展生成），使用同版本的 `amsConsole.selected` 与 `amsConsole.siteOrder` 主机名数组；旧 schema 1 样本保持不变。`workspace-order-sync.test.ts` 覆盖顺序往返、旧客户端更新选择、未知主机与本机重置后的恢复。
 
+`schema1-state-participation.json` 是 2026-10-09 新增的发送勾选样本，`amsConsole.participating` 使用独立版本的主机名布尔映射。`participation-sync.test.ts` 覆盖未勾选、空范围、未知主机、本机重置与备份恢复；旧样本不修改。
+
 ## 新实体与备份
 
 - `schema2-*.json`：决策卡及删除标记，实体 schema 2。

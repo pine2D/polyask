@@ -2,7 +2,7 @@ export const SITE_PARTICIPATION_COPY = {
   en: {
     participationLabel: 'Send to',
     participationSummary: 'Sending to {participating} sites',
-    participationSessionHint: 'Uncheck a site to skip future broadcasts in this app session. Its page stays open; close it to release resources.',
+    participationSessionHint: 'Send selections are saved and synced when connected. Uncheck a site to skip future broadcasts; its page stays open.',
     participationResourcesHint: 'Pages kept open still use resources. Close a page to release it.',
     sitePageRetained: 'Page open, skipped',
     sitePageClosed: 'Page closed',
@@ -27,7 +27,7 @@ export const SITE_PARTICIPATION_COPY = {
   zhCN: {
     participationLabel: '发送站点',
     participationSummary: '发送到 {participating} 站',
-    participationSessionHint: '取消勾选后，本次使用期间不再发送到该站；页面仍保留，关闭可释放资源。',
+    participationSessionHint: '发送勾选会保存，连接同步后可跨设备恢复；取消勾选不关闭页面。',
     participationResourcesHint: '保留打开的页面仍占资源；关闭页面可以释放。',
     sitePageRetained: '保留页面，不发送',
     sitePageClosed: '页面已关闭',
@@ -52,7 +52,7 @@ export const SITE_PARTICIPATION_COPY = {
   zhTW: {
     participationLabel: '傳送網站',
     participationSummary: '傳送至 {participating} 站',
-    participationSessionHint: '取消勾選後，本次使用期間不再傳送至該站；頁面仍保留，關閉可釋放資源。',
+    participationSessionHint: '傳送勾選會儲存，連線同步後可跨裝置恢復；取消勾選不關閉頁面。',
     participationResourcesHint: '保留開啟的頁面仍占資源；關閉頁面可以釋放。',
     sitePageRetained: '保留頁面，不傳送',
     sitePageClosed: '頁面已關閉',

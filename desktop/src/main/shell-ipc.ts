@@ -1,5 +1,6 @@
 import { registerQuestionHistoryIpc } from "./question-history-ipc";
 import { registerBootstrapIpc } from './bootstrap-ipc';
+import { registerWorkspaceSelectionIpc } from './workspace-selection-ipc';
 import { registerSitePageIpc } from './site-page-ipc';
 import { SitePageService } from './site-page-service';
 import { createQuestionCapture } from "./question-capture-binding";
@@ -103,6 +104,7 @@ const HANDLERS = [
   "polyask:synthesis-save",
   "polyask:open-external",
   "polyask:set-selection",
+  "polyask:set-participation",
   "polyask:set-tier",
   "polyask:save-group",
   "polyask:delete-group",
@@ -266,16 +268,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!url) throw new Error("invalid_external_url");
     await electronShell.openExternal(url);
   });
-  ipcMain.handle("polyask:set-selection", (event, value: unknown) => {
-    if (!trustedShell(event)) throw new Error("untrusted_sender");
-    workspace.setSelection(value);
-    return publishWorkspace();
-  });
-  ipcMain.handle("polyask:set-tier", (event, value: unknown) => {
-    if (!trustedShell(event)) throw new Error("untrusted_sender");
-    workspace.setTier(value);
-    return publishWorkspace();
-  });
+  registerWorkspaceSelectionIpc(ipcMain, workspace, trustedShell, publishWorkspace);
   ipcMain.handle("polyask:save-group", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
     workspace.saveGroup(value && typeof value === "object" ? value : {});

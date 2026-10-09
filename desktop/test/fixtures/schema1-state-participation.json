@@ -1,0 +1,19 @@
+{
+  "file": {
+    "id": "drive-state-participation",
+    "name": "state-participating-desktop.json",
+    "appProperties": { "app": "polyask", "schema": "1", "kind": "state", "id": "participating-desktop" }
+  },
+  "body": {
+    "schema": 1,
+    "deviceId": "participating-desktop",
+    "settings": {
+      "amsConsole.selected": { "value": { "claude.ai": true, "www.kimi.com": true }, "updatedAt": 50, "deviceId": "participating-desktop" },
+      "amsConsole.siteOrder": { "value": ["claude.ai", "www.kimi.com"], "updatedAt": 50, "deviceId": "participating-desktop" },
+      "amsConsole.tier": { "value": "", "updatedAt": 50, "deviceId": "participating-desktop" },
+      "amsConsole.participating": { "value": { "www.kimi.com": true, "future.example": false }, "updatedAt": 75, "deviceId": "participating-desktop" }
+    },
+    "templates": {},
+    "groups": {}
+  }
+}

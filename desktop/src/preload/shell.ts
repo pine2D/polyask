@@ -110,6 +110,7 @@ export interface PolyAskDesktopApi {
   setDrawerOpen(value: boolean): void;
   setSurface(value: DesktopSurface): void;
   setSelection(sites: readonly SiteKey[]): Promise<WorkspaceState>;
+  setParticipation(sites: readonly SiteKey[]): Promise<WorkspaceState>;
   setTier(value: BroadcastRequest["tier"]): Promise<WorkspaceState>;
   saveGroup(input: { readonly name: string; readonly sites: readonly SiteKey[] }): Promise<WorkspaceState>;
   deleteGroup(id: string): Promise<WorkspaceState>;
@@ -219,6 +220,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   setDrawerOpen: (value: boolean) => ipcRenderer.send("polyask:set-drawer-open", value),
   setSurface: (value: DesktopSurface) => ipcRenderer.send("polyask:set-surface", value),
   setSelection: (sites: readonly SiteKey[]) => invoke("polyask:set-selection", sites),
+  setParticipation: (sites: readonly SiteKey[]) => invoke('polyask:set-participation', sites),
   setTier: (value: BroadcastRequest["tier"]) => invoke("polyask:set-tier", value),
   saveGroup: (input: { readonly name: string; readonly sites: readonly SiteKey[] }) =>
     invoke("polyask:save-group", input),

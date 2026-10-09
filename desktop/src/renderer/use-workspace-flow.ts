@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import type { Tier } from "../shared/protocol";
 import type { WorkspaceState } from "../shared/workspace";
+import { compareSyncVersion } from '../shared/sync';
 import { shell } from "./shell-api";
 
 const INITIAL_WORKSPACE: WorkspaceState = { selectedSites: [], groups: [], tier: null };
@@ -15,14 +16,22 @@ export function useWorkspaceFlow(
   const selectionRef = useRef<readonly SiteKey[]>([]);
   const selectionRequest = useRef(0);
   const pendingSelection = useRef<readonly SiteKey[] | null>(null);
+  const participationRequest = useRef(0);
+  const pendingParticipation = useRef<readonly SiteKey[] | null>(null);
+  const acceptedWorkspace = useRef<WorkspaceState>(INITIAL_WORKSPACE);
   const [workspace, setWorkspace] = useState<WorkspaceState>(INITIAL_WORKSPACE);
   const accept = (value: WorkspaceState): void => {
+    const latest = acceptedWorkspace.current;
+    if (compareSyncVersion(latest.participationVersion ?? {}, value.participationVersion ?? {}) > 0) value = latest;
+    acceptedWorkspace.current = value;
     const selectedSites = pendingSelection.current ?? value.selectedSites;
     selectionRef.current = selectedSites;
-    setWorkspace({ ...value, selectedSites });
+    setWorkspace({ ...value, selectedSites,
+      ...(pendingParticipation.current ? { participatingSites: pendingParticipation.current } : {}) });
   };
   const recover = (): void => {
     pendingSelection.current = null;
+    accept(acceptedWorkspace.current);
     const request = ++selectionRequest.current;
     announce(failedMessage);
     void shell.bootstrap().then((state) => {
@@ -54,9 +63,26 @@ export function useWorkspaceFlow(
     selected,
     currentSelection: () => selectionRef.current,
     accept,
-    invalidate: () => { selectionRequest.current++; pendingSelection.current = null; },
+    invalidate: () => {
+      selectionRequest.current++; pendingSelection.current = null;
+      participationRequest.current++; pendingParticipation.current = null;
+      acceptedWorkspace.current = INITIAL_WORKSPACE;
+    },
     changeSelection,
     openPages,
+    saveParticipation: async (sites: readonly SiteKey[]): Promise<readonly SiteKey[]> => {
+      const request = ++participationRequest.current;
+      pendingParticipation.current = sites;
+      try {
+        const state = await shell.setParticipation(sites);
+        if (request !== participationRequest.current) throw new Error('operation_superseded');
+        pendingParticipation.current = null; accept(state);
+        return acceptedWorkspace.current.participatingSites ?? acceptedWorkspace.current.selectedSites;
+      } catch (error) {
+        if (request === participationRequest.current) { pendingParticipation.current = null; recover(); }
+        throw error;
+      }
+    },
     toggleSite: (site: SiteKey) => {
       const next = new Set(selectionRef.current);
       if (next.has(site)) next.delete(site); else next.add(site);

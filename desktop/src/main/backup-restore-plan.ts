@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { BackupEntry, BackupKind, BackupSelectionPreview } from '../shared/backup';
 import { folderMembershipId } from '../shared/task-folder';
 import { questionAnswerId } from './question-repository';
-import { comparison, projectBody } from './backup-validation';
+import { comparison, inheritBackupParticipation, projectBody } from './backup-validation';
 
 type Body = Record<string, any>;
 export const backupEntryKey = (entry: Pick<BackupEntry, 'kind' | 'id'>) => `${entry.kind}:${entry.id}`;
@@ -55,11 +55,16 @@ export function planBackupRestore(entries: readonly BackupEntry[], source: Reado
       if (!activeBackupBody(snapshot.get(`folder:${body.folderId}`)) || !activeBackupBody(snapshot.get(`${body.targetKind}:${body.targetId}`))) continue;
     }
     const id = String(body.id ?? entry.id), current = snapshot.get(`${entry.kind}:${id}`);
+    if (entry.kind === 'workspace') body = inheritBackupParticipation(body, current);
     if (activeBackupBody(current) && JSON.stringify(comparison(projectBody(entry.kind, current))) === JSON.stringify(comparison(body))) continue;
     const stamp = Math.max(options.now(), Number(body.updatedAt) + 1, Number(body.createdAt) || 0, Number(body.lastUsedAt ?? 0) + 1,
       Number(current?.updatedAt ?? 0) + 1, Number(current?.lastUsedAt ?? 0) + 1, Number(current?.deletedAt ?? 0) + 1, Number(original?.updatedAt ?? 0) + 1);
     if (!Number.isSafeInteger(stamp)) throw new Error('backup_invalid');
     body = { ...body, updatedAt: stamp, deviceId: options.deviceId() };
+    if (entry.kind === 'workspace' && entry.body.participation) {
+      const updatedAt = Math.max(stamp, Number(body.participation.updatedAt) + 1, Number(current?.participation?.updatedAt ?? 0) + 1);
+      body.participation = { sites: body.participation.sites, updatedAt, deviceId: body.deviceId };
+    }
     if (entry.kind === 'history') body.lastUsedAt = Math.max(stamp, body.lastUsedAt);
     projectBody(entry.kind, body);
     snapshot.set(`${entry.kind}:${id}`, body);

@@ -2,7 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { BackupApplyResult, BackupDocument, BackupEntry, BackupKind, BackupPreview, BackupPreviewItem, BackupSelectionPreview } from "../shared/backup";
 import { folderMembershipId } from "../shared/task-folder";
 import type { DesktopDatabase } from "./database";
-import { comparison, projectBody, validateBackup } from "./backup-validation";
+import { comparison, inheritBackupParticipation, projectBody, validateBackup } from "./backup-validation";
 import { backupEntryKey as keyOf, activeBackupBody as active, restoredBackupId as restoredFolderId, questionRestoreSeed, planBackupRestore } from "./backup-restore-plan";
 type Body = Record<string, any>;
 interface Plan {
@@ -44,8 +44,9 @@ export class BackupService {
     const documentKeys = new Set(document.entries.map(keyOf));
     const items: BackupPreviewItem[] = document.entries.map(e => {
       const key = keyOf(e);
-      const backupBody = { ...e.body } as Body;
+      let backupBody = { ...e.body } as Body;
       let local = snapshot.get(key);
+      if (e.kind === 'workspace') backupBody = inheritBackupParticipation(backupBody, local && projectBody(e.kind, local));
       if (e.kind === "folderMembership") {
         const originalFolder = snapshot.get(`folder:${backupBody.folderId}`);
         if (originalFolder && !active(originalFolder) && documentKeys.has(`folder:${backupBody.folderId}`)) {

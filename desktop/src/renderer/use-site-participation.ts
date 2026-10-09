@@ -7,10 +7,12 @@ export interface SiteParticipationOptions {
   readonly ready: boolean;
   readonly busy?: boolean;
   readonly openPages: (next: readonly SiteKey[]) => Promise<readonly SiteKey[]>;
+  readonly saved?: readonly SiteKey[];
+  readonly save?: (next: readonly SiteKey[]) => Promise<readonly SiteKey[]>;
   readonly onError: () => void;
 }
 
-/** Page membership is persistent; send membership only belongs to this shell session. */
+/** Page membership and send membership are independent; saves wait for their own ACK. */
 export function useSiteParticipation(options: SiteParticipationOptions) {
   const latest = useRef(options); latest.current = options;
   const initialized = useRef(false), mounted = useRef(true), revision = useRef(0);
@@ -25,12 +27,19 @@ export function useSiteParticipation(options: SiteParticipationOptions) {
   }, []);
   useEffect(() => {
     if (!options.ready) return;
-    if (!initialized.current) { initialized.current = true; accept(participationSites(options.opened)); }
+    if (!initialized.current) {
+      initialized.current = true;
+      accept(participationSites(options.saved ?? options.opened).filter(site => options.opened.includes(site)));
+    }
+    else if (options.saved !== undefined && !pending) {
+      const next = participationSites(options.saved).filter(site => options.opened.includes(site));
+      if (next.join(',') !== desired.current.join(',')) accept(next);
+    }
     else {
       const next = desired.current.filter(site => options.opened.includes(site));
       if (next.join(',') !== desired.current.join(',')) accept(next);
     }
-  }, [options.opened, options.ready, resetRevision]);
+  }, [options.opened, options.ready, options.saved, pending, resetRevision]);
   const currentSites = () => desired.current.filter(site => latest.current.opened.includes(site));
   const active = (request: number) => mounted.current && request === revision.current;
   const change = async (value: readonly SiteKey[]): Promise<boolean> => {
@@ -41,20 +50,31 @@ export function useSiteParticipation(options: SiteParticipationOptions) {
     const opened = latest.current.opened;
     // Missing pages become participants only after their own accepted open ACK.
     accept(target.filter(site => opened.includes(site)));
-    if (target.every(site => opened.includes(site))) { setPending(false); return true; }
-    const inFlight = [...opening.current.values()].flat();
-    const base = pagesNeededForParticipation(opened, [...new Set(inFlight)]);
-    const next = pagesNeededForParticipation(base, target);
-    opening.current.set(request, next); setPending(true);
+    const needsOpening = target.some(site => !opened.includes(site));
+    if (!needsOpening && !latest.current.save) { setPending(false); return true; }
+    setPending(true);
     try {
-      const accepted = participationSites(await latest.current.openPages(next));
+      let accepted = opened;
+      if (needsOpening) {
+        const inFlight = [...opening.current.values()].flat();
+        const base = pagesNeededForParticipation(opened, [...new Set(inFlight)]);
+        const next = pagesNeededForParticipation(base, target);
+        opening.current.set(request, next);
+        accepted = participationSites(await latest.current.openPages(next));
+      }
       if (!active(request)) return false;
-      accept(target.filter(site => accepted.includes(site)));
+      const confirmed = target.filter(site => accepted.includes(site));
+      const saved = latest.current.save ? participationSites(await latest.current.save(confirmed)) : confirmed;
+      if (!active(request)) return false;
+      accept(saved);
       const complete = target.every(site => accepted.includes(site));
       if (!complete) latest.current.onError();
       return complete;
     } catch {
-      if (active(request)) latest.current.onError();
+      if (active(request)) {
+        if (latest.current.saved !== undefined) accept(latest.current.saved.filter(site => latest.current.opened.includes(site)));
+        latest.current.onError();
+      }
       return false;
     } finally {
       opening.current.delete(request);

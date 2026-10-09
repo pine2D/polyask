@@ -78,7 +78,7 @@ import { useImageSelection } from "./use-image-selection";
 import { useSynthesisFlow } from "./use-synthesis-flow";
 import { useSynthesisRecovery } from "./use-synthesis-recovery";
 import { useWorkspaceFlow } from "./use-workspace-flow";
-import { useSiteParticipation } from './use-site-participation';
+import { useSyncedSiteParticipation } from './use-synced-site-participation';
 import { useSitePageClose } from './use-site-page-close';
 import { shell } from "./shell-api";
 import { requestDecisionNavigation } from "./decision-navigation";
@@ -180,13 +180,8 @@ function App(): React.JSX.Element {
   };
   const synthesis = useSynthesisFlow(actionLock.current!);
   const auxiliaryBusy = auxiliaryWorkBusy || synthesis.runState !== "idle";
-  const participation = useSiteParticipation({ opened: workspace.selectedSites, ready: bootstrapPhase === 'ready',
-    get busy() { return actionLock.current!.busy; }, openPages: async next => {
-      const accepted = await actionLock.current!.run(() => workspaceFlow.openPages(next));
-      if (!accepted) throw new Error('operation_busy');
-      return accepted;
-    },
-    onError: () => setAnnouncement(copy.workspaceActionFailed) });
+  const participation = useSyncedSiteParticipation(workspaceFlow, bootstrapPhase === 'ready',
+    actionLock.current!, () => setAnnouncement(copy.workspaceActionFailed));
   const participating = useMemo(() => new Set(participation.participating), [participation.participating]);
   const archiveCapture = useArchiveCapture({ sites, selected: participating, prompt: text });
   const broadcast = useBroadcastFlow(

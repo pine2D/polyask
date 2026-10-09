@@ -68,7 +68,8 @@ export function useControlHint(id: string, noticeSequence = 0): string {
     document.addEventListener("pointerout", out);
     document.addEventListener("focusin", focus);
     document.addEventListener("focusout", blur);
-    document.addEventListener("click", dismiss, true);
+    // Let React observe native checkbox changes before hint updates rerender controlled inputs.
+    document.addEventListener("click", dismiss);
     document.addEventListener("keydown", key);
     window.addEventListener("blur", dismiss);
     return () => {
@@ -77,7 +78,7 @@ export function useControlHint(id: string, noticeSequence = 0): string {
       document.removeEventListener("pointerout", out);
       document.removeEventListener("focusin", focus);
       document.removeEventListener("focusout", blur);
-      document.removeEventListener("click", dismiss, true);
+      document.removeEventListener("click", dismiss);
       document.removeEventListener("keydown", key);
       window.removeEventListener("blur", dismiss);
     };

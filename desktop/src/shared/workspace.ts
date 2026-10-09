@@ -1,6 +1,6 @@
 import { SITE_KEYS, type SiteDefinition, type SiteKey } from "./contracts";
 import type { Tier } from "./protocol";
-import { validSyncTime } from "./sync";
+import { validSyncTime, type VersionedSyncValue } from "./sync";
 
 export const GROUP_NAME_LIMIT = 80;
 export type ScopePresetKey = "all" | "clear" | "intl" | "domestic";
@@ -24,6 +24,9 @@ export type WorkspaceGroup = ActiveWorkspaceGroup | WorkspaceGroupTombstone;
 
 export interface WorkspaceState {
   readonly selectedSites: readonly SiteKey[];
+  /** Missing in legacy bootstrap responses; those default to the opened pages. */
+  readonly participatingSites?: readonly SiteKey[];
+  readonly participationVersion?: Pick<VersionedSyncValue, 'updatedAt' | 'deviceId'>;
   readonly groups: readonly ActiveWorkspaceGroup[];
   readonly tier: Tier;
 }

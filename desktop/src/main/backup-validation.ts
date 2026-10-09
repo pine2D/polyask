@@ -7,6 +7,7 @@ import { isStoredDecision } from "../shared/decision";
 import { isStoredPromptTemplate } from "../shared/prompt-library";
 import { isHistoryRecord, validSyncTime } from "../shared/sync";
 import { isStoredFolderMembership, isStoredTaskFolder } from "../shared/task-folder";
+import { parseStoredParticipation } from '../shared/workspace-participation';
 type Body = Record<string, any>;
 const fields: Record<BackupKind, string[]> = {
   question: ["id", "text", "sites", "requestedTier", "inputImageCount", "createdAt", "updatedAt", "schema"],
@@ -16,7 +17,7 @@ const fields: Record<BackupKind, string[]> = {
   decision: ["id", "archiveId", "title", "sourceTitle", "conclusion", "rationale", "uncertainties", "nextStep", "status", "evidence", "createdAt", "updatedAt", "schema"],
   folder: ["id", "name", "createdAt", "updatedAt", "schema"],
   folderMembership: ["id", "folderId", "targetKind", "targetId", "createdAt", "updatedAt", "schema"],
-  template: ["id", "name", "text", "updatedAt"], group: ["id", "name", "sites", "updatedAt"], workspace: ["selectedSites", "tier", "updatedAt"]
+  template: ["id", "name", "text", "updatedAt"], group: ["id", "name", "sites", "updatedAt"], workspace: ["selectedSites", "tier", "updatedAt", "participation"]
 };
 const object = (v: unknown): v is Body => !!v && typeof v === "object" && !Array.isArray(v);
 const pick = (v: Body, keys: string[]): Body => Object.fromEntries(keys.filter(k => Object.hasOwn(v, k)).map(k => [k, v[k]]));
@@ -26,6 +27,11 @@ export function projectBody(kind: BackupKind, value: unknown): Body {
   if (!object(value) || "deletedAt" in value)
     throw new Error("backup_invalid");
   const b = pick(value, fields[kind]);
+  if (kind === 'workspace' && Object.hasOwn(b, 'participation')) {
+    const participation = object(b.participation) && parseStoredParticipation({ ...b.participation, deviceId: 'backup' });
+    if (!participation) throw new Error('backup_invalid');
+    b.participation = { sites: participation.sites, updatedAt: participation.updatedAt };
+  }
   if (kind === "archive") {
     if (!Array.isArray(b.results) || !Array.isArray(b.resultPreviews))
       throw new Error("backup_invalid");
@@ -109,5 +115,12 @@ export function validateBackup(value: unknown): BackupDocument {
   return JSON.parse(JSON.stringify({ format: "polyask-backup", version: value.version, exportedAt: value.exportedAt, entries }));
 }
 export function comparison(body: Readonly<Record<string, unknown>>): Body {
-  return Object.fromEntries(Object.entries(body).filter(([k]) => !["deviceId", "updatedAt", "createdAt", "lastUsedAt", "ts"].includes(k)));
+  return Object.fromEntries(Object.entries(body).filter(([k]) => !["deviceId", "updatedAt", "createdAt", "lastUsedAt", "ts"].includes(k))
+    .map(([key, value]) => [key, key === 'participation' && object(value) ? { sites: value.sites } : value]));
+}
+
+/** Legacy backups do not express a change to the independently versioned send preference. */
+export function inheritBackupParticipation(body: Body, current?: Body | null): Body {
+  return !Object.hasOwn(body, 'participation') && current?.participation
+    ? { ...body, participation: current.participation } : body;
 }

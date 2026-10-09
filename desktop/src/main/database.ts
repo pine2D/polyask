@@ -145,6 +145,7 @@ export class DesktopDatabase {
   resetLocalData(): void {
     this.questions.invalidateLifecycle();
     inTransaction(this.database, () => {
+      // state_items includes workspace.participation and its independent sync version.
       for (const table of ["questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");
     });

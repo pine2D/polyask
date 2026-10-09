@@ -16,6 +16,7 @@ import {
 } from "../shared/workspace";
 import type { MetaRepository } from "./meta-repository";
 import { nextSyncTime } from "../shared/sync";
+import { parseStoredParticipation, type StoredParticipation } from '../shared/workspace-participation';
 import { SITES } from "./sites";
 import type { StateRepository } from "./state-repository";
 
@@ -32,6 +33,7 @@ const GROUP_PREFIX = "group:";
 
 interface StoredWorkspace {
   readonly selectedSites: readonly SiteKey[];
+  readonly participation?: StoredParticipation;
   readonly tier: Tier;
   readonly updatedAt: number;
   readonly deviceId: string;
@@ -114,7 +116,11 @@ export class WorkspaceService {
     const groups = this.state.list<unknown>(GROUP_PREFIX)
       .filter(validGroup)
       .filter(isActiveWorkspaceGroup);
-    return { selectedSites, tier, groups };
+    const savedParticipation = parseStoredParticipation(stored?.participation);
+    const participatingSites = stored?.participation === undefined ? selectedSites
+      : selectedSites.filter(site => savedParticipation?.sites.includes(site));
+    return { selectedSites, participatingSites, tier, groups,
+      ...(savedParticipation ? { participationVersion: { updatedAt: savedParticipation.updatedAt, deviceId: savedParticipation.deviceId } } : {}) };
   }
 
   setSelection(value: unknown): WorkspaceState {
@@ -126,6 +132,20 @@ export class WorkspaceService {
   setTier(value: unknown): WorkspaceState {
     if (!validTier(value)) throw new Error("invalid_tier");
     this.writeWorkspace(this.getState().selectedSites, value);
+    return this.getState();
+  }
+
+  setParticipation(value: unknown): WorkspaceState {
+    const sites = strictSelection(value, true);
+    const opened = this.getState().selectedSites;
+    if (sites.some(site => !opened.includes(site))) throw new Error('invalid_site_selection');
+    const current = this.state.get<StoredWorkspace>(WORKSPACE_KEY) ?? {
+      selectedSites: [...SITE_KEYS], tier: null, updatedAt: 0, deviceId: this.deviceId()
+    };
+    const updatedAt = nextSyncTime(this.now(), current.participation?.updatedAt ?? 0);
+    const hidden = parseStoredParticipation(current.participation)?.sites.filter(site => !opened.includes(site)) ?? [];
+    const participation = { sites: [...hidden, ...sites], updatedAt, deviceId: this.deviceId() };
+    this.state.put(WORKSPACE_KEY, { ...current, participation }, Math.max(current.updatedAt, updatedAt));
     return this.getState();
   }
 
@@ -197,6 +217,7 @@ export class WorkspaceService {
     const current = this.state.get<StoredWorkspace>(WORKSPACE_KEY);
     const updatedAt = current ? nextSyncTime(this.now(), current.updatedAt) : this.now();
     this.state.put<StoredWorkspace>(WORKSPACE_KEY, {
+      ...current,
       selectedSites,
       tier,
       updatedAt,
