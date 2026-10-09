@@ -46,7 +46,7 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 ## 离线回归
 
-- 输入框展开意图专项：`npm run test:unit -- test/composer-activation-native.check.ts` 编译生产外壳、preload 和 ViewManager，以临时档案及五个真实本地网页视图验证 Esc 后换页/恢复窗口、已聚焦重点击/聚焦命令、Tab、取消关页、附件单层 Esc、模板和历史回填；明暗主题比较搜索、编辑、设置及门户菜单等文字输入的焦点，并检查错误、只读、禁用、强制颜色与减少动态效果。`test/composer-activation.test.tsx` 另覆盖被阻止、组合态及失效 Tab 和选区恢复。截图与报告只留临时目录；这不替代 Windows 原生分组切换焦点、物理输入法或读屏验收。
+- 输入框展开意图专项：`npm run test:unit -- test/composer-activation-native.check.ts` 编译生产外壳、preload 和 ViewManager，以临时档案及五个真实本地网页视图验证 Esc 后换页/恢复窗口、已聚焦重点击/聚焦命令、Tab、取消关页、附件单层 Esc、模板和历史回填；受控发送 IPC 核验按钮/快捷键成功后收起、部分成功、失败/取消/未确认保留，以及等待期间新草稿和清空后重输同文的保护。明暗主题比较搜索、编辑、设置及门户菜单等文字输入的焦点，并检查错误、只读、禁用、强制颜色与减少动态效果。`test/composer-activation.test.tsx` 另覆盖被阻止、组合态及失效 Tab 和选区恢复；`test/draft-send.test.ts` 覆盖发送结果和草稿修订的组合。截图与报告只留临时目录；这不替代 Windows 原生分组切换焦点、物理输入法或读屏验收。
 
 - 历史阅读专项：`npm run test:unit -- test/markdown-reading-interaction.check.ts`（无显示服务器自行使用 Xvfb）。构建生产阅读器与合成数据，临时 Electron 档案、禁止联网，不访问用户数据库；验证三语 Mermaid 实际成图、源码复制、代码切换、缩放、缺失/无效/超限/配置指令回退、迟到源码切换、完整来源链接打开/复制及会话地址动作。截图留在系统临时目录，不入库。普通 `npm test` 的阅读和会话动作回归覆盖解析、当前尝试、缺地址及繁忙状态；`scripts/md-diagram.test.js` 通过九站生产 `historyTurn()` 定位夹具验证共用提取、隐藏非图表排除、只读及空行保真。图形专项不替代九站真实 DOM 形态验收。
 

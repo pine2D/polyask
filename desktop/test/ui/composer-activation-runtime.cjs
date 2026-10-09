@@ -23,7 +23,11 @@ app.whenReady().then(async()=>{
   ipcMain.handle('polyask:set-display',(_e,v)=>{manager.setDisplayPreferences(v);return v});
   ipcMain.handle('polyask:site-history-state',()=>({}));ipcMain.handle('polyask:menu-shortcuts',()=>[]);
   ipcMain.handle('polyask:set-tier',()=>workspace());
+  let pendingSend=null;
+  ipcMain.handle('polyask:broadcast',(_e,request)=>new Promise(resolve=>{pendingSend={request,resolve}}));
+  ipcMain.on('polyask:cancel',e=>{if(trusted(e)&&pendingSend){pendingSend.resolve(pendingSend.request.sites.map(site=>({site,ok:false,code:'cancelled'})));pendingSend=null}});
   ipcMain.handle('polyask:question-list',()=>({items:[{...question,savedSites:0,answers:[]}],cursor:null}));
+  ipcMain.handle('polyask:question-run-progress',()=>null);
   ipcMain.handle('polyask:question-get',()=>({question,answers:[]}));
   ipcMain.handle('polyask:question-legacy',()=>({items:[],cursor:null}));
   ipcMain.handle('polyask:question-panel',(_e,v)=>manager.historyAccess.setPanelOpen(v));
@@ -70,6 +74,8 @@ app.whenReady().then(async()=>{
   // Xvfb 返回窗口可能恢复到网页视图；另明确验证原生外壳焦点恢复。
   win.focus();win.webContents.focus();await wait('document.hasFocus()');await check('native shell focus restoration preserves collapse',false);
   await run('originalArea.blur();originalArea.focus()');await check('programmatic focus preserves collapse',false);
+  // 临时窗口销毁后 Xvfb 的焦点交接可能迟到；Tab 专项从实际聚焦的外壳开始。
+  win.focus();win.webContents.focus();await wait('document.hasFocus()');
   await key('Tab');await key('Tab',['shift']);report.tabEvents=await run('window.entryEvents.slice(-16)');await check('native Tab entry reopens editing',true);
   assert.equal(await focusStyle(),pointerShadow,'Tab and pointer share the focus language');
   await key('Escape');await click('.mode-switch button:nth-child(2)');await check('layout action preserves collapse',false);
@@ -94,6 +100,31 @@ app.whenReady().then(async()=>{
   fs.writeFileSync(join(output,'question-search.png'),(await win.webContents.capturePage()).toPNG());
   await click('.question-main');await wait('!!document.querySelector("[data-action=reask-question]")');await click('[data-action=reask-question]');await pause(250);
   await check('history reask explicitly expands',true);assert.equal((await state()).value,question.text);
+  await run('window.sendArea=document.querySelector("[name=prompt]")');
+  for(const scenario of [
+    {name:'keyboard send collapses after success',method:'keyboard',outcome:'success',expanded:false},
+    {name:'button send collapses after partial success',method:'pointer',outcome:'partial',expanded:false},
+    {name:'failed send retains draft and expansion',method:'pointer',outcome:'inject_failed',expanded:true},
+    {name:'unconfirmed send retains draft and expansion',method:'keyboard',outcome:'submit_unconfirmed',expanded:true},
+    {name:'cancelled send retains draft and expansion',method:'pointer',outcome:'cancelled',expanded:true},
+    {name:'successful old send preserves next draft',method:'keyboard',outcome:'success',next:'Next local draft',expanded:true},
+    {name:'successful old send preserves retyped identical draft',method:'keyboard',outcome:'success',next:'Local send draft',expanded:true}
+  ]){
+    await click('[name=prompt]');await key('A',['control']);await win.webContents.insertText('Local send draft');
+    if(scenario.method==='keyboard')await key('Enter',['control']);else await click('.send');
+    await wait('!!document.querySelector(".cancel")');assert.equal(pendingSend!==null,true,'send reaches the controlled IPC boundary');
+    await check(scenario.name+' while pending',true);
+    if(scenario.next){await click('[name=prompt]');await key('A',['control']);await key('Backspace');await win.webContents.insertText(scenario.next)}
+    if(scenario.outcome==='cancelled')await click('.cancel');
+    else{
+      pendingSend.resolve(pendingSend.request.sites.map(site=>scenario.outcome==='success'||scenario.outcome==='partial'&&site==='claude'
+        ?{site,ok:true}:{site,ok:false,code:scenario.outcome==='partial'?'not_ready':scenario.outcome}));pendingSend=null;
+    }
+    await wait('!!document.querySelector(".send")');await pause(190);await check(scenario.name,scenario.expanded);
+    assert.equal((await state()).value,scenario.next||(scenario.expanded?'Local send draft':''));
+    assert.equal(await run('document.querySelector("[name=prompt]")===window.sendArea'),true,'send keeps the same editor');
+    if(!scenario.expanded){await run('sendArea.blur();sendArea.focus()');await check(scenario.name+' focus restoration',false)}
+  }
   manager.setSurface('settings');
   await run(`(()=>{const panel=document.createElement('section');panel.id='field-gallery';panel.style='position:fixed;inset:60px 20px 40px;overflow:auto;z-index:100;background:var(--panel);padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px';
     const contexts=['archive-filters','library folder-filters','decision-filters','folder-modal','archive-fields','decision-editor','comparison-worksheet','synthesis-config','synthesis-preview','prompt-variable-editor','settings-card danger-zone','backup-workspace'];

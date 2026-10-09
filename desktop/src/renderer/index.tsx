@@ -329,6 +329,7 @@ function App(): React.JSX.Element {
         images
       });
       if (completed && [...completed.results.values()].some((result) => result.ok)) {
+        if (draftRevision.isCurrent(sentRevision)) composer.reset();
         clearSent(sentRevision);
       }
     });
