@@ -29,7 +29,8 @@ export function inlineTokens(tokens: readonly MarkdownToken[], onOpenLink?: (url
         if (token.type === 'link_open') {
           const href = safeMarkdownUrl(String(token.attrGet('href') ?? ''));
           const labelTokens = tokens.slice(start, i - 1);
-          const label = labelTokens.every(t => t.type === 'text') ? labelTokens.map(t => t.content).join('') : null;
+          const readable = labelTokens.every(t => ['text', 'code_inline', 'softbreak', 'hardbreak'].includes(t.type) || ['strong', 'em', 's'].includes(t.tag));
+          const label = readable ? labelTokens.map(t => ['text', 'code_inline'].includes(t.type) ? t.content : '').join('') : null;
           nodes.push(href && onOpenLink ? <MarkdownLink key={key} url={href} label={label} onOpenLink={onOpenLink}>{children}</MarkdownLink> : <span key={key}>{children}</span>);
         } else if (['strong', 'em', 's'].includes(token.tag)) nodes.push(createElement(token.tag === 's' ? 'del' : token.tag, { key }, children));
         else nodes.push(...children);

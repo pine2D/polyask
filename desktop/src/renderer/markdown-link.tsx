@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { getCopy } from '../shared/copy';
 import { CopyIcon, MoreIcon } from './icons';
+import { isMarkdownUrlLabel } from './markdown-parser';
 
 function displayUrl(value: string): string {
   const url = new URL(value);
@@ -24,10 +25,9 @@ export function MarkdownLink({ url, label, children, onOpenLink }: {
     return () => document.removeEventListener('pointerdown', close);
   }, [expanded]);
   const copy = getCopy(typeof document === 'undefined' ? 'en' : document.documentElement.lang);
-  let isUrl = false;
-  const comparable = (value: string) => value.replace(/%28/gi, '(').replace(/%29/gi, ')');
-  try { isUrl = !!label && comparable(new URL(label).href) === comparable(url); } catch { /* A meaningful label is kept. */ }
-  const compact = label === '' || (isUrl && (label!.length > 80 || url.includes(':~:text=')));
+  const text = label?.trim() ?? null;
+  const compact = text === '' || (text !== null && isMarkdownUrlLabel(text)
+    && (text.length > 80 || text.includes(':~:text=') || url.includes(':~:text=')));
   const link = <a href={url} title={url} onClick={event => { event.preventDefault(); onOpenLink(url); }}
     onAuxClick={event => { event.preventDefault(); if (event.button === 1) onOpenLink(url); }}>{compact ? displayUrl(url) : children}</a>;
   if (!compact) return link;

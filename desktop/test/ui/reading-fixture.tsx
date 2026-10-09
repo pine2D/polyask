@@ -2,9 +2,11 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { QuestionHistoryReader } from '../../src/renderer/question-history-reader';
 import { MarkdownPreview } from '../../src/renderer/markdown-preview';
+import { ArchiveDetail } from '../../src/renderer/archive-detail';
+import { createArchiveRecord } from '../../src/shared/archive';
 import { getCopy } from '../../src/shared/copy';
 import { setShellApi } from '../../src/renderer/shell-api';
-import { readingDetail, diagramSource, longSourceUrl } from './reading-data';
+import { readingDetail, diagramSource, longSourceUrl, readingUrlCases, readingLinksMarkdown } from './reading-data';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/question-history.css';
 const locale = new URLSearchParams(location.search).get('locale') ?? 'zh-CN';
@@ -15,10 +17,15 @@ let reasked = 0, deleted = 0;
 Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (text: string) => { clipboard.push(text); } } });
 setShellApi({ openExternal: async (url: string) => { opened.push(url); } } as any);
 const root = createRoot(document.getElementById('root')!);
+const record = createArchiveRecord({ text: 'Local link cases', task: 'Local link cases', results: [{ host: 'www.kimi.com', label: 'Kimi', text: readingLinksMarkdown }] },
+  { id: 'local-reading', now: 1000, deviceId: 'fixture' });
 let extra = 'flowchart LR\n Old --> Gone';
 const render = () => root.render(<section className="question-history is-full">
   <QuestionHistoryReader detail={readingDetail} copy={copy} sites={[]} busy={false} onRestore={id => restored.push(id)}
     onReask={() => { reasked++; }} onDelete={() => { deleted++; }} onAnnounce={text => notices.push(text)} />
+  <div className="library" id="archive-link-cases"><ArchiveDetail copy={copy} locale={locale} record={record} busy={false}
+    onPatch={() => undefined} onOpenSource={url => opened.push(url)} pendingSynthesis={null} synthesisCandidate={null}
+    onSynthesize={() => undefined} onCollectSynthesis={() => undefined} onSaveSynthesis={() => undefined} /></div>
   <div id="diagram-cases"><MarkdownPreview value={'```mermaid\n' + extra + '\n```'} /></div>
 </section>);
 render();
@@ -32,6 +39,25 @@ const click = async (selector: string) => { const node = document.querySelector<
 const label = (text: string) => `button[aria-label="${text}"]`;
 const setSource = async (source: string) => { extra = source; render(); await pause(); };
 const cases = () => document.querySelector('#diagram-cases')!;
+async function checkLinks(selector: string, skip: number) {
+  const container = document.querySelector(selector)!;
+  const links = [...container.querySelectorAll<HTMLAnchorElement>('.markdown-link-group a')].slice(skip);
+  check(links.length === readingUrlCases.length, selector + ' has all compact links');
+  for (const [index, expected] of readingUrlCases.entries()) {
+    const link = links[index], group = link.closest('.markdown-link-group')!;
+    check(link.textContent === expected.visible && link.href === expected.target && link.title === expected.target, selector + ' readable actual destination');
+    link.click(); await pause(); check(opened.at(-1) === expected.target, 'open keeps the exact target');
+    const details = group.querySelector<HTMLButtonElement>('.markdown-link-details')!;
+    details.click(); await pause();
+    check(group.querySelector('code')?.textContent === expected.target, 'details keep the exact target');
+    group.querySelector<HTMLButtonElement>('.markdown-link-popover button')!.click(); await pause();
+    check(clipboard.at(-1) === expected.target, 'copy keeps the exact target');
+    details.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await pause();
+    check(group.querySelector('.markdown-link-popover') === null, 'Escape closes details');
+  }
+  const title = [...container.querySelectorAll('a')].find(link => link.textContent === '官方资料');
+  check(title?.querySelector('strong') && !title.closest('.markdown-link-group'), 'meaningful styled title stays intact');
+}
 function toolbarLayout() {
   const toolbar = document.querySelector<HTMLElement>('.question-reader-actions')!;
   const answer = toolbar.querySelector<HTMLElement>('.question-answer-actions')!.getBoundingClientRect();
@@ -73,6 +99,8 @@ async function run() {
   await click('.markdown-link-popover button'); check(clipboard.at(-1) === longSourceUrl, 'link copy keeps text fragment');
   document.querySelector('.markdown-link-details')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); await pause();
   check(!document.querySelector('.markdown-link-popover'), 'Escape closes full-link details');
+  await checkLinks('.question-answer', 1);
+  await checkLinks('#archive-link-cases .archive-answer', 0);
   await click(label(copy.questionCopyLink)); check(clipboard.at(-1)?.endsWith('/second'), 'conversation copy uses current attempt');
   await click(label(copy.questionOpenBrowser)); check(opened.at(-1)?.endsWith('/second'), 'browser action uses current attempt');
   await click(label(copy.questionCopy)); check(clipboard.at(-1) === readingDetail.answers[1].answerMarkdown, 'copy icon keeps the complete current answer');
@@ -86,7 +114,7 @@ async function run() {
   check(!document.querySelector('[role="menu"]') && document.activeElement === document.querySelector(label(copy.questionRestoreOptions)), 'Escape returns focus to the trigger');
   await click(label(copy.questionRestoreOptions)); await click('[role="menu"] button');
   check(restored.at(-1) === undefined && restored.length === 2, 'dropdown restores the entire question');
-  await click('.question-prompt-actions > button'); check(reasked === 1, 'reuse question remains separate');
+  await click('[data-action="reask-question"]'); check(reasked === 1, 'reuse question remains separate');
   await click(label(copy.questionMenu)); await click('[role="menu"] button');
   check(deleted === 1 && !document.querySelector('[role="menu"]'), 'delete delegates to the question confirmation and closes the menu');
   toolbarLayout();
@@ -107,6 +135,6 @@ async function run() {
   const latest = decodeURIComponent(cases().querySelector<HTMLImageElement>('img')!.src.split(',').slice(1).join(','));
   check(latest.includes('Current') && !latest.includes('Stale'), 'departed render cannot replace current source');
   check(document.querySelector('.question-reader')!.scrollWidth <= document.querySelector('.question-reader')!.clientWidth + 1, 'reading content stays within its scroller');
-  return { ok: true, locale, diagramWidth: image.naturalWidth };
+  return { ok: true, locale, diagramWidth: image.naturalWidth, linkCases: readingUrlCases.length * 2 };
 }
 (window as any).readingResult = run().catch(error => ({ ok: false, locale, error: String(error) }));

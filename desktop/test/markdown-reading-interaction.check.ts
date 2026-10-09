@@ -24,6 +24,7 @@ test('Chromium renders local Mermaid and exercises history reading controls', { 
     const headless = process.platform === 'linux' && !process.env.DISPLAY;
     const result = spawnSync(headless ? 'xvfb-run' : binary, headless ? ['-a', binary, ...args] : args,
       { encoding: 'utf8', timeout: 80000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+    console.log(result.stdout);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${result.error ?? ''}`);
   } finally { rmSync(output, { recursive: true, force: true }); }
 });
