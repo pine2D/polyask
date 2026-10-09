@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.16.0] - 2026-10-10
+
+验收范围：Linux/WSL 下通过 1,544 项应用与界面测试、417 项运行时测试及打包冒烟。三语生产外壳使用两个独立设备库和受控 Drive 传输验证偏好跟随、本机覆盖、独立草稿恢复、重启持久化及附件迟到保护；发送勾选和历史长链接也完成隔离 Electron 交互检查。
+
+验收限制：真实 Google 账号的双设备联网同步、Google Cloud 指标、Windows/macOS 原生输入法与缩放，以及五种发行包的实机安装未在本轮核验。草稿同步默认关闭，开启后保留各设备独立副本，恢复须由用户明确操作。
+
 ### 新增
 
 - 完成通知和引导状态加入 Drive 同步；显示密度、默认站点比例、默认布局与逐站手动缩放可分别选择跟随同步或仅用于本机，默认保留各设备已有显示选择。
@@ -1172,7 +1178,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.15.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.16.0...HEAD
+[1.16.0]: https://github.com/pine2D/polyask/compare/v1.15.2...v1.16.0
 [1.15.2]: https://github.com/pine2D/polyask/compare/v1.15.1...v1.15.2
 [1.15.1]: https://github.com/pine2D/polyask/compare/v1.15.0...v1.15.1
 [1.15.0]: https://github.com/pine2D/polyask/compare/v1.14.0...v1.15.0
