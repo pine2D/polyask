@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import { SelectionMark } from "./selection-mark";
-import { CloseIcon } from './icons';
+import { ClosePageIcon } from './icons';
 import type { SitesMode } from './workspace-panel-state';
 
 interface SiteChecklistProps {
@@ -119,8 +119,8 @@ export function SiteChecklist(props: SiteChecklistProps): React.JSX.Element {
             <button type="button" data-move="down" aria-label={formatCopy(props.copy.moveSiteDown, { site: site.label })} disabled={props.disabled || index === selected.length - 1} onClick={() => move(site.key, index + 1)}>↓</button>
           </div>}
           {opened && props.mode === 'select' && props.onCloseSitePage && <button type="button" data-close-site={site.key} className="site-page-close" disabled={props.disabled}
-            aria-label={formatCopy(props.copy.closeSitePage, { site: site.label })} data-hint={formatCopy(props.copy.closeSitePage, { site: site.label })}
-            onClick={() => props.onCloseSitePage?.(site.key)}><CloseIcon /></button>}
+            aria-label={formatCopy(props.copy.closeSitePage, { site: site.label })} data-hint={formatCopy(props.copy.closeSitePageHint, { site: site.label })}
+            onClick={() => props.onCloseSitePage?.(site.key)}><ClosePageIcon /></button>}
         </div>;
       })}
     </div>

@@ -32,6 +32,14 @@
 .drawer-section-heading { min-height: 20px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .drawer-section-heading h2 { margin: 0; font-size: 12px; font-weight: 650; }
 .drawer-section-heading > span { color: var(--muted); font-size: var(--font-meta); font-variant-numeric: tabular-nums; }
+.drawer-info-toggle {
+  min-height: 24px; margin: 0 0 6px; padding: 0 6px 0 2px; display: inline-flex; align-items: center; gap: 4px;
+  border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-size: var(--font-meta);
+}
+.drawer-info-toggle svg { width: 14px; height: 14px; }
+.drawer-info-toggle:hover, .drawer-info-toggle[aria-expanded="true"] { color: var(--accent); background: var(--accent-soft); }
+.drawer-info-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+#participation-help[hidden] { display: none; }
 .scope-presets { display: flex; flex-wrap: wrap; gap: 4px; }
 .scope-preset {
   min-height: 28px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;
@@ -57,7 +65,8 @@
 .site-choice label { min-width: 0; min-height: var(--workspace-row-height); padding: 4px; flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; cursor: pointer; }
 .site-choice label:hover { color: var(--accent); }
 .site-checklist label:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 1px; }
-.site-checklist label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 550; }
+/* 500 而非 550：中文回退字体没有 550/600 档，会被就近匹配成 700 粗体，与拉丁站名粗细不一。 */
+.site-checklist label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
 .site-choice button, .site-handle-spacer { width: 28px; min-height: 28px; flex: 0 0 28px; }
 .site-choice button { display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 4px; color: var(--muted); background: transparent; }
 .site-choice button:hover:not(:disabled) { color: var(--accent); background: var(--workspace-surface); }
@@ -75,7 +84,7 @@
   border: 1px solid transparent; border-radius: 7px; color: inherit; background: var(--workspace-surface);
 }
 .group-apply strong, .group-apply small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.group-apply strong { font-size: 12px; font-weight: 550; }
+.group-apply strong { font-size: 12px; font-weight: 500; }
 .group-apply small { font-size: var(--font-meta); color: var(--muted); }
 .group-apply[aria-pressed="true"] { color: inherit; background: var(--selection-soft); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
 .group-apply:hover:not([aria-pressed="true"]) { background: var(--hover-soft); }

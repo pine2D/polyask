@@ -7,7 +7,7 @@ import {
   workspacePresets,
   type ActiveWorkspaceGroup
 } from "../shared/workspace";
-import { SaveIcon, TrashIcon } from "./icons";
+import { InfoIcon, SaveIcon, TrashIcon } from "./icons";
 import { SiteChecklist } from "./site-checklist";
 import type { SitesMode } from './workspace-panel-state';
 
@@ -32,6 +32,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
   const [saving, setSaving] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [localMode, setLocalMode] = useState<SitesMode>('select');
+  const [helpOpen, setHelpOpen] = useState(false);
   const mode = props.sitesMode ?? localMode;
   const modeButton = useRef<HTMLButtonElement>(null), previousMode = useRef(mode);
   const changeMode = (next: SitesMode) => props.onSitesModeChange ? props.onSitesModeChange(next) : setLocalMode(next);
@@ -43,15 +44,15 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
   const choices = workspacePresets(props.sites);
   const selectedSites = [...props.participating];
   const selectedSignature = groupSignature(selectedSites);
-  const reservedSignatures = new Set(
-    [choices.all, choices.intl, choices.domestic].map(groupSignature)
-  );
   const duplicate = props.groups.some((group) => groupSignature(group.sites) === selectedSignature);
+  const preset = ([[props.copy.allSites, choices.all], [props.copy.intlSites, choices.intl], [props.copy.domesticSites, choices.domestic]] as const)
+    .find(([, sites]) => groupSignature(sites) === selectedSignature)?.[0];
   const saveHint = selectedSites.length === 0
     ? props.copy.groupSelectionRequired
-    : reservedSignatures.has(selectedSignature)
-      ? props.copy.groupPresetReserved
+    : preset ? formatCopy(props.copy.groupPresetReserved, { preset })
       : duplicate ? props.copy.groupAlreadySaved : "";
+  // 原因只在用户已输入名称、真要保存时才显示；空表单时保存按钮的悬停说明仍给出原因。
+  const visibleSaveHint = name.trim() ? saveHint : "";
   const presets = [
     [props.copy.allSites, choices.all],
     [props.copy.clearSites, choices.clear],
@@ -84,7 +85,11 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
         <button type="button" ref={modeButton} data-sites-mode-toggle aria-pressed={mode === 'order'} aria-controls="site-checklist" className="scope-preset site-order-toggle"
           disabled={props.participationBusy || (mode === 'select' && props.selected.size === 0)} onClick={() => changeMode(mode === 'order' ? 'select' : 'order')}>
           {mode === 'order' ? props.copy.finishSiteOrder : props.copy.adjustSiteOrder}</button></div>
-        {mode === 'select' ? <p>{props.copy.participationSessionHint}</p> : <p>{props.copy.siteOrderSaveHint}</p>}
+        {mode === 'select' ? <>
+          <button type="button" className="drawer-info-toggle" aria-expanded={helpOpen} aria-controls="participation-help" onClick={() => setHelpOpen(open => !open)}>
+            <InfoIcon /><span>{props.copy.participationHelp}</span></button>
+          <p id="participation-help" hidden={!helpOpen}>{props.copy.participationSessionHint}</p>
+        </> : <p>{props.copy.siteOrderSaveHint}</p>}
         <SiteChecklist copy={props.copy} sites={props.sites} selected={props.selected} participating={props.participating} mode={mode} disabled={props.participationBusy} onToggle={toggleSite} onReorder={props.onSelectionChange} onCloseSitePage={props.onCloseSitePage} />
       </section>
       <section className="drawer-section group-section" hidden={mode === 'order'}>
@@ -117,7 +122,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
         }}>
           <input name="group-name" autoComplete="off" value={name} maxLength={80} aria-describedby="group-save-hint" aria-label={props.copy.groupNamePlaceholder} placeholder={props.copy.groupNamePlaceholder} onChange={(event) => setName(event.target.value)} />
           <button type="submit" data-hint={saveHint || props.copy.saveGroup} aria-label={props.copy.saveGroup} disabled={!name.trim() || !!saveHint || saving}><SaveIcon /></button>
-          <span id="group-save-hint" className="group-save-hint" role="status">{saving ? props.copy.groupSaving : saveHint}</span>
+          <span id="group-save-hint" className="group-save-hint" role="status">{saving ? props.copy.groupSaving : visibleSaveHint}</span>
         </form>
       </section>
     </div>

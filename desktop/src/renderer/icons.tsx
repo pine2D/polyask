@@ -87,6 +87,15 @@ export function CloseIcon(): React.JSX.Element {
   return <Icon><path d="m6 6 12 12M18 6 6 18" /></Icon>;
 }
 
+/** 关闭站点页面：页面外框带一个小叉，区别于「取消勾选」与弹窗关闭。 */
+export function ClosePageIcon(): React.JSX.Element {
+  return <Icon><path d="M13 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7" /><path d="m16 3 5 5M21 3l-5 5" /></Icon>;
+}
+
+export function InfoIcon(): React.JSX.Element {
+  return <Icon><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></Icon>;
+}
+
 export function SaveIcon(): React.JSX.Element {
   return <Icon><path d="M5 4h12l2 2v14H5z" /><path d="M8 4v6h8V4M8 20v-6h8v6" /></Icon>;
 }
