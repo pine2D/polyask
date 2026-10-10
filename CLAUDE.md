@@ -20,7 +20,7 @@ PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点�
 ## 硬约束
 
 - **提交不确定 ≠ 可以重发**：命令超时、无回包、`submit_unconfirmed` 一律原样交给用户点 retry。**只有**实现了只读 `adapter.submitted(text)` 的站（目前仅 Kimi）、且 `wasSubmitted` 回包 `supported:true, ok:false` 明确确认「末条用户消息不是本次内容」，才允许自动重发一次；这条分支由 `broadcast.ts` 的常量 `POLYASK_KIMI_RESUBMIT` 拦着，**默认 `false`，F067 两条真机硬用例通过前不得打开**。回包形状不对一律按不支持处理（`normalizeSubmitted` fail-closed）。给没有 `submitted()` 的站加自动重发 = 同一个问题被问两遍且用户无从察觉。
-- **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删；清空历史/结果库也要留标记，否则其它设备会同步回来。**唯一例外是「重置全部本机数据」**：先断开 Drive、再物理清空本机库并保留 `deviceId`（tombstone 比云端记录新，重连后会赢过云端副本并上传，等于把云端也删了）。本机重置不删 Drive 数据；要改先改承诺文案。
+- **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删；清空历史/结果库也要留标记，否则其它设备会同步回来。草稿墓碑在超过 30 天且所有已知 fragment 都不再携带该活草稿后才回收墓碑本身（`draft-retention.ts`，规则见 `docs/desktop.md`），别的实体不得照搬。**唯一例外是「重置全部本机数据」**：先断开 Drive、再物理清空本机库并保留 `deviceId`（tombstone 比云端记录新，重连后会赢过云端副本并上传，等于把云端也删了）。本机重置不删 Drive 数据；要改先改承诺文案。
 - **实测阈值留 ≥20% 余量**：`findComposer` 高度用 `>=16`，不用 `>=20`。标称 20px 在缩放机器上实测 19.999998px，曾筛掉唯一编辑器、群发空等 44s（v0.15.2）。
 - **`deadline` 是绝对时间戳、全链路透传**：`shell-ipc.ts` 的群发入口（44s / 带图 90s）→ `broadcast.ts` → `site-command-channel.ts` → `preload/site.ts` → site-runtime `submitPrompt` → `adapter.submit`/`attach` → `confirmSubmitted`。**循环等待、以及 ≥1s 的固定等待，一律夹取**：`Math.min(x, Math.max(0, deadline - Date.now()))`。例外两处：「让渲染跟上」的毫秒级 sleep（单条 ≤500ms、不得叠成秒级）；提交后的只读确认窗（1.5s，deadline 到点才开始，夹了就归零）。切档 `think`/`fast` 同样接收绝对 deadline，群发内取总截止时间与 10s 切档上限的较早者；超时仅收菜单，不再选择模型或档位。
 - **群发预算只有一个真源**：`shell-ipc.ts` 群发入口的 44s/90s；`main/window-data-services.ts` 辅助发送回调的 44s 必须跟随（硬编码、无带图分支）。改预算先改那一处，再改 `docs/desktop.md` 的预算表。
