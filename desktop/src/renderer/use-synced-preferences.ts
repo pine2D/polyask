@@ -114,9 +114,6 @@ export function useSyncedPreferences(options: SyncedPreferencesOptions) {
   const onFollowingChange = useCallback((group: PreferenceGroup, enabled: boolean) => run(() => shell.followPreferences(group, enabled)), [run]);
   const onLayoutModeChange = useCallback((mode: PreferenceValues['layoutMode']) => setPreference('layoutMode', mode), [setPreference]);
   const onDraftSyncChange = useCallback((enabled: boolean) => run(() => shell.setDraftSync(enabled)), [run]);
-  const onGuideChange = useCallback(async (value: WorkbenchGuideState): Promise<void> => {
-    try { await setPreference('workbenchGuide', value); } catch { /* Central persistence feedback owns the failure. */ }
-  }, [setPreference]);
   const refresh = useCallback(async (): Promise<void> => {
     if (typeof shell.getPreferences !== 'function') return;
     lifecycle.current++;
@@ -124,5 +121,5 @@ export function useSyncedPreferences(options: SyncedPreferencesOptions) {
   }, [run]);
   const settings: PreferenceSyncSettingsState = { snapshot, onFollowingChange, onLayoutModeChange, onDraftSyncChange };
   return { snapshot, ready: snapshot !== null, completionNotifications: snapshot?.values.completionNotifications ?? localNotifications,
-    onCompletionNotifications, settings, onGuideChange, refresh };
+    onCompletionNotifications, settings, refresh };
 }
