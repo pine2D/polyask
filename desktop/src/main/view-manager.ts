@@ -324,7 +324,7 @@ export class ViewManager {
   }
 
   async clearSiteData(site: SiteKey): Promise<boolean> {
-    return clearSiteDataAndReload(site, this.siteSession, () => this.views.get(site),
+    return clearSiteDataAndReload(site, this.siteSession, () => this.views.get(site), () => this.generation.attempt(site),
       () => siteReloadAllowed(this.currentStatus(site).phase) && !this.historyAccess.navigating(site), contents => this.beginNavigation(site, contents, true));
   }
 

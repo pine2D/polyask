@@ -75,6 +75,11 @@ export class GenerationMonitor {
     return entry?.runId === runId ? entry : null;
   }
 
+  /** 本站当前这一次尝试的身份（begin 每次换新条目，同 runId 重试也换）；没有则 null。 */
+  attempt(site: SiteKey): object | null {
+    return this.entries.get(site) ?? null;
+  }
+
   holds(ticket: object, site: SiteKey): boolean {
     return this.entries.get(site) === ticket;
   }

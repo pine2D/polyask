@@ -659,6 +659,7 @@ test("clearSiteData re-resolves the view after awaiting storage clearing", () =>
   const reget = body.indexOf("const live = getView();", awaitAt);
   assert.ok(awaitAt > 0 && reget > awaitAt, "await 之后必须重新取视图");
   assert.match(body.slice(reget), /live !== view \|\| live\.webContents\.isDestroyed\(\) \|\| !reloadAllowed\(\)/);
+  assert.match(body.slice(reget), /attempt\(\) !== run/, "await 期间开了新一轮（含同 runId 重试）不得重载");
   assert.doesNotMatch(body.slice(reget), /\bview\.webContents\.reloadIgnoringCache/);
 });
 

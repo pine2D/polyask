@@ -39,7 +39,7 @@ function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promis
           setBounds: (value: unknown) => bounds.push({ id, value }),
           webContents: Object.assign(new EventEmitter(), { id,
             isDestroyed: () => closed.has(id), close: () => { closed.add(id); view.webContents.emit("destroyed"); }, loadURL: async () => {}, focus() {},
-            reloadIgnoringCache: () => { reloads.push(id); },
+            reloadIgnoringCache: () => { reloads.push(id); }, getURL: () => "https://claude.ai/new",
             setZoomMode: (mode: string) => assert.equal(mode, "isolated"),
             getZoomFactor: () => zoom, setZoomFactor: (value: number) => { zoom = value; }
           })
@@ -91,6 +91,38 @@ test("site data clear does not reload a page that started generating during the 
     assert.equal(await clearing, false);
     assert.deepEqual(h.reloads, []);
     assert.equal(h.manager.getStatuses().find((s: { site: string }) => s.site === "claude").phase, "generating");
+  } finally { h.window.emit("closed"); }
+});
+
+// 2026-10-10 审查 R9：清缓存 await 期间新开一轮且刚提交（submitted，尚未探到生成）——旧口径只看 phase，迟到的重载会冲掉刚提交的页。
+test("site data clear does not reload a page whose new run was submitted during the await", async () => {
+  for (const runId of ["previous", "next"]) {
+    let finishClear!: () => void;
+    const h = harness(undefined, () => new Promise<void>(resolve => { finishClear = resolve; }));
+    try {
+      h.manager.beginGenerationRun("previous", ["claude"]);
+      h.manager.markStatus(statusForResult("claude", { ok: true }, "previous"));
+      h.manager.markStatus({ site: "claude", phase: "complete" });
+      const clearing = h.manager.clearSiteData("claude");
+      // runId === "previous" 是同 runId 重试：runId 不变，仍是一次新尝试。
+      h.manager.beginGenerationRun(runId, ["claude"]);
+      h.manager.markStatus({ site: "claude", phase: "sending" });
+      h.manager.markStatus(statusForResult("claude", { ok: true }, runId));
+      finishClear();
+      assert.equal(await clearing, false);
+      assert.deepEqual(h.reloads, []);
+      assert.equal(h.manager.getStatuses().find((s: { site: string }) => s.site === "claude").phase, "submitted");
+    } finally { h.window.emit("closed"); }
+  }
+});
+
+test("site data clear still reloads when no run starts during the await", async () => {
+  const h = harness();
+  try {
+    h.manager.beginGenerationRun("previous", ["claude"]);
+    h.manager.markStatus({ site: "claude", phase: "complete" });
+    assert.equal(await h.manager.clearSiteData("claude"), true);
+    assert.equal(h.reloads.length, 1);
   } finally { h.window.emit("closed"); }
 });
 
