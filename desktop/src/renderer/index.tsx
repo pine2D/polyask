@@ -80,6 +80,7 @@ import { useSynthesisRecovery } from "./use-synthesis-recovery";
 import { useWorkspaceFlow } from "./use-workspace-flow";
 import { useSyncedSiteParticipation } from './use-synced-site-participation';
 import { useSitePageClose } from './use-site-page-close';
+import { reloadSiteWithFeedback } from "./site-reload";
 import { shell } from "./shell-api";
 import { requestDecisionNavigation } from "./decision-navigation";
 import { currentPlatform, isMac } from "./platform";
@@ -209,7 +210,7 @@ function App(): React.JSX.Element {
     () => { archiveNavigation.clear(); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
   const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
-  const preferences = useSyncedPreferences({ display: display.value, onDisplay: display.accept, onPersistenceFailure: () => setAnnouncement(copy.displayPreferencesFailed) });
+  const preferences = useSyncedPreferences({ display: display.value, onDisplay: display.accept, onPersistenceFailure: () => setAnnouncement(copy.preferencesSaveFailed) });
   const { completionNotifications, onCompletionNotifications: setCompletionNotifications } = preferences;
   const acceptDisplayPreferences = display.accept;
   const acceptBootstrap = (state: BootstrapState): void => {
@@ -645,7 +646,7 @@ function App(): React.JSX.Element {
         participating={participating} participationBusy={runState !== 'idle' || auxiliaryBusy || participation.pending}
         onToggle={site => { void participation.toggle(site); }}
         onFocus={(site) => setMode("focus", site)}
-        onReload={(site) => { void shell.reloadSite(site); }}
+        onReload={(site) => { void reloadSiteWithFeedback(site, copy, sites, setAnnouncement); }}
         retrySites={broadcast.retrySites}
         uncertainSites={broadcast.uncertainSites}
         retryDisabled={runState !== "idle" || auxiliaryBusy}
