@@ -32,7 +32,7 @@ test("image previews reserve geometry and dense long lists skip offscreen render
 });
 
 test("desktop focus, reduced motion and Windows high contrast remain explicit", () => {
-  const css = renderer("styles.css") + renderer("settings.css") + renderer("accessibility.css");
+  const css = renderer("styles.css") + renderer("command-bar.css") + renderer("settings.css") + renderer("accessibility.css");
   assert.doesNotMatch(css, /outline:\s*none/);
   assert.doesNotMatch(css, /transition:\s*all/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
@@ -41,7 +41,7 @@ test("desktop focus, reduced motion and Windows high contrast remain explicit", 
 });
 
 test("desktop motion uses shared curves, explicit properties, and input-aware page feedback", () => {
-  const css = renderer("styles.css") + renderer("settings.css") + renderer("accessibility.css");
+  const css = renderer("styles.css") + renderer("command-bar.css") + renderer("settings.css") + renderer("accessibility.css");
   assert.match(css, /--ease-out:\s*cubic-bezier\(0\.23,\s*1,\s*0\.32,\s*1\)/);
   assert.match(css, /--ease-in-out:\s*cubic-bezier\(0\.77,\s*0,\s*0\.175,\s*1\)/);
   assert.match(css, /--ease-drawer:\s*cubic-bezier\(0\.32,\s*0\.72,\s*0,\s*1\)/);

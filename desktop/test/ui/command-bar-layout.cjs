@@ -3,6 +3,8 @@ const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 
 module.exports = async ({ win, run, output, label }) => {
+  // 命令栏适配（toolbar-fit.ts）在尺寸变化后的下一次渲染更新里完成；先等两帧再量。
+  await run('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
   const result = await run(`(() => {
     const bar=document.querySelector('.command-bar'), rect=bar.getBoundingClientRect();
     const visible=e=>e.getClientRects().length && getComputedStyle(e).visibility!=='hidden';
@@ -10,8 +12,10 @@ module.exports = async ({ win, run, output, label }) => {
       const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.className,
         left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};
     });
+    // 窄栏把历史入口收进更多菜单（display:none）时，改比两者的计算尺寸，仍要求同一套控件样式。
+    const folded=!visible(bar.querySelector('.question-trigger'));
     const style=e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return {
-      width:r.width,height:r.height,color:s.color,background:s.backgroundColor,border:s.borderRadius};};
+      width:folded?s.minWidth:r.width,height:folded?s.height:r.height,color:s.color,background:s.backgroundColor,border:s.borderRadius};};
     return {bar:{left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom},boxes,
       history:style(bar.querySelector('.question-trigger')),draft:style(bar.querySelector('[data-draft-open]'))};
   })()`);

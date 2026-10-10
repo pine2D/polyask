@@ -1,12 +1,13 @@
-import type { ReactNode, RefObject } from "react";
+import { useRef, type ReactNode, type RefObject } from "react";
 
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
-import { ChevronDownIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, SendIcon, StopIcon } from "./icons";
+import { ChevronDownIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, ScopeIcon, SendIcon, StopIcon } from "./icons";
 import { commandHint } from "./command-hint";
 import { PromptComposer } from "./prompt-composer";
 import { TierControls } from "./tier-controls";
+import { useToolbarFit } from "./toolbar-fit";
 import type { WorkspacePanelTab } from "./workspace-panel-state";
 import { WorkspaceActions } from "./workspace-actions";
 
@@ -63,14 +64,17 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
   const cancelLabel = props.runState === "cancelling" ? props.copy.cancelling : props.copy.cancel;
   const workbenchOpen = props.panelTab !== null;
   const healthOpen = props.panelTab === "health";
+  const barRef = useRef<HTMLElement | null>(null);
+  useToolbarFit(barRef);
 
   return (
-    <header className={`command-bar${props.pageControl ? " has-pages" : ""}${(props.reservedExpanded ?? props.expanded) ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
+    <header ref={barRef} className={`command-bar${props.pageControl ? " has-pages" : ""}${(props.reservedExpanded ?? props.expanded) ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
       <div className="workspace-entry priority-p0">
         <div className="scope-split">
           <button type="button" className="scope-main" data-hint={workbenchOpen ? props.copy.closeWorkbench : commandHint(props.scopeLabel, "open-sites", props.isMac)} aria-label={workbenchOpen ? props.copy.closeWorkbench : props.scopeLabel} aria-expanded={workbenchOpen} aria-controls="workspace-panel" onClick={() => props.onPanelChange(workbenchOpen ? null : "sites")}>
             <span className="scope-label-full">{props.scopeLabel}</span>
             <span className="scope-label-compact">{props.copy.sitesCompact} · {props.selectedCount}</span>
+            <span className="scope-label-count" aria-hidden="true"><ScopeIcon />{props.selectedCount}</span>
           </button>
           <button type="button" className="scope-menu" data-hint={props.copy.chooseSavedGroup} aria-label={props.copy.chooseSavedGroup} aria-haspopup="menu" onClick={props.onShowGroupMenu}><ChevronDownIcon /></button>
         </div>

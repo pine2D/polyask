@@ -22,6 +22,7 @@
 @import "./comparison-worksheet.css";
 @import "./draft-recovery.css";
 @import "./library-scale.css";
+@import "./command-bar.css";
 
 :root {
   font-family: var(--font-ui);
@@ -160,137 +161,6 @@ button { cursor: default; }
 }
 .bootstrap-bar button:hover { background: var(--accent-soft); }
 .bootstrap-bar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-.command-bar {
-  position: relative; z-index: 2; width: 100%; height: var(--shell-height); padding: var(--space-1) var(--space-2);
-  display: grid; grid-template-columns: auto auto minmax(200px, 1fr) auto auto auto auto auto;
-  align-items: center; gap: var(--space-1); border-bottom: 1px solid var(--border); background: var(--panel);
-}
-.command-bar.has-pages { grid-template-columns: auto auto auto minmax(200px, 1fr) auto auto auto auto auto; }
-.command-bar.is-expanded { height: var(--composer-expanded-height); align-items: start; }
-.command-bar > * { min-width: 0; }
-.command-bar .mode-switch { margin-left: var(--space-1); }
-.workspace-entry { height: var(--control-height); display: flex; align-items: stretch; gap: 3px; }
-.scope-split { max-width: 172px; display: grid; grid-template-columns: minmax(0, 1fr) var(--target-size); border: 1px solid var(--border); border-radius: 7px; background: transparent; }
-.scope-split button, .health-trigger {
-  min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; border: 0;
-  color: var(--muted); background: transparent;
-}
-.scope-main { border-radius: 6px 0 0 6px; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.scope-menu { border-radius: 0 6px 6px 0; padding: 0 !important; border-left: 1px solid var(--border) !important; display: grid; place-items: center; }
-.scope-label-full, .scope-label-compact { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scope-label-compact { display: none; }
-.health-trigger { position: relative; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 7px; background: transparent; }
-.scope-split button:hover, .health-trigger:hover { background: var(--hover-soft); }
-.health-trigger.active, .scope-split:has(.scope-main[aria-expanded="true"]) { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
-.health-trigger[data-health-attention]::after {
-  position: absolute; top: 3px; right: 3px; width: 6px; height: 6px;
-  border: 1px solid var(--panel); border-radius: 50%; background: var(--danger); content: "";
-}
-.mode-switch, .tier-switch {
-  height: var(--control-height); display: flex; padding: 2px; border: 1px solid transparent;
-  border-radius: 7px; background: var(--hover-soft);
-}
-.mode-switch button, .tier-switch button {
-  min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; display: inline-flex;
-  align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 5px;
-  color: var(--muted); background: transparent; white-space: nowrap;
-  transition: color 120ms ease, background-color 120ms ease;
-}
-.mode-switch button.active, .tier-switch button.active {
-  color: inherit; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border);
-}
-.command-bar textarea {
-  margin-left: var(--space-1); width: calc(100% - var(--space-1)); height: var(--control-height); resize: none; padding: 5px 10px; border: 1px solid var(--border);
-  border-radius: var(--radius-control); color: inherit; background: var(--field); line-height: 20px; font-size: var(--font-body);
-}
-.command-bar.is-expanded textarea { height: calc(var(--composer-expanded-height) - var(--space-2)); }
-.command-bar textarea:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent); }
-.mode-switch button:hover:not(.active), .tier-switch button:hover:not(.active) { color: inherit; background: var(--panel); }
-.summary { max-width: 112px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.workspace-actions {
-  height: var(--control-height); display: flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 8px;
-  border-left: 1px solid var(--border); background: transparent;
-}
-.workspace-actions > button {
-  min-width: var(--target-size); height: 100%; padding: 0 6px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 3px; border: 0; border-radius: 5px; color: var(--muted); background: transparent;
-}
-.workspace-actions > button:hover { background: var(--hover-soft); }
-.workspace-actions > button.active { color: var(--accent); background: var(--selection-soft); }
-.workspace-actions > button:disabled, .workspace-actions > button[aria-disabled="true"] { opacity: .4; }
-.workspace-actions > button[aria-disabled="true"] { cursor: default; color: var(--muted); background: transparent; }
-.workspace-actions > button.retry-trigger { color: var(--danger-ink); white-space: nowrap; }
-.workspace-actions .summary { margin: 0 5px 0 2px; }
-.workspace-actions > button.sync-attention { position: relative; }
-.workspace-actions > button.sync-attention::after {
-  position: absolute; top: 4px; right: 3px; width: 5px; height: 5px;
-  border: 1px solid var(--panel); border-radius: 50%; background: var(--danger); content: "";
-}
-/* F166：attentionCount 曾经只落进 data-attention-count 却没有任何 CSS 消费它——补一个数字徽标；
-   sync-attention 已有单独的圆点样式，两者共用 ::after 会互相覆盖，故这里排除 .sync-attention。 */
-.workspace-actions > button.more-trigger { position: relative; }
-.workspace-actions > button.more-trigger[data-attention-count]:not(.sync-attention)::after {
-  position: absolute; top: 2px; right: 2px; min-width: 14px; height: 14px; padding: 0 3px;
-  display: flex; align-items: center; justify-content: center; border-radius: 999px;
-  background: var(--danger); color: #fff; font-size: 9px; font-weight: 700; line-height: 1;
-  content: attr(data-attention-count);
-}
-.workspace-actions > button.sync-syncing::after { background: var(--accent); }
-.workspace-actions > button.sync-waiting::after,
-.workspace-actions > button.sync-schema::after,
-.workspace-actions > button.sync-offline::after { background: var(--warning); }
-.primary-action {
-  min-width: 88px; height: var(--control-height); padding: 0 10px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 6px; border: 0; border-radius: 7px; color: white; font-weight: 650;
-}
-.send { color: var(--on-accent); background: var(--accent); }
-.send-count, .scope-label-compact, .retry-trigger > span,
-.workspace-actions > button.more-trigger::after { font-variant-numeric: tabular-nums; }
-.cancel { background: var(--danger); }
-.primary-action:hover:not(:disabled) { filter: brightness(.92); }
-.send:disabled { opacity: .45; }
-.cancel:disabled { opacity: .68; }
-kbd { opacity: .7; font: 10px system-ui; }
-
-.page-tabs {
-  position: relative; flex-shrink: 0; height: var(--control-height); padding: 2px; display: grid; grid-auto-flow: column;
-  grid-auto-columns: 1fr; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-muted);
-}
-.page-tabs button {
-  position: relative; z-index: 1; min-width: 42px; height: 100%; padding: 0 6px; display: inline-flex;
-  align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 5px;
-  color: var(--muted); background: transparent; font-size: var(--font-meta); font-variant-numeric: tabular-nums;
-  transition: color 120ms ease;
-}
-.page-tabs button[aria-selected="true"] { color: var(--accent); }
-.page-tabs button > span { white-space: nowrap; }
-.page-tab-badges { display: inline-flex; gap: 3px; }
-.page-tab-indicator {
-  position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 2px; border-radius: 5px;
-  background: var(--panel); box-shadow: 0 1px 2px #11182718;
-  transition: transform 180ms var(--ease-in-out);
-}
-.page-tabs[data-input-method="keyboard"] .page-tab-indicator { transition-duration: 0ms; }
-.page-tab-badge { flex: 0 0 auto; min-width: 20px; height: 16px; padding: 0 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 2px; font: 10px/16px system-ui; font-style: normal; }
-.page-tab-badge.sending { color: var(--accent); background: var(--accent-soft); }
-.page-tab-badge.sent { color: var(--success-ink); background: color-mix(in srgb, var(--success) 12%, transparent); }
-.page-tab-badge.failed { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.page-tab-badge.unconfirmed { color: var(--warning-ink); background: color-mix(in srgb, var(--warning) 12%, transparent); }
-.page-tab-badge.cancelled { color: var(--muted); background: var(--panel-muted); }
-
-.image-picker { position: static; height: var(--control-height); display: flex; align-items: center; gap: 2px; }
-.prompt-history-tools { height: var(--control-height); display: flex; align-items: center; gap: var(--space-1); }
-.question-trigger, .draft-trigger, .image-trigger, .image-warning button, .image-error button {
-  min-width: var(--control-height); height: var(--control-height); padding: 0; display: inline-flex;
-  align-items: center; justify-content: center; gap: 2px; border: 1px solid transparent; border-radius: var(--radius-control);
-  color: var(--muted); background: var(--hover-soft);
-}
-.question-trigger[aria-expanded="true"], .draft-trigger[aria-expanded="true"], .image-trigger.active { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
-.question-trigger:hover, .draft-trigger:hover:not(:disabled), .image-trigger:hover:not(:disabled) { background: var(--hover-soft); }
-.draft-trigger:disabled, .image-trigger:disabled { opacity: .4; }
-.image-count, .image-warning span { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.image-warning button, .image-error button { min-width: var(--target-size); width: var(--target-size); border-color: var(--warning-ink); color: var(--warning-ink); background: transparent; }
-.image-error button { border-color: var(--danger-ink); color: var(--danger-ink); }
 
 /* 应用内确认层，取代系统原生弹框（外观与本应用其余部分统一）。压在站点视图之上，
    所以 scrim 必须挡住指针事件，否则误点会打到底下的站点页面。 */
@@ -420,30 +290,8 @@ kbd { opacity: .7; font: 10px system-ui; }
 @media (hover: hover) and (pointer: fine) {
   .page-tabs button:hover { color: var(--accent); }
 }
-@media (max-width: 1400px) {
-  .mode-switch .priority-p1, .workspace-actions .priority-p1, .summary, kbd { display: none; }
-  .scope-label-full { display: none; }
-  .scope-label-compact { display: inline; }
-  .command-bar > :is(.page-tabs, .workspace-actions, .mode-switch, .tier-switch, .image-picker, .prompt-history-tools) { min-width: max-content; }
-  .workspace-actions .retry-label { display: none; }
-  .workspace-actions .compare-trigger, .workspace-actions .archive-trigger { width: var(--target-size); min-width: var(--target-size); }
-  .workspace-entry .scope-split { flex: 1; min-width: calc(var(--target-size) * 2 + 2px); }
-  .command-bar > .workspace-entry { min-width: calc(var(--target-size) * 3 + 5px); }
-  .workspace-entry .health-trigger { flex: 0 0 var(--target-size); padding: 0; }
-  .page-tabs button { flex-direction: column; gap: 0; padding: 0 4px; line-height: 12px; }
-  .page-tab-badges { gap: 2px; }
-  .page-tab-badge { min-width: 10px; height: 12px; line-height: 12px; padding: 0; }
-  .page-tab-count { display: none; }
-}
-@media (max-width: 1100px) {
-  .command-bar { grid-template-columns: auto auto minmax(160px, 1fr) auto auto auto auto auto; }
-  .command-bar.has-pages { grid-template-columns: auto auto auto minmax(160px, 1fr) auto auto auto auto auto; }
-  .tier-switch [data-current-tier] { display: none; }
-  .primary-action { min-width: var(--control-height); width: var(--control-height); padding: 0; }
-  .primary-action > span { display: none; }
-  .send.primary-action { width: auto; padding: 0 8px; }
-  .send.primary-action > .send-count { display: inline; }
-}
+/* 命令栏内的图标化由 command-bar.css 的 data-fit 级别决定；其它位置的快捷键提示沿用窄窗隐藏。 */
+@media (max-width: 1400px) { .summary, kbd { display: none; } }
 @media (max-width: 860px) {
   .archive-compare-selectors, .archive-compare-grid { grid-template-columns: 1fr; }
 }

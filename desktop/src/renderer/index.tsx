@@ -6,7 +6,7 @@ import { QuestionHistory } from "./question-history";
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-import { MORE_MENU_IDS } from "../shared/more-menu";
+import { moreMenuCommandIds } from "./toolbar-fit";
 import { COMMANDS, type CommandId } from "../shared/commands";
 import type { SiteDefinition } from "../shared/contracts";
 import type { CommandActions } from "./command-dispatcher";
@@ -374,7 +374,7 @@ function App(): React.JSX.Element {
   };
   const showMoreMenu = async (): Promise<void> => {
     try {
-      const command = await shell.showCommandMenu(MORE_MENU_IDS.filter((id) => !!commandActions.current[id]));
+      const command = await shell.showCommandMenu(moreMenuCommandIds().filter((id) => !!commandActions.current[id]));
       if (command) executeCommand(command, commandActions.current);
     } catch {
       setAnnouncement(copy.workspaceActionFailed);

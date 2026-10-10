@@ -43,7 +43,7 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
       {uncertainCount ? <button type="button" className="uncertain-retry-trigger" disabled={props.disabled}
         aria-label={formatCopy(props.copy.retryReviewAction, {count: uncertainCount})}
         data-hint={formatCopy(props.copy.retryReviewAction, {count: uncertainCount})} onClick={props.onReviewUncertain}>
-        <span>{props.copy.retryReviewCompact}</span><span>{uncertainCount}</span>
+        <span className="review-label">{props.copy.retryReviewCompact}</span><span className="review-glyph" aria-hidden="true">?</span><span>{uncertainCount}</span>
       </button> : null}
       <button type="button" className="compare-trigger" data-hint={compareBlocked ?? props.copy.collectCompare}
         aria-label={props.copy.collectCompare} aria-disabled={!!compareBlocked}

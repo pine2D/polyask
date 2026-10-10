@@ -7,9 +7,14 @@
   height: calc(var(--composer-expanded-height) - var(--space-2));
   transition-duration: 180ms, 120ms, 120ms;
 }
+/* 文本区让出右侧展开按钮那一列：展开后的滚动条不再压在按钮下面。 */
 .command-bar .prompt-composer textarea {
-  display: block; margin-left: 0; width: 100%; padding-right: 35px;
+  display: block; margin-left: 0; width: calc(100% - var(--target-size) - 6px); padding-right: 6px;
   border-color: transparent; border-radius: inherit; background: transparent;
+}
+/* 收起时恰好一行：上内边距把 20px 行高居中、下内边距归零（溢出裁切在内边距框，留白会露出半行第二行），也不出现滚动条。 */
+.command-bar .prompt-composer:not([data-expanded="true"]) textarea {
+  height: calc((var(--control-height) + 22px) / 2); padding-top: calc((var(--control-height) - 22px) / 2); padding-bottom: 0; overflow: hidden;
 }
 .command-bar .prompt-composer textarea:focus-visible { border-color: transparent; outline: none; box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { .prompt-composer { transition: none; } }

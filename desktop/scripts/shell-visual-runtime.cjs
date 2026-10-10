@@ -64,6 +64,7 @@ app.whenReady().then(async () => {
       return {selector:e.className, ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};
     });
     return {boxes, ratios, viewport:innerWidth, height:document.querySelector('.command-bar')?.getBoundingClientRect().height,
+      prompt:document.querySelector('.command-bar .prompt-composer')?.getBoundingClientRect().width, fit:document.querySelector('.command-bar')?.dataset.fit,
       textSize:[...document.querySelectorAll('.sync-state span,.sync-privacy,.preference-card small,.danger-zone label,.sync-stage-list small')].map(e => parseFloat(getComputedStyle(e).fontSize))};
   })()`);
   for (const surface of ['shell', 'settings']) for (const locale of ['zh-CN', 'zh-TW', 'en']) {
@@ -73,7 +74,7 @@ app.whenReady().then(async () => {
         win.setContentSize(width, 900);
         await win.loadFile(join(output, 'index.html'), { query: { surface, locale, density, stress: [960, 1101, 1401].includes(width) && surface === 'shell' ? '1' : '0' } });
         await wait('!!document.querySelector(".command-bar,.settings-workspace")');
-        await paint();
+        await paint(); await paint();
         const label = `${surface}/${locale}/${theme}/${density}/${width}`, result = await measure();
         for (const box of result.boxes) {
           check(box.scroll <= box.width + 2, `${label}: overflow ${JSON.stringify(box)}`);
@@ -82,10 +83,12 @@ app.whenReady().then(async () => {
         }
         for (const color of result.ratios) check(color.ratio >= 4.5, `${label}: ${color.selector} text contrast ${color.ratio.toFixed(2)}`);
         if (surface === 'shell') check(result.height === (density === 'compact' ? 52 : 64), `${label}: native bounds mismatch`);
+        if (surface === 'shell') check(result.prompt >= 320, `${label}: prompt squeezed to ${result.prompt}px at fit ${result.fit}`);
         else check(result.textSize.every(size => size >= 12), `${label}: secondary text below 12px`);
         reports.push({ label, ...result });
         if (locale === 'zh-CN' && density === 'compact' && width === 1600) await shot(`${surface}-${theme}`);
         if (surface === 'shell' && locale === 'en' && density === 'comfortable' && width === 960) await shot(`shell-stress-${theme}`);
+        if (surface === 'shell' && density === 'comfortable' && [1101, 1401].includes(width) && locale !== 'zh-TW') await shot(`shell-stress-${locale}-${theme}-${width}`);
       }
     }
   }

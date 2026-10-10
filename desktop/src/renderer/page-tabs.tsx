@@ -5,7 +5,7 @@ import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteStatus } from "../shared/protocol";
 import { paginateSiteKeys } from "../shared/site-pages";
 import { pageTabKeyAction } from "./keyboard";
-import { pageSubmissionSummary, pageSiteDetail } from "./page-submission";
+import { pageSubmissionSummary, pageSiteDetail, primarySubmissionState } from "./page-submission";
 import { commandHint } from "./command-hint";
 
 interface PageTabsProps {
@@ -45,6 +45,7 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
         nextStart += sites.length;
         const range = `${start}–${start + sites.length - 1}`;
         const badges = pageSubmissionSummary(sites, statuses, props.copy);
+        const primary = primarySubmissionState(badges.map(badge => badge.state));
         const label = [formatCopy(props.copy.sitePageLabel, { page: index + 1, range }), ...badges.map(b => b.label)].join(", ");
         const details = sites.map(key => pageSiteDetail(
           props.sites?.find(site => site.key === key)?.label ?? key, statuses[key], props.copy
@@ -73,7 +74,7 @@ export function PageTabs(props: PageTabsProps): React.JSX.Element | null {
             }}
           >
             <span>{props.showSiteNames ? sites.map(site => SHORT_NAMES[site]).join(' · ') : range}</span>
-            {badges.length > 0 && <span className="page-tab-badges" aria-hidden="true">{badges.map(badge => <i key={badge.state} className={`page-tab-badge ${badge.state}`}>
+            {badges.length > 0 && <span className="page-tab-badges" aria-hidden="true">{badges.map(badge => <i key={badge.state} className={`page-tab-badge ${badge.state}`} data-primary={badge.state === primary || undefined}>
               <span>{badge.symbol}</span><span className="page-tab-count">{badge.count}</span>
             </i>)}</span>}
           </button>

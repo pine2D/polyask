@@ -11,6 +11,13 @@ export const SUBMISSION_BADGES = [
   { state: "cancelled", symbol: "−", copyKey: "sitePageCancelled" }
 ] as const;
 
+/** 图标化页签只留一枚徽标时按此顺序取最需要处理的状态。 */
+const BADGE_SEVERITY: readonly SubmissionStatus["state"][] = ["failed", "unconfirmed", "sending", "cancelled", "sent"];
+
+export function primarySubmissionState(states: readonly SubmissionStatus["state"][]): SubmissionStatus["state"] | null {
+  return BADGE_SEVERITY.find(state => states.includes(state)) ?? null;
+}
+
 export function pageSubmissionSummary(sites: readonly SiteKey[], statuses: Readonly<Record<string, SiteStatus>>, copy: DesktopCopy) {
   return SUBMISSION_BADGES.map(badge => ({ ...badge,
     count: sites.filter(site => statuses[site]?.submission?.state === badge.state).length

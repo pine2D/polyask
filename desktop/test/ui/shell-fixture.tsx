@@ -126,8 +126,8 @@ function Fixture(): React.JSX.Element {
       onDraftSyncChange: async draftSync => setPreferences(p => ({ ...p, draftSync })) }} />;
   return <div className={`app-shell${reservedExpanded ? ' is-composer-expanded' : ''}`} data-sent={sent} data-opened={selected.join(',')} data-participating={participation.participating.join(',')}>
     <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
-      layoutMode={layout} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0}
-      scopeLabel={copy.allSites} healthAttention={0} panelTab={panel?.tab ?? null}
+      layoutMode={layout} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0} uncertainCount={stress ? 3 : 0} onReviewUncertain={noop}
+      scopeLabel={copy.allSites} healthAttention={stress ? 2 : 0} panelTab={panel?.tab ?? null}
       pageControl={!query.has('singlePage') && <PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}
       draftRecovery={<PromptDraftRecovery copy={copy} busy={!!query.get('sending')} onClearImages={() => setImages([])}
         onBlockingChange={noop} recovery={{ deviceId: 'fixture-local', status: draftStatus, dirty: true, drafts,
