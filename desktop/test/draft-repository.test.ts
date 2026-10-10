@@ -38,6 +38,22 @@ test('saving unfinished and explicitly empty forms keeps one local branch and mo
   } finally { f.database.close(); }
 });
 
+test('saving unchanged draft contents is a no-op: same version, no outbox row, no upload', () => {
+  const f = fixture();
+  try {
+    f.drafts.setSyncEnabled(true);
+    const first = f.drafts.save(prompt);
+    settle(f);
+    f.clock(5_000);
+    const again = f.drafts.save({ ...prompt, content: { text: 'unfinished' } });
+    assert.equal(again.updatedAt, first.updatedAt, 'remounting an editor must not advance the version');
+    assert.equal(f.database.outbox.count(), 0, 'an identical save must not schedule a state upload');
+    const edited = f.drafts.save({ ...prompt, content: { text: 'edited' } });
+    assert.equal(edited.updatedAt, 5_000);
+    assert.equal(f.database.outbox.count(), 1);
+  } finally { f.database.close(); }
+});
+
 test('concurrent device edits to one context retain both drafts without remote replacement', () => {
   const a = fixture('a'), b = fixture('b');
   try {

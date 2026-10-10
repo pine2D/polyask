@@ -252,6 +252,21 @@ test('reset rejects cleanup of a delayed captured receipt even after its editor 
   } finally { f.close(); }
 });
 
+test('remounting an editor over its own identical saved copy does not write the draft again', async () => {
+  const f = fixture();
+  try {
+    f.repository.save(input);
+    const before = f.repository.list()[0].updatedAt;
+    await f.client.refresh();
+    const result = await f.client.flush();
+    assert.equal(f.saves.length, 0, 'an unchanged form must not round-trip through saveDraft');
+    assert.equal(result?.updatedAt, before);
+    f.client.edit({ ...input, content: { text: 'changed' } }, true, true);
+    await f.client.flush();
+    assert.equal(f.saves.length, 1);
+  } finally { f.close(); }
+});
+
 test('a reset acknowledged after main already republished drafts still resumes autosave', async () => {
   const f = fixture();
   try {

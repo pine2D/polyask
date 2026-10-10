@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { DRAFT_STATE_PREFIX, DRAFT_SYNC_META_KEY, parseDraftInput, parseStoredDraft, validDraftId,
-  type DraftKind, type StoredDraft } from '../shared/drafts';
+  type DraftInput, type DraftKind, type StoredDraft } from '../shared/drafts';
 import { nextSyncTime, validSyncTime } from '../shared/sync';
 import type { StateRepository } from './state-repository';
 import type { MetaRepository } from './meta-repository';
@@ -44,6 +44,8 @@ export class DraftRepository {
     if (!input) throw new Error('invalid_draft');
     const deviceId = this.currentDeviceId();
     const current = this.list(input.kind, input.context).find(d => d.deviceId === deviceId);
+    // Remounting an editor re-saves the same form: keep the version, write nothing, upload nothing.
+    if (current && sameContents(current, input)) return current;
     const id = current?.id ?? this.createId();
     if (!current && this.state.get(`${DRAFT_STATE_PREFIX}${id}`) !== null) throw new Error('invalid_draft');
     const draft = parseStoredDraft({ ...input, format: 1, id, deviceId,
@@ -96,4 +98,9 @@ export class DraftRepository {
       return draft && key === `${DRAFT_STATE_PREFIX}${draft.id}` ? [draft] : [];
     });
   }
+}
+
+function sameContents(draft: StoredDraft, input: DraftInput): boolean {
+  const form = (value: DraftInput) => JSON.stringify([value.title, value.content, value.sourceUpdatedAt ?? null]);
+  return form(draft) === form(input);
 }

@@ -91,6 +91,7 @@ export class PersistentDraftClient {
         const draft = parseStoredDraft(value);
         return draft && !Object.hasOwn(draft, 'deletedAt') && draft.kind === this.input?.kind && draft.context === this.input?.context ? [draft] : [];
       });
+      this.adoptIdenticalOwnCopy();
       if (this.status === 'loading') this.status = 'ready';
       this.notify(); this.schedule();
     } catch {
@@ -139,6 +140,15 @@ export class PersistentDraftClient {
     this.cancelTimer(); this.generation++; this.refreshSequence++; this.mainEpoch = null;
     this.resetBaseline = this.signature; this.tail = Promise.resolve(null); this.saved = null;
     this.drafts = []; this.status = 'ready'; this.notify();
+  }
+  /** An own copy identical to the open form already is the saved state: remounting must not rewrite it. */
+  private adoptIdenticalOwnCopy(): void {
+    if (this.saved || this.writing) return;
+    const task = this.capture(false);
+    const draft = task && this.drafts.find(value => value.deviceId === this.deviceId && JSON.stringify({ kind: value.kind,
+      context: value.context, title: value.title, content: value.content,
+      ...(value.sourceUpdatedAt === undefined ? {} : { sourceUpdatedAt: value.sourceUpdatedAt }) }) === task.signature);
+    if (task && draft) this.saved = { task, draft };
   }
   dispose(): void { this.flushOnLeave(); this.mounted = false; this.cancelTimer(); this.generation++; }
 
