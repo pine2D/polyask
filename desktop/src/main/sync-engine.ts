@@ -28,6 +28,7 @@ interface SyncEngineOptions {
 }
 
 export interface SyncDrive {
+  remove?(fileId: string, signal?: AbortSignal): Promise<void>;
   listFiles(signal?: AbortSignal): Promise<DriveFile[]>;
   getStartToken(signal?: AbortSignal): Promise<string>;
   listChanges(pageToken: string, signal?: AbortSignal): Promise<{ changes: DriveChange[]; newStartPageToken: string | null }>;
@@ -44,6 +45,9 @@ export interface SyncAuth {
 }
 
 type QueuedOperation = OutboxOperation & { readonly revision: number };
+const UPLOAD_ORDER: Readonly<Record<OutboxOperation["kind"], number>> = { state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 };
+/** Failures caused by one request's own payload or target; other batches may still succeed. */
+const BATCH_LOCAL_FAILURES = new Set(["request_failed", "invalid_response", "not_found"]);
 export class SyncEngine {
   private readonly now: () => number;
   private chain: Promise<unknown> = Promise.resolve();
@@ -205,8 +209,15 @@ export class SyncEngine {
         this.options.onWorkspaceChanged
       ).run(controller.signal);
       controller.signal.throwIfAborted();
-      await this.flush(controller.signal);
+      const rejected = await this.flush(controller.signal);
       controller.signal.throwIfAborted();
+      if (rejected) {
+        // Pull and the other batches went through; report the rejected batch and wake for its own backoff.
+        const status = this.fail(rejected);
+        this.runRetryAt = this.runRetryAttempt = 0;
+        this.scheduleLocal();
+        return status;
+      }
       const waiting = this.options.repository.pending() > 0;
       const next = this.options.repository.config();
       const status = this.setStatus(next.readOnly ? "schema" : waiting ? "waiting" : "idle", {
@@ -233,13 +244,15 @@ export class SyncEngine {
     finally { if (this.activeController === controller) this.activeController = null; }
   }
 
-  private async flush(signal: AbortSignal): Promise<void> {
-    if (this.options.repository.config().readOnly || this.now() < this.uploadRetryAt) return;
+  private async flush(signal: AbortSignal): Promise<unknown> {
+    if (this.options.repository.config().readOnly || this.now() < this.uploadRetryAt) return null;
+    // A batch rejected for its own payload backs off alone; the rest of the outbox keeps flowing.
+    let rejected: unknown = null;
     for (;;) {
       signal.throwIfAborted();
       const ready = this.options.repository.ready(this.now());
-      if (!ready.length) return;
-      ready.sort((left, right) => ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 }[left.kind] - ({ state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 }[right.kind])));
+      if (!ready.length) break;
+      ready.sort((left, right) => UPLOAD_ORDER[left.kind] - UPLOAD_ORDER[right.kind]);
       // state 正文是本机整份 fragment、与出箱条数无关：一轮只上传一次，然后把本轮全部 state 项逐条 complete。
       // 出箱行本身不折叠（database.test.ts 明写 outbox 按 key 各留一行），折叠只发生在这里。
       const stateOperations = ready.filter((operation) => operation.kind === "state");
@@ -251,19 +264,22 @@ export class SyncEngine {
           for (const folded of batch.slice(1)) this.options.repository.complete(folded.key, folded.revision);
         } catch (error) {
           const code = (error as { code?: string }).code;
-          if (code !== "rate_limited" && code !== "server_error") throw error;
+          const transient = code === "rate_limited" || code === "server_error";
+          if (!transient && !BATCH_LOCAL_FAILURES.has(code ?? "")) throw error;
           // Retry-After may only push the retry further out, never pull it forward.
           const hint = (error as { retryAfter?: number }).retryAfter;
           // 整批同一 attempt 与 nextAt：折叠的 state 行若各自抖动退避，下一轮会拆成 N 次一模一样的整份上传。
           const attempt = Math.max(...batch.map((operation) => operation.attempt)) + 1;
           const nextAt = this.now() + Math.max(retryDelay(attempt), typeof hint === "number" && hint > 0 ? hint : 0);
-          this.uploadRetryAt = Math.max(this.uploadRetryAt, nextAt);
           for (const operation of batch) this.options.repository.retry({ ...operation, attempt, nextAt });
+          if (!transient) { rejected ??= error; continue; }
+          this.uploadRetryAt = Math.max(this.uploadRetryAt, nextAt);
           // Backoff covers every batch, including revisions written during this upload.
-          return;
+          return rejected;
         }
       }
     }
+    return rejected;
   }
 
   private async upload(operation: QueuedOperation, signal: AbortSignal): Promise<void> {

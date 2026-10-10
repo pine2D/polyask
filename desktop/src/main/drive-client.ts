@@ -24,6 +24,14 @@ export interface DriveFailure extends Error {
 type Fetch = (input: string | URL, init?: RequestInit) => Promise<Response>;
 const API = "https://www.googleapis.com/drive/v3";
 const UPLOAD = "https://www.googleapis.com/upload/drive/v3";
+/**
+ * Drive documents multipart uploads for files of 5 MB or less and resumable uploads above that
+ * (developers.google.com/workspace/drive/api/guides/manage-uploads). Switch at 4 MiB to keep
+ * >=20% headroom for the multipart envelope and metadata.
+ */
+export const MULTIPART_BODY_LIMIT = 4 * 1024 * 1024;
+/** Large bodies get extra time on top of the per-request deadline (assumes >=128 KiB/s uplink). */
+const UPLOAD_BYTES_PER_SECOND = 128 * 1024;
 
 /** A hint of zero (or an already elapsed HTTP-date) is no hint: it would defeat backoff. */
 function retryAfter(value: string | null): number | undefined {
@@ -81,29 +89,70 @@ export class DriveClient {
   }
 
   async upsert(fileId: string | null, name: string, appProperties: Readonly<Record<string, string>>, body: unknown, signal?: AbortSignal): Promise<DriveFile> {
-    const boundary = `polyask-${crypto.randomUUID()}`;
     const metadata: Record<string, unknown> = { name, mimeType: "application/json", appProperties };
     if (!fileId) metadata.parents = ["appDataFolder"];
-    const payload = [`--${boundary}`, "Content-Type: application/json; charset=UTF-8", "", JSON.stringify(metadata), `--${boundary}`, "Content-Type: application/json; charset=UTF-8", "", JSON.stringify(body), `--${boundary}--`, ""].join("\r\n");
-    return this.json(fileId ? `${UPLOAD}/files/${encodeURIComponent(fileId)}?uploadType=multipart` : `${UPLOAD}/files?uploadType=multipart`, {
-      method: fileId ? "PATCH" : "POST",
+    const content = JSON.stringify(body);
+    const bytes = Buffer.from(content, "utf8");
+    const target = fileId ? `${UPLOAD}/files/${encodeURIComponent(fileId)}` : `${UPLOAD}/files`;
+    const method = fileId ? "PATCH" : "POST";
+    if (bytes.byteLength > MULTIPART_BODY_LIMIT) return this.resumable(target, method, metadata, bytes, signal);
+    const boundary = `polyask-${crypto.randomUUID()}`;
+    const payload = [`--${boundary}`, "Content-Type: application/json; charset=UTF-8", "", JSON.stringify(metadata), `--${boundary}`, "Content-Type: application/json; charset=UTF-8", "", content, `--${boundary}--`, ""].join("\r\n");
+    return this.json(`${target}?uploadType=multipart`, {
+      method,
       headers: { "Content-Type": `multipart/related; boundary=${boundary}` },
       body: payload,
       signal
     });
   }
 
+  /**
+   * Single-request resumable upload: open a session with the metadata, then PUT the whole body.
+   * A failed PUT is not resumed; the outbox retries later with a fresh session (sessions expire anyway).
+   */
+  private async resumable(target: string, method: string, metadata: Record<string, unknown>, bytes: Uint8Array, signal?: AbortSignal): Promise<DriveFile> {
+    const session = await this.request(`${target}?uploadType=resumable`, {
+      method,
+      headers: {
+        "Content-Type": "application/json; charset=UTF-8",
+        "X-Upload-Content-Type": "application/json",
+        "X-Upload-Content-Length": String(bytes.byteLength)
+      },
+      body: JSON.stringify(metadata),
+      signal
+    });
+    const location = sessionUri(session.headers.get("Location"));
+    // The bearer token must never follow a session URI to another host.
+    if (!location) throw failure("invalid_response", session.status);
+    const timeout = this.requestTimeoutMs + Math.ceil(bytes.byteLength / UPLOAD_BYTES_PER_SECOND) * 1_000;
+    return this.json(location, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: bytes as unknown as BodyInit,
+      signal
+    }, timeout);
+  }
+
+  /** Deletes one file; a file that is already gone counts as deleted. */
+  async remove(fileId: string, signal?: AbortSignal): Promise<void> {
+    try {
+      await this.request(`${API}/files/${encodeURIComponent(fileId)}`, { method: "DELETE", signal });
+    } catch (error) {
+      if ((error as { code?: string }).code !== "not_found") throw error;
+    }
+  }
+
   async clearAll(onProgress?: (count: number) => void | Promise<void>, signal?: AbortSignal): Promise<void> {
     let deleted = 0;
     for (const file of await this.listFiles(signal)) {
       if (file.appProperties?.app !== "polyask") continue;
-      await this.request(`${API}/files/${encodeURIComponent(file.id)}`, { method: "DELETE", signal });
+      await this.remove(file.id, signal);
       await onProgress?.(++deleted);
     }
   }
 
-  private async json<T>(url: string, init: RequestInit): Promise<T> {
-    return this.withDeadline(init.signal, async (signal, deadline) => {
+  private async json<T>(url: string, init: RequestInit, timeoutMs = this.requestTimeoutMs): Promise<T> {
+    return this.withDeadline(init.signal, timeoutMs, async (signal, deadline) => {
       const response = await this.requestWithinDeadline(url, { ...init, signal }, init.signal, deadline);
       try { return JSON.parse(await response.text()) as T; }
       catch (error) {
@@ -116,17 +165,18 @@ export class DriveClient {
   }
 
   private request(url: string, init: RequestInit): Promise<Response> {
-    return this.withDeadline(init.signal, (signal, deadline) =>
+    return this.withDeadline(init.signal, this.requestTimeoutMs, (signal, deadline) =>
       this.requestWithinDeadline(url, { ...init, signal }, init.signal, deadline));
   }
 
   private async withDeadline<T>(
     callerSignal: AbortSignal | null | undefined,
+    timeoutMs: number,
     run: (signal: AbortSignal, deadline: AbortSignal) => Promise<T>
   ): Promise<T> {
     throwCallerAbort(callerSignal);
     const timeout = new AbortController();
-    const timer = setTimeout(() => timeout.abort(new DOMException("Timed out", "TimeoutError")), this.requestTimeoutMs);
+    const timer = setTimeout(() => timeout.abort(new DOMException("Timed out", "TimeoutError")), timeoutMs);
     const signal = callerSignal ? AbortSignal.any([callerSignal, timeout.signal]) : timeout.signal;
     try { return await run(signal, timeout.signal); }
     finally { clearTimeout(timer); }
@@ -168,6 +218,14 @@ export class DriveClient {
 
 function failure(code: string, status: number, reason?: string, wait?: number): DriveFailure {
   return Object.assign(new Error(code), { code, status, ...(reason ? { reason } : {}), ...(wait !== undefined ? { retryAfter: wait } : {}) });
+}
+
+function sessionUri(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && url.host === "www.googleapis.com" && url.pathname.startsWith("/upload/drive/v3/files") ? url.href : null;
+  } catch { return null; }
 }
 
 function throwCallerAbort(signal: AbortSignal | null | undefined): void {
