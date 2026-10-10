@@ -19,7 +19,8 @@ setShellApi(withFolderPages({
   listFolders: async () => { if (state.failLoad) throw new Error('fixture_load_failed'); return folders; },
   createFolder: async (name: string) => { state.folderWrites++; const folder = { id: `folder-${state.folderWrites}`, name, createdAt: Date.now(), updatedAt: Date.now(), deviceId: 'fixture', schema: 3 }; folders.push(folder); return folder; },
   renameFolder: async (id: string, name: string) => { state.folderWrites++; const folder = folders.find(item => item.id === id); if (!folder) throw Error('not_found'); Object.assign(folder, { name, updatedAt: Date.now() }); return folder; },
-  searchFolderContents: async (filters: any) => [...records.map(record => ({kind:'archive',record})), ...cards.map(record => ({kind:'decision',record}))].filter(item => (!filters.kind || item.kind === filters.kind) && (!filters.query || JSON.stringify(item).includes(filters.query))),
+  // 搜索/翻页只重查内容（R24 起不再重取文件夹列表），列表加载失败要在这一层模拟。
+  searchFolderContents: async (filters: any) => { if (state.failLoad) throw new Error('fixture_load_failed'); return [...records.map(record => ({kind:'archive',record})), ...cards.map(record => ({kind:'decision',record}))].filter(item => (!filters.kind || item.kind === filters.kind) && (!filters.query || JSON.stringify(item).includes(filters.query))); },
   searchArchives: async () => ({items: records, tags: ['产品设计', '待讨论', '很长的标签用于验证下拉菜单内容能够换行且不会撑破窗口边缘']}),
   listArchiveTags: async () => ['产品设计', '待讨论', '很长的标签用于验证下拉菜单内容能够换行且不会撑破窗口边缘'],
   getArchive: async (id: string) => records.find(r => r.id === id),
