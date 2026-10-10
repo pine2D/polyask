@@ -19,6 +19,7 @@ export { getCopy } from '../../src/shared/copy';
 export { SITES } from '../../src/main/sites';
 export { applicationMenu } from '../../src/main/application-menu';
 export { dispatchAppCommand } from '../../src/main/app-command-dispatch';
+export { runViewMenuAction } from '../../src/main/view-menu-actions';
 
 /** Synthetic file transport only: the production engine still merges and uploads. */
 export class NativeCloud implements SyncDrive {

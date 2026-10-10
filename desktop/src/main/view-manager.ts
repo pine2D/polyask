@@ -61,6 +61,7 @@ import type { StabilityEventInput } from "./stability-monitor";
 import { applyWorkspaceLayout, computeWorkspaceLayout } from "./workspace-layout";
 import { stackOrder } from "./view-visibility";
 import { SiteZoomController } from "./site-zoom";
+import { bindShellContents } from "./shell-contents-bindings";
 
 // TODO(size-ratchet)：748 行，目标 ≤400——抽出 site-workspace-state（勾选/分页/布局纯状态）、
 // site-status-registry（pageStatus/runStatus 合并与 unread）、generation-watcher（生成态轮询）三块无 Electron 依赖的纯逻辑。
@@ -149,7 +150,10 @@ export class ViewManager {
     this.layout();
     window.on("resize", () => this.layout());
     window.on("restore", () => this.layout());
-    window.webContents.on("zoom-changed", () => setTimeout(() => this.layout(), 0));
+    bindShellContents(window.webContents, { relayout: () => this.layout(), reset: () => {
+      this.composerExpanded = this.drawerOpen = this.historyAccess.panelOpen = false;
+      if (this.surface === "sites") this.layout(); else this.setSurface("sites");
+    } });
     window.on("closed", () => this.dispose());
   }
 
@@ -191,6 +195,8 @@ export class ViewManager {
     this.display = value;
     this.layout();
   }
+
+  relayout(): void { this.layout(); }
 
   setComposerExpanded(value: boolean): void {
     if (this.composerExpanded === value) return;

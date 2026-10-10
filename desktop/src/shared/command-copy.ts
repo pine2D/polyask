@@ -1,5 +1,10 @@
 export const COMMAND_COPY = {
   en: {
+    menuReloadSite: "Reload Current AI Site",
+    menuForceReloadSite: "Force Reload Current AI Site",
+    menuActualSize: "Actual Size",
+    menuZoomIn: "Zoom In",
+    menuZoomOut: "Zoom Out",
     commandSearchPlaceholder: "Search commands, shortcuts, or saved groups…",
     commandSearchEmpty: "No matching commands",
     commandSearchHint: "Use ↑↓ to select, Enter to run, and Esc to close",
@@ -19,6 +24,11 @@ export const COMMAND_COPY = {
     siteZoomHint: "Click an AI page before using its zoom shortcuts. Ctrl + mouse wheel also zooms that site. Each site's zoom is saved on this device."
   },
   zhCN: {
+    menuReloadSite: "重新加载当前 AI 站点",
+    menuForceReloadSite: "强制重新加载当前 AI 站点",
+    menuActualSize: "实际大小",
+    menuZoomIn: "放大",
+    menuZoomOut: "缩小",
     commandSearchPlaceholder: "搜索命令、快捷键或已存分组…",
     commandSearchEmpty: "没有匹配的命令",
     commandSearchHint: "按 ↑↓ 选择，Enter 执行，Esc 关闭",
@@ -38,6 +48,11 @@ export const COMMAND_COPY = {
     siteZoomHint: "先点击 AI 页面，再使用缩放快捷键；Ctrl + 鼠标滚轮也可缩放该站点。各站比例保存在本机，重启后仍保留。"
   },
   zhTW: {
+    menuReloadSite: "重新載入目前的 AI 網站",
+    menuForceReloadSite: "強制重新載入目前的 AI 網站",
+    menuActualSize: "實際大小",
+    menuZoomIn: "放大",
+    menuZoomOut: "縮小",
     commandSearchPlaceholder: "搜尋指令、快速鍵或已儲存群組…",
     commandSearchEmpty: "找不到符合的指令",
     commandSearchHint: "按 ↑↓ 選取，Enter 執行，Esc 關閉",

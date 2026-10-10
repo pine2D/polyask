@@ -92,7 +92,7 @@ test("every menu accelerator comes from the shared command table", () => {
 
   assert.deepEqual(handWritten, [],
     `菜单模板里不得手写 accelerator（发现 ${handWritten.join(", ")}）——` +
-    "登记到 src/shared/commands.ts 的 COMMANDS，菜单与快捷键速查才会同源");
+    "登记到 src/shared/commands.ts 的 COMMANDS（重新加载/缩放登记在 src/shared/view-menu.ts），菜单与快捷键速查才会同源");
 });
 
 test("every navigation command a menu exposes is reachable from the renderer", () => {

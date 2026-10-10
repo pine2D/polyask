@@ -2,10 +2,12 @@ import type { MenuItemConstructorOptions } from "electron";
 import { COMMANDS, commandAccelerator, type CommandId } from "../shared/commands";
 import type { DesktopCopy } from "../shared/copy";
 import type { DisplayPreferences } from "../shared/display";
+import { VIEW_MENU_ITEMS, type ViewMenuAction } from "../shared/view-menu";
 
 export function applicationMenu(
   platform: NodeJS.Platform, copy: DesktopCopy, display: DisplayPreferences,
-  onDisplay: (value: DisplayPreferences) => void, dispatch: (id: CommandId) => void, appName: string
+  onDisplay: (value: DisplayPreferences) => void, dispatch: (id: CommandId) => void, appName: string,
+  onViewAction: (action: ViewMenuAction) => void
 ): MenuItemConstructorOptions[] {
   return [
     ...(platform === "darwin"
@@ -31,8 +33,10 @@ export function applicationMenu(
     {
       label: copy.viewMenu,
       submenu: [
-        { role: "reload" }, { role: "forceReload" }, { type: "separator" },
-        { role: "resetZoom" }, { role: "zoomIn" }, { role: "zoomOut" },
+        // 不用 reload/zoom role（理由见 shared/view-menu.ts）：自定义项经 ViewManager 执行。
+        ...VIEW_MENU_ITEMS.map((item): MenuItemConstructorOptions => item
+          ? { label: copy[item.labelKey], accelerator: item.accelerator, click: () => onViewAction(item.action) }
+          : { type: "separator" }),
         { type: "separator" },
         {
           label: copy.densityMenu,

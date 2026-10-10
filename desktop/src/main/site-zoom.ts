@@ -36,6 +36,12 @@ export class SiteZoomController {
     if (Math.abs(contents.getZoomFactor() - zoom) > 0.001) contents.setZoomFactor(zoom);
   }
 
+  /** 菜单缩放在站点视图取得焦点时调用：与站内快捷键同一路径，比例照常记入偏好。 */
+  step(site: SiteKey, action: SiteZoomAction): void {
+    const contents = this.contents.get(site);
+    if (contents) this.change(site, contents, action);
+  }
+
   clear(): void {
     this.preferences = {};
     for (const [site, contents] of this.contents) this.apply(site, contents, this.defaults.get(site) ?? 1);

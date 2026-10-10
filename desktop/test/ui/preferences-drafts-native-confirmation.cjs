@@ -21,7 +21,9 @@ module.exports = async ({ tools, win, manager, views, commands, surface }) => {
     ['focus-prompt', 'Q', ['alt']], ['new-session', 'N', ['alt']], ['show-page-2', '2', ['alt']],
     ['collect-answers', 'C', ['alt']], ['set-think', 'T', ['alt']], ['set-fast', 'Y', ['alt']],
     ['next-site', 'PageDown', ['control']], ['next-page', 'PageDown', ['control', 'shift']],
-    ['site-back', 'Left', ['alt']], ['open-settings', ',', ['control']]
+    ['site-back', 'Left', ['alt']], ['open-settings', ',', ['control']],
+    // 「视图」菜单的重新加载不再是 role：外壳聚焦时既不重载外壳（确认锁会随旧渲染层失联），也不在确认期间重载站点。
+    ['view:reload', 'R', ['control']]
   ]) {
     const before = commands.length;
     key(code, modifiers);
@@ -50,5 +52,5 @@ module.exports = async ({ tools, win, manager, views, commands, surface }) => {
   manager.setPage(original.page); manager.setLayout(original.mode, original.focused, false);
   await click('[data-draft-open]'); await wait('!!document.querySelector(".folder-modal")');
   await covered();
-  return { nativeKeys: 10, rendererCommands: 5, pages: views.length, newSessionConfirmed: false };
+  return { nativeKeys: 11, rendererCommands: 5, pages: views.length, newSessionConfirmed: false };
 };

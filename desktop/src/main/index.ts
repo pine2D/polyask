@@ -1,5 +1,6 @@
 import { dispatchAppCommand as dispatchShellCommand } from './app-command-dispatch';
 import { applicationMenu } from "./application-menu";
+import { runViewMenuAction } from "./view-menu-actions";
 import { installNativeShell, initialShellBackground } from "./native-shell";
 import { createWindowDataServices } from './window-data-services';
 import type { PreferenceRuntime } from './preference-runtime';
@@ -14,6 +15,7 @@ import {
   Notification,
   screen,
   shell as electronShell,
+  webContents,
 } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 
@@ -155,7 +157,8 @@ function createMenu(): void {
   const copy = getCopy(app.getLocale());
   const display = viewManager?.getDisplayPreferences() ?? DEFAULT_DISPLAY_PREFERENCES;
   const template = applicationMenu(process.platform, copy, display,
-    (value) => { if (preferenceRuntime) preferenceRuntime.setDisplay(value); else if (viewManager) applyDisplayPreferences(viewManager, value); }, dispatchAppCommand, app.name);
+    (value) => { if (preferenceRuntime) preferenceRuntime.setDisplay(value); else if (viewManager) applyDisplayPreferences(viewManager, value); }, dispatchAppCommand, app.name,
+    (action) => runViewMenuAction(action, viewManager, mainWindow?.webContents ?? null, webContents.getFocusedWebContents()));
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 

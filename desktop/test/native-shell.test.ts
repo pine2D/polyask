@@ -31,7 +31,7 @@ test('native editing menu respects selection and edit capabilities', () => {
 test('Mac application menu exposes settings once and native lifecycle roles', () => {
   for (const platform of ['darwin', 'win32', 'linux'] as const) {
     const called: string[] = [];
-    const menu = applicationMenu(platform, COPY.en, DEFAULT_DISPLAY_PREFERENCES, () => {}, id => called.push(id), 'PolyAsk');
+    const menu = applicationMenu(platform, COPY.en, DEFAULT_DISPLAY_PREFERENCES, () => {}, id => called.push(id), 'PolyAsk', () => {});
     const flatten = (items: typeof menu): typeof menu => items.flatMap(item => [item, ...flatten(Array.isArray(item.submenu) ? item.submenu : [])]);
     const items = flatten(menu);
     assert.equal(items.filter(item => item.accelerator === (platform === 'darwin' ? 'Command+,' : 'Control+,')).length, 1);

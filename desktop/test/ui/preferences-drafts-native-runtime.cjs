@@ -46,7 +46,10 @@ app.whenReady().then(async () => {
   Menu.setApplicationMenu(Menu.buildFromTemplate(services.applicationMenu(process.platform, getCopy(locale),
     manager.getDisplayPreferences(), () => {}, id => {
       nativeCommands.push(id); services.dispatchAppCommand(id, manager, win);
-    }, 'PolyAsk native fixture')));
+    }, 'PolyAsk native fixture', action => {
+      nativeCommands.push(`view:${action}`);
+      services.runViewMenuAction(action, manager, win.webContents, require('electron').webContents.getFocusedWebContents());
+    })));
   const tools = require('./preferences-drafts-native-tools.cjs')(win, output, `${locale}-${phase}`);
   const { run, wait, pause, click, clickText, clickElement, type, key } = tools;
   const loadEnd = Date.now() + 8000;

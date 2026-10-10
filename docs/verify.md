@@ -56,7 +56,7 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 本轮真实 SQLite 的 1,000 条合成记录各含约 20KB 回答，单页 100 条摘要回包约 18.4KB；这是本机样本，不是大库延迟承诺。日期分页在 SQL 执行；完整标题排序使用 ID/标题窄投影，决策 Unicode 检索仍经 SQLite UDF 转换，不能据摘要化宣称所有操作均不扫描正文。旧夹具补齐真实按 ID 回包及异步加载就绪条件，滚轮停稳后才核对返回位置；没有删除来源变更、缺失或未保存保护的原有断言。组合事件不替代物理输入法；真实 Drive 账号双设备、九站实网发送与 Windows/macOS 原生输入法、缩放和读屏未在本轮验证。
 
-- 偏好与草稿同步专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`，脚本启动独立 Xvfb，Linux 需要临时 cgroup。受保护入口构建生产外壳、preload、ViewManager 与 SQLite 服务，以两个独立设备库和真实 SyncEngine 的受控 Drive 传输验证三语设置、本机覆盖/跟随、旧缓存冷启动、问题及比较/决策/综合草稿的编辑、预览、确认恢复和重启。问题恢复还核对已加载及正在读取的附件清理；五个本地原生视图在确认期间保持隐藏、挂载和正视口，10 个实际菜单快捷键与 5 个直达渲染命令不得切换、抢焦点或导航，关闭后恢复正常新会话确认及设置后台分页。HTTP/HTTPS 阻断，不发送真实提问、不访问用户库或 Google 账号；截图、报告及源码/构建哈希清单留在临时目录，验收期间源码变化会失败。真实 Drive 双设备及 Windows/macOS 原生交互仍需对应环境验收。
+- 偏好与草稿同步专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`，脚本启动独立 Xvfb，Linux 需要临时 cgroup。受保护入口构建生产外壳、preload、ViewManager 与 SQLite 服务，以两个独立设备库和真实 SyncEngine 的受控 Drive 传输验证三语设置、本机覆盖/跟随、旧缓存冷启动、问题及比较/决策/综合草稿的编辑、预览、确认恢复和重启。问题恢复还核对已加载及正在读取的附件清理；五个本地原生视图在确认期间保持隐藏、挂载和正视口，11 个实际菜单快捷键（含「视图」菜单的 Ctrl+R 重新加载，外壳与站点均不得被重载）与 5 个直达渲染命令不得切换、抢焦点或导航，关闭后恢复正常新会话确认及设置后台分页。HTTP/HTTPS 阻断，不发送真实提问、不访问用户库或 Google 账号；截图、报告及源码/构建哈希清单留在临时目录，验收期间源码变化会失败。真实 Drive 双设备及 Windows/macOS 原生交互仍需对应环境验收。
 
 - 结果库分页专项：`npm run test:unit -- test/task-folder-page.test.ts test/library-server-page.test.tsx` 使用真实 SQLite 与生产组件，检查摘要不含回答正文、每页上限、筛选总数、跨页选择、按 ID 读取、详情回包期间的未保存保护和完整长标题排序。`test/ui/library-page-api.ts` 仅为旧渲染夹具补分页回包，不作为数据库性能证据；已提供的详情读取回包必须原样透传，不能由缓存覆盖来源变更或缺失。
 
