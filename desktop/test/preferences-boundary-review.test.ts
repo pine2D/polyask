@@ -14,15 +14,17 @@ test('terminal draft deletion survives merging a newer live setting before first
   const database = DesktopDatabase.open(':memory:');
   database.meta.put('deviceId', 'new-device'); database.meta.put('draftSyncEnabled', true);
   const sync = new SyncRepository(database), drafts = new DraftRepository(database.state, database.meta);
+  // Within the tombstone retention window, so the deletion is imported rather than already reclaimable.
+  const base = Date.now() - 1_000;
   const fragment = (deleted: boolean): StateFragment => ({ schema: 1, deviceId: deleted ? 'deleting-device' : 'stale-writer', templates: {}, groups: {}, settings: {
     'polyask.draft.shared-draft': { value: { format: 1, id: 'shared-draft', kind: 'prompt', context: 'composer',
       title: deleted ? '' : 'old branch', content: deleted ? null : { text: 'deleted labor' } },
-      deviceId: 'branch-owner', updatedAt: deleted ? 100 : 200, ...(deleted ? { deletedAt: 100 } : {}) }
+      deviceId: 'branch-owner', updatedAt: deleted ? base : base + 100, ...(deleted ? { deletedAt: base } : {}) }
   } });
   try {
     sync.applyStateFragments({ deletion: fragment(true), stale: fragment(false) });
     assert.equal(drafts.list().length, 0, 'a terminal deletion cannot disappear in generic version merging');
-    assert.equal(drafts.get('shared-draft')?.deletedAt, 100);
+    assert.equal(drafts.get('shared-draft')?.deletedAt, base);
   } finally { database.close(); }
 });
 

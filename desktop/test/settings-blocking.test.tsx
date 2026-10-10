@@ -34,7 +34,8 @@ for (const action of ['clear', 'reset'] as const) for (const outcome of ['succes
       assert.equal(blocking, false);
       assert.equal(events.at(-1), false, 'settled writes release the parent command gate');
       assert.equal(closeButton(h.document).disabled, false);
-      assert.equal(resets, action === 'reset' && outcome === 'success' ? 1 : 0);
+      // A failed reset may already have wiped main's data, so the shell resynchronizes either way.
+      assert.equal(resets, action === 'reset' ? 1 : 0);
       if (outcome === 'failure') assert.equal(confirmButton(h.document).disabled, false);
     } finally { await h.close(); }
   });
