@@ -1058,3 +1058,12 @@ Windows/macOS 本轮原生、物理输入法与读屏、真实 Drive 授权及�
 本轮最终完整门禁为 1,356 项应用/界面测试及 417 项运行时测试，零失败、零跳过；仓库 verify、当前源码 package 与隔离 Xvfb smoke 均通过，冒烟 shell=1 / sites=9 / attached=9。变更记录在未发布段，版本仍为 1.15.0，未推送或发布。
 
 本轮未测 Windows/macOS 原生、九站实网满载、物理输入法或读屏；本地合成选区不替代物理输入法验证。未发送真实提问、写入正式档案或执行 Drive 同步。
+
+## 2026-10-10 多行提问注入回归（R1）真机确认与复测
+
+环境：Windows TestLab（已登录九站，Electron 44.5.0，英文界面，`POLYASK_IDLE_THROTTLING_EXPERIMENT=1`），经外壳 `polyask.broadcast`（`tier:null`、无图片）发送；每轮前先九站 `newSession` 并核对输入框为空，`submit_unconfirmed` 不重发。用户授权本轮实发测试问题。
+
+- **确认（修复前，v1.13.0 包，注入核对与 1.17.0 相同）**：两行问题九站群发，Claude/ChatGPT/Gemini/豆包/元宝/Kimi 六站 `inject_failed`，DeepSeek/智谱（textarea）与千问（Slate，单 `<p>` 内含 `\n`）成功。前五站 DOM 为每行一个 `<p>`，整体 `innerText` 块间为 `\n\n`，内容其实正确；Kimi DOM 是单个 `<p>` 且换行已丢（`execCommand("insertText")` 吞换行，拦截正确）。
+- **不发送对拍**：在七个 contenteditable 站按生产注入链写入两行、空行、缩进+制表符、连续与末尾空格四种文本，按块逐行读取后全部与原文逐字一致，随后用可信按键清空。Kimi 的 `insertParagraph`/`insertLineBreak` 均不入 model；合成 paste 逐字一致，但单次 1639 字起被转成 TXT 附件（1391 字正常），按 1000 单元同步分块后 2.5k/3.4k/13.9k 字逐字一致、零附件。Kimi 用 paste 真发一条，用户消息换行完整。
+- **复测（修复后，34bcf74+工作树补丁包）**：带空行与四格缩进的五行问题九站 9/9 成功；页面用户消息逐行比对，Claude/ChatGPT/DeepSeek/智谱/Kimi/元宝/千问逐字一致，Gemini 保留空行但显示时去掉行首缩进、豆包显示时合并空行与缩进（均为站点渲染，注入前已逐字核对）。4057 字、104 行长文本八站成功且长度逐字相等（豆包显示时在中文与数字间加空格）；Gemini 当时上一轮回答在后台卡在加载数分钟、发送位是停止键，按设计报 `submit_unconfirmed` 未重发。停止该生成并清空后单独重发，Gemini 104 行完整送达。
+- 未测：带图多行、Windows 前台可见窗口下 Gemini 长时间卡加载的原因（后台视图，疑与已知后台节流同类，未单独排查）。

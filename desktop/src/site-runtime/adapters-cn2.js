@@ -105,11 +105,28 @@
       },
       // 新编辑器（真机 2026-07-21）：合成 beforeinput 会 DOM/model 分叉并冻死编辑器（发送键失灵、
       // 可信键盘也不再接受）；execCommand insertText 反而正常入 model → 站点特调注入改道
+      // 多行（真机 2026-10-10）：execCommand insertText 吞掉换行，insertParagraph/insertLineBreak 也不入 model；
+      // 合成 paste（自带 DataTransfer，不读写系统剪贴板）走 Lexical 自己的粘贴命令，换行、空行、缩进逐字保留。
+      // 单次粘贴约 1.5k 字起会被转成 TXT 附件（实测 1391 字正常、1639 字转附件）→ 按 1000 个 UTF-16 单元同步分块。
       inject: function (el, text) {
         el.focus();
         // 新开页 focus 后选区未必落进编辑器（execCommand 无处可写）：显式设 Range 再插入
         const s = getSelection(); s.removeAllRanges();
         const rg = document.createRange(); rg.selectNodeContents(el); s.addRange(rg);
+        let pasted = false;
+        for (let i = 0; i < text.length;) {
+          let end = Math.min(text.length, i + 1000);
+          if (end < text.length && /[\uD800-\uDBFF]/.test(text[end - 1])) end--; // 不切断代理对
+          const data = new DataTransfer(); data.setData("text/plain", text.slice(i, end));
+          const paste = new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true });
+          el.dispatchEvent(paste);
+          if (!paste.defaultPrevented) {
+            if (pasted) throw new Error("Kimi: 分块粘贴中途未被接管");
+            break; // 编辑器没接管粘贴：退回 execCommand（多行若丢换行，core 的逐字核对会拦成 inject_failed）
+          }
+          pasted = true; i = end;
+        }
+        if (pasted) return;
         // 失败必须抛（而非返回 false）：本站通用 beforeinput 回退会写死编辑器，宁可 inject_failed
         if (!document.execCommand("insertText", false, text)) throw new Error("Kimi: execCommand 注入失败");
       },

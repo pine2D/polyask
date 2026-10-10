@@ -6,7 +6,7 @@ const { source } = require("./lib/site-send-harness");
 
 // Execute production injection and submission; only the external editor's
 // controlled updates and DOM surface are simulated.
-function runtime({ kind = "textarea", rollback, initial = "OLD QUESTION", render = text => text } = {}) {
+function runtime({ kind = "textarea", rollback, initial = "OLD QUESTION", render = text => text, paragraphs = false } = {}) {
   let now = 1000, text = initial, rendered = initial, injected = false;
   const submitted = [];
   class Event { constructor(type, init) { this.type = type; Object.assign(this, init); } }
@@ -25,9 +25,13 @@ function runtime({ kind = "textarea", rollback, initial = "OLD QUESTION", render
       }
     }
   });
+  // Paragraph editors (ProseMirror/Quill) render one <p> per line, an empty line as <p><br></p>,
+  // and Chromium's whole-element innerText puts a blank line between blocks.
+  const blocks = () => rendered.split("\n").map(line => ({ tagName: "P", innerText: line || "\n" }));
   if (kind !== "textarea") Object.defineProperties(composer, {
     textContent: { get: () => text, set: value => { text = value; } },
-    innerText: { get: () => rendered }
+    innerText: { get: () => paragraphs ? blocks().map(b => b.innerText.replace(/\n$/, "")).join("\n\n") : rendered },
+    children: { get: () => paragraphs ? blocks() : [] }
   });
   const context = {
     window: {}, document: { querySelectorAll: () => [composer] },
@@ -95,3 +99,24 @@ for (const rollback of ["sync", "async"]) {
     assert.deepEqual(r.submitted, []);
   });
 }
+
+test("paragraph editors compare per block, keeping blank lines, indentation and word spacing exact", async () => {
+  for (const value of ["First line\nSecond line", "First\n\nThird", "code:\n    indented\n\ttab", "Two  spaces\nnext"]) {
+    const r = runtime({ kind: "editable", paragraphs: true });
+    assert.equal((await r.submit(value)).ok, true, JSON.stringify(value));
+    assert.deepEqual(r.submitted, [value]);
+  }
+});
+
+test("paragraph editors still reject lost line breaks, extra blank lines and changed spacing", async () => {
+  for (const [value, shown] of [["First\nSecond", "FirstSecond"], ["First\nSecond", "First\n\nSecond"], ["A  B\nC", "A B\nC"]]) {
+    const r = runtime({ kind: "editable", paragraphs: true, render: () => shown });
+    assert.equal((await r.submit(value)).code, "inject_failed", JSON.stringify(shown));
+    assert.deepEqual(r.submitted, []);
+  }
+});
+
+test("invisible zero-width and no-break space differences do not block an exact prompt", async () => {
+  const r = runtime({ kind: "editable", paragraphs: true, render: value => "\uFEFF" + value.replace(" ", "\u00A0") });
+  assert.equal((await r.submit("Hello world\nnext")).ok, true);
+});

@@ -76,15 +76,19 @@
   // 隐藏节点（水印 UUID、翻译克隆等）一并带出，所见即所得必须用 innerText（textContent 仅作兜底）
   function visText(el) { return ((el && (el.innerText != null ? el.innerText : el.textContent)) || "").trim(); }
 
-  // 读输入框当前文本：textarea/input 取 .value，其余优先 innerText 保留段落换行；不折叠词间空格。
+  // 读输入框当前文本：textarea/input 取 .value；段落型编辑器（ProseMirror/Quill 每行一个 <p>，空行是 <p><br></p>）
+  // 逐块取行——整体 innerText 会在块间多出一个空行，真机 2026-10-10 六站多行问题因此全报 inject_failed。
+  // 只抹平零宽字符与不换行空格这类不可见差异；词间空格、缩进与空行数仍逐字比较。
   function readText(e) {
     if (!e) return "";
-    const v = (e.tagName === "TEXTAREA" || e.tagName === "INPUT") ? (e.value || "") : (e.innerText ?? e.textContent ?? "");
-    return v.replace(/\r\n?/g, "\n").trim();
+    if (e.tagName === "TEXTAREA" || e.tagName === "INPUT") return plainText(e.value);
+    const blocks = e.children ? [...e.children] : [];
+    if (blocks.length && blocks.every((b) => b.tagName === "P" || b.tagName === "DIV"))
+      return plainText(blocks.map((b) => (b.innerText ?? b.textContent ?? "").replace(/\n$/, "")).join("\n"));
+    return plainText(e.innerText ?? e.textContent);
   }
-  function promptMatches(el, text) {
-    return readText(el) === String(text || "").replace(/\r\n?/g, "\n").trim();
-  }
+  function plainText(v) { return String(v || "").replace(/\r\n?/g, "\n").replace(/[​﻿]/g, "").replace(/ /g, " ").trim(); }
+  function promptMatches(el, text) { return readText(el) === plainText(text); }
 
   // 切换成功后把光标放回输入框
   function focusComposer() {

@@ -97,3 +97,44 @@ test("元宝 think 切到 Hy4 preview（站点自动落专家），并使用语�
 
 // 切档链路（core.js 的 runModeNow / switchTier）：把 escMenus 的 Escape、toast 文案与适配器调用记在同一条
 // 序列上，就能断言「谁在谁之后发生」。composer 只为让 submitPrompt 消息入口走完全程。
+
+// Kimi 注入（真机 2026-10-10）：execCommand 吞换行 → 合成 paste；单次 ~1.5k 字起转 TXT 附件 → 1000 单元同步分块。
+function kimiInject({ handled = () => true } = {}) {
+  const pastes = [], commands = [];
+  const range = { selectNodeContents() {} };
+  const document = { querySelector: () => null, querySelectorAll: () => [], createRange: () => range,
+    execCommand(command, _ui, value) { commands.push([command, value]); return true; } };
+  const context = helpers(document);
+  Object.assign(context, {
+    getSelection: () => ({ removeAllRanges() {}, addRange() {} }),
+    DataTransfer: class { setData(type, value) { this[type] = value; } },
+    ClipboardEvent: class { constructor(type, init) { Object.assign(this, { type, ...init, defaultPrevented: false }); } },
+  });
+  vm.runInNewContext(source("adapters-cn2.js"), context);
+  const el = { focus() {}, dispatchEvent(event) {
+    if (event.type !== "paste") return;
+    pastes.push(event.clipboardData["text/plain"]);
+    event.defaultPrevented = handled(pastes.length);
+  } };
+  return { inject: (text) => context.window.__AMS.adapters["kimi.com"].inject(el, text), pastes, commands };
+}
+
+test("Kimi 多行经合成 paste 注入，长文本按 ≤1000 单元同步分块且不切断代理对", () => {
+  const r = kimiInject();
+  r.inject("第一行\n\n    缩进");
+  assert.deepEqual(r.pastes, ["第一行\n\n    缩进"]);
+  assert.deepEqual(r.commands, [], "粘贴被接管就不再 execCommand，否则会重复写入");
+  const long = "a".repeat(999) + "😀" + "b".repeat(1500);
+  const chunked = kimiInject();
+  chunked.inject(long);
+  assert.equal(chunked.pastes.join(""), long);
+  assert.ok(chunked.pastes.every((part) => part.length <= 1000 && !/^[\uDC00-\uDFFF]/.test(part)));
+});
+
+test("Kimi 编辑器不接管 paste 时退回 execCommand；分块中途不接管则抛出交给 inject_failed", () => {
+  const fallback = kimiInject({ handled: () => false });
+  fallback.inject("单行问题");
+  assert.deepEqual(fallback.commands, [["insertText", "单行问题"]]);
+  const midway = kimiInject({ handled: (n) => n === 1 });
+  assert.throws(() => midway.inject("x".repeat(2500)), /分块粘贴中途/);
+});
