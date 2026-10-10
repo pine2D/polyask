@@ -4,12 +4,16 @@ import type { CommandId } from "../../src/shared/commands";
 import type { PolyAskDesktopApi } from "../../src/preload/shell";
 import { getCopy } from "../../src/shared/copy";
 import { createSyncDiagnosticSnapshot } from "../../src/shared/sync-diagnostics";
+import { DEFAULT_PREFERENCE_VALUES, type PreferenceSnapshot } from "../../src/shared/preferences";
 
 const status = { state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false,
   oauthConfigured: false, secureTokenStorage: false } as const;
 let command: (id: CommandId) => void = () => {};
 let sends = 0, resets = 0;
 let pageError = "";
+// Reset refreshes synced preferences; the catch-all stub below would answer [] and crash the root render.
+const preferences: PreferenceSnapshot = { values: DEFAULT_PREFERENCE_VALUES, following: { display: false, layout: false, siteZoom: false },
+  draftSync: false, initialized: [], deviceId: "fixture", versions: {} };
 let finishReset: (() => void) | undefined, boundaryNavigation = false;
 const surfaces: string[] = [], commands: CommandId[] = [];
 const emitCommand = (id: CommandId) => { commands.push(id); command(id); };
@@ -20,6 +24,7 @@ setShellApi(new Proxy({
     workspace: { selectedSites: ["claude"], groups: [], tier: null }, promptLibrary: { templates: [], history: [] },
     pendingSynthesis: null, sync: status }),
   setDisplayPreferences: async (value: unknown) => value,
+  getPreferences: async () => preferences, seedPreferences: async () => preferences,
   setDrawerOpen: () => {}, setComposerExpanded: () => {}, setCompletionNotifications: () => {},
   setSurface: (value: string) => { surfaces.push(value); },
   broadcast: async () => { sends++; return [{ site: "claude", ok: false, code: "submit_unconfirmed" }]; },

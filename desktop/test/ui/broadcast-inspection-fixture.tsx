@@ -9,7 +9,10 @@ let sends = 0, selections = 0;
 let mainSelected = [...selected], inspections = 0;
 const layouts: {mode: string; site: SiteKey}[] = [];
 let workspaceListener: (value: ReturnType<typeof workspace>) => void = () => {};
-const workspace = () => ({ selectedSites: [...selected], groups: [], tier: null });
+// Send membership is saved separately from open pages (setParticipation); absent until the user first changes it.
+let participating: SiteKey[] | undefined, participations = 0;
+const workspace = () => ({ selectedSites: [...selected], groups: [], tier: null,
+  ...(participating ? { participatingSites: participating.filter(site => selected.includes(site)) } : {}) });
 const sync = { state: 'idle', connected: false, pending: 0, errorCount: 0, readOnly: false,
   oauthConfigured: false, secureTokenStorage: false } as const;
 setShellApi(new Proxy({
@@ -18,6 +21,7 @@ setShellApi(new Proxy({
     workspace: workspace(), promptLibrary: {templates: [], history: []}, pendingSynthesis: null, sync }),
   setDisplayPreferences: async (value: unknown) => value,
   setSelection: async (value: SiteKey[]) => { selections++; selected = [...value]; mainSelected = [...value]; return workspace(); },
+  setParticipation: async (value: SiteKey[]) => { participations++; participating = [...value]; return workspace(); },
   onWorkspaceState: (listener: typeof workspaceListener) => { workspaceListener = listener; return () => {}; },
   inspectSite: async (site: SiteKey) => {
     inspections++;
@@ -28,7 +32,7 @@ setShellApi(new Proxy({
   setSurface: () => {}, setDrawerOpen: () => {}, setComposerExpanded: () => {}, setCompletionNotifications: () => {},
   broadcast: async () => { sends++; return [{site: 'claude', ok: false, code: 'submit_unconfirmed'}, {site: 'chatgpt', ok: true}]; }
 }, {get: (target, key) => Reflect.get(target, key) ?? (String(key).startsWith('on') ? () => () => {} : async () => [])}) as unknown as PolyAskDesktopApi);
-(window as any).inspectionFixture = { copy: getCopy('en'), state: () => ({selected, mainSelected, sends, selections, inspections, layouts}),
+(window as any).inspectionFixture = { copy: getCopy('en'), state: () => ({selected, mainSelected, participating, participations, sends, selections, inspections, layouts}),
   mainRemove: (site: SiteKey, publish = false) => { mainSelected = mainSelected.filter(key => key !== site);
     if (publish) { selected = [...mainSelected]; workspaceListener(workspace()); } } };
 void import('../../src/renderer/index');

@@ -39,8 +39,10 @@ app.whenReady().then(async () => {
     'main rejection must produce guidance without focus, scope mutation or resend');
   await until('!!document.querySelector(".site-choice[data-site-key=claude] label")', 'site scope');
   await click('.site-choice[data-site-key=claude] label');
+  await until('window.inspectionFixture.state().participations === 1', 'send membership saved');
   result = await state();
-  check(result.selected.join() === 'claude,chatgpt' && result.selections === 0, 'exclusion retains the open page without a page selection write');
+  check(result.selected.join() === 'claude,chatgpt' && result.selections === 0 && result.participating?.join() === 'chatgpt',
+    'exclusion retains the open page without a page selection write and saves only send membership');
   // External workspace removal remains distinct from the user's send checkbox.
   await js('window.inspectionFixture.mainRemove("claude", true)');
   await until('window.inspectionFixture.state().selected.join() === "chatgpt"', 'A removed and B kept');
