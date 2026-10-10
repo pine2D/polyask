@@ -62,8 +62,8 @@ app.whenReady().then(async () => {
           assert.ok(box.right <= box.viewport + 2, `${locale}/${theme}/${width} offscreen ${JSON.stringify(box)}`);
         }
         assert.equal(await run('(() => { const e=document.querySelector(".archive-answer-nav"); return e.scrollWidth <= e.clientWidth + 2; })()'), true, `${locale}/${theme}/${width} source navigation overflow`);
-        const controls = await run(`(() => [...document.querySelectorAll('.library-selection-controls button, .library-pagination button')]
-          .map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
+        const controls = await run(`(() => [...document.querySelectorAll('.library-selection-controls button, .library-pagination button, .library-list-summary button')]
+          .filter(e => e.getClientRects().length).map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
         for (const control of controls) {
           assert.equal(control.border, 'solid', `${locale}/${theme} list controls must use the themed border`);
           assert.ok(control.radius >= 4 && control.height >= 28, `${locale}/${theme} list controls must keep usable geometry`);
@@ -103,6 +103,11 @@ app.whenReady().then(async () => {
   await click('.archive-answer-nav a:last-child');
   assert.equal(await run('(() => { const nav=document.querySelector(".archive-answer-nav"), link=nav.querySelector("a:last-child"), answer=document.getElementById(link.hash.slice(1)); return answer.getBoundingClientRect().top >= nav.getBoundingClientRect().bottom - 2; })()'), true);
   await run('document.querySelector(".archive-detail-pane").scrollTop = 0');
+  // Tag/status/sort live in the collapsed filter panel; selection tools appear only in multi-select mode.
+  assert.equal(await run('document.querySelector(".library-filter-panel").hidden && document.querySelector(".library-selection").hidden'), true);
+  await click('.library-filter-toggle'); await click('[data-action=library-multi-select]');
+  await wait('!document.querySelector(".library-filter-panel").hidden && !document.querySelector(".library-selection").hidden');
+  win.setContentSize(960, 900); await pause(100); await shot('library-filters'); win.setContentSize(1600, 1000); await pause(100);
   // Open a searchable select, keyboard navigation, Escape and focus restoration.
   await click('.library-select');
   await wait('!!document.querySelector(".library-popover input")');

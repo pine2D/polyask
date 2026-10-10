@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import { formatCopy } from '../shared/copy';
 import { getLibraryCopy } from '../shared/library-scale-copy';
@@ -6,7 +6,7 @@ import type { FolderFilters } from '../shared/task-folder';
 import type { FolderContentPage, FolderContentSummary } from '../shared/task-folder-page';
 import { decisionStatuses, decisionStatusLabel } from './decision-editor';
 import { LibrarySelect } from './library-select';
-import { StarIcon } from './icons';
+import { ChevronDownIcon, StarIcon } from './icons';
 import { LIBRARY_PAGE_SIZE, pageLibraryContents, sortLibraryContents, type LibrarySort } from './library-list-model';
 import { matchingSelection, selectLibraryPage, toggleLibrarySelection } from './library-selection';
 import { LibraryContentRow } from './library-content-row';
@@ -34,6 +34,10 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     end: Math.min((serverPage.page + 1) * LIBRARY_PAGE_SIZE, serverPage.total) } : pageLibraryContents(sorted, page);
   const unavailable = disabled || loading || failed;
   const scroller = useRef<HTMLDivElement>(null);
+  // 标签/收藏/状态/排序收进「筛选」面板，多选工具只在多选时出现：列表首屏多留几条内容。
+  const panelId = useId(), [filtersOpen, setFiltersOpen] = useState(false), [multi, setMulti] = useState(false);
+  const activeFilters = [filters.tag, filters.favorite, filters.status].filter(Boolean).length;
+  const selecting = multi || keys.length > 0;
   useLayoutEffect(() => {
     if (!loading && !failed && scroller.current) scroller.current.scrollTop = listScroll;
   }, [current.page, loading, failed]);
@@ -54,27 +58,36 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
         {[['', copy.libraryAll], ['archive', copy.libraryResults], ['decision', copy.libraryCards]].map(([kind, label]) =>
           <button key={kind} type="button" disabled={disabled} aria-pressed={(filters.kind ?? '') === kind} onClick={() => onChange({ kind: kind as FolderFilters['kind'] })}>{label}</button>)}
       </div>
-      <div className="library-filter-row">
-        {filters.kind !== 'decision' ? <>
-          <LibrarySelect disabled={disabled} label={copy.archiveTags} value={filters.tag ?? ''} searchLabel={copy.librarySearchOptions} emptyLabel={copy.archiveNoMatches}
-            options={[{ value: '', label: copy.allArchiveTags }, ...tags.map(tag => ({ value: tag, label: tag }))]} onChange={tag => onChange({ tag })} />
-          <button className="library-favorite" type="button" aria-label={copy.favoriteArchives} title={copy.favoriteArchives}
-            disabled={disabled} aria-pressed={!!filters.favorite} onClick={() => onChange({ favorite: !filters.favorite })}><StarIcon /></button>
-        </> : null}
-        {filters.kind !== 'archive' ? <LibrarySelect disabled={disabled} label={copy.decisionStatus} value={filters.status ?? ''}
-          options={[{ value: '', label: copy.decisionAll }, ...decisionStatuses.map(status => ({ value: status, label: decisionStatusLabel(copy, status) }))]}
-          onChange={status => onChange({ status: status as FolderFilters['status'] })} /> : null}
-      </div>
-      <div className="library-list-summary"><span>{formatCopy(copy.libraryItemCount, { count: current.total })}</span>
+      <div className="library-list-summary">
+        <button type="button" className="library-filter-toggle" aria-expanded={filtersOpen} aria-controls={panelId} disabled={disabled}
+          onClick={() => setFiltersOpen(open => !open)}>{activeFilters ? formatCopy(labels.filtersActive, { count: activeFilters }) : labels.filters}<ChevronDownIcon /></button>
+        <span>{formatCopy(copy.libraryItemCount, { count: current.total })}</span>
         {filtered ? <button type="button" disabled={disabled} onClick={() => onChange({ query: '', tag: '', favorite: false, status: '' })}>{copy.libraryClearFilters}</button> : null}
+        <button type="button" className="library-multi-toggle" data-action="library-multi-select" aria-pressed={selecting} disabled={unavailable && !selecting}
+          onClick={() => { if (selecting) { setMulti(false); setKeys([]); } else setMulti(true); }}>{labels.multiSelect}</button>
       </div>
-      <LibrarySelect name="library-sort" label={labels.sort} value={sort} disabled={unavailable}
-        options={[{ value: 'updated-desc', label: labels.updated }, { value: 'created-desc', label: labels.created }, { value: 'title-asc', label: labels.title }]}
-        onChange={value => { setSort(value as LibrarySort); if (!onSortChange) setPage(0); }} />
-      <div className="library-selection-summary" role="status">{formatCopy(labels.selected, { count: keys.length, total: current.total })}</div>
-      <div className="library-selection-controls">
-        <button type="button" data-action="library-select-page" disabled={unavailable || !current.items.length} onClick={() => setKeys(selectLibraryPage(keys, current.items))}>{labels.selectPage}</button>
-        <button type="button" data-action="library-clear-selection" disabled={unavailable || !keys.length} onClick={() => setKeys([])}>{labels.clearSelection}</button>
+      <div id={panelId} className="library-filter-panel" hidden={!filtersOpen}>
+        <div className="library-filter-row">
+          {filters.kind !== 'decision' ? <>
+            <LibrarySelect disabled={disabled} label={copy.archiveTags} value={filters.tag ?? ''} searchLabel={copy.librarySearchOptions} emptyLabel={copy.archiveNoMatches}
+              options={[{ value: '', label: copy.allArchiveTags }, ...tags.map(tag => ({ value: tag, label: tag }))]} onChange={tag => onChange({ tag })} />
+            <button className="library-favorite" type="button" aria-label={copy.favoriteArchives} title={copy.favoriteArchives}
+              disabled={disabled} aria-pressed={!!filters.favorite} onClick={() => onChange({ favorite: !filters.favorite })}><StarIcon /></button>
+          </> : null}
+          {filters.kind !== 'archive' ? <LibrarySelect disabled={disabled} label={copy.decisionStatus} value={filters.status ?? ''}
+            options={[{ value: '', label: copy.decisionAll }, ...decisionStatuses.map(status => ({ value: status, label: decisionStatusLabel(copy, status) }))]}
+            onChange={status => onChange({ status: status as FolderFilters['status'] })} /> : null}
+        </div>
+        <LibrarySelect name="library-sort" label={labels.sort} value={sort} disabled={unavailable}
+          options={[{ value: 'updated-desc', label: labels.updated }, { value: 'created-desc', label: labels.created }, { value: 'title-asc', label: labels.title }]}
+          onChange={value => { setSort(value as LibrarySort); if (!onSortChange) setPage(0); }} />
+      </div>
+      <div className="library-selection" hidden={!selecting}>
+        <div className="library-selection-summary" role="status">{formatCopy(labels.selected, { count: keys.length, total: current.total })}</div>
+        <div className="library-selection-controls">
+          <button type="button" data-action="library-select-page" disabled={unavailable || !current.items.length} onClick={() => setKeys(selectLibraryPage(keys, current.items))}>{labels.selectPage}</button>
+          <button type="button" data-action="library-clear-selection" disabled={unavailable || !keys.length} onClick={() => setKeys([])}>{labels.clearSelection}</button>
+        </div>
       </div>
     </div>
     <div ref={scroller} className="archive-list" aria-busy={loading} onScroll={event => onScroll?.(event.currentTarget.scrollTop)}>

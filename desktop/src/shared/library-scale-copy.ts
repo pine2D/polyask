@@ -2,6 +2,7 @@ import { resolveLocale } from './locale';
 
 export const LIBRARY_SCALE_COPY = {
   en: {
+    filters: 'Filters', filtersActive: 'Filters · {count}', multiSelect: 'Select items',
     sort: 'Sort', updated: 'Updated, newest first', created: 'Created, newest first', title: 'Title, A–Z',
     page: 'Page', range: '{start}–{end} of {total}', previous: 'Previous page', next: 'Next page',
     selectPage: 'Select this page', clearSelection: 'Clear selection', selectItem: 'Select {title}',
@@ -12,6 +13,7 @@ export const LIBRARY_SCALE_COPY = {
     bulkScope: '{count} selected items', folderConfirm: 'Add selected items', exportIncomplete: 'No file was downloaded. Retry failed items to complete the export.',
   },
   zhCN: {
+    filters: '筛选', filtersActive: '筛选 · {count}', multiSelect: '多选',
     sort: '排序', updated: '最近更新优先', created: '最近创建优先', title: '标题顺序',
     page: '页码', range: '第 {start}–{end} 条，共 {total} 条', previous: '上一页', next: '下一页',
     selectPage: '选择本页', clearSelection: '清除选择', selectItem: '选择「{title}」',
@@ -22,6 +24,7 @@ export const LIBRARY_SCALE_COPY = {
     bulkScope: '已选 {count} 条', folderConfirm: '加入所选条目', exportIncomplete: '尚未下载文件。重试失败条目后可完成导出。',
   },
   zhTW: {
+    filters: '篩選', filtersActive: '篩選 · {count}', multiSelect: '多選',
     sort: '排序', updated: '最近更新優先', created: '最近建立優先', title: '標題順序',
     page: '頁碼', range: '第 {start}–{end} 筆，共 {total} 筆', previous: '上一頁', next: '下一頁',
     selectPage: '選取本頁', clearSelection: '清除選取', selectItem: '選取「{title}」',

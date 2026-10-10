@@ -59,6 +59,8 @@ async function run(win, locale, width) {
   const opened = nativePerformance(app, '1000-record-last-decision-click-to-ready');
   await click(win, "[...document.querySelectorAll('[data-action=library-open-item]')].at(-1)");
   await until(win, "document.querySelector('.decision-workspace')"); samples.push(opened()); await browse(win);
+  // 多选工具只在多选模式出现：先打开多选再选择本页。
+  await click(win, action('multi-select')); await until(win, "!document.querySelector('.library-selection').hidden");
   await click(win, action('select-page'));
   await until(win, "document.querySelectorAll('.library-content-row input:checked').length===100");
   check(await win.webContents.executeJavaScript("document.querySelector('[data-action=library-bulk-favorite]').disabled"), 'mixed page cannot favorite decision cards');

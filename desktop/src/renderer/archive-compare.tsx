@@ -42,8 +42,10 @@ function ComparisonColumn(props: {
   readonly onCompare?: (value: ExactExcerpt) => void;
   readonly initialScroll?: number;
   readonly onPosition?: (top: number) => void;
+  readonly nodeRef?: React.RefObject<HTMLElement | null>;
+  readonly onUserScroll?: (node: HTMLElement) => void;
 }): React.JSX.Element {
-  const node = useRef<HTMLElement>(null);
+  const ownNode = useRef<HTMLElement>(null), node = props.nodeRef ?? ownNode;
   const positions = useRef(new Map<string, { text: string; top: number }>());
   useLayoutEffect(() => {
     const saved = positions.current.get(props.host);
@@ -60,7 +62,8 @@ function ComparisonColumn(props: {
       {!props.paragraphs.length ? <p role="status">{props.copy.noDifferentParagraphs}</p> : null}
       {props.paragraphs.map((paragraph, index) => (
         <div className={`archive-compare-paragraph ${paragraph.relation}`} data-relation={paragraph.relation} key={`${index}:${paragraph.text}`}>
-          {props.paragraphs[index - 1]?.relation !== paragraph.relation ? <span>{paragraph.relation === "shared" ? props.copy.sharedParagraph : props.copy.uniqueParagraph}</span> : null}
+          {/* 共同/独有改用底色与左侧边线区分（图例在选项行）；文字标签留给读屏。 */}
+          {props.paragraphs[index - 1]?.relation !== paragraph.relation ? <span className="sr-only">{paragraph.relation === "shared" ? props.copy.sharedParagraph : props.copy.uniqueParagraph}</span> : null}
           <MarkdownPreview value={paragraph.text} onOpenLink={props.onOpenLink} />
         </div>
       ))}</>;
@@ -68,6 +71,7 @@ function ComparisonColumn(props: {
     <article ref={node} className="archive-compare-column" onScroll={event => {
       const top = event.currentTarget.scrollTop;
       positions.current.set(props.host, { text: props.text, top }); props.onPosition?.(top);
+      props.onUserScroll?.(event.currentTarget);
     }}>
       <h3>{props.label}</h3>
       {props.source ? <ArchiveAnswerReading copy={props.copy} source={props.source} busy={props.busy} onEvidence={props.onEvidence} onCompare={props.onCompare} onFollowUp={props.onFollowUp ? value => props.onFollowUp?.(props.host, value) : undefined}>{content}</ArchiveAnswerReading> : content}
@@ -93,6 +97,19 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
     if (nextLeft?.host !== leftHost) setLeftHost(nextLeft?.host ?? '');
     if (nextRight?.host !== rightHost) setRightHost(nextRight?.host ?? '');
   }, [resultKey]);
+  // 两栏默认各自滚动（各自记忆位置）；开启同步后按滚动比例带动另一栏，被带动的那次滚动不再反向回传。
+  const [syncScroll, setSyncScroll] = useState(false);
+  const leftNode = useRef<HTMLElement | null>(null), rightNode = useRef<HTMLElement | null>(null);
+  const echo = useRef<{ node: HTMLElement; top: number } | null>(null);
+  const follow = (source: HTMLElement): void => {
+    const expected = echo.current; echo.current = null;
+    if (expected?.node === source && Math.abs(source.scrollTop - expected.top) < 2) return;
+    const target = source === leftNode.current ? rightNode.current : leftNode.current;
+    if (!syncScroll || !target) return;
+    const range = source.scrollHeight - source.clientHeight, next = range > 0 ? source.scrollTop / range * (target.scrollHeight - target.clientHeight) : 0;
+    if (Math.abs(target.scrollTop - next) < 1) return;
+    target.scrollTop = next; echo.current = { node: target, top: target.scrollTop };
+  };
   const focusButton = useRef<HTMLButtonElement>(null);
   const lastFocused = useRef(props.readingFocus?.focused);
   useLayoutEffect(() => {
@@ -115,19 +132,23 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
         <p>{props.copy.answerComparisonDescription}</p>
         {props.readingFocus ? <button ref={focusButton} className="comparison-focus" type="button" disabled={props.busy} onClick={() => props.readingFocus!.onFocus(!props.readingFocus!.focused)}>{props.readingFocus.focused ? props.copy.comparisonBrowse : props.copy.comparisonExpand}</button> : null}
       </header>
-      <label className="comparison-filter"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} />{props.copy.onlyDifferences}</label>
+      <div className="comparison-options">
+        <label className="comparison-filter"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} />{props.copy.onlyDifferences}</label>
+        <label className="comparison-filter"><input type="checkbox" name="comparison-sync-scroll" checked={syncScroll} onChange={(event) => setSyncScroll(event.target.checked)} />{props.copy.syncComparisonScroll}</label>
+        <span className="comparison-legend" aria-hidden="true"><i />{props.copy.sharedParagraph}</span>
+      </div>
       <div className="archive-compare-grid">
         <section className="archive-compare-side">
           <label className="archive-compare-picker">{props.copy.leftAnswer}
             <LibrarySelect label={props.copy.leftAnswer} value={left?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === right?.host }))} onChange={setLeftHost} />
           </label>
-          <ComparisonColumn initialScroll={props.reader?.state.leftScroll} onPosition={top => props.reader?.change({ leftScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={leftSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={left?.host ?? ''} text={left?.text ?? ''} label={left?.label ?? ''} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
+          <ComparisonColumn nodeRef={leftNode} onUserScroll={follow} initialScroll={props.reader?.state.leftScroll} onPosition={top => props.reader?.change({ leftScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={leftSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={left?.host ?? ''} text={left?.text ?? ''} label={left?.label ?? ''} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
         </section>
         <section className="archive-compare-side">
           <label className="archive-compare-picker">{props.copy.rightAnswer}
             <LibrarySelect label={props.copy.rightAnswer} value={right?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === left?.host }))} onChange={setRightHost} />
           </label>
-          <ComparisonColumn initialScroll={props.reader?.state.rightScroll} onPosition={top => props.reader?.change({ rightScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={rightSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={right?.host ?? ''} text={right?.text ?? ''} label={right?.label ?? ''} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
+          <ComparisonColumn nodeRef={rightNode} onUserScroll={follow} initialScroll={props.reader?.state.rightScroll} onPosition={top => props.reader?.change({ rightScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={rightSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={right?.host ?? ''} text={right?.text ?? ''} label={right?.label ?? ''} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
         </section>
       </div>
       {props.record ? <ManualComparison copy={props.copy} record={props.record} worksheet={worksheet} sources={[leftSource, rightSource].filter((value): value is ExcerptSource => !!value)} busy={props.busy ?? false} onCreate={props.onCreateDecisionDraft} /> : null}
