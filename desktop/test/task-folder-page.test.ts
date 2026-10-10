@@ -14,6 +14,23 @@ function fixture() {
   } };
 }
 
+test('date pages use a total order: equal timestamps never repeat or skip an item across pages', () => {
+  const f = fixture();
+  try {
+    // Synced batches often share one timestamp; insertion order is deliberately scrambled.
+    for (const index of [...Array(150).keys()].sort((a, b) => (a * 37) % 150 - (b * 37) % 150)) {
+      f.db.archives.put(createArchiveRecord({ text: `Q ${index}`, task: `R ${index}`, createdAt: 5, results: [] },
+        { id: `same-${String(index).padStart(3, '0')}`, now: 5, deviceId: 'test' }), false);
+    }
+    for (const sort of ['updated-desc', 'created-desc']) {
+      const seen = [0, 1].flatMap(page => f.query({ page, sort }).items.map((item: { record: { id: string } }) => item.record.id));
+      assert.equal(seen.length, 150, sort);
+      assert.equal(new Set(seen).size, 150, `${sort} must not repeat an item on the next page`);
+      assert.deepEqual(seen, [...seen].sort(), `${sort} ties break by id`);
+    }
+  } finally { f.db.close(); }
+});
+
 test('SQL pages project only bounded summaries and preserve off-page targets at a thousand long answers', t => {
   const f = fixture();
   try {
