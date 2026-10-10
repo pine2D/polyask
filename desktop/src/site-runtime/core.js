@@ -152,7 +152,7 @@
         const before = readText(el);
         if ((await a.submit(el, deadline)) !== false)
           return await confirmSubmitted(before, confirmUntil(), historyToken, watchMessage);
-      } catch (e) { return { ok: false, code: e?.message === "inject_failed" ? "inject_failed" : "error", reason: String((e && e.message) || e) }; }
+      } catch (e) { return { ok: false, code: ["inject_failed", "timeout"].includes(e?.message) ? e.message : "error", reason: String((e && e.message) || e) }; }
     }
     // 发送键定位在 send.js：纵向锚定输入区，横向择近，排除侧栏里的同名按钮。
     // 每次动作前检查绝对截止时间，防止主进程已报超时后才迟到发送。

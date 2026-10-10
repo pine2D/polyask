@@ -78,3 +78,13 @@ test("production core reports inject_failed when DeepSeek observes rollback duri
   assert.equal((await r.send()).code, "inject_failed");
   assert.deepEqual(r.clicks, []);
 });
+
+// 2026-10-10 审查 R11：DeepSeek 等发送键到截止时抛 timeout，core 曾把它一律记成泛化的 error。
+// timeout 与 error 同属「提交不确定」（renderer PRE_SUBMIT_FAILURES 都不收），这里只校正码，不放宽重试。
+test("production core reports timeout when DeepSeek's button wait reaches the deadline", async () => {
+  const r = runtime({ readyAt: 2000 });
+  const result = await r.send();
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "timeout");
+  assert.deepEqual(r.clicks, []);
+});
