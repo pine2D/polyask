@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { DesktopCopy } from '../shared/copy';
 import type { SiteKey } from '../shared/contracts';
@@ -17,7 +17,7 @@ export interface WorkspaceProgressProps {
   readonly onRead: () => void;
 }
 export function WorkspaceProgress(props: WorkspaceProgressProps): React.JSX.Element | null {
-  const { workspaceHost } = useGlobalFeedback();
+  const { workspaceHost, announce } = useGlobalFeedback();
   const [expanded, setExpanded] = useState(false), detailsId = useId();
   const counts = runProgressCounts(props.runId, props.activeSites, props.statuses, props.progress);
   const total = props.activeSites.length, copy = props.copy;
@@ -34,10 +34,16 @@ export function WorkspaceProgress(props: WorkspaceProgressProps): React.JSX.Elem
     ['ended', copy.runEnded, counts.ended, true], ['complete', copy.runSavedComplete, counts.complete, true],
     ['partial', copy.runSavedPartial, counts.partial, false]
   ] as const;
+  const alerts = (['unconfirmed', 'failed', 'cancelled'] as const).filter(key => counts[key] > 0).map(key =>
+    formatCopy(key === 'unconfirmed' ? copy.runUnconfirmed : key === 'failed' ? copy.runFailed : copy.runCancelled, { count: counts[key] }));
+  const spoken = [stage, ...alerts].join('. ');
+  const active = !!props.runId;
+  // The summary itself is silent: the global live region is the single progress channel (no on-screen notice).
+  useEffect(() => { if (active) announce(spoken, false); }, [active, spoken, announce]);
   if (!props.runId || !workspaceHost) return null;
   return createPortal(<div className="run-progress" role="group" aria-label={copy.runProgressLabel} data-expanded={expanded}>
     <div className="run-progress-content">
-      <div className="run-progress-summary" role="status" aria-live="polite" aria-atomic="true">
+      <div className="run-progress-summary">
         <strong data-progress-stage>{stage}</strong>
         <span className="run-progress-summary-counts">{formatCopy(copy.runSubmitted, { count: counts.submitted, total })}
           <span>{formatCopy(copy.runEnded, { count: counts.ended, total })}</span>
