@@ -85,7 +85,7 @@ export class PersistentDraftClient {
       const response = await this.api.listDrafts(this.input.kind, this.input.context);
       if (!this.mounted || generation !== this.generation || sequence !== this.refreshSequence) return;
       if (!Number.isSafeInteger(response.epoch) || response.epoch < 0 || !response.deviceId || !Array.isArray(response.drafts)) throw Error('invalid_draft');
-      if (this.mainEpoch !== null && this.mainEpoch !== response.epoch) this.invalidate();
+      if (this.mainEpoch !== null && this.mainEpoch !== response.epoch) this.drop();
       this.mainEpoch = response.epoch; this.deviceId = response.deviceId;
       this.drafts = response.drafts.flatMap(value => {
         const draft = parseStoredDraft(value);
@@ -133,7 +133,9 @@ export class PersistentDraftClient {
     return operation;
   }
 
-  invalidate(): void {
+  /** Local reset: drop old work, then re-read main's epoch so later edits can be saved again. */
+  invalidate(): void { this.drop(); void this.refresh(); }
+  private drop(): void {
     this.cancelTimer(); this.generation++; this.refreshSequence++; this.mainEpoch = null;
     this.resetBaseline = this.signature; this.tail = Promise.resolve(null); this.saved = null;
     this.drafts = []; this.status = 'ready'; this.notify();

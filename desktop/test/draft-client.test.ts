@@ -251,3 +251,20 @@ test('reset rejects cleanup of a delayed captured receipt even after its editor 
     assert.deepEqual(f.repository.get(fresh.id)?.content, { text: 'new session labor' });
   } finally { f.close(); }
 });
+
+test('a reset acknowledged after main already republished drafts still resumes autosave', async () => {
+  const f = fixture();
+  try {
+    await f.client.refresh();
+    // Production order: main invalidates and wipes, publishes drafts-changed (renderer refreshes),
+    // and only then does the reset IPC resolve and the renderer invalidate its editors.
+    f.repository.invalidate(); f.database.resetLocalData();
+    await f.client.refresh();
+    f.client.invalidate();
+    await new Promise(resolve => setImmediate(resolve));
+    f.client.edit({ ...input, content: { text: 'typed after reset' } }, true, true);
+    const saved = await f.client.flush();
+    assert.deepEqual(saved?.content, { text: 'typed after reset' }, 'drafts typed after a reset must persist again');
+    assert.equal(f.repository.list().length, 1);
+  } finally { f.close(); }
+});

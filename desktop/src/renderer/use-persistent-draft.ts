@@ -19,7 +19,7 @@ const RESET_EVENT = 'polyask:drafts-reset';
 const draftApi: DraftClientApi = new Proxy({} as DraftClientApi, { get(_target, key) {
   try { return (shell as unknown as Record<PropertyKey, unknown>)[key]; } catch { return undefined; }
 } });
-/** Call synchronously at the start of a local reset, before awaiting its IPC. */
+/** Call once a local reset finished: editors drop stale work and re-read main's draft epoch. */
 export function invalidatePersistentDrafts(): void { window.dispatchEvent(new Event(RESET_EVENT)); }
 
 export type DraftRecoveryState = Omit<DraftRecoveryProps, 'copy'>;
