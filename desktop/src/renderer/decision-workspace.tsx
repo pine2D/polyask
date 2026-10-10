@@ -131,6 +131,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
       const sentRevision = editRevision.current, sentDraft = persistent.flush();
       const record = saved ? await shell.updateDecision(saved.id, value) : await shell.createDecision(value);
       void persistent.clearSaved(sentDraft);
+      if (!saved) persistent.supersede();
       setSaved(record); setDraftSourceVersion(record.updatedAt);
       if (editRevision.current === sentRevision) { setValue(decisionInput(record)); setEditing(false); }
       setRevision((count) => count + 1);

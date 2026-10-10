@@ -46,6 +46,7 @@ export class PersistentDraftClient {
   private drafts: StoredDraft[] = [];
   private status: DraftSaveStatus = 'ready';
   private mounted = true;
+  private supersedeOnLeave = false;
 
   constructor(private readonly api: DraftClientApi, private readonly onChange: () => void) {}
 
@@ -67,6 +68,8 @@ export class PersistentDraftClient {
     return { drafts: this.drafts, deviceId: this.deviceId, status: this.status, busy: this.status === 'saving' };
   }
   activate(): void { this.mounted = true; }
+  /** The current context is about to be replaced by its saved successor: do not persist its unsaved remainder under the old key. */
+  supersede(): void { this.supersedeOnLeave = true; this.cancelTimer(); }
 
   schedule(): void {
     this.cancelTimer();
@@ -182,7 +185,7 @@ export class PersistentDraftClient {
 
   private flushOnLeave(): void {
     const task = this.capture();
-    if (!task || this.saved?.task.signature === task.signature ||
+    if (!task || this.supersedeOnLeave || this.saved?.task.signature === task.signature ||
       (this.writing?.generation === task.generation && this.writing.signature === task.signature)) return;
     // Dispatch before dropping the generation. Main writes synchronously and verifies epoch;
     // waiting on an old ACK here could place old labor behind a newly opened editor's write.

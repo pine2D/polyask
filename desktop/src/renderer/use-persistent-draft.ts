@@ -56,5 +56,5 @@ export function usePersistentDraft(options: PersistentDraftOptions) {
     onRemove: value => client.remove(value), onRetry: () => { void client.flush(); }
   };
   return { recovery, flush: () => client.flush(), clearSaved: (expected?: DraftReceipt) => client.clearSaved(expected),
-    reset: () => client.invalidate() };
+    reset: () => client.invalidate(), supersede: () => client.supersede() };
 }

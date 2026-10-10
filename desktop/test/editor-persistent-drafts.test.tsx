@@ -134,3 +134,22 @@ test('unanswered draft IPC does not block synthesis sending or formal decision s
     await act(async () => finish());
   } finally { await h.close(); f.close(); }
 });
+
+test('an edit that lands while a new card is saving does not leave a draft under the superseded archive context', async () => {
+  const f = setup();
+  const value: DecisionInput = { archiveId: source.id, title: 'Deliberate choice', conclusion: 'A valid conclusion',
+    rationale: 'Edited reasoning', uncertainties: '', nextStep: '', status: 'draft', evidence: [] };
+  let finish!: (record: DecisionRecord) => void;
+  setShellApi({ ...f.api, createDecision: (input: DecisionInput) => new Promise<DecisionRecord>(resolve => {
+    finish = record => resolve({ ...record, ...input, evidence: [], id: 'decision-created' });
+  }) } as any);
+  const h = await mountDom(<DecisionWorkspace copy={copy} locale="en" initialSource={source} initialDraft={value} embedded onArchives={() => {}} onClose={() => {}} />);
+  try {
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => { button(h.document, copy.decisionSave).click(); });
+    await h.input(h.document.querySelector<HTMLTextAreaElement>('[name="decision-rationale"]')!, 'Typed while saving');
+    await act(async () => { finish({ evidence: [], sourceTitle: source.task, createdAt: 1000, updatedAt: 1000, deviceId: 'local', schema: 2 } as any); });
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
+    assert.equal(f.drafts.list('decision', `archive:${source.id}`).filter(d => d.deviceId === 'local').length, 0);
+  } finally { await h.close(); f.close(); }
+});
