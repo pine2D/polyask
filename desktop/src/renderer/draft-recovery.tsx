@@ -96,7 +96,7 @@ export function DraftRecovery(props: DraftRecoveryProps): React.JSX.Element {
   </section>;
   if (!props.compact) return <details className="draft-recovery-entry"><summary>{copy.draftRecoveryCount.replace('{count}', String(props.drafts.length))}</summary>{contents}</details>;
   const label = copy.draftRecoveryCount.replace('{count}', String(props.drafts.length));
-  return <><button type="button" data-draft-open data-draft-status={props.status} aria-label={label} data-hint={label} title={status || label} disabled={busy} onClick={() => setOpen(true)}>{props.trigger ?? label}</button>
+  return <><button type="button" className="draft-trigger" data-draft-open data-draft-status={props.status} aria-label={label} aria-expanded={open} aria-haspopup="dialog" data-hint={label} title={status || label} disabled={busy} onClick={() => setOpen(true)}>{props.trigger ?? label}</button>
     {status && <span className="sr-only" role="status">{status}</span>}
     {open && createPortal(<FolderModal copy={copy as DesktopCopy} title={copy.draftRecovery} busy={!!busy} onCancel={close}>{contents}</FolderModal>, document.body)}</>;
 }

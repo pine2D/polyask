@@ -35,6 +35,10 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  if (!process.argv.includes('--site-order-only')) {
+    await require('./draft-tools-visual.cjs')({ win, output, run, wait, paint, shot });
+    if (process.argv.includes('--toolbar-only')) { assert.deepEqual(errors, []); win.destroy(); app.quit(); return; }
+  }
   if (process.argv.includes('--site-order-only')) {
     await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });
     assert.deepEqual(errors, []);
@@ -89,7 +93,10 @@ app.whenReady().then(async () => {
   // Keyboard interaction proves resizing preserves the production composer contract.
   await win.loadFile(join(output, 'index.html'), { query: { surface: 'shell' } });
   await wait('!!document.querySelector("textarea")');
-  await run('document.querySelector("textarea").focus()');
+  // Programmatic focus deliberately preserves collapse; genuine Tab entry starts editing.
+  await run('document.querySelector(".page-tabs button:last-of-type").focus()');
+  for (const type of ['keyDown', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode: 'Tab' });
+  await wait('document.activeElement===document.querySelector("textarea")');
   await wait('document.querySelector(".command-bar").classList.contains("is-expanded")');
   check((await measure()).height === 120, 'expanded composer native bounds mismatch');
   win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Enter', modifiers: ['control'] });
@@ -119,4 +126,4 @@ app.whenReady().then(async () => {
   if (failures.length) { console.error(failures.slice(0, 16).join('\n')); throw new Error(`${failures.length} UI checks failed`); }
   console.log(`Shell UI passed: ${reports.length} layout variants, action/status contrast, composer and diagnostics keyboard flow, 150% settings zoom.`);
   win.destroy(); app.quit();
-}).catch(error => { console.error(error); app.exit(1); });
+}).catch(error => { writeFileSync(join(output, 'failure.json'), JSON.stringify({ message: error.message, stack: error.stack }, null, 2)); console.error(error); app.exit(1); });

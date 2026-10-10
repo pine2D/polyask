@@ -94,6 +94,7 @@ app.whenReady().then(async () => {
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (trusted(event)) action(value); });
   await win.loadFile(join(output, 'index.html')); win.focus(); win.webContents.focus();
   await wait('!!document.querySelector("textarea[name=prompt]")');
+  await require('./command-bar-layout.cjs')({ win, run, output, label: `${locale}-${phase}` });
   await run(`window.nativeInputs=[]; for(const type of ['click','change','input','paste'])document.addEventListener(type,
     event=>nativeInputs.push({type,trusted:event.isTrusted,name:event.target.name,tag:event.target.tagName}),true)`);
   const copy = getCopy(locale);

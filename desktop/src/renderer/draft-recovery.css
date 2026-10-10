@@ -1,6 +1,18 @@
-.draft-recovery-entry { margin-block: 8px; }
-.draft-recovery-entry > summary { cursor: pointer; }
-.draft-recovery { min-width: 0; font-size: 13px; }
+.draft-recovery-entry { margin-block: 16px; padding-block: 12px; border-top: 1px solid var(--border); }
+.draft-recovery-entry > summary { min-height: 32px; padding-block: 6px; cursor: pointer; font-size: var(--font-control); font-weight: 600; }
+.draft-recovery { min-width: 0; min-height: 0; font-size: var(--font-control); color: var(--text); }
+.draft-recovery p { margin-block: 8px; line-height: 1.65; overflow-wrap: anywhere; }
+.draft-recovery button {
+  min-height: 32px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-control);
+  color: inherit; background: var(--panel); font: inherit;
+}
+.draft-recovery button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
+.draft-recovery button:disabled { opacity: .45; }
+.draft-recovery button.primary { color: var(--on-accent); border-color: var(--accent); background: var(--accent); }
+.draft-recovery button.primary:hover:not(:disabled) { color: var(--on-accent); background: var(--accent); }
+.draft-recovery-entry > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-control); }
+.folder-modal:has(> .draft-recovery) { max-height: calc(100dvh - 48px); grid-template-rows: auto minmax(0, 1fr); }
+.folder-modal > .draft-recovery { overflow-y: auto; overscroll-behavior: contain; }
 .draft-copy-list { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 8px; }
 .draft-copy-list > li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding-block: 8px; border-bottom: 1px solid var(--border); }
 .draft-copy-list > li > span { overflow-wrap: anywhere; }
@@ -8,7 +20,7 @@
 .draft-copy-list small { grid-column: 1; }
 .draft-copy-list time { grid-column: 1; font-variant-numeric: tabular-nums; }
 .draft-copy-list button { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
-.draft-preview pre { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.5; padding: 12px; background: var(--field); border-radius: 4px; }
+.draft-preview pre { max-height: 260px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; line-height: 1.5; padding: 12px; background: var(--field); border-radius: var(--radius-control); }
 .draft-preview h3 { margin-block: 12px 8px; }
 .draft-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .draft-confirm { padding-block: 8px; }

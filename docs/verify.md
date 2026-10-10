@@ -32,6 +32,10 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 ## 外壳与设置页视觉回归
 
+新增控件或可见属性必须同时更新 `test/ui/shell-fixture.tsx`，使用生产组件及完整数据，不省略新增入口后再声称外壳布局通过。草稿与偏好同步组件已经纳入该夹具；`test:shell-ui` 包含 24 组草稿工具栏检查，覆盖三语、明暗主题、两密度、单页与分页、附件及失败计数、开合及 150% 外壳缩放，另检验键盘焦点、禁用动作、行内按钮及多副本弹窗的实际滚动、末项恢复确认焦点与可见性。仅运行本专项时，在 `desktop/` 使用 `node scripts/test-safe.mjs command env -u WAYLAND_DISPLAY xvfb-run -a node scripts/shell-visual.mjs --toolbar-only`；缩放检查维持应用支持的至少 960px CSS 视口。
+
+`preferences-drafts-native` 另从生产 `index.tsx` 启动真实 preload 与 ViewManager，检查整个工具栏的操作区未越过其下边界，草稿入口与既有历史入口尺寸及主题样式一致；失败时保留标量报告与截图。这用于防止夹具遗漏新控件，仍不代替 Windows/macOS 实机验收。每次交付新增界面元素时还须查看对应截图，检查默认、悬停、键盘焦点、禁用、加载、空内容和失败状态，不能只以点击功能通过作为外观验收。
+
 在 `desktop/` 运行 `npm run test:shell-ui`；无显示服务器使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:shell-ui`。与结果库回归一样，构建生产组件并使用合成数据和临时 Electron profile，禁止网络连接，不访问用户资料。
 
 覆盖简中/繁中/英文、明暗主题、紧凑/舒适密度、960/1280/1600px 的 72 组基础布局，以及外壳 1101/1401px 的 24 组断点边界布局；960/1101/1401px 使用混合发送状态、附件与重试的拥挤场景；检查主按钮及异常状态文字对比度、按钮溢出、外壳高度契约，验证提问框展开/快捷发送/Escape、诊断展开和 150% 设置页缩放。输出截图与 `report.json`。站点标题是生产组件，但不含真实 WebContentsView，不能替代原生站点叠放及 Windows/macOS 字体/缩放验收。

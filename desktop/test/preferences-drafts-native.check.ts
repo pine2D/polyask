@@ -18,7 +18,8 @@ function inputManifest(): Record<string, string> {
   };
   visit('src');
   for (const file of ['package.json', 'package-lock.json', 'test/preferences-drafts-native.check.ts',
-    'scripts/preferences-drafts-native.mjs', ...readdirSync(join(base, 'test/ui')).filter(name => name.startsWith('preferences-drafts-native-')).map(name => `test/ui/${name}`)]) {
+    'scripts/preferences-drafts-native.mjs', 'test/ui/command-bar-layout.cjs',
+    ...readdirSync(join(base, 'test/ui')).filter(name => name.startsWith('preferences-drafts-native-')).map(name => `test/ui/${name}`)]) {
     files[file] = digest(join(base, file));
   }
   return files;

@@ -84,10 +84,12 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       <PromptComposer copy={props.copy} promptRef={props.promptRef} text={props.text} revision={props.draftRevision}
         expanded={props.expanded} revealedExpanded={props.revealedExpanded} busy={busy} isMac={props.isMac} onTextChange={props.onTextChange}
         onExpandedChange={props.onExpandedChange} onSubmit={props.onSubmit} onPasteImages={props.onPasteImages} />
-      <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
-        <HistoryIcon />
-      </button>
-      {props.draftRecovery}
+      <div className="prompt-history-tools">
+        <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
+          <HistoryIcon />
+        </button>
+        {props.draftRecovery}
+      </div>
       <TierControls copy={props.copy} tier={props.tier} isMac={props.isMac} onChange={props.onTierChange} />
       {props.imageControl}
       {props.runState !== "idle" ? (

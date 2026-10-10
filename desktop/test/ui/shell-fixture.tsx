@@ -3,6 +3,8 @@ import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CommandBar } from '../../src/renderer/command-bar';
 import { ImagePicker } from '../../src/renderer/image-picker';
+import { PromptDraftRecovery } from '../../src/renderer/prompt-draft-recovery';
+import { DraftRecovery } from '../../src/renderer/draft-recovery';
 import { PageTabs } from '../../src/renderer/page-tabs';
 import { SettingsWorkspace } from '../../src/renderer/settings-workspace';
 import { WorkspaceDrawer } from '../../src/renderer/workspace-drawer';
@@ -22,6 +24,7 @@ import type { Tier, SiteStatus } from '../../src/shared/protocol';
 import type { SiteKey } from '../../src/shared/contracts';
 import type { OpenWorkspacePanelState } from '../../src/renderer/workspace-panel-state';
 import type { LocalDataStats } from '../../src/shared/local-data';
+import { DEFAULT_PREFERENCE_VALUES, type PreferenceSnapshot } from '../../src/shared/preferences';
 import { SITES } from '../../src/main/sites';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
@@ -92,10 +95,21 @@ function Fixture(): React.JSX.Element {
   const [inputMethod, setInputMethod] = useState<'keyboard' | 'pointer'>('keyboard');
   const [images, setImages] = useState(query.has('details') ? previewImages : []);
   const [imagesOpen, setImagesOpen] = useState(false);
-  const [selected, setSelected] = useState<readonly SiteKey[]>(SITES.map(s => s.key));
+  const [selected, setSelected] = useState<readonly SiteKey[]>(SITES.slice(0, query.has('singlePage') ? 2 : 9).map(s => s.key));
   const [panel, setPanel] = useState<OpenWorkspacePanelState | null>({ tab: 'sites', detail: null, inputMethod: 'keyboard' });
   const [notifications, setNotifications] = useState(true);
   const [sent, setSent] = useState(false);
+  const [preferences, setPreferences] = useState<PreferenceSnapshot>({ deviceId: 'fixture-local',
+    values: DEFAULT_PREFERENCE_VALUES, following: { display: false, layout: false, siteZoom: false },
+    draftSync: false, initialized: [], versions: {} });
+  const draftStatus = query.get('draftStatus') === 'error' ? 'error' : 'saved';
+  const drafts = Array.from({ length: query.has('manyDrafts') ? 20 : 1 }, (_, i) => ({
+    format: 1 as const, id: `fixture-draft-${i}`, kind: 'prompt' as const, context: 'composer', deviceId: 'fixture-remote',
+    title: '远端独立草稿 · Remote draft', content: { text: '完整保存的问题。 A saved question.' }, updatedAt: 1_790_208_000_000 + i }));
+  if (query.get('surface') === 'drafts') return <main className="archive-detail" style={{ padding: 24, height: '100%', overflow: 'auto' }}>
+    <DraftRecovery copy={copy} drafts={drafts} deviceId="fixture-local" status={draftStatus} dirty
+      busy={!!query.get('sending')} onRestore={async () => true} onRemove={async () => true} onRetry={noop} />
+  </main>;
   const participation = useSiteParticipation({ opened: selected, ready: true, busy: !!query.get('sending'),
     openPages: async next => { setSelected(next); if (query.has('deferPageSelection')) await finishOperation(); return next; }, onError: noop });
   const pageClose = useSitePageClose({ copy, sites: SITES, busy: !!query.get('sending') || participation.pending,
@@ -105,12 +119,19 @@ function Fixture(): React.JSX.Element {
     }, onOpen: () => setPanel(null), onClose: () => queueMicrotask(() => promptRef.current?.focus()), onWorkspace: state => setSelected(state.selectedSites), onAnnounce: noop });
   if (query.get('surface') === 'settings') return <SettingsWorkspace copy={copy} locale={locale}
     status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={() => { document.body.dataset.settingsClosed = 'true'; }}
-    onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications} />;
+    onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications}
+    preferenceSync={{ snapshot: preferences,
+      onFollowingChange: async (group, enabled) => setPreferences(p => ({ ...p, following: { ...p.following, [group]: enabled } })),
+      onLayoutModeChange: async layoutMode => setPreferences(p => ({ ...p, values: { ...p.values, layoutMode } })),
+      onDraftSyncChange: async draftSync => setPreferences(p => ({ ...p, draftSync })) }} />;
   return <div className={`app-shell${reservedExpanded ? ' is-composer-expanded' : ''}`} data-sent={sent} data-opened={selected.join(',')} data-participating={participation.participating.join(',')}>
     <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
       layoutMode={layout} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0}
       scopeLabel={copy.allSites} healthAttention={0} panelTab={panel?.tab ?? null}
-      pageControl={<PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}
+      pageControl={!query.has('singlePage') && <PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}
+      draftRecovery={<PromptDraftRecovery copy={copy} busy={!!query.get('sending')} onClearImages={() => setImages([])}
+        onBlockingChange={noop} recovery={{ deviceId: 'fixture-local', status: draftStatus, dirty: true, drafts,
+          onRestore: async draft => { setText((draft.content as { text: string }).text); return true; }, onRemove: async () => true, onRetry: noop }} />}
       imageControl={<ImagePicker copy={copy} images={query.has('details') ? images : stress ? previewImages.slice(0, 1) : []} open={imagesOpen} disabled={false} warning={null} warningCount={0}
         error={null} onOpenChange={open => { setImagesOpen(open); if (open) setPanel(null); }} onFiles={noop} onRemove={index => setImages(current => current.filter((_, i) => i !== index))} onAdjustScope={noop} />}
       sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded} reservedExpanded={reservedExpanded}
