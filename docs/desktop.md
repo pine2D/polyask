@@ -36,6 +36,7 @@
 - 顶层导航由 `navigation.ts` 的 `navigationDisposition` 分五类，`navigation-guard.ts` 裁决：`site`（本站 host）/ `auth`（登记的登录域）/ `transit`（一方反滥用与同意中转域，如 Google 的 sorry 页）/ `external` / `block`（非 https 一律 block）。`site`/`auth` 恒放行；`external` 主帧**只在「auth 流进行中」且「来自服务端 302」时放行**；`transit` 只在服务端 302 放行、渲染端一律拦、不进也不改登录流。核心不变量：`transit` **不新增任何到达 external 的路径**。auth 流只由 `did-navigate`（主帧实际提交）翻转，按「提交」而非「意图」武装。
 - 子帧只拦非 https；子帧从不改变主帧流状态。**新窗口一律 deny 真窗口**，`window.open` 只有「目标是本站页面且顶层也在本站」「目标是登录域且顶层仍在本站或 auth 流进行中」两种改写进受管视图的情形。
 - 站点视图里点到的外部链接交给用户自己的浏览器（`index.ts` 的 `openExternal` → `safeExternalUrl`）；不接这条回调是**静默无反应**。
+- 下载不接管：站点与外壳都没有注册 `will-download`，走 Electron 默认行为（系统保存对话框由用户选择位置），应用不自动落盘、不记录下载路径。
 - 权限请求处理器**只放行显式白名单**（`view-manager.ts` 的 `SITE_PERMISSION_ALLOWLIST`：`clipboard-sanitized-write` / `fullscreen` / `pointerLock`），其余一律拒绝——摄像头、麦克风、地理位置、MIDI、通知、`clipboard-read`、`window-management` 全在拒绝之列。两个 handler 都读它，改动须同步本节。
 - `clearSiteData(site)`（站点详情的「清除缓存后重载」）**只清 `cachestorage` + `serviceworkers`**，不动 cookies、localStorage、IndexedDB——保住登录与站点自身偏好，只针对「过期 Service Worker 顶着旧资源、普通 reload 也从同一缓存来」的白屏。`await` 期间用户可能取消勾选，返回前必须重取视图引用（老引用已悬垂）；也可能开了新一轮群发并刚提交（`submitted` 仍属可重载 phase），所以 await 前后还要比较本站发送尝试身份（`GenerationMonitor.attempt`，同 runId 重试也换新），变了就不重载、返回 false。
 
@@ -62,7 +63,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 `renderer` → `polyask:broadcast`（`shell-ipc.ts`）→ `BroadcastCoordinator.send`（`broadcast.ts`）→ `ViewManager.sendCommand` → `SiteCommandChannel` → site preload → 站点运行时。
 
 - **`deadline` 是绝对时间戳**，在 `broadcast.ts` 一次算出（`now() + max(1, timeoutMs)`）并原样放进每站命令，全链路透传、只读不重算。循环等待与 ≥1s 的固定等待一律夹取。
-- **群发预算只有 `shell-ipc.ts` 一个真源**：`request.images.length ? 90_000 : 44_000`。**辅助综合走的是 `index.ts` 里另一处硬编码的 `44_000`，且没有带图分支**——改群发预算必须同批跟进这一处，否则带图辅助综合按纯文本预算跑。
+- **群发预算只有 `shell-ipc.ts` 一个真源**：`request.images.length ? 90_000 : 44_000`。**辅助综合走的是 `window-data-services.ts` 里另一处硬编码的 `44_000`，且没有带图分支**——改群发预算必须同批跟进这一处，否则带图辅助综合按纯文本预算跑。
 - **epoch 取消**：`BroadcastCoordinator` 每次 `send` 自增 `epoch` 并换一个 `AbortController`；`cancel()` 自增 epoch 并 abort。每个 `await` 之后都核对 epoch，不一致立刻返回 `cancelled`。新写的长流程照此办理。
 - **可重试码只有两个**：`RETRIABLE = {composer_not_found, not_ready}`——只有它们代表「还没开始提交」，可在同一 deadline 内等 `min(500, 剩余)` 后重投。其它任何码（含新增的）默认不可重试。
 - **提交不确定 ≠ 可以重发**：`submit_unconfirmed` 走只读确认窗（下表），确认「已提交」返回成功；确认「未提交」也**只有在开关打开时**才允许自动重发一次。开关 `POLYASK_KIMI_RESUBMIT` 是 `broadcast.ts` 的模块常量，**当前为 `false`**，不是设置项——用户不该有能力打开一条尚未真机验证的自动重发路径。测试必须显式传 `resubmit`。
@@ -71,7 +72,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 | 场景 | 值 | 落点 |
 | --- | --- | --- |
 | 群发绝对 deadline | 纯文本 44s / 带图 90s | `shell-ipc.ts` |
-| 辅助综合发送 | 44s，**硬编码、无带图分支** | `index.ts` |
+| 辅助综合发送 | 44s，**硬编码、无带图分支** | `window-data-services.ts` |
 | 辅助综合等新会话 | 22s | `synthesis-service.ts` |
 | 新会话 / 辅助综合导航前保存旧回答 | 总计 6s：读一次（≤2.5s），确认完成的候选只差静默复读时等它（≤3.05s）再读，到点不阻塞导航；随后结束这些站的采集。在辅助综合 22s 计时之前、新会话主帧计时之前 | `question-capture-binding.ts`（`SESSION_HANDOFF_MS`）、`question-capture-service.ts`（`handoff`） |
 | 新会话占 OperationGate 等主帧提交 | 等 `did-navigate` 而非 `did-finish-load`（旧文档的 `did-finish-load`/ERR_ABORTED 会让 `loadURL` 提前落地，提交模式下都不算数）。单站硬上限 20s：Windows 18 次实测 96–3557ms，慢网下带 Cookie 的 HTML 约 13s（原 10s 把慢页面判成失败），取约 1.5 倍。到点先 `historyAccess.abandon` 中止未提交导航并钉 `load_failed`（`stop()` 只产生被 `PageLifecycle` 忽略的 ERR_ABORTED，不钉住会停在 loading、群发打进旧会话），再报 `not_ready` 放门，外壳显示「N 站失败」（`newSessionPartial`），重载即恢复；旧文档就是首页时保留并按成功返回（见下行「中止后保留旧文档」）。辅助综合导航后立刻发送，仍等 `did-finish-load`（`ViewManager.navigate` 默认 `"load"`）。真机：到点收口与「延迟 15/18s 后放行照常 ready」的正负对照均已验证（docs/verify.md 2026-10-05 第 7 轮、10-05/06 后续核对） | `workspace-service.ts`（`NEW_SESSION_COMMIT_CAP_MS`）、`navigation-commit.ts` |
@@ -96,7 +97,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 
 **main 与站点运行时只产 `code`，绝不产用户可见文案**；判定认 `code`，**绝不正则匹配文案**。翻译只有两处落点：`shared/status-copy.ts` 的映射 + `shared/copy.ts` 的三语词条。
 
-`shared/protocol.ts` 的 `SITE_CODES`（19 个）与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
+`shared/protocol.ts` 的 `SITE_CODES`（21 个）与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
 
 | code | copy key | | code | copy key |
 | --- | --- | --- | --- | --- |

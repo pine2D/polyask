@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { readdirSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
 
 import { SITE_CODES } from "../src/shared/protocol";
@@ -7,12 +9,18 @@ import { readSource } from "./fixtures";
 // 站点码的双向覆盖：源码里产出的每个码都要有用户可见文案，文案表里的每个码也要真有产出方。
 // 扩展时代由 scripts/test-err-codes.js 守这条线（见 tag archive/extension-v0.25.1），扩展删除后这里是唯一承接者。
 
-// 产出方：preload 注入的 content 运行时（按 site.ts 的 require 列表取，搬家不用改这里）+ preload 自身 + 主进程四个产码文件。
+// 产出方：preload 注入的 content 运行时（按 site.ts 的 require 列表取，搬家不用改这里）+ preload 自身 + 主进程全部源文件。
+// 主进程按目录扫描而不是写死清单：写死时漏了 workspace-service / site-command-channel / submission-upgrade 等产码方，
+// 新拆出的文件也会悄悄落在对账之外。
 function producerFiles(): string[] {
   const preload = "src/preload/site.ts";
   const requires = [...readSource(preload).matchAll(/^require\("([^"]+\.js)"\);$/gm)].map((m) => `src/preload/${m[1]}`);
   assert.ok(requires.length >= 5, `${preload} 的 require 列表读取失败或结构变了`);
-  return [...requires, preload, "src/main/view-manager.ts", "src/main/generation-probe-scheduler.ts", "src/main/broadcast.ts", "src/main/collection-service.ts", "src/main/synthesis-service.ts"];
+  const main = readdirSync(join(__dirname, "../src/main")).filter((name) => name.endsWith(".ts")).sort().map((name) => `src/main/${name}`);
+  for (const known of ["view-manager.ts", "broadcast.ts", "workspace-service.ts", "site-command-channel.ts", "submission-upgrade.ts"]) {
+    assert.ok(main.includes(`src/main/${known}`), `主进程目录扫描失效：缺 ${known}`);
+  }
+  return [...requires, preload, ...main];
 }
 
 function producedCodes(): Map<string, string> {
@@ -40,8 +48,10 @@ function collectionCodes(): Set<string> {
   return codes;
 }
 
-// 产出了但刻意不进状态/采集文案表的码（写明理由）。目前为空：诊断码若只走 diagnose 通道，登记在这里。
-const PRODUCED_WITHOUT_COPY: Record<string, string> = {};
+// 产出了但刻意不进状态/采集文案表的码（写明理由）。诊断码若只走 diagnose 通道，也登记在这里。
+const PRODUCED_WITHOUT_COPY: Record<string, string> = {
+  shell: "runtime-gates.ts 的稳定性事件码（外壳窗口 unresponsive），只写入运行门禁的稳定性报告文件，不是站点状态码"
+};
 
 // 文案表里有、源码扫描却找不到字面量的码（写明理由）。
 const COPY_WITHOUT_PRODUCER: Record<string, string> = {
