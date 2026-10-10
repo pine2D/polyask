@@ -22,7 +22,6 @@ import { normalizeSubmitted, parseGenerationState } from "../shared/protocol";
 import type {
   CollectSiteCommand,
   DesktopSurface,
-  DiagnoseSiteCommand,
   GenerationSiteCommand,
   LayoutState,
   SiteCollectionResult,
@@ -34,13 +33,8 @@ import type {
   SubmitSiteCommand,
   WasSubmittedSiteCommand
 } from "../shared/protocol";
-import {
-  buildSiteHealth,
-  siteReloadAllowed,
-  type SiteHealth,
-  type SiteHealthPageState,
-  type SiteHealthRunPhase
-} from "../shared/site-health";
+import { siteReloadAllowed, type SiteHealth } from "../shared/site-health";
+import { checkSiteHealth } from "./site-health-check";
 import {
   resolveFocusedSite,
   resolveSitePage,
@@ -458,39 +452,8 @@ export class ViewManager {
       "ok" in result ? { code: "not_ready" } : result as SiteCollectionResult);
   }
 
-  private async checkSiteHealth(site: SiteKey): Promise<SiteHealth> {
-    const definition = SITES.find((candidate) => candidate.key === site);
-    const view = this.views.get(site);
-    const pageStatus = this.pageStatus.get(site) ?? { site, phase: "loading" as const };
-    const runStatus = this.runStatus.get(site);
-    const finish = (checks: unknown, navigation: ReturnType<typeof navigationDisposition>): SiteHealth => {
-      const health = buildSiteHealth({ site, phase: pageStatus.phase, navigation, checks });
-      const page: SiteHealthPageState = pageStatus.phase === "failed" || pageStatus.phase === "crashed"
-        ? "error"
-        : pageStatus.phase === "loading" || pageStatus.phase === "ready" ? pageStatus.phase : "unknown";
-      const recentPhases: readonly SiteHealthRunPhase[] = ["sending", "submitted", "generating", "complete", "warning", "cancelled", "failed"];
-      const recent = runStatus && recentPhases.includes(runStatus.phase as SiteHealthRunPhase)
-        ? { phase: runStatus.phase as SiteHealthRunPhase, ...(runStatus.code ? { code: runStatus.code } : {}) }
-        : undefined;
-      return { ...health, page, checkedAt: Date.now(), ...(recent ? { recent } : {}) };
-    };
-    if (!definition || !view || view.webContents.isDestroyed()) {
-      return finish(undefined, "block");
-    }
-    const navigation = navigationDisposition(definition, view.webContents.getURL());
-    if (navigation !== "site" || pageStatus.phase === "loading" || ["failed", "crashed"].includes(pageStatus.phase)) {
-      return finish(undefined, navigation);
-    }
-    const command: DiagnoseSiteCommand = {
-      source: "AMS",
-      cmd: "diagnose",
-      deadline: Date.now() + 2_500
-    };
-    const response = await this.commands.send(view.webContents, command, {
-      timeoutResult: { code: "not_ready" }
-    });
-    const checks = "checks" in response ? response.checks : undefined;
-    return finish(checks, navigation);
+  private checkSiteHealth(site: SiteKey): Promise<SiteHealth> {
+    return checkSiteHealth(site, this.views.get(site), this.pageStatus.get(site), this.runStatus.get(site), this.commands);
   }
 
   receiveResponse(sender: WebContents, envelope: SiteResponseEnvelope): void {

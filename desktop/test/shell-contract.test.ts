@@ -362,7 +362,7 @@ test("commands refuse to reach a crashed or failed page instead of guessing", ()
   );
   const collect = manager.slice(
     manager.indexOf("collect(site: SiteKey"),
-    manager.indexOf("private async checkSiteHealth(")
+    manager.indexOf("private checkSiteHealth(")
   );
   assert.match(send, /const pageFailure = this\.pageFailureCode\(site\)/);
   assert.match(collect, /const pageFailure = this\.pageFailureCode\(site\)/);
