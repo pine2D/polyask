@@ -1,5 +1,6 @@
 import { projectPreferences, applyPreferences } from './sync-preferences';
-import { projectDrafts, applyDrafts } from './sync-drafts';
+import { projectDrafts, applyDrafts, carriedSettings } from './sync-drafts';
+import { purgeDraftTombstones } from './draft-retention';
 import { terminalDraftSettings } from './sync-draft-merge';
 import { isStoredQuestion, isStoredQuestionAnswer } from "../shared/question-history";
 import { createHash } from "node:crypto";
@@ -71,7 +72,7 @@ const hostFor = (key: SiteKey) => SITES.find((site) => site.key === key)?.host;
 const keyFor = (host: string) => SITES.find((site) => site.host === host)?.key;
 
 export class SyncRepository {
-  constructor(private readonly database: DesktopDatabase) {}
+  constructor(private readonly database: DesktopDatabase, private readonly now: () => number = Date.now) {}
 
   deviceId(): string {
     const id = this.database.meta.get<unknown>("deviceId");
@@ -99,7 +100,7 @@ export class SyncRepository {
       return host ? [[host, true]] : [];
     }));
     const settings = {
-      ...(previous?.settings ?? {}),
+      ...carriedSettings(previous, this.database.meta),
       ...projectPreferences(this.database.state),
       ...projectDrafts(this.database.state, this.database.meta),
       ...projectParticipation(workspace.participation, remoteStates),
@@ -156,8 +157,9 @@ export class SyncRepository {
     let changed = applyPreferences(this.database.state, merged.settings);
     if (this.database.meta.get('draftSyncEnabled') === true) {
       changed = applyDrafts(this.database.state, { ...merged.settings,
-        ...terminalDraftSettings([...Object.values(remoteStates), this.localStateFragment()]) }) || changed;
+        ...terminalDraftSettings([...Object.values(remoteStates), this.localStateFragment()]) }, this.now()) || changed;
     }
+    purgeDraftTombstones(this.database.state, remoteStates, this.now());
     const participationSetting = merged.settings[PARTICIPATION_SETTING];
     const participation = participationFromSetting(participationSetting) ?? current?.participation ?? (participationSetting
       ? { sites: [], updatedAt: participationSetting.updatedAt, deviceId: participationSetting.deviceId } : undefined);

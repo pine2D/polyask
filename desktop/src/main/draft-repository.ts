@@ -4,6 +4,8 @@ import { DRAFT_STATE_PREFIX, DRAFT_SYNC_META_KEY, parseDraftInput, parseStoredDr
 import { nextSyncTime, validSyncTime } from '../shared/sync';
 import type { StateRepository } from './state-repository';
 import type { MetaRepository } from './meta-repository';
+import { purgeDraftTombstones } from './draft-retention';
+import type { StateFragment } from '../shared/sync';
 
 interface DraftRepositoryOptions {
   readonly now?: () => number;
@@ -46,6 +48,7 @@ export class DraftRepository {
     const current = this.list(input.kind, input.context).find(d => d.deviceId === deviceId);
     // Remounting an editor re-saves the same form: keep the version, write nothing, upload nothing.
     if (current && sameContents(current, input)) return current;
+    if (!current) purgeDraftTombstones(this.state, this.meta.get<Record<string, StateFragment>>('remoteStates') ?? {}, this.now());
     const id = current?.id ?? this.createId();
     if (!current && this.state.get(`${DRAFT_STATE_PREFIX}${id}`) !== null) throw new Error('invalid_draft');
     const draft = parseStoredDraft({ ...input, format: 1, id, deviceId,

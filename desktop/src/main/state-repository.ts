@@ -40,6 +40,11 @@ export class StateRepository {
     });
   }
 
+  /** Physical removal of a tombstone only (retention reclaim); live rows are never touched. */
+  dropTombstone(key: string): boolean {
+    return this.database.prepare("DELETE FROM state_items WHERE key = ? AND deleted_at IS NOT NULL").run(key).changes === 1;
+  }
+
   put<T>(key: string, value: T, updatedAt: number, enqueue = true): T {
     if (!key || !Number.isSafeInteger(updatedAt) || updatedAt < 0) throw new Error("invalid_state_item");
     const deletedAt = value && typeof value === "object" && "deletedAt" in value

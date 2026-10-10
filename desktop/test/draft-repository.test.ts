@@ -218,15 +218,18 @@ test('remote ingestion rejects malformed payloads and incompatible identity with
 });
 
 test('frozen schema 1 draft fixture preserves independent versions, empty labor and deletion through wire round trips', () => {
-  const f = fixture('desktop-local');
+  const f = fixture('draft-device-a');
   const { body } = JSON.parse(readSource('test/fixtures/schema1-state-drafts.json')) as { body: StateFragment };
   try {
     f.drafts.setSyncEnabled(true);
-    assert.equal(applyDrafts(f.database.state, JSON.parse(JSON.stringify(body.settings))), true);
+    // Read at the fixture's own time: a tombstone past the retention window is not imported for an unknown branch.
+    assert.equal(applyDrafts(f.database.state, JSON.parse(JSON.stringify(body.settings)), 1756800000100), true);
     assert.deepEqual(f.drafts.list().map(d => d.id).sort(), ['draft-comparison-a', 'draft-decision-b', 'draft-prompt-a', 'draft-synthesis-b']);
     assert.deepEqual(f.drafts.get('draft-prompt-a')?.content, { text: '' });
     assert.equal(f.drafts.get('draft-gone-a')?.deletedAt, 1756800000050);
-    assert.deepEqual(JSON.parse(JSON.stringify(wire(f))), body.settings);
+    // Own branches and every tombstone round-trip unchanged; other devices' live branches are theirs to publish.
+    const { 'polyask.draft.draft-decision-b': _decision, 'polyask.draft.draft-synthesis-b': _synthesis, ...republished } = body.settings;
+    assert.deepEqual(JSON.parse(JSON.stringify(wire(f))), republished);
     assert.equal(f.database.outbox.count(), 0);
   } finally { f.database.close(); }
 });
