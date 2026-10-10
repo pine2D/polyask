@@ -4,6 +4,15 @@ import { folderMembershipId, isFolderTarget, validFolderId, validFolderName,
 import type { TaskFolderRepository } from "./task-folder-repository";
 import type { ArchiveService } from "./archive-service";
 import type { DecisionService } from "./decision-service";
+import type { FolderContentPage, FolderPageRequest } from '../shared/task-folder-page';
+
+function validateFilters(filters: FolderFilters): void {
+  if (!filters || typeof filters !== 'object' || Array.isArray(filters) ||
+    (filters.kind !== undefined && !['', 'archive', 'decision'].includes(filters.kind)) ||
+    (filters.status !== undefined && !['', 'draft', 'verify', 'final'].includes(filters.status)) ||
+    [filters.folderId, filters.query, filters.tag].some(v => v !== undefined && typeof v !== 'string') ||
+    (filters.favorite !== undefined && typeof filters.favorite !== 'boolean')) throw new Error('invalid_request');
+}
 
 interface Options {readonly deviceId:()=>string;readonly now?:()=>number;readonly createId?:()=>string}
 export class TaskFolderService {
@@ -64,11 +73,7 @@ export class TaskFolderService {
     return this.memberships(target);
   }
   search(filters:FolderFilters={}):FolderContent[] {
-    if (!filters||typeof filters!=="object"||Array.isArray(filters)||
-      (filters.kind!==undefined&&!["","archive","decision"].includes(filters.kind))||
-      (filters.status!==undefined&&!["","draft","verify","final"].includes(filters.status))||
-      [filters.folderId,filters.query,filters.tag].some(v=>v!==undefined&&typeof v!=="string")||
-      (filters.favorite!==undefined&&typeof filters.favorite!=="boolean")) throw new Error("invalid_request");
+    validateFilters(filters);
     const result:FolderContent[]=[];
     if(filters.kind!=="decision")for(const record of this.archives.search({query:filters.query,tag:filters.tag,favorite:filters.favorite}).items)result.push({kind:"archive",record});
     if(filters.kind!=="archive")for(const record of this.decisions.search({query:filters.query,status:filters.status}))result.push({kind:"decision",record});
@@ -80,5 +85,17 @@ export class TaskFolderService {
     }
     return result.filter(item=>!filters.folderId||(filters.folderId==="__unfiled__"?!linked.has(`${item.kind}:${item.record.id}`):selected.has(`${item.kind}:${item.record.id}`)))
       .sort((a,b)=>b.record.updatedAt-a.record.updatedAt||a.record.id.localeCompare(b.record.id)||a.kind.localeCompare(b.kind));
+  }
+  query(request: FolderPageRequest = {}): FolderContentPage {
+    validateFilters(request);
+    if ((request.page !== undefined && (!Number.isSafeInteger(request.page) || request.page < 0)) ||
+      (request.sort !== undefined && !['updated-desc', 'created-desc', 'title-asc'].includes(request.sort)) ||
+      (request.locale !== undefined && (typeof request.locale !== 'string' || request.locale.length > 80)) ||
+      (request.query !== undefined && request.query.length > 65_536) ||
+      (request.selected !== undefined && !isFolderTarget(request.selected)) ||
+      (request.locateSelected !== undefined && typeof request.locateSelected !== 'boolean') ||
+      (request.selectedTargets !== undefined && (!Array.isArray(request.selectedTargets) || request.selectedTargets.length > 20_000 ||
+        !request.selectedTargets.every(isFolderTarget)))) throw new Error('invalid_request');
+    return this.repository.query(request);
   }
 }

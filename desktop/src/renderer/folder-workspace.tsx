@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ArchiveRecord } from '../shared/archive';
 import type { DecisionInput, DecisionRecord } from '../shared/decision';
 import type { FolderContent, FolderFilters, FolderTarget, TaskFolder } from '../shared/task-folder';
+import type { FolderContentSummary } from '../shared/task-folder-page';
 import type { ArchiveSurfaceProps } from './archive-surface';
 import { FolderSidebar } from './folder-sidebar';
 import { FolderMembershipDialog } from './folder-membership-dialog';
@@ -13,7 +14,8 @@ import { requestDecisionNavigation } from './decision-navigation';
 import { shell } from './shell-api';
 import { useLibraryReadingFocus, type LibraryReadingFocus } from './library-reading-focus';
 import { createLibrarySessionStore, type LibrarySessionStore } from './library-session';
-import { contentKey, LIBRARY_PAGE_SIZE, sortLibraryContents, type LibrarySort } from './library-list-model';
+import { contentKey, type LibrarySort } from './library-list-model';
+import { readFolderContent, targetFromContentKey } from './library-content-loader';
 import { getLibraryCopy } from '../shared/library-scale-copy';
 import { useLibraryBulk } from './use-library-bulk';
 import { LibraryBulkActions } from './library-bulk-actions';
@@ -29,7 +31,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const session = props.session ?? ownSession.current;
   const initial = useRef(session.read()).current;
   const [folders, setFolders] = useState<TaskFolder[]>([]);
-  const [items, setItems] = useState<FolderContent[]>([]);
+  const [items, setItems] = useState<readonly FolderContentSummary[]>([]);
+  const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState<FolderFilters>(initial.filters);
   const [sort, setSort] = useState<LibrarySort>(initial.sort);
   const [page, setPage] = useState(initial.page);
@@ -66,7 +69,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const consumedPreferred = useRef(initial.consumedNavigationKey);
   const restoringKey = useRef(initial.selectedKey);
   const selectedRef = useRef(selected); selectedRef.current = selected;
-  const sortRef = useRef(sort); sortRef.current = sort;
+  const selectedKeysRef = useRef(selectedKeys); selectedKeysRef.current = selectedKeys;
   const filterChanged = useRef(false);
   const listScroll = useRef(initial.listScroll);
   const refresh = () => setRevision(value => value + 1);
@@ -91,11 +94,18 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     const requestIntent = intent.current;
     const timer = setTimeout(() => {
       setLoading(true);
-      Promise.all([shell.listFolders(), shell.searchFolderContents(filters), shell.listArchiveTags()]).then(([nextFolders, contents, nextTags]) => {
+      const target = targetFromContentKey(selectedRef.current ? contentKey(selectedRef.current) : restoringKey.current);
+      const selection = selectedKeysRef.current.flatMap(key => targetFromContentKey(key) ?? []);
+      Promise.all([shell.listFolders(), shell.queryFolderContents({ ...filters, page, sort, locale: props.locale,
+        selected: target ?? undefined, selectedTargets: selection, locateSelected: filterChanged.current }), shell.listArchiveTags()]).then(async ([nextFolders, contents, nextTags]) => {
         if (request !== epoch.current) return;
-        setFolders(nextFolders); setItems(contents); setTags(nextTags); setLoading(false); setLoadFailed(false); setMessage('');
-        const key = selectedRef.current ? contentKey(selectedRef.current) : restoringKey.current;
-        const match = key ? contents.find(item => contentKey(item) === key) ?? null : null;
+        const match = contents.selected && requestIntent === intent.current ? await readFolderContent(contents.selected) : null;
+        if (request !== epoch.current) return;
+        setFolders(nextFolders); setItems(contents.items); setTotal(contents.total); setPage(contents.page);
+        const live = new Set(contents.selectedTargets.map(target => `${target.kind}:${target.id}`));
+        setSelectedKeys(current => current.filter(key => live.has(key)));
+        setTags(nextTags); setLoading(false); setLoadFailed(false); setMessage('');
+        const key = target ? `${target.kind}:${target.id}` : null;
         restoringKey.current = null;
         if (key && requestIntent === intent.current) {
           if (match) setSelected(match);
@@ -109,14 +119,13 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
           }
         }
         if (filterChanged.current) {
-          const index = match ? sortLibraryContents(contents, sortRef.current, props.locale).findIndex(item => contentKey(item) === key) : -1;
-          setPage(index < 0 ? 0 : Math.floor(index / LIBRARY_PAGE_SIZE)); listScroll.current = 0;
+          listScroll.current = 0;
           filterChanged.current = false;
         }
       }).catch(() => { if (request === epoch.current) { setLoading(false); setLoadFailed(true); setMessage(copy.folderLoadFailed); } });
     }, filters.query ? 180 : 0);
     return () => { clearTimeout(timer); epoch.current++; };
-  }, [filters, revision, copy.folderLoadFailed]);
+  }, [filters, revision, page, sort, props.locale, copy.folderLoadFailed]);
   useEffect(() => {
     const navigationKey = props.preferredId ? JSON.stringify([props.preferredId, props.navigationRevision ?? 0]) : null;
     if (!props.preferredId || consumedPreferred.current === navigationKey) return;
@@ -137,8 +146,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     if (!selected) setPane('list');
   });
   const changeSort = (value: LibrarySort) => navigate(() => {
-    setSort(value); const index = selected ? sortLibraryContents(items, value, props.locale).findIndex(item => contentKey(item) === contentKey(selected)) : -1;
-    setPage(index < 0 ? 0 : Math.floor(index / LIBRARY_PAGE_SIZE)); listScroll.current = 0;
+    filterChanged.current = true; setLoading(true); setSort(value); listScroll.current = 0;
   });
   const openArchive = (record?: ArchiveRecord) => navigate(() => { setNewSource(null); if (record) setFilters({ folderId: '' }); setSelected(record ? { kind: 'archive', record } : null); setPane(record ? 'detail' : 'list'); });
   const changed = (deleted = false) => { if (deleted) { setSelected(null); setFocused(false); setPane('list'); } refresh(); };
@@ -161,11 +169,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   };
   const folderName = folders.find(folder => folder.id === filters.folderId)?.name
     ?? (filters.folderId === '__unfiled__' ? copy.folderUnfiled : copy.folderAll);
-  const ordered = useMemo(() => sortLibraryContents(items, sort, props.locale), [items, sort, props.locale]);
-  const selectedItems = useMemo(() => {
-    const keys = new Set(selectedKeys); return ordered.filter(item => keys.has(contentKey(item)));
-  }, [ordered, selectedKeys]);
-  const targets = selectedItems.map(item => ({ kind: item.kind, id: item.record.id }));
+  const targets = selectedKeys.flatMap(key => targetFromContentKey(key) ?? []);
   const unavailable = busy || loading || loadFailed || !targets.length;
   const startBulk = (action: BulkRequest['action'], favorite?: boolean, folderIds?: readonly string[]) => navigate(() => {
     if (loading || loadFailed || !targets.length) return;
@@ -187,15 +191,32 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     <LibraryBulkActions labels={labels} count={selectedKeys.length} mixed={targets.some(target => target.kind === 'decision')}
       disabled={unavailable} running={bulk.running} done={bulk.done} result={bulk.result} onFavorite={value => startBulk('favorite', value)}
       onAdd={() => navigate(() => setBulkFolders(true))} onExport={() => startBulk('export')} onStop={bulk.stop}
-      onRetry={() => navigate(() => { if (!loading && !loadFailed) bulk.retry(items.map(item => ({ kind: item.kind, id: item.record.id }))); })} />
+      onRetry={() => navigate(() => {
+        if (loading || loadFailed || !bulk.result) return;
+        const retryIntent = intent.current;
+        shell.queryFolderContents({ ...filters, selectedTargets: bulk.result.outcome.failed }).then(result => {
+          if (mounted.current && retryIntent === intent.current) bulk.retry(result.selectedTargets);
+        }).catch(() => { if (mounted.current) setMessage(copy.folderLoadFailed); });
+      })} />
     <div className="folder-columns">
       <FolderSidebar copy={copy} locale={props.locale} folders={folders} selected={filters.folderId ?? ''} disabled={busy} onSelect={folderId => change({ folderId })} onChanged={refresh} />
       <LibraryContentList copy={copy} locale={props.locale} items={items} filters={filters} tags={tags} loading={loading}
+        serverPage={{ page, total }}
         failed={loadFailed} selectedKey={selected ? contentKey(selected) : null} onChange={change} onRetry={refresh}
         page={page} sort={sort} selectedKeys={selectedKeys} onSelectedKeysChange={setSelectedKeys}
-        onPageChange={value => navigate(() => { setPage(value); listScroll.current = 0; })} onSortChange={changeSort}
+        onPageChange={value => navigate(() => { setLoading(true); setPage(value); listScroll.current = 0; })} onSortChange={changeSort}
         listScroll={listScroll.current} onScroll={value => { listScroll.current = value; session.update({ listScroll: value }); }} disabled={busy}
-        onSelect={item => navigate(() => { setSelected(item); setNewSource(null); setPane('detail'); })} />
+        onSelect={item => navigate(() => {
+          const readingIntent = intent.current;
+          readFolderContent({ kind: item.kind, id: item.record.id }).then(record => {
+            if (!mounted.current || readingIntent !== intent.current) return;
+            requestDecisionNavigation(() => {
+              if (!mounted.current || readingIntent !== intent.current || busyRef.current) return;
+              setSelected(record); setNewSource(null); setPane(record ? 'detail' : 'list');
+              setMessage(record ? '' : copy.folderLoadFailed);
+            });
+          }).catch(() => { if (mounted.current && readingIntent === intent.current) setMessage(copy.folderLoadFailed); });
+        })} />
       <div className="folder-detail">
         {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
           : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => navigate(() => { setNewSource(source); setNewDraft(draft); }), detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{copy.libraryPickHint}</p></div>}

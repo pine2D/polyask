@@ -1,3 +1,4 @@
+import { withFolderPages } from './ui/library-page-api';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { act, useState } from 'react';
@@ -13,9 +14,9 @@ const a = { ...archiveFixture(), id: 'history-A', text: 'History original A' };
 const b = { ...archiveFixture(), id: 'new-B', text: 'Newly collected B' };
 async function fixture() {
   const reads: string[] = [];
-  setShellApi({ listFolders: async () => [], listArchiveTags: async () => [],
+  setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [],
     searchFolderContents: async () => [{ kind: 'archive', record: a }, { kind: 'archive', record: b }],
-    getArchive: async (id: string) => { reads.push(id); return id === a.id ? a : b; } } as any);
+    getArchive: async (id: string) => { reads.push(id); return id === a.id ? a : b; } }) as any);
   function Fixture() {
     const target = useArchiveNavigation();
     const [open, setOpen] = useState(false), [pendingId, setPendingId] = useState<string | null>(null);

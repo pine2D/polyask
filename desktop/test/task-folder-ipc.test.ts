@@ -17,12 +17,14 @@ test("folder IPC guards every handler, rejects malformed envelopes and disposes"
   let called=0;
   const folders=new Proxy({},{get:()=>()=>{called++;return "ok";}});
   const dispose=exported.exports.registerTaskFolderIpc({folders,trusted:(e:unknown)=>e===true});
-  assert.equal(handlers.size,7);
+  assert.equal(handlers.size,8);
   for(const fn of handlers.values())assert.throws(()=>fn(false,{}),/untrusted_sender/);
   assert.equal(called,0);
   for (const bad of [null,{},[],"",{id:"x"}])
     assert.throws(()=>handlers.get("polyask:folder-memberships-patch")!(true,bad),/invalid_request/);
   assert.throws(()=>handlers.get("polyask:folder-delete")!(true,""),/invalid_request/);
+  assert.equal(handlers.has('polyask:folder-query'),true);
+  for (const bad of [null, [], 'query']) assert.throws(()=>handlers.get('polyask:folder-query')!(true,bad),/invalid_request/);
   assert.equal(handlers.get("polyask:folder-list")!(true,undefined),"ok");
   assert.equal(handlers.get("polyask:folder-memberships-patch")!(true,{target:{kind:"archive",id:"a"},changes:[]}),"ok");
   assert.equal(called,2);

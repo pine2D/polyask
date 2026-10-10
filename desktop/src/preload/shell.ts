@@ -8,6 +8,7 @@ import type { LocalDataStats } from "../shared/local-data";
 import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
 import type { BackupPreview, BackupApplyResult, BackupSelectionPreview } from "../shared/backup";
 import type { TaskFolder, TaskFolderSummary, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
+import type { FolderContentPage, FolderPageRequest } from '../shared/task-folder-page';
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
 import { contextBridge, ipcRenderer } from "electron";
 import type { RuntimeProcessFailure } from "../shared/runtime-process";
@@ -90,6 +91,7 @@ export interface PolyAskDesktopApi {
   renameFolder(id: string, name: string): Promise<TaskFolder>;
   deleteFolder(id: string): Promise<void>;
   searchFolderContents(filters: FolderFilters): Promise<FolderContent[]>;
+  queryFolderContents(request: FolderPageRequest): Promise<FolderContentPage>;
   folderMemberships(target: FolderTarget): Promise<string[]>;
   patchFolderMemberships(target: FolderTarget, changes: readonly FolderMembershipChange[]): Promise<string[]>;
   clearFolders(): Promise<number>;
@@ -211,6 +213,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   renameFolder: (id: string, name: string) => invoke("polyask:folder-rename", { id, name }),
   deleteFolder: (id: string) => invoke("polyask:folder-delete", id),
   searchFolderContents: (filters: FolderFilters) => invoke("polyask:folder-search", filters),
+  queryFolderContents: (request: FolderPageRequest) => invoke('polyask:folder-query', request),
   folderMemberships: (target: FolderTarget) => invoke("polyask:folder-memberships", target),
   patchFolderMemberships: (target: FolderTarget, changes: readonly FolderMembershipChange[]) => invoke("polyask:folder-memberships-patch", { target, changes }),
   clearFolders: () => invoke("polyask:clear-folders"),

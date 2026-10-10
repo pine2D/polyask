@@ -1,3 +1,4 @@
+import { withFolderPages } from './library-page-api';
 import React, { useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArchiveSurface } from '../../src/renderer/archive-surface';
@@ -28,7 +29,7 @@ const originalRequirement = 'Original saved requirement: verify sources before u
 const saved = { host: SITES[0].host, text: 'Saved supplementary analysis with an unverified [S1] reference.',
   state: 'think' as const, instruction: originalRequirement, createdAt: 1700000000020 };
 if (mode === 'saved') records[0] = { ...nativeArchive, synthesis: saved };
-setShellApi({
+setShellApi(withFolderPages({
   listFolders: async () => [], listArchiveTags: async () => [],
   searchFolderContents: async () => records.map(record => ({ kind: 'archive', record })),
   getArchive: async (id: string) => { const value = records.find(record => record.id === id) || null;
@@ -59,7 +60,7 @@ setShellApi({
     writeCount++; const record = { ...records.find(record => record.id === pending!.archiveId)!, synthesis: candidate, updatedAt: 1700000000400 };
     records = records.map(old => old.id === record.id ? record : old); pending = null; candidate = null; return record; },
   cancel: () => {}, openExternal: async () => {}
-} as any);
+}) as any);
 let controls: { revise: () => void; recovered: () => void };
 function App() {
   const [open, setOpen] = useState(true), [revision, setRevision] = useState(1);

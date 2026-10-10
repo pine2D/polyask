@@ -1,3 +1,4 @@
+import { withFolderPages } from './library-page-api';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import MarkdownIt from 'markdown-it';
@@ -29,7 +30,7 @@ MarkdownIt.prototype.parse = function(this: InstanceType<typeof MarkdownIt>, val
   const before = performance.now();
   try { return parse.call(this, value, env); } finally { state.parseMs += performance.now() - before; }
 };
-setShellApi({ listFolders: async () => [], listArchiveTags: async () => [],
+setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [],
   searchFolderContents: async (filters: FolderFilters) => {
     const query = (filters.query ?? '').trim().toLowerCase();
     const result = data.items.filter(item => (!filters.kind || filters.kind === item.kind)
@@ -40,7 +41,7 @@ setShellApi({ listFolders: async () => [], listArchiveTags: async () => [],
     state.query = query; state.total = result.length; state.readySequence++; return result;
   }, getArchive: async (id: string) => data.archives.find(record => record.id === id) ?? null,
   openExternal: async () => { throw Error('post workload must not open external sources'); },
-} as any);
+}) as any);
 function Fixture() {
   const [opened, setOpened] = useState(true), [revision, setRevision] = useState(0);
   state.mount = value => { if (value) session.clear(); state.start = performance.now(); setOpened(value); };

@@ -1,3 +1,4 @@
+import { withFolderPages } from './library-page-api';
 import { StrictMode, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArchiveSurface } from '../../src/renderer/archive-surface';
@@ -25,7 +26,7 @@ const state = { blocked: false, writes: [] as string[], blockingAtWrite: [] as b
   queries: [] as FolderFilters[], finish: null as (() => void) | null, command: (_name: string) => false,
   labels: { ...labels, back: copy.folderBackList, folders: copy.folderTitle } };
 const source = (): ArchiveRecord => items.find(item => item.kind === 'archive')!.record as ArchiveRecord;
-setShellApi({ listFolders: async () => [{ ...folder, contentCount: membership.size }], listArchiveTags: async () => [],
+setShellApi(withFolderPages({ listFolders: async () => [{ ...folder, contentCount: membership.size }], listArchiveTags: async () => [],
   searchFolderContents: async (filters: FolderFilters) => {
     state.queries.push(filters);
     return items.filter(item => (!filters.kind || item.kind === filters.kind)
@@ -41,7 +42,7 @@ setShellApi({ listFolders: async () => [{ ...folder, contentCount: membership.si
     }; });
   }, archiveMarkdown: async (id: string) => `# Canonical ${id}\n\tExact source\n`, decisionMarkdown: async () => '# Canonical decision\n',
   openExternal: async () => { throw Error('native library fixture must not open an external source'); },
-} as any);
+}) as any);
 
 function Fixture() {
   const [opened, setOpened] = useState(true), [blocked, setBlocked] = useState(false);

@@ -2,10 +2,16 @@ import type { DatabaseSync } from "node:sqlite";
 import { isStoredTaskFolder, isStoredFolderMembership, type StoredTaskFolder, type StoredFolderMembership, type TaskFolder } from "../shared/task-folder";
 import type { OutboxRepository } from "./outbox-repository";
 import { inTransaction, readJson } from "./repository-utils";
+import { TaskFolderQuery } from './task-folder-query';
+import type { FolderContentPage, FolderPageRequest } from '../shared/task-folder-page';
 
 export class TaskFolderRepository {
   private depth = 0;
-  constructor(private readonly database: DatabaseSync, private readonly outbox: OutboxRepository) {}
+  private readonly contentQuery: TaskFolderQuery;
+  constructor(private readonly database: DatabaseSync, private readonly outbox: OutboxRepository) {
+    this.contentQuery = new TaskFolderQuery(database);
+  }
+  query(request: FolderPageRequest): FolderContentPage { return this.contentQuery.query(request); }
 
   transaction<T>(action: () => T): T {
     if (this.depth) return action();

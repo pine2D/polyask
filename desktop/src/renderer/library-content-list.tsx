@@ -2,41 +2,49 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import { formatCopy } from '../shared/copy';
 import { getLibraryCopy } from '../shared/library-scale-copy';
-import type { FolderContent, FolderFilters } from '../shared/task-folder';
+import type { FolderFilters } from '../shared/task-folder';
+import type { FolderContentPage, FolderContentSummary } from '../shared/task-folder-page';
 import { decisionStatuses, decisionStatusLabel } from './decision-editor';
 import { LibrarySelect } from './library-select';
 import { StarIcon } from './icons';
-import { pageLibraryContents, sortLibraryContents, type LibrarySort } from './library-list-model';
+import { LIBRARY_PAGE_SIZE, pageLibraryContents, sortLibraryContents, type LibrarySort } from './library-list-model';
 import { matchingSelection, selectLibraryPage, toggleLibrarySelection } from './library-selection';
 import { LibraryContentRow } from './library-content-row';
 
-export function LibraryContentList({ copy, locale, items, filters, tags, loading, failed, selectedKey, onChange, onSelect, onRetry,
-  page: controlledPage, sort: controlledSort, selectedKeys: controlledKeys, onPageChange, onSortChange, onSelectedKeysChange, disabled = false, onScroll, listScroll = 0 }: {
-  copy: DesktopCopy; locale: string; items: readonly FolderContent[]; filters: FolderFilters; tags: readonly string[];
+export function LibraryContentList<T extends FolderContentSummary>({ copy, locale, items, filters, tags, loading, failed, selectedKey, onChange, onSelect, onRetry,
+  page: controlledPage, sort: controlledSort, selectedKeys: controlledKeys, onPageChange, onSortChange, onSelectedKeysChange, disabled = false, onScroll, listScroll = 0, serverPage }: {
+  copy: DesktopCopy; locale: string; items: readonly T[]; filters: FolderFilters; tags: readonly string[];
   loading: boolean; failed: boolean; selectedKey: string | null; onChange: (patch: Partial<FolderFilters>) => void;
-  onSelect: (item: FolderContent) => void; onRetry: () => void;
+  onSelect: (item: T) => void; onRetry: () => void;
   page?: number; sort?: LibrarySort; selectedKeys?: readonly string[]; disabled?: boolean;
   onPageChange?: (page: number) => void; onSortChange?: (sort: LibrarySort) => void;
   onSelectedKeysChange?: (keys: readonly string[]) => void; onScroll?: (scroll: number) => void; listScroll?: number;
+  serverPage?: Pick<FolderContentPage, 'total' | 'page'>;
 }): React.JSX.Element {
   const labels = getLibraryCopy(locale);
   const [ownPage, setOwnPage] = useState(0), [ownSort, setOwnSort] = useState<LibrarySort>('updated-desc');
   const [ownKeys, setOwnKeys] = useState<readonly string[]>([]);
   const page = controlledPage ?? ownPage, sort = controlledSort ?? ownSort, keys = controlledKeys ?? ownKeys;
   const setPage = onPageChange ?? setOwnPage, setSort = onSortChange ?? setOwnSort, setKeys = onSelectedKeysChange ?? setOwnKeys;
-  const sorted = useMemo(() => sortLibraryContents(items, sort, locale), [items, sort, locale]);
+  const sorted = useMemo(() => serverPage ? items : sortLibraryContents(items, sort, locale), [items, sort, locale, serverPage]);
   const checkedKeys = useMemo(() => new Set(keys), [keys]);
-  const current = pageLibraryContents(sorted, page), unavailable = disabled || loading || failed;
+  const current = serverPage ? { items, page: serverPage.page, total: serverPage.total,
+    pageCount: Math.max(1, Math.ceil(serverPage.total / LIBRARY_PAGE_SIZE)),
+    start: serverPage.total ? serverPage.page * LIBRARY_PAGE_SIZE + 1 : 0,
+    end: Math.min((serverPage.page + 1) * LIBRARY_PAGE_SIZE, serverPage.total) } : pageLibraryContents(sorted, page);
+  const unavailable = disabled || loading || failed;
   const scroller = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     if (!loading && !failed && scroller.current) scroller.current.scrollTop = listScroll;
   }, [current.page, loading, failed]);
   useEffect(() => {
     if (loading || failed) return;
-    const next = matchingSelection(keys, items);
-    if (next.length !== keys.length) setKeys(next);
+    if (!serverPage) {
+      const next = matchingSelection(keys, items);
+      if (next.length !== keys.length) setKeys(next);
+    }
     if (current.page !== page) setPage(current.page);
-  }, [items, loading, failed, keys, page, current.page, setKeys, setPage]);
+  }, [items, loading, failed, keys, page, current.page, setKeys, setPage, serverPage]);
   const filtered = !!(filters.query || filters.tag || filters.favorite || filters.status);
   return <section className="folder-content-list" aria-label={copy.folderAll}>
     <div className="folder-filters">
@@ -57,13 +65,13 @@ export function LibraryContentList({ copy, locale, items, filters, tags, loading
           options={[{ value: '', label: copy.decisionAll }, ...decisionStatuses.map(status => ({ value: status, label: decisionStatusLabel(copy, status) }))]}
           onChange={status => onChange({ status: status as FolderFilters['status'] })} /> : null}
       </div>
-      <div className="library-list-summary"><span>{formatCopy(copy.libraryItemCount, { count: items.length })}</span>
+      <div className="library-list-summary"><span>{formatCopy(copy.libraryItemCount, { count: current.total })}</span>
         {filtered ? <button type="button" disabled={disabled} onClick={() => onChange({ query: '', tag: '', favorite: false, status: '' })}>{copy.libraryClearFilters}</button> : null}
       </div>
       <LibrarySelect name="library-sort" label={labels.sort} value={sort} disabled={unavailable}
         options={[{ value: 'updated-desc', label: labels.updated }, { value: 'created-desc', label: labels.created }, { value: 'title-asc', label: labels.title }]}
         onChange={value => { setSort(value as LibrarySort); if (!onSortChange) setPage(0); }} />
-      <div className="library-selection-summary" role="status">{formatCopy(labels.selected, { count: keys.length, total: items.length })}</div>
+      <div className="library-selection-summary" role="status">{formatCopy(labels.selected, { count: keys.length, total: current.total })}</div>
       <div className="library-selection-controls">
         <button type="button" data-action="library-select-page" disabled={unavailable || !current.items.length} onClick={() => setKeys(selectLibraryPage(keys, current.items))}>{labels.selectPage}</button>
         <button type="button" data-action="library-clear-selection" disabled={unavailable || !keys.length} onClick={() => setKeys([])}>{labels.clearSelection}</button>

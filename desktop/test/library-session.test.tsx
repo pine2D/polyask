@@ -1,3 +1,4 @@
+import { withFolderPages } from './ui/library-page-api';
 import assert from 'node:assert/strict';
 import React, { act } from 'react';
 import test from 'node:test';
@@ -8,8 +9,13 @@ import { button, copy, folder, record, readerTitle, sessionFixture, waitForIniti
 
 const content: FolderContent = { kind: 'archive', record };
 function api(search: (filters: FolderFilters) => Promise<readonly FolderContent[]> = async () => [content]) {
-  setShellApi({ listFolders: async () => [folder], listArchiveTags: async () => ['research'],
-    searchFolderContents: search, getArchive: async () => record } as any);
+  const records = new Map([[record.id, record]]);
+  setShellApi(withFolderPages({ listFolders: async () => [folder], listArchiveTags: async () => ['research'],
+    searchFolderContents: async (filters: FolderFilters) => {
+      const items = await search(filters);
+      for (const item of items) if (item.kind === 'archive') records.set(item.record.id, item.record);
+      return items;
+    }, getArchive: async (id: string) => records.get(id) ?? null }) as any);
 }
 
 test('matching query keeps the reader during the request and applies the newest record', async () => {

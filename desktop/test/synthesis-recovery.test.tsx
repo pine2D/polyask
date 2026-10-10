@@ -1,3 +1,4 @@
+import { withFolderPages } from './ui/library-page-api';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { act, useState } from 'react';
@@ -26,10 +27,10 @@ async function fixture(followUpHost?: string, held = false) {
   let navigate!: (surface: string) => void;
   let finish!: (value: SynthesisSendResponse) => void;
   const failure: SynthesisSendResponse = { result: { site: 'kimi', ok: false, code: 'submit_unconfirmed' }, pending: null };
-  setShellApi({ listFolders: async () => [], searchFolderContents: async () => [{ kind: 'archive', record }],
+  setShellApi(withFolderPages({ listFolders: async () => [], searchFolderContents: async () => [{ kind: 'archive', record }],
     listArchiveTags: async () => [], getArchive: async () => record,
     sendSynthesis: async () => { attempts++; return held ? new Promise<SynthesisSendResponse>(resolve => { finish = resolve; }) : failure; }
-  } as any);
+  }) as any);
   function App() {
     const [surface, setSurface] = useState('archive');
     navigate = setSurface;

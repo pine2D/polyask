@@ -1,3 +1,4 @@
+import { withFolderPages } from './ui/library-page-api';
 import assert from 'node:assert/strict';
 import React, { act } from 'react';
 import test from 'node:test';
@@ -9,10 +10,10 @@ import { copy, decision, record, waitForInitial, waitForQuery, workspace } from 
 const content: FolderContent = { kind: 'decision', record: decision };
 function deferredSearch() {
   const finishes = new Map<string, (items: readonly FolderContent[]) => void>();
-  setShellApi({ listFolders: async () => [], listArchiveTags: async () => [], getArchive: async () => record,
+  setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [], getArchive: async () => record,
     searchFolderContents: (filters: FolderFilters) => filters.query
       ? new Promise<readonly FolderContent[]>(resolve => finishes.set(filters.query!, resolve)) : Promise.resolve([content]),
-  } as any);
+  }) as any);
   return finishes;
 }
 async function startPendingDraft(h: Awaited<ReturnType<typeof mountDom>>) {

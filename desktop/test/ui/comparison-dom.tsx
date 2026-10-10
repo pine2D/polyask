@@ -1,3 +1,4 @@
+import { withFolderPages } from './library-page-api';
 import { act, StrictMode } from 'react';
 import { mountDom } from './dom-harness';
 import { createArchiveRecord, updateArchiveRecord, type ArchiveRecord } from '../../src/shared/archive';
@@ -27,15 +28,15 @@ export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraf
   let writes = 0;
   let decisionWrites = 0;
   let read: ((id: string) => Promise<ArchiveRecord | null>) | null = null;
-  setShellApi({ listFolders: async () => [], listArchiveTags: async () => [],
+  setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [],
     searchFolderContents: async () => records.map(record => ({ kind: 'archive', record })),
-    getArchive: async (id: string) => read ? read(id) : records.find(record => record.id === id) || null,
+    getArchive: async (id: string) => read && id === comparisonRecord.id ? read(id) : records.find(record => record.id === id) || null,
     createDecision: async () => { decisionWrites++; throw new Error('unexpected fixture write'); },
     updateArchive: async (id: string, patch: Parameters<typeof updateArchiveRecord>[1]) => {
       writes++; const saved = updateArchiveRecord(records.find(record => record.id === id)!, patch, { now: 200, deviceId: 'fixture' });
       records = records.map(record => record.id === id ? saved : record); return saved;
     }
-  } as any);
+  }) as any);
   const h = await mountDom(<StrictMode><ArchiveSurface copy={comparisonCopy} locale="en" sites={SITES} synthesisSites={SITES}
     defaultTier={null} preferredId={comparisonRecord.id} comparisonId={comparisonRecord.id}
     synthesisDrafts={options.synthesisDrafts}

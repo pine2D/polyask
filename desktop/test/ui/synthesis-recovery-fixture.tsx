@@ -1,3 +1,4 @@
+import { withFolderPages } from './library-page-api';
 import { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArchiveSurface } from '../../src/renderer/archive-surface';
@@ -19,10 +20,10 @@ const record = createArchiveRecord({ text: 'Synthetic question', task: 'Syntheti
 { id: 'A', now: 1, deviceId: 'fixture' });
 const noop = () => undefined;
 let attempts = 0;
-setShellApi({ listFolders: async () => [], searchFolderContents: async () => [{ kind: 'archive', record }],
+setShellApi(withFolderPages({ listFolders: async () => [], searchFolderContents: async () => [{ kind: 'archive', record }],
   listArchiveTags: async () => [], getArchive: async () => record,
   sendSynthesis: async () => { attempts++; return { result: { site: 'kimi', ok: false, code: 'submit_unconfirmed' }, pending: null }; }
-} as any);
+}) as any);
 function App() {
   const [surface, setSurface] = useState('archive');
   const [lock] = useState(() => new ExclusiveActionLock());

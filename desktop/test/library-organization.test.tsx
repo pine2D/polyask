@@ -1,3 +1,4 @@
+import { withFolderPages } from './ui/library-page-api';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import React, { act } from 'react';
@@ -134,10 +135,10 @@ test('membership folder names use the existing 80-codepoint bound and expose a r
 test('a created folder remains visible in the library when association editing is canceled', async () => {
   const record = archiveFixture();
   const folders: TaskFolder[] = [];
-  setShellApi({ listFolders: async () => [...folders], searchFolderContents: async () => [{ kind: 'archive', record }],
+  setShellApi(withFolderPages({ listFolders: async () => [...folders], searchFolderContents: async () => [{ kind: 'archive', record }],
     listArchiveTags: async () => [], getArchive: async () => record, folderMemberships: async () => [],
     createFolder: async () => { folders.push(folder); return folder; }
-  } as any);
+  }) as any);
   const h = await mountDom(<FolderWorkspace copy={copy} locale="en" preferredId={record.id} onClose={() => {}}
     onCapture={async () => record} sites={[]} synthesisSites={[]} defaultTier={null} pendingSynthesis={null} synthesisCandidate={null}
     onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => record}
@@ -158,11 +159,11 @@ test('an older library refresh cannot remove a folder created during association
   const record = archiveFixture();
   const folders: TaskFolder[] = [];
   const finishContents: (() => void)[] = [];
-  setShellApi({ listFolders: async () => [...folders], searchFolderContents: () => new Promise(resolve => {
+  setShellApi(withFolderPages({ listFolders: async () => [...folders], searchFolderContents: () => new Promise(resolve => {
     finishContents.push(() => resolve([{ kind: 'archive', record }]));
   }), listArchiveTags: async () => [], getArchive: async () => record, folderMemberships: async () => [],
   createFolder: async () => { folders.push(folder); return folder; }
-  } as any);
+  }) as any);
   const h = await mountDom(<FolderWorkspace copy={copy} locale="en" preferredId={record.id} onClose={() => {}}
     onCapture={async () => record} sites={[]} synthesisSites={[]} defaultTier={null} pendingSynthesis={null} synthesisCandidate={null}
     onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => record}

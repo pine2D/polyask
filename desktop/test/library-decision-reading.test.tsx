@@ -1,3 +1,4 @@
+import { withFolderPages } from './ui/library-page-api';
 import assert from 'node:assert/strict';
 import React from 'react';
 import test from 'node:test';
@@ -7,10 +8,10 @@ import { mountDom } from './ui/dom-harness';
 import { copy, decision, record, waitForInitial, waitForQuery, workspace } from './ui/library-test-host';
 
 test('a latest matching decision result updates the same mounted reading surface', async () => {
-  setShellApi({ listFolders: async () => [], listArchiveTags: async () => [], getArchive: async () => record,
+  setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [], getArchive: async () => record,
     searchFolderContents: async (filters: { query?: string }) => [{ kind: 'decision', record: filters.query
       ? { ...decision, title: 'Newest decision title', conclusion: 'Latest saved conclusion', updatedAt: 2_000 } : decision }],
-  } as any);
+  }) as any);
   const h = await mountDom(workspace({ preferredId: null }));
   try {
     await waitForInitial(); await h.click(h.document.querySelector<HTMLButtonElement>('[data-action="library-open-item"]')!);

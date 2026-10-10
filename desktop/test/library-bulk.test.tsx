@@ -1,3 +1,4 @@
+import { withFolderPages } from './ui/library-page-api';
 import assert from 'node:assert/strict';
 import React, { act } from 'react';
 import test from 'node:test';
@@ -9,8 +10,8 @@ import { archiveItems, button, copy, decision, folder, record, waitForInitial, w
 
 const two = archiveItems(2);
 function api(items: readonly FolderContent[], extra: Record<string, unknown> = {}) {
-  setShellApi({ listFolders: async () => [folder], listArchiveTags: async () => [],
-    searchFolderContents: async () => items, getArchive: async () => record, ...extra } as any);
+  setShellApi(withFolderPages({ listFolders: async () => [folder], listArchiveTags: async () => [],
+    searchFolderContents: async () => items, getArchive: async () => record, ...extra }) as any);
 }
 async function selectPage(h: Awaited<ReturnType<typeof mountDom>>) {
   await waitForInitial(); assert.equal(h.document.querySelector('[data-action="library-select-page"]') !== null, true);

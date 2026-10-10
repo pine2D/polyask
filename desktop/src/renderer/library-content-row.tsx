@@ -2,13 +2,13 @@ import type { DesktopCopy } from '../shared/copy';
 import { formatCopy } from '../shared/copy';
 import type { LibraryCopy } from '../shared/library-scale-copy';
 import { formatDateTime } from '../shared/format';
-import type { FolderContent } from '../shared/task-folder';
+import type { FolderContentSummary } from '../shared/task-folder-page';
 import { decisionStatusLabel } from './decision-editor';
 import { libraryTitle } from './library-list-model';
 import { StarIcon } from './icons';
 
 export function LibraryContentRow({ item, copy, labels, locale, current, checked, disabled, onCheck, onOpen }: {
-  item: FolderContent; copy: DesktopCopy; labels: LibraryCopy; locale: string;
+  item: FolderContentSummary; copy: DesktopCopy; labels: LibraryCopy; locale: string;
   current: boolean; checked: boolean; disabled: boolean; onCheck: () => void; onOpen: () => void;
 }) {
   const title = libraryTitle(item), time = item.kind === 'archive' ? item.record.ts : item.record.updatedAt;

@@ -1,3 +1,4 @@
+import { withFolderPages } from './library-page-api';
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ArchiveSurface } from '../../src/renderer/archive-surface';
@@ -28,7 +29,7 @@ let captures = 0, drafted = '', blocking = false, folderTarget = '', folderIds: 
 let appControls: { reopen: () => void; busy: (value: boolean) => void };
 const loaded = (answerId = 'a2'): QuestionDetail => ({ ...savedDetail, loadedAnswerId: answerId,
   answers: savedDetail.answers.map(answer => ({ ...answer, answerMarkdown: answer.id === answerId ? answer.answerMarkdown : null })) });
-setShellApi({
+setShellApi(withFolderPages({
   setQuestionPanel: async () => {}, setSurface: async () => {}, onQuestionSaveFailed: () => () => {},
   listLegacyQuestions: async () => ({ items: [], cursor: null }),
   listQuestions: async () => ({ items: [{ ...savedDetail.question, savedSites: 2, answers: savedDetail.answers }], cursor: null }),
@@ -58,7 +59,7 @@ setShellApi({
     folderTarget = `${target.kind}:${target.id}`; folderIds = changes.filter(item => item.present).map(item => item.folderId); return [];
   },
   openExternal: async () => {}
-} as any);
+}) as any);
 function App() {
   const [open, setOpen] = useState(true), [busy, setBusy] = useState(false);
   const [route, setRoute] = useState<{ record: ArchiveRecord; mode: 'read' | 'compare' } | null>(null);
