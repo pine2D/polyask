@@ -9,7 +9,7 @@ import { createSynthesisDraftStore } from "../src/renderer/synthesis-draft";
 test("synthesis holds the shared renderer lock and exposes cancel until the request settles", async () => {
   const states: unknown[] = [];
   let finish!: (response: unknown) => void;
-  let cancelled = false;
+  let cancelled = false, broadcastCancelled = false;
   const module = { exports: {} as any };
   vm.runInNewContext(ts.transpileModule(readSource("src/renderer/use-synthesis-flow.ts"), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -21,7 +21,8 @@ test("synthesis holds the shared renderer lock and exposes cancel until the requ
         useRef: (value: unknown) => ({ current: value })
       }
       : name === "./synthesis-draft" ? { createSynthesisDraftStore }
-      : { shell: { sendSynthesis: () => new Promise((resolve) => { finish = resolve; }), cancel: () => { cancelled = true; } } }
+      : { shell: { sendSynthesis: () => new Promise((resolve) => { finish = resolve; }),
+        cancelSynthesis: () => { cancelled = true; }, cancel: () => { broadcastCancelled = true; } } }
   });
   const lock = new ExclusiveActionLock();
   const flow = module.exports.useSynthesisFlow(lock);
@@ -33,6 +34,8 @@ test("synthesis holds the shared renderer lock and exposes cancel until the requ
   assert.equal(prepared, 1, "rejected send must not navigate or invalidate the current run");
   flow.cancel();
   assert.equal(cancelled, true);
+  // 2026-10-10 审查 R10：综合取消只作用于综合目标，不得走群发取消（会把上一轮「提交未确认」站的迟到确认一并作废）。
+  assert.equal(broadcastCancelled, false);
   assert.equal(states.at(-1), "cancelling");
   assert.equal(await lock.run(async () => "early navigation"), null);
   finish({result:{ok:false,code:"cancelled"},pending:null});

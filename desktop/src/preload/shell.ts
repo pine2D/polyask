@@ -113,6 +113,8 @@ export interface PolyAskDesktopApi {
   saveSynthesis(replaceExisting: boolean): Promise<ArchiveRecord>;
   openExternal(url: string): Promise<void>;
   cancel(): void;
+  /** 只取消辅助综合的派发与导航，不碰群发（群发取消会作废上一轮「提交未确认」的迟到确认）。 */
+  cancelSynthesis(): void;
   setLayout(mode: "overview" | "focus", focused: SiteKey): void;
   inspectSite(site: SiteKey): Promise<boolean>;
   setPage(page: number): void;
@@ -235,6 +237,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   saveSynthesis: (replaceExisting: boolean) => invoke("polyask:synthesis-save", replaceExisting),
   openExternal: (url: string) => invoke("polyask:open-external", url),
   cancel: () => ipcRenderer.send("polyask:cancel"),
+  cancelSynthesis: () => ipcRenderer.send("polyask:synthesis-cancel"),
   setLayout: (mode: "overview" | "focus", focused: SiteKey) => ipcRenderer.send("polyask:set-layout", { mode, focused }),
   inspectSite: (site: SiteKey) => invoke("polyask:inspect-site", site),
   setPage: (page: number) => ipcRenderer.send("polyask:set-page", page),

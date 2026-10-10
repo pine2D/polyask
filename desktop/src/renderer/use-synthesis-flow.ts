@@ -59,7 +59,7 @@ export function useSynthesisFlow(lock: ExclusiveActionLock): {
     if (!result) throw new Error("operation_busy");
     return result;
   };
-  const cancel = (): void => { setRunState("cancelling"); shell.cancel(); };
+  const cancel = (): void => { setRunState("cancelling"); shell.cancelSynthesis(); };
   const collect = async (): Promise<string> => {
     const current = pendingRef.current;
     if (!current) throw new Error("synthesis_not_pending");

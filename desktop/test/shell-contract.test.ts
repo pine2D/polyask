@@ -526,9 +526,13 @@ test("completion notifications are boolean-only and update checks open the offic
 test("assisted synthesis state and mutations stay behind the trusted shell bridge", () => {
   const ipc = readSource("src/main/shell-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
-  for (const channel of ["polyask:synthesis-send", "polyask:synthesis-collect", "polyask:synthesis-save"]) {
-    assert.match(ipc, new RegExp(channel));
+  const synthesisIpc = readSource("src/main/synthesis-ipc.ts");
+  for (const channel of ["polyask:synthesis-send", "polyask:synthesis-collect", "polyask:synthesis-save", "polyask:synthesis-cancel"]) {
+    assert.match(synthesisIpc, new RegExp(channel));
   }
+  assert.match(ipc, /registerSynthesisIpc\(\{ synthesis, synthesisCoordinator, gate: operationGate,/);
+  assert.match(ipc, /disposeSynthesisIpc\(\)/);
+  assert.match(preload, /cancelSynthesis: \(\) => ipcRenderer\.send\("polyask:synthesis-cancel"\)/);
   assert.match(ipc, /registerBootstrapIpc\(ipcMain, options, trustedShell\)/);
   assert.match(readSource("src/main/bootstrap-ipc.ts"), /pendingSynthesis: options\.synthesis\.getPending\(\)/);
   assert.match(preload, /sendSynthesis/);

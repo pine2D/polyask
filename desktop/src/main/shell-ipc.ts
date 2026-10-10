@@ -49,6 +49,7 @@ import { SynthesisService } from "./synthesis-service";
 import { SyncEngine } from "./sync-engine";
 import { registerSyncIpc } from "./sync-ipc";
 import { registerSiteHealthIpc } from "./site-health-ipc";
+import { registerSynthesisIpc } from "./synthesis-ipc";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { showCommandMenu, showGroupMenu } from "./native-menus";
 import { SITES } from "./sites";
@@ -102,9 +103,6 @@ const HANDLERS = [
   "polyask:archive-update",
   "polyask:archive-delete",
   "polyask:archive-markdown",
-  "polyask:synthesis-send",
-  "polyask:synthesis-collect",
-  "polyask:synthesis-save",
   "polyask:open-external",
   "polyask:set-selection",
   "polyask:set-participation",
@@ -257,19 +255,8 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     const locale = typeof input.locale === "string" && input.locale.length <= 32 ? input.locale : "en";
     return archives.exportMarkdown(strictId(input.id), locale);
   });
-  ipcMain.handle("polyask:synthesis-send", (event, value: unknown) => {
-    if (!trustedShell(event)) throw new Error("untrusted_sender");
-    if (options.dataAdmin.isResetting) throw new Error("operation_busy");
-    return operationGate.run(() => synthesis.send(value));
-  });
-  ipcMain.handle("polyask:synthesis-collect", (event) => {
-    if (!trustedShell(event)) throw new Error("untrusted_sender");
-    return synthesis.collect();
-  });
-  ipcMain.handle("polyask:synthesis-save", (event, value: unknown) => {
-    if (!trustedShell(event) || typeof value !== "boolean") throw new Error("invalid_synthesis_save");
-    return synthesis.save(value);
-  });
+  const disposeSynthesisIpc = registerSynthesisIpc({ synthesis, synthesisCoordinator, gate: operationGate,
+    resetting: () => options.dataAdmin.isResetting, trusted: trustedShell });
   ipcMain.handle("polyask:open-external", async (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
     const url = safeExternalUrl(value);
@@ -385,6 +372,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     disposePreferences();
     disposeSitePageIpc();
     disposeQuestionIpc();
+    disposeSynthesisIpc();
     capture.dispose();
     disposeBackupIpc();
     disposeFolderIpc();
