@@ -595,7 +595,7 @@ test("groups and selections naming unknown hosts are consumed without truncating
   repository.applyStateFragments(remote as unknown as Record<string, StateFragment>);
   try {
     const fragment = repository.localStateFragment();
-    assert.equal(fragment.groups.mixed, undefined, "a partially understood group must not be re-uploaded truncated");
+    assert.deepEqual(fragment.groups.mixed, remote["remote-state"].groups.mixed, "a partially understood group must not be re-uploaded truncated");
     assert.deepEqual(fragment.settings["amsConsole.selected"].value, {
       "brand-new.example": true,
       "claude.ai": true

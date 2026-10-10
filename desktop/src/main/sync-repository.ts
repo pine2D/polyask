@@ -1,6 +1,7 @@
 import { projectPreferences, applyPreferences } from './sync-preferences';
 import { projectDrafts, applyDrafts, carriedSettings } from './sync-drafts';
 import { purgeDraftTombstones } from './draft-retention';
+import { projectGroups } from './sync-groups';
 import { terminalDraftSettings } from './sync-draft-merge';
 import { isStoredQuestion, isStoredQuestionAnswer } from "../shared/question-history";
 import { createHash } from "node:crypto";
@@ -116,18 +117,8 @@ export class SyncRepository {
       },
       "amsConsole.tier": { value: workspace.tier ?? "", updatedAt: workspace.updatedAt, deviceId }
     };
-    // Groups whose cloud copy names a host this build cannot resolve are consumed
-    // read-only: re-projecting them would upload a truncated host list that wins
-    // the tie against the complete one (same updatedAt, same deviceId).
-    const foreign = groupsWithUnknownHosts(remoteStates);
-    const groups = Object.fromEntries(this.database.state.entries<WorkspaceGroup>("group:")
-      .filter(({ value }) => "deletedAt" in value || !foreign.has(value.id))
-      .map(({ value }) => [
-        value.id,
-        "deletedAt" in value
-          ? value
-          : { id: value.id, name: value.name, hosts: value.sites.flatMap((key) => hostFor(key) ?? []), updatedAt: value.updatedAt, deviceId: value.deviceId }
-      ]));
+    // Unknown hosts in a group's cloud copy are kept, never truncated (see sync-groups.ts).
+    const groups = projectGroups(this.database.state.list<WorkspaceGroup>("group:"), remoteStates);
     const localTemplates = this.database.state.list<unknown>("template:").filter(isStoredPromptTemplate);
     const templates = mergeStateFragments([
       previous ?? { schema: SYNC_SCHEMA, deviceId, settings: {}, templates: {}, groups: {} },
@@ -318,17 +309,6 @@ function projectedSiteOrder(sites: readonly SiteKey[], remoteStates: Readonly<Re
     ? index < known.length ? [known[index++]] : []
     : [host]);
   return [...order, ...known.slice(index)];
-}
-
-function groupsWithUnknownHosts(remoteStates: Readonly<Record<string, StateFragment>>): Set<string> {
-  const ids = new Set<string>();
-  for (const fragment of Object.values(remoteStates)) {
-    for (const [id, group] of Object.entries(fragment?.groups ?? {})) {
-      const hosts = (group as { readonly hosts?: unknown }).hosts;
-      if (Array.isArray(hosts) && hosts.some((host) => typeof host === "string" && !keyFor(host))) ids.add(id);
-    }
-  }
-  return ids;
 }
 
 function selectionFromSetting(setting?: VersionedSyncValue, order?: VersionedSyncValue): SiteKey[] | null {
