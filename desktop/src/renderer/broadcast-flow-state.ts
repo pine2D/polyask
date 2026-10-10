@@ -84,8 +84,11 @@ export class BroadcastFlowState {
     return true;
   }
 
-  cancel(): void {
+  /** 只有在途的一轮才能进入 cancelling；settle 后迟到的点击不改状态（否则没有 settle 再把它放回 idle）。 */
+  cancel(): boolean {
+    if (this.activeGeneration === null) return false;
     this.phase = "cancelling";
+    return true;
   }
 
   invalidate(): void {
@@ -120,7 +123,7 @@ export function cancelBroadcast(
   publish: (runState: RunState) => void,
   cancelIpc: () => void
 ): void {
-  state.cancel();
+  if (!state.cancel()) return;
   publish(state.runState);
   cancelIpc();
 }

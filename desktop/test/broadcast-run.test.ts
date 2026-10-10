@@ -220,6 +220,19 @@ test("cancel publishes the locked state before sending its IPC", () => {
   assert.equal(state.runState, "cancelling");
 });
 
+// 2026-10-10 审查 R12：settle 之后、重渲染之前取消按钮仍可点；那次点击曾把状态钉在 cancelling，提交被拦到下一次重启。
+test("a cancel that arrives after settlement leaves the idle state and sends no IPC", () => {
+  const state = new BroadcastFlowState();
+  const operation = state.begin(true)!;
+  assert.equal(state.settle(operation), true);
+  const events: string[] = [];
+  cancelBroadcast(state, (runState) => events.push(runState), () => events.push("ipc"));
+  assert.equal(state.runState, "idle");
+  assert.equal(events.includes("ipc"), false, "nothing is running, so the main process must not hold other submissions");
+  assert.equal(events.includes("cancelling"), false);
+  assert.equal(state.begin(true) === null, false, "the next submit is not blocked");
+});
+
 test("renderer action lock blocks submit and retry during auxiliary work", async () => {
   const lock = new ExclusiveActionLock();
   let releaseAuxiliary!: () => void;
