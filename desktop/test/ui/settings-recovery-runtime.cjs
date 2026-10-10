@@ -9,17 +9,20 @@ const check = (value, message) => { if (!value) throw Error(message); };
 async function wait(win, expression, label) {
   const until = Date.now() + 5000;
   while (Date.now() < until) {
-    if (await win.webContents.executeJavaScript(expression)) return;
+    if (await read(win, expression)) return;
     await new Promise(resolve => setTimeout(resolve, 20));
   }
   throw Error(`timeout: ${label}`);
 }
-const read = (win, expression) => win.webContents.executeJavaScript(expression);
+const read = (win, expression) => win.webContents.executeJavaScript(expression)
+  .catch(error => { throw Error(`${error.message} :: ${String(expression).slice(0, 160)}`); });
 const find = (selector) => `document.querySelector(${JSON.stringify(selector)})`;
 const textButton = (key) => `[...document.querySelectorAll('button')].find(el=>el.textContent===window.recoveryFixture.copy[${JSON.stringify(key)}])`;
 async function click(win, expression) {
   await wait(win, `!!(${expression}) && !(${expression}).disabled`, 'enabled click target');
-  await read(win, `(${expression}).scrollIntoView({block:'center',inline:'nearest'})`);
+  // A target revealed by a just-committed disclosure can still move after scrolling: aim only once its centre hits it.
+  await wait(win, `(()=>{const el=${expression};el.scrollIntoView({block:'center',inline:'nearest'});const r=el.getBoundingClientRect(),
+    hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return hit===el||el.contains(hit)})()`, 'click target in viewport');
   const point = await read(win, `(()=>{const el=${expression},r=el.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height,visible:getComputedStyle(el).visibility!=='hidden'}})()`);
   check(point.visible && point.width >= 24 && point.height >= 24,
     `native click target must be visible and at least 24px: ${expression}; width=${point.width}; height=${point.height}; visible=${point.visible}`);
@@ -45,6 +48,8 @@ async function navigate(win, section) {
   await read(win, `window.recoveryFixture.navigate(${JSON.stringify(section)})`);
   const id = section === 'data' ? 'settings-advanced-toggle' : 'settings-display-title';
   await wait(win, `document.activeElement?.id===${JSON.stringify(id)}`, 'explicit settings navigation');
+  // Focus moves in a microtask; the data disclosure opens on the following React commit.
+  if (section === 'data') await wait(win, '!!document.querySelector(".settings-advanced")?.open', 'data disclosure open');
 }
 async function shot(win, name) {
   writeFileSync(join(output, `${name}.png`), (await win.webContents.capturePage()).toPNG());
@@ -77,31 +82,31 @@ async function settingsFlow(win, name) {
   await wait(win, '!document.querySelector("[role=dialog]")', 'cancel late read');
   check(await read(win, 'document.activeElement?.textContent===window.recoveryFixture.copy.clearHistoryAction'), 'cancel restores opener focus');
   await click(win, textButton('clearHistoryAction'));
-  await wait(win, '!document.querySelector("[data-local-confirm]").disabled', 'counts loaded');
+  await wait(win, 'document.querySelector("[data-local-confirm]")?.disabled===false', 'counts loaded');
   await click(win, textButton('localDataBackupFirst'));
   await wait(win, '!document.querySelector("[role=dialog]") && document.activeElement?.textContent===window.recoveryFixture.copy.backupExport', 'backup navigation');
   check(await read(win, 'window.recoveryFixture.calls.exports===0 && window.recoveryFixture.calls.clears===0'), 'backup navigation only');
   await navigate(win, 'data');
   await click(win, textButton('clearHistoryAction'));
-  await wait(win, '!document.querySelector("[data-local-confirm]").disabled', 'second counts loaded');
+  await wait(win, 'document.querySelector("[data-local-confirm]")?.disabled===false', 'second counts loaded');
   const ime = await read(win, `(()=>{const event=new KeyboardEvent('keydown',{key:'Escape',keyCode:229,bubbles:true,cancelable:true});window.dispatchEvent(event);return !event.defaultPrevented&&!!document.querySelector('[role=dialog]')})()`);
   check(ime, 'simulated composition Escape preserves native default and confirmation');
   await click(win, find('[data-local-confirm]'));
   // The first same-count confirmation has completed; restart to test changed scope.
   await wait(win, '!document.querySelector("[role=dialog]")', 'initial clear');
   await click(win, textButton('clearHistoryAction'));
-  await wait(win, '!document.querySelector("[data-local-confirm]").disabled', 'changed scope ready');
+  await wait(win, 'document.querySelector("[data-local-confirm]")?.disabled===false', 'changed scope ready');
   await read(win, 'window.recoveryFixture.setHistory(3)');
   await click(win, find('[data-local-confirm]'));
   await wait(win, '!!document.querySelector(".local-counts-changed")', 'changed scope retained');
   check(await read(win, 'window.recoveryFixture.calls.clears===1'), 'changed counts cannot clear');
   await click(win, find('[data-local-confirm]'));
-  await wait(win, '!document.querySelector("[role=dialog]") && document.querySelector(".archive-status").textContent===window.recoveryFixture.copy.localDataHistoryCleared.replace("{count}","4")', 'actual clear feedback');
+  await wait(win, '!document.querySelector("[role=dialog]") && document.querySelector(".archive-status")?.textContent===window.recoveryFixture.copy.localDataHistoryCleared.replace("{count}","4")', 'actual clear feedback');
   await read(win, 'window.recoveryFixture.failStats()');
   await click(win, textButton('clearHistoryAction'));
   await wait(win, '!!document.querySelector("[role=dialog] [role=alert]") && document.querySelector("[data-local-confirm]").disabled', 'stats failure');
   await click(win, textButton('localDataStatsRetry'));
-  await wait(win, '!document.querySelector("[data-local-confirm]").disabled', 'stats reread');
+  await wait(win, 'document.querySelector("[data-local-confirm]")?.disabled===false', 'stats reread');
   await read(win, 'document.querySelector("[data-local-confirm]").focus()');
   await key(win, 'Tab');
   check(await read(win, 'document.activeElement?.textContent===window.recoveryFixture.copy.localDataBackupFirst'), 'Tab wraps to first visible confirmation control');
@@ -111,7 +116,7 @@ async function settingsFlow(win, name) {
   await wait(win, '!document.querySelector("[role=dialog]")', 'confirmation Escape');
   await read(win, 'window.recoveryFixture.failWrite()');
   await click(win, textButton('clearHistoryAction'));
-  await wait(win, '!document.querySelector("[data-local-confirm]").disabled', 'write attempt ready');
+  await wait(win, 'document.querySelector("[data-local-confirm]")?.disabled===false', 'write attempt ready');
   await click(win, find('[data-local-confirm]'));
   await wait(win, '!!document.querySelector("[role=dialog] [role=alert]") && !document.querySelector("[data-local-confirm]").disabled', 'write failure stays retryable');
   await click(win, find('[data-local-confirm]'));

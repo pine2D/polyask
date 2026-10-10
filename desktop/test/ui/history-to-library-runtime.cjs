@@ -227,8 +227,13 @@ app.whenReady().then(async () => {
   await until('!document.querySelector("[role=dialog]")', 'folder saved');
   saved = await state();
   check(saved.folderTarget === 'archive:history-result-1' && saved.folderIds === 'fixture-folder', 'folder association uses the new snapshot ID');
+  // A real user cannot close the library inside the 140ms history exit transition; reopening during it keeps the reader.
+  const closeLibrary = async label => {
+    await until('!document.querySelector("aside.question-history")', 'history exit transition settled');
+    await click('.library-close'); await until('!!document.querySelector(".question-main")', label);
+  };
   lastStep = 'snapshot-compare';
-  await click('.library-close'); await until('!!document.querySelector(".question-main")', 'history reopened'); await click('.question-main');
+  await closeLibrary('history reopened'); await click('.question-main');
   await until('!!document.querySelector(".markdown-preview")', 'saved answer reopened');
   await organize(); await select('[data-archive-site=kimi] select', 1); await click('[data-question-archive=compare]');
   await until('document.querySelector(".archive-detail")?.dataset.view === "compare"', 'new result compare mode');
@@ -238,7 +243,7 @@ app.whenReady().then(async () => {
   console.log(JSON.stringify({ scenario: 'old-copy-read-compare-and-existing-folder', ok: true, ...saved }));
 
   lastStep = 'snapshot-busy-late';
-  await click('.library-close'); await until('!!document.querySelector(".question-main")', 'history return'); await click('.question-main');
+  await closeLibrary('history return'); await click('.question-main');
   await until('!!document.querySelector(".markdown-preview")', 'returned answer');
   await organize(); await js('window.historyFixture.createDelay(true)'); await click('[data-question-archive=read]');
   await js('window.historyFixture.busy(true)'); await pause();
@@ -255,7 +260,8 @@ app.whenReady().then(async () => {
   await click('.question-main'); await until('!!document.querySelector(".markdown-preview")', 'detail before reask');
   await js('document.querySelector(".question-reader").scrollTop=0'); await pause();
   await copyPrompt(); await click('[data-action=reask-question]');
-  check((await state()).draftExact && await js('!document.querySelector(".question-history")'), 'reask passes the complete original and closes history');
+  check((await state()).draftExact && await js('document.querySelector(".question-history")?.dataset.state !== "open"'), 'reask passes the complete original and closes history');
+  await until('!document.querySelector(".question-history")', 'history exit transition after reask');
   console.log(JSON.stringify({ scenario: 'late-replies-and-full-reask', ok: true, ...await state() }));
   win.destroy(); app.exit(0);
 }).catch(async error => {
