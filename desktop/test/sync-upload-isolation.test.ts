@@ -5,6 +5,7 @@ import { DesktopDatabase } from "../src/main/database";
 import { DriveClient, MULTIPART_BODY_LIMIT, type AccessTokenProvider } from "../src/main/drive-client";
 import { SyncEngine, type SyncAuth, type SyncDrive } from "../src/main/sync-engine";
 import { SyncRepository } from "../src/main/sync-repository";
+import { DraftRepository } from "../src/main/draft-repository";
 import { createArchiveRecord } from "../src/shared/archive";
 
 const auth = (): SyncAuth => ({ configured: () => true, securePersistence: () => true, connect: async () => undefined, disconnect: async () => undefined });
@@ -103,6 +104,35 @@ test("a body above the multipart limit is sent through a resumable session; smal
   await client.upsert("small", "small.json", { app: "polyask" }, { text: "short" });
   assert.equal(requests.length, 1);
   assert.equal(requests[0].url.searchParams.get("uploadType"), "multipart");
+});
+
+test("a state file above 5 MB reaches Drive through the real client instead of blocking every round", async () => {
+  const { database, repository } = connected();
+  database.meta.put("draftSyncEnabled", true);
+  const drafts = new DraftRepository(database.state, database.meta);
+  const chunk = "汉".repeat(170_000); // ~510 KB UTF-8 each, 11 of them exceed 5 MB
+  for (let i = 0; i < 11; i++) drafts.save({ kind: "comparison", context: `archive-${i}`, title: "", content: { notes: chunk } });
+  const stored = new Map<string, number>();
+  const client = new DriveClient(provider, async (input, init) => {
+    const url = new URL(String(input));
+    if (url.pathname.endsWith("/changes/startPageToken")) return Response.json({ startPageToken: "start" });
+    if (url.pathname.endsWith("/changes")) return Response.json({ changes: [], newStartPageToken: "next" });
+    if (url.pathname === "/drive/v3/files") return Response.json({ files: [] });
+    const size = init?.body instanceof Uint8Array ? init.body.byteLength : Buffer.byteLength(String(init?.body ?? ""));
+    if (url.searchParams.get("uploadType") === "multipart" && size > 5 * 1024 * 1024) return new Response("{}", { status: 413 });
+    if (url.searchParams.get("upload_id")) { stored.set("state", size); return Response.json({ id: "state-file" }); }
+    if (url.searchParams.get("uploadType") === "resumable") {
+      return new Response(null, { status: 200, headers: { Location: "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&upload_id=s" } });
+    }
+    return Response.json({ id: "small-file" });
+  });
+  const engine = new SyncEngine({ repository, drive: client, auth: auth(), now: () => 50_000 });
+  try {
+    const status = await engine.syncNow();
+    assert.equal(status.state, "idle");
+    assert.ok((stored.get("state") ?? 0) > 5 * 1024 * 1024);
+    assert.equal(repository.pending(), 0);
+  } finally { engine.dispose(); database.close(); }
 });
 
 test("a resumable session URI outside the Drive upload endpoint is rejected before any token is sent", async () => {
