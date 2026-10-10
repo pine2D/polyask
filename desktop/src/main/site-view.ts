@@ -12,6 +12,7 @@ import { navigationDisposition } from "./navigation";
 import { SiteNavigationPolicy } from "./navigation-guard";
 import { reassertPainting } from "./paint-recovery";
 import { allowAppNavigationUnload } from "./app-navigation-unload";
+import { ExternalOpenGate, handsOffToBrowser } from "./site-external-links";
 
 interface SiteViewCallbacks {
   readonly onLoading: () => void;
@@ -105,6 +106,10 @@ export function createSiteView(
   contents.on("render-process-gone", (_event, details) => callbacks.onCrash(details.reason));
 
   const policy = new SiteNavigationPolicy(site);
+  // 转交系统浏览器须有近期用户输入、一次输入一次（见 site-external-links.ts）：第三方帧不能凭空反复拉起浏览器。
+  const externalGate = new ExternalOpenGate();
+  contents.on("input-event", (_event, input) => externalGate.noteInput(input?.type));
+  const handOff = (url: string) => { if (externalGate.take()) callbacks.onExternal(url); };
   const guardNavigation = (isRedirect: boolean) => (event: Electron.Event<{
     readonly url: string;
     readonly isMainFrame: boolean;
@@ -114,9 +119,9 @@ export function createSiteView(
     if (decision.allow) return;
     event.preventDefault();
     // 拦下之后要给用户一个去处，否则点了毫无反应。只有「用户主动点出去」的那类才转交外部浏览器：
-    // external + 主帧 + 非重定向。服务端 302 与 block 类不转（前者是登录链中间态，后者本就该死掉）。
-    if (decision.disposition === "external" && event.isMainFrame && !isRedirect) {
-      callbacks.onExternal(event.url);
+    // 外部域或明文 http + 主帧 + 非重定向。服务端 302 与其余 block 类不转（前者是登录链中间态，后者本就该死掉）。
+    if (handsOffToBrowser(decision.disposition, event.url) && event.isMainFrame && !isRedirect) {
+      handOff(event.url);
     }
   };
   // will-navigate 是渲染端意图（恒主帧，程序化 loadURL/reload 不触发）；will-redirect 是
@@ -139,9 +144,10 @@ export function createSiteView(
     // Account only for the navigation we perform ourselves; a claim of
     // "main frame" from the opener would be worth nothing here.
     authRecovery.observe(decision.disposition, rewrite);
-    if (rewrite) void contents.loadURL(url);
+    // 失败由 did-fail-load 收口；不接住拒绝就是未处理拒绝。
+    if (rewrite) contents.loadURL(url).catch(() => undefined);
     // 回答里的引用链接绝大多数是 target="_blank"，走的正是这条。不转交就是静默无反应。
-    else if (decision.disposition === "external") callbacks.onExternal(url);
+    else if (handsOffToBrowser(decision.disposition, url)) handOff(url);
     return { action: "deny" };
   });
   return view;

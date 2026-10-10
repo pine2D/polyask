@@ -28,9 +28,11 @@ test("site-view hands refused external links to the browser instead of dropping 
   const source = readSource("src/main/site-view.ts");
 
   // 两条路都要转交，漏一条就还是静默无反应；而且必须是「用户主动点出去」的那类。
-  assert.match(source, /callbacks\.onExternal\(event\.url\)/);
+  // 两条都经 handOff（须有近期用户输入，见 site-external-links.test.ts 的行为回归）。
+  assert.match(source, /handOff\(event\.url\)/);
+  assert.match(source, /handOff\(url\)/);
   assert.match(source, /callbacks\.onExternal\(url\)/);
-  assert.match(source, /disposition === "external" && event\.isMainFrame && !isRedirect/,
+  assert.match(source, /handsOffToBrowser\(decision\.disposition, event\.url\) && event\.isMainFrame && !isRedirect/,
     "服务端 302 是登录链中间态，不能当成用户点击转交出去");
 });
 
