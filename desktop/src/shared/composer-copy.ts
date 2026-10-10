@@ -11,7 +11,7 @@ export const COMPOSER_COPY = {
   },
   zhTW: {
     composerExpand: '展開輸入框', composerCollapse: '收起輸入框',
-    composerNextMode: '下次傳送的回答檔位：{mode}',
+    composerNextMode: '下次傳送的回答模式：{mode}',
     composerModeSite: '原站', composerModeFast: '快速', composerModeThink: '深思'
   }
 } as const;

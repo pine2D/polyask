@@ -171,7 +171,7 @@ export const SYNC_COPY = {
     syncClearConfirmation: "確認刪除",
     settings: "設定",
     syncTitle: "Google Drive 同步",
-    syncDescription: "透過 PolyAsk 的 Drive 應用程式專屬資料夾同步已開啟網站、頁面順序、傳送勾選、回應模式、群組、提問記錄、範本、結果庫、決策卡與任務資料夾。同步資料夾或決策卡後，舊版裝置須升級才能恢復同步。",
+    syncDescription: "透過 PolyAsk 的 Drive 應用程式專屬資料夾同步已開啟網站、頁面順序、傳送勾選、回答模式、群組、提問記錄、範本、結果庫、決策卡與任務資料夾。同步資料夾或決策卡後，舊版裝置須升級才能恢復同步。",
     syncConnected: "已連線",
     syncDisconnected: "未連線",
     syncPending: "{count} 項待同步",

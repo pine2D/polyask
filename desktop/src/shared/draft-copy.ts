@@ -73,7 +73,7 @@ export const DRAFT_COPY = {
     draftFieldUncertainties: '待確認事項', draftFieldNextStep: '下一步', draftFieldEvidence: '證據摘錄',
     draftFieldJudgment: '我的判斷', draftFieldVerification: '下一步核驗行動', draftFieldQuotes: '來源摘錄',
     draftFieldConditions: '條件', draftFieldCost: '成本', draftFieldNotesEvidence: '依據筆記', draftFieldCategories: '來源分類',
-    draftFieldSources: '所選來源', draftFieldTarget: '目標 AI', draftFieldTier: '回答檔位',
+    draftFieldSources: '所選來源', draftFieldTarget: '目標 AI', draftFieldTier: '回答模式',
     draftFieldInstruction: '要求或追問', draftFieldExcerpt: '引用摘錄',
     draftStatusDraft: '草稿', draftStatusVerify: '待驗證', draftStatusFinal: '已定稿',
     draftTierFollow: '跟隨原站設定', draftTierFast: '快速', draftTierThink: '深度思考',

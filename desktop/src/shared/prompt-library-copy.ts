@@ -81,7 +81,7 @@ export const PROMPT_LIBRARY_COPY = {
     templateVariableHint: "自存範本可使用 {{變數名稱}}。請填齊各項；不適用時填「無」。",
     templatePreview: "問題預覽",
     templateApply: "填入問題",
-    templateReplace: "這會取代目前草稿，保留網站與檔位，不會傳送。",
+    templateReplace: "這會取代目前草稿，保留網站與回答模式，不會傳送。",
     templateReplaceTitle: "取代目前草稿？",
     templateReplaceAction: "取代草稿",
     templateBack: "返回提問庫",
