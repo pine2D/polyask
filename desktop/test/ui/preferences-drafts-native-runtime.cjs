@@ -149,7 +149,7 @@ app.whenReady().then(async () => {
     const confirmation = await require('./preferences-drafts-native-confirmation.cjs')({ tools, win, manager,
       views, commands: nativeCommands, surface: () => surface });
     fs.writeFileSync(join(output, `${locale}-confirmation.json`), JSON.stringify(confirmation, null, 2));
-    await clickElement(`[...document.querySelectorAll('.draft-copy-list li')].find(e=>e.querySelector('small').textContent===${JSON.stringify(copy.draftRemote)}).querySelector('button')`);
+    await clickElement(`[...document.querySelectorAll('.draft-copy-list li')].find(e=>e.querySelector('small:not(.draft-copy-summary)').textContent===${JSON.stringify(copy.draftRemote)}).querySelector('button')`);
     await clickText('.draft-actions button', copy.draftRestore);
     await wait('!!document.querySelector(".draft-confirm")');
     assert.equal(await run(`document.querySelector('.draft-confirm').textContent.includes(${JSON.stringify(copy.questionClearImages)})`), true);
@@ -189,7 +189,7 @@ app.whenReady().then(async () => {
     await type('textarea[name="prompt"]', '');
     await click('[data-draft-open]');
     await wait('!!document.querySelector(".draft-copy-list")');
-    await clickElement(`[...document.querySelectorAll('.draft-copy-list li')].find(e=>e.querySelector('small').textContent===${JSON.stringify(copy.draftRemote)}).querySelector('button')`);
+    await clickElement(`[...document.querySelectorAll('.draft-copy-list li')].find(e=>e.querySelector('small:not(.draft-copy-summary)').textContent===${JSON.stringify(copy.draftRemote)}).querySelector('button')`);
     await clickText('.draft-actions button', copy.draftRestore);
     await wait('!!document.querySelector(".draft-confirm")');
     assert.equal(await run('document.querySelector("textarea[name=prompt]").value'), '', 'empty prompt recovery still requires confirmation');

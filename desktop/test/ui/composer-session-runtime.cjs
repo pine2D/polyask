@@ -55,8 +55,15 @@ app.whenReady().then(async () => {
     const layouts = [];
     for (const width of [960, 1101, 1280, 1401, 1600]) {
       win.setContentSize(width, 900); await paint();
-      const bounds = await run('(()=>{const e=document.querySelector("[data-current-tier]"),s=document.querySelector(".send"),r=e.getBoundingClientRect(),b=s.getBoundingClientRect(),a=document.querySelector(".command-bar");return {width:innerWidth,labelVisible:r.width>0&&r.left>=0&&r.right<=innerWidth,sendVisible:b.width>=24&&b.right<=innerWidth,overflow:a.scrollWidth>a.clientWidth+1,height:a.getBoundingClientRect().height}})()');
-      assert.equal(bounds.labelVisible && bounds.sendVisible && !bounds.overflow, true, `toolbar stays usable: ${JSON.stringify(bounds)}`);
+      // Narrow bars hide the text label by design (toolbar-fit): the current tier must then stay visible as the pressed icon or the tier select.
+      const bounds = await run(`(()=>{const shown=e=>{const r=e?.getBoundingClientRect();return !!r&&r.width>0&&r.left>=0&&r.right<=innerWidth};
+        const s=document.querySelector(".send").getBoundingClientRect(),a=document.querySelector(".command-bar"),select=document.querySelector(".tier-select");
+        return {width:innerWidth,fit:a.dataset.fit||"",labelVisible:shown(document.querySelector("[data-current-tier]")),
+          pressedVisible:shown(document.querySelector('[data-tier-icon="think"][aria-pressed="true"]')),selectVisible:shown(select)&&select.value==="think",
+          promptWidth:Math.round(document.querySelector(".prompt-composer").getBoundingClientRect().width),
+          sendVisible:s.width>=24&&s.right<=innerWidth,overflow:a.scrollWidth>a.clientWidth+1,height:a.getBoundingClientRect().height}})()`);
+      const tierVisible = bounds.labelVisible || bounds.pressedVisible || bounds.selectVisible;
+      assert.equal(tierVisible && bounds.sendVisible && !bounds.overflow && bounds.promptWidth >= 320, true, `toolbar stays usable: ${JSON.stringify(bounds)}`);
       assert.equal(bounds.height, density === 'compact' ? 120 : 144);
       layouts.push(bounds);
     }

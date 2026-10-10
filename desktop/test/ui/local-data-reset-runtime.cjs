@@ -2,7 +2,8 @@ const { app, BrowserWindow, session } = require("electron");
 const { join } = require("node:path");
 const output = process.argv[2];
 app.setPath("userData", join(output, "profile"));
-const read = (window, expression) => window.webContents.executeJavaScript(expression);
+const read = (window, expression) => window.webContents.executeJavaScript(expression)
+  .catch(error => { throw Error(`${error.message} :: ${String(expression).slice(0, 160)}`); });
 async function wait(window, expression, label) {
   const until = Date.now() + 5000;
   while (Date.now() < until) {
@@ -40,7 +41,7 @@ async function resetFlow(window) {
   await wait(window, 'document.querySelector(".settings-advanced")?.open&&document.activeElement?.id==="settings-advanced-toggle"', "explicit data navigation");
   await click(window, '[...document.querySelectorAll("button")].find(el=>el.textContent===window.localDataResetFixture.copy.resetLocalAction)');
   await wait(window, '!!document.querySelector("[data-local-confirm]")&&!document.querySelector("[data-local-confirm]").disabled', "valid reset counts");
-  check(await read(window, 'document.querySelectorAll(".local-data-counts li").length===9'), "reset shows all business and retained-setting scopes");
+  check(await read(window, '(()=>{const rows=[...document.querySelectorAll(".local-data-counts li")].map(li=>li.textContent);return rows.length===11&&rows.every(text=>/\\d/.test(text)&&!/undefined|NaN|\\{count\\}/.test(text))})()'), "reset shows all business, draft and retained-setting scopes with counts");
   await click(window, 'document.querySelector("[data-local-confirm]")');
   await wait(window, 'window.localDataResetFixture.result().resetPending&&document.querySelector(".settings-workspace .panel-close")?.disabled', "deferred reset closes the root navigation gate");
   check(await read(window, 'window.localDataResetFixture.result().resets===1&&!window.localDataResetFixture.result().boundaryNavigation'), "IPC-start commands cannot navigate before the busy render");

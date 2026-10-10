@@ -18,13 +18,15 @@ module.exports = async ({ tools, locale, phase, copy, drafts, remoteDrafts, engi
     await wait('!!document.querySelector(".archive-detail")');
   };
   const openRecovery = async scope => {
+    // Inline entries render only once saved copies have loaded (an empty list takes no space).
+    await wait(`!!document.querySelector(${JSON.stringify(`${scope} .draft-recovery-entry`)})`);
     if (!(await run(`document.querySelector(${JSON.stringify(`${scope} .draft-recovery-entry`)}).open`)))
       await click(`${scope} .draft-recovery-entry > summary`);
     await wait(`document.querySelectorAll(${JSON.stringify(`${scope} .draft-copy-list li`)}).length>=2`);
   };
   const selectCopy = async (scope, label) => {
     await openRecovery(scope);
-    await clickElement(`[...document.querySelectorAll(${JSON.stringify(`${scope} .draft-copy-list li`)})].find(e=>e.querySelector('small').textContent===${JSON.stringify(label)}).querySelector('button')`);
+    await clickElement(`[...document.querySelectorAll(${JSON.stringify(`${scope} .draft-copy-list li`)})].find(e=>e.querySelector('small:not(.draft-copy-summary)').textContent===${JSON.stringify(label)}).querySelector('button')`);
     await wait(`!!document.querySelector(${JSON.stringify(`${scope} .draft-preview-fields`)})`);
   };
   const restore = async (scope, selector, expected, cancelFirst) => {
