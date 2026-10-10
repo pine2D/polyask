@@ -38,9 +38,11 @@ export function registerDataAdminIpc(options: DataAdminIpcOptions): () => void {
   });
   ipcMain.handle(CHANNELS[2], async (event) => {
     if (!options.trusted(event)) throw new Error("untrusted_sender");
-    const status = await options.admin.resetLocal();
-    options.afterReset();
-    return status;
+    // A failure may come after the wipe: republish whatever main now holds either way
+    // (a rejected duplicate request leaves that to the reset already running).
+    const duplicate = options.admin.isResetting === true;
+    try { return await options.admin.resetLocal(); }
+    finally { if (!duplicate) options.afterReset(); }
   });
   ipcMain.handle(CHANNELS[3], (event) => {
     if (!options.trusted(event)) throw new Error("untrusted_sender");

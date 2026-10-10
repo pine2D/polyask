@@ -134,6 +134,20 @@ test('reset with zero business counts remains available and reports the service 
   } finally { await h.close(); setShellApi(null); }
 });
 
+test('a failed reset still resynchronizes the renderer and keeps the confirmation for retry', async () => {
+  const effects: string[] = [];
+  setShellApi({ getLocalDataStats: async () => stats(), resetLocalData: async () => { throw Error('reset_failed'); } } as any);
+  const h = await mountDom(<LocalDataCard copy={copy} busy={false} onBusy={noop}
+    onFeedback={() => effects.push('feedback')} onStatus={() => effects.push('status')} onReset={() => effects.push('reset')} />);
+  try {
+    await h.click(button(h.document, copy.resetLocalAction));
+    await h.click(confirm(h.document));
+    assert.deepEqual(effects, ['reset'], 'main may already have wiped data: the renderer must drop its stale copy');
+    assert.equal(h.document.querySelector('[role="dialog"]') === null, false);
+    assert.match(h.document.querySelector('[role="alert"]')!.textContent!, /Could not change local data/);
+  } finally { await h.close(); setShellApi(null); }
+});
+
 test('a reset reply after unmount does not change renderer status or draft state', async () => {
   let finish!: (status: SyncStatus) => void;
   const effects: string[] = [];

@@ -80,7 +80,11 @@ export function useLocalDataConfirmation(props: LocalDataCallbacks) {
         }
         if (mounted.current && request === epoch.current) { update(null); latest.current.onFeedback(message); }
       } catch {
-        if (mounted.current && request === epoch.current) update({ ...next, executing: false, error: 'write' });
+        if (mounted.current && request === epoch.current) {
+          // A failed reset may already have wiped main's data: drop the renderer's stale copy too.
+          if (before.action === 'reset') latest.current.onReset?.();
+          update({ ...next, executing: false, error: 'write' });
+        }
       } finally { latest.current.onBusy(false); }
     } catch {
       if (mounted.current && request === epoch.current) update({ ...before, loading: false, error: 'stats' });

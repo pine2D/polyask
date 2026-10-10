@@ -150,9 +150,12 @@ export class DesktopDatabase {
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");
     });
     // DELETE 只把页挂进 freelist，提问与回答明文仍留在 .sqlite / WAL 里；重置的承诺是「本机清空」，收缩一次。
-    this.database.exec("VACUUM");
-    const checkpoint = this.database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as { busy?: number } | undefined;
-    if (checkpoint?.busy) throw new Error("reset_wal_checkpoint_failed");
+    // 收缩失败时数据已清空：只记告警，不能让调用方跳过重置后的收尾（重新发布空状态、重置界面）。
+    try {
+      this.database.exec("VACUUM");
+      const checkpoint = this.database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get() as { busy?: number } | undefined;
+      if (checkpoint?.busy) throw new Error("reset_wal_checkpoint_busy");
+    } catch { console.warn("reset_compaction_failed"); }
   }
 
   adoptImportedProfile(deviceId: string): void {

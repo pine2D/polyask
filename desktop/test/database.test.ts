@@ -8,6 +8,24 @@ import { DatabaseSync } from "node:sqlite";
 import { DesktopDatabase } from "../src/main/database";
 import { archiveFixture, readSource } from "./fixtures";
 
+test("a failed compaction after a local reset is only a warning: the wipe already happened", () => {
+  const database = DesktopDatabase.open(":memory:");
+  database.meta.put("deviceId", "kept-device");
+  database.state.put("workspace", { selectedSites: ["claude"], tier: null, updatedAt: 1, deviceId: "kept-device" }, 1);
+  const raw = (database as unknown as { database: DatabaseSync }).database;
+  const exec = raw.exec.bind(raw);
+  raw.exec = (sql: string) => { if (sql === "VACUUM") throw new Error("database is locked"); return exec(sql); };
+  const warn = console.warn;
+  const warnings: unknown[] = [];
+  console.warn = (...args: unknown[]) => { warnings.push(args[0]); };
+  try {
+    assert.doesNotThrow(() => database.resetLocalData());
+    assert.equal(database.state.get("workspace"), null);
+    assert.equal(database.meta.get("deviceId"), "kept-device");
+    assert.deepEqual(warnings, ["reset_compaction_failed"]);
+  } finally { console.warn = warn; database.close(); }
+});
+
 test("desktop database enables WAL and preserves archive tombstones across reopen", () => {
   const directory = mkdtempSync(join(tmpdir(), "polyask-database-"));
   const path = join(directory, "polyask.sqlite");
