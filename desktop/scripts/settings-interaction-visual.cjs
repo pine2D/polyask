@@ -59,19 +59,25 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const width of [640, 1280]) {
     win.setContentSize(width, 900);
     await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, diagnosticError: '1' } });
-    await wait('!!document.querySelector(".sync-stage-list code")');
+    await wait('!!document.querySelector(".sync-stage-list [data-stage-state=failed]")');
     await run('document.querySelector("#settings-advanced-toggle").click()');
     await paint();
     const geometry = await run(`(() => {
       const card = document.querySelector('.cloud-data-row'), heading = card.querySelector('h2').getBoundingClientRect();
       const description = card.querySelector('.settings-description p').getBoundingClientRect();
       return { gap: description.top - heading.bottom,
-        texts: [...document.querySelectorAll('.sync-stage-list strong, .sync-stage-list code')].map(e => ({text:e.textContent, clipped:e.scrollWidth > e.clientWidth + 1})),
+        texts: [...document.querySelectorAll('.sync-stage-list strong, .sync-stage-list small')].map(e => ({text:e.textContent, clipped:e.scrollWidth > e.clientWidth + 1})),
+        rows: [...document.querySelectorAll('.sync-stage-list li')].map(li => [Math.round(li.getBoundingClientRect().top), Math.round(li.querySelector('strong').getBoundingClientRect().top)]),
+        raw: /oauth_/.test(document.querySelector('.sync-overview').textContent), primary: document.querySelector('.sync-overview .primary').textContent,
         overflow: [...document.querySelectorAll('.settings-card, .settings-control')].some(e => e.scrollWidth > e.clientWidth + 2) };
     })()`);
     assert.ok(geometry.gap <= 12, `cloud heading gap: ${JSON.stringify(geometry)}`);
     assert.equal(geometry.overflow, false);
     assert.equal(geometry.texts.some(t => t.clipped), false, JSON.stringify(geometry.texts));
+    // Raw reason codes stay in the copied report; same-row stage titles share one baseline.
+    assert.equal(geometry.raw, false);
+    assert.equal(geometry.primary, { 'zh-CN': '重新连接', 'zh-TW': '重新連線', en: 'Reconnect' }[locale]);
+    for (const [row, title] of geometry.rows) for (const [other, otherTitle] of geometry.rows) if (row === other) assert.ok(Math.abs(title - otherTitle) <= 1, JSON.stringify(geometry.rows));
     if (locale === 'en') await shot(`settings-diagnostics-${width}`);
     await run('document.querySelector(".settings-body").scrollTop = document.querySelector(".settings-body").scrollHeight');
     if (locale === 'zh-CN') await shot(`settings-data-${width}`);

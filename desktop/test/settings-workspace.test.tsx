@@ -177,7 +177,8 @@ test("an expired connected session offers reauthentication instead of a dead-end
       onClose={noop}
     />
   );
-  assert.match(html, /Connect Google Drive/);
+  assert.match(html, /<strong>Needs reauthorization<\/strong>/);
+  assert.match(html, /class="settings-control primary"[^>]*>Reconnect<\/button>/);
   assert.match(html, /Disconnect/);
   assert.doesNotMatch(html, /class="settings-control primary"[^>]*>Sync now<\/button>/);
   assert.doesNotMatch(html, /<button type="button">Sync now<\/button>/);

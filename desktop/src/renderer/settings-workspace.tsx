@@ -19,6 +19,7 @@ import { PreferenceSyncSettings } from "./preference-sync-settings";
 import type { PreferenceSyncSettingsState } from "./use-synced-preferences";
 import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
+import { syncNeedsReauthorization, syncOverview } from "./sync-overview";
 import { shell } from "./shell-api";
 
 interface SettingsWorkspaceProps {
@@ -67,6 +68,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   const pendingFocus = useRef(false);
   const busy = actionBusy || props.status.state === "syncing";
   const statusText = describeSync(props.copy, props.status);
+  const overview = syncOverview(props.copy, props.status);
   const setWriteBlocking = (source: "local" | "cloud", value: boolean): void => {
     const wasBlocking = writes.current.local || writes.current.cloud;
     writes.current[source] = value;
@@ -199,7 +201,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     queueMicrotask(() => {
       const target = document.getElementById(id);
       if (!target) return;
-      target.tabIndex = -1;
+      // 只给本不可聚焦的标题补 tabIndex；<summary> 等原生可聚焦元素保持在 Tab 顺序里。
+      if (!target.matches("summary, button, a[href], input, select, textarea, [tabindex]")) target.tabIndex = -1;
       target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true });
     });
   };
@@ -218,8 +221,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
       </header>
       <div className="settings-body">
         <nav className="settings-section-navigation" aria-label={props.copy.settingsSectionNavigation}>
-          {sections.map(([section, id, label]) => <button type="button" key={section} data-settings-section={section}
-            disabled={closeLocked} onClick={() => navigateSection(section, id)}>{label}</button>)}
+          <div className="settings-section-scroller">{sections.map(([section, id, label]) => <button type="button" key={section} data-settings-section={section}
+            disabled={closeLocked} onClick={() => navigateSection(section, id)}>{label}</button>)}</div>
         </nav>
         <div className="settings-group">
           <section className="settings-card sync-overview" aria-labelledby="sync-title">
@@ -227,10 +230,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
               <h1 id="sync-title">{props.copy.syncTitle}</h1>
               <p>{props.copy.syncDescription}</p>
             </div>
-            <div className="sync-state" data-state={props.status.state} data-connected={props.status.connected}>
+            <div className="sync-state" data-state={props.status.state} data-connected={props.status.connected} data-tone={overview.tone}>
               <i aria-hidden="true" />
-              <strong>{props.status.connected ? props.copy.syncConnected : props.copy.syncDisconnected}</strong>
-              <span>{statusText}</span>
+              <strong>{overview.title}</strong>
+              <span>{overview.detail}</span>
             </div>
             <dl className="sync-facts">
               <div><dt>{formatCopy(props.copy.syncPending, { count: props.status.pending })}</dt><dd>{lastSuccess}</dd></div>
@@ -239,9 +242,9 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             {props.status.oauthConfigured && !props.status.secureTokenStorage ? <p className="settings-notice warning">{props.copy.syncStorageWarning}</p> : null}
             {props.status.readOnly ? <p className="settings-notice warning">{props.copy.syncReadOnly}</p> : null}
             <div className="settings-actions">
-              {!props.status.connected || props.status.state === "auth" ? (
-                <button type="button" className="settings-control primary" disabled={busy || !props.status.oauthConfigured} onClick={() => void run(() => shell.connectSync(), "connect")}>{props.copy.syncConnect}</button>
-              ) : <button type="button" className="settings-control primary" disabled={busy} onClick={() => void run(() => shell.syncNow(), "sync")}>{props.status.state === "syncing" ? statusText : pendingAction === "sync" ? props.copy.syncStateSyncing : props.copy.syncNow}</button>}
+              {overview.primary !== "sync" ? (
+                <button type="button" className="settings-control primary" disabled={busy || !props.status.oauthConfigured} onClick={() => void run(() => shell.connectSync(), "connect")}>{overview.primaryLabel}</button>
+              ) : <button type="button" className="settings-control primary" disabled={busy} onClick={() => void run(() => shell.syncNow(), "sync")}>{pendingAction === "sync" ? props.copy.syncStateSyncing : overview.primaryLabel}</button>}
               {props.status.connected ? <button type="button" className="settings-control" disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncDisconnect}</button> : null}
               {!props.status.connected && props.status.hasStoredToken ? (
                 <button type="button" className="settings-control" title={props.copy.syncRevokeHint} disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncRevoke}</button>
@@ -253,7 +256,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
               open={diagnosticsOpen}
               busy={busy || diagnosticsBusy}
               refreshing={diagnosticsBusy}
-              canSync={props.status.connected && props.status.state !== "auth"}
+              canSync={props.status.connected && !syncNeedsReauthorization(props.status)}
               onOpenChange={setDiagnosticsOpen}
               onCopy={() => { void copyDiagnostics(); }}
               onRefresh={() => { void refreshDiagnostics(); }}

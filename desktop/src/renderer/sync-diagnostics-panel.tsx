@@ -63,7 +63,8 @@ export function SyncDiagnosticsPanel(props: SyncDiagnosticsPanelProps): React.JS
                 key={stage.id}
               >
                 <i aria-hidden="true" />
-                <span><strong>{props.copy[STAGE_LABELS[stage.id]]}</strong>{stage.code ? <code>{stage.code}</code> : null}</span>
+                {/* 原始原因码只进「复制诊断报告」；卡片只给阶段名与结论，左右列标题因此同一基线。 */}
+                <span><strong>{props.copy[STAGE_LABELS[stage.id]]}</strong></span>
                 <small>{props.copy[STATE_LABELS[stage.state]]}</small>
               </li>
             ))}

@@ -16,6 +16,8 @@ test('in-page section navigation opens data and focuses headings without running
     await h.click(data!);
     assert.equal(advanced(h.document).open, true);
     assert.equal(h.document.activeElement === h.document.getElementById('settings-advanced-toggle'), true);
+    // R25：<summary> 本身可聚焦，跳转后不能被设成 tabIndex=-1 而退出 Tab 顺序。
+    assert.equal(h.document.getElementById('settings-advanced-toggle')!.hasAttribute('tabindex'), false);
     await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="display"]')!);
     assert.equal(h.document.activeElement === h.document.getElementById('settings-display-title'), true);
     assert.equal(clears, 0);

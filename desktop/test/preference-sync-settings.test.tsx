@@ -23,7 +23,12 @@ test('each preference group names the accepted value, current source and edit sc
     assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-scope]')!.textContent!, /this device/i);
     assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-current]')!.textContent!, /Focus/);
     assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-source]')!.textContent!, /shared/i);
-    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-scope]')!.textContent!, /devices that follow/i);
+    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-scope]')!.textContent!, /other devices following/i);
+    // The follow explanation is stated once for the section, not repeated per group; value cells carry no sentence period.
+    const text = h.document.body.textContent!;
+    assert.equal(text.split(getCopy('en').preferenceSyncFollowHint).length - 1, 1);
+    assert.equal(text.split(getCopy('en').preferenceSyncScopeShared).length - 1, 1, 'layout scope is not repeated under the layout value');
+    for (const scope of h.document.querySelectorAll('[data-preference-scope]')) assert.doesNotMatch(scope.textContent!, /[.。]$/);
     const legends = [...h.document.querySelectorAll('legend')].map(node => node.textContent);
     assert.equal(new Set(legends).size, legends.length, 'follow-source and layout-value controls need distinct legends');
   } finally { await h.close(); }

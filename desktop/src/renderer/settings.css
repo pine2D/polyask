@@ -25,7 +25,14 @@
 .settings-group {
   min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--panel);
 }
-.settings-section-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* 分区导航吸顶并单行横向滚动：窄窗/150% 缩放时不折成两行，滚到下方分区时仍可直达。
+   设置页正文的滚动内边距让出导航高度，跳转后的分区标题不被它挡住。 */
+.settings-body { scroll-padding-top: 80px; }
+.settings-section-navigation { position: sticky; top: -24px; z-index: 3; margin: -24px -4px 0; padding: 24px 0 4px; background: var(--canvas); }
+.settings-section-scroller { padding: 3px 4px 6px; display: flex; flex-wrap: nowrap; align-items: center; gap: 6px; overflow: auto hidden; }
+.settings-section-scroller::-webkit-scrollbar { height: 6px; }
+.settings-section-scroller::-webkit-scrollbar-thumb { border-radius: 3px; background: var(--border); }
+.settings-section-navigation button { flex: 0 0 auto; white-space: nowrap; }
 .settings-section-navigation button {
   min-height: max(30px, var(--control-height)); padding: 5px 10px;
   border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--panel);
@@ -57,10 +64,10 @@
 .sync-state i { width: 8px; height: 8px; grid-row: 1 / 3; border-radius: 50%; background: var(--muted); }
 .sync-state strong { font-size: 12px; }
 .sync-state span { max-width: 240px; overflow-wrap: anywhere; line-height: 1.5; color: var(--muted); font-size: var(--font-meta); }
-.sync-state[data-connected="true"][data-state="idle"] i { background: var(--success); }
-.sync-state[data-state="syncing"] i { background: var(--accent); }
-.sync-state[data-state="waiting"] i, .sync-state[data-state="schema"] i { background: var(--warning); }
-.sync-state[data-state="blocked"] i, .sync-state[data-state="auth"] i, .sync-state[data-state="error"] i { background: var(--danger); }
+.sync-state[data-tone="ok"] i { background: var(--success); }
+.sync-state[data-tone="busy"] i { background: var(--accent); }
+.sync-state[data-tone="attention"] i { background: var(--warning); }
+.sync-state[data-tone="error"] i { background: var(--danger); }
 .sync-facts { grid-column: 1 / -1; margin: 0; }
 .sync-facts div { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: var(--font-meta); }
 .sync-facts dt, .sync-facts dd { margin: 0; }
@@ -97,7 +104,6 @@
 .sync-stage-list i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
 .sync-stage-list span { min-width: 0; display: grid; gap: 2px; }
 .sync-stage-list strong { font-size: var(--font-meta); overflow-wrap: anywhere; }
-.sync-stage-list code { color: var(--muted); font-size: var(--font-meta); overflow-wrap: anywhere; user-select: text; }
 .sync-stage-list small { grid-column: 2; color: var(--muted); font-size: var(--font-meta); white-space: nowrap; }
 .sync-stage-list li[data-stage-state="ok"] i { background: var(--success); }
 .sync-stage-list li[data-stage-state="checking"] i { background: var(--accent); }
@@ -166,6 +172,7 @@
 .local-confirm-tools button:disabled { color: var(--muted); }
 @media (max-width: 760px) {
   .settings-body { grid-template-columns: minmax(0, 1fr); padding: 16px; }
+  .settings-section-navigation { top: -16px; margin-top: -16px; padding-top: 16px; }
   .settings-card { padding: 16px; }
   .settings-advanced > summary { padding: 12px 16px; }
   .settings-advanced-hint { padding: 0 16px 16px; }
