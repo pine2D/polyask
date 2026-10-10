@@ -8,6 +8,8 @@
 .decision-detail-actions { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--panel); }
 .decision-detail-actions span { color: var(--muted); font-size: 12px; }
 .decision-editor { max-width: 920px; margin: auto; padding: 24px 28px 48px; }
+/* 草稿入口与下方字段同一内容列，左缘对齐。 */
+.decision-workspace .draft-recovery-entry { max-width: 920px; margin: 16px auto 0; padding: 0 28px; border-top: 0; }
 .decision-editor h1 { font-size: 24px; margin: 0 0 20px; overflow-wrap: anywhere; }
 .decision-editor h2 { font-size: 15px; margin: 0 0 10px; }
 .decision-editor label { display: grid; gap: 7px; font-size: 13px; }
@@ -18,9 +20,10 @@
 .decision-field-error { color: var(--danger-ink); font-size: 12px; margin: 0; overflow-wrap: anywhere; }
 .decision-field-hints .decision-field-error { flex: 1 1 200px; }
 .decision-editor input[aria-invalid="true"], .decision-editor textarea[aria-invalid="true"], .decision-excerpt blockquote[aria-invalid="true"] { border-color: var(--danger-ink); }
-.decision-meta { display: flex; align-items: center; gap: 20px; margin: 20px 0; }
+/* 说明与状态值（只读文字或下拉）同一基线，不再悬在「状态」标签与值两行之间。 */
+.decision-meta { display: flex; flex-wrap: wrap; align-items: last baseline; gap: 6px 20px; margin: 20px 0; }
 .decision-meta label { min-width: 120px; }
-.decision-meta p { color: var(--muted); font-size: 12px; }
+.decision-meta p { margin: 0; color: var(--muted); font-size: 12px; }
 .decision-source { padding: 14px 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
 .decision-source p { margin: 8px 0; overflow-wrap: anywhere; }
 .decision-fields { display: grid; gap: 22px; margin: 24px 0; }
@@ -35,6 +38,7 @@
 @media (max-width: 760px) {
   .decision-workspace .archive-body { grid-template-columns: minmax(150px, 30%) minmax(0, 1fr); }
   .decision-editor { padding: 16px; }
+  .decision-workspace .draft-recovery-entry { padding-inline: 16px; }
   .decision-tabs { gap: 4px; }
   .decision-tabs button, .decision-toolbar > button { padding: 6px; }
 }
