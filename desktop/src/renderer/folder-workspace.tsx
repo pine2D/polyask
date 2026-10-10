@@ -71,6 +71,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const selectedRef = useRef(selected); selectedRef.current = selected;
   const selectedKeysRef = useRef(selectedKeys); selectedKeysRef.current = selectedKeys;
   const filterChanged = useRef(false);
+  const loadedRevision = useRef(-1);
   const listScroll = useRef(initial.listScroll);
   const refresh = () => setRevision(value => value + 1);
   const bulk = useLibraryBulk(value => blocking('bulk', value), refresh);
@@ -96,18 +97,27 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       setLoading(true);
       const target = targetFromContentKey(selectedRef.current ? contentKey(selectedRef.current) : restoringKey.current);
       const selection = selectedKeysRef.current.flatMap(key => targetFromContentKey(key) ?? []);
-      Promise.all([shell.listFolders(), shell.queryFolderContents({ ...filters, page, sort, locale: props.locale,
-        selected: target ?? undefined, selectedTargets: selection, locateSelected: filterChanged.current }), shell.listArchiveTags()]).then(async ([nextFolders, contents, nextTags]) => {
+      const fresh = loadedRevision.current !== revision;
+      const wasLocating = filterChanged.current;
+      Promise.all([fresh ? shell.listFolders() : null, shell.queryFolderContents({ ...filters, page, sort, locale: props.locale,
+        selected: target ?? undefined, selectedTargets: selection, locateSelected: filterChanged.current }), fresh ? shell.listArchiveTags() : null]).then(async ([nextFolders, contents, nextTags]) => {
         if (request !== epoch.current) return;
-        const match = contents.selected && requestIntent === intent.current ? await readFolderContent(contents.selected) : null;
-        if (request !== epoch.current) return;
-        setFolders(nextFolders); setItems(contents.items); setTotal(contents.total); setPage(contents.page);
+        const reread = !!contents.selected && requestIntent === intent.current && (fresh || wasLocating || !selectedRef.current);
+        let match: FolderContent | null = null, detailFailed = false;
+        if (reread) {
+          try { match = await readFolderContent(contents.selected!); } catch { detailFailed = true; }
+          if (request !== epoch.current) return;
+        }
+        if (nextFolders) setFolders(nextFolders);
+        if (nextTags) setTags(nextTags);
+        loadedRevision.current = revision;
+        setItems(contents.items); setTotal(contents.total); setPage(contents.page);
         const live = new Set(contents.selectedTargets.map(target => `${target.kind}:${target.id}`));
         setSelectedKeys(current => current.filter(key => live.has(key)));
-        setTags(nextTags); setLoading(false); setLoadFailed(false); setMessage('');
+        setLoading(false); setLoadFailed(false); setMessage(detailFailed ? copy.folderLoadFailed : '');
         const key = target ? `${target.kind}:${target.id}` : null;
         restoringKey.current = null;
-        if (key && requestIntent === intent.current) {
+        if (key && requestIntent === intent.current && !detailFailed && !(contents.selected && !reread)) {
           if (match) setSelected(match);
           else {
             const responseSelection = selectedRef.current ? contentKey(selectedRef.current) : null;
@@ -206,17 +216,20 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         page={page} sort={sort} selectedKeys={selectedKeys} onSelectedKeysChange={setSelectedKeys}
         onPageChange={value => navigate(() => { setLoading(true); setPage(value); listScroll.current = 0; })} onSortChange={changeSort}
         listScroll={listScroll.current} onScroll={value => { listScroll.current = value; session.update({ listScroll: value }); }} disabled={busy}
-        onSelect={item => navigate(() => {
-          const readingIntent = intent.current;
+        onSelect={item => {
+          // Ask once, against the draft state at response time: a pre-read prompt would be answered again if the draft changed during the read.
+          if (busyRef.current) return;
+          const readingIntent = ++intent.current;
           readFolderContent({ kind: item.kind, id: item.record.id }).then(record => {
             if (!mounted.current || readingIntent !== intent.current) return;
             requestDecisionNavigation(() => {
               if (!mounted.current || readingIntent !== intent.current || busyRef.current) return;
+              listScroll.current = reading.root.current?.querySelector<HTMLElement>('.archive-list')?.scrollTop ?? listScroll.current;
               setSelected(record); setNewSource(null); setPane(record ? 'detail' : 'list');
               setMessage(record ? '' : copy.folderLoadFailed);
             });
           }).catch(() => { if (mounted.current && readingIntent === intent.current) setMessage(copy.folderLoadFailed); });
-        })} />
+        }} />
       <div className="folder-detail">
         {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
           : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => navigate(() => { setNewSource(source); setNewDraft(draft); }), detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{copy.libraryPickHint}</p></div>}
