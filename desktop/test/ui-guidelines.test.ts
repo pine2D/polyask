@@ -96,7 +96,8 @@ test("the command surface keeps scrolling inside the result list", () => {
 
 test("Drive idle success color requires an active connection", () => {
   const css = renderer("settings.css");
-  assert.match(css, /\.sync-state\[data-connected="true"\]\[data-state="idle"\] i\s*\{\s*background:\s*var\(--success\);\s*\}/);
+  // The dot follows the single sync conclusion; only a connected, idle device gets tone "ok" (see sync-overview.test.tsx).
+  assert.match(css, /\.sync-state\[data-tone="ok"\] i\s*\{\s*background:\s*var\(--success\);\s*\}/);
   assert.doesNotMatch(css, /\.sync-state\[data-state="idle"\] i\s*\{/);
 });
 

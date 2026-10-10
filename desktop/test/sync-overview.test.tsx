@@ -29,7 +29,7 @@ for (const locale of ["en", "zh-CN", "zh-TW"] as const) test(`${locale}: one con
   const misconfigured = syncOverview(copy, status({ state: "blocked", reason: "oauth_invalid_client" }));
   assert.notEqual(misconfigured.primary, "reconnect", "reauthorizing cannot fix a broken OAuth client");
   const off = syncOverview(copy, status({ connected: false }));
-  assert.deepEqual([off.title, off.primary, off.primaryLabel], [copy.syncDisconnected, "connect", copy.syncConnect]);
+  assert.deepEqual([off.title, off.tone, off.primary, off.primaryLabel], [copy.syncDisconnected, "off", "connect", copy.syncConnect], "success colour needs an active connection");
   for (const overview of [timeout, idle, waiting, failed, misconfigured, off]) {
     assert.doesNotMatch(`${overview.title} ${overview.detail} ${overview.primaryLabel}`, /oauth_|drive_|_timeout/, "raw reason codes stay out of the card");
   }

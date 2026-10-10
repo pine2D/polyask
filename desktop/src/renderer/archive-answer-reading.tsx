@@ -52,7 +52,7 @@ export function ArchiveAnswerReading(props: {
       </div>
       {!canUseEvidence ? <p role="status">{props.copy.excerptEvidenceLimit}</p> : null}
     </div> : null}
-    {rawOpen ? <FolderModal copy={props.copy} title={props.copy.excerptReviewOriginal} busy={false} onCancel={() => setRawOpen(false)} closeLabel={props.copy.dialogClose}>
+    {rawOpen ? <FolderModal copy={props.copy} title={props.copy.excerptReviewOriginal} busy={false} onCancel={() => setRawOpen(false)}>
       <p>{answerSourceId(source.resultIndex)} {source.label} · {props.copy.excerptOriginalHint}</p>
       {renderedHint ? <blockquote className="excerpt-rendered-hint">{renderedHint}</blockquote> : null}
       <textarea name="answer-excerpt-original" aria-label={props.copy.excerptOriginal} readOnly value={source.sourceText}
