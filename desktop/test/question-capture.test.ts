@@ -114,7 +114,27 @@ test('an owned turn with no answer becomes unavailable when its capture budget e
     assert.ok(a.sealedAt);
     assert.equal(a.capture, 'unavailable');
     assert.equal(history.targets().length, 0);
-    assert.equal(history.releasable('claude'), false);
+    // 2026-10-10 审查 R4：观察预算到期即观察结束，页面保护交给生成监视是否也已停下（site-page-protection.ts）。
+    assert.equal(history.releasable('claude'), true);
+  } finally { db.close(); }
+});
+
+test('an unowned capture of an unconfirmed submission becomes releasable when its budget expires', () => {
+  const db = DesktopDatabase.open(':memory:');
+  let now = 1000;
+  const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => now });
+  try {
+    const q = history.begin(request('uncertain'))!;
+    history.result('uncertain', { site: 'claude', ok: false, code: 'submit_unconfirmed' });
+    const token = history.token('claude')!;
+    history.accept('claude', { token, owned: false });
+    assert.equal(history.releasable('claude'), false, 'still inside the observation budget');
+    now += 15 * 60_000 + 2;
+    history.accept('claude', { token, owned: false });
+    const a = db.questions.answers(q.id)[0];
+    assert.equal(a.captureCode, 'capture_expired');
+    assert.equal(history.token('claude'), undefined);
+    assert.equal(history.releasable('claude'), true);
   } finally { db.close(); }
 });
 

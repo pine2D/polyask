@@ -7,6 +7,7 @@ import { runInNewContext } from "node:vm";
 import { transformSync } from "esbuild";
 import { readSource } from "./fixtures";
 import type { DesktopUiState } from "../src/shared/desktop-ui-state";
+import { statusForResult } from "../src/main/status";
 
 function harness(initialUiState?: DesktopUiState, clearStorageData: () => Promise<void> = async () => {}, selectedSites = ["claude", "chatgpt", "gemini"]) {
   const require = createRequire(resolve(__dirname, "../src/main/view-manager.ts"));
@@ -190,7 +191,35 @@ test("generation deadline exhaustion also releases a deselected page", async () 
   } finally { h.window.emit("closed"); }
 });
 
-test("unknown generation after observation and capture budgets remains open", () => {
+// 2026-10-10 审查 R4：「提交未确认」不开生成监视（无 deadline），旧口径 stopped 恒假，采集结束后页面仍永远报 generation_pending。
+test("a submit_unconfirmed page without a generation watch releases once its capture has ended", () => {
+  const h = harness();
+  let capturing = true;
+  try {
+    h.manager.setCapturePending((site: string) => site === "claude" && capturing, (site: string) => site === "claude" && !capturing);
+    h.manager.beginGenerationRun("uncertain", ["claude"]);
+    h.manager.markStatus(statusForResult("claude", { ok: false, code: "submit_unconfirmed" }, "uncertain"));
+    assert.equal(h.manager.sitePageCloseReason("claude"), "capture_pending");
+    h.manager.setSelection(["chatgpt", "gemini"]);
+    assert.equal(h.contents[0].isDestroyed(), false, "capture still owns the page");
+    capturing = false;
+    assert.equal(h.manager.sitePageCloseReason("claude"), null, "an explicit close is no longer refused as generation_pending");
+    h.manager.releaseUnselectedViews();
+    assert.equal(h.contents[0].isDestroyed(), true);
+  } finally { h.window.emit("closed"); }
+});
+
+test("a submitted page whose watch has not started yet stays protected", () => {
+  const h = harness();
+  try {
+    h.manager.setCapturePending(() => false, () => true);
+    h.manager.beginGenerationRun("sent", ["claude"]);
+    h.manager.markStatus(statusForResult("claude", { ok: true }, "sent"));
+    assert.equal(h.manager.sitePageCloseReason("claude"), "generation_pending");
+  } finally { h.window.emit("closed"); }
+});
+
+test("unknown generation without capture release evidence remains open", () => {
   const h = harness();
   try {
     h.manager.setCapturePending(() => false, () => false);

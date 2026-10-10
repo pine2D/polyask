@@ -176,7 +176,7 @@ export class QuestionHistoryService {
         if (v.generation === "generating") this.revoke(site, e);
         if (v.ended || now >= e.deadline) {
           this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: current.answerMarkdown ? "interrupted" : "unavailable", captureCode: v.captureCode ?? (now >= e.deadline ? "capture_expired" : "turn_unconfirmed") });
-          if (v.ended) this.releasableSites.set(site, this.repository.lifecycle);
+          if (v.ended || now >= e.deadline) this.releasableSites.set(site, this.repository.lifecycle);
           this.active.delete(site);
         } else if (v.captureCode && v.captureCode !== current.captureCode) {
           this.repository.putAnswer({ ...current, updatedAt: now, captureCode: v.captureCode });
@@ -213,7 +213,8 @@ export class QuestionHistoryService {
       }
       if (upgraded) { try { this.reportSubmitted?.(e.runId, site); } catch { /* Status display must never break saving. */ } }
       if (sealed) {
-        if (complete || v.ended) this.releasableSites.set(site, this.repository.lifecycle);
+        // 完整封存、冻结结束与观察预算到期都是采集观察结束：只解除采集这一侧，生成监视仍须自己停下才放页（site-page-protection.ts）。
+        this.releasableSites.set(site, this.repository.lifecycle);
         this.active.delete(site);
       }
     }, undefined);
