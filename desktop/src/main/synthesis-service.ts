@@ -41,10 +41,14 @@ export class SynthesisService {
   private candidate: SynthesisCandidate | null = null;
   private activeController: AbortController | null = null;
   private generation = 0;
+  private beforeNavigate: (site: SiteKey) => Promise<void> = async () => undefined;
 
   constructor(private readonly options: SynthesisServiceOptions) {
     this.now = options.now ?? Date.now;
   }
+
+  /** 目标站导航到新会话前先读完它在采的群发回答（采集服务晚于本服务建立，question-capture-binding.ts）。 */
+  setBeforeNavigate(handler: (site: SiteKey) => Promise<void>): void { this.beforeNavigate = handler; }
 
   getPending(): PendingSynthesis | null {
     return this.pending;
@@ -90,6 +94,8 @@ export class SynthesisService {
     try {
       // 先把目标站挂回视图树再导航/发送：detach 态视口 0×0，站内 findComposer 恒 null。
       this.options.showTarget(site.key);
+      try { await this.beforeNavigate(site.key); } catch { /* Saving must never block the synthesis send. */ }
+      if (controller.signal.aborted || this.activeController !== controller) return { result: { site: site.key, ok: false, code: 'cancelled' }, pending: null };
       const navigationCode = await this.navigate(site.key, site.url, controller.signal);
       if (navigationCode) return { result: { site: site.key, ok: false, code: navigationCode }, pending: null };
       if (controller.signal.aborted || this.activeController !== controller) return { result: { site: site.key, ok: false, code: 'cancelled' }, pending: null };

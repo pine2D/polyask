@@ -5,7 +5,7 @@ import { registerBootstrapIpc } from './bootstrap-ipc';
 import { registerWorkspaceSelectionIpc } from './workspace-selection-ipc';
 import { registerSitePageIpc } from './site-page-ipc';
 import { SitePageService } from './site-page-service';
-import { createQuestionCapture } from "./question-capture-binding";
+import { createQuestionCapture, sessionHandoff } from "./question-capture-binding";
 import { cancelSubmissions, lateSentResult } from "./submission-upgrade";
 import type { QuestionHistoryService } from "./question-history-service";
 import type { BackupService } from "./backup-service";
@@ -141,6 +141,8 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   const { window, manager, workspace, coordinator, synthesisCoordinator, collection, archives, history, promptLibrary, synthesis, sync } = options;
   const operationGate = new OperationGate();
   const capture = createQuestionCapture(options.questions, manager, site => synthesis.getPending()?.targetSite === site);
+  const handoff = sessionHandoff(options.questions, capture);
+  workspace.setBeforeNewSession(handoff); synthesis.setBeforeNavigate(site => handoff([site]));
   const trustedShell = (event: ShellIpcEvent) =>
     event.sender.id === window.webContents.id &&
     event.senderFrame?.parent === null &&

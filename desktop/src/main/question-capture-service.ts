@@ -33,18 +33,29 @@ export class QuestionCaptureService {
     const current = () => epoch === this.epoch && preparation === this.preparationEpoch && this.history.repository.lifecycle === lifecycle;
     await this.flush(this.history.targets().map(entry => entry.site), deadline);
     if (!current()) throw new Error("cancelled");
-    const delay = this.history.handoffDelay(request.sites);
-    // 正向完成候选只差静默复读时，先读完再换 token。等待与读取共用原发送预算，绝不为静止正文凭空确认。
-    if (delay !== null && delay + 50 < deadline - Date.now()) {
-      await new Promise<void>(resolve => setTimeout(resolve, Math.min(3_050, delay + 50)));
-      if (!current()) throw new Error("cancelled");
-      await this.flush(request.sites, deadline);
-    }
+    await this.awaitCandidates(request.sites, deadline, current);
     if (!current()) throw new Error("cancelled");
     const settled = request.sites.flatMap(site => settle(site) ?? []);
     const dispatch = settled.length ? { ...request, sites: request.sites.filter(site => !settled.some(r => r.site === site)) } : request;
     if (dispatch.sites.length) this.history.begin(dispatch);
     return { remaining: Math.max(1, deadline - Date.now()), dispatch, settled };
+  }
+  /**
+   * 导航离开前（新会话、辅助综合）与开轮同口径：先读完这些站，正向完成候选只差静默复读时在预算内等它封存。
+   * 不取消采集，由调用方随后结束；dispose/重置后立即返回。
+   */
+  async handoff(sites: readonly SiteKey[], budgetMs: number): Promise<void> {
+    const deadline = Date.now() + budgetMs, epoch = this.epoch, lifecycle = this.history.repository.lifecycle;
+    const current = () => epoch === this.epoch && this.history.repository.lifecycle === lifecycle;
+    await this.flush(sites, deadline);
+    if (current()) await this.awaitCandidates(sites, deadline, current);
+  }
+  // 正向完成候选只差静默复读时，先读完再换 token。等待与读取共用调用方预算，绝不为静止正文凭空确认。
+  private async awaitCandidates(sites: readonly SiteKey[], deadline: number, current: () => boolean): Promise<void> {
+    const delay = this.history.handoffDelay(sites);
+    if (delay === null || delay + 50 >= deadline - Date.now()) return;
+    await new Promise<void>(resolve => setTimeout(resolve, Math.min(3_050, delay + 50)));
+    if (current()) await this.flush(sites, deadline);
   }
   async flush(sites: readonly SiteKey[], until = Infinity): Promise<void> {
     const deadline = Math.min(until, Date.now() + 2_500);

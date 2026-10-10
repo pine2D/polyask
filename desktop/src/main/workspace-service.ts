@@ -91,6 +91,7 @@ export class WorkspaceService {
   private readonly navigationCapMs: number;
   private readonly context: (site: SiteKey) => number | undefined;
   private readonly abandon: (site: SiteKey, contentsId: number, target: string) => boolean | void;
+  private beforeNewSession: (sites: readonly SiteKey[]) => Promise<void> = async () => undefined;
 
   constructor(
     private readonly state: StateRepository,
@@ -183,9 +184,13 @@ export class WorkspaceService {
     return deleted;
   }
 
+  /** 采集服务在外壳 IPC 装配时才建立，晚于本服务；导航前先读完旧会话的回答（question-capture-binding.ts）。 */
+  setBeforeNewSession(handler: (sites: readonly SiteKey[]) => Promise<void>): void { this.beforeNewSession = handler; }
+
   async newSession(value: unknown): Promise<NewSessionSiteResult[]> {
     const sites = strictSelection(value, false);
     this.onNewSession(sites);
+    try { await this.beforeNewSession(sites); } catch { /* Saving the old answer must never block a new session. */ }
     const settled = await Promise.allSettled(sites.map((site) => {
       const definition = SITES.find((candidate) => candidate.key === site);
       if (!definition) throw new Error("unknown_site");

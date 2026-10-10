@@ -20,3 +20,13 @@ export function createQuestionCapture(history: QuestionHistoryService, manager: 
   history.setSubmissionHandler((runId, site) => { upgradeSubmission(manager, runId, site); });
   return capture;
 }
+
+// 新会话 / 辅助综合导航前的保存预算：读一次（≤2.5s）+ 候选静默复读（≤3.05s）+ 复读，到点不阻塞导航。
+export const SESSION_HANDOFF_MS = 6_000;
+/** 离开会话前先读完在采的站（候选在预算内封存为完整），再结束这些站的采集——导航后旧会话已不在页面上。 */
+export function sessionHandoff(history: QuestionHistoryService, capture: QuestionCaptureService) {
+  return async (sites: readonly SiteKey[]): Promise<void> => {
+    await capture.handoff(sites, SESSION_HANDOFF_MS);
+    history.cancel(sites);
+  };
+}
