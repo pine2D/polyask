@@ -6,9 +6,10 @@ import {
   type StateFragment
 } from "../shared/sync";
 import type { DriveChange, DriveFile } from "./drive-client";
+import { convergeDuplicateFiles, type DuplicateDrive } from "./sync-duplicates";
 import { SyncRepository } from "./sync-repository";
 
-export interface SyncPullDrive {
+export interface SyncPullDrive extends DuplicateDrive {
   listFiles(signal?: AbortSignal): Promise<DriveFile[]>;
   getStartToken(signal?: AbortSignal): Promise<string>;
   listChanges(pageToken: string, signal?: AbortSignal): Promise<{ changes: DriveChange[]; newStartPageToken: string | null }>;
@@ -45,6 +46,8 @@ export class SyncPull {
       if (detail.code !== "page_token_expired" && detail.status !== 410) throw error;
       await this.fullScan(signal);
     }
+    // A newer schema on Drive makes this build read-only: it must not delete anything there either.
+    if (!this.repository.config().readOnly) await convergeDuplicateFiles(this.repository, this.drive, signal);
   }
 
   private async fullScan(signal: AbortSignal): Promise<void> {

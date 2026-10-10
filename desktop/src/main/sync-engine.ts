@@ -15,6 +15,7 @@ import {
 } from "../shared/sync";
 import type { DriveChange, DriveFile } from "./drive-client";
 import { classifySyncFailure, type FailureStage } from "./sync-failures";
+import type { DuplicateDrive } from "./sync-duplicates";
 import { SyncPull } from "./sync-pull";
 import { SyncRepository } from "./sync-repository";
 
@@ -27,8 +28,7 @@ interface SyncEngineOptions {
   readonly onWorkspaceChanged?: () => void;
 }
 
-export interface SyncDrive {
-  remove?(fileId: string, signal?: AbortSignal): Promise<void>;
+export interface SyncDrive extends DuplicateDrive {
   listFiles(signal?: AbortSignal): Promise<DriveFile[]>;
   getStartToken(signal?: AbortSignal): Promise<string>;
   listChanges(pageToken: string, signal?: AbortSignal): Promise<{ changes: DriveChange[]; newStartPageToken: string | null }>;
@@ -330,7 +330,16 @@ export class SyncEngine {
       body = record;
     } else { this.options.repository.complete(operation.key, operation.revision); return; }
     const existing = this.options.repository.findDriveFile(key);
-    const saved = await this.options.drive.upsert(existing?.id ?? null, name, properties, body, signal);
+    let saved: DriveFile;
+    try {
+      saved = await this.options.drive.upsert(existing?.id ?? null, name, properties, body, signal);
+    } catch (error) {
+      if (!existing || (error as { code?: string }).code !== "not_found") throw error;
+      // Another device converged this duplicate away: write to the surviving copy, or create one.
+      this.options.repository.deleteDriveFile(existing.id);
+      signal.throwIfAborted();
+      saved = await this.options.drive.upsert(this.options.repository.findDriveFile(key)?.id ?? null, name, properties, body, signal);
+    }
     signal.throwIfAborted();
     if (!saved.id) throw Object.assign(new Error("invalid_response"), { code: "invalid_response" });
     this.options.repository.putDriveFile(saved, key, this.now());
