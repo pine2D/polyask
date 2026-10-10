@@ -3,10 +3,11 @@ import type { DesktopCopy } from '../shared/copy';
 import { DEFAULT_DISPLAY_PREFERENCES, type DisplayPreferences } from '../shared/display';
 
 /** 显示值始终来自外壳已接受的偏好，保存失败不显示未经接受的新值。 */
-export function SettingsDisplay({ copy, display = DEFAULT_DISPLAY_PREFERENCES, busy, onChange }: {
+export function SettingsDisplay({ copy, display = DEFAULT_DISPLAY_PREFERENCES, busy, following = false, onChange }: {
   copy: DesktopCopy;
   display?: DisplayPreferences;
   busy: boolean;
+  following?: boolean;
   onChange?: (preferences: DisplayPreferences) => Promise<void>;
 }): React.JSX.Element {
   const [pending, setPending] = useState(false), [failed, setFailed] = useState(false);
@@ -24,6 +25,7 @@ export function SettingsDisplay({ copy, display = DEFAULT_DISPLAY_PREFERENCES, b
   const disabled = pending || busy || !onChange;
   return <section className="settings-card settings-display" aria-labelledby="settings-display-title" aria-busy={pending}>
     <h2 id="settings-display-title" tabIndex={-1}>{copy.settingsDisplayTitle}</h2>
+    <p className="settings-control-hint">{following ? copy.preferenceSyncScopeShared : copy.preferenceSyncScopeLocal}</p>
     <fieldset disabled={disabled} aria-describedby="settings-density-hint">
       <legend>{copy.settingsDensityLabel}</legend>
       <p id="settings-density-hint">{copy.settingsDensityScope}</p>

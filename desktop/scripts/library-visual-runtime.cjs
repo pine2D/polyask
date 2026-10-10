@@ -62,6 +62,12 @@ app.whenReady().then(async () => {
           assert.ok(box.right <= box.viewport + 2, `${locale}/${theme}/${width} offscreen ${JSON.stringify(box)}`);
         }
         assert.equal(await run('(() => { const e=document.querySelector(".archive-answer-nav"); return e.scrollWidth <= e.clientWidth + 2; })()'), true, `${locale}/${theme}/${width} source navigation overflow`);
+        const controls = await run(`(() => [...document.querySelectorAll('.library-selection-controls button, .library-pagination button')]
+          .map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
+        for (const control of controls) {
+          assert.equal(control.border, 'solid', `${locale}/${theme} list controls must use the themed border`);
+          assert.ok(control.radius >= 4 && control.height >= 28, `${locale}/${theme} list controls must keep usable geometry`);
+        }
         reports.push({ locale, theme, width, boxes });
         if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}`);
       }
@@ -69,6 +75,28 @@ app.whenReady().then(async () => {
   }
   nativeTheme.themeSource = 'light';
   win.setContentSize(1600, 1000);
+  await win.loadFile(join(output, 'index.html'));
+  await wait('!!document.querySelector(".archive-detail h1")');
+  // Candidate confirmation must never become a folder write in Chromium.
+  for (const mode of ['new', 'rename']) {
+    for (const composition of [{ isComposing: true }, { keyCode: 229 }]) {
+      await win.loadFile(join(output, 'index.html'));
+      await wait('!!document.querySelector(".archive-detail h1")');
+      if (mode === 'rename') {
+        await click('.folder-sidebar nav button:nth-child(3)');
+        await wait('!!document.querySelector(".folder-manage")');
+        await click('.folder-manage button:first-child');
+      } else await click('.folder-sidebar > button');
+      await wait('!!document.querySelector(".folder-modal input")');
+      await fill('.folder-modal input', '输入法候选名称');
+      await run(`document.querySelector('.folder-modal input').dispatchEvent(new KeyboardEvent('keydown', ${JSON.stringify({ key: 'Enter', bubbles: true, cancelable: true, ...composition })}))`);
+      assert.equal(await run('window.libraryTest.folderWrites'), 0);
+      assert.equal(await run('!!document.querySelector(".folder-modal")'), true);
+      assert.equal(await run('document.querySelector(".folder-modal input").value'), '输入法候选名称');
+      await key('Return');
+      await wait('window.libraryTest.folderWrites === 1 && !document.querySelector(".folder-modal")');
+    }
+  }
   await win.loadFile(join(output, 'index.html'));
   await wait('!!document.querySelector(".archive-detail h1")');
   // Wrapped sticky navigation must not cover the answer selected by its last link.
@@ -128,8 +156,8 @@ app.whenReady().then(async () => {
   await click('.library-focus');
   // Decision editing shares the selector and protects the draft on navigation.
   await click('.library-segments button:nth-child(3)');
-  await wait('document.querySelectorAll(".archive-list > button").length === 1');
-  await click('.archive-list > button');
+  await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 1');
+  await click('.archive-list [data-action=library-open-item]');
   await wait('!!document.querySelector(".decision-editor")');
   await shot('decision-reading');
   await click('.library-decision-actions > button:nth-child(2)');
@@ -164,15 +192,15 @@ app.whenReady().then(async () => {
   await click('.library-segments button:first-child');
   await wait('document.querySelector(".library-segments button:first-child").getAttribute("aria-pressed") === "true"');
   await fill('[name=library-search]', 'no-matching-record');
-  await wait('document.querySelectorAll(".archive-list > button").length === 0 && !document.querySelector(".archive-list[aria-busy=true]")');
+  await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 0 && !!document.querySelector(".archive-list .library-empty") && !document.querySelector(".archive-list[aria-busy=true]")');
   assert.equal(await run('document.activeElement.name'), 'library-search');
   await run('window.libraryTest.failLoad=true');
   await fill('[name=library-search]', 'failure');
   await wait('!!document.querySelector(".library-empty button")');
   await run('window.libraryTest.failLoad=false');
   await fill('[name=library-search]', '');
-  await wait('document.querySelectorAll(".archive-list > button").length === 9');
-  await click('.archive-list > button');
+  await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 9');
+  await click('.archive-list [data-action=library-open-item]:has(.library-item-title[title^="如何改善"])');
   await wait('!!document.querySelector(".archive-detail")');
   // Removing the active result while focused restores browsing, instead of trapping an empty pane.
   await click('.library-focus');
@@ -180,10 +208,10 @@ app.whenReady().then(async () => {
   await click('[role=menuitem]:last-child');
   await wait('!!document.querySelector("[role=dialog]")');
   await click('.confirm-actions .primary');
-  await wait('document.querySelectorAll(".archive-list > button").length === 8');
+  await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 8');
   assert.equal(await run('document.querySelector(".library").dataset.focused'), 'false');
   assert.deepEqual(errors, []);
   writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, interactions: 'passed', consoleErrors: errors }, null, 2));
-  console.log(`Library UI passed: ${reports.length} layout variants and keyboard/editing flows.`);
+  console.log(`Library UI passed: ${reports.length} layout variants, four folder IME cases and keyboard/editing flows.`);
   app.quit();
 }).catch(error => { console.error(error); app.exit(1); });

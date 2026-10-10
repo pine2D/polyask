@@ -1,6 +1,16 @@
 .library .folder-filters { gap: 6px; }
 .library-selection-summary, .library-pagination, .library-bulk-actions, .library-bulk-result { font-size: 12px; line-height: 1.5; }
 .library-selection-controls { display: flex; flex-wrap: wrap; gap: 6px; }
+.library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button {
+  border: 1px solid var(--border); border-radius: var(--radius-control);
+  color: var(--text); background: var(--panel); font: inherit; cursor: pointer;
+}
+.library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button:hover:not(:disabled) {
+  border-color: var(--accent); color: var(--accent); background: var(--accent-soft);
+}
+.library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button:active:not(:disabled) { background: var(--selection-soft); }
+.library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button:disabled { color: var(--muted); background: var(--panel-muted); cursor: default; }
 .library-selection-controls button { min-height: 28px; padding: 4px 7px; }
 .library-content-row { display: flex; align-items: flex-start; gap: 2px; border: 1px solid transparent; border-radius: 8px; margin-bottom: 4px; }
 .library .library-content-row:has([aria-current=true]) { border-color: color-mix(in srgb, var(--accent) 30%, var(--border)); background: var(--selection-soft); }
@@ -25,6 +35,9 @@
 .library-bulk-folder-option { display: flex; align-items: center; gap: 8px; min-height: 34px; cursor: pointer; }
 .library-bulk-folder-option input { width: 16px; height: 16px; accent-color: var(--accent); }
 @media (forced-colors: active) {
+  .library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button { color: ButtonText; border-color: ButtonText; }
+  .library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button:disabled { color: GrayText; border-color: GrayText; }
+  .library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button:focus-visible { outline-color: Highlight; }
   .library .library-content-row:has([aria-current=true]) { border-color: Highlight; }
   .library .library-content-row:has([aria-current=true]) button { color: LinkText; }
   .library-row-check input, .library-bulk-folder-option input { forced-color-adjust: auto; }

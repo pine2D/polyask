@@ -6,6 +6,22 @@ import { mountSettings, settingsButton, settingsCopy, settingsElement, settingsS
 
 const advanced = (doc: Document) => doc.querySelector<HTMLDetailsElement>('.settings-advanced')!;
 
+test('in-page section navigation opens data and focuses headings without running actions', async () => {
+  const h = await mountSettings();
+  let clears = 0;
+  settingsShell({ clearRemoteSync: async () => { clears++; return settingsStatus; } });
+  try {
+    const data = h.document.querySelector<HTMLButtonElement>('[data-settings-section="data"]');
+    assert.equal(data === null, false, 'settings sections must be reachable without command shortcuts');
+    await h.click(data!);
+    assert.equal(advanced(h.document).open, true);
+    assert.equal(h.document.activeElement === h.document.getElementById('settings-advanced-toggle'), true);
+    await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="display"]')!);
+    assert.equal(h.document.activeElement === h.document.getElementById('settings-display-title'), true);
+    assert.equal(clears, 0);
+  } finally { await h.close(); }
+});
+
 test('overview keeps display, backup and diagnostics visible while advanced data starts collapsed', async () => {
   const h = await mountSettings();
   try {

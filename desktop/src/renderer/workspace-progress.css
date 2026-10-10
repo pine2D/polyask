@@ -1,10 +1,31 @@
 .feedback-workspace:empty { display: none; }
-.feedback-workspace { flex: 1; min-width: 0; }
+.feedback-workspace { flex: 1; min-width: 0; container-type: inline-size; }
 .feedback-bar[data-has-notice="false"]:has(.run-progress) .feedback-notice:not([hidden]) { display: none; }
 .run-progress { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; font-size: 11px; white-space: nowrap; }
-.run-progress-facts { display: flex; align-items: center; gap: 10px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.run-progress-content { flex: 1; min-width: 0; container-type: inline-size; }
+.run-progress-summary { display: flex; align-items: center; gap: 10px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.run-progress-summary > strong { font-size: inherit; font-weight: 600; }
+.run-progress-summary-counts { display: inline-flex; gap: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.run-progress-facts { display: none; align-items: center; gap: 10px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.run-progress[data-expanded="true"] .run-progress-summary { display: none; }
+.run-progress[data-expanded="true"] .run-progress-facts { display: flex; }
 .run-progress-fact { color: var(--muted); font-variant-numeric: tabular-nums; }
 .run-progress-fact.failed { color: var(--danger-ink); }
 .run-progress-fact.unconfirmed { color: var(--warning-ink); }
 .run-progress button { flex-shrink: 0; min-height: 24px; padding: 1px 7px; border: 0; border-radius: 4px; color: var(--accent); background: var(--accent-soft); font-size: 11px; }
+.run-progress button:hover:not(:disabled) { background: var(--selection-soft); }
+.run-progress :is(button, .run-progress-facts):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .run-progress button:disabled { color: var(--muted); background: transparent; }
+.run-read-compact { display: none; }
+@container (max-width: 820px) { .run-progress-summary-counts > span { display: none; } }
+@container (max-width: 580px) { .run-progress-summary-counts { display: none; } }
+@container (max-width: 440px) {
+  .run-read-label { display: none; }
+  .run-read-compact { display: inline; }
+  .run-progress, .run-progress-summary { gap: 6px; }
+}
+@media (forced-colors: active) {
+  .run-progress button { color: ButtonText; border: 1px solid ButtonText; }
+  .run-progress button:disabled { color: GrayText; border-color: GrayText; }
+  .run-progress :is(button, .run-progress-facts):focus-visible { outline-color: Highlight; }
+}

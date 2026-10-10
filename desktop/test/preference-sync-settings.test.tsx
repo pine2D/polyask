@@ -13,6 +13,33 @@ const state: PreferenceSnapshot = {
   initialized: [], versions: {}, deviceId: 'fixture'
 };
 
+test('each preference group names the accepted value, current source and edit scope', async () => {
+  const { PreferenceSyncSettings } = await import('../src/renderer/preference-sync-settings');
+  const h = await mountDom(<PreferenceSyncSettings copy={getCopy('en')} snapshot={state} busy={false}
+    onFollowingChange={async () => {}} onLayoutModeChange={async () => {}} onDraftSyncChange={async () => {}} />);
+  try {
+    assert.equal(h.document.querySelector('[data-preference-group="display"]') === null, false);
+    assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-current]')!.textContent!, /Compact.*90%/);
+    assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-scope]')!.textContent!, /this device/i);
+    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-current]')!.textContent!, /Focus/);
+    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-source]')!.textContent!, /shared/i);
+    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-scope]')!.textContent!, /devices that follow/i);
+    const legends = [...h.document.querySelectorAll('legend')].map(node => node.textContent);
+    assert.equal(new Set(legends).size, legends.length, 'follow-source and layout-value controls need distinct legends');
+  } finally { await h.close(); }
+});
+
+test('preferences do not present defaults as accepted values while their snapshot is loading', async () => {
+  const { PreferenceSyncSettings } = await import('../src/renderer/preference-sync-settings');
+  const copy = getCopy('en');
+  const h = await mountDom(<PreferenceSyncSettings copy={copy} snapshot={null} busy={false}
+    onFollowingChange={async () => {}} onLayoutModeChange={async () => {}} onDraftSyncChange={async () => {}} />);
+  try {
+    for (const value of h.document.querySelectorAll('[data-preference-current]')) assert.equal(value.textContent, copy.preferenceSyncLoading);
+    assert.equal([...h.document.querySelectorAll<HTMLInputElement>('input')].every(input => input.disabled), true);
+  } finally { await h.close(); }
+});
+
 test('preference settings expose device-follow choices layout mode and opt-in draft sync', async () => {
   const { PreferenceSyncSettings } = await import('../src/renderer/preference-sync-settings');
   const { PREFERENCE_SYNC_COPY } = await import('../src/shared/preference-sync-copy');

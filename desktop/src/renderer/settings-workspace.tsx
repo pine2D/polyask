@@ -186,6 +186,23 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     : pendingAction === "connect" ? props.copy.syncStateAuthorizing
     : pendingAction === "clear" ? props.copy.syncClearing : props.copy.settingsWorking
     : props.status.state === "syncing" ? statusText : "";
+  const sections = [
+    ["overview", "sync-title", props.copy.syncTitle], ["backup", "backup-card-title", props.copy.backupTitle],
+    ["display", "settings-display-title", props.copy.settingsDisplayTitle],
+    ...(props.preferenceSync ? [["preferences", "settings-preference-sync-title", props.copy.preferenceSyncTitle]] : []),
+    ["notifications", "completion-notifications-title", props.copy.completionNotifications],
+    ["updates", "app-updates-title", props.copy.appUpdates], ["data", "settings-advanced-toggle", props.copy.settingsAdvancedData]
+  ];
+  const navigateSection = (section: string, id: string): void => {
+    if (closeLocked) return;
+    if (section === "data") setDataOpen(true);
+    queueMicrotask(() => {
+      const target = document.getElementById(id);
+      if (!target) return;
+      target.tabIndex = -1;
+      target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true });
+    });
+  };
 
   return (
     <main className="settings-workspace" aria-busy={busy}>
@@ -200,6 +217,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         <button className="panel-close" type="button" title={props.copy.closeSettings} aria-label={props.copy.closeSettings} disabled={closeLocked} onClick={props.onClose}><CloseIcon /></button>
       </header>
       <div className="settings-body">
+        <nav className="settings-section-navigation" aria-label={props.copy.settingsSectionNavigation}>
+          {sections.map(([section, id, label]) => <button type="button" key={section} data-settings-section={section}
+            disabled={closeLocked} onClick={() => navigateSection(section, id)}>{label}</button>)}
+        </nav>
         <div className="settings-group">
           <section className="settings-card sync-overview" aria-labelledby="sync-title">
             <div className="settings-description">
@@ -241,7 +262,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             <p className="sync-privacy">{props.copy.syncPrivacy}</p>
           </section>
           <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
-          <SettingsDisplay copy={props.copy} display={props.display} busy={busy} onChange={props.onDisplayChange} />
+          <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
+            following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
           {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} copy={props.copy} busy={busy} /> : null}
           <label className="settings-card preference-card">
             <span className="preference-copy">

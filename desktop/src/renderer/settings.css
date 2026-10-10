@@ -25,6 +25,19 @@
 .settings-group {
   min-width: 0; border: 1px solid var(--border); border-radius: var(--radius-panel); background: var(--panel);
 }
+.settings-section-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.settings-section-navigation button {
+  min-height: max(30px, var(--control-height)); padding: 5px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--panel);
+  color: var(--text); font: inherit; font-size: var(--font-meta);
+}
+.settings-section-navigation button:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+.settings-section-navigation button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-section-navigation button:disabled { color: var(--muted); cursor: default; }
+.settings-preference-facts { display: grid; gap: 6px; margin: 10px 0; font-size: var(--font-meta); line-height: 1.6; }
+.settings-preference-facts > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; }
+.settings-preference-facts dt { color: var(--muted); }
+.settings-preference-facts dd { margin: 0; overflow-wrap: anywhere; }
 .settings-card { min-width: 0; padding: 20px 24px; }
 .settings-group > .settings-card + .settings-card { border-top: 1px solid var(--border); }
 .settings-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 32px; align-items: start; }
@@ -164,6 +177,7 @@
   .sync-stage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 560px) { .sync-stage-list { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .settings-preference-facts > div { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .preference-switch span::after { transition: none; }
 }
@@ -175,6 +189,9 @@
   .settings-card .settings-control, .sync-stage-list li { border-color: var(--muted); }
 }
 @media (forced-colors: active) {
+  .settings-section-navigation button { color: ButtonText; border-color: ButtonText; }
+  .settings-section-navigation button:disabled { color: GrayText; border-color: GrayText; }
+  .settings-section-navigation button:focus-visible { outline-color: Highlight; }
   .settings-card .settings-control, .danger-zone input, .sync-stage-list li { border-color: ButtonText; }
   .settings-card .settings-control:disabled { color: GrayText; border-color: GrayText; }
   .settings-card :is(button, input):focus-visible { outline-color: Highlight; }

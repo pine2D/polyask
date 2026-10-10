@@ -55,6 +55,17 @@ app.whenReady().then(async () => {
     }
     win.webContents.setZoomFactor(1); await run('window.progressFixture.expanded(false); window.progressFixture.evidence("waiting")'); await paint();
     check(await run('document.querySelector("[data-progress=ended]").textContent.includes("1/3")&&document.querySelector("[data-progress=complete]").textContent.includes("0/3")'), 'positive generation is separate from stored copies');
+    win.setContentSize(640, 900); await paint();
+    check(await run('getComputedStyle(document.querySelector(".run-progress-summary-counts")).display==="none"&&document.querySelector("[data-progress-stage]").getBoundingClientRect().width>0&&document.querySelector("[data-progress-alert=unconfirmed]").getBoundingClientRect().width>0'), 'narrow progress prioritizes the stage and uncertain submissions');
+    if (locale === 'en' && density === 'compact') writeFileSync(join(output, 'progress-narrow-summary.png'), (await win.webContents.capturePage()).toPNG());
+    await click('[name=run-progress-details]');
+    check(await run('document.querySelector("[name=run-progress-details]").getAttribute("aria-expanded")==="true"&&getComputedStyle(document.querySelector(".run-progress-facts")).display==="flex"&&document.querySelector(".run-progress-facts").tabIndex===0'), 'details are a real inline disclosure without a native overlay');
+    win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Tab', modifiers: ['shift'] });
+    win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Tab', modifiers: ['shift'] }); await paint();
+    check(await run('document.activeElement===document.querySelector(".run-progress-facts")'), 'keyboard users can enter the scrollable full counters');
+    if (locale === 'en' && density === 'compact') writeFileSync(join(output, 'progress-narrow-details.png'), (await win.webContents.capturePage()).toPNG());
+    await click('[name=run-progress-details]');
+    win.setContentSize(1200, 900); await paint();
     check(await run('document.querySelectorAll(".page-tab-badge.failed").length===0'), 'old exceptions excluded');
     await run('document.querySelector("[role=tab]").focus()');
     win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Right' }); win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Right' }); await paint();
