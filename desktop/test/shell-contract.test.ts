@@ -30,7 +30,7 @@ test("focus action transfers keyboard focus to the native site view", () => {
 });
 
 test("application menu offers a keyboard route back to the prompt", () => {
-  const main = readSource("src/main/index.ts");
+  const main = readSource("src/main/index.ts") + readSource("src/main/app-command-dispatch.ts");
   const commands = readSource("src/shared/commands.ts");
   const preload = readSource("src/preload/shell.ts");
   const renderer = readSource("src/renderer/index.tsx");
@@ -97,7 +97,7 @@ test("every menu accelerator comes from the shared command table", () => {
 
 test("every navigation command a menu exposes is reachable from the renderer", () => {
   const renderer = readSource("src/renderer/index.tsx");
-  const main = readSource("src/main/index.ts");
+  const main = readSource("src/main/index.ts") + readSource("src/main/app-command-dispatch.ts");
 
   // 命令面板与快捷键速查都按「渲染层是否给了动作」过滤（index.tsx 的 availableCommands），
   // 所以纯主进程处理的命令必须同时有渲染层入口，否则用户在速查里根本看不到它。

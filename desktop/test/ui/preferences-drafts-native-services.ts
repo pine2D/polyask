@@ -17,6 +17,8 @@ export { registerTaskFolderIpc } from '../../src/main/task-folder-ipc';
 export { createArchiveRecord } from '../../src/shared/archive';
 export { getCopy } from '../../src/shared/copy';
 export { SITES } from '../../src/main/sites';
+export { applicationMenu } from '../../src/main/application-menu';
+export { dispatchAppCommand } from '../../src/main/app-command-dispatch';
 
 /** Synthetic file transport only: the production engine still merges and uploads. */
 export class NativeCloud implements SyncDrive {

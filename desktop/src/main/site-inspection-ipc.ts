@@ -12,7 +12,8 @@ export function registerSiteInspectionIpc(options: {
     if (typeof value !== 'string' || !SITE_KEYS.includes(value as SiteKey)) throw Error('invalid_site');
     if (options.manager.setLayout('focus', value as SiteKey) !== true) return false;
     options.manager.setSurface('sites');
-    return true;
+    // 隐藏 surface 的布局不能抢焦点；明确查看本站在恢复原生视图后再聚焦。
+    return options.manager.setLayout('focus', value as SiteKey) === true;
   });
   return () => ipcMain.removeHandler('polyask:inspect-site');
 }

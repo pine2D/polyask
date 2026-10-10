@@ -1,3 +1,4 @@
+import { dispatchAppCommand as dispatchShellCommand } from './app-command-dispatch';
 import { applicationMenu } from "./application-menu";
 import { installNativeShell, initialShellBackground } from "./native-shell";
 import { createWindowDataServices } from './window-data-services';
@@ -136,41 +137,8 @@ function sendToShell(channel: string, payload?: unknown): void {
   if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send(channel, payload);
 }
 
-const HISTORY_COMMANDS: Readonly<Record<string, -1 | 1>> = {
-  "site-back": -1,
-  "site-forward": 1
-};
-
-const RELATIVE_COMMANDS: Readonly<Record<string, (manager: ViewManager) => void>> = {
-  "next-page": (manager) => manager.pageRelative(1),
-  "previous-page": (manager) => manager.pageRelative(-1),
-  "next-site": (manager) => manager.focusRelative(1),
-  "previous-site": (manager) => manager.focusRelative(-1)
-};
-
 function dispatchAppCommand(id: CommandId): void {
-  const page = (["show-page-1", "show-page-2", "show-page-3"] as const).indexOf(
-    id as "show-page-1" | "show-page-2" | "show-page-3"
-  );
-  if (page >= 0) {
-    viewManager?.pageDirect(page);
-    return;
-  }
-  // 后退/前进作用于**当前聚焦的**站点视图：站内导航之后此前完全没有退路。
-  const offset = HISTORY_COMMANDS[id];
-  if (offset) {
-    viewManager?.navigateHistory(viewManager.getLayout().focused, offset);
-    return;
-  }
-  // 翻页/换焦点只有主进程的 ViewManager 知道当前页与聚焦顺序，渲染层重算会漂。
-  const relative = RELATIVE_COMMANDS[id];
-  if (relative) {
-    if (viewManager) relative(viewManager);
-    return;
-  }
-  if (!mainWindow || mainWindow.isDestroyed()) return;
-  if (id === "focus-prompt") mainWindow.webContents.focus();
-  mainWindow.webContents.send("polyask:command", id);
+  dispatchShellCommand(id, viewManager, mainWindow);
 }
 
 function applyDisplayPreferences(

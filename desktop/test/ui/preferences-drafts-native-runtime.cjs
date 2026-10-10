@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Menu } = require('electron');
 const { join } = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
@@ -24,7 +24,7 @@ app.whenReady().then(async () => {
       { host: 'www.kimi.com', label: 'Kimi', text: 'Another locally generated answer for draft testing.' }
     ] }, { id: 'native-archive', now: 100, deviceId: 'native-local' }));
   const workspace = new WorkspaceService(database.state, database.meta, () => {});
-  if (phase === 'write') { workspace.setSelection(['claude', 'kimi']); workspace.setParticipation(['claude', 'kimi']); }
+  if (phase === 'write') { workspace.setSelection(['claude', 'chatgpt', 'gemini', 'deepseek', 'kimi']); workspace.setParticipation(['claude', 'kimi']); }
   let blocked = 0, forbidden = 0;
   for (const s of [session.defaultSession, session.fromPartition('persist:polyask-sites')]) {
     s.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_request, callback) => { blocked++; callback({ cancel: true }); });
@@ -42,13 +42,21 @@ app.whenReady().then(async () => {
     onUiStateChange: state => { fs.writeFileSync(uiPath, JSON.stringify(state)); preferences?.captureUi(state); }
   });
   const views = win.contentView.children.filter(view => view.webContents && view.webContents !== win.webContents);
+  const nativeCommands = [];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(services.applicationMenu(process.platform, getCopy(locale),
+    manager.getDisplayPreferences(), () => {}, id => {
+      nativeCommands.push(id); services.dispatchAppCommand(id, manager, win);
+    }, 'PolyAsk native fixture')));
   const tools = require('./preferences-drafts-native-tools.cjs')(win, output, `${locale}-${phase}`);
   const { run, wait, pause, click, clickText, clickElement, type, key } = tools;
   const loadEnd = Date.now() + 8000;
-  while (blocked < 2 || views.some(view => view.webContents.isLoadingMainFrame())) {
+  while (blocked < views.length || views.some(view => view.webContents.isLoadingMainFrame())) {
     if (Date.now() >= loadEnd) throw Error('Blocked site loads did not settle'); await pause(25);
   }
-  for (const view of views) await view.webContents.loadURL('data:text/html,<input placeholder="isolated local page">');
+  for (const view of views) {
+    await view.webContents.loadURL('data:text/html,<input placeholder="isolated local page">');
+    await view.webContents.loadURL('data:text/html,<input placeholder="isolated local page with back history">');
+  }
   const notifyDrafts = () => win.webContents.send('polyask:drafts-changed');
   const repository = new PreferencesRepository(database.state, database.meta);
   const drafts = new DraftRepository(database.state, database.meta);
@@ -90,7 +98,7 @@ app.whenReady().then(async () => {
     ['set-drawer-open', value => manager.setDrawerOpen(value)],
     ['set-completion-notifications', value => preferences.set('completionNotifications', value)],
     ['set-layout', value => { manager.setLayout(value.mode, value.focused); preferences.set('layoutMode', value.mode); }],
-    ['set-surface', value => { surface = value; manager.setSurface(value); }]
+    ['set-surface', value => { surface = value; manager.setSurface(value); if (value === 'confirmation') win.webContents.focus(); }]
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (trusted(event)) action(value); });
   await win.loadFile(join(output, 'index.html')); win.focus(); win.webContents.focus();
   await wait('!!document.querySelector("textarea[name=prompt]")');
@@ -135,6 +143,9 @@ app.whenReady().then(async () => {
     await wait('!!document.querySelector(".draft-copy-list")');
     assert.equal(surface, 'confirmation', 'prompt recovery covers native views');
     assert.equal(views.every(view => !view.getVisible() && view.getBounds().width > 0), true);
+    const confirmation = await require('./preferences-drafts-native-confirmation.cjs')({ tools, win, manager,
+      views, commands: nativeCommands, surface: () => surface });
+    fs.writeFileSync(join(output, `${locale}-confirmation.json`), JSON.stringify(confirmation, null, 2));
     await clickElement(`[...document.querySelectorAll('.draft-copy-list li')].find(e=>e.querySelector('small').textContent===${JSON.stringify(copy.draftRemote)}).querySelector('button')`);
     await clickText('.draft-actions button', copy.draftRestore);
     await wait('!!document.querySelector(".draft-confirm")');

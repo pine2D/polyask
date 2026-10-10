@@ -1,6 +1,7 @@
 import { reclaimUnselectedViews } from "./view-reclamation";
 import { historyPanelWidth, coverSitesForHistory } from "./question-layout";
 import { transitionSiteSurface } from "./site-surface";
+import { siteHistoryState, navigateSiteHistory } from './site-history-navigation';
 import { SiteHistoryAccess } from "./site-history-access";
 import { clearSiteDataAndReload } from "./site-data-recovery";
 import {
@@ -222,6 +223,7 @@ export class ViewManager {
   }
 
   setPage(value: number): void {
+    if (this.isConfirmationActive()) return;
     this.focusedByPage.set(this.page, this.focused);
     const next = resolveSitePage(this.selected, value);
     if (next.page === this.page) return;
@@ -248,7 +250,7 @@ export class ViewManager {
     this.reconcileViews();
     this.clearVisibleUnread();
     this.layout();
-    if (activate && mode === "focus" && current.keys.includes(focused)) {
+    if (activate && this.surface === 'sites' && mode === "focus" && current.keys.includes(focused)) {
       const view = this.views.get(focused);
       if (view && !view.webContents.isDestroyed()) view.webContents.focus();
     }
@@ -267,6 +269,7 @@ export class ViewManager {
   }
 
   focusRelative(offset: -1 | 1): void {
+    if (this.isConfirmationActive()) return;
     const keys = this.selected;
     if (!keys.length) return;
     const current = keys.indexOf(this.focused);
@@ -287,25 +290,15 @@ export class ViewManager {
   // 站内导航（点了回答里的站内链接、站点自己的跳转器）之后没有退路，此前唯一的脱身办法是
   // 「新会话」——那会丢掉当前对话。这里给出真正的后退/前进。
   navigateHistory(site: SiteKey, offset: -1 | 1): boolean {
-    const view = this.views.get(site);
-    if (!view || view.webContents.isDestroyed()) return false;
-    // 群发/生成进行中不许动历史，理由同 reload：会把正在写的回答连同页面一起丢掉。
-    if (!siteReloadAllowed(this.currentStatus(site).phase) || this.historyAccess.navigating(site)) return false;
-    const history = view.webContents.navigationHistory;
-    if (offset === -1 ? !history.canGoBack() : !history.canGoForward()) return false;
-    this.beginNavigation(site);
-    if (offset === -1) history.goBack();
-    else history.goForward();
-    return true;
+    if (this.isConfirmationActive()) return false;
+    return navigateSiteHistory(this.views.get(site), this.canNavigateHistory(site), offset, () => this.beginNavigation(site));
   }
 
   canNavigateHistory(site: SiteKey): SiteHistoryState {
-    const view = this.views.get(site);
-    if (!view || view.webContents.isDestroyed()) return { back: false, forward: false };
-    if (!siteReloadAllowed(this.currentStatus(site).phase) || this.historyAccess.navigating(site)) return { back: false, forward: false };
-    const history = view.webContents.navigationHistory;
-    return { back: history.canGoBack(), forward: history.canGoForward() };
+    return siteHistoryState(this.views.get(site), this.currentStatus(site).phase, this.historyAccess.navigating(site));
   }
+
+  isConfirmationActive(): boolean { return this.surface === 'confirmation'; }
 
   // 一次给出全部已勾选站点的可用性：格子头部的后退按钮与 Alt+Left 共用同一份状态，
   // 避免两处各查一次而显示不一致。

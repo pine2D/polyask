@@ -62,11 +62,13 @@ test("history navigation is wired end to end and gated like reload", () => {
   const ipc = readSource("src/main/shell-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
   const renderer = readSource("src/renderer/index.tsx");
-  const body = manager.slice(manager.indexOf("navigateHistory("), manager.indexOf("canNavigateHistory("));
+  const body = manager.slice(manager.indexOf("navigateHistory("), manager.indexOf("\n  canNavigateHistory("));
+  const history = readSource("src/main/site-history-navigation.ts");
 
-  assert.match(body, /siteReloadAllowed/,
+  assert.match(body, /navigateSiteHistory\(this\.views\.get\(site\), this\.canNavigateHistory\(site\)/);
+  assert.match(history, /siteReloadAllowed/,
     "群发/生成进行中不得动导航历史——会把正在写的回答连同页面一起丢掉");
-  assert.match(body, /canGoBack\(\)/);
+  assert.match(history, /canGoBack\(\)/);
   assert.match(ipc, /polyask:step-history/);
   assert.match(preload, /polyask:step-history/);
   assert.match(renderer, /stepHistory/);

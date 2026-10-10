@@ -43,7 +43,10 @@ export function FolderSidebar({ copy, folders, selected, onSelect, onChanged, di
     {current ? <div className="folder-manage"><button disabled={blocked} onClick={() => edit(current)}>{copy.folderRename}</button><button disabled={blocked} onClick={() => setRemoving(current)}>{copy.folderDelete}</button></div> : null}
     {!editing && message ? <p role="status">{message}</p> : null}
     {editing ? <FolderModal copy={copy} title={editing === 'new' ? copy.folderNew : copy.folderRename} busy={blocked} onCancel={() => setEditing(null)}>
-      <label>{copy.folderName}<input value={name} disabled={blocked} onChange={event => setName(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') void save(); }} /></label>
+      <label>{copy.folderName}<input value={name} disabled={blocked} onChange={event => setName(event.target.value)} onKeyDown={event => {
+        if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+        if (event.key === 'Enter') { event.preventDefault(); void save(); }
+      }} /></label>
       <p role="status">{message}</p><div className="confirm-actions"><button disabled={blocked} onClick={() => setEditing(null)}>{copy.cancel}</button><button disabled={blocked} className="primary" onClick={() => void save()}>{copy.decisionSave}</button></div>
     </FolderModal> : null}
     {removing ? <ConfirmDialog copy={copy} title={copy.folderDelete} message={copy.folderDeleteConfirm} confirmLabel={copy.decisionConfirm} cancelLabel={copy.cancel} onCancel={() => setRemoving(null)} onConfirm={() => {

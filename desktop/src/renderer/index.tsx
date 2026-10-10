@@ -1,5 +1,7 @@
 import { useSyncedPreferences } from './use-synced-preferences';
 import { PromptDraftRecovery } from './prompt-draft-recovery';
+import { useDraftConfirmation } from './use-draft-confirmation';
+import { confirmAndStartNewSession } from './new-session-action';
 import { QuestionHistory } from "./question-history";
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -36,7 +38,7 @@ import { BootstrapStateView } from "./bootstrap-state";
 import { ExclusiveActionLock } from "./broadcast-flow-state";
 import { CommandBar } from "./command-bar";
 import { ConfirmDialog } from "./confirm-dialog";
-import { confirmNewSession, type PendingSessionConfirmation } from "./session-confirmation";
+import type { PendingSessionConfirmation } from "./session-confirmation";
 import { CommandPalette, type CommandPaletteMode } from "./command-palette";
 import { executeCommand } from "./command-dispatcher";
 import {
@@ -120,6 +122,7 @@ function App(): React.JSX.Element {
   const requestedPage = useRef<{ readonly page: number; readonly inputMethod: "keyboard" | "pointer" } | null>(null);
   const actionLock = useRef<ExclusiveActionLock | null>(null);
   const commandActions = useRef<CommandActions>({});
+  const draftConfirmation = useDraftConfirmation(commandActions);
   const lastOpenPanel = useRef<OpenWorkspacePanelState>(openWorkspacePanel("sites", "pointer"));
   if (!actionLock.current) actionLock.current = new ExclusiveActionLock();
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>("loading");
@@ -187,11 +190,11 @@ function App(): React.JSX.Element {
   );
   const { runState } = broadcast;
   const runProgress = useQuestionRunProgress(broadcast.runId, bootstrapProgress);
-  const pageClose = useSitePageClose({ copy, sites, busy: runState !== 'idle' || auxiliaryBusy || participation.pending, api: shell,
+  const pageClose = useSitePageClose({ copy, sites, busy: runState !== 'idle' || auxiliaryBusy || participation.pending || draftConfirmation.blocking, api: shell,
     lock: actionLock.current!, onOpen: () => { commandActions.current = {}; changeSurface('confirmation'); },
     onClose: () => { changeSurface('sites'); restoreWorkbenchFocus(); }, onWorkspace: workspaceFlow.accept, onAnnounce: setAnnouncement });
   const retryReview = useBroadcastRetryReview({copy, sites, flow: broadcast, lock: actionLock.current!,
-    busy: runState !== "idle" || auxiliaryBusy, onOpen: () => { changeSurface("sites"); changeSurface("confirmation"); },
+    busy: runState !== "idle" || auxiliaryBusy || draftConfirmation.blocking, onOpen: () => { changeSurface("sites"); changeSurface("confirmation"); },
     onClose: () => changeSurface("sites"), onInspect: (site, active) => inspectBroadcastSite(site, {
       isSelected: key => workspaceFlow.currentSelection().includes(key), active, focus: async key => {
         const accepted = await shell.inspectSite(key);
@@ -299,7 +302,7 @@ function App(): React.JSX.Element {
   const submit = async (): Promise<void> => {
     const prompt = text.trim();
     const sentRevision = draftRevision.current;
-    if (!prompt || !participation.currentSites().length || runState !== "idle" || participation.pending) return;
+    if (draftConfirmation.isBlocking() || !prompt || !participation.currentSites().length || runState !== "idle" || participation.pending) return;
     await actionLock.current!.run(async () => {
       if (imageWarning) {
         setAnnouncement(imageWarning);
@@ -323,10 +326,12 @@ function App(): React.JSX.Element {
   };
 
   const setMode = (mode: "overview" | "focus", focused = layout.focused): void => {
+    if (draftConfirmation.isBlocking()) return;
     shell.setLayout(mode, focused);
   };
 
   const changeSurface = (value: DesktopSurface): void => {
+    draftConfirmation.surfaceChanged(value);
     if (value !== "sites") {
       setQuestionHistoryOpen(false);
       imageSelection.invalidateAndClose();
@@ -337,7 +342,7 @@ function App(): React.JSX.Element {
     shell.setSurface(value);
   };
   const runAuxiliary = async (action: () => Promise<void>): Promise<void> => {
-    if (runState !== "idle") return;
+    if (draftConfirmation.isBlocking() || runState !== "idle") return;
     await actionLock.current!.run(async () => {
       setAuxiliaryBusy(true);
       try {
@@ -351,24 +356,10 @@ function App(): React.JSX.Element {
     capture: archiveCapture, synthesis, runAuxiliary, announce: setAnnouncement,
     openArchive: (id, mode) => { if (id && mode === 'read') archiveNavigation.history(id, 'read'); else archiveNavigation.collection(id); changeSurface("archive"); }});
   const startNewSession = async (): Promise<void> => {
-    if (pendingNewSession || auxiliaryBusy || runState !== "idle") return;
-    const selectedSites = [...selected];
-    if (!selectedSites.length) return;
-    const approved = await confirmNewSession(selectedSites.length, setPendingNewSession, changeSurface);
-    if (!approved) return;
-    await runAuxiliary(async () => {
-      broadcast.invalidate();
-      runProgress.invalidate();
-      archiveCapture.invalidate();
-      try {
-        const results = await shell.newSession(selectedSites);
-        const failed = results.filter((result) => !result.ok).length;
-        setAnnouncement(failed
-          ? formatCopy(copy.newSessionPartial, { ok: results.length - failed, failed })
-          : formatCopy(copy.newSessionDone, { count: results.length }));
-      } catch {
-        workspaceFlow.recover();
-      }
+    if (draftConfirmation.isBlocking() || pendingNewSession || auxiliaryBusy || runState !== "idle") return;
+    await confirmAndStartNewSession({ sites: [...selected], copy, show: setPendingNewSession, changeSurface,
+      run: runAuxiliary, send: shell.newSession, recover: workspaceFlow.recover, announce: setAnnouncement,
+      invalidate: () => { broadcast.invalidate(); runProgress.invalidate(); archiveCapture.invalidate(); }
     });
   };
   const showGroupMenu = async (): Promise<void> => {
@@ -423,7 +414,7 @@ function App(): React.JSX.Element {
       .catch(() => setAnnouncement(copy.updatePageFailed));
   };
 
-  commandActions.current = pendingNewSession || questionHistoryBlocking || settingsBlocking || libraryBlocking || retryReview.open || pageClose.blocking || participation.pending ? {} : {
+  commandActions.current = draftConfirmation.blocking || pendingNewSession || questionHistoryBlocking || settingsBlocking || libraryBlocking || retryReview.open || pageClose.blocking || participation.pending ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
     "open-sites": () => {
       openPanel("sites", "keyboard");
@@ -554,7 +545,7 @@ function App(): React.JSX.Element {
         text={text}
         tier={workspace.tier}
         runState={synthesis.runState !== "idle" ? synthesis.runState : runState}
-        auxiliaryBusy={auxiliaryBusy || participation.pending}
+        auxiliaryBusy={auxiliaryBusy || participation.pending || draftConfirmation.blocking}
         layoutMode={layout.mode}
         automaticFocus={layout.automaticFocus}
         selectedCount={participating.size}
@@ -594,11 +585,11 @@ function App(): React.JSX.Element {
         expanded={composerExpanded}
         reservedExpanded={composer.reservedExpanded}
         revealedExpanded={composer.revealedExpanded}
-        draftRevision={draftRevision.current} onTextChange={setText} draftRecovery={<PromptDraftRecovery recovery={promptRecovery} copy={copy} busy={runState !== 'idle' || auxiliaryBusy} onClearImages={imageSelection.clear} onBlockingChange={blocking => changeSurface(blocking ? 'confirmation' : 'sites')} />}
+        draftRevision={draftRevision.current} onTextChange={setText} draftRecovery={<PromptDraftRecovery recovery={promptRecovery} copy={copy} busy={runState !== 'idle' || auxiliaryBusy} onClearImages={imageSelection.clear} onBlockingChange={(blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface)} />}
         onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
         onSubmit={() => void submit()}
         onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}
-        onTierChange={workspaceFlow.changeTier}
+        onTierChange={tier => { if (!draftConfirmation.isBlocking()) workspaceFlow.changeTier(tier); }}
         onLayoutChange={setMode}
         onExpandedChange={composer.setExpanded}
         onPanelChange={(tab) => tab ? openPanel(tab, "pointer") : changePanelState(null)}

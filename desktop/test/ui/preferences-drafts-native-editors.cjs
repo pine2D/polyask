@@ -25,7 +25,7 @@ module.exports = async ({ tools, locale, phase, copy, drafts, remoteDrafts, engi
   const selectCopy = async (scope, label) => {
     await openRecovery(scope);
     await clickElement(`[...document.querySelectorAll(${JSON.stringify(`${scope} .draft-copy-list li`)})].find(e=>e.querySelector('small').textContent===${JSON.stringify(label)}).querySelector('button')`);
-    await wait(`!!document.querySelector(${JSON.stringify(`${scope} .draft-preview pre`)})`);
+    await wait(`!!document.querySelector(${JSON.stringify(`${scope} .draft-preview-fields`)})`);
   };
   const restore = async (scope, selector, expected, cancelFirst) => {
     await clickText(`${scope} .draft-actions button`, copy.draftRestore);
@@ -53,7 +53,7 @@ module.exports = async ({ tools, locale, phase, copy, drafts, remoteDrafts, engi
       assert.equal((await engine.syncNow()).state, 'idle');
       assert.equal(await run(`document.querySelector(${JSON.stringify(selector)}).value`), active, 'cloud push preserves editor labor');
       await selectCopy(scope, copy.draftRemote);
-      assert.equal(await run(`document.querySelector(${JSON.stringify(`${scope} .draft-preview pre`)}).textContent.includes(${JSON.stringify(restored)})`), true);
+      assert.equal(await run(`document.querySelector(${JSON.stringify(`${scope} .draft-preview-fields`)}).textContent.includes(${JSON.stringify(restored)})`), true);
       await restore(scope, selector, restored, true);
       await pollDraft(kind, field, restored);
     } else {

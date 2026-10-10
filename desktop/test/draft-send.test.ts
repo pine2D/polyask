@@ -31,6 +31,7 @@ for (const outcome of outcomes) for (const nextDraft of [null, "B", "A"]) test(`
   let flushes = 0, broadcasts = 0, clears = 0;
   const task = vm.runInNewContext(ts.transpileModule(`${body}\nsubmit();`, {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText, {
     text: "A", draftRevision: revision, runState:"idle",
+    draftConfirmation:{isBlocking:()=>false},
     participation:{currentSites:()=>sites,pending:false},
     actionLock:{current:{run:(action:()=>Promise<void>)=>action()}}, imageWarning:null,
     imageSelection:{invalidateAndClose(){}}, workspace:{tier:null}, images:[],
@@ -47,4 +48,19 @@ for (const outcome of outcomes) for (const nextDraft of [null, "B", "A"]) test(`
   assert.equal(draft, nextDraft ?? (outcome.sent ? "" : "A"));
   assert.equal(expanded, nextDraft !== null || !outcome.sent);
   assert.equal(clears, outcome.sent ? 1 : 0, "only a successful submission starts cleanup of its captured receipt");
+});
+
+test('a prompt draft confirmation blocks dispatch before flushing a receipt or taking the action lock', async () => {
+  const source = readSource("src/renderer/index.tsx");
+  const body = source.slice(source.indexOf("  const submit ="), source.indexOf("  const setMode ="));
+  let flushes = 0, broadcasts = 0, actions = 0;
+  await vm.runInNewContext(ts.transpileModule(`${body}\nsubmit();`, {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText, {
+    text: "A", draftRevision: new DraftRevision(), runState: "idle",
+    draftConfirmation:{isBlocking:()=>true}, participation:{currentSites:()=>["claude"],pending:false},
+    actionLock:{current:{run:(action:()=>Promise<void>)=>{actions++;return action();}}},
+    imageWarning:null, imageSelection:{invalidateAndClose(){}}, workspace:{tier:null}, images:[],
+    composer:{reset(){}}, clearSent(){},
+    flushDraft:()=>{flushes++;return Promise.resolve(null);}, broadcast:{send:()=>{broadcasts++;return Promise.resolve(null);}}
+  });
+  assert.equal(flushes, 0); assert.equal(broadcasts, 0); assert.equal(actions, 0);
 });

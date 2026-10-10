@@ -3,6 +3,8 @@ import test from "node:test";
 import vm from "node:vm";
 import ts from "typescript";
 import { readSource } from "./fixtures";
+import { confirmAndStartNewSession } from "../src/renderer/new-session-action";
+import { getCopy } from "../src/shared/copy";
 
 // 执行 App 的真实入口；只替换 Electron/React 边界，覆盖确认前后的原生视图切换时序。
 for (const approved of [false, true]) {
@@ -14,14 +16,15 @@ for (const approved of [false, true]) {
     const context = vm.createContext({
       selected: new Set(["claude", "chatgpt", "deepseek"]),
       pendingNewSession: null, runState: "idle", auxiliaryBusy: false,
+      draftConfirmation: { isBlocking: () => false },
       changeSurface: (surface: string) => events.push(surface),
       setPendingNewSession: (value: typeof pending) => { pending = value; },
-      confirmNewSession: (...args: unknown[]) => require("../src/renderer/session-confirmation").confirmNewSession(...args),
+      confirmAndStartNewSession,
       runAuxiliary: (action: () => Promise<void>) => action(),
       broadcast: { invalidate() {} }, archiveCapture: { invalidate() {} },
       runProgress: { invalidate: () => events.push("invalidate-progress") },
       shell: { newSession: async (sites: string[]) => { events.push("new-session"); assert.deepEqual([...sites], ["claude", "chatgpt", "deepseek"]); return []; } },
-      copy: {}, formatCopy: () => "", setAnnouncement() {},
+      copy: getCopy("en"), setAnnouncement() {},
       workspaceFlow: { recover: () => assert.fail("unexpected failure") }
     });
     const script = ts.transpileModule(`${body}\nstartNewSession();`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -46,9 +49,10 @@ test("a pending auxiliary operation cannot be covered by a new-session confirmat
   const script = ts.transpileModule(`${body}\nstartNewSession();`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   await vm.runInNewContext(script, {
     pendingNewSession: null, runState: "idle", auxiliaryBusy: true,
+    draftConfirmation: { isBlocking: () => false },
     selected: new Set(["claude"]),
     setPendingNewSession() {}, changeSurface() {},
-    confirmNewSession: async () => { opened = true; return false; }
+    confirmAndStartNewSession: async () => { opened = true; }
   });
   assert.equal(opened, false, "辅助综合完成时会切换界面，不能把未决确认框卸载后留在锁定状态");
 });

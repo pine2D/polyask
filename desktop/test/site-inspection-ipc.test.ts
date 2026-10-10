@@ -28,6 +28,6 @@ test('inspection validates trusted input, returns the main decision and disposes
   assert.deepEqual(events, ['focus:claude']);
   accepted = true;
   assert.equal(invoke(true, 'claude'), true);
-  assert.deepEqual(events, ['focus:claude', 'focus:claude', 'sites']);
+  assert.deepEqual(events, ['focus:claude', 'focus:claude', 'sites', 'focus:claude']);
   dispose(); assert.equal(handlers.size, 0);
 });

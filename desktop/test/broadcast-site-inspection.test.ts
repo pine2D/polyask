@@ -52,7 +52,7 @@ test('ViewManager refuses a stale focus request for a site outside current selec
   const method = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'setLayout') as ts.MethodDeclaration;
   const body = ts.transpileModule(`function ${method.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
   let reconciles = 0, focuses = 0;
-  const manager = {selected: ['chatgpt'], focused: 'chatgpt', page: 0, mode: 'overview',
+  const manager = {selected: ['chatgpt'], focused: 'chatgpt', page: 0, mode: 'overview', surface: 'sites',
     focusOrder: ['chatgpt'], focusedByPage: new Map(), views: new Map([['chatgpt', {webContents: {isDestroyed: () => false, focus: () => { focuses++; }}}]]),
     reconcileViews: () => { reconciles++; }, clearVisibleUnread: () => {}, layout: () => {}};
   const accepted = vm.runInNewContext(`${body}\nsetLayout.call(manager, 'focus', 'claude');`, {manager,
@@ -70,7 +70,7 @@ test('ViewManager acknowledges only a successfully selected focus target', () =>
   const method = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'setLayout') as ts.MethodDeclaration;
   const body = ts.transpileModule(`function ${method.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
   let focuses = 0;
-  const manager = {selected: ['claude'], focused: 'claude', page: 0, mode: 'overview',
+  const manager = {selected: ['claude'], focused: 'claude', page: 0, mode: 'overview', surface: 'sites',
     focusOrder: ['claude'], focusedByPage: new Map(), views: new Map([['claude', {webContents: {isDestroyed: () => false, focus: () => { focuses++; }}}]]),
     reconcileViews: () => {}, clearVisibleUnread: () => {}, layout: () => {}};
   const accepted = vm.runInNewContext(`${body}\nsetLayout.call(manager, 'focus', 'claude');`, {manager,

@@ -50,7 +50,7 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 ## 离线回归
 
-- 偏好与草稿同步专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`，脚本启动独立 Xvfb，Linux 需要临时 cgroup。受保护入口构建生产外壳、preload、ViewManager 与 SQLite 服务，以两个独立设备库和真实 SyncEngine 的受控 Drive 传输验证三语设置、本机覆盖/跟随、旧缓存冷启动、问题及比较/决策/综合草稿的编辑、预览、确认恢复和重启。问题恢复还核对已加载及正在读取的附件清理，确认框遮住原生站点视图。HTTP/HTTPS 阻断，不发送真实提问、不访问用户库或 Google 账号；截图、报告及源码/构建哈希清单留在临时目录，验收期间源码变化会失败。真实 Drive 双设备及 Windows/macOS 原生交互仍需对应环境验收。
+- 偏好与草稿同步专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`，脚本启动独立 Xvfb，Linux 需要临时 cgroup。受保护入口构建生产外壳、preload、ViewManager 与 SQLite 服务，以两个独立设备库和真实 SyncEngine 的受控 Drive 传输验证三语设置、本机覆盖/跟随、旧缓存冷启动、问题及比较/决策/综合草稿的编辑、预览、确认恢复和重启。问题恢复还核对已加载及正在读取的附件清理；五个本地原生视图在确认期间保持隐藏、挂载和正视口，10 个实际菜单快捷键与 5 个直达渲染命令不得切换、抢焦点或导航，关闭后恢复正常新会话确认及设置后台分页。HTTP/HTTPS 阻断，不发送真实提问、不访问用户库或 Google 账号；截图、报告及源码/构建哈希清单留在临时目录，验收期间源码变化会失败。真实 Drive 双设备及 Windows/macOS 原生交互仍需对应环境验收。
 
 - 结果库分页专项：`npm run test:unit -- test/task-folder-page.test.ts test/library-server-page.test.tsx` 使用真实 SQLite 与生产组件，检查摘要不含回答正文、每页上限、筛选总数、跨页选择、按 ID 读取、详情回包期间的未保存保护和完整长标题排序。`test/ui/library-page-api.ts` 仅为旧渲染夹具补分页回包，不作为数据库性能证据；已提供的详情读取回包必须原样透传，不能由缓存覆盖来源变更或缺失。
 

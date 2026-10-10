@@ -13,6 +13,17 @@ export const DRAFT_COPY = {
     draftRemoveFailed: 'This draft changed or could not be deleted. Review the latest copy and try again.',
     draftSyncLabel: 'Sync drafts between devices', draftSyncHint: 'Off by default. Turning it off keeps existing cloud copies.',
     draftPrompt: 'Prompt', draftComparison: 'Manual comparison', draftDecision: 'Decision', draftSynthesis: 'Synthesis and follow-up',
+    draftFieldTitle: 'Title', draftFieldStatus: 'Status', draftFieldConclusion: 'Conclusion', draftFieldRationale: 'Rationale',
+    draftFieldUncertainties: 'Uncertainties', draftFieldNextStep: 'Next step', draftFieldEvidence: 'Evidence excerpts',
+    draftFieldJudgment: 'My judgment', draftFieldVerification: 'Next verification step', draftFieldQuotes: 'Source excerpts',
+    draftFieldConditions: 'Conditions', draftFieldCost: 'Costs', draftFieldNotesEvidence: 'Evidence notes', draftFieldCategories: 'Source categories',
+    draftFieldSources: 'Selected sources', draftFieldTarget: 'Target AI', draftFieldTier: 'Response mode',
+    draftFieldInstruction: 'Instructions or follow-up', draftFieldExcerpt: 'Quoted excerpt',
+    draftStatusDraft: 'Draft', draftStatusVerify: 'To verify', draftStatusFinal: 'Final',
+    draftTierFollow: 'Use site setting', draftTierFast: 'Fast', draftTierThink: 'Deep thinking',
+    draftSourceNumber: 'Source answer {number}', draftNotSet: 'Not set', draftUnknownSetting: 'Unknown setting',
+    draftPreviewUnavailable: 'This draft cannot be previewed in this editor.',
+    draftSiteDoubao: 'Doubao', draftSiteQianwen: 'Qianwen', draftSiteYuanbao: 'Yuanbao', draftSiteChatglm: 'Zhipu',
     draftFormSaved: 'Saved draft', draftReviewChanged: 'This draft has changed. Review its latest contents.', draftTimeUnavailable: 'Time unavailable'
   },
   zhCN: {
@@ -29,6 +40,17 @@ export const DRAFT_COPY = {
     draftRemoveFailed: '草稿已变更或删除失败，请核对最新副本后重试。',
     draftSyncLabel: '跨设备同步草稿', draftSyncHint: '默认关闭，关闭后会保留已有云端副本。',
     draftPrompt: '提问', draftComparison: '人工对照', draftDecision: '决策', draftSynthesis: '综合与追问',
+    draftFieldTitle: '标题', draftFieldStatus: '状态', draftFieldConclusion: '结论', draftFieldRationale: '判断理由',
+    draftFieldUncertainties: '待确认事项', draftFieldNextStep: '下一步', draftFieldEvidence: '证据摘录',
+    draftFieldJudgment: '我的判断', draftFieldVerification: '下一步核验行动', draftFieldQuotes: '来源摘录',
+    draftFieldConditions: '条件', draftFieldCost: '成本', draftFieldNotesEvidence: '依据笔记', draftFieldCategories: '来源分类',
+    draftFieldSources: '所选来源', draftFieldTarget: '目标 AI', draftFieldTier: '回答档位',
+    draftFieldInstruction: '要求或追问', draftFieldExcerpt: '引用摘录',
+    draftStatusDraft: '草稿', draftStatusVerify: '待验证', draftStatusFinal: '已定稿',
+    draftTierFollow: '跟随原站设置', draftTierFast: '快速', draftTierThink: '深度思考',
+    draftSourceNumber: '来源回答 {number}', draftNotSet: '未填写', draftUnknownSetting: '未知设置',
+    draftPreviewUnavailable: '这份草稿暂不能在当前编辑器中预览。',
+    draftSiteDoubao: '豆包', draftSiteQianwen: '千问', draftSiteYuanbao: '元宝', draftSiteChatglm: '智谱',
     draftFormSaved: '已保存草稿', draftReviewChanged: '这份草稿已变更，请重新查看最新内容。', draftTimeUnavailable: '时间不可用'
   },
   zhTW: {
@@ -45,6 +67,17 @@ export const DRAFT_COPY = {
     draftRemoveFailed: '草稿已變更或刪除失敗，請核對最新副本後重試。',
     draftSyncLabel: '跨裝置同步草稿', draftSyncHint: '預設關閉，關閉後會保留已有雲端副本。',
     draftPrompt: '提問', draftComparison: '人工對照', draftDecision: '決策', draftSynthesis: '綜合與追問',
+    draftFieldTitle: '標題', draftFieldStatus: '狀態', draftFieldConclusion: '結論', draftFieldRationale: '判斷理由',
+    draftFieldUncertainties: '待確認事項', draftFieldNextStep: '下一步', draftFieldEvidence: '證據摘錄',
+    draftFieldJudgment: '我的判斷', draftFieldVerification: '下一步核驗行動', draftFieldQuotes: '來源摘錄',
+    draftFieldConditions: '條件', draftFieldCost: '成本', draftFieldNotesEvidence: '依據筆記', draftFieldCategories: '來源分類',
+    draftFieldSources: '所選來源', draftFieldTarget: '目標 AI', draftFieldTier: '回答檔位',
+    draftFieldInstruction: '要求或追問', draftFieldExcerpt: '引用摘錄',
+    draftStatusDraft: '草稿', draftStatusVerify: '待驗證', draftStatusFinal: '已定稿',
+    draftTierFollow: '跟隨原站設定', draftTierFast: '快速', draftTierThink: '深度思考',
+    draftSourceNumber: '來源回答 {number}', draftNotSet: '未填寫', draftUnknownSetting: '未知設定',
+    draftPreviewUnavailable: '這份草稿暫時不能在目前編輯器中預覽。',
+    draftSiteDoubao: '豆包', draftSiteQianwen: '千問', draftSiteYuanbao: '元寶', draftSiteChatglm: '智譜',
     draftFormSaved: '已儲存草稿', draftReviewChanged: '這份草稿已變更，請重新檢視最新內容。', draftTimeUnavailable: '時間無法使用'
   }
 } as const;

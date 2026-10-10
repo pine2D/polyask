@@ -25,7 +25,7 @@ for (const locale of ['en', 'zh-CN', 'zh-TW'] as const) test(`${locale}: recover
     assert.ok(h.document.body.textContent?.includes(copy.draftBackup));
     assert.deepEqual(restored, []);
     await h.click(button(copy.draftReview));
-    assert.ok(h.document.querySelector('pre')?.textContent?.includes('old saved labor'));
+    assert.ok(h.document.querySelector('.draft-preview-fields')?.textContent?.includes('old saved labor'));
     assert.ok(h.document.body.textContent?.includes(copy.draftSourceChanged));
     await h.click(button(copy.draftRestore));
     assert.deepEqual(restored, []);
@@ -65,7 +65,42 @@ test('deleting a copy requires confirmation and a failed removal keeps its previ
     await h.click(button(copy.draftRemove));
     assert.deepEqual(removed, ['draft-b']);
     assert.ok(h.document.body.textContent?.includes(copy.draftRemoveFailed));
-    assert.ok(h.document.querySelector('pre')?.textContent?.includes('old saved labor'));
+    assert.ok(h.document.querySelector('.draft-preview-fields')?.textContent?.includes('old saved labor'));
+  } finally { await h.close(); }
+});
+
+test('compact recovery blocks synchronously and releases the callback that acquired its cover', async () => {
+  const copy = getCopy('en'), old: boolean[] = [], next: boolean[] = [], tokens: unknown[] = [];
+  const props = { copy, drafts: [draft], deviceId: 'local', compact: true, onRestore: () => true, onRemove: async () => true };
+  const h = await mountDom(<DraftRecovery {...props} onBlockingChange={(value, token) => { old.push(value); tokens.push(token); }} />);
+  try {
+    await act(async () => {
+      h.document.querySelector<HTMLButtonElement>('[data-draft-open]')!.click();
+      assert.equal(old.at(-1), true, 'blocking must precede the next root command in the same event');
+    });
+    await h.render(<DraftRecovery {...props} onBlockingChange={value => next.push(value)} />);
+    await act(async () => h.window.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    assert.deepEqual(old, [true, false]); assert.deepEqual(next, []);
+    assert.equal(typeof tokens[0], 'symbol'); assert.equal(tokens[0] === tokens[1], true);
+  } finally { await h.close(); }
+});
+
+test('changing draft context ends old busy state and a late restore cannot close the new dialog', async () => {
+  const copy = getCopy('en');
+  let finish!: (value: boolean) => void;
+  const props = { copy, drafts: [draft], deviceId: 'local', compact: true, onRemove: async () => true,
+    onRestore: () => new Promise<boolean>(resolve => { finish = resolve; }) };
+  const h = await mountDom(<DraftRecovery {...props} contextKey="first" />);
+  const button = (label: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === label)!;
+  try {
+    await h.click(h.document.querySelector<HTMLButtonElement>('[data-draft-open]')!);
+    await h.click(button(copy.draftReview)); await h.click(button(copy.draftRestore));
+    await h.render(<DraftRecovery {...props} contextKey="second" />);
+    const opener = h.document.querySelector<HTMLButtonElement>('[data-draft-open]')!;
+    assert.equal(opener.disabled, false, 'the new context does not inherit the pending old restore');
+    await h.click(opener);
+    await act(async () => { finish(true); await Promise.resolve(); });
+    assert.equal(h.document.querySelector('[role="dialog"]') === null, false);
   } finally { await h.close(); }
 });
 
