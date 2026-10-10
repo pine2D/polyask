@@ -53,6 +53,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [pane, setPane] = useState<'navigation' | 'list' | 'detail'>(initial.pane);
   const epoch = useRef(0);
   const intent = useRef(0);
+  /** 列表选中项的读取尚未回包时为其意图号；期间旧条目的迟到动作（如证据来源核对）不得再抢占导航。 */
+  const selecting = useRef<number | null>(null);
   const busyRef = useRef(false);
   const blockers = useRef(new Set<string>()), mounted = useRef(true);
   const notify = useRef(props.onBlockingChange); notify.current = props.onBlockingChange;
@@ -220,7 +222,10 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
           // Ask once, against the draft state at response time: a pre-read prompt would be answered again if the draft changed during the read.
           if (busyRef.current) return;
           const readingIntent = ++intent.current;
-          readFolderContent({ kind: item.kind, id: item.record.id }).then(record => {
+          selecting.current = readingIntent;
+          readFolderContent({ kind: item.kind, id: item.record.id }).finally(() => {
+            if (selecting.current === readingIntent) selecting.current = null;
+          }).then(record => {
             if (!mounted.current || readingIntent !== intent.current) return;
             requestDecisionNavigation(() => {
               if (!mounted.current || readingIntent !== intent.current || busyRef.current) return;
@@ -232,7 +237,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         }} />
       <div className="folder-detail">
         {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
-          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => navigate(() => { setNewSource(source); setNewDraft(draft); }), detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{copy.libraryPickHint}</p></div>}
+          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => { if (selecting.current === null) navigate(() => { setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{copy.libraryPickHint}</p></div>}
       </div>
     </div>
     {message ? <div className="archive-status" role="status">{message}<button onClick={refresh}>{copy.retryShellLoad}</button></div> : null}
