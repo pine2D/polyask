@@ -291,7 +291,11 @@ export class ViewManager {
   // 「新会话」——那会丢掉当前对话。这里给出真正的后退/前进。
   navigateHistory(site: SiteKey, offset: -1 | 1): boolean {
     if (this.isConfirmationActive()) return false;
-    return navigateSiteHistory(this.views.get(site), this.canNavigateHistory(site), offset, () => this.beginNavigation(site));
+    const page = this.pageStatus.get(site);
+    return navigateSiteHistory(this.views.get(site), this.canNavigateHistory(site), offset, {
+      begin: (contents, target) => { this.beginNavigation(site); this.historyAccess.reloads.replace(site, contents, target); },
+      sameDocument: () => { this.historyAccess.reloads.replace(site); if (page) this.updatePageStatus(page); }
+    });
   }
 
   canNavigateHistory(site: SiteKey): SiteHistoryState {

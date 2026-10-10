@@ -3,6 +3,7 @@ import type { SiteKey } from "../shared/contracts";
 import { normalizeHistorySnapshot } from "../shared/question-capture";
 import { loadUntil, type NavigationWait } from "./navigation-commit";
 import { ReloadCommitWatch } from "./reload-commit";
+import { allowAppNavigationUnload } from "./app-navigation-unload";
 import { safeQuestionUrl } from "./question-navigation";
 import type { SiteCommandChannel } from "./site-command-channel";
 import { SITES } from "./sites";
@@ -63,12 +64,14 @@ export class SiteHistoryAccess {
     const home = SITES.find(item => item.key === site)?.url;
     if (!contents.getURL() && home) { this.initialLoad(site, contents, home); return; }
     this.reloads.replace(site, contents);
+    allowAppNavigationUnload(contents);
     if (ignoreCache) contents.reloadIgnoringCache();
     else contents.reload();
   }
   initialLoad(site: SiteKey, contents: WebContents, url: string): void {
     this.reloads.replace(site, contents, url);
-    void contents.loadURL(url);
+    // 失败由 did-fail-load / 提交上限收口；loadURL 的拒绝只是同一结局的另一份通知，不吞掉就是未处理拒绝。
+    contents.loadURL(url).catch(() => undefined);
   }
   async snapshot(site: SiteKey, token: string, deadline: number) {
     const contents = this.view(site)?.webContents;
@@ -89,6 +92,7 @@ export class SiteHistoryAccess {
     if (!homepage && contents.getURL() === url) return;
     this.reloads.replace(site);
     this.beforeNavigate(site);
+    allowAppNavigationUnload(contents);
     if (until !== "commit") { await loadUntil(contents, url, until); return; }
     const token = {};
     this.committing.set(site, token);

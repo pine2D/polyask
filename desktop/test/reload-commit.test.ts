@@ -227,7 +227,9 @@ test("history restore and new session retire a pending reload watch before navig
   assert.equal(access.reloads.watching("claude"), true);
   void access.navigate("claude", "https://claude.ai/new", true);
   assert.equal(access.reloads.watching("claude"), false);
-  assert.equal(page.listenerCount("did-navigate"), 1, "only the navigation's own commit listener remains");
+  assert.equal(page.listenerCount("render-process-gone"), 0, "the reload watch's listeners are gone");
+  // 剩下的是本次导航自己的提交监听，以及「应用发起的导航忽略 beforeunload」的提交解除（app-navigation-unload.ts）。
+  assert.equal(page.listenerCount("did-navigate"), 2, "only the navigation's own commit listeners remain");
 });
 
 test("a renderer crash during a pending reload ends the watch so the cap cannot rewrite the crash as load_failed", (t) => {

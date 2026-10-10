@@ -11,6 +11,7 @@ import { PageLifecycle } from "./page-lifecycle";
 import { navigationDisposition } from "./navigation";
 import { SiteNavigationPolicy } from "./navigation-guard";
 import { reassertPainting } from "./paint-recovery";
+import { allowAppNavigationUnload } from "./app-navigation-unload";
 
 interface SiteViewCallbacks {
   readonly onLoading: () => void;
@@ -92,6 +93,7 @@ export function createSiteView(
   contents.on("did-finish-load", () => {
     if (!lifecycle.finishLoad()) return;
     if (authRecovery.shouldReload(navigationDisposition(site, contents.getURL()))) {
+      allowAppNavigationUnload(contents);
       contents.reload();
       return;
     }
