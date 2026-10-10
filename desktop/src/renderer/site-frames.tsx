@@ -54,6 +54,9 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
             (["loading", "sending", "generating"].includes(status.phase) ? statusText : null);
           const reloadBlocked = !siteReloadAllowed(status.phase);
           const uncertain = props.uncertainSites?.includes(site.key);
+          // 提交未确认：卡片给出下一步——先看原站页面，没看到问题才重试；任何路径都不自动重发。
+          const nextStep = uncertain || status.code === "submit_unconfirmed" ? copy.retryUnconfirmed : null;
+          const stateHint = nextStep ? `${statusText} · ${nextStep}` : statusText;
           const retryLabel = formatCopy(uncertain ? copy.retryReviewSite : copy.retrySite, {site: site.label});
           return (
             <article
@@ -72,9 +75,9 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
                     aria-label={`${copy.participationLabel}: ${site.label}`} aria-description={participating.has(site.key) ? undefined : copy.sitePageRetained} onChange={() => onToggle(site.key)} />
                   <SelectionMark /><span className="site-name">{site.label}</span>
                 </label>
-                <span className="site-status-dot priority-p0" data-hint={statusText} aria-hidden="true" />
-                <span className="tile-status-sr sr-only">{statusText}</span>
-                {attentionText && <span className="site-state priority-p0" data-hint={statusText}>{attentionText}</span>}
+                <span className="site-status-dot priority-p0" data-hint={stateHint} aria-hidden="true" />
+                <span className="tile-status-sr sr-only">{stateHint}</span>
+                {attentionText && <span className="site-state priority-p0" data-hint={stateHint}>{attentionText}</span>}
                 {props.retrySites?.includes(site.key) ? <button type="button" className="site-retry" disabled={props.retryDisabled}
                   data-hint={uncertain ? copy.retryUnconfirmed : retryLabel}
                   aria-label={retryLabel} onClick={() => props.onRetry?.(site.key)}>{uncertain ? copy.retryReviewCompact : copy.retryCompact}</button> : null}

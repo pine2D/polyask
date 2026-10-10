@@ -13,6 +13,8 @@ interface FeedbackState {
   readonly announcementSeq: number;
   readonly announce: (text: string, visible?: boolean, transient?: boolean) => void;
   readonly clearNotice: (text: string) => void;
+  /** 无操作反馈时底栏显示的当前状态（由命令栏按选站/失败/未确认计数提供）。 */
+  readonly setIdleNotice?: (text: string | null) => void;
 }
 const FeedbackContext = createContext<FeedbackState | null>(null);
 
@@ -23,6 +25,8 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
   const [noticeAction, setNoticeAction] = useState<FeedbackAction | null>(null);
   const [announced, setAnnounced] = useState({ text: "", seq: 0 });
   const [notice, setNotice] = useState({ text: "", seq: 0, transient: false });
+  const [idleNotice, setIdleNotice] = useState<string | null>(null);
+  const [live, setLive] = useState("");
   const hint = useControlHint(hintId, notice.seq);
   const announce = useCallback((text: string, visible = true, transient = false): void => {
     setAnnounced((current) => ({ text, seq: current.seq + 1 }));
@@ -37,11 +41,19 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
     return () => clearTimeout(timer);
   }, [notice]);
   useEffect(() => { document.documentElement.style.setProperty("--feedback-height", `${WORKSPACE_FEEDBACK_HEIGHT}px`); }, []);
-  return <FeedbackContext.Provider value={{ workspaceHost, announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction, setNoticeAction }}>
+  // R33：live 区节点常驻；每次播报先清空，下一帧再写入，同文重复播报也会被读屏重新读出。
+  useEffect(() => {
+    setLive("");
+    if (!announced.seq) return;
+    const frame = typeof requestAnimationFrame === "function";
+    const handle = frame ? requestAnimationFrame(() => setLive(announced.text)) : setTimeout(() => setLive(announced.text), 16);
+    return () => { if (frame) cancelAnimationFrame(handle as number); else clearTimeout(handle); };
+  }, [announced]);
+  return <FeedbackContext.Provider value={{ workspaceHost, announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction, setNoticeAction, setIdleNotice }}>
     {children}
-    <div className="sr-only" aria-live="polite" aria-atomic="true" key={announced.seq}>{announced.text}</div>
+    <div className="sr-only" aria-live="polite" aria-atomic="true">{live}</div>
     <footer className="feedback-bar" data-hint-visible={!!hint} data-has-notice={!!notice.text} style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
-      <span className="feedback-notice" hidden={!notice.text && !!hint} title={notice.text}>{notice.text || copy.feedbackReady}</span>
+      <span className="feedback-notice" hidden={!notice.text && !!hint} title={notice.text || (idleNotice ?? "")}>{notice.text || idleNotice || copy.feedbackReady}</span>
       <span className="feedback-hint" id={hintId} role={hint ? "tooltip" : undefined} hidden={!hint} title={hint}>{hint}</span>
       <div className="feedback-workspace" ref={setWorkspaceHost} />
       {undoAction ? <button type="button" onClick={undoAction.run}>{undoAction.label}</button> : null}
@@ -49,6 +61,13 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
       {notice.text ? <button type="button" onClick={() => setNotice((current) => ({ ...current, text: "" }))}>{copy.dismissFeedback}</button> : null}
     </footer>
   </FeedbackContext.Provider>;
+}
+
+/** 命令栏等宿主上报空闲状态；没有 FeedbackProvider 的独立夹具里是空操作。 */
+export function useIdleNotice(text: string): void {
+  const set = useContext(FeedbackContext)?.setIdleNotice;
+  useEffect(() => { set?.(text); }, [set, text]);
+  useEffect(() => () => set?.(null), [set]);
 }
 
 export function useGlobalFeedback(): FeedbackState {

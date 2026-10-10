@@ -638,7 +638,7 @@ test("site frames visibly distinguish stable failure codes and retain full contr
   assert.equal([...html.matchAll(/<article class="tile-frame/g)].length, 2);
   assert.match(
     html,
-    /<span class="site-state priority-p0" data-hint="Whether it was sent is unconfirmed">Whether it was sent is unconfirmed<\/span>/
+    /<span class="site-state priority-p0" data-hint="Send not confirmed · Check this site&#x27;s page first\. Retry only if your question is not there; PolyAsk never resends automatically\.">Send not confirmed<\/span>/
   );
   assert.match(
     html,

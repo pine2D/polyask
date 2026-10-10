@@ -1,10 +1,13 @@
 export const PRODUCTIVITY_COPY = {
   en: {
     feedbackReady: "Ready · Select sites, then ask a question",
+    feedbackIdleReady: "Ready · Sends to {count} sites",
+    feedbackIdleRetry: "{count} sites failed before submitting; retry is available",
+    feedbackIdleUnconfirmed: "{count} sites not confirmed as sent: check their pages before retrying",
     dismissFeedback: "Dismiss",
     broadcastSummary: "Send results: {ok} sent · {failed} before-submit failures · {cancelled} cancelled (check sites) · {uncertain} other uncertain",
     retrySite: "Retry {site}",
-    retryUnconfirmed: "Submission is uncertain. Check this site before retrying.",
+    retryUnconfirmed: "Check this site's page first. Retry only if your question is not there; PolyAsk never resends automatically.",
 
     completionNotifications: "Answer status notifications",
     completionNotificationsDescription: "Show a system notification when an answer finishes or fails while PolyAsk is in the background. Notifications never include prompts or answers.",
@@ -18,10 +21,13 @@ export const PRODUCTIVITY_COPY = {
   },
   zhCN: {
     feedbackReady: "就绪 · 选择站点后即可提问",
+    feedbackIdleReady: "就绪 · 将发送到 {count} 个站点",
+    feedbackIdleRetry: "{count} 个站点发送失败，可重试",
+    feedbackIdleUnconfirmed: "{count} 个站点未确认发送：先查看页面再决定是否重试",
     dismissFeedback: "关闭提示",
     broadcastSummary: "发送结果：已发送 {ok} · 提交前失败 {failed} · 已取消待核对 {cancelled} · 其他待核对 {uncertain}",
     retrySite: "重试 {site}",
-    retryUnconfirmed: "发送结果尚未确认，请先检查该站点再决定是否重试。",
+    retryUnconfirmed: "先查看该站页面：没看到你的问题再重试。PolyAsk 不会自动重发。",
 
     completionNotifications: "回答状态通知",
     completionNotificationsDescription: "PolyAsk 位于后台时，在回答完成或失败后显示系统通知。通知不会包含提问或回答正文。",
@@ -35,10 +41,13 @@ export const PRODUCTIVITY_COPY = {
   },
   zhTW: {
     feedbackReady: "就緒 · 選取網站後即可提問",
+    feedbackIdleReady: "就緒 · 將傳送到 {count} 個網站",
+    feedbackIdleRetry: "{count} 個網站傳送失敗，可重試",
+    feedbackIdleUnconfirmed: "{count} 個網站未確認送出：先查看頁面再決定是否重試",
     dismissFeedback: "關閉提示",
     broadcastSummary: "傳送結果：已傳送 {ok} · 提交前失敗 {failed} · 已取消待核對 {cancelled} · 其他待核對 {uncertain}",
     retrySite: "重試 {site}",
-    retryUnconfirmed: "傳送結果尚未確認，請先檢查該網站再決定是否重試。",
+    retryUnconfirmed: "先查看該網站頁面：沒看到你的問題再重試。PolyAsk 不會自動重新傳送。",
 
     completionNotifications: "回答狀態通知",
     completionNotificationsDescription: "PolyAsk 位於背景時，在回答完成或失敗後顯示系統通知。通知不會包含提問或回答正文。",

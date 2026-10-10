@@ -8,6 +8,7 @@ import { commandHint } from "./command-hint";
 import { PromptComposer } from "./prompt-composer";
 import { TierControls } from "./tier-controls";
 import { useToolbarFit } from "./toolbar-fit";
+import { useIdleNotice } from "./feedback-provider";
 import type { WorkspacePanelTab } from "./workspace-panel-state";
 import { WorkspaceActions } from "./workspace-actions";
 
@@ -66,6 +67,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
   const healthOpen = props.panelTab === "health";
   const barRef = useRef<HTMLElement | null>(null);
   useToolbarFit(barRef);
+  useIdleNotice(idleFeedback(props));
 
   return (
     <header ref={barRef} className={`command-bar${props.pageControl ? " has-pages" : ""}${(props.reservedExpanded ?? props.expanded) ? " is-expanded" : ""}`} aria-label={props.copy.broadcastLabel}>
@@ -104,4 +106,14 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       <WorkspaceActions onCompare={props.onCompare} onRetry={props.onRetry} uncertainCount={props.uncertainCount} onReviewUncertain={props.onReviewUncertain} isMac={props.isMac} copy={props.copy} disabled={busy} failureCount={props.failureCount} cancelledCount={props.cancelledCount} synthesisPending={props.synthesisPending} syncStatus={props.syncStatus} onOpenMore={props.onOpenMore} onOpenArchive={props.onOpenArchive} />
     </header>
   );
+}
+
+/** 底栏空闲文案跟随实际状态：发送中、失败可重试、未确认先核对，或就绪及目标站数。 */
+export function idleFeedback(props: Pick<CommandBarProps, "copy" | "runState" | "selectedCount" | "failureCount" | "cancelledCount" | "uncertainCount">): string {
+  const { copy } = props;
+  if (props.runState !== "idle") return props.runState === "cancelling" ? copy.cancelling : copy.sending;
+  const uncertain = props.uncertainCount ?? props.cancelledCount;
+  const attention = [props.failureCount ? formatCopy(copy.feedbackIdleRetry, { count: props.failureCount }) : "",
+    uncertain ? formatCopy(copy.feedbackIdleUnconfirmed, { count: uncertain }) : ""].filter(Boolean).join(" · ");
+  return attention || (props.selectedCount ? formatCopy(copy.feedbackIdleReady, { count: props.selectedCount }) : copy.feedbackReady);
 }

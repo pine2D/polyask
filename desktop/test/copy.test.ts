@@ -389,11 +389,11 @@ test("dense tiles show short text only for statuses that need attention", () => 
   assert.equal(visibleStatus(copy, { site: "claude", phase: "sending" }), null);
   assert.equal(
     visibleStatus(copy, { site: "claude", phase: "warning", code: "tier_unconfirmed" }),
-    "Sent; response mode not confirmed"
+    "Sent; mode not confirmed"
   );
   assert.equal(
     visibleStatus(copy, { site: "claude", phase: "failed", code: "submit_unconfirmed" }),
-    "Whether it was sent is unconfirmed"
+    "Send not confirmed"
   );
   assert.equal(
     visibleStatus(copy, { site: "claude", phase: "failed", code: "composer_not_found" }),
