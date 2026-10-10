@@ -23,7 +23,7 @@ import { guideComparisonChoices, type QuestionReadingRequest } from './question-
 import { usePresence } from './presence';
 import { PANEL_EXIT_MS } from './motion';
 
-type Confirmation = { title: string; message: string; label: string; run: () => void };
+type Confirmation = { title: string; message: string; label: string; danger?: boolean; run: () => void };
 export function QuestionHistory({ open, active = true, copy, sites, draft, draftImageCount = 0, busy, onOpen, onClose, onDraft, onBlockingChange, onArchiveCreated, openRequest, onReadAccepted, onReadingCancelled, locale = navigator.language }: {
   open: boolean; copy: DesktopCopy; sites: readonly SiteDefinition[]; draft: string; draftImageCount?: number; busy: boolean;
   active?: boolean;
@@ -226,7 +226,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     if (warning) setConfirmation({ title: copy.questionDraftTitle, message: warning, label: copy.questionReask, run: apply });
     else apply();
   };
-  const remove = (id: string) => setConfirmation({ title: copy.questionDeleteTitle, message: copy.questionDeleteWarning, label: copy.questionDelete, run: () => {
+  const remove = (id: string) => setConfirmation({ title: copy.questionDeleteTitle, message: copy.questionDeleteWarning, label: copy.questionDelete, danger: true, run: () => {
     detailSequence.current++; detailPending.current = 0;
     void shell.deleteQuestion(id).then(() => {
       if (detail?.question.id === id) leaveDetail();
@@ -283,7 +283,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
         <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={reask} />
       </div>
     </>}
-    {confirmation && <ConfirmDialog copy={copy} title={confirmation.title} message={confirmation.message} confirmLabel={confirmation.label} cancelLabel={copy.cancel} onConfirm={confirmation.run} onCancel={() => setConfirmation(null)} />}
+    {confirmation && <ConfirmDialog copy={copy} title={confirmation.title} message={confirmation.message} confirmLabel={confirmation.label} cancelLabel={copy.cancel} tone={confirmation.danger ? "danger" : undefined} onConfirm={confirmation.run} onCancel={() => setConfirmation(null)} />}
     {organizing && detail && <QuestionArchivePicker key={`picker:${detail.question.id}:${archiveEpoch.current}`} detail={detail} answerId={organizing} initialAnswerIds={guideChoices}
       copy={copy} sites={sites} busy={disabled} locale={resolveLocale(locale) === 'zhCN' ? 'zh-CN' : resolveLocale(locale) === 'zhTW' ? 'zh-TW' : 'en'}
       onCancel={() => { archiveEpoch.current++; setOrganizing(null); setGuideChoices([]); if (openRequest) onReadingCancelled?.(openRequest.request); }} onCreated={(record, mode, selection) => {

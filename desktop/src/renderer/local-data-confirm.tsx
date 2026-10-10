@@ -52,7 +52,7 @@ export function LocalDataConfirm({ copy, state, busy, onCancel, onConfirm, onRet
     }
   }
   const empty = !!stats && state.action !== 'reset' && stats[state.action] === 0;
-  const confirmButton = <button key="confirm" type="button" className="primary" data-local-confirm disabled={busy || state.loading || state.executing || !stats || state.error === 'stats' || empty} onClick={onConfirm}>{state.executing ? state.action === 'reset' ? copy.localDataResetting : copy.localDataClearing : copy[keys.action]}</button>;
+  const confirmButton = <button key="confirm" type="button" className="primary danger" data-local-confirm disabled={busy || state.loading || state.executing || !stats || state.error === 'stats' || empty} onClick={onConfirm}>{state.executing ? state.action === 'reset' ? copy.localDataResetting : copy.localDataClearing : copy[keys.action]}</button>;
   const cancelButton = <button key="cancel" type="button" ref={cancel} disabled={state.executing} onClick={onCancel}>{copy.cancel}</button>;
   return <div className="confirm-scrim"><div className="confirm-dialog local-data-confirm" ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="local-confirm-title" aria-describedby="local-confirm-message local-confirm-snapshot" aria-busy={state.loading || state.executing}>
     <header><h2 id="local-confirm-title">{copy[keys.title]}</h2></header>
@@ -60,9 +60,10 @@ export function LocalDataConfirm({ copy, state, busy, onCancel, onConfirm, onRet
     {state.changed ? <p className="local-counts-changed">{copy.localDataStatsChanged}</p> : null}
     {state.loading ? <p>{copy.localDataStatsLoading}</p> : null}
     {state.error ? <p role="alert">{state.error === 'stats' ? copy.localDataStatsFailed : copy.localDataActionFailed}</p> : null}
+    {/* 说明写「以下为…」，必须紧挨在数量列表之前。 */}
+    <p id="local-confirm-snapshot">{state.action === 'reset' ? copy.localDataResetSnapshot : copy.localDataStatsSnapshot}</p>
     <ul className="local-data-counts">{rows.map(([label, count]) => <li key={label}>{formatCopy(label, { count })}</li>)}</ul>
     {empty ? <p>{copy.localDataNoActiveRecords}</p> : null}
-    <p id="local-confirm-snapshot">{state.action === 'reset' ? copy.localDataResetSnapshot : copy.localDataStatsSnapshot}</p>
     <div className="local-confirm-tools">
       {state.error === 'stats' ? <button type="button" disabled={state.loading} onClick={onRetry}>{copy.localDataStatsRetry}</button> : null}
       {onBackup ? <button type="button" disabled={state.executing} onClick={onBackup}>{copy.localDataBackupFirst}</button> : null}

@@ -11,6 +11,8 @@ interface ConfirmDialogProps {
   readonly message: string;
   readonly confirmLabel: string;
   readonly cancelLabel: string;
+  /** 不可逆的删除/清空用危险色确认按钮，与触发它的红色入口一致。 */
+  readonly tone?: "danger";
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }
@@ -25,7 +27,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
   const onCancelRef = useRef(props.onCancel);
   onCancelRef.current = props.onCancel;
   const cancel = <button key="cancel" type="button" ref={cancelRef} onClick={props.onCancel}>{props.cancelLabel}</button>;
-  const confirm = <button key="confirm" type="button" className="primary" onClick={props.onConfirm}>{props.confirmLabel}</button>;
+  const confirm = <button key="confirm" type="button" className={props.tone === "danger" ? "primary danger" : "primary"} onClick={props.onConfirm}>{props.confirmLabel}</button>;
 
   // 焦点圈在弹层内、Escape 只关弹层：键盘事件挂在 window 的捕获阶段——挂在 scrim 的 React onKeyDown 上
   // 有两个洞：宿主页面（设置页、工作区抽屉）自己的 window Escape 监听会同时收到事件把整页关掉；

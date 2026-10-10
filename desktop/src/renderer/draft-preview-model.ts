@@ -71,6 +71,22 @@ export function draftPreviewFields(kind: DraftKind, content: unknown, copy: Draf
   return fields;
 }
 
+const firstLine = (value: string): string => value.split('\n').map(line => line.trim()).find(Boolean) ?? '';
+
+/** 列表项副标题：区分同名草稿。正文取首个非空行（标题已显示时改给长度），来源型草稿附来源数。 */
+export function draftSummary(draft: Pick<StoredDraft, 'kind' | 'content' | 'title'>, copy: DraftCopy): string {
+  const value = record(draft.content);
+  const count = (template: string, n: number) => template.replace('{count}', String(n));
+  const main = draft.kind === 'prompt' ? (typeof draft.content === 'string' ? draft.content : text(value.text))
+    : draft.kind === 'decision' ? text(value.conclusion) : draft.kind === 'comparison' ? text(value.judgment) : text(value.instruction);
+  const line = firstLine(main);
+  const parts = [line && !draft.title.startsWith(line) ? [...line].slice(0, 80).join('') : '', count(copy.draftSummaryChars, [...main].length)];
+  const sources = draft.kind === 'comparison' ? array(value.quotes).length : draft.kind === 'synthesis' ? array(value.selectedHosts).length
+    : draft.kind === 'decision' ? array(value.evidence).length : 0;
+  if (sources) parts.push(count(copy.draftSummarySources, sources));
+  return parts.filter(Boolean).join(' · ');
+}
+
 export function sortDraftCopies(drafts: readonly StoredDraft[]): readonly StoredDraft[] {
   return [...drafts].sort((left, right) => right.updatedAt - left.updatedAt || left.id.localeCompare(right.id));
 }

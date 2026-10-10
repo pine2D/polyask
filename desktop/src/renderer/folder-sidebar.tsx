@@ -49,7 +49,7 @@ export function FolderSidebar({ copy, folders, selected, onSelect, onChanged, di
       }} /></label>
       <p role="status">{message}</p><div className="confirm-actions"><button disabled={blocked} onClick={() => setEditing(null)}>{copy.cancel}</button><button disabled={blocked} className="primary" onClick={() => void save()}>{copy.decisionSave}</button></div>
     </FolderModal> : null}
-    {removing ? <ConfirmDialog copy={copy} title={copy.folderDelete} message={copy.folderDeleteConfirm} confirmLabel={copy.decisionConfirm} cancelLabel={copy.cancel} onCancel={() => setRemoving(null)} onConfirm={() => {
+    {removing ? <ConfirmDialog copy={copy} title={copy.folderDelete} message={copy.folderDeleteConfirm} confirmLabel={copy.decisionConfirm} cancelLabel={copy.cancel} tone="danger" onCancel={() => setRemoving(null)} onConfirm={() => {
       if (blocked) return;
       const id = removing.id; setRemoving(null); requestDecisionNavigation(() => { setBusy(true);
       shell.deleteFolder(id).then(() => { runApprovedDecisionNavigation(() => onSelect('')); onChanged(); }).catch(() => setMessage(copy.folderFailed)).finally(() => setBusy(false)); });

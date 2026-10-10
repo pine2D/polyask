@@ -19,8 +19,13 @@
 .draft-copy-list small, .draft-copy-list time { color: var(--muted); }
 .draft-copy-list small { grid-column: 1; }
 .draft-copy-list time { grid-column: 1; font-variant-numeric: tabular-nums; }
-.draft-copy-list button { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
-.draft-preview h3 { margin-block: 12px 8px; }
+.draft-copy-list > li > button { grid-column: 2; grid-row: 1 / span 4; align-self: center; }
+.draft-copy-list > li { padding-inline: 8px; border-radius: var(--radius-control); }
+.draft-copy-list > li[data-selected] { border-bottom-color: transparent; background: var(--selection-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.draft-copy-list .draft-copy-title { font-weight: 600; }
+.draft-copy-list .draft-copy-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.draft-copy-list > li > .draft-preview { grid-column: 1 / -1; margin-top: 4px; padding-top: 8px; border-top: 1px solid var(--border); }
+.draft-recovery button.primary.danger, .draft-recovery button.primary.danger:hover:not(:disabled) { color: #fff; border-color: var(--danger); background: var(--danger); }
 .draft-preview-fields { margin: 12px 0; display: grid; gap: 12px; }
 .draft-preview-fields > div { min-width: 0; }
 .draft-preview-fields dt { margin-bottom: 4px; font-weight: 600; }

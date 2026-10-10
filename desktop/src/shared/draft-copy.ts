@@ -24,7 +24,8 @@ export const DRAFT_COPY = {
     draftSourceNumber: 'Source answer {number}', draftNotSet: 'Not set', draftUnknownSetting: 'Unknown setting',
     draftPreviewUnavailable: 'This draft cannot be previewed in this editor.',
     draftSiteDoubao: 'Doubao', draftSiteQianwen: 'Qianwen', draftSiteYuanbao: 'Yuanbao', draftSiteChatglm: 'Zhipu',
-    draftFormSaved: 'Saved draft', draftReviewChanged: 'This draft has changed. Review its latest contents.', draftTimeUnavailable: 'Time unavailable'
+    draftFormSaved: 'Saved draft', draftReviewChanged: 'This draft has changed. Review its latest contents.', draftTimeUnavailable: 'Time unavailable',
+    draftHide: 'Hide draft', draftSummaryChars: '{count} characters', draftSummarySources: '{count} sources', dialogClose: 'Close'
   },
   zhCN: {
     draftRecovery: '保存的草稿', draftRecoveryCount: '保存的草稿（{count}）', draftLocal: '本机',
@@ -51,7 +52,8 @@ export const DRAFT_COPY = {
     draftSourceNumber: '来源回答 {number}', draftNotSet: '未填写', draftUnknownSetting: '未知设置',
     draftPreviewUnavailable: '这份草稿暂不能在当前编辑器中预览。',
     draftSiteDoubao: '豆包', draftSiteQianwen: '千问', draftSiteYuanbao: '元宝', draftSiteChatglm: '智谱',
-    draftFormSaved: '已保存草稿', draftReviewChanged: '这份草稿已变更，请重新查看最新内容。', draftTimeUnavailable: '时间不可用'
+    draftFormSaved: '已保存草稿', draftReviewChanged: '这份草稿已变更，请重新查看最新内容。', draftTimeUnavailable: '时间不可用',
+    draftHide: '收起草稿', draftSummaryChars: '{count} 字', draftSummarySources: '{count} 个来源', dialogClose: '关闭'
   },
   zhTW: {
     draftRecovery: '儲存的草稿', draftRecoveryCount: '儲存的草稿（{count}）', draftLocal: '本機',
@@ -78,7 +80,8 @@ export const DRAFT_COPY = {
     draftSourceNumber: '來源回答 {number}', draftNotSet: '未填寫', draftUnknownSetting: '未知設定',
     draftPreviewUnavailable: '這份草稿暫時不能在目前編輯器中預覽。',
     draftSiteDoubao: '豆包', draftSiteQianwen: '千問', draftSiteYuanbao: '元寶', draftSiteChatglm: '智譜',
-    draftFormSaved: '已儲存草稿', draftReviewChanged: '這份草稿已變更，請重新檢視最新內容。', draftTimeUnavailable: '時間無法使用'
+    draftFormSaved: '已儲存草稿', draftReviewChanged: '這份草稿已變更，請重新檢視最新內容。', draftTimeUnavailable: '時間無法使用',
+    draftHide: '收合草稿', draftSummaryChars: '{count} 字', draftSummarySources: '{count} 個來源', dialogClose: '關閉'
   }
 } as const;
 

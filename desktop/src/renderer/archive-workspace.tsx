@@ -129,7 +129,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
       </div>
       <div className="archive-status" role="status" aria-live="polite">{props.status}</div>
       {confirmDelete === selected?.id && selected ? <ConfirmDialog copy={copy} title={copy.deleteArchive} message={copy.confirmDeleteArchive}
-        confirmLabel={copy.deleteArchive} cancelLabel={copy.cancel} onCancel={() => setConfirmDelete(null)}
+        confirmLabel={copy.deleteArchive} cancelLabel={copy.cancel} tone="danger" onCancel={() => setConfirmDelete(null)}
         onConfirm={() => { setConfirmDelete(null); props.onDelete(selected.id); }} /> : null}
     </section>
   );

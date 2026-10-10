@@ -185,6 +185,9 @@ button { cursor: default; }
 .confirm-dialog .confirm-actions button:hover { color: var(--accent); border-color: var(--accent); background: transparent; }
 .confirm-dialog .confirm-actions button.primary { border-color: var(--accent); color: var(--on-accent); background: var(--accent); }
 .confirm-dialog .confirm-actions button.primary:hover { color: var(--on-accent); background: var(--accent); filter: brightness(.92); }
+/* 不可逆操作：确认按钮与触发它的红色入口同色，不再用主色紫暗示「推荐」。 */
+.confirm-dialog .confirm-actions button.primary.danger, .confirm-dialog .confirm-actions button.primary.danger:hover { border-color: var(--danger); color: #fff; background: var(--danger); }
+.confirm-dialog .confirm-actions button.primary.danger:disabled { filter: none; opacity: .45; }
 
 .archive-workspace { position: fixed; z-index: 10; inset: 0; display: grid; grid-template-rows: 44px minmax(0, 1fr) 22px; background: var(--canvas); }
 .archive-toolbar { padding: 4px 6px; display: grid; grid-template-columns: auto minmax(220px, 1fr) auto; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); background: var(--panel); }
