@@ -1067,3 +1067,16 @@ Windows/macOS 本轮原生、物理输入法与读屏、真实 Drive 授权及�
 - **不发送对拍**：在七个 contenteditable 站按生产注入链写入两行、空行、缩进+制表符、连续与末尾空格四种文本，按块逐行读取后全部与原文逐字一致，随后用可信按键清空。Kimi 的 `insertParagraph`/`insertLineBreak` 均不入 model；合成 paste 逐字一致，但单次 1639 字起被转成 TXT 附件（1391 字正常），按 1000 单元同步分块后 2.5k/3.4k/13.9k 字逐字一致、零附件。Kimi 用 paste 真发一条，用户消息换行完整。
 - **复测（修复后，34bcf74+工作树补丁包）**：带空行与四格缩进的五行问题九站 9/9 成功；页面用户消息逐行比对，Claude/ChatGPT/DeepSeek/智谱/Kimi/元宝/千问逐字一致，Gemini 保留空行但显示时去掉行首缩进、豆包显示时合并空行与缩进（均为站点渲染，注入前已逐字核对）。4057 字、104 行长文本八站成功且长度逐字相等（豆包显示时在中文与数字间加空格）；Gemini 当时上一轮回答在后台卡在加载数分钟、发送位是停止键，按设计报 `submit_unconfirmed` 未重发。停止该生成并清空后单独重发，Gemini 104 行完整送达。
 - 未测：带图多行、Windows 前台可见窗口下 Gemini 长时间卡加载的原因（后台视图，疑与已知后台节流同类，未单独排查）。
+
+## 2026-10-11 审计修复合并后 TestLab 真机复核
+
+环境同 2026-10-10（Windows TestLab，已登录九站，Electron 44.5.0）。程序先后为 `50c5624` 与 `0709079` 干净包；经外壳 IPC 与主进程 inspector（127.0.0.1:9231）驱动，用户授权实发测试问题。测外链时把主进程 `shell.openExternal` 临时换成只记录、不打开系统浏览器，结束后恢复原函数。
+
+- **多行群发回归**：新会话后三行（含空行）问题九站 9/9 成功。新会话后 Gemini 输入框自行恢复了上一轮测试文本，发前用可信按键清空。
+- **R8 新会话交接**：DeepSeek/智谱/千问/Kimi/豆包五站在外壳轮询（250ms）首次全部报完成后立刻 `newSession`，新会话耗时 3.5s（交接保存）；五份副本均 `complete`、未截断、正文含结尾标记。
+- **R2 菜单**：「视图」菜单 reload/forceReload/缩放均为自定义项（无 role），加速器 `CmdOrCtrl+R`、`Shift+CmdOrCtrl+R`、`CmdOrCtrl+0/Plus/-`。菜单「重新加载」对空闲的 Claude 实际重载（`timeOrigin` 变化）后回到 ready；焦点移到正在生成的 Gemini 时被拒（`timeOrigin` 不变、生成继续）。
+- **R15/R16 外链**：同页 `http://` 链接与刚点击过的 `target=_blank` 链接都转交浏览器（记录到两条），页面不跳转；距上次输入超过 10s 的无手势 `window.open` 被拒。
+- **新发现并修复（0709079）**：`50c5624` 上点同页 `http://` 链接后 Claude 永久停在 loading，菜单重载也被拒。原因是 Electron 的 will-navigate 在 did-start-navigation 之后才发，拦下后只剩 ERR_ABORTED、旧文档保留；同页外链在基线即走此路。修后同一操作 Claude 全程 ready。
+- **R14 同文档历史**：先做一次可信点击取得激活，再在主帧 `pushState`，然后经外壳后退、前进：URL 来回切换，`timeOrigin` 不变（同文档），阶段全程 ready，前进/后退可用性随之更新。
+- **观察（未修）**：Gemini 两轮（10-10、10-11）在可见页上都出现服务端长时间不回、`model-response` 为 0、停止键常亮的情况；截图正常渲染，非 PolyAsk 绘制问题，原因未查。
+- **未测**：真实 Drive 的 resumable 上传、重复文件收敛与草稿墓碑回收；Windows 物理快捷键（本轮经菜单 `click()` 驱动，未按真实键盘）；macOS。
