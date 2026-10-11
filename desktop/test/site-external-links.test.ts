@@ -30,16 +30,19 @@ function loadSiteView({ loadURL = async (_url: string) => {} } = {}) {
   });
   const sites = require("./sites").SITES;
   const external: string[] = [];
+  const phases: string[] = [];
   const noop = () => {};
   module.exports.createSiteView(sites.find((site: { key: string }) => site.key === "claude"),
-    { onLoading: noop, onReady: noop, onFailure: noop, onCrash: noop, onExternal: (url: string) => external.push(url) });
+    { onLoading: () => phases.push("loading"), onReady: () => phases.push("ready"), onFailure: noop, onCrash: noop, onExternal: (url: string) => external.push(url) });
   const click = (type = "mouseDown") => contents.emit("input-event", {}, { type });
   const navigate = (url: string) => {
+    // Electron 先发 did-start-navigation，will-navigate 由 NavigationThrottle 随后发出。
+    contents.emit("did-start-navigation", { url, isMainFrame: true, isSameDocument: false });
     let prevented = false;
     contents.emit("will-navigate", { url, isMainFrame: true, preventDefault: () => { prevented = true; } });
     return prevented;
   };
-  return { contents, external, loads, click, navigate, open: (url: string) => openHandler({ url }) };
+  return { contents, external, loads, phases, click, navigate, open: (url: string) => openHandler({ url }) };
 }
 
 // R15：http:// 是 block（受管视图绝不明文加载），此前连转交都没有——用户点了毫无反应。
@@ -113,4 +116,16 @@ test("a rejected same-site window.open rewrite does not become an unhandled reje
     await new Promise(done => setImmediate(done));
     assert.equal(unhandled.length, 0);
   } finally { process.off("unhandledRejection", record); }
+});
+
+test("a refused same-tab link leaves the page ready instead of loading forever", () => {
+  const view = loadSiteView();
+  view.contents.emit("did-start-navigation", { url: "https://claude.ai/new", isMainFrame: true, isSameDocument: false });
+  view.contents.emit("did-finish-load");
+  view.phases.length = 0;
+  view.click();
+  assert.equal(view.navigate("http://example.com/cited"), true);
+  assert.deepEqual(view.phases, ["loading", "ready"], "the old document is still there and must read as ready");
+  assert.equal(view.navigate("https://claude.ai/chat/next"), false, "allowed navigations still load normally");
+  assert.deepEqual(view.phases, ["loading", "ready", "loading"]);
 });

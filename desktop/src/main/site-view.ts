@@ -89,7 +89,7 @@ export function createSiteView(
   // 加载失败不被紧随的 did-finish-load 洗回就绪。
   const lifecycle = new PageLifecycle();
   contents.on("did-start-navigation", (details) => {
-    if (lifecycle.startNavigation(details.isMainFrame, details.isSameDocument)) callbacks.onLoading();
+    if (lifecycle.startNavigation(details.isMainFrame, details.isSameDocument, details.url)) callbacks.onLoading();
   });
   contents.on("did-finish-load", () => {
     if (!lifecycle.finishLoad()) return;
@@ -118,6 +118,8 @@ export function createSiteView(
     authRecovery.observe(decision.disposition, event.isMainFrame);
     if (decision.allow) return;
     event.preventDefault();
+    // 拦下的主帧导航不会再有 did-finish-load：阶段还原到发起前（旧文档仍在），否则永久 loading（page-lifecycle.ts ③）。
+    if (event.isMainFrame && lifecycle.cancelNavigation(isRedirect ? undefined : event.url) === "ready") callbacks.onReady();
     // 拦下之后要给用户一个去处，否则点了毫无反应。只有「用户主动点出去」的那类才转交外部浏览器：
     // 外部域或明文 http + 主帧 + 非重定向。服务端 302 与其余 block 类不转（前者是登录链中间态，后者本就该死掉）。
     if (handsOffToBrowser(decision.disposition, event.url) && event.isMainFrame && !isRedirect) {

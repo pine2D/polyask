@@ -58,3 +58,26 @@ test("aborted and subframe failures leave the phase untouched", () => {
   assert.equal(page.failLoad(-102, false), null);
   assert.equal(page.current(), "ready");
 });
+
+// ③ 2026-10-10 TestLab 真机：will-navigate 在 did-start-navigation 之后才发，拦下后只剩 ERR_ABORTED，
+// 旧文档原样保留——不还原就永久 loading，连重新加载都被闸门拒绝。
+test("a main-frame navigation refused by the guard restores the previous phase", () => {
+  const page = new PageLifecycle();
+  page.startNavigation(true, false, "https://claude.ai/new");
+  page.finishLoad();
+
+  assert.equal(page.startNavigation(true, false, "http://example.com/cited"), "loading");
+  assert.equal(page.failLoad(PageLifecycle.ABORTED, true), null);
+  assert.equal(page.cancelNavigation("http://example.com/cited"), "ready");
+  assert.equal(page.current(), "ready");
+});
+
+test("cancelling a different or already settled navigation changes nothing", () => {
+  const page = new PageLifecycle();
+  page.startNavigation(true, false, "https://claude.ai/new");
+  assert.equal(page.cancelNavigation("https://evil.example/"), null, "another URL is not this navigation");
+  assert.equal(page.current(), "loading");
+  page.finishLoad();
+  assert.equal(page.cancelNavigation("https://claude.ai/new"), null, "a committed load is not undone");
+  assert.equal(page.current(), "ready");
+});
