@@ -191,8 +191,11 @@ function App(): React.JSX.Element {
   );
   const { runState } = broadcast;
   const runProgress = useQuestionRunProgress(broadcast.runId, bootstrapProgress);
+  const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
+  const preferences = useSyncedPreferences({ display: display.value, onDisplay: display.accept, onPersistenceFailure: () => setAnnouncement(copy.preferencesSaveFailed) });
   const pageClose = useSitePageClose({ copy, sites, busy: runState !== 'idle' || auxiliaryBusy || participation.pending || draftConfirmation.blocking, api: shell,
-    lock: actionLock.current!, onOpen: () => { commandActions.current = {}; changeSurface('confirmation'); },
+    lock: actionLock.current!, confirmClose: preferences.confirmations.sitePageCloseConfirm, onConfirmCloseChange: enabled => { void preferences.onConfirmation('sitePageCloseConfirm', enabled); },
+    onOpen: () => { commandActions.current = {}; changeSurface('confirmation'); },
     onClose: () => { changeSurface('sites'); restoreWorkbenchFocus(); }, onWorkspace: workspaceFlow.accept, onAnnounce: setAnnouncement });
   const retryReview = useBroadcastRetryReview({copy, sites, flow: broadcast, lock: actionLock.current!,
     busy: runState !== "idle" || auxiliaryBusy || draftConfirmation.blocking, onOpen: () => { changeSurface("sites"); changeSurface("confirmation"); },
@@ -209,8 +212,6 @@ function App(): React.JSX.Element {
     () => { runProgress.invalidate(); broadcast.invalidate(); changeSurface("sites"); },
     () => { archiveNavigation.clear(); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
-  const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
-  const preferences = useSyncedPreferences({ display: display.value, onDisplay: display.accept, onPersistenceFailure: () => setAnnouncement(copy.preferencesSaveFailed) });
   const { completionNotifications, onCompletionNotifications: setCompletionNotifications } = preferences;
   const acceptDisplayPreferences = display.accept;
   const acceptBootstrap = (state: BootstrapState): void => {
@@ -358,7 +359,7 @@ function App(): React.JSX.Element {
     openArchive: (id, mode) => { if (id && mode === 'read') archiveNavigation.history(id, 'read'); else archiveNavigation.collection(id); changeSurface("archive"); }});
   const startNewSession = async (): Promise<void> => {
     if (draftConfirmation.isBlocking() || pendingNewSession || auxiliaryBusy || runState !== "idle") return;
-    await confirmAndStartNewSession({ sites: [...selected], copy, show: setPendingNewSession, changeSurface,
+    await confirmAndStartNewSession({ sites: [...selected], copy, confirm: preferences.confirmations.newSessionConfirm, show: setPendingNewSession, changeSurface,
       run: runAuxiliary, send: shell.newSession, recover: workspaceFlow.recover, announce: setAnnouncement,
       invalidate: () => { broadcast.invalidate(); runProgress.invalidate(); archiveCapture.invalidate(); }
     });
@@ -499,7 +500,7 @@ function App(): React.JSX.Element {
     return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} synthesisSession={synthesis.session} comparisonDrafts={comparisonDrafts} session={librarySession} navigationRevision={archiveNavigation.revision} onBlockingChange={blockLibrary} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} preferenceSync={preferences.settings} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { void preferences.refresh(); workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} preferenceSync={preferences.settings} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} confirmations={preferences.confirmations} onConfirmationChange={(key, enabled) => { void preferences.onConfirmation(key, enabled); }} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { void preferences.refresh(); workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (
@@ -664,7 +665,8 @@ function App(): React.JSX.Element {
           message={formatCopy(copy.newSessionConfirmMessage, { count: pendingNewSession.count })}
           confirmLabel={copy.newSessionConfirmAction}
           cancelLabel={copy.newSessionKeepCurrent}
-          onConfirm={() => pendingNewSession.decide(true)}
+          dontAskLabel={copy.confirmDontAsk}
+          onConfirm={dontAsk => { if (dontAsk) void preferences.onConfirmation('newSessionConfirm', false); pendingNewSession.decide(true); }}
           onCancel={() => pendingNewSession.decide(false)}
         />
       )}

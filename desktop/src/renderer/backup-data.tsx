@@ -20,7 +20,8 @@ export function backupKind(copy: DesktopCopy, kind: string): string { return cop
 export function backupItemTitle(copy: DesktopCopy, item: Pick<BackupPreviewItem, 'kind' | 'id' | 'title'>): string {
   if (item.kind !== 'preference') return item.title || backupKind(copy, item.kind);
   const labels: Record<string, keyof DesktopCopy> = { density: 'densityMenu', siteScale: 'siteScaleMenu',
-    completionNotifications: 'completionNotifications', layoutMode: 'layoutLabel', workbenchGuide: 'gettingStarted' };
+    completionNotifications: 'completionNotifications', layoutMode: 'layoutLabel', workbenchGuide: 'gettingStarted',
+    sitePageCloseConfirm: 'sitePageCloseConfirmSetting', newSessionConfirm: 'newSessionConfirmSetting' };
   return item.id.startsWith('siteZoom.') ? `${copy.siteScaleMenu} · ${formatBackupValue(item.id.slice(9), 'site', copy, '')}`
     : copy[labels[item.id] ?? 'backupKindPreference'];
 }

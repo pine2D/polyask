@@ -207,3 +207,5 @@
   .settings-display-options input:disabled + span, .local-confirm-tools button:disabled { color: GrayText; }
   .local-confirm-tools button { border-color: ButtonText; }
 }
+.settings-confirmations > h2 { margin-bottom: 12px; }
+.settings-confirmations .preference-card + .preference-card { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }

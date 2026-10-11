@@ -17,6 +17,9 @@ export interface SitePageCloseOptions {
   readonly busy: boolean;
   readonly api: SitePageCloseApi;
   readonly lock?: Pick<ExclusiveActionLock, 'run'>;
+  /** false = 用户选过「不再提示」：仍走只读预检与保护拦截，只省掉确认弹窗。 */
+  readonly confirmClose?: boolean;
+  readonly onConfirmCloseChange?: (enabled: boolean) => void;
   readonly onOpen: () => void;
   readonly onClose: () => void;
   readonly onWorkspace: (workspace: WorkspaceState) => void;
@@ -31,10 +34,12 @@ const BLOCKED_COPY = {
 
 export function useSitePageClose(options: SitePageCloseOptions) {
   const latest = useRef(options); latest.current = options;
-  const revision = useRef(0), mounted = useRef(true), blocked = useRef(false), closing = useRef(false);
+  const revision = useRef(0), mounted = useRef(true), blocked = useRef(false), closing = useRef(false), opened = useRef(false);
   const [site, setSite] = useState<SiteKey | null>(null);
   const [preview, setPreview] = useState<SitePageClosePreview | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [quiet, setQuiet] = useState(false);
+  const [dontAsk, setDontAsk] = useState(false);
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; revision.current++; blocked.current = false; };
@@ -43,16 +48,18 @@ export function useSitePageClose(options: SitePageCloseOptions) {
   const announceReason = (reason: SitePageBlockedReason) => latest.current.onAnnounce(latest.current.copy[BLOCKED_COPY[reason]]);
   const finish = () => {
     revision.current++;
-    const wasOpen = blocked.current;
-    blocked.current = false; closing.current = false;
-    setSite(null); setPreview(null); setSubmitting(false);
+    const wasOpen = opened.current;
+    blocked.current = false; closing.current = false; opened.current = false;
+    setSite(null); setPreview(null); setSubmitting(false); setQuiet(false); setDontAsk(false);
     if (wasOpen) latest.current.onClose();
   };
   const request = async (key: SiteKey): Promise<boolean> => {
     if (!mounted.current || blocked.current || latest.current.busy || !latest.current.sites.some(item => item.key === key)) return false;
     const attempt = ++revision.current;
-    blocked.current = true; setSite(key); setPreview(null);
-    latest.current.onOpen();
+    // 不再提示时不切到确认面：站点视图不闪隐，结果仍经 onAnnounce 播报。
+    const skip = latest.current.confirmClose === false;
+    blocked.current = true; setSite(key); setPreview(null); setQuiet(skip); setDontAsk(false);
+    if (!skip) { opened.current = true; latest.current.onOpen(); }
     try {
       const next = await latest.current.api.previewSitePageClose(key);
       if (!current(attempt)) return false;
@@ -62,6 +69,7 @@ export function useSitePageClose(options: SitePageCloseOptions) {
       if (next.contentsId === null) { latest.current.onAnnounce(latest.current.copy.sitePageNotOpen); finish(); return false; }
       if (next.reason) { announceReason(next.reason); finish(); return false; }
       setPreview(next);
+      if (skip) await perform(next, attempt);
       return true;
     } catch {
       if (current(attempt)) { latest.current.onAnnounce(latest.current.copy.sitePageCloseFailed); finish(); }
@@ -70,7 +78,11 @@ export function useSitePageClose(options: SitePageCloseOptions) {
   };
   const confirm = async () => {
     if (!preview || closing.current || latest.current.busy) return;
-    const attempt = revision.current;
+    // 只在用户确实关闭时记住「不再提示」；取消不改偏好。
+    if (dontAsk) latest.current.onConfirmCloseChange?.(false);
+    await perform(preview, revision.current);
+  };
+  const perform = async (preview: SitePageClosePreview, attempt: number) => {
     closing.current = true; setSubmitting(true);
     const action = () => latest.current.api.closeSitePage({ site: preview.site, contentsId: preview.contentsId!, confirmed: true });
     try {
@@ -91,12 +103,16 @@ export function useSitePageClose(options: SitePageCloseOptions) {
   };
   const cancel = () => { if (!closing.current) finish(); };
   const label = options.sites.find(item => item.key === site)?.label ?? '';
-  const dialog = site ? <FolderModal copy={options.copy} title={formatCopy(options.copy.sitePageCloseTitle, { site: label })}
+  const dialog = site && !quiet ? <FolderModal copy={options.copy} title={formatCopy(options.copy.sitePageCloseTitle, { site: label })}
     busy={submitting} onCancel={cancel}>
     <p>{options.copy.sitePageCloseMessage}</p>
     {!preview ? <p role="status">{options.copy.sitePagePreviewPending}</p> :
-      <footer><button type="button" className="site-page-close-confirm" disabled={submitting || options.busy}
-        onClick={() => { void confirm(); }}>{options.copy.sitePageCloseConfirm}</button></footer>}
+      <footer>
+        {options.onConfirmCloseChange ? <label className="site-page-close-dont-ask"><input type="checkbox" name="site-page-close-dont-ask"
+          checked={dontAsk} disabled={submitting} onChange={event => setDontAsk(event.target.checked)} />{options.copy.confirmDontAsk}</label> : null}
+        <button type="button" className="site-page-close-confirm" disabled={submitting || options.busy}
+          onClick={() => { void confirm(); }}>{options.copy.sitePageCloseConfirm}</button>
+      </footer>}
   </FolderModal> : null;
   return { blocking: site !== null, pending: submitting || (site !== null && preview === null), request, cancel,
     invalidate: finish, dialog };

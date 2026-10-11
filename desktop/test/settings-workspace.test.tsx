@@ -239,6 +239,24 @@ test("settings expose an explicit local-only completion notification preference"
   assert.match(html, />检查更新</);
 });
 
+test("settings restore confirmations that were turned off with don't ask again", () => {
+  const render = (confirmations: { sitePageCloseConfirm: boolean; newSessionConfirm: boolean }) => renderToStaticMarkup(
+    <SettingsWorkspace copy={getCopy("zh-CN")} locale="zh-CN" runtime={runtime} status={status()}
+      confirmations={confirmations} onConfirmationChange={noop}
+      onStatus={noop} onAnnounce={noop} onClose={noop} />
+  );
+  const html = render({ sitePageCloseConfirm: false, newSessionConfirm: true });
+  assert.match(html, /确认提示/);
+  assert.match(html, /data-settings-section="confirmations"/);
+  assert.match(html, /关闭站点页面前确认/);
+  assert.match(html, /正在发送、生成或保存回答的页面仍会被拦下/);
+  assert.match(html, /新建会话前确认/);
+  assert.doesNotMatch(html, /name="confirmation-sitePageCloseConfirm"[^>]*checked/);
+  assert.match(html, /name="confirmation-newSessionConfirm"[^>]*checked=""/);
+  assert.doesNotMatch(renderToStaticMarkup(<SettingsWorkspace copy={getCopy("zh-CN")} locale="zh-CN" runtime={runtime}
+    status={status()} onStatus={noop} onAnnounce={noop} onClose={noop} />), /settings-confirmations/);
+});
+
 test("settings expose the three local-data entry points and promise cloud data stays", () => {
   const html = renderSettings(status({ connected: true, state: "idle" }));
   assert.match(html, /aria-labelledby="local-data-title"/);

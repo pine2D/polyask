@@ -11,11 +11,13 @@ import {
 } from "../shared/sync-diagnostics";
 import type { RuntimeInfo } from "../shared/runtime";
 import type { DisplayPreferences } from "../shared/display";
+import type { ConfirmationKey } from "../shared/preferences";
 import { CloseIcon } from "./icons";
 import { BackupCard } from "./backup-workspace";
 import { LocalDataCard } from "./local-data-card";
 import { SettingsDisplay } from "./settings-display";
 import { PreferenceSyncSettings } from "./preference-sync-settings";
+import { SettingsConfirmations } from "./settings-confirmations";
 import type { PreferenceSyncSettingsState } from "./use-synced-preferences";
 import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
@@ -33,6 +35,8 @@ interface SettingsWorkspaceProps {
   readonly onCheckUpdates?: () => void | Promise<void>;
   readonly completionNotifications?: boolean;
   readonly onCompletionNotificationsChange?: (enabled: boolean) => void;
+  readonly confirmations?: Readonly<Record<ConfirmationKey, boolean>>;
+  readonly onConfirmationChange?: (key: ConfirmationKey, enabled: boolean) => void;
   readonly display?: DisplayPreferences;
   readonly onDisplayChange?: (preferences: DisplayPreferences) => Promise<void>;
   readonly preferenceSync?: PreferenceSyncSettingsState;
@@ -193,6 +197,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     ["display", "settings-display-title", props.copy.settingsDisplayTitle],
     ...(props.preferenceSync ? [["preferences", "settings-preference-sync-title", props.copy.preferenceSyncTitle]] : []),
     ["notifications", "completion-notifications-title", props.copy.completionNotifications],
+    ...(props.confirmations && props.onConfirmationChange ? [["confirmations", "settings-confirmations-title", props.copy.confirmationsTitle]] : []),
     ["updates", "app-updates-title", props.copy.appUpdates], ["data", "settings-advanced-toggle", props.copy.settingsAdvancedData]
   ];
   const navigateSection = (section: string, id: string): void => {
@@ -286,6 +291,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
               <span aria-hidden="true" />
             </span>
           </label>
+          {props.confirmations && props.onConfirmationChange ? <SettingsConfirmations copy={props.copy} busy={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
+            confirmations={props.confirmations} onChange={props.onConfirmationChange} /> : null}
           <section className="settings-card settings-row update-card" aria-labelledby="app-updates-title">
             <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
             <p>{props.copy.appUpdatesDescription}</p>

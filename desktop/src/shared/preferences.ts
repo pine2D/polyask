@@ -4,7 +4,10 @@ import type { SiteZoomPreferences } from "./site-zoom";
 import { validSyncTime, type VersionedSyncValue } from "./sync";
 
 export type PreferenceKey = "completionNotifications" | "density" | "siteScale" | "layoutMode" |
-  "workbenchGuide" | `siteZoom.${SiteKey}`;
+  "workbenchGuide" | ConfirmationKey | `siteZoom.${SiteKey}`;
+/** 可「不再提示」的确认：值为 false 表示用户选了不再提示。不归组，始终随同步跨设备生效。 */
+export type ConfirmationKey = "sitePageCloseConfirm" | "newSessionConfirm";
+export const CONFIRMATION_KEYS: readonly ConfirmationKey[] = ["sitePageCloseConfirm", "newSessionConfirm"];
 export type PreferenceGroup = "display" | "layout" | "siteZoom";
 export type WorkbenchGuideState = null | { readonly version: 1; readonly disposition: "dismissed" | "completed" };
 
@@ -14,6 +17,8 @@ export interface PreferenceValues {
   readonly layoutMode: "overview" | "focus";
   readonly siteZoom: SiteZoomPreferences;
   readonly workbenchGuide: WorkbenchGuideState;
+  readonly sitePageCloseConfirm: boolean;
+  readonly newSessionConfirm: boolean;
 }
 
 export interface PreferenceSnapshot {
@@ -35,7 +40,7 @@ export const PREFERENCE_SETTING_PREFIX = "polyask.preference.";
 export const PREFERENCE_STATE_PREFIX = "preference:";
 export const PREFERENCE_GROUPS: readonly PreferenceGroup[] = ["display", "layout", "siteZoom"];
 export const PREFERENCE_KEYS: readonly PreferenceKey[] = [
-  "completionNotifications", "density", "siteScale", "layoutMode", "workbenchGuide",
+  "completionNotifications", "density", "siteScale", "layoutMode", "workbenchGuide", ...CONFIRMATION_KEYS,
   ...SITE_KEYS.map(site => `siteZoom.${site}` as const)
 ];
 export const DEFAULT_PREFERENCE_VALUES: PreferenceValues = {
@@ -43,7 +48,9 @@ export const DEFAULT_PREFERENCE_VALUES: PreferenceValues = {
   display: DEFAULT_DISPLAY_PREFERENCES,
   layoutMode: "overview",
   siteZoom: {},
-  workbenchGuide: null
+  workbenchGuide: null,
+  sitePageCloseConfirm: true,
+  newSessionConfirm: true
 };
 
 export function isPreferenceKey(value: unknown): value is PreferenceKey {
@@ -58,7 +65,7 @@ export function preferenceGroup(key: PreferenceKey): PreferenceGroup | null {
 
 export function isPreferenceValue(key: PreferenceKey, value: unknown): boolean {
   if (!isPreferenceKey(key)) return false;
-  if (key === "completionNotifications") return typeof value === "boolean";
+  if (key === "completionNotifications" || CONFIRMATION_KEYS.includes(key as ConfirmationKey)) return typeof value === "boolean";
   if (key === "density") return value === "compact" || value === "comfortable";
   if (key === "siteScale") return value === 0.9 || value === 1;
   if (key === "layoutMode") return value === "overview" || value === "focus";

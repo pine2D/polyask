@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DisplayPreferences } from '../shared/display';
-import type { PreferenceGroup, PreferenceKey, PreferenceSnapshot, PreferenceValues, WorkbenchGuideState } from '../shared/preferences';
+import { CONFIRMATION_KEYS, type ConfirmationKey, type PreferenceGroup, type PreferenceKey, type PreferenceSnapshot, type PreferenceValues, type WorkbenchGuideState } from '../shared/preferences';
 import { COMPLETION_NOTIFICATIONS_KEY, saveCompletionNotifications } from './completion-notification-preference';
 import { readLocalUiPreferences, writeWorkbenchGuidePreference, type LocalUiStorage } from './local-ui-preferences';
 import { shell } from './shell-api';
@@ -114,6 +114,9 @@ export function useSyncedPreferences(options: SyncedPreferencesOptions) {
   const onFollowingChange = useCallback((group: PreferenceGroup, enabled: boolean) => run(() => shell.followPreferences(group, enabled)), [run]);
   const onLayoutModeChange = useCallback((mode: PreferenceValues['layoutMode']) => setPreference('layoutMode', mode), [setPreference]);
   const onDraftSyncChange = useCallback((enabled: boolean) => run(() => shell.setDraftSync(enabled)), [run]);
+  const onConfirmation = useCallback(async (key: ConfirmationKey, enabled: boolean): Promise<void> => {
+    try { await setPreference(key, enabled); } catch { /* Central persistence feedback owns the failure. */ }
+  }, [setPreference]);
   const refresh = useCallback(async (): Promise<void> => {
     if (typeof shell.getPreferences !== 'function') return;
     lifecycle.current++;
@@ -121,5 +124,8 @@ export function useSyncedPreferences(options: SyncedPreferencesOptions) {
   }, [run]);
   const settings: PreferenceSyncSettingsState = { snapshot, onFollowingChange, onLayoutModeChange, onDraftSyncChange };
   return { snapshot, ready: snapshot !== null, completionNotifications: snapshot?.values.completionNotifications ?? localNotifications,
-    onCompletionNotifications, settings, refresh };
+    onCompletionNotifications, settings, refresh,
+    // 快照未到时一律确认：偏好未读到不等于用户选过「不再提示」。
+    confirmations: Object.fromEntries(CONFIRMATION_KEYS.map(key => [key, snapshot?.values[key] ?? true])) as Record<ConfirmationKey, boolean>,
+    onConfirmation };
 }

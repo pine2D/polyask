@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { DesktopCopy } from "../shared/copy";
 import { CloseIcon } from "./icons";
@@ -13,7 +13,9 @@ interface ConfirmDialogProps {
   readonly cancelLabel: string;
   /** 不可逆的删除/清空用危险色确认按钮，与触发它的红色入口一致。 */
   readonly tone?: "danger";
-  readonly onConfirm: () => void;
+  /** 给出时显示「不再提示」勾选框；只用于可挽回的确认，删除/清空类一律不给。 */
+  readonly dontAskLabel?: string;
+  readonly onConfirm: (dontAsk: boolean) => void;
   readonly onCancel: () => void;
 }
 
@@ -25,9 +27,10 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const onCancelRef = useRef(props.onCancel);
+  const [dontAsk, setDontAsk] = useState(false);
   onCancelRef.current = props.onCancel;
   const cancel = <button key="cancel" type="button" ref={cancelRef} onClick={props.onCancel}>{props.cancelLabel}</button>;
-  const confirm = <button key="confirm" type="button" className={props.tone === "danger" ? "primary danger" : "primary"} onClick={props.onConfirm}>{props.confirmLabel}</button>;
+  const confirm = <button key="confirm" type="button" className={props.tone === "danger" ? "primary danger" : "primary"} onClick={() => props.onConfirm(dontAsk)}>{props.confirmLabel}</button>;
 
   // 焦点圈在弹层内、Escape 只关弹层：键盘事件挂在 window 的捕获阶段——挂在 scrim 的 React onKeyDown 上
   // 有两个洞：宿主页面（设置页、工作区抽屉）自己的 window Escape 监听会同时收到事件把整页关掉；
@@ -42,7 +45,7 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
       }
       if (event.key === "Escape") { event.preventDefault(); event.stopImmediatePropagation(); onCancelRef.current(); return; }
       if (event.key !== "Tab") return;
-      const focusable = panelRef.current?.querySelectorAll<HTMLElement>("button");
+      const focusable = panelRef.current?.querySelectorAll<HTMLElement>("button, input");
       if (!focusable?.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -74,6 +77,8 @@ export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
           <button type="button" className="panel-close confirm-close" title={props.cancelLabel} aria-label={props.cancelLabel} onClick={props.onCancel}><CloseIcon /></button>
         </header>
         <p id="confirm-message">{props.message}</p>
+        {props.dontAskLabel ? <label className="confirm-dont-ask"><input type="checkbox" name="confirm-dont-ask" checked={dontAsk}
+          onChange={event => setDontAsk(event.target.checked)} />{props.dontAskLabel}</label> : null}
         <div className="confirm-actions">
           {(props.platform ?? currentPlatform) === 'win32' ? [confirm, cancel] : [cancel, confirm]}
         </div>

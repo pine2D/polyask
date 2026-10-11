@@ -24,7 +24,7 @@ for (const approved of [false, true]) {
       broadcast: { invalidate() {} }, archiveCapture: { invalidate() {} },
       runProgress: { invalidate: () => events.push("invalidate-progress") },
       shell: { newSession: async (sites: string[]) => { events.push("new-session"); assert.deepEqual([...sites], ["claude", "chatgpt", "deepseek"]); return []; } },
-      copy: getCopy("en"), setAnnouncement() {},
+      copy: getCopy("en"), setAnnouncement() {}, preferences: { confirmations: { newSessionConfirm: true } },
       workspaceFlow: { recover: () => assert.fail("unexpected failure") }
     });
     const script = ts.transpileModule(`${body}\nstartNewSession();`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
@@ -41,6 +41,29 @@ for (const approved of [false, true]) {
     assert.equal(pending, null);
   });
 }
+
+test("new session skips the dialog after don't ask again without bypassing busy guards", async () => {
+  const app = readSource("src/renderer/index.tsx");
+  const body = app.slice(app.indexOf("  const startNewSession ="), app.indexOf("  const showGroupMenu ="));
+  const events: string[] = [];
+  const context = vm.createContext({
+    selected: new Set(["claude", "kimi"]), pendingNewSession: null, runState: "idle", auxiliaryBusy: false,
+    draftConfirmation: { isBlocking: () => false },
+    changeSurface: (surface: string) => events.push(surface),
+    setPendingNewSession: () => assert.fail("no confirmation after don't ask again"),
+    confirmAndStartNewSession, runAuxiliary: (action: () => Promise<void>) => action(),
+    broadcast: { invalidate() {} }, archiveCapture: { invalidate() {} }, runProgress: { invalidate() {} },
+    shell: { newSession: async (sites: string[]) => { events.push(`new-session:${[...sites].join(",")}`); return []; } },
+    copy: getCopy("en"), setAnnouncement() {}, preferences: { confirmations: { newSessionConfirm: false } },
+    workspaceFlow: { recover: () => assert.fail("unexpected failure") }
+  });
+  const script = ts.transpileModule(`${body}\nstartNewSession();`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+  await vm.runInContext(script, context);
+  assert.deepEqual(events, ["new-session:claude,kimi"], "站点视图不让位、不弹确认，直接新建");
+  context.runState = "sending";
+  await vm.runInContext("startNewSession()", context);
+  assert.equal(events.length, 1, "忙碌保护不因不再提示而失效");
+});
 
 test("a pending auxiliary operation cannot be covered by a new-session confirmation", async () => {
   const app = readSource("src/renderer/index.tsx");

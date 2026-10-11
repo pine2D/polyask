@@ -5,13 +5,16 @@ import { confirmNewSession, type PendingSessionConfirmation } from './session-co
 
 export async function confirmAndStartNewSession(options: {
   sites: readonly SiteKey[]; copy: DesktopCopy;
+  /** false = 用户选过「不再提示」：直接开新会话，其余保护（忙碌/草稿确认）由调用方先判。 */
+  confirm?: boolean;
   show: (pending: PendingSessionConfirmation | null) => void;
   changeSurface: (surface: DesktopSurface) => void;
   run: (action: () => Promise<void>) => Promise<void>;
   invalidate: () => void; recover: () => void; announce: (message: string) => void;
   send: (sites: readonly SiteKey[]) => Promise<readonly SiteResult[]>;
 }): Promise<void> {
-  if (!options.sites.length || !await confirmNewSession(options.sites.length, options.show, options.changeSurface)) return;
+  if (!options.sites.length) return;
+  if (options.confirm !== false && !await confirmNewSession(options.sites.length, options.show, options.changeSurface)) return;
   await options.run(async () => {
     options.invalidate();
     try {

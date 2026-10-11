@@ -119,6 +119,9 @@ export class PreferencesRepository {
   }
 }
 
+const PLAIN_FIELDS = ["completionNotifications", "layoutMode", "workbenchGuide", "sitePageCloseConfirm", "newSessionConfirm"] as const;
+const isPlainField = (field: string): field is typeof PLAIN_FIELDS[number] => (PLAIN_FIELDS as readonly string[]).includes(field);
+
 function entriesFromValues(values: Partial<PreferenceValues>): PreferenceEntries {
   if (!values || typeof values !== "object" || Array.isArray(values)) throw new Error("invalid_preference");
   const entries: PreferenceEntries = {};
@@ -136,8 +139,7 @@ function entriesFromValues(values: Partial<PreferenceValues>): PreferenceEntries
         entries[key] = zoom;
       }
     } else {
-      if ((field !== "completionNotifications" && field !== "layoutMode" && field !== "workbenchGuide") ||
-        !isPreferenceValue(field, value)) throw new Error("invalid_preference");
+      if (!isPlainField(field) || !isPreferenceValue(field, value)) throw new Error("invalid_preference");
       entries[field] = value;
     }
   }
@@ -154,6 +156,8 @@ function valuesFromEntries(entries: PreferenceEntries): PreferenceValues {
     completionNotifications: entries.completionNotifications as boolean,
     display: { density: entries.density as "compact" | "comfortable", siteScale: entries.siteScale as 0.9 | 1 },
     layoutMode: entries.layoutMode as "overview" | "focus", siteZoom,
-    workbenchGuide: structuredClone(entries.workbenchGuide) as PreferenceValues["workbenchGuide"]
+    workbenchGuide: structuredClone(entries.workbenchGuide) as PreferenceValues["workbenchGuide"],
+    sitePageCloseConfirm: entries.sitePageCloseConfirm as boolean,
+    newSessionConfirm: entries.newSessionConfirm as boolean
   };
 }

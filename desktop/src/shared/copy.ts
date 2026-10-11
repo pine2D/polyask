@@ -19,6 +19,7 @@ import { BROADCAST_RETRY_COPY } from "./broadcast-retry-copy";
 import { SETTINGS_RECOVERY_COPY } from "./settings-recovery-copy";
 import { COMPOSER_COPY } from "./composer-copy";
 import { SITE_PARTICIPATION_COPY } from "./site-participation-copy";
+import { CONFIRMATION_COPY } from "./confirmation-copy";
 import { COMPARISON_COPY } from "./comparison-copy";
 import { PAGE_PROGRESS_COPY } from "./page-progress-copy";
 import { WORKBENCH_GUIDANCE_COPY } from './workbench-guidance-copy';
@@ -45,6 +46,7 @@ export const COPY = {
     ...SETTINGS_RECOVERY_COPY.en,
     ...COMPOSER_COPY.en,
     ...SITE_PARTICIPATION_COPY.en,
+    ...CONFIRMATION_COPY.en,
     ...COMPARISON_COPY.en,
     ...PAGE_PROGRESS_COPY.en,
     ...WORKBENCH_GUIDANCE_COPY.en,
@@ -216,6 +218,7 @@ export const COPY = {
     ...SETTINGS_RECOVERY_COPY.zhCN,
     ...COMPOSER_COPY.zhCN,
     ...SITE_PARTICIPATION_COPY.zhCN,
+    ...CONFIRMATION_COPY.zhCN,
     ...COMPARISON_COPY['zh-CN'],
     ...PAGE_PROGRESS_COPY.zhCN,
     ...WORKBENCH_GUIDANCE_COPY.zhCN,
@@ -387,6 +390,7 @@ export const COPY = {
     ...SETTINGS_RECOVERY_COPY.zhTW,
     ...COMPOSER_COPY.zhTW,
     ...SITE_PARTICIPATION_COPY.zhTW,
+    ...CONFIRMATION_COPY.zhTW,
     ...COMPARISON_COPY['zh-TW'],
     ...PAGE_PROGRESS_COPY.zhTW,
     ...WORKBENCH_GUIDANCE_COPY.zhTW,

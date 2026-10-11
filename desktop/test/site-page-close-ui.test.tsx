@@ -9,15 +9,15 @@ import { ExclusiveActionLock } from '../src/renderer/broadcast-flow-state';
 import { useSitePageClose } from '../src/renderer/use-site-page-close';
 import { mountDom } from './ui/dom-harness';
 
-async function fixture(config: { deferPreview?: boolean; deferClose?: boolean; reason?: SitePageClosePreview['reason']; result?: SitePageCloseResult } = {}) {
+async function fixture(config: { deferPreview?: boolean; deferClose?: boolean; reason?: SitePageClosePreview['reason']; result?: SitePageCloseResult; confirmClose?: boolean } = {}) {
   let controller!: ReturnType<typeof useSitePageClose>, busy!: (value: boolean) => void;
   let finishPreview!: (preview: SitePageClosePreview) => void, finishClose!: (result: SitePageCloseResult) => void;
-  const closes: SitePageCloseRequest[] = [], workspaces: WorkspaceState[] = [], announcements: string[] = [], surfaces: string[] = [];
+  const closes: SitePageCloseRequest[] = [], workspaces: WorkspaceState[] = [], announcements: string[] = [], surfaces: string[] = [], optOuts: boolean[] = [];
   const copy = getCopy('en'), lock = new ExclusiveActionLock();
   const result: SitePageCloseResult = { state: 'closed', workspace: { selectedSites: ['claude'], groups: [], tier: null } };
   function Fixture() {
     const [blocked, setBlocked] = useState(false); busy = setBlocked;
-    controller = useSitePageClose({ copy, sites: SITES, busy: blocked, lock,
+    controller = useSitePageClose({ copy, sites: SITES, busy: blocked, lock, confirmClose: config.confirmClose, onConfirmCloseChange: value => optOuts.push(value),
       api: {
         previewSitePageClose: async site => config.deferPreview ? new Promise<SitePageClosePreview>(resolve => { finishPreview = resolve; })
           : { site, contentsId: 21, reason: config.reason ?? null },
@@ -28,11 +28,12 @@ async function fixture(config: { deferPreview?: boolean; deferClose?: boolean; r
     return <><button id="opener" onClick={() => { void controller.request('kimi'); }}>Close Kimi</button>{controller.dialog}</>;
   }
   const h = await mountDom(<Fixture />);
-  return { ...h, copy, result, lock, closes, workspaces, announcements, surfaces, busy,
+  return { ...h, copy, result, lock, closes, workspaces, announcements, surfaces, optOuts, busy,
     controller: () => controller, finishPreview: (value: SitePageClosePreview) => finishPreview(value),
     finishClose: (value: SitePageCloseResult) => finishClose(value),
     open: async () => { h.document.getElementById('opener')!.focus(); await h.click(h.document.getElementById('opener')!); },
     confirm: () => h.document.querySelector<HTMLButtonElement>('.site-page-close-confirm')!,
+    dontAsk: () => h.document.querySelector<HTMLInputElement>('input[name="site-page-close-dont-ask"]')!,
     cancel: () => [...h.document.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')].find(button => button.textContent === copy.cancel)! };
 }
 
@@ -131,4 +132,40 @@ test('busy changes disable confirmation while leaving an unsubmitted preview can
     await h.click(h.cancel());
     assert.equal(h.document.querySelector('[role="dialog"]') === null, true);
   } finally { await h.close(); }
+});
+
+test('"don\'t ask again" is remembered only when the close is confirmed', async () => {
+  const h = await fixture();
+  try {
+    await h.open();
+    assert.equal(h.dontAsk().checked, false);
+    assert.match(h.dontAsk().closest('label')!.textContent!, /Don't ask again/);
+    await h.click(h.dontAsk()); await h.click(h.cancel());
+    assert.deepEqual(h.optOuts, []);
+    await h.open();
+    assert.equal(h.dontAsk().checked, false, 'a cancelled opt-out does not carry into the next dialog');
+    await h.click(h.dontAsk()); await h.click(h.confirm());
+    assert.deepEqual(h.optOuts, [false]);
+    assert.deepEqual(h.closes, [{ site: 'kimi', contentsId: 21, confirmed: true }]);
+  } finally { await h.close(); }
+});
+
+test('opted-out close skips the modal but keeps the preview protection and announcements', async () => {
+  const h = await fixture({ confirmClose: false });
+  try {
+    await h.open();
+    assert.equal(h.document.querySelector('[role="dialog"]') === null, true);
+    assert.deepEqual(h.closes, [{ site: 'kimi', contentsId: 21, confirmed: true }]);
+    assert.deepEqual(h.workspaces.map(state => state.selectedSites), [['claude']]);
+    assert.equal(h.announcements.at(-1), h.copy.sitePageClosed);
+    assert.deepEqual(h.surfaces, [], 'site views are never hidden for a skipped confirmation');
+    assert.equal(h.controller().blocking, false);
+  } finally { await h.close(); }
+  const guarded = await fixture({ confirmClose: false, reason: 'generation_pending' });
+  try {
+    await guarded.open();
+    assert.deepEqual(guarded.closes, []); assert.deepEqual(guarded.workspaces, []);
+    assert.equal(guarded.announcements.at(-1), guarded.copy.sitePageCloseGeneration);
+    assert.equal(guarded.document.querySelector('[role="dialog"]') === null, true);
+  } finally { await guarded.close(); }
 });

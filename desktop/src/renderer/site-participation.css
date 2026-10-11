@@ -4,3 +4,6 @@
 
 .site-order-toggle { margin-left: auto; flex-shrink: 0; font-size: 11px; }
 .workspace-sites .drawer-section-heading { flex-wrap: wrap; }
+.folder-modal footer:has(> .site-page-close-dont-ask) { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
+.folder-modal .site-page-close-dont-ask { min-height: var(--target-size); color: var(--muted); font-size: var(--font-control); cursor: pointer; }
+.folder-modal footer > .site-page-close-confirm { margin-left: auto; }
