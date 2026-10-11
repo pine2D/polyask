@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.19.0] - 2026-10-11
+
+验收范围：Linux/WSL 下通过 1,658 项应用与界面测试、423 项运行时测试，以及输入保护、弹窗键盘、发送站点、偏好与草稿、设置恢复、输入框会话 6 项原生交互专项。
+
+验收限制：「不再提示」跨设备同步只在模拟 Drive 中验证，未用真实 Google 账号联网核验；本版改动未在 Windows 已登录九站测试档案中实机点验。
+
 ### 新增
 
 - 关闭站点页面、新建会话的确认框新增「不再提示」：勾选并确认后，之后直接执行，不再弹框；关闭页面时，正在发送、生成或保存回答的页面仍会被拦下。该选择随 Google Drive 同步到其他设备，可在「设置 › 确认提示」中逐项恢复。
@@ -1261,7 +1267,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.18.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.19.0...HEAD
+[1.19.0]: https://github.com/pine2D/polyask/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/pine2D/polyask/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/pine2D/polyask/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/pine2D/polyask/compare/v1.15.2...v1.16.0
