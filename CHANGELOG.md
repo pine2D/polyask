@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.18.0] - 2026-10-11
+
+验收范围：Linux/WSL 下通过 1,648 项应用与界面测试、423 项运行时测试、外壳 96 种与结果库 18 种布局回归、25 项原生交互专项及打包冒烟。Windows 已登录九站测试档案实发验证多行与 4,000 字长问题九站送达、新会话前保存刚完成的回答、菜单重新加载的发送/生成保护、外部与 `http://` 链接转交浏览器，以及同页历史后退/前进。
+
+验收限制：分段上传、Drive 重复文件合并与草稿删除记录清理只在模拟 Drive 中验证，未用真实 Google 账号联网核验；Windows 物理快捷键、macOS、物理输入法与读屏，以及五种发行包的实机安装未在本轮核验。
+
 ### 修复
 
 - 多行问题群发到 ChatGPT、Claude、Gemini、豆包、元宝时不再在发送前误报“未能填写提问”：段落型输入框按段逐行核对本次问题，空行、缩进和词间空格仍须逐字一致（v1.12.0 起的回归）。
@@ -1247,7 +1253,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.17.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.18.0...HEAD
+[1.18.0]: https://github.com/pine2D/polyask/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/pine2D/polyask/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/pine2D/polyask/compare/v1.15.2...v1.16.0
 [1.15.2]: https://github.com/pine2D/polyask/compare/v1.15.1...v1.15.2
