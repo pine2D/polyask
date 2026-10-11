@@ -53,6 +53,7 @@ import { WorkspaceProgress } from './workspace-progress';
 import { resetLocalSession } from "./local-data-reset";
 import { useTemplateDeletion } from "./use-template-deletion";
 import { usePromptDraft } from "./use-prompt-draft";
+import { useDraftReplaceUndo } from "./use-draft-replace-undo";
 import { focusPromptForEditing, restoreWorkbenchFocus } from "./composer-activation";
 import { useWorkspaceMotion } from "./use-workspace-motion";
 import { FeedbackProvider } from "./feedback-provider";
@@ -286,6 +287,7 @@ function App(): React.JSX.Element {
   }, [copy]);
 
   const { composer, drawerPresent } = useWorkspaceMotion(surface, drawerOpen, lastOpenPanel.current.inputMethod, imageSelection.present, { layout, density: display.value.density, covered: surface === 'confirmation' });
+  const replaceDraft = useDraftReplaceUndo(copy, text, setText, () => focusPromptForEditing(promptRef, composer.setExpanded));
   const composerExpanded = composer.expanded;
 
   const scopeLabel = useMemo(
@@ -521,11 +523,7 @@ function App(): React.JSX.Element {
           void participation.change(group.sites);
           changeSurface("sites");
         }}
-        onInsertPrompt={(value) => {
-          setText(value);
-          changeSurface("sites");
-          focusPromptForEditing(promptRef, composer.setExpanded);
-        }}
+        onInsertPrompt={(value) => { changeSurface("sites"); replaceDraft(value); }}
         onSaveTemplate={async (input) => {
           try {
             const library = await shell.savePromptTemplate(input);

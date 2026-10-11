@@ -10,28 +10,21 @@ const templates = [{ id: 'plain', name: 'Plain template', text: 'New template qu
   { id: 'variable', name: 'Variable template', text: 'Ask {{Topic}}', updatedAt: 1, deviceId: 'a' }];
 const history = [{ id: 'h', text: 'Recent question', lastUsedAt: 2 }];
 
-for (const entry of ['template', 'recent', 'variable']) test(`${entry} filling protects an existing draft until replacement is confirmed`, async () => {
+// 替换保护由宿主的 useDraftReplaceUndo 提供「撤销」（见 draft-replace-undo.test.tsx），面板本身不再弹确认。
+for (const entry of ['template', 'recent', 'variable']) test(`${entry} filling replaces an existing draft directly without a blocking dialog`, async () => {
   const inserted: string[] = [];
   const h = await mountDom(<PromptLibrary copy={copy} draft="Existing work" templates={templates} history={history}
     onInsert={text => inserted.push(text)} onSave={() => undefined} onDelete={() => undefined} />);
   const button = (text: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent?.includes(text))!;
   try {
-    const selectEntry = async () => {
-      if (entry === 'recent') await h.click(button('Recent question'));
-      else if (entry === 'template') await h.click(button('Plain template'));
-      else {
-        await h.click(button('Variable template'));
-        await h.input(h.document.querySelector<HTMLTextAreaElement>('[name="template-variable-0"]')!, 'Detailed topic');
-        await h.click(button(copy.templateApply));
-      }
-    };
-    await selectEntry();
-    assert.deepEqual(inserted, [], 'choosing content cannot silently replace user work');
-    assert.ok(h.document.querySelector('[role="dialog"]'), 'replacement has an explicit confirmation');
-    await h.click(h.document.querySelector<HTMLButtonElement>('.confirm-actions button:not(.primary)')!);
-    assert.deepEqual(inserted, [], 'cancel retains the existing draft');
-    if (entry === 'variable') await h.click(button(copy.templateApply)); else await selectEntry();
-    await h.click(h.document.querySelector<HTMLButtonElement>('.confirm-actions .primary')!);
+    if (entry === 'recent') await h.click(button('Recent question'));
+    else if (entry === 'template') await h.click(button('Plain template'));
+    else {
+      await h.click(button('Variable template'));
+      await h.input(h.document.querySelector<HTMLTextAreaElement>('[name="template-variable-0"]')!, 'Detailed topic');
+      await h.click(button(copy.templateApply));
+    }
+    assert.equal(h.document.querySelector('[role="dialog"]') === null, true);
     assert.deepEqual(inserted, [entry === 'recent' ? 'Recent question' : entry === 'variable' ? 'Ask Detailed topic' : 'New template question']);
   } finally { await h.close(); }
 });

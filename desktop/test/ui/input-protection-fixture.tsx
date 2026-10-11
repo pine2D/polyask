@@ -4,6 +4,7 @@ import { CommandPalette } from '../../src/renderer/command-palette';
 import { FeedbackProvider, useGlobalFeedback } from '../../src/renderer/feedback-provider';
 import { ImagePicker } from '../../src/renderer/image-picker';
 import { useImageSelection } from '../../src/renderer/use-image-selection';
+import { useDraftReplaceUndo } from '../../src/renderer/use-draft-replace-undo';
 import { getCopy } from '../../src/shared/copy';
 import { COMMANDS } from '../../src/shared/commands';
 import '../../src/renderer/styles.css';
@@ -20,6 +21,7 @@ function Fixture() {
   const [draft, setDraft] = useState('Preserve this carefully written draft 😀');
   feedback = useGlobalFeedback();
   flow = useImageSelection(copy, true, feedback.announce);
+  const replaceDraft = useDraftReplaceUndo(copy, draft, setDraft, noop);
   return <>
     <div className="command-bar" style={{ padding: 8 }}>
       <button id="hint-control" data-hint={copy.promptLibrary}>Hint control</button>
@@ -33,7 +35,7 @@ function Fixture() {
         { id: 'variable', name: 'Variable replacement', text: 'Ask {{Topic}}', updatedAt: 1, deviceId: 'fixture' }],
         history: [{ id: 'recent', text: 'Recent replacement', lastUsedAt: 1 }] }}
       draft={draft} mode="library" onModeChange={noop} onExecute={noop} onApplyGroup={noop}
-      onInsertPrompt={text => { inserts++; setDraft(text); }} onSaveTemplate={async () => { saved++; throw new Error('synthetic_save_failure'); }}
+      onInsertPrompt={text => { inserts++; replaceDraft(text); }} onSaveTemplate={async () => { saved++; throw new Error('synthetic_save_failure'); }}
       onDeleteTemplate={noop} onClose={noop} />
   </>;
 }
@@ -59,10 +61,11 @@ async function run() {
       await enter('[name="template-variable-0"]', 'Precise topic');
       await click(button(copy.templateApply));
     }
-    check(document.querySelector('[role="dialog"]'), 'filling a different draft requires a dialog');
-    check(inserts === 0, 'choosing content cannot replace work');
-    await click(document.querySelector<HTMLElement>('.confirm-actions button:not(.primary)')!);
-    check(document.getElementById('current-draft')!.textContent === 'Preserve this carefully written draft 😀', 'cancel preserves the original draft');
+    check(!document.querySelector('[role="dialog"]'), 'filling a different draft no longer blocks on a dialog');
+    check(document.getElementById('current-draft')!.textContent !== 'Preserve this carefully written draft 😀', 'filling replaces the draft directly');
+    const undo = [...document.querySelectorAll<HTMLButtonElement>('.feedback-bar button')].find(node => node.textContent === copy.undoDraftReplace)!;
+    await click(undo);
+    check(document.getElementById('current-draft')!.textContent === 'Preserve this carefully written draft 😀', 'undo restores the original draft');
     if (name === 'Variable replacement') await click(button(copy.templateBack));
   }
   await enter('[name="prompt-template-name"]', 'Preserve this template name 😀');

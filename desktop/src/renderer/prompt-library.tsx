@@ -4,7 +4,6 @@ import type { DesktopCopy } from "../shared/copy";
 import type { PromptHistoryItem, PromptTemplate } from "../shared/prompt-library";
 import { promptVariables } from "../shared/prompt-variables";
 import { PromptTemplateEditor } from "./prompt-template-editor";
-import { ConfirmDialog } from "./confirm-dialog";
 import { SaveIcon, TrashIcon } from "./icons";
 
 interface PromptLibraryProps {
@@ -21,14 +20,11 @@ export function PromptLibrary(props: PromptLibraryProps): React.JSX.Element {
   const [query, setQuery] = useState("");
   const [name, setName] = useState("");
   const [editing, setEditing] = useState<{ name: string; text: string } | null>(null);
-  const [pendingInsert, setPendingInsert] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const selectedButton = useRef<HTMLButtonElement | null>(null);
-  const insert = (text: string) => {
-    if (props.draft.trim() && props.draft !== text) setPendingInsert(text);
-    else props.onInsert(text);
-  };
+  // 替换已有草稿不再弹确认：宿主直接替换并在底栏提供「撤销」（useDraftReplaceUndo）。
+  const insert = (text: string) => props.onInsert(text);
   const choose = (item: { name: string; text: string }, button: HTMLButtonElement) => {
     if (!promptVariables(item.text).length) { insert(item.text); return; }
     selectedButton.current = button;
@@ -89,9 +85,6 @@ export function PromptLibrary(props: PromptLibraryProps): React.JSX.Element {
         {!matchedStarters.length && !templates.length && !history.length ? <p className="command-empty">{props.copy.promptLibraryEmpty}</p> : null}
         </div>
       </div>
-      {pendingInsert !== null ? <ConfirmDialog copy={props.copy} title={props.copy.templateReplaceTitle}
-        message={props.copy.templateReplace} confirmLabel={props.copy.templateReplaceAction} cancelLabel={props.copy.cancel}
-        onCancel={() => setPendingInsert(null)} onConfirm={() => { const value = pendingInsert; setPendingInsert(null); props.onInsert(value); }} /> : null}
     </section>
   );
 }
