@@ -321,3 +321,52 @@ test("the default keyring timeout is ten seconds", { timeout: 2000 }, async (t) 
   await tick();
   assert.equal(settled, "secret_write_timeout");
 });
+
+test("reads are coalesced so a hung keyring cannot build a backlog in front of a later write", { timeout: 5000 }, async () => {
+  await withDir(async (directory) => {
+    const path = join(directory, "proxy-secret.bin");
+    await new SecretFileStore(path, cipher()).write("old");
+    const late = deferred();
+    let stuck = true;
+    const store = new SecretFileStore(path, cipher({
+      decrypt: async (value) => {
+        if (stuck) await late.promise;
+        return value.toString().slice(7);
+      }
+    }), { keyringTimeoutMs: 20 });
+    const first = store.read();
+    assert.equal(store.read(), first, "back-to-back reads share one promise");
+    const reads: Promise<unknown>[] = [first];
+    for (let i = 0; i < 12; i += 1) {
+      await new Promise((done) => setTimeout(done, 10));
+      reads.push(store.read());
+    }
+    const started = Date.now();
+    assert.equal(await store.write("new"), "saved");
+    assert.ok(Date.now() - started < 120, `write waited ${Date.now() - started}ms behind the reads`);
+    await Promise.all(reads);
+    late.resolve();
+    stuck = false;
+  });
+});
+
+test("a read issued after a queued write is a new chain link and sees the written value", { timeout: 2000 }, async () => {
+  await withDir(async (directory) => {
+    const path = join(directory, "proxy-secret.bin");
+    const release = deferred();
+    const store = new SecretFileStore(path, cipher({
+      encrypt: async (value) => { await release.promise; return Buffer.from(`cipher:${value}`); }
+    }));
+    const before = store.read();
+    const writing = store.write("fresh");
+    const after = store.read();
+    assert.notEqual(after, before);
+    release.resolve();
+    assert.deepEqual(await before, { kind: "none" });
+    assert.equal(await writing, "saved");
+    assert.deepEqual(await after, { kind: "ok", value: "fresh" });
+    const settled = store.read();
+    await settled;
+    assert.notEqual(store.read(), settled, "a settled read is not reused");
+  });
+});

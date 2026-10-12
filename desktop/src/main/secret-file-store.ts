@@ -47,6 +47,7 @@ const stale = (guard: SecretWriteGuard | undefined): boolean =>
  */
 export class SecretFileStore {
   private tail: Promise<void> = Promise.resolve();
+  private pendingRead: Promise<SecretReadResult> | null = null;
   private readonly invalidCode: string;
   private readonly keyringTimeoutMs: number;
 
@@ -64,16 +65,27 @@ export class SecretFileStore {
     return (await this.withinKeyringTimeout(this.secureNow())) === true;
   }
 
+  /**
+   * 合并读：排队中或进行中的 read 在其后没有 write / clear 入队、且尚未结束时，新的 read 直接复用同一个 promise。
+   * 否则钥匙环挂起时每次调用方重试都会在链上多占一个时限，积压无界，后面的 write / clear 要等所有读排完。
+   */
   read(): Promise<SecretReadResult> {
-    return this.serial(() => this.readNow());
+    if (this.pendingRead) return this.pendingRead;
+    const run = this.serial(() => this.readNow());
+    this.pendingRead = run;
+    const release = (): void => { if (this.pendingRead === run) this.pendingRead = null; };
+    run.then(release, release);
+    return run;
   }
 
   write(value: string, guard?: SecretWriteGuard): Promise<SecretWriteResult> {
     if (typeof value !== "string" || !value) return Promise.reject(new Error(this.invalidCode));
+    this.pendingRead = null; // 此后发起的 read 必须排在这次 write 之后
     return this.serial(() => this.writeNow(value, guard));
   }
 
   clear(): Promise<void> {
+    this.pendingRead = null;
     return this.serial(() => this.clearNow());
   }
 
