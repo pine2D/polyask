@@ -21,6 +21,8 @@
 
 `schema1-state-preferences.json` 与 `schema1-state-drafts.json` 是 2026-10-09 新增的独立偏好和设备草稿分支样本，分别使用 `polyask.preference.*`、`polyask.draft.*` setting，沿用 state schema 1。未知扩展字段可由旧客户端保留；草稿墓碑保留身份和上下文，不保留正文。相应 repository、同步和备份测试覆盖版本合并、设备覆盖及删除终态。
 
+`schema1-state-preferences-proxy.json` 是 2026-10-12 新增的网络代理偏好样本，setting `polyask.preference.proxy` 的值为规范形式的代理配置（固定字段顺序、小写主机、不含密码）。旧客户端不认识该键，会原样带回。`preferences-proxy-boundary.test.ts` 覆盖投影往返、非规范值拒收，以及该值不进入偏好快照和 outbox；旧样本不修改。
+
 ## 新实体与备份
 
 - `schema2-*.json`：决策卡及删除标记，实体 schema 2。

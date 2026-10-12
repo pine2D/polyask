@@ -1,0 +1,20 @@
+{
+  "file": {
+    "id": "drive-state-preferences-proxy",
+    "name": "state-proxy-desktop.json",
+    "appProperties": { "app": "polyask", "schema": "1", "kind": "state", "id": "proxy-desktop" }
+  },
+  "body": {
+    "schema": 1,
+    "deviceId": "proxy-desktop",
+    "settings": {
+      "polyask.preference.proxy": {
+        "value": { "version": 1, "mode": "custom", "scheme": "http", "host": "proxy.example.com", "port": 8080, "bypass": ["*.corp.example.com", "intranet.local"], "username": "alice" },
+        "updatedAt": 120,
+        "deviceId": "proxy-desktop"
+      }
+    },
+    "templates": {},
+    "groups": {}
+  }
+}

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import { formatCopy } from '../shared/copy';
 import type { PreferenceSyncCopy } from '../shared/preference-sync-copy';
-import type { PreferenceGroup } from '../shared/preferences';
+import type { GeneralPreferenceGroup } from '../shared/preferences';
 import type { PreferenceSyncSettingsState } from './use-synced-preferences';
 import { formatBackupValue } from './backup-data';
 
@@ -21,9 +21,10 @@ export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
   };
   const { copy, snapshot } = props;
   const disabled = pending || props.busy || !snapshot;
-  const titles: Record<PreferenceGroup, string> = { display: copy.preferenceSyncDisplay,
+  // 代理组的跟随不走 preferences-follow（主进程拒收），这里只列通用分组。
+  const titles: Record<GeneralPreferenceGroup, string> = { display: copy.preferenceSyncDisplay,
     layout: copy.preferenceSyncLayout, siteZoom: copy.preferenceSyncSiteZoom };
-  const values: Record<PreferenceGroup, string> = {
+  const values: Record<GeneralPreferenceGroup, string> = {
     display: snapshot ? formatCopy(copy.preferenceSyncCurrentDisplay, {
       density: snapshot.values.display.density === 'compact' ? copy.compactDensity : copy.comfortableDensity,
       scale: `${Math.round(snapshot.values.display.siteScale * 100)}%`

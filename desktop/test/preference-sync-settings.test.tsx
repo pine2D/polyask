@@ -9,7 +9,7 @@ import { mountSettings } from './ui/settings-dom';
 const state: PreferenceSnapshot = {
   values: { completionNotifications: false, display: { density: 'compact', siteScale: 0.9 },
     layoutMode: 'focus', siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true },
-  following: { display: false, layout: true, siteZoom: false }, draftSync: false,
+  following: { display: false, layout: true, siteZoom: false, proxy: false }, draftSync: false,
   initialized: [], versions: {}, deviceId: 'fixture'
 };
 

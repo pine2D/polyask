@@ -154,3 +154,43 @@ test('draft list IPC accepts the same Unicode context length as draft save', () 
     assert.equal(result.drafts[0].context, context);
   } finally { ipc.dispose(); s.db.close(); }
 });
+
+const IPC_PROXY = { version: 1, mode: 'custom', scheme: 'http', host: 'proxy.example.com', port: 8080, bypass: [], username: '' };
+
+test('generic preference IPC rejects the proxy key and group before reaching the runtime', () => {
+  const reached: string[] = [];
+  const runtime = { set: () => { reached.push('set'); return null; }, follow: () => { reached.push('follow'); return null; },
+    snapshot: () => null, seed: () => null } as unknown as PreferenceRuntime;
+  const ipc = register(runtime);
+  try {
+    const invoke = (channel: string, value?: unknown) => ipc.handlers.get(`polyask:${channel}`)!(true, value);
+    assert.equal(preferenceContract.isPreferenceKey('proxy'), true, 'proxy is registered, so only the explicit guard can reject it');
+    assert.equal(preferenceContract.isPreferenceValue('proxy', IPC_PROXY), true);
+    assert.throws(() => invoke('preference-set', { key: 'proxy', value: IPC_PROXY }), /^Error: invalid_preference$/);
+    for (const enabled of [true, false]) {
+      assert.throws(() => invoke('preferences-follow', { group: 'proxy', enabled }), /^Error: invalid_preference_group$/);
+    }
+    assert.deepEqual(reached, []);
+    invoke('preference-set', { key: 'density', value: 'compact' });
+    invoke('preferences-follow', { group: 'display', enabled: true });
+    assert.deepEqual(reached, ['set', 'follow']);
+  } finally { ipc.dispose(); }
+});
+
+test('while every group follows, proxy writes through preference IPC leave storage and outbox untouched', () => {
+  const s = setup(), ipc = register(s.runtime);
+  try {
+    const invoke = (channel: string, value?: unknown) => ipc.handlers.get(`polyask:${channel}`)!(true, value);
+    for (const group of ['display', 'layout', 'siteZoom']) invoke('preferences-follow', { group, enabled: true });
+    s.db.meta.put('proxyFollowing', true);
+    const before = { outbox: s.db.outbox.count(), published: s.published.length,
+      device: JSON.stringify(s.db.meta.get('devicePreferences')) };
+    assert.throws(() => invoke('preference-set', { key: 'proxy', value: IPC_PROXY }), /^Error: invalid_preference$/);
+    assert.throws(() => invoke('preferences-follow', { group: 'proxy', enabled: false }), /^Error: invalid_preference_group$/);
+    assert.equal(s.db.state.get('preference:proxy'), null);
+    assert.deepEqual({ outbox: s.db.outbox.count(), published: s.published.length,
+      device: JSON.stringify(s.db.meta.get('devicePreferences')) }, before);
+    assert.equal(invoke('preferences').following.proxy, true);
+    assert.equal(s.db.meta.get('proxyFollowing'), true);
+  } finally { ipc.dispose(); s.db.close(); }
+});

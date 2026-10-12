@@ -26,7 +26,7 @@ test("uninitialized preferences use device defaults without generating sync writ
       completionNotifications: false, display: { density: "compact", siteScale: 0.9 },
       layoutMode: "overview", siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true
     });
-    assert.deepEqual(snapshot.following, { display: false, layout: false, siteZoom: false });
+    assert.deepEqual(snapshot.following, { display: false, layout: false, siteZoom: false, proxy: false });
     assert.deepEqual(snapshot.initialized, []);
     assert.equal(snapshot.deviceId, "device-a");
     assert.equal(snapshot.draftSync, false);
@@ -265,7 +265,7 @@ test("local metadata corruption falls back without contaminating shared settings
     database.meta.put("devicePreferences", { following: { display: "true", layout: true, siteZoom: false },
       overrides: { density: "broken", siteScale: 5, "siteZoom.kimi": 9, layoutMode: "focus" } });
     const snapshot = preferences.snapshot({ display: { density: "comfortable", siteScale: 1 } });
-    assert.deepEqual(snapshot.following, { display: false, layout: true, siteZoom: false });
+    assert.deepEqual(snapshot.following, { display: false, layout: true, siteZoom: false, proxy: false });
     assert.deepEqual(snapshot.values.display, { density: "comfortable", siteScale: 1 });
     assert.deepEqual(snapshot.values.siteZoom, {});
     assert.equal(database.outbox.count(), 0);
@@ -282,7 +282,7 @@ test("reset clears shared and device preference state while retaining device ide
     database.resetLocalData();
     const snapshot = preferences.snapshot();
     assert.deepEqual(snapshot.initialized, []);
-    assert.deepEqual(snapshot.following, { display: false, layout: false, siteZoom: false });
+    assert.deepEqual(snapshot.following, { display: false, layout: false, siteZoom: false, proxy: false });
     assert.equal(snapshot.values.completionNotifications, false);
     assert.equal(snapshot.values.workbenchGuide, null);
     assert.equal(snapshot.deviceId, "device-a");

@@ -100,7 +100,7 @@ function Fixture(): React.JSX.Element {
   const [notifications, setNotifications] = useState(true);
   const [sent, setSent] = useState(false);
   const [preferences, setPreferences] = useState<PreferenceSnapshot>({ deviceId: 'fixture-local',
-    values: DEFAULT_PREFERENCE_VALUES, following: { display: false, layout: false, siteZoom: false },
+    values: DEFAULT_PREFERENCE_VALUES, following: { display: false, layout: false, siteZoom: false, proxy: false },
     draftSync: false, initialized: [], versions: {} });
   const draftStatus = query.get('draftStatus') === 'error' ? 'error' : 'saved';
   const drafts = Array.from({ length: query.has('manyDrafts') ? 20 : 1 }, (_, i) => ({

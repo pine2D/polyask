@@ -1,6 +1,6 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { DRAFT_KINDS, type DraftKind } from '../shared/drafts';
-import { isPreferenceKey, PREFERENCE_GROUPS, type PreferenceGroup, type PreferenceValues } from '../shared/preferences';
+import { GENERAL_PREFERENCE_GROUPS, isPreferenceKey, type GeneralPreferenceGroup, type PreferenceValues } from '../shared/preferences';
 import type { PreferenceRuntime } from './preference-runtime';
 
 const CHANNELS = ['polyask:preferences', 'polyask:preferences-seed', 'polyask:preference-set',
@@ -24,14 +24,15 @@ export function registerPreferencesDraftsIpc(options: { readonly runtime: Prefer
   const { runtime } = options;
   handle(CHANNELS[0], () => runtime.snapshot());
   handle(CHANNELS[1], value => runtime.seed(object(value) as Partial<PreferenceValues>));
+  // proxy 只走 proxy-set / proxy-follow：这里写入会跳过应用、校验与确认，跟随时还会直接上传。
   handle(CHANNELS[2], value => {
-    const v = object(value); if (!isPreferenceKey(v.key)) throw new Error('invalid_preference');
+    const v = object(value); if (!isPreferenceKey(v.key) || v.key === 'proxy') throw new Error('invalid_preference');
     return runtime.set(v.key, v.value);
   });
   handle(CHANNELS[3], value => {
     const v = object(value);
-    if (!PREFERENCE_GROUPS.includes(v.group as PreferenceGroup) || typeof v.enabled !== 'boolean') throw new Error('invalid_preference_group');
-    return runtime.follow(v.group as PreferenceGroup, v.enabled);
+    if (!GENERAL_PREFERENCE_GROUPS.includes(v.group as GeneralPreferenceGroup) || typeof v.enabled !== 'boolean') throw new Error('invalid_preference_group');
+    return runtime.follow(v.group as GeneralPreferenceGroup, v.enabled);
   });
   handle(CHANNELS[4], value => {
     if (typeof value !== 'boolean') throw new Error('invalid_draft');

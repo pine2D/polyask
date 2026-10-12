@@ -12,7 +12,7 @@ let command: (id: CommandId) => void = () => {};
 let sends = 0, resets = 0;
 let pageError = "";
 // Reset refreshes synced preferences; the catch-all stub below would answer [] and crash the root render.
-const preferences: PreferenceSnapshot = { values: DEFAULT_PREFERENCE_VALUES, following: { display: false, layout: false, siteZoom: false },
+const preferences: PreferenceSnapshot = { values: DEFAULT_PREFERENCE_VALUES, following: { display: false, layout: false, siteZoom: false, proxy: false },
   draftSync: false, initialized: [], deviceId: "fixture", versions: {} };
 let finishReset: (() => void) | undefined, boundaryNavigation = false;
 const surfaces: string[] = [], commands: CommandId[] = [];
