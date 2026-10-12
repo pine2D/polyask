@@ -49,6 +49,7 @@ import type {
   SynthesisSendRequest,
   SynthesisSendResponse
 } from "../shared/synthesis";
+import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 
 export interface PolyAskDesktopApi {
   getPreferences(): Promise<PreferenceSnapshot>;
@@ -158,6 +159,13 @@ export interface PolyAskDesktopApi {
   onWorkspaceState(listener: (value: WorkspaceState) => void): () => void;
   onPromptLibrary(listener: (value: PromptLibraryState) => void): () => void;
   onSyncStatus(listener: (value: SyncStatus) => void): () => void;
+  getProxyState(request?: ProxyStateRequest): Promise<ProxyStateView>;
+  saveProxy(request: ProxySetRequest): Promise<ProxyWriteResult>;
+  followProxy(enabled: boolean): Promise<ProxyWriteResult>;
+  acceptProxy(request: ProxyAcceptRequest): Promise<ProxyWriteResult>;
+  testProxy(request: ProxyTestRequest): Promise<ProxyTestResult>;
+  reloadProxySites(): Promise<ProxyReloadResult>;
+  onProxyState(listener: (value: ProxyStateView) => void): () => void;
 }
 
 function subscribe<T>(channel: string, listener: (value: T) => void): () => void {
@@ -286,7 +294,14 @@ const api: PolyAskDesktopApi = Object.freeze({
     subscribe("polyask:workspace-state", listener),
   onPromptLibrary: (listener: (value: PromptLibraryState) => void) =>
     subscribe("polyask:prompt-library", listener),
-  onSyncStatus: (listener: (value: SyncStatus) => void) => subscribe("polyask:sync-status", listener)
+  onSyncStatus: (listener: (value: SyncStatus) => void) => subscribe("polyask:sync-status", listener),
+  getProxyState: (request?: ProxyStateRequest) => invoke("polyask:proxy-state", request),
+  saveProxy: (request: ProxySetRequest) => invoke("polyask:proxy-set", request),
+  followProxy: (enabled: boolean) => invoke("polyask:proxy-follow", { enabled }),
+  acceptProxy: (request: ProxyAcceptRequest) => invoke("polyask:proxy-accept", request),
+  testProxy: (request: ProxyTestRequest) => invoke("polyask:proxy-test", request),
+  reloadProxySites: () => invoke("polyask:proxy-reload-sites"),
+  onProxyState: (listener: (value: ProxyStateView) => void) => subscribe("polyask:proxy-state-changed", listener)
 });
 
 contextBridge.exposeInMainWorld("polyask", api);

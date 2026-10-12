@@ -43,6 +43,7 @@ import { ArchiveService } from "./archive-service";
 import { CollectionService } from "./collection-service";
 import type { DataAdminService } from "./data-admin-service";
 import { registerDataAdminIpc } from "./data-admin-ipc";
+import { registerProxyIpc, type ProxyIpcServices } from "./proxy-ipc";
 import { HistoryService } from "./history-service";
 import { PromptLibraryService } from "./prompt-library-service";
 import { SynthesisService } from "./synthesis-service";
@@ -84,6 +85,7 @@ export interface ShellIpcOptions {
   readonly sync: SyncEngine;
   readonly dataAdmin: DataAdminService;
   readonly preferences?: PreferenceRuntime;
+  readonly proxy?: ProxyIpcServices;
   readonly shellEntry: string;
   readonly applyDisplay: (value: DisplayPreferences) => DisplayPreferences;
   readonly setCompletionNotifications: (enabled: boolean) => void;
@@ -176,6 +178,8 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     afterDraftsChange: () => { options.preferences?.drafts.invalidate(); publishDrafts(); },
     afterReset: () => { options.questions.publishRunProgress(); options.preferences?.reset(); manager.siteZoom.clear(); publishWorkspace(); publishPromptLibrary(); publishDrafts(); }
   });
+  const disposeProxyIpc = options.proxy ? registerProxyIpc({ ...options.proxy, trusted: trustedShell, gate: operationGate, dataAdmin: options.dataAdmin,
+    send: (channel, payload) => { if (!window.isDestroyed()) window.webContents.send(channel, payload); } }) : () => {};
 
   // 速查面板按需拉取：菜单会随显示偏好重建，按需读永远是当前那一份。
   ipcMain.handle("polyask:menu-shortcuts", (event) =>
@@ -380,6 +384,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     disposeSyncIpc();
     disposeSiteHealthIpc();
     disposeDataAdminIpc();
+    disposeProxyIpc();
     for (const channel of HANDLERS) ipcMain.removeHandler(channel);
     for (const channel of LISTENERS) ipcMain.removeAllListeners(channel);
   };

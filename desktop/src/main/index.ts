@@ -287,7 +287,7 @@ async function createWindow(): Promise<void> {
     promptLibrary,
     synthesis,
     sync,
-    dataAdmin, preferences,
+    dataAdmin, preferences, proxy,
     shellEntry: MAIN_WINDOW_WEBPACK_ENTRY,
     applyDisplay: (value) => preferences.setDisplay(value),
     setCompletionNotifications: (enabled) => { preferences.set('completionNotifications', enabled); }
