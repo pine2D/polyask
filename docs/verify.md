@@ -1080,3 +1080,100 @@ Windows/macOS 本轮原生、物理输入法与读屏、真实 Drive 授权及�
 - **R14 同文档历史**：先做一次可信点击取得激活，再在主帧 `pushState`，然后经外壳后退、前进：URL 来回切换，`timeOrigin` 不变（同文档），阶段全程 ready，前进/后退可用性随之更新。
 - **观察（未修）**：Gemini 两轮（10-10、10-11）在可见页上都出现服务端长时间不回、`model-response` 为 0、停止键常亮的情况；截图正常渲染，非 PolyAsk 绘制问题，原因未查。
 - **未测**：真实 Drive 的 resumable 上传、重复文件收敛与草稿墓碑回收；Windows 物理快捷键（本轮经菜单 `click()` 驱动，未按真实键盘）；macOS。
+
+## 自定义代理：本地代理验证法与技术验证结论
+
+契约见 `docs/desktop.md` §13「网络代理」。本节记录怎样在本机验证代理线路，以及 Electron 44.5.0 上的实测结论。判定一律以代理端和源站端的记录为准，不认客户端自报。
+
+### 本地代理夹具
+
+`desktop/test/support/local-proxy.ts` 只用 Node 内置模块实现，单测、原生检查和一次性技术验证共用，不进安装包：
+
+- `startHttpProxy({auth?})`：HTTP 代理，支持 `CONNECT` 和绝对 URI。带 `auth` 时，对缺失或错误的 `Proxy-Authorization: Basic` 回 407，附 `Proxy-Authenticate: Basic realm="polyask-test"`。
+- `startSocksProxy({version: 4 | 5})`：SOCKS4（含 4a）和 SOCKS5 的无认证 CONNECT。
+- `startOrigin()`：本地源站，提供 `/generate_204` 和返回 302 的 `/redirect?to=<url>`，并记录每次收到的 `Authorization`。
+- 代理端 `log` 的每条记录含 `kind`（`connect`/`http`/`socks4`/`socks5`）、`target`、`resolvedBy`（`proxy` 表示由代理端解析域名，`client` 表示本机解析）和 `authorized`。源站的 `hits` 记录路径和 `Authorization`。
+
+夹具自测：在 `desktop/` 运行 `npm run test:unit -- test/local-proxy.test.ts`。
+
+### 自动化覆盖
+
+- `npm test` 覆盖纯函数与主进程逻辑：`desktop/test/` 下以 `proxy-` 开头的用例，加上 `test/secret-file-store.test.ts`、`test/net-request-fetch.test.ts`、`test/settings-proxy.test.tsx`、`test/backup-proxy-exclusion.test.ts` 等。session、webContents 和 `ClientRequest` 都用桩，桩上补了 `setProxy`、`resolveProxy`、`clearAuthCache`、`closeAllConnections`、`clearHostResolverCache`、`setWebRTCIPHandlingPolicy`。这些测试不经真实网络栈，不能代替下面的原生检查。启动阻断开关在 app ready 之前追加，由 `test/proxy-startup-wiring.test.ts` 做源码守卫。
+- 原生检查：在 `desktop/` 运行 `npm run test:unit -- test/proxy-native.check.ts`（没有显示服务器时自行使用 Xvfb；开发机带着 `DISPLAY` 时可加 `env -u DISPLAY -u WAYLAND_DISPLAY`）。检查用 webpack 打包生产代理服务，先后启动两个独立的 Electron 进程，各用临时档案和本地代理，剥掉 `*_proxy` 和桌面会话变量，不访问真实站点、Drive 或用户档案，以代理端日志、源站命中和直连哨兵断言：
+  - `startup-closed` 套件：`startup-closed-port`（启动时存的自定义代理端口没开：应用照常启动，站点主帧报 -130 `ERR_PROXY_CONNECTION_FAILED` 并显示 `proxy_failed`、不悄悄直连，设置卡数据可读，测试连接给 `proxy_failed`，改到可用代理后立即恢复）；`startup-no-direct`（host-resolver-rules 把其余主机都映射到本机直连哨兵，保持生产启动顺序、不改写拼写词典地址，从 session 实例化到启动应用结束，哨兵必须收不到任何直连）。
+  - `main` 套件：`startup-system`（对照组：跟随系统、无环境代理时哨兵会收到词典下载）、`custom-http`（经代理加载）、`switch-socks5`（运行中切换后新请求换线）、`direct`（代理端收不到请求）、`http-auth`（带认证的 HTTP 代理；先只存用户名，验证 `polyask-net` 的认证被取消时先回 407 响应、读正文才报 `net::ERR_TUNNEL_CONNECTION_FAILED`）、`probe`（测试连接先用正确密码成功、再用错误密码失败）、`http-auth-unicode`（密码含 `:`、`@` 和非 ASCII 字符时，站点与 `polyask-net` 都认证成功）、`busy-pending`（群发进行中保存被拒，挂起项在群发结束后应用）、`pending-confirm`（同步待确认时出现横幅、确认后才应用、过期入参被拒）。
+  - 普通 `npm test` 不运行这项检查（默认只收 `*.test.ts(x)`）；通过后删除临时档案（含自签证书私钥），失败时保留并打印路径。
+- 设置卡改了外壳可见内容，交付前还要跑 `npm run test:shell-ui` 和 `preferences-drafts-native` 两项界面专项（入口见本文「外壳与设置页视觉回归」「离线回归」）。
+
+### 技术验证结论（Electron 44.5.0，WSL2 + Xvfb）
+
+一次性 spike（2026-10-12）：裸 Electron 配合上述本地服务器和辅助服务器（连接计数、上传字节数、STUN 计数、netlog），每个验证点都有对照组。spike 脚本不入库。
+
+| # | 验证点 | 结论 | 对实现的影响 |
+| --- | --- | --- | --- |
+| a | `net.request` 适配器语义 | 成立。`redirect: "manual"` 下不能调用 `followRedirect`：原生 `followRedirect` 会把 `Authorization` 带到跨源第二跳。不跟随时请求以 `Redirect was cancelled` 结束；在 `redirect` 处理器里同步 `abort()` 不抛错，只发 `abort` 事件、不发 `error`，目标源在手动重发之前 0 命中（评审另跑探针验证）。`abort()` 只触发 `abort` 事件，不触发 `error` 或 `end`；每个请求的第一个事件都是 `close`（`end()` 后 Writable 关闭），不代表完成。没有 `login` 监听时，407 作为普通响应返回。`Uint8Array` 可以直接 `end()`，>4MiB 上传完整到达。`cache: "no-store"` 和 `useSessionCookies: false` 按预期生效 | 适配器在 `redirect` 事件里记下 Location、立即 abort 当前跳再自行重发，跨源删除 `Authorization`；`AbortSignal` 触发时先 reject 再 `abort()`，不靠 `ClientRequest` 的事件判断结束；407 响应也要归类 |
+| b | SOCKS5 认证 | 不可用。握手只提供无认证方法 0x00；`socks5://u:p@` 规则 `resolveProxy` 为空，请求得到 `net::ERR_NO_SUPPORTED_PROXIES` | 校验拒收 SOCKS 密码、清空用户名；列为已知限制 |
+| c | DNS 解析方 | SOCKS5 由代理端解析（`resolvedBy: proxy`）；SOCKS4 在本机解析（`resolvedBy: client`），IPv6 目标得到 `net::ERR_NAME_NOT_RESOLVED` | 设置卡对 SOCKS4 提示 DNS 风险；列为已知限制 |
+| d | 不调 `closeAllConnections` 时是否复用旧线路 | 未观察到新请求或单纯 reload 沿用旧线路（http/https 共 9 种切换组合）。没有「同配置再发、确认暖连接被复用」的正向对照，探测灵敏度未经证明 | 「重新加载全部站点」仍先 `closeAllConnections()`，作为防御；文案不写「必须重载才生效」 |
+| e | `disable_non_proxied_udp` | 新建视图和已有视图都即时生效（3 轮复跑合计泄漏 0；对照组默认策略有 2 个 UDP 候选） | 创建点设置策略，加上 runtime 遍历已有视图 |
+| f | loopback 隐式绕过 | 成立：`localhost`、`127.0.0.1`、`[::1]` 和 BrowserWindow 打开的 localhost 页都不经代理；对照组（`<-loopback>`）经代理。开发态 dev server 不经代理 | 只固定追加 `<local>`，不追加 loopback 规则 |
+| g | `resolveProxy` 返回格式、生效时延、DNS | 格式为 `PROXY h:p`、`HTTPS h:p`、`SOCKS h:p`、`SOCKS5 h:p`、`DIRECT`，IPv6 主机写成 `[addr]`，主机名原样；切换后 0–15ms 即可校验通过；`.invalid` 主机不触发 DNS（对照组触发 1 次） | 期望值按此格式；2s 重试窗口足够 |
+| h | 首个导航的线路 | `applyNow` 完成后立即 `loadURL`，代理端收到首个请求（20 次中直连 0 次，校验耗时 14–34ms） | 不需要 `forceReloadProxyConfig` |
+| i | `firstAuthAttempt` 分布 | 正确凭据下全部为 true（样本只有 5 次）；九窗并发首载只触发 2–3 次 `login`，其余请求由 HttpAuthCache 预先带上凭据；错误密码每次导航产生 2 次 false | 「60s 内 2 次 false 即熔断」不变 |
+
+以上是 Linux/WSL 的结论，不证明 Windows、macOS 的系统代理读取、NTLM 行为或钥匙环表现。
+
+**代理失败时的原生错误号**（Electron 44.5.0，假代理跑在独立进程；实现按这些实测值分类，不按 Chromium 错误名的字面推测）：
+
+| 场景 | 错误号 | 站点显示 |
+| --- | --- | --- |
+| 代理端口没开（含阻断配置 `http://127.0.0.1:9`、SOCKS5 端口没开、`https://` 代理指向明文端口） | -130 `ERR_PROXY_CONNECTION_FAILED` | `proxy_failed` |
+| `CONNECT` 被回 502 | -111 `ERR_TUNNEL_CONNECTION_FAILED` | `proxy_failed` |
+| SOCKS5 回 REP=4 / REP=1、要求认证、没有可接受的方法 | -120 `ERR_SOCKS_CONNECTION_FAILED`（不是 -121） | `proxy_failed` |
+| HTTPS 目标，代理 407，没有 `login` 处理或 `callback()` 取消 | -111（错误描述为空） | 熔断已触发时 `proxy_auth_failed`（`ViewManager` 的 `proxyAuthFailed`），否则 `proxy_failed` |
+| 错误密码无限重试（没有熔断时） | -375 `ERR_TOO_MANY_RETRIES`（31 次 `firstAuthAttempt=false` 之后） | 未分类；生产中熔断第 2 次即触发，走不到这里 |
+| fake-IP DNS 环境（Clash 一类）里代理主机名写错 | -324 `ERR_EMPTY_RESPONSE` | `load_failed` |
+| `polyask-net` 请求，代理 407、认证被取消 | 先回 407 响应，读正文时报 `net::ERR_TUNNEL_CONNECTION_FAILED` | Drive/OAuth 按 407 归为 `proxy_error` |
+
+-127 `ERR_PROXY_AUTH_REQUESTED`、-115 `ERR_PROXY_AUTH_UNSUPPORTED` 实际几乎不出现，所以代理认证失败靠熔断状态改判。
+
+**启动阻断开关**（2026-10-13，`env -i` 无代理变量、无桌面，Xvfb）：只要 session 被实例化，Chromium 就开始下载拼写词典（`redirector.gvt1.com`），`spellcheck: false` 和 `setSpellCheckerEnabled(false)` 都挡不住；生产中外壳窗口和应用第 1 步的 `clearAuthCache()` 都早于首次 `setProxy`，存了自定义代理时每次启动都有 1–3 个词典请求直连（netlog：无开关时 4 次 `TCP_CONNECT` 直连；有开关时 5/5 解析为 `PROXY 127.0.0.1:9` 并以 -130 结束，0 次直连建连）。采用 app ready 之前追加 `--proxy-server=http://127.0.0.1:9`：
+
+- 只有开关时，site/net/probe session 的 `resolveProxy` 为 `PROXY 127.0.0.1:9`，四个 session 全部 -130、源站 0 命中。defaultSession 和从未 `setProxy` 的 session 的 `resolveProxy` 答 `DIRECT`，流量却同样被拦：`setProxy` 之前的 `resolveProxy` 对它们不可信，runtime 只校验站点 partition 和 `polyask-net`。
+- `session.setProxy` + `app.setProxy` 的 http、socks5、`direct`、`system`（无环境代理；带 `http_proxy` 启动时走该代理）都能覆盖开关，来回切换照常；从未 `setProxy` 的 session 保持阻断；loopback 仍隐式直连。
+- 残留（与开关无关，有无开关都存在）：网络质量估计器对首个请求的主机名做一次只查 DNS 的解析，不建连。生产中这是一次系统 DNS 查询，见真机清单 W9。
+- 负向对拍：把开关改成空操作后，`startup-no-direct` 以 8 次 `gvt1.com` 直连失败。
+
+### 真机清单
+
+状态：**全部未执行。** 执行时逐项把 `[ ]` 改为 `[x]`，并在该项末尾写上日期、构建提交和观察结果；失败项写清现象，不勾选。macOS 没有真机，自定义代理在 macOS 上**未真机验证**，CHANGELOG 和 Release 限制也照此写。
+
+**Windows TestLab**（`%LOCALAPPDATA%\PolyAsk-TestLab` 独立测试档案，启动与收尾规则见本文「后续：独立 Windows 测试档案」；不得使用正式档案）
+
+- [ ] W1 跟随系统：Clash 关闭「系统代理」时启动，复制诊断报告应为 `proxy mode=system … applied=ok`，Clash 连接列表里看不到九站域名；打开「系统代理」后点「重新加载全部站点」，Clash 连接列表出现九站域名。
+- [ ] W2 自定义 `127.0.0.1:7890`（HTTP）：保存后诊断报告为 `proxy mode=custom scheme=http auth=no … applied=ok`；「测试连接」成功且 `route` 为经代理；新打开的站点出现在 Clash 连接列表里；Clash 退出后，站点重载显示代理连接失败的提示（`proxy_failed`），不会悄悄直连。
+- [ ] W3 带认证的 HTTP 代理：在 TestLab 所用源码的 `desktop/` 下，把下面三行存为被忽略的 `test-artifacts/auth-proxy.ts`，运行 `npx tsx test-artifacts/auth-proxy.ts`，按打印的端口把自定义代理设为 HTTP、`127.0.0.1:<端口>`、用户名 `polyask`。正确密码 `polyask-test` 时九站正常加载、不弹任何登录框；改成错误密码后，站点显示代理认证失败（`proxy_auth_failed`），代理端 407 次数有界、不无限重试；清除已存密码后，代理端日志里不再出现 `authorized: true`。
+
+  ```ts
+  import { startHttpProxy } from "../test/support/local-proxy";
+  void (async () => { const proxy = await startHttpProxy({ auth: { username: "polyask", password: "polyask-test" } });
+    console.log(`auth proxy on 127.0.0.1:${proxy.port}`); setInterval(() => console.log(JSON.stringify(proxy.log.slice(-5))), 10_000); })();
+  ```
+- [ ] W4 群发中保存被拒：需要用户明确授权发送一条测试提问，否则此项保持未执行。群发进行中点「保存」，按钮禁用或提示忙碌；群发结束后再保存成功。
+- [ ] W5 Drive 同步经代理：需要用户授权使用测试 Google 账号并在 TestLab 配置 OAuth。在自定义代理下连接 Drive 并同步一次，代理端能看到 `oauth2.googleapis.com` 和 `www.googleapis.com`；代理停掉后，同步状态显示代理失败，不显示普通断网。
+- [ ] W6 同步待确认流程：两台设备都打开「跟随同步」（或手工把云端 `polyask.preference.proxy` 改成新地址）。另一端改了代理地址后，本机设置卡出现横幅，线路不变；点「应用」后才换到新地址；点「保留本机设置」后关闭跟随，本机配置保持不变。
+- [ ] W7 诊断报告：W1–W6、W8–W11 每一步复制的报告里，都没有代理主机、端口、用户名或绕过列表。
+- [ ] W8 启动阻断开关被覆盖：分别以「自定义 HTTP」「跟随系统」（Clash 打开「系统代理」）「不使用代理」三种已存设置冷启动，九站都按该设置正常加载（自定义与跟随系统时 Clash 连接列表出现九站域名，不使用代理时不出现），诊断报告 `applied=ok`；三种情况下都没有站点停在代理连接失败。
+- [ ] W9 启动时没有直连泄漏：使用拼写词典已缓存的档案（之前正常启动过一次），存好自定义 SOCKS5 代理后退出；开着 Wireshark（过滤 `udp.port == 53 or tcp.port == 53`，以及本机到外网的 TCP 443）冷启动。期望：在 Clash 连接列表出现第一条九站请求之前，没有任何直连外网的 TCP 连接；DNS 查询里不出现九站域名，网络质量估计器那一次解析只命中本机缓存或 hosts（抓不到 53 端口上的对应查询）。
+- [ ] W10 启动时已存代理没有运行（计划 Review Focus 第 4 条）：存好自定义 `127.0.0.1:7890` 后完全退出 Clash，再冷启动 PolyAsk。期望应用正常启动、窗口可操作；九站都显示代理连接失败（`proxy_failed`），不是通用的加载失败；设置卡能打开并修改；「测试连接」给出代理连接失败。启动 Clash 后点「重新加载全部站点」恢复。
+- [ ] W11 特殊字符密码（计划 Review Focus 第 5 条）：用 W3 的脚本，把密码改成 `p@ss:wörd` 启动，在设置卡填同样的密码。九站正常加载、不弹登录框；W5 已获授权时，Drive 同步也经该代理认证成功。
+
+**Linux**
+
+- [ ] L1 GNOME：在 GNOME 设置里配置手动 HTTP 代理，从应用菜单启动，「跟随系统」下 `resolveProxy` 走该代理（诊断报告 `applied=ok`，代理端有记录），设置卡不显示环境变量提示。
+- [ ] L2 无桌面环境（WSL 或 xvfb），带 `https_proxy` 启动：`https_proxy=http://127.0.0.1:<端口> npm start`，「跟随系统」下代理端收到九站请求，设置卡显示「未识别到桌面环境」提示。
+- [ ] L3 无桌面环境，不带 `https_proxy` 启动：九站直连，代理端没有记录；设置卡同样显示上述提示。
+
+**macOS**
+
+- [ ] M1 没有真机，未执行。拿到真机后至少补做 W1、W2、W3、W8、W10 的对应项（「跟随系统」读系统网络设置；启动阻断开关能被 `system` 和自定义覆盖；钥匙串首次访问提示时保存密码不会把保存流程卡住超过 10s）。拿到真机之前，Release 正文的验收限制必须写「自定义代理未在 macOS 上真机验证」。

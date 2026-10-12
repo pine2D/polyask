@@ -31,7 +31,7 @@ PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点�
 - **站点 UI 三条通用规则**（反例见 `docs/adapters.md`）：① 控件在下沉到二级子菜单，默认「顶层找不到 → 展开子菜单 → 再找」；② 同一 role 可能承载不同语义的列表，取列表必须校验语义，否则「最高档」被点成末位模型；③ **每个菜单动作自己 `escMenus()` 收尾**。
 - **群发取消（epoch）**：`broadcast.ts` 的 `epoch`。新写的长流程必须在每个 `await` 后核对 epoch，否则用户取消了、主进程还在往站点输入框里打字；`AbortSignal` 不替代 epoch 核对。
 - **站点视图内不产用户可见反馈**：site-runtime 的 `toast` 是 no-op，切档结果/失败原因走外壳状态通道与 `feedback-provider.tsx` / `bootstrap-state.tsx` 两处 sr-only `aria-live`（圆点变色对读屏不可见，这是唯一进度通道，不可删）。
-- **诊断报告是唯一报障入口**：`Alt+H`「复制诊断报告」（`shared/site-report.ts`）只含版本/系统/缩放/阶段码/`name-kind-ok`、每站定位/采集原因的固定枚举计数及卡顿数（详见 `docs/desktop.md`）、白名单进程类别/退出原因/数值错误码；**可复制，不含对话、网址、账号、路径、token 或消息 key**。
+- **诊断报告是唯一报障入口**：`Alt+H`「复制诊断报告」（`shared/site-report.ts`）只含版本/系统/缩放/阶段码/`name-kind-ok`、每站定位/采集原因的固定枚举计数及卡顿数（详见 `docs/desktop.md`）、白名单进程类别/退出原因/数值错误码、代理枚举行（`proxy` 行的 mode/scheme/auth/secret/following/applied/pending/confirm/stored，只含枚举和布尔值，不含主机、端口、用户名、绕过列表、URL）；**可复制，不含对话、网址、账号、路径、token 或消息 key**。
 - **新增持久化键要同时登记**：SQLite 仓库（`main/*-repository.ts`）、同步投影（`sync-repository.ts`）、本机重置（`database.ts` 的 `resetLocalData`）、线格式 fixture（`desktop/test/fixtures/` 只增不改）。漏一处，同步/重置/回填会静默失效。
 - **图片限额改任何一个数**，落点以 `scripts/test-image-limits.js` 的对账项与 `docs/adapters.md`「图片载荷」为准，别凭记忆列。
 - **加站点 / 新开适配器分卷**：登记落点见 `docs/adapters.md`（站点表 `main/sites.ts`、分卷注册键、`preload/site.ts` 的 require 顺序、issue 模板站点下拉），`scripts/test-site-selection.js` 与 `desktop/scripts/desktop-shared-runtime.test.js` 会红。
@@ -53,9 +53,9 @@ bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布
 
 ## 架构（先在这里定位入口文件）
 
-- **主进程**：`desktop/src/main/index.ts`（装配）→ `view-manager.ts`（站点视图树/状态）、`broadcast.ts`（群发编排、deadline、epoch、Kimi 只读确认）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts`（IPC，全部过 `trustedShell`）。
+- **主进程**：`desktop/src/main/index.ts`（装配）→ `view-manager.ts`（站点视图树/状态）、`broadcast.ts`（群发编排、deadline、epoch、Kimi 只读确认）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts`（IPC，全部过 `trustedShell`）。
 - **站点适配**：`desktop/src/site-runtime/`：core/tier 编排、selection-match 候选匹配、send/upload 提交与附件；intl/intl2/cn/cn2/cn3/cn4 按站分卷；注入顺序以 `preload/site.ts` 为准，classic script、`__AMS` 全局；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
-- **数据与同步**：`main/database.ts`（SQLite）+ `*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata，旧实体 schema 1 / 决策卡 schema 2 / 文件夹及关联 schema 3 / 逐次提问及回答 schema 4，fixture 在 `desktop/test/fixtures/`）、`data-admin-service.ts`（本机数据管理）、`backup-service.ts`（预览与事务恢复）。
+- **数据与同步**：`main/database.ts`（SQLite）+ `*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata，旧实体 schema 1 / 决策卡 schema 2 / 文件夹及关联 schema 3 / 逐次提问及回答 schema 4，fixture 在 `desktop/test/fixtures/`）、`data-admin-service.ts`（本机数据管理）、`backup-service.ts`（预览与事务恢复）；网络代理由 `proxy-runtime.ts`（应用、校验、fail-closed）和 `proxy-preference-store.ts`（唯一写入口：本机 meta 键 `proxyOverride` / `proxyFollowing` / `proxyAccepted`，加同步键 `preference:proxy`，不进备份）负责，契约见 `docs/desktop.md` §13。
 - **渲染层**：`desktop/src/renderer/`，所有 IPC 只经 `shell-api.ts` 的 `shell`（测试用 `setShellApi` 注入桩）。
 - **共享契约**：`desktop/src/shared/`（protocol、copy、locale、site-report、ipc-error）。
 

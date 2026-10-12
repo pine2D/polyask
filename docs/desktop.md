@@ -90,6 +90,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 | 提问历史副本观察期 | 提交结果就绪后固定 15 分钟；生成或正文进度不顺延，明确终止归属时提前结束 | `question-history-service.ts` |
 | Drive 周期同步 / 本机变更合并窗口 | 15 分钟 / 3s（连续写入不推迟已计划唤醒）；未来任务按最早 nextAt 到期唤醒 | `sync-engine.ts` |
 | OAuth 回调等待 / 网络请求截止 | 5 分钟 / 30s | `oauth-pkce.ts`、`drive-client.ts` |
+| 代理应用校验 / 密码钥匙环 / 密码惰性读取 / 测试连接 | 应用后 `resolveProxy` 有界重试 2s；`setProxy`、`clearAuthCache` 每次调用限时 5s（`PROXY_CHROMIUM_CALL_TIMEOUT_MS`，超时按应用失败处理）；密码文件的钥匙环阶段（读、写、可用性查询）各限时 10s（`SECRET_KEYRING_TIMEOUT_MS`）：写盘超时降级为仅本次运行有效（`secret: "failed"`），OAuth refresh token 写盘同样适用（connect 报 `token_store_failed`），读盘超时按读不到（`unreadable`）处理、不删文件，30s 后（`PROXY_SECRET_RETRY_MS`）才会再读，可用性查询超时按不能安全保存答复；`proxy-auth` 等待惰性读取 5s（链上那次读盘由 10s 时限结束）；测试连接请求 8s；复制诊断报告等代理状态 1.5s（`REPORT_PROXY_STATE_TIMEOUT_MS`，超时省略 `proxy` 行）。都不在群发链路内，**不改变群发 44s/90s 预算**：但 `proxy-set` 在 `OperationGate` 和代理写锁内先校验、再写密码，写盘又排在同一条链上可能已挂起的读盘之后，一次带密码的保存最坏会让群发收到 `operation_busy` 约 22s（2s 校验 + 前一次读盘 10s + 本次写盘 10s）；网络服务整体挂起时一次应用最坏占 gate 约 30s（`clearAuthCache` 5s + 恢复上一份 5s + 阻断时三个 session 与 `app.setProxy` 各 5s）。群发只会被拒、不会被拖长；后台重算同样占用 gate（见 §13） | `proxy-runtime.ts`、`secret-file-store.ts`、`proxy-auth.ts`、`proxy-probe.ts`、`renderer/site-health-actions.ts` |
 
 **页面阶段的 `ready` = 主帧 `did-finish-load`（整页连同子资源和 load 前插入的 iframe 加载完），不是「能发了」**（`page-lifecycle.ts`，`site-view.ts` 只在 did-finish-load 调 `onReady`）。2026-10-05/06 Windows 实测（docs/verify.md「就绪判据采证」）：慢网下 Gemini 新会话可停在 loading 15–50s，而它的编辑器早在提交后数秒就已出现；群发不看 loading，照常可发；健康检查在 loading 时跳过 `diagnose`，该站显示 unknown。曾评估「输入框可用或整页加载完，先到者算 ready」：收益基本只有 Gemini（元宝约 0.6s，其余站 did-finish-load 先到），且通用 `findComposer()` 会被 ChatGPT/豆包/Gemini 的预渲染占位 textarea 骗过、须按站点只认真编辑器，**用户决定不改（2026-10-06）**，只记录语义。另：智谱遇阿里云滑块验证页时 did-finish-load 照样报 ready（页上无输入框），未处理。
 
@@ -99,7 +100,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 
 **main 与站点运行时只产 `code`，绝不产用户可见文案**；判定认 `code`，**绝不正则匹配文案**。翻译只有两处落点：`shared/status-copy.ts` 的映射 + `shared/copy.ts` 的三语词条。
 
-`shared/protocol.ts` 的 `SITE_CODES`（21 个）与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
+`shared/protocol.ts` 的 `SITE_CODES`（23 个）与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
 
 | code | copy key | | code | copy key |
 | --- | --- | --- | --- | --- |
@@ -114,6 +115,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 | `no_view` | `siteUnavailable` | | `invalid_response` | `invalidResponse` |
 | `error` | `siteError` | | `adapter_unavailable` | `adapterUnavailable` |
 | `attachment_conflict` | `attachmentConflict` | | `source_changed` | `synthesisSourceVersionChanged` |
+| `proxy_failed` | `proxyFailed` | | `proxy_auth_failed` | `proxyAuthFailed` |
 
 采集码另走 `describeCollectionCode`：`no_answer` → `noAnswer`、`no_view` / `no_window` → `siteUnavailable`（`no_window` 是 Drive schema 1 线格式里带进来的旧码，语义与 `no_view` 相通）、`not_ready` → `siteNotReady`、`answer_truncated` → `answerTruncated`，其余落 `failed`。辅助综合发送另有 `describeSynthesisSendCode`，另处理 `target_not_selected` 与 `operation_busy`。
 
@@ -174,7 +176,8 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - **站点顺序同步**：SQLite 复用 `workspace.selectedSites`，不新增业务键或 schema；`sync-repository.ts` 将顺序投影成 state fragment 的 `amsConsole.siteOrder` 主机名数组，与 `amsConsole.selected` 同时写入相同版本。拉取只采用与勾选版本一致的顺序，过滤未知/重复/未选项并按默认顺序补齐缺项；旧客户端更新勾选而保留旧顺序时回退默认排列。上传保留远端未知站点的勾选与顺序字段。分组 `hosts` 数组保序；分组云端副本含本机不认识的 host 时（`sync-groups.ts`），未改动的分组按云端副本原样上传（同版本同内容），本机改名/改站点则替换已知 host、保留云端最新副本里的未知 host 并以新版本上传，不再被下一轮拉取回滚。备份沿用既有 workspace/group 字段，`resetLocalData` 随 `state_items` 和 `meta` 清除本机顺序，重连可从云端恢复；冻结兼容样本为 `desktop/test/fixtures/schema1-state-site-order.json`。
 - **发送站点勾选同步**：SQLite 的 `workspace.participation` 保存站点集合、独立 `updatedAt` 与 `deviceId`，经受信 `set-participation` IPC 写入 workspace 并入 outbox；修改档位、打开页面或排序不改勾选版本。Drive state schema 1 新增 `amsConsole.participating` 主机名布尔映射，保留未知站点的 true/false；缺字段兼容旧数据默认已打开页面全部参与，明确空映射表示零站参与。非布尔载荷不采用；已有有效本机偏好时保留，无有效偏好时采用空集合，不能把字符串 false 当启用。当前客户端整体合并此偏好，冲突按既有时间戳、设备 ID 裁决。
 - **勾选确认与恢复**：界面等待页面打开与勾选保存各自回执，保存期间阻止发送；独立版本阻止旧回执覆盖较新推送，保存失败立即恢复最近权威状态。云端推送只更新后续发送范围，原轮与重试仍用冻结的范围。关闭页面只从有效范围排除它，期间编辑其它站点仍保留关闭页的偏好；重新勾选会先开页再保存。旧客户端可透传此设置但不会显示或应用它。备份 workspace 包含偏好与版本、不含设备 ID；提供偏好的备份恢复重记本机新版本，旧备份缺字段时保留现有独立偏好与版本。`resetLocalData` 随 state_items/meta/outbox 清除，重连可由云端恢复；固定样本为 `desktop/test/fixtures/schema1-state-participation.json`。
-- 加密 refresh token 先写同目录独占临时文件（0600），完成写入、同步与关闭后原子替换；失败清理临时文件，保留原令牌文件。无安全加密后端时仍仅保留进程内令牌。
+- 加密 refresh token 经 `main/secret-file-store.ts` 写入（`TokenStore` 是它的薄包装）：先写同目录独占临时文件（0600），完成写入、同步与关闭后原子替换；失败清理临时文件，保留原令牌文件。无安全加密后端时仍仅保留进程内令牌。钥匙环阶段（读、写、可用性查询）各限时 10s：写盘超时不建临时文件、不动旧文件，首次连接报 `token_store_failed`（以前钥匙环挂起时连接会一直挂着），令牌轮换路径保留内存令牌、不报错；读盘超时与解密失败同样处理（`load()` 返回 null，不删令牌文件，下次再读）。
+- 网络代理的持久化（`preference:proxy`、本机 meta 键 `proxyOverride` / `proxyFollowing` / `proxyAccepted`、加密的 `proxy-secret.bin`）、备份排除与本机重置顺序见 §13「数据边界」。
 - 结果库过滤在 SQLite 执行，保持既有 searchText 的大小写与字面搜索语义；标签独立查询，不再为标签加载全部回答。历史每页批量读取尝试摘要，正文仍只随选中详情返回；不新增数据库字段或同步格式。
 - **schema 1 的线格式冻结在 `desktop/test/fixtures/schema1-*.json`**（每个文件 `{file, body}`，出自扩展时代的真实实现，代码保留在 tag `archive/extension-v0.25.1`）。**不要重新生成、不要按新校验「修正」它们**：`schema1-wire-format.test.ts` 把全部样本喂进下行链路并要求逐条接收，任何一次校验收紧命中存量形状会先红在那里，而不是在用户的结果库里静默少几条。新增决策卡 schema 2 另增 `schema2-decision*.json`，文件夹及关联 schema 3 另增 `schema3-folder*.json`；旧实体仍为 schema 1，冻结样本不变。
 - **两条跨端不变量**（跨设备记录要能互认，改一端就是让另一端拒收）：
@@ -191,6 +194,8 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - **只有 `tier`、`capture` 之外的红项决定站点可用性**（`checks.filter(check => !isAdvisoryCheck(check))`）。各站 `state()` 是刻意的偏函数：用户停在非预设的合法档位时可能返回 null，那不是故障；部分组合会被粗判归入 think/fast，精确边界见各站卡。`tier` 红项仍在详情页以提示显示。`capture` 红只说明提问历史副本的选择器漂移，群发照常可用，同样只提示。
 - 判定口径：只有站点给出明确登录证据才说「需要登录」，无法可靠判断一律「无法确认」，不拿 URL 或页面外观猜。单站正在发送或重载会破坏当前任务时禁用「重新加载」并说明原因。
 - **可复制诊断报告**（`shared/site-report.ts` 的 `buildSiteReport`）是切除扩展后唯一的结构化报障入口，**不得只可见不可复制**。内容边界：版本 / 发行形态 / 平台 / 显示缩放、每站的 `phase`+`code`+健康结论+`checkedAt`、每条 check 的 `{name, kind, ok}`、白名单进程类别/退出原因/数值错误码，以及每站 `capture-locate selector=… semantic=… anchor=…`、`capture-reason …=数字` 与 `capture-slow-observer N` 行。原因仅取 `CAPTURE_REASONS` 固定枚举；卡顿数为 historyTurn 单次超过 250ms 的 MutationObserver 回调次数。三类均为主进程内存计数，经 `polyask:capture-locate-counts` 读取，只认白名单枚举键与正安全整数，读取失败仅省略该行。**绝不包含对话内容、URL、账号、路径、token 或消息 key**——`check.name` 是本地化的 `diag_*` 词条不是页面文本，站点只写 key 与产品名不写 host。Drive 连接诊断另在设置页，同样走负向泄漏约束的白名单快照。
+- 报告头部的 `proxy mode=…` 一行只含代理模式、协议、是否带认证、密码状态、是否跟随、应用结果、挂起、待确认与存储状态这些枚举和布尔值，不含主机、端口、用户名或绕过列表，格式见 §13「诊断」。
+
 
 ## 9. 源码文本守卫的明文规则
 
@@ -333,6 +338,112 @@ Mermaid 仅在需要预览时加载本地依赖，串行绘制、最多缓存 12
 重试只对明确提交前失败使用默认批量入口。提交未确认、超时、未知/缺失回包及取消都需先查看本站，再逐站勾选确认；取消不证明未发送。核对/查看动作不发送，重试仍使用原 runId/text/tier/images。查看时核对最新选择，本站未选则不聚焦其它站、不自动改范围，具名提示人工重新选择也会加入后续群发；查看经受信 inspect-site IPC 在同一主进程事件内核对并聚焦，严格 true 回执才切回站点；拒绝或异常显示具名提示，等待回执期间核对框与根层命令保持锁定。已作废轮次的迟到回执不再导航。重新打开页面不作为未提交证据。执行时重新读取本轮结果，迟到同轮可信 sent 只升不降并移除重试选择；新轮和本机重置使旧选择失效，不改主进程重发策略或预算。
 
 设置集中既有显示密度及站点默认比例，仅应用主进程接受的值，与菜单推送共用状态。高级数据操作默认折叠，可通过显式设置命令定位。清理确认的 `local-data-stats` 是受信只读单条 SELECT 快照，区分分类附带记录与 reset 的全部本机范围；执行前重读，相关数量变化须再次确认，执行结果以真实返回条数为准，两次 IPC 不构成原子快照。可先定位备份导出入口。破坏性本机/云端写入前同步阻断关闭与根层命令，成功或失败后释放；迟到重置结果不能清新会话。诊断按机器 kind/code 推荐安全手动首步，更明确的忙碌/未确认/登录/页面与控制证据优先，未知失败要求检查，旧健康快照不能宣称新失败已恢复；其它恢复操作按需展开，不自动重载或重发。
+
+## 13. 网络代理
+
+全应用只有一份代理配置，分三档：跟随系统（`system`，默认）、不使用代理（`direct`）、自定义（`custom`，支持 HTTP、HTTPS、SOCKS4、SOCKS5）。九站、外壳和 Google Drive 同步（包括 OAuth）都按这一份配置出网。值类型、默认值、字符校验和规范化都在 `shared/proxy-preference.ts`。设置卡 `renderer/settings-proxy.tsx` 只读 `polyask:proxy-state`，不读偏好快照。本期不做显式 PAC、分站分流，也不给每站单独配代理；「跟随系统」时，系统配置里的 PAC 交给 Chromium 处理。
+
+### 出口
+
+| 出口 | 承载 | 处理 |
+| --- | --- | --- |
+| `persist:polyask-sites`（`SITE_PARTITION`） | 九站视图，以及站内的登录跳转 | `setProxy` 后校验；认证走 `app.on("login")` |
+| defaultSession | 外壳窗口；开发态的 dev server | `setProxy` 后校验 |
+| `polyask-net`（非持久，`main/proxy-sessions.ts` 的 `NET_PARTITION`） | Drive，以及 OAuth 的令牌交换、刷新和撤销 | `setProxy` 后校验；认证走请求级 `login` |
+| `polyask-proxy-probe`（非持久） | 设置卡里的「测试连接」 | 每次测试单独配置 |
+| `app.setProxy` | 不属于任何 session 的请求 | 写入同一份配置，作兜底 |
+
+- Drive 和 OAuth 经 `main/net-request-fetch.ts` 的 `createSessionFetch` 走 `net.request`，参数为 `redirect: "manual"`、`cache: "no-store"`、`useSessionCookies: false`。Node 全局 `fetch` 和 `session.fetch` 都不能用：前者不走 Chromium 网络栈，连系统代理都不认；后者不处理 `login`。适配器自己跟随重定向，最多 20 次，跨源时去掉 `Authorization`；`net::ERR_*` 原样保留在 `Error.message` 里。源码守卫断言生产装配注入的是这个适配器。
+- Drive 用非持久的 `polyask-net`，不用 defaultSession，这样同步载荷和 Google Cookie 都不会落盘。OAuth 回环回调是入站连接，不受代理影响。`shell.openExternal` 打开的系统浏览器不在本应用的代理范围内。
+- 默认的「跟随系统」下，Drive 同步也走系统代理。此前它用 Node `fetch`，任何代理都不走。
+
+### 翻译、应用与 fail-closed
+
+- **翻译**（`toProxyConfig`）：`system` 译为 `{mode: "system"}`，`direct` 译为 `{mode: "direct"}`。`custom` 译为 `fixed_servers`，其中 `proxyRules` 是 `<scheme>://<host>:<port>`（IPv6 写成 `[addr]`），`proxyBypassRules` 是用户列表末尾再由程序固定追加 `<local>`。`<local>` 只匹配不含点的单标签主机名，与 loopback 无关；loopback 由 Chromium 隐式绕过，开发态 dev server 不受影响（实测见 `docs/verify.md`「自定义代理」）。凭据不能写进代理规则，只能经 `login` 提供。
+- **应用**（`main/proxy-runtime.ts`，串行执行，排队时只留最新一份）：
+  1. 先装入新凭据或墓碑：每次应用都调用 `proxy-auth` 的 `beginApply`，`gen` 加一。目标身份（scheme、host、port、username）与已应用身份不同，或者请求带了新凭据（包括清除密码）时，再对站点 partition、defaultSession、`polyask-net` 执行 `clearAuthCache()`，并清零熔断。这样清缓存之后再到达的 407，拿到的只会是新凭据或墓碑。
+  2. 依次 `setProxy`，最后 `app.setProxy`。
+  3. 对站点 partition 和 `polyask-net` 调用 `resolveProxy("https://proxy-check.polyask.invalid/")`，与期望值比较：http 对应 `PROXY h:p`，https 对应 `HTTPS h:p`，socks4 对应 `SOCKS h:p`，socks5 对应 `SOCKS5 h:p`，direct 对应 `DIRECT`；`system` 不比较。结果不符时有界重试，总时长不超过 2s。`setProxy` resolve 只说明配置写进了 pref store，不能当作已生效的证据。
+  4. 目标与已应用配置规范化后相同（且当前没有阻断）时，跳过第 2、3 步；第 1 步只看身份和凭据，不受这条影响。
+- 每次 `setProxy`、`clearAuthCache` 调用限时 5s（`PROXY_CHROMIUM_CALL_TIMEOUT_MS`），每次 `resolveProxy` 只给 2s 校验窗口的剩余时间；超时一律按应用失败处理，走下面的 fail-closed。Chromium 网络服务挂起时，代理流程不会无限期占着 gate 和写锁。
+- 校验用的是 `.invalid` 保留域名，不会触发 DNS。保存时按 Chromium 的通配语义，拒收能匹配这个主机的绕过规则（`*`、`*.*`、`*.invalid`、`.invalid`、`*polyask*` 等）。这类规则会让校验误判，效果也等于全部直连。
+- **fail-closed**：校验失败时，先恢复上一份已应用配置并重新校验。没有上一份（启动时），或者恢复后仍然失败，就把三个出口改成阻断配置 `http://127.0.0.1:9`（不带 direct 回退），站点报 `proxy_failed`，状态记 `proxy_apply_failed`。**任何情况下都不回退到 `system` 或直连。** 阻断配置永远不记为「已应用配置」：认证匹配、打开或关闭跟随时，取到的只会是上一份合法配置或 null，状态另外标 `blocked`。
+- **启动阻断**（`main/proxy-startup-block.ts`）：`main/index.ts` 在模块顶层、app ready 之前调用 `blockProxyUntilApplied(app.commandLine)`，追加命令行开关 `--proxy-server=http://127.0.0.1:9`（与阻断配置同址），让所有网络上下文默认处于阻断，直到 runtime 第一次 `setProxy` 把它覆盖。原因：session 一被实例化，Chromium 就开始下载拼写词典（`redirector.gvt1.com`），不等 webContents，`spellcheck: false` 也挡不住；外壳窗口和第 1 步的 `clearAuthCache()` 都会在首次 `setProxy` 之前实例化 session，没有这个开关时，存了自定义代理的启动每次都有 1–3 个词典请求直连出网。Electron 44.5.0（Linux）实测 `session.setProxy` / `app.setProxy` 的 http、socks5、`direct`、`system`（含带 `http_proxy` 环境变量启动）都能覆盖开关，回来回切换照常；从未 `setProxy` 的 session 保持阻断；loopback 仍隐式直连，开发态 dev server 不受影响。阻断期间 defaultSession 的 `resolveProxy` 会答 `DIRECT`，但流量实际被拦，所以 runtime 只校验站点 partition 和 `polyask-net`。源码守卫断言开关在 app ready 之前追加。
+- **启动顺序**：数据库就绪 → `await proxy.runtime.recomputeFromStore()`（内部完成读取、分类、应用和阻断）→ `new ViewManager(...)`。读取用 `ProxyPreferenceStore.read()` 直接读四项原始值（不调用 `snapshot()`，不依赖 `deviceId`，全新安装时也不抛错）；启动时还没有绑定 gate，这次调用不经过 `OperationGate`；存储值损坏时进入阻断而不抛错，不会让启动失败。所以首个站点 `loadURL` 发生在代理应用并校验之后。装配代码在 `main/proxy-services.ts`；源码守卫断言 `main/index.ts` 里的 `await proxy.runtime.recomputeFromStore()` 只出现一次，并且在 `new ViewManager` 之前。启动时不读密码。Chromium 代理调用全部挂起时，启动最多在窗口隐藏的状态下等约 25s（`clearAuthCache` 5s + 阻断时三个 session 与 `app.setProxy` 各 5s），之后以阻断状态继续启动。
+- 四项读取结果都带标签：`absent`、`invalid`、`ok`。以下情况进入阻断，状态标 `stored=invalid`，设置卡提示重新设置：`proxyFollowing` 存在但不是布尔值；不跟随，且 override 非法；跟随，且 `proxyAccepted` 非法；跟随、`proxyAccepted` 缺失，且 override 不是 `ok`。跟随时 `preference:proxy` 非法按缺失处理，只会退回已经确认过的值，不会 fail-open。
+- **运行中变更**：忙碌只看 `OperationGate` 的 `busy` 和 `onIdle`。同步拉取、备份恢复后的 refresh、本机重置，都经 `PreferenceRuntime.refresh()` 的 proxy 回调；回调只调用 `request()` 设置脏标记，不携带值。重算在 `gate.run` 内执行，每次都从 store 读取最新输入。拿不到 gate，或者正在本机重置时，保留脏标记，等 `onIdle` 或重置结束后再试。因此重算期间群发会收到 `operation_busy`，不会在发送中途换线路。
+- **写锁与重置互斥**：`proxy-set`、`proxy-follow`、`proxy-accept` 的完整 handler、后台重算、`wipeSecrets` 都在代理写锁内执行。顺序是先取 gate 再取锁，重置一侧只取锁。写 handler 进入 gate 之前先查 `dataAdmin.isResetting`，重置中返回 `proxy_busy`。每个 await 之后核对 `wipeEpoch`，一旦变化，就放弃写缓存、写盘、写 meta 和写 outbox。
+- **不断开旧连接**：保存后不调用 `closeAllConnections`。流式回答和 WebSocket 沿旧线路跑完，新连接按新设置。「重新加载全部站点」（`polyask:proxy-reload-sites`，占用 gate，`main/proxy-reload.ts`）先对站点 partition 执行 `closeAllConnections()`（限时 5s，失败或超时直接报错，不报告成已切换），再逐个已选站点 reload，会中断正在生成的回答；未选站点没有视图，选中时按新线路加载。`reload` 返回 false 的站点会列出来，请用户手动刷新。保存后不自动重载。
+- **WebRTC**：已应用配置是 `custom`，或者处于阻断时，所有站点 webContents 设为 `disable_non_proxied_udp`，其余情况设为 `default`。阻断属于 fail-closed，按 `default` 处理会让 UDP 绕过阻断直连。新视图在 `main/site-view.ts` 的创建点读取当前策略，已有视图由 runtime 遍历更新。
+
+### 认证（`main/proxy-auth.ts`）
+
+- 只有同时满足以下条件才交出凭据：`authInfo.isProxy === true`；已应用配置（或应用过程中的 `applying`）是 `custom`；host 和 port 规范化后一致（IPv6 带方括号比较，IDN 转 punycode，端口按数值比较）。`authInfo.scheme` 是认证方案（basic/digest），不是代理协议。站点自己的 401 一律不代填。
+- `app.on("login")` 满足条件时**同步**调用 `event.preventDefault()`，callback 可以之后异步调用；`polyask-net` 的请求级 `login` 用同一套规则。只有缓存为空时才惰性读取 `proxy-secret.bin`：读取期间缓存为 `loading`，5s 超时。代际号 `gen` 只增不减，读完时发现 `gen` 已变，就丢弃结果并取消认证。清除密码时写入墓碑，命中墓碑直接取消、不读盘，所以即使删除密码文件失败，也不会把旧密码读回来。读到 `unreadable`（解密失败或钥匙环超时）不是永久结论：距上次结果满 30s（`PROXY_SECRET_RETRY_MS`）后，下一次认证挑战或设置卡刷新会再读一次，钥匙环解锁后可以恢复；没有密码文件（`none`）则保持到下次保存或应用。
+- 密码原样交给 Chromium，不做 URL 编码，也不按 `:` 或 `@` 截断；含非 ASCII 字符的密码在站点和 Drive 两条认证路径上都由原生检查覆盖。
+- **407 熔断**：`app.on("login")` 只统计 `firstAuthAttempt === false` 的事件；请求级 `login` 在同一个请求第二次进入时记一次。同一身份 60s 内累计 2 次即熔断，之后一律取消，产出 `proxy_auth_failed`。身份变化、换密码或清除密码、本机重置时清零。九站并发首载产生的 `firstAuthAttempt === true` 不计数。
+- **测试连接**（`main/proxy-probe.ts`）：同一时间只允许一个测试，不受 `OperationGate` 限制。每次测试前清空 probe session 的认证缓存、连接和 DNS 缓存，再用 8s 超时请求 `https://www.gstatic.com/generate_204`，并返回实际线路 `route: "proxy" | "direct"`（`direct` 表示绕过列表让它直连了）。凭据只在请求级 `login` 里交出，不经 `app.on("login")`，也不影响正式的熔断计数。
+
+### 同步与本机确认
+
+| 本机状态 | 线路配置的来源 | 上传 | 本机重置 |
+| --- | --- | --- | --- |
+| 不跟随（默认） | `meta.proxyOverride` | 不上传 | 清除，回到 `system` |
+| 跟随 | `main/proxy-target.ts` 的 `resolveProxyTarget`，基于共享值和 `proxyAccepted` | `preference:proxy` 投影为 `polyask.preference.proxy`，按 LWW 合并 | 清除本机副本，云端不删 |
+
+- 同步拉取时，不管本机跟不跟随，都会把云端值写进本机 `state_items`；不跟随时这份值不生效。跟随开关只能经 `polyask:proxy-follow` 修改，通用的 `polyask:preferences-follow` 拒收 `proxy` 组。同步设置里的「代理」行读 `proxy-state` 的 `following`，不读偏好快照里的跟随状态（`proxy-follow` 不经通用偏好刷新，快照里那一项可能是旧的）。
+- **确认规则**：跟随时，共享值改成 `system` 或 `direct`，或者与比较基准同为 `custom` 且 scheme、host、port 都相同（只改了绕过列表或用户名），就直接采用。其他情况保留基准，并给出 `pendingConfirm = {scheme, host, port, version}`；设置卡显示横幅，提供「应用」和「保留本机设置」，外壳反馈通道同时发一条提示。比较基准是 `proxyAccepted ?? proxyOverride`；打开跟随的那一次，固定用当时的已应用配置。`proxyAccepted` 只在校验通过后写入。
+- `proxy-accept` 在 gate 内从 store 重新读取共享值，同时满足以下三条才应用：入参与 `pendingConfirm` 一致；共享值的 `{updatedAt, deviceId}` 等于 `pendingConfirm.version`；共享值的 scheme、host、port 等于入参。任何一条不满足，返回 `proxy_not_pending`，并重算一次刷新横幅。有待确认项时，`proxy-set` 返回 `proxy_pending_confirm`，设置卡也会禁用保存。
+- **打开跟随**：处于阻断或 `stored_invalid` 时拒绝，返回 `proxy_invalid`。成功后在同一个事务里写 following=true 和 `proxyAccepted`；原本没有共享值时，把当前配置作为新版本写入并入 outbox。
+- **关闭跟随**：在同一个事务里把 `proxyOverride` 设为 `proxyAccepted`（缺失时取已应用配置），把 following 置为 false，并删除 `proxyAccepted`。**永远不会把未确认的共享值复制进本机。** `proxyAccepted` 非法，或者没有已应用配置时，拒绝关闭；这时用 `proxy-set` 保存一份新配置即可脱困，following 非法时它会一并写回 false。
+- **`proxy-set` 先应用、后落盘**：校验或应用失败时什么都不写，重启后也不会进入阻断。成功后，跟随时在同一个事务里写共享值（入 outbox）和 `proxyAccepted`，不跟随时写 `proxyOverride`。密码写盘失败不回滚配置，结果附带 `secret: "failed"`，密码只在本次运行有效。`password` 的取值：`undefined` 不改，`null` 清除，`""` 拒收；身份是 SOCKS 时一律拒收。
+- 旧版客户端的 `isPreferenceKey` 会过滤掉这个键，`carriedSettings` 原样带回。
+
+### 数据边界
+
+- **`preference:proxy`**：存在 `state_items` 并参与同步投影，冻结样本是 `desktop/test/fixtures/schema1-state-preferences-proxy.json`。它**不进** `PreferenceValues`、`DEFAULT_PREFERENCE_VALUES` 和偏好快照的 `values`。通用写入路径双层拒收 `proxy` 键和 `proxy` 组：一层是 `main/preferences-drafts-ipc.ts`，一层是 `PreferencesRepository` 的 `set`、`seed`、`setFollowing`。唯一的写入口是 `main/proxy-preference-store.ts`。
+- **本机 meta 键** `proxyOverride`、`proxyFollowing`、`proxyAccepted` 各自独立存放，不放进 `devicePreferences`。原因是通用写入会把经 `readDevice` 过滤的对象整个写回；放在里面的损坏值会在下一次调整站点缩放时被静默删掉，重启后变成 `system`。三个键都不同步、不进备份，`resetLocalData` 清空 meta 时一并清除。
+- **备份完全排除**：`BackupService.snapshot` 跳过 `preference:proxy`，`backup-validation` 遇到它直接拒收。理由有三：同步会把其他设备的值写进本机；恢复时会盖上新时间戳并上传，按 LWW 覆盖所有跟随的设备；≤ v1.19.0 的版本导入含这个键的备份，会整份报 `backup_invalid`。
+- **密码**：文件是 `userData/proxy-secret.bin`，明文 `{version, scheme, host, port, username, password}` 用 `safeStorage.encryptStringAsync` 加密，由 `main/secret-file-store.ts` 写入（refresh token 的 `TokenStore` 现在是它的薄包装）。写入流程是同目录临时文件 0600、fsync、rename。钥匙环阶段限时 10s（`SECRET_KEYRING_TIMEOUT_MS`），读、写和可用性查询各自计时：写入的钥匙环阶段（`available()` + 加密）超时不建临时文件、不动旧文件，按写盘失败处理（`secret: "failed"`，密码只在本次运行有效）；读取的钥匙环阶段（`available()` + 读文件 + 解密）超时按读不到（`unreadable`）处理；`securePersistence()` 超时按不能安全保存答复；`clear` 只删文件、不经过钥匙环。超时后迟到的结果一律丢弃，排在后面的读写照常执行；读取失败（含超时）绝不删除文件；`read`、`write`、`clear` 在同一条链上串行执行，链上已有读取在排队或进行、其后还没排入写或删时，新的读取直接复用它，所以反复触发的惰性读取不会在钥匙环挂起时越积越多；写入在 rename 之前核对 `wipeEpoch`。没有安全加密后端（包括 Linux 的 `basic_text`）时只留在内存。密码只交给身份完全一致的代理，不同步、不进备份和诊断报告；IPC 只写不读。
+- 设置卡显示的 `ProxySecretState`：`unknown`（本次运行还没读过）、`saved`、`memory`（重启后丢失）、`mismatch`（已解密但身份不一致）、`unreadable`（解密失败或钥匙环超时，例如便携目录换了机器或用户）、`none`。
+- **本机重置**：`DataAdminService` 在 `sync.disconnect()` 之后、`resetLocalData()` 之前 await `wipeSecrets`，依次执行：取写锁；`wipeEpoch` 加一，缓存置为 `wiping`（期间到达的 407 一律取消、不读盘）；`gen` 加一；删除密码文件；清零熔断；三个出口执行 `clearAuthCache()`。任何一步失败，整个重置就失败。之后经 `afterReset → preferences.reset() → refresh()` 回到 `system`。本机重置不删 Drive 上的共享代理值。
+
+### 错误码
+
+| 场景 | 码 | 落点 |
+| --- | --- | --- |
+| 站点主帧因代理加载失败 | `proxy_failed`、`proxy_auth_failed`，进 `SITE_CODES`，和 `load_failed` 一样归为「提交前失败」 | `main/proxy-errors.ts`、`main/view-manager.ts` |
+| Drive / OAuth 请求经代理失败 | `proxy_error`，同步归为 `offline`，reason 为 `oauth_proxy` 或 `drive_proxy`，与 `network_error` 一样退避 | `main/proxy-net-error.ts`、`main/sync-failures.ts` |
+| 代理 IPC 结果 | 失败码放在 `result` 字段：`proxy_invalid`、`proxy_busy`、`proxy_apply_failed`（未生效）、`proxy_test_busy`、`proxy_not_pending`、`proxy_pending_confirm`。密码写盘失败不算失败：成功回包附 `secret: "failed"`，渲染层译为 `proxy_secret_failed`（密码未保存，只在本次运行有效）。都不进 `SITE_CODES` | `shared/proxy-copy.ts` 翻译 |
+| 测试连接结果 | `result` 字段取 `proxy_failed`、`proxy_auth_failed`、`network_error`、`network_timeout`、`proxy_apply_failed`、`proxy_invalid`、`proxy_test_busy` | `main/proxy-probe.ts` |
+
+- 站点码的映射：`ERR_PROXY_CONNECTION_FAILED`、`ERR_TUNNEL_CONNECTION_FAILED`、`ERR_SOCKS_CONNECTION_FAILED`、`ERR_SOCKS_CONNECTION_HOST_UNREACHABLE`、`ERR_PROXY_CERTIFICATE_INVALID`、`ERR_MANDATORY_PROXY_CONFIGURATION_FAILED` 归为 `proxy_failed`；`ERR_PROXY_AUTH_REQUESTED`、`ERR_PROXY_AUTH_UNSUPPORTED` 归为 `proxy_auth_failed`；其余仍为 `load_failed`。阻断配置会让站点得到 `ERR_PROXY_CONNECTION_FAILED`，因此显示为 `proxy_failed`。
+- Electron 44.5.0 原生实测：HTTPS 目标遇到 407 且认证被取消（熔断或没有密码）时，站点拿到的是 -111 `ERR_TUNNEL_CONNECTION_FAILED`，`ERR_PROXY_AUTH_REQUESTED`（-127）、`ERR_PROXY_AUTH_UNSUPPORTED`（-115）实际几乎不出现。所以 `ViewManager` 另接 `proxyAuthFailed`（`ProxyAuth.authFailed()`）：分类结果是 `proxy_failed` 且熔断处于触发状态时，改报 `proxy_auth_failed`。各场景的错误号见 `docs/verify.md`「自定义代理」。
+- Drive/OAuth 的判断依据是 `Error.message` 以 `net::ERR_PROXY`、`net::ERR_TUNNEL`、`net::ERR_SOCKS` 或 `net::ERR_MANDATORY_PROXY` 开头。这是 Chromium 错误名，属于机器字面量，不是文案。认证被取消时 `net.request` 先回一个 407 响应、读正文时才报 `net::ERR_TUNNEL_CONNECTION_FAILED`，所以响应状态 407（RFC 9110 规定只由代理发出）和正文阶段的代理网络错误同样归为 `proxy_error`。
+- 同步阶段（非 OAuth）的 `proxy_error` 也报 `drive_proxy`：同步流量就是 Drive 流量，要改的是代理而不是网络。同步诊断按 Drive 访问失败统计 `drive_proxy`。
+
+### 预算
+
+代理不改群发的 44s/90s 预算，也不在群发链路里加入等待：代理的写操作和后台重算都占用 `OperationGate`，与群发互斥，群发只会以 `operation_busy` 被拒，不会被拖长。代理自己的上限是：应用后校验 2s，`setProxy` / `clearAuthCache` 每次调用 5s（`PROXY_CHROMIUM_CALL_TIMEOUT_MS`），密码文件的钥匙环阶段（读、写、可用性查询）各 10s（`SECRET_KEYRING_TIMEOUT_MS`；写盘超时降级为仅本次运行有效，读盘超时按 `unreadable` 处理，30s 后才再读），`proxy-auth` 等待惰性读取 5s，测试连接请求 8s，「重新加载全部站点」关闭连接 5s（§4 预算表）。`proxy-set` 在 gate 和写锁内先应用校验、再写密码，写盘又排在同一条链上可能已挂起的读盘（设置卡打开时的密码状态刷新，或 407 触发的惰性读取）之后，所以钥匙环无响应时，一次带密码的保存最坏会让群发收到 `operation_busy` 约 22s（2s 校验 + 前一次读盘 10s + 本次写盘 10s）；本机重置的 `wipeSecrets` 在写锁内删除密码文件，最多先等前一次读或写的 10s（`clear` 本身不经过钥匙环）。Chromium 网络服务整体挂起时，一次应用最坏占 gate 约 30s（`clearAuthCache` 5s + 恢复上一份 5s + 阻断时三个 session 与 `app.setProxy` 各 5s）；启动时同样情况最多在窗口隐藏下等约 25s，然后以阻断状态继续。没有这些时限时，钥匙环或网络服务挂起会让 gate 和写锁一直不释放、群发一直被拒。
+
+### 诊断
+
+`Alt+H` 诊断报告头部有一行 `proxy`（`shared/site-report.ts`），格式为 `proxy mode=<system|direct|custom> [scheme=…] auth=yes|no secret=<ProxySecretState> following=yes|no applied=ok|proxy_apply_failed pending=yes|no confirm=yes|no stored=ok|invalid`。`mode`、`scheme`、`auth` 描述的是配置值（不跟随时为本机配置，跟随时为解析出的目标），`applied` 说明它是否已生效；`scheme` 只在自定义时输出，`auth` 只说有没有用户名。`secret=unknown` 表示本次运行还没读过密码文件：复制诊断报告不会触发读盘。这一行只取枚举和布尔值，不输出主机、端口、用户名、绕过列表或任何 URL；单个字段不合法时只省略该字段，`mode` 不合法、读取失败或 1.5s 内（`REPORT_PROXY_STATE_TIMEOUT_MS`，`renderer/site-health-actions.ts`）拿不到代理状态时整行省略，报告照常复制。
+
+### 已知限制
+
+- SOCKS 代理不支持用户名密码认证：Chromium 只提供无认证方法。身份是 SOCKS 时，用户名会被清空，密码一律拒收。
+- SOCKS4 在本机解析 DNS，可能受 DNS 污染，也不支持 IPv6 目标；SOCKS5 由代理端解析。
+- Windows 上，代理要求 NTLM 或 Negotiate 认证时，Chromium 会静默使用当前 Windows 登录凭据。本期不禁用 `auth-schemes`，因为公司 NTLM 代理的用户需要它。同步带来的新地址要先在本机确认，所以只有用户自己填写或确认过的代理才会走到这一步。
+- Linux 的「跟随系统」：能识别 GNOME/KDE 时，读 gsettings/kioslaverc，不读环境变量；识别不了（WSL、裸 X）时，读启动环境里的 `*_proxy`，从图标启动可能读不到。设置卡在 `linuxDesktopProxy === "env"` 时提示改用自定义。钥匙环未解锁时解密可能卡住：`proxy-auth` 最多等 5s，链上的读盘 10s 后按读不到处理，不删密码文件。
+- 同步带来的「改为直连」「改为跟随系统」，以及只改绕过列表的变化，无需确认就会生效（用户的选择），可能让站点改为直连。缓解措施：拒收裸 `*`；设置卡标明配置来源；诊断报告带 `following` 字段。
+- 密码只存在内存里（设置卡显示 `memory`，例如 Linux 的 `basic_text` 或没有安全加密后端）时，磁盘上没有密码文件，「测试连接」读不到已存密码，需要重新输入；正式线路的认证不受影响。
+- IPv6 代理地址带端口时必须写方括号：不带方括号的 `::1:7890` 是另一个合法的 IPv6 地址，会被原样接受（主机栏没有专门提示，测试连接会失败）。
+- Drive/OAuth 只按上面四个前缀判断代理错误：`ERR_PAC_SCRIPT_FAILED`、`ERR_NO_SUPPORTED_PROXIES`、`ERR_UNEXPECTED_PROXY_AUTH` 不在其中，仍报 `network_error`。
+- 在 fake-IP 方式解析 DNS 的环境里（Clash 一类），代理主机名写错时得到的是 -324 `ERR_EMPTY_RESPONSE`，站点显示 `load_failed`，不是 `proxy_failed`。
+- 熔断只对已识别的代理认证失败计数。假如没有熔断，错误密码会一直重试到 -375 `ERR_TOO_MANY_RETRIES`（实测 31 次之后），这个错误号不在映射表里；熔断在第 2 次就会触发，所以正常情况下走不到这一步。
+- Chromium 的网络质量估计在启动时会对首个请求的主机名做一次只查 DNS 的解析（不建连），有没有启动阻断都一样；生产中这是一次系统 DNS 查询，SOCKS5 下也可能经本机 DNS 暴露该主机名。预期它只命中本机缓存或 hosts，有待真机抓包确认（`docs/verify.md` 真机清单）。
+- macOS 未经真机验证；启动阻断开关能被各模式覆盖这一点也只在 Linux 上实测过。
 
 ## 实验：最小化空闲节流（默认关闭）
 
