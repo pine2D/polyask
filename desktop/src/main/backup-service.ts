@@ -2,8 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { BackupApplyResult, BackupDocument, BackupEntry, BackupKind, BackupPreview, BackupPreviewItem, BackupSelectionPreview } from "../shared/backup";
 import { folderMembershipId } from "../shared/task-folder";
 import type { DesktopDatabase } from "./database";
-import { isPreferenceKey } from "../shared/preferences";
-import { comparison, inheritBackupParticipation, projectBody, validateBackup } from "./backup-validation";
+import { comparison, inheritBackupParticipation, isBackupPreferenceKey, projectBody, validateBackup } from "./backup-validation";
 import { backupEntryKey as keyOf, activeBackupBody as active, restoredBackupId as restoredFolderId, restoredDraftId, questionRestoreSeed, planBackupRestore } from "./backup-restore-plan";
 type Body = Record<string, any>;
 interface Plan {
@@ -29,7 +28,7 @@ export class BackupService {
     }));
     for (const prefix of ['preference:', 'draft:']) {
       for (const { key, value } of this.database.state.entries<Body>(prefix)) {
-        if (prefix === 'preference:' && !isPreferenceKey(key.slice(prefix.length))) continue;
+        if (prefix === 'preference:' && !isBackupPreferenceKey(key.slice(prefix.length))) continue;
         snapshot.set(key, value);
       }
     }

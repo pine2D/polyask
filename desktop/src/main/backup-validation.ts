@@ -5,12 +5,21 @@ import { BACKUP_KINDS, BACKUP_MAX_BYTES, BACKUP_MAX_ENTRIES, type BackupDocument
 import { SITE_KEYS } from "../shared/contracts";
 import { isStoredDecision } from "../shared/decision";
 import { parseStoredDraft } from "../shared/drafts";
-import { isPreferenceKey, isVersionedPreference } from "../shared/preferences";
+import { isPreferenceKey, isVersionedPreference, type PreferenceKey } from "../shared/preferences";
 import { isStoredPromptTemplate } from "../shared/prompt-library";
 import { isHistoryRecord, validSyncTime } from "../shared/sync";
 import { isStoredFolderMembership, isStoredTaskFolder } from "../shared/task-folder";
 import { parseStoredParticipation } from '../shared/workspace-participation';
 type Body = Record<string, any>;
+/**
+ * 任何状态下都不进备份的偏好键（spec §4.3）。同步会把其它设备的代理写进本机，
+ * 恢复又会盖新时间戳并按 LWW 覆盖所有跟随设备，所以导出跳过、导入整份拒收。
+ */
+export const BACKUP_EXCLUDED_PREFERENCES: readonly PreferenceKey[] = ["proxy"];
+/** 导出过滤（BackupService.snapshot）与导入校验（projectBody）共用的唯一判定。 */
+export function isBackupPreferenceKey(key: unknown): key is PreferenceKey {
+  return isPreferenceKey(key) && !BACKUP_EXCLUDED_PREFERENCES.includes(key);
+}
 const fields: Record<BackupKind, string[]> = {
   preference: ["value", "updatedAt"],
   draft: ["format", "id", "kind", "context", "title", "content", "sourceUpdatedAt", "updatedAt"],
@@ -55,7 +64,7 @@ export function projectBody(kind: BackupKind, value: unknown, id?: string): Body
   if (kind !== "workspace" && kind !== "preference")
     ok = ok && idValid(b.id);
   switch (kind) {
-    case "preference": ok = ok && isPreferenceKey(id) && isVersionedPreference(id, stored); break;
+    case "preference": ok = ok && isBackupPreferenceKey(id) && isVersionedPreference(id, stored); break;
     case "draft": ok = ok && parseStoredDraft(stored) !== null; break;
     case "question": ok = ok && isStoredQuestion(stored); break;
     case "questionAnswer": ok = ok && isStoredQuestionAnswer(stored); break;
