@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { PolyAskDesktopApi } from "../src/preload/shell";
 import { getCopy } from "../src/shared/copy";
-import { siteHealthActions } from "../src/renderer/site-health-actions";
+import { REPORT_PROXY_STATE_TIMEOUT_MS, siteHealthActions } from "../src/renderer/site-health-actions";
 import { setShellApi } from "../src/renderer/shell-api";
 
 test("copy action fetches runtime diagnostics and reports success or failure accurately", async () => {
@@ -80,6 +80,48 @@ test("copy action appends the proxy line from proxy-state and omits it when prox
     assert.match(clipboard, /^PolyAsk Desktop 1\.20\.0/, "proxy-state 读不到时省略该行，报告照常复制");
     assert.doesNotMatch(clipboard, /^proxy /m);
     assert.equal(notes.at(-1), copy.healthReportCopied);
+  } finally {
+    setShellApi(null);
+    if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);
+    else Reflect.deleteProperty(globalThis, "navigator");
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow);
+    else Reflect.deleteProperty(globalThis, "window");
+  }
+});
+
+test("a hung proxy-state read is abandoned after the timeout and the report still copies without a proxy line", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const originalNavigator = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  let clipboard = "";
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { platform: "Win32",
+    clipboard: { writeText: async (text: string) => { clipboard = text; } } } });
+  Object.defineProperty(globalThis, "window", { configurable: true, value: { devicePixelRatio: 1 } });
+  const cleared = t.mock.method(globalThis, "clearTimeout");
+  let hang = true;
+  setShellApi({ getRuntimeProcessFailures: async () => [], getCaptureLocateCounts: async () => ({}),
+    getProxyState: () => hang ? new Promise(() => {}) : Promise.resolve({ formValue: { mode: "direct", scheme: "http", username: "" },
+      following: false, appliedResult: "ok", stored: "ok", pending: false, pendingConfirm: null, secret: "none" })
+  } as unknown as PolyAskDesktopApi);
+  try {
+    const copy = getCopy("zh-CN");
+    const notes: string[] = [];
+    const actions = siteHealthActions({ copy, sites: [], selected: new Set(),
+      runtime: { version: "1.20.0", distribution: "installed" } as any, statuses: {}, health: {},
+      setHealth() {}, noteHealth: text => notes.push(text) });
+    const pending = actions.onCopyHealthReport();
+    for (let i = 0; i < 10; i++) await Promise.resolve();
+    assert.equal(clipboard, "", "超时前仍在等待");
+    t.mock.timers.tick(REPORT_PROXY_STATE_TIMEOUT_MS);
+    await pending;
+    assert.match(clipboard, /^PolyAsk Desktop 1\.20\.0/);
+    assert.doesNotMatch(clipboard, /^proxy /m);
+    assert.equal(notes.at(-1), copy.healthReportCopied);
+    hang = false;
+    clipboard = "";
+    await actions.onCopyHealthReport();
+    assert.match(clipboard, /\nproxy mode=direct /);
+    assert.ok(cleared.mock.callCount() >= 2, "超时路径与正常路径都清除了定时器");
   } finally {
     setShellApi(null);
     if (originalNavigator) Object.defineProperty(globalThis, "navigator", originalNavigator);

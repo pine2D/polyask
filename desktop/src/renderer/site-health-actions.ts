@@ -7,6 +7,14 @@ import type { SiteStatus } from "../shared/protocol";
 import { buildSiteReport } from "../shared/site-report";
 import { shell } from "./shell-api";
 
+// proxy-state 在主进程可能等钥匙串（最长 10s）；报告的附加行不值得拖住复制。
+export const REPORT_PROXY_STATE_TIMEOUT_MS = 1_500;
+function withTimeout<T>(task: Promise<T> | undefined, ms: number): Promise<T | undefined> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<undefined>((resolve) => { timer = setTimeout(() => resolve(undefined), ms); });
+  return Promise.race([Promise.resolve(task), timeout]).catch(() => undefined).finally(() => clearTimeout(timer));
+}
+
 type HealthState = Partial<Record<SiteKey, SiteHealth>>;
 export function siteHealthActions(input: {
   copy: DesktopCopy;
@@ -33,8 +41,10 @@ export function siteHealthActions(input: {
       try {
         const processFailures = await shell.getRuntimeProcessFailures();
         // 定位记账与代理行都是报告的附加行：读不到就省略，不让整份报告复制失败。
-        const captureLocate = await Promise.resolve(shell.getCaptureLocateCounts?.()).catch(() => undefined);
-        const proxy = await Promise.resolve(shell.getProxyState?.()).catch(() => undefined);
+        const [captureLocate, proxy] = await Promise.all([
+          Promise.resolve(shell.getCaptureLocateCounts?.()).catch(() => undefined),
+          withTimeout(shell.getProxyState?.(), REPORT_PROXY_STATE_TIMEOUT_MS)
+        ]);
         const report = buildSiteReport({
           version: input.runtime.version,
           distribution: input.runtime.distribution,

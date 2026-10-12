@@ -3,10 +3,11 @@ import type { SiteStatus } from "./protocol";
 import type { SiteHealth } from "./site-health";
 import { normalizeProcessFailure, type RuntimeProcessFailure } from "./runtime-process";
 import { CAPTURE_LOCATES, CAPTURE_REASONS, type CaptureLocateCounts } from "./question-capture";
+import type { ProxySecretStateView } from "./proxy-state";
 import { PROXY_MODES, PROXY_SCHEMES } from "./proxy-preference";
 
 /** 与 main/proxy-auth.ts 的 ProxySecretState 同集；test/site-report.test.ts 用类型对账防漂移。 */
-export const REPORT_PROXY_SECRET_STATES = ["unknown", "saved", "memory", "mismatch", "unreadable", "none"] as const;
+export const REPORT_PROXY_SECRET_STATES = ["unknown", "saved", "memory", "mismatch", "unreadable", "none"] as const satisfies readonly ProxySecretStateView[];
 
 /**
  * proxy-state 载荷里报告要读的字段（结构类型，ProxyRuntimeState 直接满足）。

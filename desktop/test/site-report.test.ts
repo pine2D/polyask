@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ProxySecretState } from "../src/main/proxy-auth";
+import type { ProxySecretStateView } from "../src/shared/proxy-state";
 import { buildSiteReport, REPORT_PROXY_SECRET_STATES } from "../src/shared/site-report";
 
 test("the site diagnostic report carries environment, per-site state and every check without content", () => {
@@ -108,7 +108,7 @@ test("dirty proxy input is dropped field by field and the line disappears withou
   assert.doesNotMatch(buildSiteReport(BASE), /^proxy /m, "没有 proxy 输入时不输出该行");
 });
 
-test("the report's secret-state whitelist matches ProxySecretState exactly", () => {
-  const every = { unknown: true, saved: true, memory: true, mismatch: true, unreadable: true, none: true } satisfies Record<ProxySecretState, true>;
+test("the report's secret-state whitelist matches ProxySecretStateView exactly", () => {
+  const every = { unknown: true, saved: true, memory: true, mismatch: true, unreadable: true, none: true } satisfies Record<ProxySecretStateView, true>;
   assert.deepEqual([...REPORT_PROXY_SECRET_STATES].sort(), Object.keys(every).sort());
 });
