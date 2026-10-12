@@ -326,10 +326,10 @@ test("reads are coalesced so a hung keyring cannot build a backlog in front of a
   await withDir(async (directory) => {
     const path = join(directory, "proxy-secret.bin");
     await new SecretFileStore(path, cipher()).write("old");
-    const late = deferred();
+    const late = deferred(), started = deferred();
     let decrypts = 0;
     const store = new SecretFileStore(path, cipher({
-      decrypt: async (value) => { decrypts += 1; await late.promise; return value.toString().slice(7); }
+      decrypt: async (value) => { decrypts += 1; started.resolve(); await late.promise; return value.toString().slice(7); }
     }), { keyringTimeoutMs: 20 });
     // 同一个同步段内连发：不依赖墙钟，只数链上真正开始过几次钥匙环读取。
     const first = store.read();
@@ -337,6 +337,9 @@ test("reads are coalesced so a hung keyring cannot build a backlog in front of a
     for (let i = 0; i < 12; i += 1) reads.push(store.read());
     assert.ok(reads.every((read) => read === first), "back-to-back reads share one promise");
     assert.equal(await store.write("new"), "saved");
+    // 计时器在 readFile 之前就启动，负载下读取可能先超时、decrypt 才开始：等它进入后再让出几轮，多排的读取链节也会进来。
+    await started.promise;
+    await tick(); await tick(); await tick();
     assert.equal(decrypts, 1, "write 之前链上只开始过一次挂起的读取，没有积压");
     assert.deepEqual(await Promise.all(reads), reads.map(() => ({ kind: "unreadable" })));
     late.resolve();
