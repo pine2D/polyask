@@ -1,5 +1,5 @@
 import type { SiteKey } from "../shared/contracts";
-import type { BroadcastRequest, SiteRunResult, SubmissionStatus } from "../shared/protocol";
+import { PAGE_LOAD_FAILURE_CODES, type BroadcastRequest, type SiteRunResult, type SubmissionStatus } from "../shared/protocol";
 import { normalizeSelectionMetadata } from "../shared/selection";
 
 export interface BroadcastRun {
@@ -39,9 +39,9 @@ export function failedRunSites(run: BroadcastRun): SiteKey[] {
   });
 }
 
-// 只收目前明确发生在提交动作前的失败；新增/缺失回包不能被推断为「未发送」。
-const PRE_SUBMIT_FAILURES = new Set([
-  "composer_not_found", "not_ready", "inject_failed", "no_view", "load_failed", "image_invalid",
+// 只收目前明确发生在提交动作前的失败；新增/缺失回包不能被推断为「未发送」。页面加载失败含代理失败（PAGE_LOAD_FAILURE_CODES）。
+const PRE_SUBMIT_FAILURES = new Set<string>([
+  "composer_not_found", "not_ready", "inject_failed", "no_view", ...PAGE_LOAD_FAILURE_CODES, "image_invalid",
   "attachment_unsupported", "attachment_failed", "attachment_timeout", "attachment_action_required",
   "attachment_conflict", "adapter_unavailable"
 ]);

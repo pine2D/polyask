@@ -14,6 +14,8 @@ const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
   inject_failed: "injectFailed",
   no_view: "siteUnavailable",
   load_failed: "loadFailed",
+  proxy_failed: "proxyFailed",
+  proxy_auth_failed: "proxyAuthFailed",
   renderer_crashed: "crashed",
   image_invalid: "imagePayloadInvalid",
   attachment_unsupported: "attachmentUnsupported",

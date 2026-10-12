@@ -1,6 +1,6 @@
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteKey } from "../shared/contracts";
-import type { SitePhase, SiteStatus, SubmissionStatus } from "../shared/protocol";
+import { isPageLoadFailure, type SitePhase, type SiteStatus, type SubmissionStatus } from "../shared/protocol";
 import { describeStatus } from "../shared/status-copy";
 
 export const SUBMISSION_BADGES = [
@@ -37,7 +37,7 @@ export function pageSiteDetail(name: string, status: SiteStatus | undefined, cop
     code: submission.code ?? (submission.state === "unconfirmed" ? "submit_unconfirmed" : undefined),
     selection: submission.selection, submissionEvidence: submission.submissionEvidence
   }) : copy.sitePageNotSent];
-  if (status && (status.phase === "generating" || status.phase === "complete" || status.phase === "crashed" || status.code === "load_failed"))
+  if (status && (status.phase === "generating" || status.phase === "complete" || status.phase === "crashed" || isPageLoadFailure(status.code)))
     details.push(describeStatus(copy, { site: status.site, phase: status.phase, code: status.code }));
   return `${name}: ${[...new Set(details)].join(" · ")}`;
 }

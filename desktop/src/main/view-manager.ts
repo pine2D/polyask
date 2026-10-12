@@ -4,6 +4,7 @@ import { transitionSiteSurface } from "./site-surface";
 import { siteHistoryState, navigateSiteHistory } from './site-history-navigation';
 import { SiteHistoryAccess } from "./site-history-access";
 import { clearSiteDataAndReload } from "./site-data-recovery";
+import { classifyNetError, isProxyNetCode, type ProxyNetCode } from "./proxy-errors";
 import {
   BrowserWindow,
   WebContentsView,
@@ -538,7 +539,7 @@ export class ViewManager {
       onLoading: () => this.updatePageStatus({ site: site.key, phase: "loading" }),
       onReady: () => this.updatePageStatus({ site: site.key, phase: "ready" }),
       onFailure: (code) => {
-        this.updatePageStatus({ site: site.key, phase: "failed", code: "load_failed" });
+        this.updatePageStatus({ site: site.key, phase: "failed", code: classifyNetError(code) ?? "load_failed" });
         this.onRuntimeEvent({ type: "did-fail-load", site: site.key, code: String(code) });
       },
       onCrash: (reason) => {
@@ -612,9 +613,13 @@ export class ViewManager {
     return effectiveStatus(this.runStatus.get(site), pageStatus);
   }
 
-  private pageFailureCode(site: SiteKey): "renderer_crashed" | "load_failed" | null {
-    const phase = this.pageStatus.get(site)?.phase;
+  private pageFailureCode(site: SiteKey): "renderer_crashed" | "load_failed" | ProxyNetCode | null {
+    const page = this.pageStatus.get(site);
+    const phase = page?.phase;
+    const code = page?.code;
     if (phase === "crashed") return "renderer_crashed";
+    // 代理类失败透传 onFailure 存下的码（proxy-errors.ts 分类），用户才知道该去查代理而不是站点。
+    if (phase === "failed" && isProxyNetCode(code)) return code;
     if (phase === "failed") return "load_failed";
     return null;
   }

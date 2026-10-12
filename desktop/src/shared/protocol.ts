@@ -180,9 +180,17 @@ export const SITE_CODES = [
   "invalid_response",
   "error",
   "source_changed",
-  "adapter_unavailable"
+  "adapter_unavailable",
+  "proxy_failed",
+  "proxy_auth_failed"
 ] as const;
 export type SiteCode = (typeof SITE_CODES)[number];
+// 主帧没加载出来的页面码：普通加载失败与经代理失败（main/proxy-errors.ts 分类）同义——命令从未派发，
+// 属提交前失败，重载即可恢复。重试归类、页面详情、恢复建议共用这一张表。
+export const PAGE_LOAD_FAILURE_CODES: readonly SiteCode[] = ["load_failed", "proxy_failed", "proxy_auth_failed"];
+export function isPageLoadFailure(code: string | undefined): boolean {
+  return PAGE_LOAD_FAILURE_CODES.some((known) => known === code);
+}
 
 export interface SubmissionStatus extends SelectionMetadata {
   readonly runId: string;

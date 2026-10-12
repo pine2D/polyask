@@ -1,4 +1,4 @@
-import type { SiteStatus } from '../shared/protocol';
+import { isPageLoadFailure, type SiteStatus } from '../shared/protocol';
 import { siteReloadAllowed, type SiteHealth } from '../shared/site-health';
 
 export type SiteRecoveryReason = 'busy' | 'unconfirmed' | 'sign-in' | 'page' | 'reach' | 'control'
@@ -16,7 +16,7 @@ export function siteRecoveryAdvice(health: SiteHealth, status: SiteStatus): Site
   const codes = [status.code, health.recent?.code];
   if (codes.some(code => code === 'submit_unconfirmed' || code === 'generation_unconfirmed')) return advice('unconfirmed');
   if (health.state === 'sign-in') return advice('sign-in');
-  if (health.page === 'error' || codes.some(code => code === 'load_failed' || code === 'renderer_crashed')) return advice('page', 'reload');
+  if (health.page === 'error' || codes.some(code => isPageLoadFailure(code) || code === 'renderer_crashed')) return advice('page', 'reload');
   const failed = health.checks.filter(check => !check.ok);
   if (failed.some(check => check.kind === 'reach')) return advice('reach');
   if (failed.some(check => !['reach', 'probe', 'tier', 'capture'].includes(check.kind ?? 'control'))) return advice('control');
