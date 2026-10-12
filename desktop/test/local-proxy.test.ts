@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { once } from "node:events";
 import { request as httpRequest } from "node:http";
-import { connect as netConnect } from "node:net";
+import { connect as netConnect, createServer, type AddressInfo } from "node:net";
 import test from "node:test";
 
 import { splitHostPort, startHttpProxy, startOrigin, startSocksProxy } from "./support/local-proxy";
@@ -258,7 +258,7 @@ test("a SOCKS server drops greetings of the other protocol version without loggi
   toV5.write(Buffer.from([4, 1, 0, 80, 127, 0, 0, 1, 0]));
   await toV5.rest();
   const toV4 = await openRaw(v4.port);
-  toV4.write(Buffer.from([5, 1, 0, 0, 0, 0, 0, 0]));
+  toV4.write(Buffer.from([5, 1, 0]));
   await toV4.rest();
   assert.equal(toV5.isClosed() && toV4.isClosed(), true);
   assert.deepEqual([v5.log.length, v4.log.length, v5.methods.length], [0, 0, 0]);
@@ -275,4 +275,22 @@ test("close() resolves while a CONNECT tunnel is still open and frees the port",
   await raw.rest();
   assert.equal(raw.isClosed(), true);
   await assert.rejects(openRaw(proxy.port), { code: "ECONNREFUSED" });
+});
+
+test("SOCKS5 does not append a failure frame when the upstream resets after the tunnel is established", async (t) => {
+  const upstream = createServer((socket) => {
+    socket.on("error", () => {});
+    socket.write("hello", () => socket.resetAndDestroy());
+  });
+  upstream.listen(0, "127.0.0.1");
+  await once(upstream, "listening");
+  const upstreamPort = (upstream.address() as AddressInfo).port;
+  const proxy = await startSocksProxy({ version: 5 });
+  t.after(async () => { await proxy.close(); upstream.close(); });
+  const raw = await openRaw(proxy.port);
+  raw.write(Buffer.from([5, 1, 0]));
+  await raw.read(2);
+  raw.write(Buffer.from([5, 1, 0, 1, 127, 0, 0, 1, upstreamPort >> 8, upstreamPort & 0xff]));
+  assert.deepEqual((await raw.read(10)).slice(0, 2), [5, 0]);
+  assert.equal(await raw.rest(), "hello");
 });

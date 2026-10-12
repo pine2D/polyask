@@ -200,20 +200,26 @@ function socketReader(socket: Socket) {
 function tunnel(registry: ReturnType<typeof socketRegistry>, client: Socket, leftover: Buffer, host: string, port: number,
   reply: (ok: boolean) => Buffer): void {
   const upstream = registry.track(netConnect(port, host));
+  let established = false;
   upstream.once("connect", () => {
+    established = true;
     client.write(reply(true));
     if (leftover.length) upstream.write(leftover);
     upstream.pipe(client);
     client.pipe(upstream);
   });
-  upstream.once("error", () => { if (!client.destroyed) client.end(reply(false)); });
+  upstream.once("error", () => {
+    if (client.destroyed) return;
+    if (established) client.destroy(); else client.end(reply(false));
+  });
   client.once("close", () => upstream.destroy());
 }
 
 async function handleSocks4(client: Socket, reader: ReturnType<typeof socketReader>, log: ProxyLogEntry[],
   registry: ReturnType<typeof socketRegistry>, hosts: HostMap | undefined): Promise<void> {
-  const header = await reader.take(8);
-  if (header[0] !== 4) { client.destroy(); return; }
+  const first = await reader.take(1);
+  if (first[0] !== 4) { client.destroy(); return; }
+  const header = Buffer.concat([first, await reader.take(7)]);
   const port = header.readUInt16BE(2);
   const ip = [...header.subarray(4, 8)].join(".");
   await reader.takeCString(); // USERID：本服务不校验
