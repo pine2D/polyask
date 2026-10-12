@@ -32,8 +32,9 @@ export function siteHealthActions(input: {
     onCopyHealthReport: async () => {
       try {
         const processFailures = await shell.getRuntimeProcessFailures();
-        // 定位记账只是报告的附加行：读不到就省略，不让整份报告复制失败。
+        // 定位记账与代理行都是报告的附加行：读不到就省略，不让整份报告复制失败。
         const captureLocate = await Promise.resolve(shell.getCaptureLocateCounts?.()).catch(() => undefined);
+        const proxy = await Promise.resolve(shell.getProxyState?.()).catch(() => undefined);
         const report = buildSiteReport({
           version: input.runtime.version,
           distribution: input.runtime.distribution,
@@ -42,7 +43,7 @@ export function siteHealthActions(input: {
           sites: input.sites.filter((site) => input.selected.has(site.key)),
           statuses: input.statuses,
           health: input.health,
-          now: Date.now(), processFailures, captureLocate
+          now: Date.now(), processFailures, captureLocate, proxy
         });
         await navigator.clipboard.writeText(report);
         input.noteHealth(input.copy.healthReportCopied);
