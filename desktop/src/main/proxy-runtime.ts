@@ -72,10 +72,15 @@ export interface ProxyRuntimeOptions {
   readonly environment?: { readonly linuxDesktopProxy?: LinuxDesktopProxy };
   readonly sleep?: (ms: number) => Promise<void>;
   readonly now?: () => number;
+  /** 可取消的计时器（返回取消函数），给 Chromium 调用的时限用；测试注入假时钟。 */
+  readonly setTimer?: (callback: () => void, ms: number) => () => void;
 }
 
 const VERIFY_WINDOW_MS = 2_000;
 const VERIFY_INTERVAL_MS = 100;
+/** setProxy / clearAuthCache 单次调用的上限：网络服务重启后这些调用可能永不返回，不能卡死应用队列、gate 与写锁。 */
+export const PROXY_CHROMIUM_CALL_TIMEOUT_MS = 5_000;
+const CHROMIUM_CALL_TIMEOUT = "proxy_chromium_timeout";
 const OK: ApplyResult = Object.freeze({ ok: true });
 const APPLY_FAILED: ApplyResult = Object.freeze({ ok: false, result: "proxy_apply_failed" });
 const BUSY: ApplyResult = Object.freeze({ ok: false, result: "proxy_busy" });
@@ -107,10 +112,12 @@ export class ProxyRuntime {
   private readonly listeners = new Set<() => void>();
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly now: () => number;
+  private readonly setTimer: (callback: () => void, ms: number) => () => void;
 
   constructor(private readonly options: ProxyRuntimeOptions) {
     this.sleep = options.sleep ?? (ms => new Promise<void>(resolve => setTimeout(resolve, ms)));
     this.now = options.now ?? Date.now;
+    this.setTimer = options.setTimer ?? ((callback, ms) => { const handle = setTimeout(callback, ms); return () => clearTimeout(handle); });
     options.auth.onChange(() => this.emit());
   }
 
@@ -304,7 +311,8 @@ export class ProxyRuntime {
   private async setAll(config: Electron.ProxyConfig, tolerant: boolean): Promise<void> {
     const targets: { setProxy(config: Electron.ProxyConfig): Promise<void> }[] = [...this.options.sessions(), this.options.app];
     for (const target of targets) {
-      try { await target.setProxy(config); } catch (error) { if (!tolerant) throw error; }
+      try { await this.within(() => target.setProxy(config), PROXY_CHROMIUM_CALL_TIMEOUT_MS); }
+      catch (error) { if (!tolerant) throw error; }
     }
   }
 
@@ -314,7 +322,7 @@ export class ProxyRuntime {
     if (expected === null) return true;
     const deadline = this.now() + VERIFY_WINDOW_MS;
     for (;;) {
-      if (await this.resolvesTo(expected)) return true;
+      if (await this.resolvesTo(expected, deadline)) return true;
       this.assertEpoch(epoch);
       const left = deadline - this.now();
       if (left <= 0) return false;
@@ -323,16 +331,30 @@ export class ProxyRuntime {
     }
   }
 
-  private async resolvesTo(expected: string): Promise<boolean> {
+  /** 每次 resolveProxy 只给校验窗口剩余的时间；超时与报错都按不符处理。 */
+  private async resolvesTo(expected: string, deadline: number): Promise<boolean> {
     for (const session of this.options.verifySessions()) {
-      const actual = await session.resolveProxy(PROXY_CHECK_URL).catch(() => null);
+      const left = Math.max(0, deadline - this.now());
+      const actual = await this.within(() => session.resolveProxy(PROXY_CHECK_URL), left).catch(() => null);
       if (actual === null || actual.trim() !== expected) return false;
     }
     return true;
   }
 
   private async clearAuthCaches(): Promise<void> {
-    for (const session of this.options.sessions()) await session.clearAuthCache();
+    for (const session of this.options.sessions()) {
+      await this.within(() => session.clearAuthCache(), PROXY_CHROMIUM_CALL_TIMEOUT_MS);
+    }
+  }
+
+  /** 给一次 Chromium 调用设时限：到点拒绝；迟到的结果或异常被丢弃，结束即取消计时器。 */
+  private within<T>(call: () => Promise<T>, ms: number): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const cancel = this.setTimer(() => reject(new Error(CHROMIUM_CALL_TIMEOUT)), ms);
+      new Promise<T>(done => done(call())).then(
+        value => { cancel(); resolve(value); },
+        error => { cancel(); reject(error); });
+    });
   }
 
   private assertEpoch(epoch: number): void {

@@ -14,7 +14,7 @@ import {
 } from "../src/main/proxy-preference-store";
 import type { VersionedProxy } from "../src/main/proxy-target";
 import {
-  ProxyRuntime, linuxDesktopProxySource, type ProxyAuthPort, type ProxyRuntimeOptions, type ProxySession, type ProxyWebContents
+  PROXY_CHROMIUM_CALL_TIMEOUT_MS, ProxyRuntime, linuxDesktopProxySource, type ProxyAuthPort, type ProxyRuntimeOptions, type ProxySession, type ProxyWebContents
 } from "../src/main/proxy-runtime";
 import { SecretFileStore, type TokenCrypto } from "../src/main/secret-file-store";
 
@@ -51,7 +51,18 @@ function harness(options: { inputs?: ProxyInputs; secretsClear?: () => Promise<v
   const log: string[] = [];
   const broken = new Set<string>();
   const holds = new Map<string, Promise<void>>();
+  // 按「出口.方法」注入：failing 立即拒绝，hanging 永不返回（如网络服务重启后的 Chromium 调用）。
+  const failing = new Set<string>();
+  const hanging = new Set<string>();
+  const trap = (call: string): Promise<void> | null => hanging.has(call) ? new Promise<void>(() => undefined)
+    : failing.has(call) ? Promise.reject(new Error(`${call}_failed`)) : null;
   let clock = 0;
+  // 假计时器：只有时钟前进（advance 或注入的 sleep）才触发到期项；取消即移除，pendingTimers 应回到 0。
+  const timers = new Set<{ readonly at: number; readonly fire: () => void }>();
+  const advance = (ms: number) => {
+    clock += ms;
+    for (const timer of [...timers]) if (timer.at <= clock) { timers.delete(timer); timer.fire(); }
+  };
   let current = options.inputs ?? inputs();
   const accepted: ProxyPreference[] = [];
   const describe = (config: Electron.ProxyConfig) => config.mode === "fixed_servers" ? `fixed(${config.proxyRules})` : String(config.mode);
@@ -59,17 +70,26 @@ function harness(options: { inputs?: ProxyInputs; secretsClear?: () => Promise<v
     config: null,
     async setProxy(config) {
       log.push(`${name}.setProxy:${describe(config)}`);
+      const trapped = trap(`${name}.setProxy`); if (trapped) await trapped;
       const hold = holds.get(name); if (hold) await hold;
       this.config = config;
     },
     async resolveProxy(url) {
       assert.equal(url, PROXY_CHECK_URL);
+      const trapped = trap(`${name}.resolveProxy`); if (trapped) await trapped;
       return broken.has(name) ? "DIRECT" : chromiumResolve(this.config);
     },
-    async clearAuthCache() { log.push(`${name}.clearAuthCache`); }
+    async clearAuthCache() {
+      log.push(`${name}.clearAuthCache`);
+      const trapped = trap(`${name}.clearAuthCache`); if (trapped) await trapped;
+    }
   });
   const site = session("site"), shell = session("default"), net = session("net");
-  const app = { config: null as Electron.ProxyConfig | null, async setProxy(config: Electron.ProxyConfig) { log.push(`app.setProxy:${describe(config)}`); this.config = config; } };
+  const app = { config: null as Electron.ProxyConfig | null, async setProxy(config: Electron.ProxyConfig) {
+    log.push(`app.setProxy:${describe(config)}`);
+    const trapped = trap("app.setProxy"); if (trapped) await trapped;
+    this.config = config;
+  } };
   let gen = 0;
   let wipe = 0;
   const authListeners = new Set<() => void>();
@@ -96,18 +116,20 @@ function harness(options: { inputs?: ProxyInputs; secretsClear?: () => Promise<v
     store: options.real?.store ?? { read: () => current, setAccepted: value => { accepted.push(value); return true; } },
     secrets: options.real?.secrets ?? { clear: options.secretsClear ?? (async () => { cleared++; log.push("secrets.clear"); }) },
     webContents: () => contents as unknown as ProxyWebContents[],
-    sleep: async ms => { clock += ms; await Promise.resolve(); },
-    now: () => clock
+    sleep: async ms => { advance(ms); await Promise.resolve(); },
+    now: () => clock,
+    setTimer: (fire, ms) => { const timer = { at: clock + ms, fire }; timers.add(timer); return () => { timers.delete(timer); }; }
   });
   return {
-    runtime, log, broken, holds, auth, app, contents, accepted, site, shell, net, authListeners,
+    runtime, log, broken, holds, failing, hanging, advance, pendingTimers: () => timers.size, auth, app, contents, accepted, site, shell, net, authListeners,
     setInputs: (next: ProxyInputs) => { current = next; },
     cleared: () => cleared, elapsed: () => clock,
     setProxyLog: () => log.filter(line => line.includes(".setProxy:"))
   };
 }
 
-const settle = async () => { for (let i = 0; i < 20; i++) await Promise.resolve(); };
+// 排空微任务队列（所有桩与假计时器都不用宏任务），不依赖固定的微任务轮数。
+const settle = () => new Promise<void>(resolve => setImmediate(resolve));
 
 test("translates system, direct and custom onto every managed exit, then app", async () => {
   const h = harness();
@@ -552,4 +574,101 @@ test("linuxDesktopProxySource: only desktops Chromium reads settings from count 
   assert.equal(linuxDesktopProxySource("linux", { XDG_CURRENT_DESKTOP: "X-Cinnamon" }), "desktop");
   assert.equal(linuxDesktopProxySource("linux", { XDG_CURRENT_DESKTOP: "XFCE" }), "env");
   assert.equal(linuxDesktopProxySource("linux", {}), "env", "WSL / bare X: environment variables");
+});
+
+// I1：Chromium 调用（网络服务重启后）可能永不返回；每次调用都有时限，不能卡死应用队列、gate 与写锁。
+const P1_RULE = "fixed(http://proxy-a.example:7890)";
+const BLOCK_RULE = `fixed(${BLOCKING_PROXY_CONFIG.proxyRules})`;
+
+test("a resolveProxy that never settles is a mismatch once the window ends: restore, then block, never applied", { timeout: 2000 }, async () => {
+  const h = harness();
+  await h.runtime.applyNow(P1);
+  h.hanging.add("net.resolveProxy");
+  let done = false;
+  const apply = h.runtime.applyNow(P2).then(result => { done = true; return result; });
+  await settle();
+  assert.equal(h.pendingTimers(), 1, "the hung call is raced against the remaining verify window");
+  h.advance(1_999); await settle();
+  assert.equal(done, false);
+  h.advance(1); await settle();
+  assert.equal(h.setProxyLog().at(-1), `app.setProxy:${P1_RULE}`, "verify gave up at the window end and restored the previous config");
+  h.advance(2_000); await settle();
+  assert.deepEqual(await apply, { ok: false, result: "proxy_apply_failed" });
+  const state = h.runtime.state();
+  assert.equal(state.applied === P1 && state.blocked, true, "the restore did not verify either: blocked, applied stays the last good config");
+  assert.deepEqual(h.setProxyLog().slice(-4), ["site", "default", "net", "app"].map(name => `${name}.setProxy:${BLOCK_RULE}`));
+  assert.equal(h.pendingTimers(), 0);
+  assert.deepEqual(await h.runtime.applyNow(SYSTEM), { ok: true }, "the apply queue is not wedged");
+});
+
+test("a background recompute stuck in resolveProxy releases the gate when the window ends", { timeout: 2000 }, async () => {
+  const h = harness({ inputs: inputs({ override: ok(P1) }) });
+  const gate = new OperationGate();
+  h.runtime.bindBusySource(gate);
+  h.hanging.add("site.resolveProxy");
+  h.runtime.request();
+  await settle();
+  assert.equal(gate.busy, true);
+  h.advance(2_000); await settle();
+  assert.equal(gate.busy, false, "broadcasts are no longer refused with operation_busy");
+  const state = h.runtime.state();
+  assert.deepEqual([state.applied, state.blocked, state.appliedResult, state.pending], [null, true, "proxy_apply_failed", false]);
+  assert.equal(await gate.run(async () => "broadcast"), "broadcast");
+  assert.equal(h.pendingTimers(), 0);
+});
+
+test("a setProxy that never settles aborts the route after the cap; blocking tolerates the stuck exit and writes the rest", { timeout: 2000 }, async () => {
+  const h = harness();
+  h.hanging.add("net.setProxy");
+  let done = false;
+  const apply = h.runtime.applyNow(P1).then(result => { done = true; return result; });
+  await settle();
+  assert.deepEqual(h.setProxyLog(), ["site", "default", "net"].map(name => `${name}.setProxy:${P1_RULE}`));
+  h.advance(PROXY_CHROMIUM_CALL_TIMEOUT_MS - 1); await settle();
+  assert.equal(h.setProxyLog().length, 3, "still waiting inside the cap");
+  h.advance(1); await settle();
+  assert.deepEqual(h.setProxyLog().slice(3), ["site", "default", "net"].map(name => `${name}.setProxy:${BLOCK_RULE}`), "route aborted, app never got P1");
+  assert.equal(done, false, "the blocking write to the stuck exit is capped too");
+  h.advance(PROXY_CHROMIUM_CALL_TIMEOUT_MS); await settle();
+  assert.deepEqual(await apply, { ok: false, result: "proxy_apply_failed" });
+  assert.deepEqual([h.site.config, h.shell.config, h.app.config].map(config => config?.proxyRules), Array(3).fill(BLOCKING_PROXY_CONFIG.proxyRules));
+  assert.equal(h.net.config, null);
+  assert.deepEqual([h.runtime.state().applied, h.runtime.state().blocked], [null, true]);
+  assert.equal(h.pendingTimers(), 0);
+});
+
+test("a rejected setProxy aborts the route mid-way; blocking still writes every other exit", async () => {
+  const h = harness();
+  h.failing.add("default.setProxy");
+  assert.deepEqual(await h.runtime.applyNow(P1), { ok: false, result: "proxy_apply_failed" });
+  assert.deepEqual(h.setProxyLog(), [
+    `site.setProxy:${P1_RULE}`, `default.setProxy:${P1_RULE}`,
+    ...["site", "default", "net", "app"].map(name => `${name}.setProxy:${BLOCK_RULE}`)
+  ], "net and app never receive the half-applied route");
+  assert.deepEqual([h.site.config, h.net.config, h.app.config].map(config => config?.proxyRules), Array(3).fill(BLOCKING_PROXY_CONFIG.proxyRules));
+  assert.equal(h.shell.config, null);
+  assert.deepEqual([h.runtime.state().applied, h.runtime.state().blocked], [null, true]);
+  assert.equal(h.pendingTimers(), 0, "settled calls cancel their timers");
+});
+
+test("a rejected resolveProxy counts as a mismatch and is retried within the window", async () => {
+  const h = harness();
+  h.failing.add("site.resolveProxy");
+  assert.deepEqual(await h.runtime.applyNow(P1), { ok: false, result: "proxy_apply_failed" });
+  assert.equal(h.elapsed() >= 1_900 && h.elapsed() <= 2_000, true);
+  assert.equal(h.runtime.state().blocked, true);
+});
+
+test("wipeSecrets rejects when clearAuthCache hangs past the cap, still ends the wiping state and releases the lock", { timeout: 2000 }, async () => {
+  const h = harness();
+  h.hanging.add("default.clearAuthCache");
+  const wipe = h.runtime.wipeSecrets();
+  const outcome = wipe.then(() => "resolved", (error: Error) => error.message);
+  await settle();
+  assert.equal(h.log.includes("auth.endWipe"), false);
+  h.advance(PROXY_CHROMIUM_CALL_TIMEOUT_MS);
+  assert.match(await outcome, /proxy_chromium_timeout/);
+  assert.deepEqual(h.log, ["auth.beginWipe", "secrets.clear", "auth.resetBreaker", "site.clearAuthCache", "default.clearAuthCache", "auth.endWipe"]);
+  assert.equal(await h.runtime.withWriteLock(async () => "free"), "free");
+  assert.equal(h.pendingTimers(), 0);
 });
