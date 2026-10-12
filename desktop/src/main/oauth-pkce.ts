@@ -2,6 +2,7 @@ import { createHash, randomBytes as nodeRandomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import { renderOAuthCallbackPage } from './oauth-callback-page';
+import { isProxyNetError } from "./proxy-net-error";
 
 export type RandomBytes = (size: number) => Buffer;
 
@@ -216,7 +217,7 @@ export async function revokeGoogleToken(token: string, fetch: typeof globalThis.
         body: new URLSearchParams({ token }),
         signal
       });
-    } catch { throw new Error(signal.aborted ? "network_timeout" : "network_error"); }
+    } catch (error) { throw new Error(signal.aborted ? "network_timeout" : isProxyNetError(error) ? "proxy_error" : "network_error"); }
     if (!response.ok && response.status !== 400) throw new Error("oauth_revoke_failed");
   });
 }
@@ -231,7 +232,7 @@ async function tokenRequest(body: URLSearchParams, fetch: typeof globalThis.fetc
         body,
         signal
       });
-    } catch { throw new Error(signal.aborted ? "network_timeout" : "network_error"); }
+    } catch (error) { throw new Error(signal.aborted ? "network_timeout" : isProxyNetError(error) ? "proxy_error" : "network_error"); }
     let value: { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown; error?: unknown; error_description?: unknown };
     try { value = JSON.parse(await response.text()); }
     catch { throw new Error(signal.aborted ? "network_timeout" : "oauth_invalid_response"); }

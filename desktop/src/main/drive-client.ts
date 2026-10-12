@@ -1,3 +1,5 @@
+import { isProxyNetError } from "./proxy-net-error";
+
 export interface AccessTokenProvider {
   accessToken(forceRefresh: boolean): Promise<string>;
 }
@@ -207,7 +209,7 @@ export class DriveClient {
       throwCallerAbort(callerSignal);
       if (deadline.aborted) throw failure("network_timeout", 0);
       if ((error as { name?: string }).name === "AbortError") throw error;
-      throw failure("network_error", 0);
+      throw failure(isProxyNetError(error) ? "proxy_error" : "network_error", 0);
     }
     if (response.status === 401 && retry401)
       return this.requestWithinDeadline(url, init, callerSignal, deadline, false);
