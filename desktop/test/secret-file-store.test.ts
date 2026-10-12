@@ -327,26 +327,19 @@ test("reads are coalesced so a hung keyring cannot build a backlog in front of a
     const path = join(directory, "proxy-secret.bin");
     await new SecretFileStore(path, cipher()).write("old");
     const late = deferred();
-    let stuck = true;
+    let decrypts = 0;
     const store = new SecretFileStore(path, cipher({
-      decrypt: async (value) => {
-        if (stuck) await late.promise;
-        return value.toString().slice(7);
-      }
+      decrypt: async (value) => { decrypts += 1; await late.promise; return value.toString().slice(7); }
     }), { keyringTimeoutMs: 20 });
+    // 同一个同步段内连发：不依赖墙钟，只数链上真正开始过几次钥匙环读取。
     const first = store.read();
-    assert.equal(store.read(), first, "back-to-back reads share one promise");
-    const reads: Promise<unknown>[] = [first];
-    for (let i = 0; i < 12; i += 1) {
-      await new Promise((done) => setTimeout(done, 10));
-      reads.push(store.read());
-    }
-    const started = Date.now();
+    const reads = [first];
+    for (let i = 0; i < 12; i += 1) reads.push(store.read());
+    assert.ok(reads.every((read) => read === first), "back-to-back reads share one promise");
     assert.equal(await store.write("new"), "saved");
-    assert.ok(Date.now() - started < 120, `write waited ${Date.now() - started}ms behind the reads`);
-    await Promise.all(reads);
+    assert.equal(decrypts, 1, "write 之前链上只开始过一次挂起的读取，没有积压");
+    assert.deepEqual(await Promise.all(reads), reads.map(() => ({ kind: "unreadable" })));
     late.resolve();
-    stuck = false;
   });
 });
 
@@ -368,5 +361,20 @@ test("a read issued after a queued write is a new chain link and sees the writte
     const settled = store.read();
     await settled;
     assert.notEqual(store.read(), settled, "a settled read is not reused");
+  });
+});
+
+test("a read issued after a queued clear is a new chain link", { timeout: 2000 }, async () => {
+  await withDir(async (directory) => {
+    const path = join(directory, "proxy-secret.bin");
+    await new SecretFileStore(path, cipher()).write("old");
+    const store = new SecretFileStore(path, cipher());
+    const before = store.read();
+    const clearing = store.clear();
+    const after = store.read();
+    assert.notEqual(after, before);
+    assert.deepEqual(await before, { kind: "ok", value: "old" });
+    await clearing;
+    assert.deepEqual(await after, { kind: "none" }, "clear 之后入队的 read 看到清除结果");
   });
 });
