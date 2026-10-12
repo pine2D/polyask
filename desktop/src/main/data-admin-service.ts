@@ -14,6 +14,8 @@ interface DataAdminOptions {
   readonly sync: DataAdminSync;
   readonly beforeDisconnect?: () => void;
   readonly beforeWipe?: () => void;
+  /** 代理密码文件与认证缓存（spec §4.6）：断开 Drive 之后、清库之前 await；失败则整个重置失败。 */
+  readonly wipeSecrets?: () => Promise<void>;
   readonly now?: () => number;
 }
 
@@ -99,6 +101,7 @@ export class DataAdminService {
       this.options.database.questions.invalidateLifecycle();
       this.options.beforeDisconnect?.();
       await this.options.sync.disconnect();
+      await this.options.wipeSecrets?.();
       this.options.beforeWipe?.();
       this.options.database.resetLocalData();
       return this.options.sync.status();

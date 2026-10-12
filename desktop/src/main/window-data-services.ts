@@ -51,7 +51,7 @@ export async function createWindowDataServices(options: {
       preferences.refresh(); publish('polyask:drafts-changed');
     }
   });
-  const dataAdmin = new DataAdminService({ database, deviceId: local.deviceId, sync,
+  const dataAdmin = new DataAdminService({ database, deviceId: local.deviceId, sync, wipeSecrets: () => options.proxy.runtime.wipeSecrets(),
     beforeDisconnect: () => { coordinator.cancel(); synthesisCoordinator.cancel(); },
     beforeWipe: () => { preferences.drafts.invalidate(); collection.clearRun(); synthesis.reset(); manager.resetRunStatus(); }
   });

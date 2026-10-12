@@ -9,6 +9,7 @@ import { DataAdminService } from "../src/main/data-admin-service";
 import { DesktopDatabase } from "../src/main/database";
 import { HistoryService } from "../src/main/history-service";
 import type { SyncStatus } from "../src/shared/sync";
+import { SecretFileStore } from "../src/main/secret-file-store";
 import { archiveFixture } from "./fixtures";
 
 const status = (patch: Partial<SyncStatus> = {}): SyncStatus => ({
@@ -126,4 +127,51 @@ test("a local reset remains exclusive while Drive disconnect is pending", async 
     await first;
     assert.equal(admin.isResetting, false);
   } finally { database.close(); }
+});
+
+// spec §4.6：wipeSecrets 在 sync.disconnect() 之后、resetLocalData() 之前被 await；失败则整个重置失败，不报告成功。
+test("local reset awaits proxy secret wiping after disconnect and fails as a whole when it fails", async () => {
+  const database = seeded(":memory:");
+  const events: string[] = [];
+  let failWipe = true;
+  const admin = new DataAdminService({
+    database, deviceId: () => "device-a",
+    beforeWipe: () => { events.push("beforeWipe"); },
+    wipeSecrets: async () => {
+      events.push("wipe:start");
+      await new Promise<void>(resolve => setImmediate(resolve));
+      events.push(`wipe:end:rows=${database.archives.list().length}`);
+      if (failWipe) throw new Error("proxy_wipe_failed");
+    },
+    sync: { disconnect: async () => { events.push("disconnect"); return status(); }, status: () => status() }
+  });
+  try {
+    await assert.rejects(admin.resetLocal(), /proxy_wipe_failed/);
+    assert.deepEqual(events, ["disconnect", "wipe:start", "wipe:end:rows=2"], "先断开 Drive，再等密码清理；清理失败不得继续清库");
+    assert.equal(database.archives.list().length, 2, "密码没清掉就不得报告重置成功");
+    assert.equal(admin.isResetting, false);
+    events.length = 0;
+    failWipe = false;
+    await admin.resetLocal();
+    assert.deepEqual(events, ["disconnect", "wipe:start", "wipe:end:rows=2", "beforeWipe"]);
+    assert.equal(database.archives.list().length, 0);
+  } finally { database.close(); }
+});
+
+test("local reset removes proxy-secret.bin through the awaited wipe hook", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "polyask-reset-proxy-secret-"));
+  const path = join(directory, "proxy-secret.bin");
+  const secrets = new SecretFileStore(path, {
+    backend: () => "gnome_libsecret", available: async () => true,
+    encrypt: async value => Buffer.from(value, "utf8"), decrypt: async value => value.toString("utf8")
+  });
+  const database = seeded(":memory:");
+  try {
+    assert.equal(await secrets.write('{"version":1}'), "saved");
+    assert.equal(existsSync(path), true);
+    const admin = new DataAdminService({ database, deviceId: () => "device-a", wipeSecrets: () => secrets.clear(),
+      sync: { disconnect: async () => status(), status: () => status() } });
+    await admin.resetLocal();
+    assert.equal(existsSync(path), false, "重置后 proxy-secret.bin 必须不存在");
+  } finally { database.close(); rmSync(directory, { recursive: true, force: true }); }
 });
