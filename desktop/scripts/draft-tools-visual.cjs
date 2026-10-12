@@ -96,6 +96,8 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
         && !!card.querySelector('input[name=draft-sync]');})()`), true, 'actual preference sync controls, including the proxy row, must fit their settings card');
     await run('document.querySelector("input[name=settings-follow-proxy]").scrollIntoView({block:"center"})');
     await paint(); await shot(`${locale}-${theme}-proxy-sync-row`);
+    // 状态未到时 settings-proxy.tsx 先渲染同 id 的骨架卡；等三个模式单选出现再截图和量尺寸。
+    await wait('document.querySelectorAll("input[name=settings-proxy-mode]").length===3');
     await run('document.querySelector("#settings-proxy-title").closest("section").scrollIntoView({block:"start"})');
     await paint(); await shot(`${locale}-${theme}-proxy-card`);
     assert.equal(await run(`(() => {const card=document.querySelector('#settings-proxy-title').closest('section');

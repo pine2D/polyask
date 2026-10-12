@@ -90,7 +90,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 | 提问历史副本观察期 | 提交结果就绪后固定 15 分钟；生成或正文进度不顺延，明确终止归属时提前结束 | `question-history-service.ts` |
 | Drive 周期同步 / 本机变更合并窗口 | 15 分钟 / 3s（连续写入不推迟已计划唤醒）；未来任务按最早 nextAt 到期唤醒 | `sync-engine.ts` |
 | OAuth 回调等待 / 网络请求截止 | 5 分钟 / 30s | `oauth-pkce.ts`、`drive-client.ts` |
-| 代理应用校验 / 密码钥匙环 / 密码惰性读取 / 测试连接 | 应用后 `resolveProxy` 有界重试 2s；`setProxy`、`clearAuthCache` 每次调用限时 5s（`PROXY_CHROMIUM_CALL_TIMEOUT_MS`，超时按应用失败处理）；密码文件的钥匙环阶段（读、写、可用性查询）各限时 10s（`SECRET_KEYRING_TIMEOUT_MS`）：写盘超时降级为仅本次运行有效（`secret: "failed"`），OAuth refresh token 写盘同样适用（connect 报 `token_store_failed`），读盘超时按读不到（`unreadable`）处理、不删文件，30s 后（`PROXY_SECRET_RETRY_MS`）才会再读，可用性查询超时按不能安全保存答复；`proxy-auth` 等待惰性读取 5s（链上那次读盘由 10s 时限结束）；测试连接请求 8s；复制诊断报告等代理状态 1.5s（`REPORT_PROXY_STATE_TIMEOUT_MS`，超时省略 `proxy` 行）。都不在群发链路内，**不改变群发 44s/90s 预算**：但 `proxy-set` 在 `OperationGate` 和代理写锁内先校验、再写密码，写盘又排在同一条链上可能已挂起的读盘之后，一次带密码的保存最坏会让群发收到 `operation_busy` 约 22s（2s 校验 + 前一次读盘 10s + 本次写盘 10s）；网络服务整体挂起时一次应用最坏占 gate 约 30s（`clearAuthCache` 5s + 恢复上一份 5s + 阻断时三个 session 与 `app.setProxy` 各 5s）。群发只会被拒、不会被拖长；后台重算同样占用 gate（见 §13） | `proxy-runtime.ts`、`secret-file-store.ts`、`proxy-auth.ts`、`proxy-probe.ts`、`renderer/site-health-actions.ts` |
+| 代理应用校验 / 密码钥匙环 / 密码惰性读取 / 测试连接 | 应用后 `resolveProxy` 有界重试 2s；`setProxy`、`clearAuthCache` 每次调用限时 5s（`PROXY_CHROMIUM_CALL_TIMEOUT_MS`，超时按应用失败处理）；密码文件的钥匙环阶段（读、写、可用性查询）各限时 10s（`SECRET_KEYRING_TIMEOUT_MS`）：写盘超时降级为仅本次运行有效（`secret: "failed"`），OAuth refresh token 写盘同样适用（connect 报 `token_store_failed`），读盘超时按读不到（`unreadable`）处理、不删文件，30s 后（`PROXY_SECRET_RETRY_MS`）才会再读，可用性查询超时按不能安全保存答复；`proxy-auth` 等待惰性读取 5s（链上那次读盘由 10s 时限结束）；测试连接请求 8s；「重新加载全部站点」关闭站点连接 5s（超时报错、不 reload）；复制诊断报告等代理状态 1.5s（`REPORT_PROXY_STATE_TIMEOUT_MS`，超时省略 `proxy` 行）。都不在群发链路内，**不改变群发 44s/90s 预算**：但 `proxy-set` 在 `OperationGate` 和代理写锁内先校验、再写密码，写盘又排在同一条链上可能已挂起的读盘之后，一次带密码的保存最坏会让群发收到 `operation_busy` 约 22s（2s 校验 + 前一次读盘 10s + 本次写盘 10s）；网络服务整体挂起时一次应用最坏占 gate 约 30s（`clearAuthCache` 5s + 恢复上一份 5s + 阻断时三个 session 与 `app.setProxy` 各 5s）。群发只会被拒、不会被拖长；后台重算同样占用 gate（见 §13） | `proxy-runtime.ts`、`secret-file-store.ts`、`proxy-auth.ts`、`proxy-probe.ts`、`proxy-reload.ts`、`renderer/site-health-actions.ts` |
 
 **页面阶段的 `ready` = 主帧 `did-finish-load`（整页连同子资源和 load 前插入的 iframe 加载完），不是「能发了」**（`page-lifecycle.ts`，`site-view.ts` 只在 did-finish-load 调 `onReady`）。2026-10-05/06 Windows 实测（docs/verify.md「就绪判据采证」）：慢网下 Gemini 新会话可停在 loading 15–50s，而它的编辑器早在提交后数秒就已出现；群发不看 loading，照常可发；健康检查在 loading 时跳过 `diagnose`，该站显示 unknown。曾评估「输入框可用或整页加载完，先到者算 ready」：收益基本只有 Gemini（元宝约 0.6s，其余站 did-finish-load 先到），且通用 `findComposer()` 会被 ChatGPT/豆包/Gemini 的预渲染占位 textarea 骗过、须按站点只认真编辑器，**用户决定不改（2026-10-06）**，只记录语义。另：智谱遇阿里云滑块验证页时 did-finish-load 照样报 ready（页上无输入框），未处理。
 
@@ -195,7 +195,6 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - 判定口径：只有站点给出明确登录证据才说「需要登录」，无法可靠判断一律「无法确认」，不拿 URL 或页面外观猜。单站正在发送或重载会破坏当前任务时禁用「重新加载」并说明原因。
 - **可复制诊断报告**（`shared/site-report.ts` 的 `buildSiteReport`）是切除扩展后唯一的结构化报障入口，**不得只可见不可复制**。内容边界：版本 / 发行形态 / 平台 / 显示缩放、每站的 `phase`+`code`+健康结论+`checkedAt`、每条 check 的 `{name, kind, ok}`、白名单进程类别/退出原因/数值错误码，以及每站 `capture-locate selector=… semantic=… anchor=…`、`capture-reason …=数字` 与 `capture-slow-observer N` 行。原因仅取 `CAPTURE_REASONS` 固定枚举；卡顿数为 historyTurn 单次超过 250ms 的 MutationObserver 回调次数。三类均为主进程内存计数，经 `polyask:capture-locate-counts` 读取，只认白名单枚举键与正安全整数，读取失败仅省略该行。**绝不包含对话内容、URL、账号、路径、token 或消息 key**——`check.name` 是本地化的 `diag_*` 词条不是页面文本，站点只写 key 与产品名不写 host。Drive 连接诊断另在设置页，同样走负向泄漏约束的白名单快照。
 - 报告头部的 `proxy mode=…` 一行只含代理模式、协议、是否带认证、密码状态、是否跟随、应用结果、挂起、待确认与存储状态这些枚举和布尔值，不含主机、端口、用户名或绕过列表，格式见 §13「诊断」。
-
 
 ## 9. 源码文本守卫的明文规则
 
@@ -348,7 +347,7 @@ Mermaid 仅在需要预览时加载本地依赖，串行绘制、最多缓存 12
 | 出口 | 承载 | 处理 |
 | --- | --- | --- |
 | `persist:polyask-sites`（`SITE_PARTITION`） | 九站视图，以及站内的登录跳转 | `setProxy` 后校验；认证走 `app.on("login")` |
-| defaultSession | 外壳窗口；开发态的 dev server | `setProxy` 后校验 |
+| defaultSession | 外壳窗口；开发态的 dev server | `setProxy`，不校验（`setProxy` 之前它的 `resolveProxy` 不可信，见下文「启动阻断」） |
 | `polyask-net`（非持久，`main/proxy-sessions.ts` 的 `NET_PARTITION`） | Drive，以及 OAuth 的令牌交换、刷新和撤销 | `setProxy` 后校验；认证走请求级 `login` |
 | `polyask-proxy-probe`（非持久） | 设置卡里的「测试连接」 | 每次测试单独配置 |
 | `app.setProxy` | 不属于任何 session 的请求 | 写入同一份配置，作兜底 |

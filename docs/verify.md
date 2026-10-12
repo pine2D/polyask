@@ -1111,7 +1111,7 @@ Windows/macOS 本轮原生、物理输入法与读屏、真实 Drive 授权及�
 
 | # | 验证点 | 结论 | 对实现的影响 |
 | --- | --- | --- | --- |
-| a | `net.request` 适配器语义 | 成立。`redirect: "manual"` 下不能调用 `followRedirect`：原生 `followRedirect` 会把 `Authorization` 带到跨源第二跳。不跟随时请求以 `Redirect was cancelled` 结束；在 `redirect` 处理器里同步 `abort()` 不抛错，只发 `abort` 事件、不发 `error`，目标源在手动重发之前 0 命中（评审另跑探针验证）。`abort()` 只触发 `abort` 事件，不触发 `error` 或 `end`；每个请求的第一个事件都是 `close`（`end()` 后 Writable 关闭），不代表完成。没有 `login` 监听时，407 作为普通响应返回。`Uint8Array` 可以直接 `end()`，>4MiB 上传完整到达。`cache: "no-store"` 和 `useSessionCookies: false` 按预期生效 | 适配器在 `redirect` 事件里记下 Location、立即 abort 当前跳再自行重发，跨源删除 `Authorization`；`AbortSignal` 触发时先 reject 再 `abort()`，不靠 `ClientRequest` 的事件判断结束；407 响应也要归类 |
+| a | `net.request` 适配器语义 | 成立。`redirect: "manual"` 下不能调用 `followRedirect`：原生 `followRedirect` 会把 `Authorization` 带到跨源第二跳。不跟随时请求以 `Redirect was cancelled` 结束；在 `redirect` 处理器里同步 `abort()` 不抛错，只发 `abort` 事件、不发 `error`，目标源在手动重发之前 0 命中。`abort()` 只触发 `abort` 事件，不触发 `error` 或 `end`；每个请求的第一个事件都是 `close`（`end()` 后 Writable 关闭），不代表完成。没有 `login` 监听时，407 作为普通响应返回。`Uint8Array` 可以直接 `end()`，>4MiB 上传完整到达。`cache: "no-store"` 和 `useSessionCookies: false` 按预期生效 | 适配器在 `redirect` 事件里记下 Location、立即 abort 当前跳再自行重发，跨源删除 `Authorization`；`AbortSignal` 触发时先 reject 再 `abort()`，不靠 `ClientRequest` 的事件判断结束；407 响应也要归类 |
 | b | SOCKS5 认证 | 不可用。握手只提供无认证方法 0x00；`socks5://u:p@` 规则 `resolveProxy` 为空，请求得到 `net::ERR_NO_SUPPORTED_PROXIES` | 校验拒收 SOCKS 密码、清空用户名；列为已知限制 |
 | c | DNS 解析方 | SOCKS5 由代理端解析（`resolvedBy: proxy`）；SOCKS4 在本机解析（`resolvedBy: client`），IPv6 目标得到 `net::ERR_NAME_NOT_RESOLVED` | 设置卡对 SOCKS4 提示 DNS 风险；列为已知限制 |
 | d | 不调 `closeAllConnections` 时是否复用旧线路 | 未观察到新请求或单纯 reload 沿用旧线路（http/https 共 9 种切换组合）。没有「同配置再发、确认暖连接被复用」的正向对照，探测灵敏度未经证明 | 「重新加载全部站点」仍先 `closeAllConnections()`，作为防御；文案不写「必须重载才生效」 |
@@ -1169,8 +1169,8 @@ Windows/macOS 本轮原生、物理输入法与读屏、真实 Drive 授权及�
 - [ ] W7 诊断报告：W1–W6、W8–W11 每一步复制的报告里，都没有代理主机、端口、用户名或绕过列表。
 - [ ] W8 启动阻断开关被覆盖：分别以「自定义 HTTP」「跟随系统」（Clash 打开「系统代理」）「不使用代理」三种已存设置冷启动，九站都按该设置正常加载（自定义与跟随系统时 Clash 连接列表出现九站域名，不使用代理时不出现），诊断报告 `applied=ok`；三种情况下都没有站点停在代理连接失败。
 - [ ] W9 启动时没有直连泄漏：使用拼写词典已缓存的档案（之前正常启动过一次），存好自定义 SOCKS5 代理后退出；开着 Wireshark（过滤 `udp.port == 53 or tcp.port == 53`，以及本机到外网的 TCP 443）冷启动。期望：在 Clash 连接列表出现第一条九站请求之前，没有任何直连外网的 TCP 连接；DNS 查询里不出现九站域名，网络质量估计器那一次解析只命中本机缓存或 hosts（抓不到 53 端口上的对应查询）。
-- [ ] W10 启动时已存代理没有运行（计划 Review Focus 第 4 条）：存好自定义 `127.0.0.1:7890` 后完全退出 Clash，再冷启动 PolyAsk。期望应用正常启动、窗口可操作；九站都显示代理连接失败（`proxy_failed`），不是通用的加载失败；设置卡能打开并修改；「测试连接」给出代理连接失败。启动 Clash 后点「重新加载全部站点」恢复。
-- [ ] W11 特殊字符密码（计划 Review Focus 第 5 条）：用 W3 的脚本，把密码改成 `p@ss:wörd` 启动，在设置卡填同样的密码。九站正常加载、不弹登录框；W5 已获授权时，Drive 同步也经该代理认证成功。
+- [ ] W10 启动时已存代理没有运行：存好自定义 `127.0.0.1:7890` 后完全退出 Clash，再冷启动 PolyAsk。期望应用正常启动、窗口可操作；九站都显示代理连接失败（`proxy_failed`），不是通用的加载失败；设置卡能打开并修改；「测试连接」给出代理连接失败。启动 Clash 后点「重新加载全部站点」恢复。
+- [ ] W11 特殊字符密码：用 W3 的脚本，把密码改成 `p@ss:wörd` 启动，在设置卡填同样的密码。九站正常加载、不弹登录框；W5 已获授权时，Drive 同步也经该代理认证成功。
 
 **Linux**
 
