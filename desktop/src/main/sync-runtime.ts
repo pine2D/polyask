@@ -1,22 +1,28 @@
 import { join } from "node:path";
 
-import { app, safeStorage, shell as electronShell } from "electron";
+import { app, safeStorage, session as electronSession, shell as electronShell } from "electron";
 
 import type { SyncStatus } from "../shared/sync";
 import type { WorkspaceState } from "../shared/workspace";
 import type { DesktopDatabase } from "./database";
 import { DriveClient } from "./drive-client";
+import { createSessionFetch } from "./net-request-fetch";
 import { loadOAuthClientCredentials } from "./oauth-pkce";
 import { OAuthSession } from "./oauth-session";
+import { NET_PARTITION } from "./proxy-sessions";
 import { SyncEngine } from "./sync-engine";
 import { SyncRepository } from "./sync-repository";
 import { safeEncryptionAvailability, TokenStore } from "./token-store";
+
+/** Request-level proxy `login` for Drive/OAuth requests (ProxyAuth.handleRequestLogin); omitted = the adapter cancels. */
+export type ProxyLoginHandler = NonNullable<NonNullable<Parameters<typeof createSessionFetch>[1]>["onLogin"]>;
 
 interface SyncRuntimeOptions {
   readonly database: DesktopDatabase;
   readonly workspace: () => WorkspaceState;
   readonly onStatus: (status: SyncStatus) => void;
   readonly onWorkspace: (workspace: WorkspaceState) => void;
+  readonly onProxyLogin?: ProxyLoginHandler;
 }
 
 export async function createSyncRuntime(options: SyncRuntimeOptions): Promise<SyncEngine> {
@@ -37,11 +43,15 @@ export async function createSyncRuntime(options: SyncRuntimeOptions): Promise<Sy
     encrypt: (value) => safeStorage.encryptStringAsync(value),
     decrypt: async (value) => (await safeStorage.decryptStringAsync(value)).result
   });
+  // Drive and OAuth (token/revoke) leave through the in-memory polyask-net session so they follow the
+  // managed proxy (spec 3.1/3.5); Node's global fetch would bypass every proxy, system ones included.
+  const netFetch = createSessionFetch(electronSession.fromPartition(NET_PARTITION), { onLogin: options.onProxyLogin });
   const oauth = new OAuthSession({
     locale: app.getLocale(),
     credentials,
     scope: "https://www.googleapis.com/auth/drive.appdata",
     tokenStore,
+    fetch: netFetch,
     openExternal: async (url) => {
       const destination = new URL(url);
       if (destination.protocol !== "https:" || destination.hostname !== "accounts.google.com") {
@@ -52,7 +62,7 @@ export async function createSyncRuntime(options: SyncRuntimeOptions): Promise<Sy
   });
   return new SyncEngine({
     repository: new SyncRepository(options.database),
-    drive: new DriveClient(oauth),
+    drive: new DriveClient(oauth, netFetch),
     auth: oauth,
     onStatus: options.onStatus,
     onWorkspaceChanged: () => options.onWorkspace(options.workspace())

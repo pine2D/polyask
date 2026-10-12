@@ -9,7 +9,7 @@ import { DataAdminService } from './data-admin-service';
 import { PreferencesRepository } from './preferences-repository';
 import { DraftRepository } from './draft-repository';
 import { PreferenceRuntime } from './preference-runtime';
-import { createSyncRuntime } from './sync-runtime';
+import { createSyncRuntime, type ProxyLoginHandler } from './sync-runtime';
 import { SynthesisService } from './synthesis-service';
 import { sendTrackedSynthesis } from './synthesis-generation';
 import { SITES } from './sites';
@@ -20,6 +20,7 @@ export async function createWindowDataServices(options: {
   readonly publish: (channel: string, payload?: unknown) => void;
   readonly applyDisplay: (value: DisplayPreferences) => void;
   readonly setNotifications: (enabled: boolean) => void;
+  readonly onProxyLogin?: ProxyLoginHandler;
 }) {
   const { database, manager, workspace, coordinator, synthesisCoordinator, publish } = options;
   const local = createLocalDataServices(database);
@@ -38,7 +39,7 @@ export async function createWindowDataServices(options: {
     showTarget: site => { manager.setSurface('sites'); manager.setLayout('focus', site); },
     recordHistory: text => local.history.record(text)
   });
-  const sync = await createSyncRuntime({ database, workspace: () => workspace.getState(),
+  const sync = await createSyncRuntime({ database, workspace: () => workspace.getState(), onProxyLogin: options.onProxyLogin,
     onStatus: state => publish('polyask:sync-status', state),
     onWorkspace: state => {
       manager.setSelection(state.selectedSites);
