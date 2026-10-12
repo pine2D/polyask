@@ -16,7 +16,7 @@ function loadSiteView({ loadURL = async (_url: string) => {} } = {}) {
   const loads: string[] = [];
   const contents = Object.assign(new EventEmitter(), {
     id: 7, isDestroyed: () => false, getURL: () => "https://claude.ai/new",
-    getBackgroundThrottling: () => false, setBackgroundThrottling() {}, reload() {},
+    getBackgroundThrottling: () => false, setBackgroundThrottling() {}, reload() {}, setWebRTCIPHandlingPolicy() {},
     setWindowOpenHandler: (handler: typeof openHandler) => { openHandler = handler; },
     loadURL: (url: string) => { loads.push(url); return loadURL(url); }
   });
@@ -33,7 +33,7 @@ function loadSiteView({ loadURL = async (_url: string) => {} } = {}) {
   const phases: string[] = [];
   const noop = () => {};
   module.exports.createSiteView(sites.find((site: { key: string }) => site.key === "claude"),
-    { onLoading: () => phases.push("loading"), onReady: () => phases.push("ready"), onFailure: noop, onCrash: noop, onExternal: (url: string) => external.push(url) });
+    { onLoading: () => phases.push("loading"), onReady: () => phases.push("ready"), onFailure: noop, onCrash: noop, onExternal: (url: string) => external.push(url), webrtcPolicy: () => "default" });
   const click = (type = "mouseDown") => contents.emit("input-event", {}, { type });
   const navigate = (url: string) => {
     // Electron 先发 did-start-navigation，will-navigate 由 NavigationThrottle 随后发出。

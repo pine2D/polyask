@@ -14,26 +14,28 @@ export class PreferenceRuntime {
     private readonly manager: ViewManager,
     private readonly publish: (value: PreferenceSnapshot) => void,
     private readonly display: (value: DisplayPreferences) => void,
-    private readonly notifications: (enabled: boolean) => void) {
+    private readonly notifications: (enabled: boolean) => void,
+    // 只置脏标记、不带值（spec §3.4）：proxy-runtime 自己从 proxy-preference-store 读最新输入。
+    private readonly proxy: () => void = () => {}) {
     this.lastUi = manager.getUiState();
     repository.seed({ layoutMode: this.lastUi.layoutMode, siteZoom: this.lastUi.siteZoom ?? {} });
-    this.refresh();
+    this.applySnapshot();
   }
   snapshot(): PreferenceSnapshot { return this.repository.snapshot(); }
   seed(values: Partial<PreferenceValues>): PreferenceSnapshot {
     if (this.legacySeedEnabled) this.repository.seed(values);
-    return this.refresh();
+    return this.applySnapshot();
   }
-  set(key: PreferenceKey, value: unknown): PreferenceSnapshot { this.repository.set(key, value); return this.refresh(); }
+  set(key: PreferenceKey, value: unknown): PreferenceSnapshot { this.repository.set(key, value); return this.applySnapshot(); }
   follow(group: PreferenceGroup, enabled: boolean): PreferenceSnapshot {
-    this.repository.setFollowing(group, enabled); return this.refresh();
+    this.repository.setFollowing(group, enabled); return this.applySnapshot();
   }
   setDisplay(value: DisplayPreferences): DisplayPreferences {
     this.repository.set('density', value.density); this.repository.set('siteScale', value.siteScale);
-    return this.refresh().values.display;
+    return this.applySnapshot().values.display;
   }
   setDraftSync(enabled: boolean): PreferenceSnapshot {
-    this.drafts.setSyncEnabled(enabled); return this.refresh();
+    this.drafts.setSyncEnabled(enabled); return this.applySnapshot();
   }
   captureUi(value: DesktopUiState): void {
     if (this.applying) { this.lastUi = value; return; }
@@ -45,7 +47,10 @@ export class PreferenceRuntime {
     this.lastUi = value;
     if (changed) this.publish(this.snapshot());
   }
-  refresh(): PreferenceSnapshot {
+  // 外部刷新入口：同步拉取（onWorkspace）、备份恢复（afterApply）、本机重置（reset）。只有它置代理脏标记（spec §3.4）；
+  // 通用偏好写入走 applySnapshot，不碰代理——否则每次改布局/密度都会让后台重算占住 OperationGate，群发被拒成 operation_busy。
+  refresh(): PreferenceSnapshot { const state = this.applySnapshot(); this.proxy(); return state; }
+  private applySnapshot(): PreferenceSnapshot {
     const state = this.snapshot();
     this.applying = true;
     try {

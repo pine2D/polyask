@@ -110,7 +110,7 @@ function loadSiteView() {
   const require = createRequire(resolve(__dirname, "../src/main/site-view.ts"));
   const contents = Object.assign(fakeContents(7), {
     getURL: () => "https://claude.ai/new",
-    setWindowOpenHandler() {}, loadURL: async () => {}, reload() {}
+    setWindowOpenHandler() {}, loadURL: async () => {}, reload() {}, setWebRTCIPHandlingPolicy() {}
   });
   const module = { exports: {} as any };
   runInNewContext(transformSync(readSource("src/main/site-view.ts"), { loader: "ts", format: "cjs" }).code, {
@@ -123,7 +123,7 @@ function loadSiteView() {
   const sites = require("./sites").SITES;
   const noop = () => {};
   module.exports.createSiteView(sites.find((site: { key: string }) => site.key === "claude"),
-    { onLoading: noop, onReady: noop, onFailure: noop, onCrash: noop, onExternal: noop });
+    { onLoading: noop, onReady: noop, onFailure: noop, onCrash: noop, onExternal: noop, webrtcPolicy: () => "default" });
   return contents;
 }
 

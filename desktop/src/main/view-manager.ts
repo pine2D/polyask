@@ -51,7 +51,7 @@ import { GenerationMonitor, GENERATION_MISS_LIMIT } from "./generation-monitor";
 import { clearProbeTracking, generationObservationStatus, scheduleGenerationProbe } from "./generation-probe-scheduler";
 import { navigationDisposition } from "./navigation";
 import { SiteCommandChannel } from "./site-command-channel";
-import { createSiteView, diagnosticSitesForViews } from "./site-view";
+import { createSiteView, diagnosticSitesForViews, type SiteWebRtcPolicy } from "./site-view";
 import { SITES } from "./sites";
 import { beginSubmissionRun, preserveSubmission, effectiveStatus, markStatusRead, statusWithUnread } from "./status";
 import { ensureSiteViews } from './ensure-site-views';
@@ -80,6 +80,8 @@ interface ViewManagerOptions {
   readonly onUiStateChange?: (state: DesktopUiState) => void;
   // 站点视图里点到的外部链接交给用户自己的浏览器；不接就是静默无反应（见 site-view.ts）。
   readonly openExternal?: (url: string) => void;
+  // WebRTC IP 策略跟随已应用代理（proxy-runtime.webrtcPolicy）；生产装配必传（proxy-startup-wiring 守卫），未接按 Electron 默认。
+  readonly webrtcPolicy?: () => SiteWebRtcPolicy;
 }
 
 export class ViewManager {
@@ -543,7 +545,8 @@ export class ViewManager {
         this.updatePageStatus({ site: site.key, phase: "crashed", code: "renderer_crashed" });
         this.onRuntimeEvent({ type: "render-process-gone", site: site.key, code: reason });
       },
-      onExternal: (target) => this.options.openExternal?.(target)
+      onExternal: (target) => this.options.openExternal?.(target),
+      webrtcPolicy: () => this.options.webrtcPolicy?.() ?? "default"
     });
     this.views.set(site.key, view);
     this.siteZoom.bind(site.key, view.webContents);

@@ -14,6 +14,8 @@ import { reassertPainting } from "./paint-recovery";
 import { allowAppNavigationUnload } from "./app-navigation-unload";
 import { ExternalOpenGate, handsOffToBrowser } from "./site-external-links";
 
+export type SiteWebRtcPolicy = "default" | "disable_non_proxied_udp";
+
 interface SiteViewCallbacks {
   readonly onLoading: () => void;
   readonly onReady: () => void;
@@ -23,6 +25,8 @@ interface SiteViewCallbacks {
   // 交给用户自己的浏览器打开——这既保住「格子里永远是这个站」的不变量，也让引用链接可用。
   // 不接这条回调的话它们是**静默无反应**：will-navigate 被拦、window.open 被 deny，都没有任何提示。
   readonly onExternal: (url: string) => void;
+  // 已应用代理为 custom 时禁止非代理 UDP（spec §3.2）；新视图在这里读当前值，已有视图由 proxy-runtime 遍历更新。
+  readonly webrtcPolicy: () => SiteWebRtcPolicy;
 }
 
 interface WebPreferencesReadback {
@@ -84,6 +88,7 @@ export function createSiteView(
     }
   });
   const contents = view.webContents;
+  contents.setWebRTCIPHandlingPolicy(callbacks.webrtcPolicy());
   const authRecovery = new PostAuthReloadTracker(site.key === "gemini");
   // 页面阶段由 PageLifecycle 定夺（两条坑的说明见 page-lifecycle.ts）：子帧不改阶段，
   // 加载失败不被紧随的 did-finish-load 洗回就绪。

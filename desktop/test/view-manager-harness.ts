@@ -16,7 +16,7 @@ export interface FakeSiteContents extends EventEmitter {
   [key: string]: any;
 }
 
-export function viewManagerHarness({ sites = ["claude", "chatgpt"], committed = true } = {}) {
+export function viewManagerHarness({ sites = ["claude", "chatgpt"], committed = true, options = {} as Record<string, unknown> } = {}) {
   const require = createRequire(resolve(__dirname, "../src/main/view-manager.ts"));
   const views: FakeSiteContents[] = [];
   const bounds: Array<{ id: number; width: number; height: number }> = [];
@@ -37,7 +37,8 @@ export function viewManagerHarness({ sites = ["claude", "chatgpt"], committed = 
   runInNewContext(transformSync(readSource("src/main/view-manager.ts"), { loader: "ts", format: "cjs" }).code, {
     module, exports: module.exports, setTimeout, clearTimeout,
     require: (name: string) => {
-      if (name === "electron") return { session: { fromPartition: () => ({ setPermissionCheckHandler() {}, setPermissionRequestHandler() {}, clearStorageData: async () => {} }) } };
+      if (name === "electron") return { session: { fromPartition: () => ({ setPermissionCheckHandler() {}, setPermissionRequestHandler() {}, clearStorageData: async () => {},
+        setProxy: async () => {}, resolveProxy: async () => "DIRECT", clearAuthCache: async () => {}, closeAllConnections: async () => {}, clearHostResolverCache: async () => {} }) } };
       if (name === "./site-view") return { createSiteView: (_site: unknown, callbacks: Record<string, (...args: any[]) => void>) => {
         const id = nextId++;
         const calls: string[] = [];
@@ -67,7 +68,7 @@ export function viewManagerHarness({ sites = ["claude", "chatgpt"], committed = 
       return require(name);
     }
   });
-  const manager = new module.exports.ViewManager(window, () => {}, () => {}, undefined, { selectedSites: sites });
+  const manager = new module.exports.ViewManager(window, () => {}, () => {}, undefined, { selectedSites: sites, ...options });
   const status = (site: string) => manager.getStatuses().find((item: { site: string }) => item.site === site);
   if (committed) for (const view of views) view.emit("did-navigate", {}, view.getURL(), 200, "OK");
   return { manager, window, shell, views, status, bounds };
