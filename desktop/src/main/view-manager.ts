@@ -83,6 +83,8 @@ interface ViewManagerOptions {
   readonly openExternal?: (url: string) => void;
   // WebRTC IP 策略跟随已应用代理（proxy-runtime.webrtcPolicy）；生产装配必传（proxy-startup-wiring 守卫），未接按 Electron 默认。
   readonly webrtcPolicy?: () => SiteWebRtcPolicy;
+  // 认证熔断已跳闸（ProxyAuth.authFailed）。Electron 44 下 HTTPS 隧道遇 407 报 -111 而非 -127，须在分类处覆盖成 proxy_auth_failed。
+  readonly proxyAuthFailed?: () => boolean;
 }
 
 export class ViewManager {
@@ -539,7 +541,7 @@ export class ViewManager {
       onLoading: () => this.updatePageStatus({ site: site.key, phase: "loading" }),
       onReady: () => this.updatePageStatus({ site: site.key, phase: "ready" }),
       onFailure: (code) => {
-        this.updatePageStatus({ site: site.key, phase: "failed", code: classifyNetError(code) ?? "load_failed" });
+        this.updatePageStatus({ site: site.key, phase: "failed", code: this.loadFailureCode(code) });
         this.onRuntimeEvent({ type: "did-fail-load", site: site.key, code: String(code) });
       },
       onCrash: (reason) => {
@@ -611,6 +613,11 @@ export class ViewManager {
   private currentStatus(site: SiteKey): SiteStatus {
     const pageStatus = this.pageStatus.get(site) ?? { site, phase: "loading" as const };
     return effectiveStatus(this.runStatus.get(site), pageStatus);
+  }
+
+  private loadFailureCode(errno: number): "load_failed" | ProxyNetCode {
+    const code = classifyNetError(errno);
+    return code === "proxy_failed" && this.options.proxyAuthFailed?.() ? "proxy_auth_failed" : code ?? "load_failed";
   }
 
   private pageFailureCode(site: SiteKey): "renderer_crashed" | "load_failed" | ProxyNetCode | null {

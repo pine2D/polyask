@@ -19,6 +19,7 @@ test("startup applies the proxy (or blocks) before the first site view can load"
   assert.ok(shellLoad > apply && syncStart > apply, "the shell page and Drive come after the proxy too");
   assert.equal(main.split("recomputeFromStore(").length, 2, "exactly one startup apply");
   assert.match(main, /webrtcPolicy: \(\) => proxy\.runtime\.webrtcPolicy\(\),/);
+  assert.match(main, /proxyAuthFailed: \(\) => proxy\.auth\.authFailed\(\),/);
   assert.match(main, /const proxy = proxyServices;\n\s*if \(!proxy\) throw new Error\("proxy_not_ready"\);/);
   assert.doesNotMatch(main, /onProxyLogin/, "the request-level login is wired once, inside window-data-services");
 });

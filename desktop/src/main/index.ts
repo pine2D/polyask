@@ -253,6 +253,7 @@ async function createWindow(): Promise<void> {
       selectedSites: workspaceState.selectedSites,
       onUiStateChange: (state) => { uiStateStore.schedule(state); preferenceRuntime?.captureUi(state); },
       webrtcPolicy: () => proxy.runtime.webrtcPolicy(),
+      proxyAuthFailed: () => proxy.auth.authFailed(),
       // 站点视图里点到的外部链接交给用户自己的浏览器。视图本身绝不导航过去——格子里永远是这个站。
       // 复用 safeExternalUrl 的校验（只放行 http/https、拒带凭据的 URL）。
       openExternal: (url) => {

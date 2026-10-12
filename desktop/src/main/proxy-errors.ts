@@ -8,6 +8,7 @@ const PROXY_AUTH_FAILED = { code: "proxy_auth_failed" } as const;
 
 export const PROXY_NET_ERRORS: readonly (readonly [name: string, errno: number, result: { readonly code: ProxyNetCode }])[] = [
   ["ERR_TUNNEL_CONNECTION_FAILED", -111, PROXY_FAILED],
+  // -115/-127 在 Electron 44 实测几乎不出现（HTTPS 隧道遇 407 报 -111）；熔断覆盖（view-manager.loadFailureCode）才是真实路径，这里仅作兜底。
   ["ERR_PROXY_AUTH_UNSUPPORTED", -115, PROXY_AUTH_FAILED],
   ["ERR_SOCKS_CONNECTION_FAILED", -120, PROXY_FAILED],
   ["ERR_SOCKS_CONNECTION_HOST_UNREACHABLE", -121, PROXY_FAILED],
