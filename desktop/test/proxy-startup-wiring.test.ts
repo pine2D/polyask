@@ -3,7 +3,27 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
 
+import { blockProxyUntilApplied } from "../src/main/proxy-startup-block";
+import { BLOCKING_PROXY_CONFIG, BLOCKING_PROXY_RULES } from "../src/shared/proxy-preference";
 import { readSource } from "./fixtures";
+
+test("every network context starts on the blocking proxy: the switch is appended at top level before app ready", () => {
+  // T18 实测：session 一实例化就下载拼写词典；外壳窗口与 applyConfig 的 clearAuthCache 都早于首次 setProxy。
+  const main = readSource("src/main/index.ts");
+  const call = main.indexOf("\nblockProxyUntilApplied(app.commandLine);\n");
+  const ready = main.indexOf("app.whenReady(");
+  assert.ok(call > 0, "called once at module top level (column 0, not inside a function)");
+  assert.ok(ready > call, "appended before app.whenReady: switches read after ready have no effect");
+  assert.ok(main.indexOf("createProxyServices(") > call && main.indexOf("new BrowserWindow(") > call, "before any session exists");
+  assert.equal(main.split("blockProxyUntilApplied(").length, 2, "exactly one call");
+});
+
+test("the startup switch uses the shared blocking address", () => {
+  const calls: string[][] = [];
+  blockProxyUntilApplied({ appendSwitch: (name: string, value?: string) => { calls.push([name, String(value)]); } });
+  assert.deepEqual(calls, [["proxy-server", "http://127.0.0.1:9"]]);
+  assert.equal(BLOCKING_PROXY_CONFIG.proxyRules, BLOCKING_PROXY_RULES, "block config and startup switch share one address");
+});
 
 test("startup applies the proxy (or blocks) before the first site view can load", () => {
   const main = readSource("src/main/index.ts");

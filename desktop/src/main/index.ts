@@ -43,6 +43,7 @@ import {
   resolveRuntimeProfile
 } from "./portable-profile";
 import { createProxyServices, type ProxyServices } from "./proxy-services";
+import { blockProxyUntilApplied } from "./proxy-startup-block";
 import { createProxyTools } from "./proxy-tools";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { startRuntimeGates } from "./runtime-gates";
@@ -57,6 +58,8 @@ import { WorkspaceService } from "./workspace-service";
 // TODO(size-ratchet)：548 行，目标 ≤400——抽出 createServices（数据库、archives/history/promptLibrary/synthesis/sync/dataAdmin 装配）
 // 与 createMainWindow（BrowserWindow、菜单、runtime gates），入口只留 app 生命周期。
 if (squirrelStartup) app.quit();
+// ready 之前：每个 session 一实例化就会出网（拼写词典），首次 setProxy 之前一律走阻断地址。
+blockProxyUntilApplied(app.commandLine);
 const startupLocale = (): string => {
   try { return app.getPreferredSystemLanguages()[0] ?? "en"; }
   catch { return "en"; }

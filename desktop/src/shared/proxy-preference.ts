@@ -67,9 +67,11 @@ export const DEFAULT_PROXY_PREFERENCE: ProxyPreference = freezePreference({
   version: 1, mode: "system", scheme: "http", host: "", port: 0, bypass: [], username: ""
 });
 
+/** 阻断地址：本机 discard 端口，连接必然被拒。启动开关（main/proxy-startup-block.ts）与阻断配置共用。 */
+export const BLOCKING_PROXY_RULES = "http://127.0.0.1:9";
 /** 阻断配置：指向必然拒绝连接的 discard 端口，不带 direct 回退；永远不记为「已应用配置」。 */
 export const BLOCKING_PROXY_CONFIG: Readonly<Electron.ProxyConfig> = Object.freeze({
-  mode: "fixed_servers", proxyRules: "http://127.0.0.1:9"
+  mode: "fixed_servers", proxyRules: BLOCKING_PROXY_RULES
 });
 
 function isSocks(scheme: ProxyScheme): boolean {
