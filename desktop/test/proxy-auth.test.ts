@@ -6,7 +6,7 @@ import test from "node:test";
 import type { AuthInfo } from "electron";
 
 import {
-  decodeProxySecret, encodeProxySecret, normalizeProxyHost, ProxyAuth, type ProxyAuthStore
+  decodeProxySecret, encodeProxySecret, normalizeProxyHost, ProxyAuth, PROXY_SECRET_RETRY_MS, type ProxyAuthStore
 } from "../src/main/proxy-auth";
 import {
   SecretFileStore, type SecretReadResult, type SecretWriteGuard, type SecretWriteResult
@@ -461,4 +461,115 @@ test("the real SecretFileStore round-trips an identity-bound password across ins
   assert.equal(decodeProxySecret(JSON.stringify({ version: 1, scheme: "ftp", host: "h", port: 1, username: "", password: "x" })), null);
   assert.equal(decodeProxySecret(JSON.stringify({ version: 1, scheme: "http", host: "h", port: 0, username: "", password: "x" })), null);
   assert.equal(decodeProxySecret(JSON.stringify({ version: 1, scheme: "http", host: "h", port: 1, username: "", password: "" })), null);
+});
+
+test("a throwing change listener cannot swallow a 407 callback or strand a wipe", async () => {
+  let now = 0;
+  const store = new FakeStore();
+  store.readResult = payload(P1, "s3cret");
+  const auth = new ProxyAuth({ store, now: () => now });
+  auth.setBasis({ applied: P1, applying: null });
+  await auth.refreshSecretState();
+  let later = 0;
+  auth.onChange(() => { throw new Error("webContents destroyed"); });
+  auth.onChange(() => { later += 1; });
+
+  assert.deepEqual(appLogin(auth, info("proxy.example", 8080), false).args, ["alice", "s3cret"]);
+  now += 1_000;
+  const tripping = appLogin(auth, info("proxy.example", 8080), false);
+  assert.deepEqual(tripping.args, [], "熔断那一次仍按取消语义回调");
+  assert.equal(auth.authFailed(), true);
+  assert.equal(later > 0, true, "其余监听器照常收到通知");
+
+  assert.doesNotThrow(() => auth.beginWipe());
+  assert.equal(auth.secretState(), "unknown");
+  auth.endWipe();
+  const after = appLogin(auth, info("proxy.example", 8080));
+  await auth.refreshSecretState();
+  assert.deepEqual(after.args, ["alice", "s3cret"], "endWipe 后缓存回到 null，重新读盘");
+});
+
+test("a throwing queued callback does not stall the rest of the batch or refreshSecretState", async () => {
+  const store = new FakeStore();
+  const gate = deferred();
+  store.readGate = gate.promise;
+  store.readResult = payload(P1, "s3cret");
+  const auth = new ProxyAuth({ store, readTimeoutMs: 60_000 });
+  auth.setBasis({ applied: P1, applying: null });
+
+  const first = appLogin(auth, info("proxy.example", 8080));
+  auth.handleAppLogin({ preventDefault: () => {} }, null, { firstAuthAttempt: true }, info("proxy.example", 8080),
+    () => { throw new Error("callback boom"); });
+  const third = appLogin(auth, info("proxy.example", 8080));
+  gate.resolve();
+  await auth.refreshSecretState();
+  assert.deepEqual(first.args, ["alice", "s3cret"]);
+  assert.deepEqual(third.args, ["alice", "s3cret"]);
+  assert.equal(auth.secretState(), "saved");
+});
+
+test("a malformed read result settles waiters as unreadable instead of escaping as a rejection", async () => {
+  const store = new FakeStore();
+  store.readResult = undefined as unknown as SecretReadResult;
+  const auth = new ProxyAuth({ store, readTimeoutMs: 60_000 });
+  auth.setBasis({ applied: P1, applying: null });
+  const outcome = appLogin(auth, info("proxy.example", 8080));
+  await auth.refreshSecretState();
+  assert.deepEqual(outcome.args, []);
+  assert.equal(auth.secretState(), "unreadable");
+});
+
+test("an unreadable result is retried only after PROXY_SECRET_RETRY_MS", async () => {
+  let now = 0;
+  const store = new FakeStore();
+  store.readResult = { kind: "unreadable" };
+  const auth = new ProxyAuth({ store, now: () => now });
+  auth.setBasis({ applied: P1, applying: null });
+  await auth.refreshSecretState();
+  assert.equal(auth.secretState(), "unreadable");
+  assert.equal(PROXY_SECRET_RETRY_MS, 30_000);
+
+  store.readResult = payload(P1, "s3cret");
+  now += PROXY_SECRET_RETRY_MS - 1;
+  assert.deepEqual(appLogin(auth, info("proxy.example", 8080)).args, [], "30s 内照旧取消");
+  await auth.refreshSecretState();
+  assert.equal(store.reads, 1, "30s 内不重读");
+  assert.equal(auth.secretState(), "unreadable");
+
+  now += 1;
+  const retried = appLogin(auth, info("proxy.example", 8080));
+  await auth.refreshSecretState();
+  assert.equal(store.reads, 2);
+  assert.deepEqual(retried.args, ["alice", "s3cret"]);
+  assert.equal(auth.secretState(), "saved");
+});
+
+test("an unreadable result that lands after the read timeout is adopted and retried after 30s", async () => {
+  let now = 0;
+  const store = new FakeStore();
+  const gate = deferred();
+  store.readGate = gate.promise;
+  store.readResult = { kind: "unreadable" };
+  const auth = new ProxyAuth({ store, now: () => now, readTimeoutMs: 20 });
+  auth.setBasis({ applied: P1, applying: null });
+
+  const waiting = appLogin(auth, info("proxy.example", 8080));
+  await auth.refreshSecretState();
+  assert.deepEqual(waiting.args, [], "超时先取消等待中的 407");
+  now = 1_000;
+  gate.resolve();
+  await tick();
+  await tick();
+  assert.equal(auth.secretState(), "unreadable", "代际号未变，晚到的结果被采用");
+
+  store.readGate = null;
+  store.readResult = payload(P1, "s3cret");
+  now = 1_000 + PROXY_SECRET_RETRY_MS - 1;
+  assert.deepEqual(appLogin(auth, info("proxy.example", 8080)).args, []);
+  assert.equal(store.reads, 1);
+  now = 1_000 + PROXY_SECRET_RETRY_MS;
+  const retried = appLogin(auth, info("proxy.example", 8080));
+  await auth.refreshSecretState();
+  assert.equal(store.reads, 2);
+  assert.deepEqual(retried.args, ["alice", "s3cret"]);
 });

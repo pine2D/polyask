@@ -22,15 +22,17 @@ export interface ProxyAuthBasis {
 export const PROXY_SECRET_READ_TIMEOUT_MS = 5_000;
 export const PROXY_AUTH_WINDOW_MS = 60_000;
 export const PROXY_AUTH_FAILURE_LIMIT = 2;
+/** unreadable 只代表那一次读取（钥匙串锁定/超时）；记录后至少隔这么久，下一次 407 或 refresh 才重读。 */
+export const PROXY_SECRET_RETRY_MS = 30_000;
 
 interface Route { readonly host: string; readonly port: number }
 interface Waiter { readonly route: Route; readonly callback: ProxyLoginCallback }
 interface Loading { readonly kind: "loading"; readonly waiters: Waiter[] }
-/** null = 还没读过（唯一会惰性读盘的状态）；tombstone = 本机已明确清除密码，命中直接取消、不读盘。 */
+/** null = 还没读过（惰性读盘）；unreadable 满 PROXY_SECRET_RETRY_MS 后同样可重读；tombstone 命中直接取消、不读盘。 */
 type Entry =
   | { readonly kind: "secret"; readonly identity: ProxyIdentity; readonly password: string; readonly persisted: boolean }
   | { readonly kind: "tombstone" }
-  | { readonly kind: "absent"; readonly reason: "none" | "unreadable" }
+  | { readonly kind: "absent"; readonly reason: "none" | "unreadable"; readonly at: number }
   | Loading
   | { readonly kind: "wiping" };
 
@@ -183,9 +185,9 @@ export class ProxyAuth {
     return entry.persisted ? "saved" : "memory";
   }
 
-  /** proxy-state 遇到 unknown 时调用：缓存为 null 才读盘（5s 超时），结束后经 onChange 推送。 */
+  /** proxy-state 遇到 unknown 时调用：缓存为 null 或 unreadable 已满重试间隔才读盘（5s 超时），结束后经 onChange 推送。 */
   async refreshSecretState(): Promise<void> {
-    if (this.entry === null) this.startLoad();
+    if (this.readDue(this.entry)) this.startLoad();
     await this.loadDone;
   }
 
@@ -248,8 +250,11 @@ export class ProxyAuth {
     return () => { this.listeners.delete(listener); };
   }
 
+  /** 监听方（如推送到已销毁的 webContents）抛错一律吞掉：不得跳过 407 回调，也不得把 wiping 卡死。 */
   private emit(): void {
-    for (const listener of [...this.listeners]) listener();
+    for (const listener of [...this.listeners]) {
+      try { listener(); } catch { /* 隔离监听方故障 */ }
+    }
   }
 
   private bumpGen(): void {
@@ -288,8 +293,8 @@ export class ProxyAuth {
     if (!identity) { callback(); return; }
     if (failed) this.recordFailure(identity);
     if (this.isTripped(identity)) { callback(); return; }
-    if (entry === null) { this.startLoad().waiters.push({ route, callback }); return; }
-    if (entry.kind === "loading") { entry.waiters.push({ route, callback }); return; }
+    if (this.readDue(entry)) { this.startLoad().waiters.push({ route, callback }); return; }
+    if (entry?.kind === "loading") { entry.waiters.push({ route, callback }); return; }
     this.settle(route, callback);
   }
 
@@ -299,6 +304,11 @@ export class ProxyAuth {
     const match = this.basesFor(route).find(base => sameProxyIdentity(base, entry.identity));
     if (!match || this.isTripped(match)) { callback(); return; }
     callback(entry.identity.username, entry.password);
+  }
+
+  private readDue(entry: Entry | null): boolean {
+    return entry === null ||
+      (entry.kind === "absent" && entry.reason === "unreadable" && this.now() - entry.at >= PROXY_SECRET_RETRY_MS);
   }
 
   private startLoad(): Loading {
@@ -315,34 +325,37 @@ export class ProxyAuth {
         resolve();
       }, this.readTimeoutMs);
       timer.unref?.();
-      void this.store.read()
-        .then(result => this.fromRead(result), (): Entry => ({ kind: "absent", reason: "unreadable" }))
+      // 同步抛错也收进 Promise；fromRead 抛错同样按 unreadable，绝不逸出成未处理的 rejection。
+      void new Promise<SecretReadResult>(done => done(this.store.read()))
+        .then(result => this.fromRead(result))
+        .catch((): Entry => ({ kind: "absent", reason: "unreadable", at: this.now() }))
         .then(next => {
-          clearTimeout(timer);
           // 代际号变了（清除、换密码、重置、应用失败恢复）就丢弃结果；超时后晚到的结果在无变化时仍可采用。
           if (this.gen === startGen && (this.entry === loading || this.entry === null)) {
             this.entry = next;
             this.flush(loading, false);
             this.emit();
           }
-          resolve();
-        });
+        })
+        .finally(() => { clearTimeout(timer); resolve(); });
     });
     return loading;
   }
 
   private fromRead(result: SecretReadResult): Entry {
-    if (result.kind !== "ok") return { kind: "absent", reason: result.kind };
+    if (result.kind !== "ok") return { kind: "absent", reason: result.kind, at: this.now() };
     const decoded = decodeProxySecret(result.value);
     return decoded
       ? { kind: "secret", identity: decoded.identity, password: decoded.password, persisted: true }
-      : { kind: "absent", reason: "unreadable" };
+      : { kind: "absent", reason: "unreadable", at: this.now() };
   }
 
   private flush(loading: Loading, cancel: boolean): void {
     for (const waiter of loading.waiters.splice(0)) {
-      if (cancel) waiter.callback();
-      else this.settle(waiter.route, waiter.callback);
+      try {
+        if (cancel) waiter.callback();
+        else this.settle(waiter.route, waiter.callback);
+      } catch { /* 单个回调故障不得拖住同批其它 407 */ }
     }
   }
 
