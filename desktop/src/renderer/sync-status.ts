@@ -21,6 +21,7 @@ export function describeSync(copy: DesktopCopy, status: SyncStatus): string {
   if (status.reason === "oauth_callback_timeout") return copy.syncReasonOauthCallbackTimeout;
   if (status.reason === "oauth_network_timeout") return copy.syncReasonOauthNetworkTimeout;
   if (status.reason === "oauth_network") return copy.syncReasonOauthNetwork;
+  if (status.reason === "oauth_proxy") return copy.syncReasonOauthProxy;
   if (status.reason === "oauth_invalid_grant") return copy.syncReasonOauthInvalidGrant;
   if (status.reason === "oauth_invalid_client") return copy.syncReasonOauthInvalidClient;
   if (status.reason === "oauth_redirect_mismatch") return copy.syncReasonOauthRedirectMismatch;
@@ -33,6 +34,7 @@ export function describeSync(copy: DesktopCopy, status: SyncStatus): string {
   if (status.reason === "token_storage") return copy.syncReasonTokenStorage;
   if (status.reason === "drive_network_timeout") return copy.syncReasonDriveNetworkTimeout;
   if (status.reason === "drive_network") return copy.syncReasonDriveNetwork;
+  if (status.reason === "drive_proxy") return copy.syncReasonDriveProxy;
   if (status.reason === "drive_response") return copy.syncReasonDriveResponse;
   if (status.reason === "drive_unauthorized") return copy.syncReasonDriveUnauthorized;
   if (status.reason === "network_timeout") return copy.syncReasonTimeout;

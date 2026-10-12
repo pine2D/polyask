@@ -232,7 +232,7 @@ export class SyncEngine {
       if (this.localTimer) clearTimeout(this.localTimer);
       this.localTimer = null;
       const code = (error as { code?: string; message?: string }).code ?? (error as Error).message;
-      if (["rate_limited", "server_error", "network_error", "network_timeout"].includes(code ?? "") || error instanceof TypeError) {
+      if (["rate_limited", "server_error", "network_error", "network_timeout", "proxy_error"].includes(code ?? "") || error instanceof TypeError) {
         const hint = (error as { retryAfter?: number }).retryAfter;
         const delay = Math.max(5_000, retryDelay(++this.runRetryAttempt),
           typeof hint === "number" && Number.isFinite(hint) && hint > 0 ? hint : 0);

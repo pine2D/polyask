@@ -46,16 +46,16 @@ const SAFE_REASONS = new Set([
   "oauth_invalid_client", "oauth_redirect_mismatch", "oauth_refresh_missing",
   "oauth_provider_error", "oauth_rejected", "oauth_response", "token_storage",
   "drive_network_timeout", "drive_network", "drive_response", "drive_unauthorized",
-  "network_timeout", "revoke_failed", "clear_pending"
+  "network_timeout", "revoke_failed", "clear_pending", "oauth_proxy", "drive_proxy"
 ]);
 const BROWSER_FAILURES = new Set(["oauth_callback_timeout", "oauth_rejected"]);
 const TOKEN_FAILURES = new Set([
   "oauth_network_timeout", "oauth_network", "oauth_invalid_grant", "oauth_invalid_client",
-  "oauth_redirect_mismatch", "oauth_refresh_missing", "oauth_provider_error", "oauth_response"
+  "oauth_redirect_mismatch", "oauth_refresh_missing", "oauth_provider_error", "oauth_response", "oauth_proxy"
 ]);
 const DRIVE_FAILURES = new Set([
   "drive_disabled", "quota", "policy", "drive_network_timeout", "drive_network",
-  "drive_response", "drive_unauthorized"
+  "drive_response", "drive_unauthorized", "drive_proxy"
 ]);
 const MAX_DATE_TIMESTAMP = 8_640_000_000_000_000;
 

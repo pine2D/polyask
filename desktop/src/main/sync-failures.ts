@@ -21,6 +21,9 @@ export function classifySyncFailure(error: unknown, stage: FailureStage): SyncFa
   if (code === "network_timeout") {
     return { state: "offline", reason: stage === "oauth" ? "oauth_network_timeout" : stage === "drive" ? "drive_network_timeout" : "network_timeout" };
   }
+  // oauth-pkce.ts / drive-client.ts map Chromium ERR_PROXY/TUNNEL/SOCKS names to proxy_error. A background
+  // sync failure is still Drive traffic, so "sync" shares drive_proxy: the fix is the proxy, not the network.
+  if (code === "proxy_error") return { state: "offline", reason: stage === "oauth" ? "oauth_proxy" : "drive_proxy" };
   if (code === "network_error" || error instanceof TypeError) {
     return { state: "offline", ...(stage === "oauth" ? { reason: "oauth_network" } : stage === "drive" ? { reason: "drive_network" } : {}) };
   }
