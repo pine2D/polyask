@@ -22,8 +22,9 @@ test("the Drive and OAuth partition is in-memory", () => {
   assert.equal(value, "polyask-net");
 });
 
-test("window data services hand the proxy login handler to the sync runtime", () => {
+test("window data services hand proxy-auth's request-level login to the sync runtime", () => {
   const services = readSource("src/main/window-data-services.ts");
-  assert.match(services, /readonly onProxyLogin\?: ProxyLoginHandler;/);
-  assert.match(services, /createSyncRuntime\(\{[^}]*?onProxyLogin: options\.onProxyLogin,/);
+  assert.match(services, /readonly proxy: ProxyServices;/);
+  assert.match(services, /createSyncRuntime\(\{[^}]*?onProxyLogin: \(request, authInfo, callback\) => options\.proxy\.auth\.handleRequestLogin\(request, authInfo, callback\),/);
+  assert.doesNotMatch(services, /onProxyLogin\?:/, "the assembly always wires proxy-auth; no optional pass-through left");
 });

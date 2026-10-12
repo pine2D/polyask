@@ -42,6 +42,7 @@ import {
   isPortableDataInitialized,
   resolveRuntimeProfile
 } from "./portable-profile";
+import { createProxyServices, type ProxyServices } from "./proxy-services";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { startRuntimeGates } from "./runtime-gates";
 import { registerShellIpc } from "./shell-ipc";
@@ -133,6 +134,7 @@ let mainWindow: BrowserWindow | null = null;
 let viewManager: ViewManager | null = null;
 let desktopDatabase: DesktopDatabase | null = null;
 let preferenceRuntime: PreferenceRuntime | null = null;
+let proxyServices: ProxyServices | null = null;
 
 if (app.isPackaged) app.commandLine.removeSwitch("remote-debugging-port");
 
@@ -167,6 +169,8 @@ async function createWindow(): Promise<void> {
   const copy = getCopy(app.getLocale());
   if (!desktopDatabase) throw new Error("database_not_ready");
   const database = desktopDatabase;
+  const proxy = proxyServices;
+  if (!proxy) throw new Error("proxy_not_ready");
   let managerForWorkspace: ViewManager | null = null;
   let collectionForWorkspace: CollectionService | null = null;
   const workspace = new WorkspaceService(
@@ -233,6 +237,8 @@ async function createWindow(): Promise<void> {
   window.webContents.on("will-redirect", guardShellNavigation);
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   const runtimeGates = startRuntimeGates(window);
+  // fail-closed：代理应用并校验（存储值损坏则进入阻断）之后才构造 ViewManager——首个站点 loadURL 就在它的构造里。
+  await proxy.runtime.recomputeFromStore();
   const manager = new ViewManager(
     window,
     (status) => {
@@ -246,6 +252,7 @@ async function createWindow(): Promise<void> {
       initialUiState,
       selectedSites: workspaceState.selectedSites,
       onUiStateChange: (state) => { uiStateStore.schedule(state); preferenceRuntime?.captureUi(state); },
+      webrtcPolicy: () => proxy.runtime.webrtcPolicy(),
       // 站点视图里点到的外部链接交给用户自己的浏览器。视图本身绝不导航过去——格子里永远是这个站。
       // 复用 safeExternalUrl 的校验（只放行 http/https、拒带凭据的 URL）。
       openExternal: (url) => {
@@ -257,7 +264,7 @@ async function createWindow(): Promise<void> {
   managerForWorkspace = manager;
   viewManager = manager;
   const { archives, history, promptLibrary, decisions, folders, backup, questions, collection, preferences, synthesis, sync, dataAdmin } = await createWindowDataServices({
-    database, manager, workspace, coordinator, synthesisCoordinator, publish: sendToShell,
+    database, manager, workspace, coordinator, synthesisCoordinator, proxy, publish: sendToShell,
     applyDisplay: value => applyDisplayPreferences(manager, value),
     setNotifications: enabled => completionNotifier.setEnabled(enabled)
   });
@@ -362,6 +369,7 @@ else {
     applyPortableImportIdentity(runtimeProfile, (deviceId) => {
       desktopDatabase!.adoptImportedProfile(deviceId);
     });
+    proxyServices = createProxyServices(desktopDatabase);
     createMenu();
     await createWindow();
   }, failStartup));
