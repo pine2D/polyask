@@ -211,6 +211,8 @@ export class DriveClient {
       if ((error as { name?: string }).name === "AbortError") throw error;
       throw failure(isProxyNetError(error) ? "proxy_error" : "network_error", 0);
     }
+    // A cancelled proxy login usually surfaces as a 407 response (HTTPS CONNECT included), not a net error.
+    if (response.status === 407) throw failure("proxy_error", 407);
     if (response.status === 401 && retry401)
       return this.requestWithinDeadline(url, init, callerSignal, deadline, false);
     if (!response.ok) throw await responseFailure(response, callerSignal, deadline);
@@ -251,6 +253,7 @@ async function responseFailure(
     if (deadline.aborted || (error as { name?: string }).name === "TimeoutError") {
       throw failure("network_timeout", response.status);
     }
+    if (isProxyNetError(error)) throw failure("proxy_error", response.status);
     throw error;
   }
   try {

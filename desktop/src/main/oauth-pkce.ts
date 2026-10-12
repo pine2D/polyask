@@ -218,6 +218,7 @@ export async function revokeGoogleToken(token: string, fetch: typeof globalThis.
         signal
       });
     } catch (error) { throw new Error(signal.aborted ? "network_timeout" : isProxyNetError(error) ? "proxy_error" : "network_error"); }
+    if (response.status === 407) throw new Error("proxy_error");
     if (!response.ok && response.status !== 400) throw new Error("oauth_revoke_failed");
   });
 }
@@ -234,8 +235,9 @@ async function tokenRequest(body: URLSearchParams, fetch: typeof globalThis.fetc
       });
     } catch (error) { throw new Error(signal.aborted ? "network_timeout" : isProxyNetError(error) ? "proxy_error" : "network_error"); }
     let value: { access_token?: unknown; refresh_token?: unknown; expires_in?: unknown; error?: unknown; error_description?: unknown };
+    if (response.status === 407) throw new Error("proxy_error");
     try { value = JSON.parse(await response.text()); }
-    catch { throw new Error(signal.aborted ? "network_timeout" : "oauth_invalid_response"); }
+    catch (error) { throw new Error(signal.aborted ? "network_timeout" : isProxyNetError(error) ? "proxy_error" : "oauth_invalid_response"); }
     if (!response.ok) {
       const rejection = oauthRejection(value.error, value.error_description);
       if (rejection) throw rejection;

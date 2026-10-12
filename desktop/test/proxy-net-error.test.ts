@@ -108,3 +108,28 @@ test("browser authorization hands the injected fetch to the token exchange", asy
   }), withMessage("proxy_error"));
   assert.deepEqual(requested, ["https://oauth2.googleapis.com/token"]);
 });
+
+// Cancelled proxy auth: Chromium most likely answers 407 (HTTPS CONNECT included) and the body read then
+// fails with the tunnel error. Both shapes, and a TypeError-typed rejection, must land on proxy_error.
+const erroringBody = (status: number): typeof globalThis.fetch => async () => new Response(new ReadableStream({
+  start(controller) { controller.error(new TypeError("net::ERR_TUNNEL_CONNECTION_FAILED")); }
+}), { status });
+const status407: typeof globalThis.fetch = async () => new Response(null, { status: 407 });
+const typeErrorProxy: typeof globalThis.fetch = async () => { throw new TypeError("net::ERR_PROXY_CONNECTION_FAILED"); };
+
+test("Drive maps 407, proxy body-read errors and TypeError proxy rejections to proxy_error", async () => {
+  const provider: AccessTokenProvider = { accessToken: async () => "token" };
+  for (const stub of [status407, erroringBody(407), erroringBody(500), typeErrorProxy]) {
+    await assert.rejects(() => new DriveClient(provider, stub).getStartToken(), withCode("proxy_error"));
+  }
+});
+
+test("OAuth maps 407, proxy body-read errors and TypeError proxy rejections to proxy_error", async () => {
+  for (const stub of [status407, erroringBody(407), erroringBody(200), typeErrorProxy]) {
+    await assert.rejects(() => exchangeAuthorizationCode({ ...TOKEN_INPUT, fetch: stub }), withMessage("proxy_error"));
+    await assert.rejects(() => refreshAccessToken(CLIENT, "refresh-token", stub), withMessage("proxy_error"));
+  }
+  for (const stub of [status407, typeErrorProxy]) {
+    await assert.rejects(() => revokeGoogleToken("token", stub), withMessage("proxy_error"));
+  }
+});
