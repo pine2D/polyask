@@ -77,6 +77,27 @@ async function startConnectRewriter(upstreamPort, rewrites) {
   return { port: await listen(server), rewritten, close };
 }
 
+/**
+ * 直连哨兵：host-resolver-rules 把源站以外的主机名都映射到它（端口由入口事先分配），所以任何没走代理的请求都落在这里，
+ * 永远出不了本机。按首包（TLS ClientHello 的 SNI 或 HTTP 请求头）里出现的主机名归类记录，随即断开。
+ * 在 app ready 之前 listen（同步发起），入口在实例化任何 session 之前等它就绪。
+ */
+function startDirectSentinel(port) {
+  const records = [];
+  const server = net.createServer(socket => {
+    socket.on('error', () => {});
+    socket.once('data', chunk => {
+      const text = chunk.toString('latin1');
+      records.push(['gvt1.com', 'gstatic.com'].find(name => text.includes(name)) ?? 'other');
+      socket.destroy();
+    });
+  });
+  const close = tracked(server);
+  server.listen(port, '127.0.0.1');
+  const ready = once(server, 'listening');
+  return { records, ready, close };
+}
+
 /** 取一个刚释放的本机端口：模拟「已保存的代理没在运行」（如 Clash 未启动），连接会被立即拒绝。 */
 async function closedPort() {
   const server = net.createServer();
@@ -122,6 +143,6 @@ async function waitFor(check, label, ms = 5000) {
 const samePem = (left, right) => String(left).replace(/\s+/g, '') === String(right).replace(/\s+/g, '');
 
 module.exports = {
-  ORIGIN_HOST, USERNAME, PASSWORD, UNICODE_PASSWORD, startTlsOrigin, startConnectRewriter, closedPort, basic, proxyStatus,
+  ORIGIN_HOST, USERNAME, PASSWORD, UNICODE_PASSWORD, startTlsOrigin, startConnectRewriter, startDirectSentinel, closedPort, basic, proxyStatus,
   preference, custom, waitFor, samePem
 };

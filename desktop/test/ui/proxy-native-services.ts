@@ -13,3 +13,4 @@ export { toProxyConfig } from "../../src/shared/proxy-preference";
 export { OperationGate } from "../../src/shared/operation-gate";
 export { ipcErrorCode } from "../../src/shared/ipc-error";
 export { startHttpProxy, startOrigin, startSocksProxy } from "../support/local-proxy";
+export { blockProxyUntilApplied } from "../../src/main/proxy-startup-block";

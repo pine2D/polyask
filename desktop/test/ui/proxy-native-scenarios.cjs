@@ -16,6 +16,8 @@ async function startupSystem(ctx) {
   const control = await ctx.loadSite('control-system');
   assert.equal(ctx.hit(control), true, 'control page reached the origin');
   assert.equal(ctx.proxyTotal(), before, 'no proxy saw the control request');
+  // 哨兵对照：「跟随系统」= 直连时，session 一实例化拼写词典就直连下载，落进哨兵。startup-no-direct 断言的正是它的缺席。
+  await waitFor(() => ctx.direct().includes('gvt1.com'), 'control: the dictionary download went DIRECT into the sentinel');
 }
 
 /** 经代理加载：站点 partition、polyask-net（Drive/OAuth）、defaultSession（Shell）三个出口都走同一代理。 */
@@ -252,11 +254,21 @@ async function startupClosedPort(ctx) {
   assert.equal(ctx.hit(recovered), true, 'the recovered route reached the origin');
 }
 
+/**
+ * 启动泄漏回归（T18 评审 I1）：档案存着自定义代理时，从 session 实例化（拼写词典立即开始下载）、经启动应用、
+ * 一直到本 suite 结束，没有任何请求直连——直连会落进 host-resolver-rules 指向的哨兵。生产顺序原样保留：
+ * 外壳窗口先于启动应用创建，applyConfig 第 1 步的 clearAuthCache 先于 setProxy，拼写词典下载地址不改写。
+ */
+async function startupNoDirect(ctx) {
+  const { assert } = ctx;
+  assert.deepEqual(ctx.direct(), [], 'custom mode: no request went DIRECT, before or after the startup apply');
+}
+
 const STAGES = [
   ['startup-system', startupSystem], ['custom-http', customHttp], ['switch-socks5', switchSocks5], ['direct', direct],
   ['http-auth', httpAuth], ['probe', probe], ['http-auth-unicode', httpAuthUnicode],
   ['busy-pending', busyPending], ['pending-confirm', pendingConfirm]
 ];
-const STARTUP_STAGES = [['startup-closed-port', startupClosedPort]];
+const STARTUP_STAGES = [['startup-closed-port', startupClosedPort], ['startup-no-direct', startupNoDirect]];
 
 module.exports = { STAGES, STARTUP_STAGES };
