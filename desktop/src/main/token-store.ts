@@ -1,66 +1,40 @@
-import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
-import { dirname } from "node:path";
+import { SecretFileStore, secureBackend, type TokenCrypto } from "./secret-file-store";
 
-export interface TokenCrypto {
-  readonly backend: () => string;
-  readonly available: () => Promise<boolean>;
-  readonly encrypt: (value: string) => Promise<Buffer>;
-  readonly decrypt: (value: Buffer) => Promise<string>;
-}
+export { safeEncryptionAvailability } from "./secret-file-store";
+export type { TokenCrypto } from "./secret-file-store";
 
-export async function safeEncryptionAvailability(check: () => Promise<boolean>): Promise<boolean> {
-  try { return await check(); }
-  catch { return false; }
-}
-
+/**
+ * OAuth refresh token 存储：SecretFileStore 的薄包装。
+ * 对外 API 与行为保持原样——内存优先、读不到一律 null、basic_text 只留内存、save 返回是否真正落盘。
+ */
 export class TokenStore {
   private memoryToken: string | null = null;
+  private readonly file: SecretFileStore;
 
-  constructor(
-    private readonly path: string,
-    readonly crypto: TokenCrypto
-  ) {}
+  constructor(path: string, readonly crypto: TokenCrypto) {
+    this.file = new SecretFileStore(path, crypto, { invalidCode: "invalid_refresh_token" });
+  }
 
   securePersistence(): boolean {
-    return !["basic_text", "unknown", "unavailable"].includes(this.crypto.backend());
+    return secureBackend(this.crypto);
   }
 
   async save(refreshToken: string): Promise<boolean> {
-    if (!refreshToken) throw new Error("invalid_refresh_token");
-    this.memoryToken = refreshToken;
-    if (!this.securePersistence() || !await this.crypto.available()) return false;
-    const encrypted = await this.crypto.encrypt(refreshToken);
-    await mkdir(dirname(this.path), { recursive: true });
-    const temporary = `${this.path}.${randomUUID()}.tmp`;
-    try {
-      const file = await open(temporary, "wx", 0o600);
-      try { await file.writeFile(encrypted); await file.sync(); }
-      finally { await file.close(); }
-      await rename(temporary, this.path);
-    } finally { await unlink(temporary).catch(() => {}); }
-    return true;
+    // 空值由 SecretFileStore 立即以 invalid_refresh_token 拒绝，且不改内存副本。
+    const written = this.file.write(refreshToken);
+    if (refreshToken) this.memoryToken = refreshToken;
+    return await written === "saved";
   }
 
   async load(): Promise<string | null> {
     if (this.memoryToken) return this.memoryToken;
-    if (!this.securePersistence() || !await this.crypto.available()) return null;
-    try {
-      const token = await this.crypto.decrypt(await readFile(this.path));
-      this.memoryToken = token || null;
-      return this.memoryToken;
-    } catch {
-      // 读文件失败（EACCES/EBUSY/EIO…）或 decrypt 失败（Linux 钥匙环未解锁、密文与当前用户密钥不匹配）都到这里。
-      // 这两类在这里分不开——safeStorage 对锁住的钥匙环照样报 available——所以一律**只当本次读不到**，绝不 unlink：
-      // 磁盘上是唯一的 refresh token，删了用户就得重走一遍 Google 授权且不知道为什么；真坏掉的文件会在下次
-      // 成功授权时被 save() 整体覆盖，不需要在这里清。
-      return null;
-    }
+    const stored = await this.file.read();
+    this.memoryToken = stored.kind === "ok" ? stored.value : null;
+    return this.memoryToken;
   }
 
   async clear(): Promise<void> {
     this.memoryToken = null;
-    try { await unlink(this.path); }
-    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    await this.file.clear();
   }
 }
