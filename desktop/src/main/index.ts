@@ -43,6 +43,7 @@ import {
   resolveRuntimeProfile
 } from "./portable-profile";
 import { createProxyServices, type ProxyServices } from "./proxy-services";
+import { createProxyTools } from "./proxy-tools";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { startRuntimeGates } from "./runtime-gates";
 import { registerShellIpc } from "./shell-ipc";
@@ -287,7 +288,7 @@ async function createWindow(): Promise<void> {
     promptLibrary,
     synthesis,
     sync,
-    dataAdmin, preferences, proxy,
+    dataAdmin, preferences, proxy: { ...proxy, ...createProxyTools(proxy, manager, () => workspace.getState().selectedSites) },
     shellEntry: MAIN_WINDOW_WEBPACK_ENTRY,
     applyDisplay: (value) => preferences.setDisplay(value),
     setCompletionNotifications: (enabled) => { preferences.set('completionNotifications', enabled); }

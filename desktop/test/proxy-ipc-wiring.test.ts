@@ -17,7 +17,7 @@ test("shell IPC registers the proxy channels on the shared gate after creating i
 
 test("production assembly hands the local proxy services to the shell and the awaited reset hook", () => {
   const index = readSource("src/main/index.ts");
-  assert.match(index, /dataAdmin, preferences, proxy,/, "registerShellIpc 收 createWindow 内的非空局部常量 proxy");
+  assert.match(index, /dataAdmin, preferences, proxy: \{ \.\.\.proxy, \.\.\.createProxyTools\(proxy, manager, \(\) => workspace\.getState\(\)\.selectedSites\) \},/, "registerShellIpc 收 createWindow 内的非空局部常量 proxy 并带上 probe/reloadSites");
   assert.doesNotMatch(index, /proxyServices\.runtime|proxy: proxyServices/, "模块变量 proxyServices 可能为 null，不得直接传");
   assert.match(readSource("src/main/window-data-services.ts"), /wipeSecrets: \(\) => options\.proxy\.runtime\.wipeSecrets\(\)/);
 });
