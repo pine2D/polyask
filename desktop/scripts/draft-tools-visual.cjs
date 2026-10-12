@@ -89,9 +89,17 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     await wait('!!document.querySelector("#settings-preference-sync-title")');
     await run('document.querySelector("#settings-preference-sync-title").closest("section").scrollIntoView({block:"start"})');
     await paint(); await shot(`${locale}-${theme}-preference-sync`);
+    // 8 个通用组单选（display/layout/siteZoom 跟随 + 默认布局），外加代理行自己的一组 2 个（ProxySyncRow，走 proxy-follow）。
     assert.equal(await run(`(() => {const card=document.querySelector('#settings-preference-sync-title').closest('section');
-      return card.scrollWidth<=card.clientWidth+1 && card.querySelectorAll('input[type=radio]').length===8
-        && !!card.querySelector('input[name=draft-sync]');})()`), true, 'actual preference sync controls must fit their settings card');
+      const radios=[...card.querySelectorAll('input[type=radio]')],proxy=radios.filter(n=>n.name==='settings-follow-proxy');
+      return card.scrollWidth<=card.clientWidth+1 && radios.length-proxy.length===8 && proxy.length===2
+        && !!card.querySelector('input[name=draft-sync]');})()`), true, 'actual preference sync controls, including the proxy row, must fit their settings card');
+    await run('document.querySelector("input[name=settings-follow-proxy]").scrollIntoView({block:"center"})');
+    await paint(); await shot(`${locale}-${theme}-proxy-sync-row`);
+    await run('document.querySelector("#settings-proxy-title").closest("section").scrollIntoView({block:"start"})');
+    await paint(); await shot(`${locale}-${theme}-proxy-card`);
+    assert.equal(await run(`(() => {const card=document.querySelector('#settings-proxy-title').closest('section');
+      return card.scrollWidth<=card.clientWidth+1;})()`), true, 'the network proxy card must fit the settings page');
   }
   win.webContents.setZoomFactor(1);
   writeFileSync(join(output, 'draft-tools-report.json'), JSON.stringify({reports,failures:[]},null,2));

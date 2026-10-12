@@ -1144,6 +1144,10 @@ Windows/macOS 本轮原生、物理输入法与读屏、真实 Drive 授权及�
 - 残留（与开关无关，有无开关都存在）：网络质量估计器对首个请求的主机名做一次只查 DNS 的解析，不建连。生产中这是一次系统 DNS 查询，见真机清单 W9。
 - 负向对拍：把开关改成空操作后，`startup-no-direct` 以 8 次 `gvt1.com` 直连失败。
 
+### 门禁记录
+
+实施完成时（2026-10-13），Linux/WSL 上以下各项通过：`bash scripts/verify.sh`、`npm test`（1962 项应用与界面测试、423 项运行时测试）、`npm run typecheck`、`npm run package` 之后的 `npm run smoke -- --skip-package`（`shell=1, sites=9, attached=9`）、`test/proxy-native.check.ts`（11 个阶段）、`npm run test:shell-ui`、`preferences-drafts-native`。`test:shell-ui` 的草稿与偏好专项现在分开断言跨设备偏好卡：8 个通用组单选，外加代理行（`settings-follow-proxy`）自己的 2 个，卡片不溢出；它还为三语、明暗主题各截一张代理同步行图和一张网络代理卡图，并断言代理卡不溢出。已查看这些截图，但只看到默认状态（跟随系统）。代理卡的聚焦、禁用、横幅和错误状态由 `test/settings-proxy.test.tsx` 断言，没有截图。真实站点经代理、真实 Drive 经代理，以及 Windows/macOS 的原生行为都不在这些门禁内，见下方真机清单。
+
 ### 真机清单
 
 状态：**全部未执行。** 执行时逐项把 `[ ]` 改为 `[x]`，并在该项末尾写上日期、构建提交和观察结果；失败项写清现象，不勾选。macOS 没有真机，自定义代理在 macOS 上**未真机验证**，CHANGELOG 和 Release 限制也照此写。
