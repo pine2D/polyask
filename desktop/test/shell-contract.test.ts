@@ -219,7 +219,8 @@ test("portable setup failures localize without calling app.getLocale before read
   assert.match(setup, /legacyDataAvailable = hasImportableLegacyData\(runtimeProfile\)/);
   assert.match(main, /app\.releaseSingleInstanceLock\(\)/);
   assert.match(main, /instanceLockHeld = app\.requestSingleInstanceLock\(\)/);
-  assert.match(main, /\["EACCES", "EPERM", "EROFS", "EIO"\]/);
+  // failStartup 的终局弹框已迁到 startup-failure.ts（showStartupFailure）；errno 白名单随之迁移。
+  assert.match(readSource("src/main/startup-failure.ts"), /\["EACCES", "EPERM", "EROFS", "EIO"\]/);
 });
 
 test("display preferences cross only the trusted shell bridge", () => {

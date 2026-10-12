@@ -47,6 +47,7 @@ import { startRuntimeGates } from "./runtime-gates";
 import { registerShellIpc } from "./shell-ipc";
 import { SITES } from "./sites";
 import { runStartup } from "./startup";
+import { showStartupFailure } from "./startup-failure";
 import { UiStateStore } from "./ui-state-store";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
@@ -305,33 +306,7 @@ async function createWindow(): Promise<void> {
   });
 }
 
-function failStartup(error: unknown): void {
-  try {
-    try {
-      console.error("PolyAsk startup failed", error);
-    } catch {
-      // Continue to the visible failure path if diagnostic output is unavailable.
-    }
-    const copy = getCopy(app.getLocale());
-    const code = (error as { message?: string }).message;
-    const systemCode = (error as NodeJS.ErrnoException).code;
-    const portableStorageFailed = runtimeProfile.distribution === "portable"
-      && ["EACCES", "EPERM", "EROFS", "EIO"].includes(systemCode ?? "");
-    const failure = code === "portable_import_failed"
-      ? [copy.portableImportFailedTitle, copy.portableImportFailedMessage]
-      : code === "portable_data_unrecognized"
-        ? [copy.portableDataConflictTitle, copy.portableDataConflictMessage]
-        : portableStorageFailed
-          ? [copy.portableStorageFailedTitle, copy.portableStorageFailedMessage]
-          : [copy.startupFailedTitle, copy.startupFailedMessage];
-    dialog.showErrorBox(
-      failure[0],
-      failure[1]
-    );
-  } finally {
-    app.quit();
-  }
-}
+const failStartup = (error: unknown): void => showStartupFailure(error, runtimeProfile.distribution);
 
 const gotLock = profileReady && (runtimeProfile.distribution === "portable"
   ? instanceLockHeld
