@@ -14,6 +14,11 @@ export class StateRepository {
     return readJson<T>(row);
   }
 
+  /** 行是否存在（含墓碑与损坏正文）；与 get 搭配区分 absent / invalid。 */
+  has(key: string): boolean {
+    return this.database.prepare("SELECT 1 FROM state_items WHERE key = ?").get(key) !== undefined;
+  }
+
   list<T = unknown>(prefix: string): T[] {
     if (!prefix) throw new Error("invalid_state_prefix");
     const rows = this.database.prepare(`

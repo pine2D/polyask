@@ -8,14 +8,14 @@ import {
 } from "../shared/preferences";
 import { nextSyncTime, type VersionedSyncValue } from "../shared/sync";
 import type { MetaRepository } from "./meta-repository";
+/** 只读来展示：非布尔值按 false（运行时另按损坏阻断）。 */
+import { PROXY_FOLLOWING_KEY } from "./proxy-preference-store";
 import type { StateRepository } from "./state-repository";
 
 type PreferenceEntries = Partial<Record<PreferenceKey, unknown>>;
 const sameValue = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
 /** proxy 只借用 state 前缀与同步投影；值、跟随标志、本机覆盖都归 proxy-preference-store，这里一律不写（spec §3.4）。 */
 const GENERAL_KEYS = PREFERENCE_KEYS.filter(key => key !== "proxy");
-/** 与 proxy-preference-store 的 PROXY_FOLLOWING_KEY 同值；这里只读来展示，非布尔值按 false（运行时另按损坏阻断）。 */
-const PROXY_FOLLOWING_KEY = "proxyFollowing";
 
 function generalGroup(key: PreferenceKey): GeneralPreferenceGroup | null {
   const group = preferenceGroup(key);
