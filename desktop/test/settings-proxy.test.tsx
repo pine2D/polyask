@@ -423,3 +423,53 @@ test('a password mismatch is not surfaced while the applied proxy is not custom'
       'the password field never points at a missing description');
   } finally { await h.close(); }
 });
+
+test('clearing the stored password is offered only for a working applied custom proxy (fail-closed)', async () => {
+  const corrupt = await mountCard(proxyStateFixture({ stored: 'invalid', blocked: true, applied: null, appliedResult: 'proxy_apply_failed', secret: 'mismatch' }));
+  try {
+    await corrupt.click(byId<HTMLInputElement>(corrupt.document, 'settings-proxy-mode-custom')!);
+    assert.equal(byId(corrupt.document, 'settings-proxy-password') === null, false, 'the custom draft shows credentials');
+    assert.equal(button(corrupt.document, copy.proxyClearPassword) === null, true, 'no clear button while storage is damaged');
+    assert.equal(corrupt.calls.length, 0, 'saveProxy is never called');
+  } finally { await corrupt.close(); }
+  for (const mode of ['system', 'direct'] as const) {
+    const value = { ...DEFAULT_PROXY_PREFERENCE, mode };
+    const h = await mountCard(proxyStateFixture({ applied: value, formValue: value, secret: 'saved' }));
+    try {
+      await h.click(byId<HTMLInputElement>(h.document, 'settings-proxy-mode-custom')!);
+      assert.equal(button(h.document, copy.proxyClearPassword) === null, true, `no clear button while ${mode} is applied`);
+      assert.equal(h.calls.length, 0);
+    } finally { await h.close(); }
+  }
+});
+
+test('keyboard focus never falls to the body after saving with Enter or accepting a sync proxy', async () => {
+  const h = await mountCard(configured);
+  try {
+    const host = byId<HTMLInputElement>(h.document, 'settings-proxy-host')!;
+    await act(async () => { host.focus(); });
+    await act(async () => { host.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+    await settle();
+    assert.equal(h.calls.length, 1, 'Enter saved');
+    assert.equal(h.document.activeElement === h.document.body, false, 'focus is not on body after the save');
+    assert.equal(h.document.activeElement === byId(h.document, 'settings-proxy-host'), true, 'focus returns to the field that started the save');
+  } finally { await h.close(); }
+  const accepted = await mountCard(proxyStateFixture({ ...configured, following: true, pendingConfirm: pending }));
+  try {
+    const apply = button(accepted.document, copy.proxyPendingApply)!;
+    await act(async () => { apply.focus(); });
+    await press(apply);
+    assert.equal(accepted.calls[0].method, 'acceptProxy');
+    assert.equal(accepted.document.activeElement === byId(accepted.document, 'settings-proxy-title'), true, 'focus moves to the card title after accepting');
+  } finally { await accepted.close(); }
+});
+
+test('an unreadable password is not surfaced with an empty endpoint while the applied proxy is not custom', async () => {
+  const h = await mountCard(proxyStateFixture({ secret: 'unreadable' }));
+  try {
+    await h.click(byId<HTMLInputElement>(h.document, 'settings-proxy-mode-custom')!);
+    assert.equal(byId(h.document, 'settings-proxy-password') === null, false);
+    assert.equal(h.document.body.textContent!.includes(':0'), false, 'never "re-enter the password for :0"');
+    assert.equal(h.document.body.textContent!.includes(copy.proxySecretReenter.split('{endpoint}')[0]), false);
+  } finally { await h.close(); }
+});

@@ -45,7 +45,7 @@ export function SettingsProxy(props: {
   // base 只用来判断「是否有未保存修改」与「编辑期间是否被别处改动」。
   const [base, setBase] = useState<ProxyPreference | null>(null);
   const inFlight = useRef(false), previous = useRef<ProxyStateView | null>(null), feedback = useRef(props.onFeedback);
-  const editingNow = useRef(false);
+  const editingNow = useRef(false), focusAfter = useRef<Element | "title" | null>(null);
   feedback.current = props.onFeedback;
   // 草稿回到编辑起点（改了又改回）不算未保存修改；密码框有内容算。
   const editing = (draft !== null && base !== null && !sameProxyForm(draft, formFromPreference(base))) || !!password;
@@ -69,6 +69,14 @@ export function SettingsProxy(props: {
     if (editingNow.current && !sameProxyForm(formFromPreference(before.formValue), formFromPreference(state.formValue))) messages.push(copy.proxyEditsKept);
     if (messages.length) feedback.current(messages.join(" "));
   }, [copy, state]);
+  useEffect(() => {
+    // 操作结束、控件解除禁用后再还焦点：原控件仍在且可用就回到它，否则交给卡片标题，绝不落到 body。
+    const target = focusAfter.current;
+    if (action !== null || target === null) return;
+    focusAfter.current = null;
+    const usable = target !== "title" && target.isConnected && target !== document.body && !target.matches(":disabled");
+    ((usable ? target : document.getElementById("settings-proxy-title")) as HTMLElement | null)?.focus();
+  }, [action]);
   if (!state) return <section className="settings-card settings-proxy" aria-labelledby="settings-proxy-title" aria-busy={!proxy.failed}>
     <h2 id="settings-proxy-title" tabIndex={-1}>{copy.proxyTitle}</h2>
     <p>{copy.proxyDescription}</p>
@@ -81,6 +89,9 @@ export function SettingsProxy(props: {
   const pending = state.pendingConfirm;
   const working = action !== null;
   const custom = form.mode === "custom";
+  // 清除密码会重存 formValue：只在已生效的是可用的自定义代理时提供。存储损坏/阻断时 formValue 是默认值，
+  // 重存会把 fail-closed 阻断换成跟随系统；system/direct 时重存也毫无意义（I1）。
+  const clearable = state.applied?.mode === "custom" && !state.blocked && state.stored === "ok";
   const edit = (patch: Partial<ProxyForm>): void => {
     const next = { ...form, ...patch };
     if (!editing) setBase(state.formValue);
@@ -104,6 +115,7 @@ export function SettingsProxy(props: {
   const run = async (kind: ProxyAction, task: () => Promise<string>): Promise<void> => {
     if (inFlight.current) return;
     inFlight.current = true;
+    focusAfter.current = document.activeElement;
     setAction(kind);
     let text: string;
     try { text = await task(); } catch (failure) { text = describeProxyResult(copy, proxyErrorCode(failure)); }
@@ -145,7 +157,7 @@ export function SettingsProxy(props: {
     });
   };
   const clearPassword = (): void => {
-    if (inFlight.current || props.busy || pending) return;
+    if (inFlight.current || props.busy || pending || !clearable) return;
     void run("clear", async () => {
       const outcome = proxyOutcome(await shell.saveProxy({ value: state.formValue, password: null }));
       if (!outcome.ok) return describeProxyResult(copy, outcome.code);
@@ -159,6 +171,7 @@ export function SettingsProxy(props: {
       const outcome = proxyOutcome(kind === "accept" ? await shell.acceptProxy(pending) : await shell.followProxy(false));
       if (!outcome.ok) return describeProxyResult(copy, outcome.code);
       reset();
+      focusAfter.current = "title"; // 横幅连同按钮一起消失，焦点交给卡片标题（同 discard）
       return kind === "accept" ? copy.proxyAccepted : copy.proxyKeptLocal;
     });
   };
@@ -184,9 +197,9 @@ export function SettingsProxy(props: {
   const invalid = (field: FieldError): true | undefined => error === field ? true : undefined;
   const endpoint = proxyStateEndpoint(state);
   const secret = state.secret;
-  // 已生效的不是自定义代理时，主进程对任何已存密码都报 mismatch（身份为空）；这时不提示重新输入（C5）。
-  const quietMismatch = secret === "mismatch" && state.applied?.mode !== "custom";
-  const secretText = quietMismatch ? "" : secret === "mismatch" || secret === "unreadable" ? formatCopy(copy.proxySecretReenter, { endpoint })
+  // 已生效的不是自定义代理时，已存密码报 mismatch（身份为空）或 unreadable 都与当前连接无关，端点也只会是 ":0"；不提示重新输入（C5、Minor 1）。
+  const quietSecret = (secret === "mismatch" || secret === "unreadable") && state.applied?.mode !== "custom";
+  const secretText = quietSecret ? "" : secret === "mismatch" || secret === "unreadable" ? formatCopy(copy.proxySecretReenter, { endpoint })
     : { unknown: copy.proxySecretUnknown, saved: copy.proxySecretSaved, memory: copy.proxySecretMemory, none: copy.proxySecretNone }[secret];
   const secretLine = [secretText, state.encryption ? "" : copy.proxyNoSecureStorage].filter(Boolean).join(" ");
   const credentials = custom && !hints.socks;
@@ -251,7 +264,7 @@ export function SettingsProxy(props: {
     {hints.socks4Dns ? <p className="settings-control-hint" data-proxy-hint="socks4">{copy.proxySocks4Hint}</p> : null}
     {hints.plaintext ? <p id="settings-proxy-plaintext-hint" className="settings-control-hint" data-proxy-hint="plaintext">{copy.proxyPlaintextHint}</p> : null}
     {credentials && secretLine ? <p id="settings-proxy-secret" className="settings-control-hint" data-proxy-secret={secret}>{secretLine}</p> : null}
-    {credentials && secret !== "none" ? <div className="settings-actions">
+    {credentials && clearable && secret !== "none" ? <div className="settings-actions">
       <button type="button" className="settings-control" disabled={working || props.busy || !!pending} onClick={clearPassword}>{copy.proxyClearPassword}</button>
     </div> : null}
     {error ? <p id="settings-proxy-error" className="settings-control-hint" data-proxy-error={error}>{fieldMessage(error)}</p> : null}
