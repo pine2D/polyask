@@ -1,4 +1,4 @@
-import type { PreferenceGroup, PreferenceKey, PreferenceSnapshot, PreferenceValues } from '../shared/preferences';
+import type { GeneralPreferenceGroup, PreferenceKey, PreferenceSnapshot, PreferenceValues } from '../shared/preferences';
 import type { DraftInput, DraftKind, StoredDraft } from '../shared/drafts';
 import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
 import type { QuestionArchiveRequest } from "../shared/question-archive";
@@ -55,7 +55,7 @@ export interface PolyAskDesktopApi {
   getPreferences(): Promise<PreferenceSnapshot>;
   seedPreferences(values: Partial<PreferenceValues>): Promise<PreferenceSnapshot>;
   setPreference(key: PreferenceKey, value: unknown): Promise<PreferenceSnapshot>;
-  followPreferences(group: PreferenceGroup, enabled: boolean): Promise<PreferenceSnapshot>;
+  followPreferences(group: GeneralPreferenceGroup, enabled: boolean): Promise<PreferenceSnapshot>;
   setDraftSync(enabled: boolean): Promise<PreferenceSnapshot>;
   onPreferences(listener: (value: PreferenceSnapshot) => void): () => void;
   listDrafts(kind?: DraftKind, context?: string): Promise<{ epoch: number; deviceId: string; drafts: StoredDraft[] }>;
@@ -182,7 +182,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   getPreferences: () => invoke('polyask:preferences'),
   seedPreferences: (values: Partial<PreferenceValues>) => invoke('polyask:preferences-seed', values),
   setPreference: (key: PreferenceKey, value: unknown) => invoke('polyask:preference-set', { key, value }),
-  followPreferences: (group: PreferenceGroup, enabled: boolean) => invoke('polyask:preferences-follow', { group, enabled }),
+  followPreferences: (group: GeneralPreferenceGroup, enabled: boolean) => invoke('polyask:preferences-follow', { group, enabled }),
   setDraftSync: (enabled: boolean) => invoke('polyask:draft-sync', enabled),
   onPreferences: (listener: (value: PreferenceSnapshot) => void) => subscribe('polyask:preferences-changed', listener),
   listDrafts: (kind?: DraftKind, context?: string) => invoke('polyask:draft-list', { kind, context }),

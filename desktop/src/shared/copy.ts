@@ -1,4 +1,5 @@
 import { PREFERENCE_SYNC_COPY } from './preference-sync-copy';
+import { PROXY_COPY } from './proxy-copy';
 import { DRAFT_COPY } from './draft-copy';
 import { QUESTION_COPY } from "./question-copy";
 import { READING_COPY } from "./reading-copy";
@@ -27,6 +28,7 @@ import { WORKBENCH_GUIDANCE_COPY } from './workbench-guidance-copy';
 export const COPY = {
   en: {
     ...PREFERENCE_SYNC_COPY.en,
+    ...PROXY_COPY.en,
     ...DRAFT_COPY.en,
     ...LIBRARY_COPY.en,
     ...BACKUP_COPY.en,
@@ -201,6 +203,7 @@ export const COPY = {
   },
   zhCN: {
     ...PREFERENCE_SYNC_COPY.zhCN,
+    ...PROXY_COPY.zhCN,
     ...DRAFT_COPY.zhCN,
     ...LIBRARY_COPY.zhCN,
     ...BACKUP_COPY.zhCN,
@@ -375,6 +378,7 @@ export const COPY = {
   },
   zhTW: {
     ...PREFERENCE_SYNC_COPY.zhTW,
+    ...PROXY_COPY.zhTW,
     ...DRAFT_COPY.zhTW,
     ...LIBRARY_COPY.zhTW,
     ...BACKUP_COPY.zhTW,

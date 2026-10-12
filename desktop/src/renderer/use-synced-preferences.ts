@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { DisplayPreferences } from '../shared/display';
-import { CONFIRMATION_KEYS, type ConfirmationKey, type PreferenceGroup, type PreferenceKey, type PreferenceSnapshot, type PreferenceValues, type WorkbenchGuideState } from '../shared/preferences';
+import { CONFIRMATION_KEYS, type ConfirmationKey, type GeneralPreferenceGroup, type PreferenceKey, type PreferenceSnapshot, type PreferenceValues, type WorkbenchGuideState } from '../shared/preferences';
 import { COMPLETION_NOTIFICATIONS_KEY, saveCompletionNotifications } from './completion-notification-preference';
 import { readLocalUiPreferences, writeWorkbenchGuidePreference, type LocalUiStorage } from './local-ui-preferences';
 import { shell } from './shell-api';
@@ -14,7 +14,7 @@ export interface SyncedPreferencesOptions {
 
 export interface PreferenceSyncSettingsState {
   readonly snapshot: PreferenceSnapshot | null;
-  readonly onFollowingChange: (group: PreferenceGroup, enabled: boolean) => Promise<void>;
+  readonly onFollowingChange: (group: GeneralPreferenceGroup, enabled: boolean) => Promise<void>;
   readonly onLayoutModeChange: (mode: PreferenceValues['layoutMode']) => Promise<void>;
   readonly onDraftSyncChange: (enabled: boolean) => Promise<void>;
 }
@@ -111,7 +111,7 @@ export function useSyncedPreferences(options: SyncedPreferencesOptions) {
       setLocalNotifications(enabled);
     }
   }, [setPreference]);
-  const onFollowingChange = useCallback((group: PreferenceGroup, enabled: boolean) => run(() => shell.followPreferences(group, enabled)), [run]);
+  const onFollowingChange = useCallback((group: GeneralPreferenceGroup, enabled: boolean) => run(() => shell.followPreferences(group, enabled)), [run]);
   const onLayoutModeChange = useCallback((mode: PreferenceValues['layoutMode']) => setPreference('layoutMode', mode), [setPreference]);
   const onDraftSyncChange = useCallback((enabled: boolean) => run(() => shell.setDraftSync(enabled)), [run]);
   const onConfirmation = useCallback(async (key: ConfirmationKey, enabled: boolean): Promise<void> => {

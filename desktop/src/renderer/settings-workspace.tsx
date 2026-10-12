@@ -18,6 +18,8 @@ import { LocalDataCard } from "./local-data-card";
 import { SettingsDisplay } from "./settings-display";
 import { PreferenceSyncSettings } from "./preference-sync-settings";
 import { SettingsConfirmations } from "./settings-confirmations";
+import { SettingsProxy } from "./settings-proxy";
+import { useProxyState } from "./use-proxy-state";
 import type { PreferenceSyncSettingsState } from "./use-synced-preferences";
 import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
@@ -40,7 +42,8 @@ interface SettingsWorkspaceProps {
   readonly display?: DisplayPreferences;
   readonly onDisplayChange?: (preferences: DisplayPreferences) => Promise<void>;
   readonly preferenceSync?: PreferenceSyncSettingsState;
-  readonly initialSection?: "overview" | "drive-diagnostics" | "data" | "display";
+  readonly initialSection?: "overview" | "drive-diagnostics" | "data" | "display" | "proxy";
+  readonly operationBusy?: boolean; // 群发、综合、新会话、站点参与切换进行中：代理写操作须经 OperationGate，此时禁用（spec §3.4、§6.2）
   readonly sectionRequest?: number;
   readonly onLocalReset?: () => void;
   readonly onBlockingChange?: (blocking: boolean) => void;
@@ -71,6 +74,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   const writes = useRef({ local: false, cloud: false });
   const pendingFocus = useRef(false);
   const busy = actionBusy || props.status.state === "syncing";
+  const proxy = useProxyState({ secret: true }); // 全仓唯一带密码读取标志的调用：设置卡与同步行共用这一个句柄
   const statusText = describeSync(props.copy, props.status);
   const overview = syncOverview(props.copy, props.status);
   const setWriteBlocking = (source: "local" | "cloud", value: boolean): void => {
@@ -97,7 +101,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     if (section === "data") setDataOpen(true);
     if (section === "drive-diagnostics") setDiagnosticsOpen(true);
     const id = section === "data" ? "settings-advanced-toggle" : section === "display" ? "settings-display-title"
-      : section === "drive-diagnostics" ? "sync-diagnostics-toggle" : null;
+      : section === "drive-diagnostics" ? "sync-diagnostics-toggle" : section === "proxy" ? "settings-proxy-title" : null;
     if (id) queueMicrotask(() => { const target = document.getElementById(id); target?.scrollIntoView({ block: "nearest" }); target?.focus(); });
   }, [props.initialSection, props.sectionRequest]);
   useEffect(() => {
@@ -198,6 +202,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     ...(props.preferenceSync ? [["preferences", "settings-preference-sync-title", props.copy.preferenceSyncTitle]] : []),
     ["notifications", "completion-notifications-title", props.copy.completionNotifications],
     ...(props.confirmations && props.onConfirmationChange ? [["confirmations", "settings-confirmations-title", props.copy.confirmationsTitle]] : []),
+    ["proxy", "settings-proxy-title", props.copy.proxyTitle],
     ["updates", "app-updates-title", props.copy.appUpdates], ["data", "settings-advanced-toggle", props.copy.settingsAdvancedData]
   ];
   const navigateSection = (section: string, id: string): void => {
@@ -272,7 +277,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
           <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
             following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
-          {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} copy={props.copy} busy={busy} /> : null}
+          {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} proxy={proxy} copy={props.copy} busy={busy} /> : null}
           <label className="settings-card preference-card">
             <span className="preference-copy">
               <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
@@ -293,6 +298,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           </label>
           {props.confirmations && props.onConfirmationChange ? <SettingsConfirmations copy={props.copy} busy={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
             confirmations={props.confirmations} onChange={props.onConfirmationChange} /> : null}
+          <SettingsProxy copy={props.copy} proxy={proxy} busy={busy || !!props.operationBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
+            onOpenSync={props.preferenceSync ? () => navigateSection("preferences", "settings-preference-sync-title") : undefined} />
           <section className="settings-card settings-row update-card" aria-labelledby="app-updates-title">
             <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
             <p>{props.copy.appUpdatesDescription}</p>

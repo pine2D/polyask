@@ -5,9 +5,13 @@ import type { PreferenceSyncCopy } from '../shared/preference-sync-copy';
 import type { GeneralPreferenceGroup } from '../shared/preferences';
 import type { PreferenceSyncSettingsState } from './use-synced-preferences';
 import { formatBackupValue } from './backup-data';
+import { ProxySyncRow } from './proxy-sync-row';
+import type { ProxyStateHandle } from './use-proxy-state';
 
 export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
   readonly copy: DesktopCopy & PreferenceSyncCopy; readonly busy: boolean;
+  /** 代理组不走通用跟随通道（主进程拒收），由 ProxySyncRow 调 proxy-follow。 */
+  readonly proxy?: ProxyStateHandle;
 }): React.JSX.Element {
   const [pending, setPending] = useState(false), [failed, setFailed] = useState(false);
   const mounted = useRef(true), inFlight = useRef(false), latest = useRef(props); latest.current = props;
@@ -55,6 +59,7 @@ export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
         <span>{value === 'shared' ? copy.preferenceSyncFollow : copy.preferenceSyncLocal}</span>
       </label>)}</div>
     </fieldset>)}
+    {props.proxy ? <ProxySyncRow copy={copy} proxy={props.proxy} disabled={pending || props.busy} /> : null}
     {/* 作用范围已在上方「默认布局」分组列出，这里不再重复。 */}
     <fieldset disabled={disabled} aria-describedby="settings-layout-mode-hint settings-follow-layout-facts">
       <legend>{copy.preferenceSyncLayoutValue}</legend>

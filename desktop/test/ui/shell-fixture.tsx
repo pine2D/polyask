@@ -26,6 +26,7 @@ import type { OpenWorkspacePanelState } from '../../src/renderer/workspace-panel
 import type { LocalDataStats } from '../../src/shared/local-data';
 import { DEFAULT_PREFERENCE_VALUES, type PreferenceSnapshot } from '../../src/shared/preferences';
 import { SITES } from '../../src/main/sites';
+import { proxyShellStubs } from './proxy-state-fixture';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
 import '../../src/renderer/accessibility.css';
@@ -77,6 +78,7 @@ const finishOperation = () => new Promise<void>(resolve => document.addEventList
 let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders: 0, answers: 9, memberships: 0,
   drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
+  ...proxyShellStubs(),
   getLocalDataStats: async () => dataStats,
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
   syncNow: async () => { await finishOperation(); return status; },

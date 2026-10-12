@@ -9,6 +9,7 @@ import type { LocalDataStats } from '../../src/shared/local-data';
 import type { SiteHealth } from '../../src/shared/site-health';
 import { createSyncDiagnosticSnapshot } from '../../src/shared/sync-diagnostics';
 import { SITES } from '../../src/main/sites';
+import { proxyShellStubs } from './proxy-state-fixture';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
 import '../../src/renderer/site-health-recovery.css';
@@ -25,6 +26,7 @@ const calls = { clears: 0, exports: 0, resets: 0, closes: 0, display: [] as Disp
 const stats = (): LocalDataStats => ({ history, archives: 3, decisions: 4, folders: 5, answers: 7, memberships: 9,
   drafts: 0, reset: { preferences: 0, answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } });
 setShellApi({
+  ...proxyShellStubs(),
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
   getLocalDataStats: async () => {
     if (statsFail) { statsFail = false; throw Error('fixture-stats-failed'); }
