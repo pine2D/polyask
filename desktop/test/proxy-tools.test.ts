@@ -80,7 +80,7 @@ function wire(reload: (site: SiteKey) => boolean = () => true, selected: readonl
   const reloaded: SiteKey[] = [];
   const manager: SiteReloader = { reload: (site) => { reloaded.push(site); return reload(site); } };
   const services = {
-    auth: { secretState: () => "saved", wipeEpoch: () => 0 },
+    auth: { credentialFor: () => undefined, wipeEpoch: () => 0 },
     secrets: { read: async () => ({ kind: "ok", value: encodeProxySecret(IDENTITY, "stored") }) }
   } as unknown as Parameters<ProxyToolsModule["createProxyTools"]>[0];
   const handlers = new Map<string, ProxyIpcListener>();

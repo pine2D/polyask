@@ -191,6 +191,16 @@ export class ProxyAuth {
     await this.loadDone;
   }
 
+  /**
+   * 「测试连接」取已存密码先问缓存（只读）：身份一致的内存密码直接交出（含只在本次运行有效的）；墓碑、重置中、缓存是别的
+   * 身份时返回 null，不回落读盘（磁盘上可能还是被替换的旧密码）；缓存为空、absent 或正在读盘时返回 undefined，由调用方读盘。
+   */
+  credentialFor(identity: ProxyIdentity): string | null | undefined {
+    const entry = this.entry;
+    if (!entry || entry.kind === "absent" || entry.kind === "loading") return undefined;
+    return entry.kind === "secret" && sameProxyIdentity(entry.identity, identity) ? entry.password : null;
+  }
+
   /** 熔断只看已应用身份：设置卡据此提示「代理拒绝了当前凭据」。 */
   authFailed(): boolean {
     const identity = proxyIdentity(this.basis.applied);
@@ -207,19 +217,29 @@ export class ProxyAuth {
     }
     const identity = proxyIdentity(target);
     if (!identity || !credential) return "failed";
-    let result: SecretWriteResult;
+    let result: SecretWriteResult | "failed";
     try {
       result = await this.store.write(encodeProxySecret(identity, credential), { epoch: () => this.wipe, expected: expectedWipeEpoch });
     } catch {
-      return "failed";
+      result = "failed";
     }
     if (this.wipe !== expectedWipeEpoch) return "aborted";
+    if (result === "failed" || result === "memory") return this.dropStale(result, expectedWipeEpoch);
     const entry = this.entry;
     if (result === "saved" && entry?.kind === "secret" && entry.password === credential && sameProxyIdentity(entry.identity, identity)) {
       this.entry = { ...entry, persisted: true };
       this.emit();
     }
     return result;
+  }
+
+  /**
+   * 新密码没落盘（写盘失败或只在内存）时删掉旧密码文件，否则下次启动会读回被替换的密码。clear 只 unlink、不经钥匙环，
+   * 与 write 排在同一条链上；删不掉就报 failed（密码未保存、只在本次运行有效）。期间发生本机重置则 aborted。
+   */
+  private async dropStale(result: "failed" | "memory", expectedWipeEpoch: number): Promise<ProxyPersistResult> {
+    try { await this.store.clear(); } catch { return "failed"; }
+    return this.wipe === expectedWipeEpoch ? result : "aborted";
   }
 
   /** 本机重置第 0、1、3 步：进入 wiping（命中的 login 一律取消且不读盘）、递增 wipeEpoch 与代际号、清零熔断。 */

@@ -4,7 +4,7 @@ import test from "node:test";
 import type { AuthInfo, ProxyConfig, Session } from "electron";
 
 import { createSessionFetch } from "../src/main/net-request-fetch";
-import { encodeProxySecret, type ProxySecretState } from "../src/main/proxy-auth";
+import { encodeProxySecret, ProxyAuth } from "../src/main/proxy-auth";
 import {
   PROBE_URL, PROBE_VERIFY_WINDOW_MS, ProxyProbe, classifyProbeError, storedPasswordReader, type ProbeFailure, type ProxyProbeOptions
 } from "../src/main/proxy-probe";
@@ -175,7 +175,7 @@ test("hands the typed password to the tested proxy; a rejected password is proxy
 test("falls back to the stored password only for the same identity; a typed password wins", async () => {
   const seen: Array<string | undefined> = [];
   const { store } = fakeStore(async () => ({ kind: "ok", value: encodeProxySecret(IDENTITY, "stored") }));
-  const reader = storedPasswordReader(store, { secretState: () => "saved", wipeEpoch: () => 0 });
+  const reader = storedPasswordReader(store, { credentialFor: () => undefined, wipeEpoch: () => 0 });
   const { probe } = setup((request) => {
     request.login(proxyAuthInfo(), (_username, password) => {
       seen.push(password);
@@ -248,12 +248,15 @@ test("only one test runs at a time", async () => {
 
 test("storedPasswordReader honours tombstones, wipes, unreadable files and identity", async () => {
   const saved = fakeStore(async () => ({ kind: "ok", value: encodeProxySecret(IDENTITY, "stored") }));
-  let state: ProxySecretState = "none";
+  let cached: string | null | undefined = null;
   let epoch = 0;
-  const auth = { secretState: () => state, wipeEpoch: () => epoch };
-  assert.equal(await storedPasswordReader(saved.store, auth)(IDENTITY), null, "tombstone or none: no disk read");
+  const auth = { credentialFor: () => cached, wipeEpoch: () => epoch };
+  assert.equal(await storedPasswordReader(saved.store, auth)(IDENTITY), null, "tombstone, wipe or another identity: no disk read");
   assert.equal(saved.reads(), 0);
-  state = "unknown";
+  cached = "memory";
+  assert.equal(await storedPasswordReader(saved.store, auth)(IDENTITY), "memory", "the in-memory credential wins over the file");
+  assert.equal(saved.reads(), 0);
+  cached = undefined;
   assert.equal(await storedPasswordReader(saved.store, auth)(IDENTITY), "stored");
   assert.equal(await storedPasswordReader(saved.store, auth)({ ...IDENTITY, host: "PROXY.example.test" }), "stored", "host compares normalized");
   assert.equal(await storedPasswordReader(saved.store, auth)({ ...IDENTITY, port: 8081 }), null, "port differs");
@@ -261,10 +264,68 @@ test("storedPasswordReader honours tombstones, wipes, unreadable files and ident
   assert.equal(await storedPasswordReader(saved.store, auth)({ ...IDENTITY, username: "bob" }), null, "username differs");
   const wiped = fakeStore(async () => { epoch += 1; return { kind: "ok", value: encodeProxySecret(IDENTITY, "stored") }; });
   assert.equal(await storedPasswordReader(wiped.store, auth)(IDENTITY), null, "a reset during the read discards it");
+  const replaced = fakeStore(async () => { cached = null; return { kind: "ok", value: encodeProxySecret(IDENTITY, "stored") }; });
+  assert.equal(await storedPasswordReader(replaced.store, auth)(IDENTITY), null, "a tombstone installed during the read wins");
+  cached = undefined;
   const unreadable = fakeStore(async () => ({ kind: "unreadable" }));
   assert.equal(await storedPasswordReader(unreadable.store, auth)(IDENTITY), null);
   const v6 = fakeStore(async () => ({ kind: "ok", value: encodeProxySecret({ ...IDENTITY, host: "::1" }, "v6") }));
   assert.equal(await storedPasswordReader(v6.store, auth)({ ...IDENTITY, host: "::1" }), "v6");
+});
+
+/** 真实 ProxyAuth + 同一个假密码文件：probe 读到的与 proxy-set 写进去的是同一份。 */
+function sharedSecretFile(options: { secure: boolean; writeError?: Error; initial?: string }) {
+  let file: string | null = options.initial ?? null;
+  let reads = 0;
+  const store = {
+    async read(): Promise<SecretReadResult> { reads += 1; return file === null ? { kind: "none" } : { kind: "ok", value: file }; },
+    async write(value: string) {
+      if (options.writeError) throw options.writeError;
+      if (!options.secure) return "memory" as const;
+      file = value;
+      return "saved" as const;
+    },
+    // 模拟删不掉的旧文件：只看内存优先，不依赖 persistCredential 的清理。
+    async clear() { throw new Error("EBUSY"); },
+    async securePersistence() { return options.secure; }
+  };
+  return { store, reads: () => reads };
+}
+
+test("Test connection uses the credential ProxyAuth holds for this run before the password file", async () => {
+  const seen: Array<string | undefined> = [];
+  const probeWith = (secrets: ReturnType<typeof sharedSecretFile>, auth: ProxyAuth) => setup((request) => {
+    request.login(proxyAuthInfo(), (_username, password) => {
+      seen.push(password);
+      if (password) request.respond(204); else request.fail("net::ERR_PROXY_AUTH_REQUESTED");
+    });
+  }, { extra: { storedPassword: storedPasswordReader(secrets.store, auth) } }).probe;
+
+  // (a) basic_text / 没有钥匙环：保存只留在内存，磁盘上没有文件。
+  const memoryFile = sharedSecretFile({ secure: false });
+  const memoryAuth = new ProxyAuth({ store: memoryFile.store });
+  memoryAuth.beginApply(VALUE, "memory-only", true);
+  memoryAuth.setBasis({ applied: VALUE, applying: null });
+  await memoryAuth.persistCredential(VALUE, "memory-only", memoryAuth.wipeEpoch());
+  assert.equal((await probeWith(memoryFile, memoryAuth).test(VALUE)).ok, true, "a memory-only password is tested, not reported as an auth failure");
+
+  // (b) P1 → P2 时写盘撞上钥匙环超时：旧文件仍是同一身份的 P1，本次运行绝不再交出 P1。
+  const stale = sharedSecretFile({ secure: true, writeError: new Error("secret_write_timeout"), initial: encodeProxySecret(IDENTITY, "P1") });
+  const staleAuth = new ProxyAuth({ store: stale.store });
+  staleAuth.beginApply(VALUE, "P2", false);
+  staleAuth.setBasis({ applied: VALUE, applying: null });
+  assert.equal(await staleAuth.persistCredential(VALUE, "P2", staleAuth.wipeEpoch()), "failed");
+  assert.equal((await probeWith(stale, staleAuth).test(VALUE)).ok, true);
+
+  // (c) 清除密码后是墓碑：旧文件删不掉也不读回来。
+  const cleared = sharedSecretFile({ secure: true, initial: encodeProxySecret(IDENTITY, "P1") });
+  const clearedAuth = new ProxyAuth({ store: cleared.store });
+  clearedAuth.beginApply(VALUE, null, false);
+  clearedAuth.setBasis({ applied: VALUE, applying: null });
+  await expectFailure(probeWith(cleared, clearedAuth).test(VALUE), "proxy_auth_failed", "a tombstone yields no credential");
+
+  assert.deepEqual(seen, ["memory-only", "P2", undefined]);
+  assert.equal(stale.reads() + cleared.reads(), 0, "a cached answer never reads the file");
 });
 
 test("the probe never falls back to Node fetch or AbortSignal.timeout and produces no code literals", () => {

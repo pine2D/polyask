@@ -80,21 +80,24 @@ function fromProxy(info: Pick<AuthInfo, "isProxy" | "host" | "port">, identity: 
 }
 
 /**
- * 生产用的已存密码读取：本次运行已明确清除（墓碑，secretState 为 none）时不读盘；
- * 读取期间发生本机重置（wipeEpoch 变化）则丢弃结果；身份四元组完全一致才交出密码。
+ * 生产用的已存密码读取：先问 ProxyAuth 的缓存（只在内存里的密码、写盘失败后的新密码、墓碑都以它为准），
+ * 缓存没有结论才读盘；读取期间发生本机重置（wipeEpoch 变化）则丢弃结果，缓存有了结论则以缓存为准；
+ * 身份四元组完全一致才交出密码。
  */
 export function storedPasswordReader(
   store: Pick<SecretFileStore, "read">,
-  auth: Pick<ProxyAuth, "secretState" | "wipeEpoch">
+  auth: Pick<ProxyAuth, "credentialFor" | "wipeEpoch">
 ): StoredPasswordReader {
   return async (identity) => {
-    if (auth.secretState() === "none") return null;
+    const cached = auth.credentialFor(identity);
+    if (cached !== undefined) return cached;
     const epoch = auth.wipeEpoch();
     const read = await store.read();
-    if (read.kind !== "ok" || auth.wipeEpoch() !== epoch || auth.secretState() === "none") return null;
-    const stored = decodeProxySecret(read.value);
-    if (!stored) return null;
-    return sameProxyIdentity(stored.identity, identity) ? stored.password : null;
+    if (auth.wipeEpoch() !== epoch) return null;
+    const settled = auth.credentialFor(identity);
+    if (settled !== undefined) return settled;
+    const stored = read.kind === "ok" ? decodeProxySecret(read.value) : null;
+    return stored && sameProxyIdentity(stored.identity, identity) ? stored.password : null;
   };
 }
 

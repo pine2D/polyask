@@ -44,6 +44,7 @@ class FakeStore implements ProxyAuthStore {
   readGate: Promise<void> | null = null;
   writeGate: Promise<void> | null = null;
   clearError: Error | null = null;
+  writeError: Error | null = null;
 
   async read(): Promise<SecretReadResult> {
     this.reads += 1;
@@ -54,6 +55,7 @@ class FakeStore implements ProxyAuthStore {
   async write(value: string, guard?: SecretWriteGuard): Promise<SecretWriteResult> {
     this.writes.push(value);
     if (this.writeGate) await this.writeGate;
+    if (this.writeError) throw this.writeError;
     if (!this.secure) return "memory";
     return guard && guard.epoch() !== guard.expected ? "aborted" : "saved";
   }
@@ -572,4 +574,67 @@ test("an unreadable result that lands after the read timeout is adopted and retr
   await auth.refreshSecretState();
   assert.equal(store.reads, 2);
   assert.deepEqual(retried.args, ["alice", "s3cret"]);
+});
+
+test("credentialFor answers from memory, withholds on tombstone, wipe or another identity, and defers to disk otherwise", async () => {
+  const store = new FakeStore();
+  const auth = new ProxyAuth({ store });
+  const identity = proxyIdentity(P1)!;
+  assert.equal(auth.credentialFor(identity), undefined, "还没读过盘：交给调用方读盘");
+  auth.beginApply(P1, "mem", true);
+  assert.equal(auth.credentialFor(identity), "mem", "内存里身份一致的密码（含只在本次运行有效的）直接交出");
+  assert.equal(auth.credentialFor({ ...identity, host: "PROXY.example" }), "mem", "host 按规范化比较");
+  assert.equal(auth.credentialFor({ ...identity, username: "bob" }), null, "缓存是别的身份：不交出，也不回落读盘");
+  auth.beginApply(P1, null, false);
+  assert.equal(auth.credentialFor(identity), null, "墓碑");
+  auth.beginWipe();
+  assert.equal(auth.credentialFor(identity), null, "重置中");
+  auth.endWipe();
+  assert.equal(auth.credentialFor(identity), undefined, "重置结束缓存回到空");
+  await auth.refreshSecretState();
+  assert.equal(auth.secretState(), "none");
+  assert.equal(auth.credentialFor(identity), undefined, "读盘结果为 absent 时仍以磁盘为准");
+});
+
+test("a new password that is not persisted removes the stale password file; clearing never touches the keyring", async () => {
+  const failing = new FakeStore();
+  failing.writeError = new Error("secret_write_timeout");
+  const failed = new ProxyAuth({ store: failing });
+  failed.beginApply(P1, "P2", false);
+  assert.equal(await failed.persistCredential(P1, "P2", failed.wipeEpoch()), "failed", "写盘失败的结果不变");
+  assert.equal(failing.clears, 1, "钥匙环超时：删掉仍存着旧密码的文件，下次启动读不回被替换的密码");
+  assert.equal(failed.credentialFor(proxyIdentity(P1)!), "P2");
+
+  const insecure = new FakeStore();
+  insecure.secure = false;
+  const memory = new ProxyAuth({ store: insecure });
+  memory.beginApply(P1, "P2", false);
+  assert.equal(await memory.persistCredential(P1, "P2", memory.wipeEpoch()), "memory");
+  assert.equal(insecure.clears, 1, "只留在内存：同样删掉旧文件");
+
+  const stuck = new FakeStore();
+  stuck.secure = false;
+  stuck.clearError = new Error("EBUSY");
+  const leftover = new ProxyAuth({ store: stuck });
+  leftover.beginApply(P1, "P2", false);
+  assert.equal(await leftover.persistCredential(P1, "P2", leftover.wipeEpoch()), "failed", "旧文件删不掉：如实报告密码未保存");
+
+  const secure = new FakeStore();
+  const saved = new ProxyAuth({ store: secure });
+  saved.beginApply(P1, "P2", false);
+  assert.equal(await saved.persistCredential(P1, "P2", saved.wipeEpoch()), "saved");
+  assert.equal(secure.clears, 0, "写盘成功时新文件已整体覆盖旧文件");
+
+  const wiping = new FakeStore();
+  wiping.writeError = new Error("secret_write_timeout");
+  const gate = deferred();
+  wiping.writeGate = gate.promise;
+  const reset = new ProxyAuth({ store: wiping });
+  reset.beginApply(P1, "P2", false);
+  const pending = reset.persistCredential(P1, "P2", reset.wipeEpoch());
+  reset.beginWipe();
+  gate.resolve();
+  assert.equal(await pending, "aborted");
+  assert.equal(wiping.clears, 0, "期间发生本机重置：交给重置自己删文件");
+  reset.endWipe();
 });
