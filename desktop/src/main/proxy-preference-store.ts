@@ -55,11 +55,14 @@ function requireProxy(value: unknown): asserts value is ProxyPreference {
   if (!isProxyPreference(value)) throw new Error("proxy_invalid");
 }
 
-/** §3.3：损坏输入一律阻断；跟随时损坏的 S 视同 absent（只退回已确认的 A，不会 fail-open）。 */
+/**
+ * §3.3：损坏输入一律阻断；跟随时损坏的 S 视同 absent（只退回已确认的 A，不会 fail-open），并标 sharedInvalid（stored=invalid）。
+ * 不跟随时 S 不参与解析，本机保存也修不了它，所以不标：否则设置卡一直报「已损坏」、同步设置行一直禁用，只能本机重置。
+ */
 export function classifyProxyInputs(inputs: ProxyInputs): ProxyClassification {
   if (inputs.following.kind === "invalid") return BLOCKED;
   const following = inputs.following.kind === "ok" && inputs.following.value;
-  const sharedInvalid = inputs.shared.kind === "invalid";
+  const sharedInvalid = following && inputs.shared.kind === "invalid";
   if (!following && inputs.override.kind === "invalid") return BLOCKED;
   if (following && inputs.accepted.kind === "invalid") return BLOCKED;
   if (following && inputs.accepted.kind === "absent" && inputs.override.kind !== "ok") return BLOCKED;

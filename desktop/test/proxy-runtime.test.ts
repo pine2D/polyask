@@ -278,6 +278,15 @@ test("following with a corrupt S falls back to the accepted value and reports st
   assert.equal(state.following, true);
 });
 
+test("not following, a corrupt S is not this device's problem: stored=ok and the local override applies", async () => {
+  // 不跟随时同步设置行禁用、本机保存也修不了 S（spec §3.3 只在跟随时把损坏的 S 记为 stored=invalid）。
+  const h = harness({ inputs: inputs({ following: ok(false), override: ok(P1), shared: invalid }) });
+  await h.runtime.recomputeFromStore();
+  const state = h.runtime.state();
+  assert.deepEqual([state.blocked, state.stored, state.following], [false, "ok", false]);
+  assert.equal(state.applied === P1, true);
+});
+
 test("an empty profile (no deviceId, nothing stored) applies the system default", async () => {
   const h = harness();
   await h.runtime.recomputeFromStore();

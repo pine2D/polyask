@@ -117,7 +117,8 @@ test("classification blocks every corrupt combination listed in §3.3 and resolv
   assert.deepEqual(classifyProxyInputs(inputs({ following: ok(true), override: INVALID })), BLOCKED);
 
   assert.deepEqual(classifyProxyInputs(inputs({ following: ok(false), override: ok(P1), accepted: INVALID, shared: INVALID })),
-    { kind: "resolve", sharedInvalid: true, input: { following: false, override: P1, shared: null, accepted: null } });
+    { kind: "resolve", sharedInvalid: false, input: { following: false, override: P1, shared: null, accepted: null } },
+    "not following: a corrupt S is reported only once this device follows sync");
   assert.deepEqual(classifyProxyInputs(inputs({ following: ok(true), override: ok(P1) })),
     { kind: "resolve", sharedInvalid: false, input: { following: true, override: P1, shared: null, accepted: null } });
   assert.deepEqual(classifyProxyInputs(inputs({ following: ok(true), accepted: ok(P1), override: INVALID, shared: INVALID })),

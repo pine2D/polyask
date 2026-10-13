@@ -66,6 +66,19 @@ test('a blocked or damaged proxy disables following in both directions', async (
   } finally { await h.close(); }
 });
 
+test('a corrupt synced value that this device does not follow leaves the row usable', async () => {
+  // runtime 只在跟随时把损坏的 S 报成 stored=invalid；不跟随时报 ok，行必须可用，才能改为跟随后用本机设置修复。
+  const calls: boolean[] = [];
+  const h = await mountRow(proxyStateFixture({ ...configured, following: false, stored: 'ok' }), async enabled => { calls.push(enabled); return { ok: true }; });
+  try {
+    assert.equal(h.row()!.disabled, false);
+    assert.equal(h.document.getElementById('settings-follow-proxy-hint')!.textContent, copy.proxySyncHint);
+    await h.click(h.row()!.querySelector<HTMLInputElement>('input[value="shared"]')!);
+    await settle();
+    assert.deepEqual(calls, [true]);
+  } finally { await h.close(); }
+});
+
 test('settings navigation lists the proxy card between confirmations and updates and focuses its heading', async () => {
   const h = await mountSettings({ confirmations: { sitePageCloseConfirm: true, newSessionConfirm: true }, onConfirmationChange: () => {} });
   try {
