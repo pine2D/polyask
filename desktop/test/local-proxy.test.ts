@@ -278,9 +278,12 @@ test("close() resolves while a CONNECT tunnel is still open and frees the port",
 });
 
 test("SOCKS5 does not append a failure frame when the upstream resets after the tunnel is established", async (t) => {
+  // 先确认 "hello" 已到达客户端再发 RST：Windows 与繁忙的 Linux 上，RST 会丢弃代理尚未读走的数据。
+  let resetUpstream = () => {};
   const upstream = createServer((socket) => {
     socket.on("error", () => {});
-    socket.write("hello", () => socket.resetAndDestroy());
+    resetUpstream = () => socket.resetAndDestroy();
+    socket.write("hello");
   });
   upstream.listen(0, "127.0.0.1");
   await once(upstream, "listening");
@@ -292,5 +295,7 @@ test("SOCKS5 does not append a failure frame when the upstream resets after the 
   await raw.read(2);
   raw.write(Buffer.from([5, 1, 0, 1, 127, 0, 0, 1, upstreamPort >> 8, upstreamPort & 0xff]));
   assert.deepEqual((await raw.read(10)).slice(0, 2), [5, 0]);
-  assert.equal(await raw.rest(), "hello");
+  assert.equal(Buffer.from(await raw.read(5)).toString("latin1"), "hello");
+  resetUpstream();
+  assert.equal(await raw.rest(), "");
 });
