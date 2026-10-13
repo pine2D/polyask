@@ -8,7 +8,13 @@
 
 ## [未发布]
 
-已知限制：SOCKS 代理不支持用户名和密码；SOCKS4 由本机解析域名，可能受 DNS 污染，也连不了 IPv6 地址；Windows 上，代理要求 NTLM 或 Negotiate 认证时，会自动使用当前 Windows 登录身份；IPv6 代理地址带端口时要写方括号；Linux 上识别不到桌面环境（如 WSL）时，「跟随系统」只读启动时的代理环境变量，从图标启动可能读不到，需要改用自定义代理；网络代理未在 macOS 上真机验证。
+## [1.20.0] - 2026-10-13
+
+验收范围：Linux/WSL 下通过 1,968 项应用与界面测试、423 项运行时测试，以及经本地代理的原生端到端专项（启动、切换、认证、群发互斥、测试连接、同步待确认等 11 段）。
+
+验收限制：网络代理未在 Windows、macOS 真机验证，也未用真实 Google 账号经代理联网核验 Drive 同步。
+
+已知限制：SOCKS 代理不支持用户名和密码；SOCKS4 由本机解析域名，可能受 DNS 污染，也连不了 IPv6 地址；Windows 上，代理要求 NTLM 或 Negotiate 认证时，会自动使用当前 Windows 登录身份；IPv6 代理地址带端口时要写方括号；Linux 上识别不到桌面环境（如 WSL）时，「跟随系统」只读启动时的代理环境变量，从图标启动可能读不到，需要改用自定义代理。
 
 ### 新增
 
@@ -1282,7 +1288,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.19.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.20.0...HEAD
+[1.20.0]: https://github.com/pine2D/polyask/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/pine2D/polyask/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/pine2D/polyask/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/pine2D/polyask/compare/v1.16.0...v1.17.0
