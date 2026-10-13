@@ -153,7 +153,9 @@ export function SettingsProxy(props: {
       // 要求重新输入密码的提示必须带 host:port（spec §4.5）；这里的端点是本次被测的表单值。
       if (!outcome.ok && outcome.code === "proxy_auth_failed") return formatCopy(copy.proxyAuthRejected, { endpoint: proxyEndpoint(value) });
       if (!outcome.ok) return describeProxyResult(copy, outcome.code);
-      return formatCopy(outcome.route === "direct" ? copy.proxyTestDirect : copy.proxyTestOk, { ms: outcome.ms });
+      // 只有自定义代理的直连才是绕过列表造成的；不使用代理、或系统没有代理时直连就是预期线路。
+      const text = outcome.route === "proxy" ? copy.proxyTestOk : value.mode === "custom" ? copy.proxyTestDirect : copy.proxyTestConnected;
+      return formatCopy(text, { ms: outcome.ms });
     });
   };
   const clearPassword = (): void => {

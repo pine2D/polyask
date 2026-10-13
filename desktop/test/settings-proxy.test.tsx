@@ -161,6 +161,19 @@ test('test connection reports direct routes and maps failures without touching s
   } finally { await h.close(); }
 });
 
+test('a direct route is blamed on the bypass list only for a custom proxy', async () => {
+  const direct = { ...DEFAULT_PROXY_PREFERENCE, mode: 'direct' as const };
+  const cases = [[direct, 'direct', 'proxyTestConnected'], [DEFAULT_PROXY_PREFERENCE, 'direct', 'proxyTestConnected'],
+    [DEFAULT_PROXY_PREFERENCE, 'proxy', 'proxyTestOk']] as const;
+  for (const [value, route, key] of cases) {
+    const h = await mountCard(proxyStateFixture({ applied: value, formValue: value }), { testProxy: async () => ({ ok: true, ms: 7, route }) });
+    try {
+      await press(button(h.document, copy.proxyTest)!);
+      assert.equal(h.feedback.at(-1), formatCopy(copy[key], { ms: 7 }), `${value.mode}/${route}`);
+    } finally { await h.close(); }
+  }
+});
+
 test('saving announces the result, reports password storage failure, and offers reloading every site', async () => {
   const saves: unknown[] = [{ ok: true, secret: 'failed' }, { ok: false, result: 'proxy_busy' }, new Error('proxy_busy'), { ok: false, result: 'proxy_apply_failed' }];
   const reloads: unknown[] = [{ ok: true, skipped: ['kimi', 'doubao'] }, { ok: false, result: 'proxy_busy' }, { ok: true, skipped: [] }];
