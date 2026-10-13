@@ -3,7 +3,7 @@ import { net, type AuthInfo, type ClientRequest, type IncomingMessage, type Sess
 /**
  * Drive / OAuth 用的 fetch 适配器：基于 `net.request`，走所给 session 的代理设置（含系统代理），
  * 并接住请求级 `login`（`session.fetch` 不处理 login，Node 全局 fetch 不走 Chromium 代理）。
- * 设计见 docs/superpowers/specs/2026-10-12-custom-proxy-design.md §3.5。
+ * 契约见 docs/desktop.md §13。
  */
 export type RequestLoginHandler = (
   request: object,
