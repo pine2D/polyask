@@ -13,6 +13,7 @@ import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/d
 import { contextBridge, ipcRenderer } from "electron";
 import type { RuntimeProcessFailure } from "../shared/runtime-process";
 import type { CaptureLocateCounts } from "../shared/question-capture";
+import type { SiteFindRequest, SiteFindState } from '../shared/site-find';
 
 import { ipcErrorCode } from "../shared/ipc-error";
 
@@ -52,6 +53,13 @@ import type {
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 
 export interface PolyAskDesktopApi {
+  openSiteFind(): Promise<SiteFindState>;
+  getSiteFind(): Promise<SiteFindState>;
+  findSites(request: SiteFindRequest): Promise<SiteFindState>;
+  moveSiteFind(direction: -1 | 1): Promise<SiteFindState>;
+  selectSiteFind(site: SiteKey): Promise<SiteFindState>;
+  closeSiteFind(restoreFocus?: boolean): Promise<SiteFindState>;
+  onSiteFind(listener: (state: SiteFindState) => void): () => void;
   getPreferences(): Promise<PreferenceSnapshot>;
   seedPreferences(values: Partial<PreferenceValues>): Promise<PreferenceSnapshot>;
   setPreference(key: PreferenceKey, value: unknown): Promise<PreferenceSnapshot>;
@@ -179,6 +187,13 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  openSiteFind: () => invoke('polyask:find-open'),
+  getSiteFind: () => invoke('polyask:find-state'),
+  findSites: (request: SiteFindRequest) => invoke('polyask:find-query', request),
+  moveSiteFind: (direction: -1 | 1) => invoke('polyask:find-move', direction),
+  selectSiteFind: (site: SiteKey) => invoke('polyask:find-select', site),
+  closeSiteFind: (restoreFocus?: boolean) => invoke('polyask:find-close', restoreFocus),
+  onSiteFind: (listener: (state: SiteFindState) => void) => subscribe('polyask:find-state', listener),
   getPreferences: () => invoke('polyask:preferences'),
   seedPreferences: (values: Partial<PreferenceValues>) => invoke('polyask:preferences-seed', values),
   setPreference: (key: PreferenceKey, value: unknown) => invoke('polyask:preference-set', { key, value }),

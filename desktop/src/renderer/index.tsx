@@ -84,6 +84,7 @@ import { useSyncedSiteParticipation } from './use-synced-site-participation';
 import { useSitePageClose } from './use-site-page-close';
 import { reloadSiteWithFeedback } from "./site-reload";
 import { shell } from "./shell-api";
+import { SiteFind } from './site-find';
 import { requestDecisionNavigation } from "./decision-navigation";
 import { currentPlatform, isMac } from "./platform";
 import "./styles.css";
@@ -168,6 +169,7 @@ function App(): React.JSX.Element {
   const workspaceFlow = useWorkspaceFlow(sites, copy.workspaceActionFailed, setAnnouncement);
   const { workspace, selected } = workspaceFlow;
   const changePanelState = (value: WorkspacePanelState): void => {
+    if (value) void shell.closeSiteFind(false).catch(() => {});
     if (value) { setQuestionHistoryOpen(false); imageSelection.setOpen(false); }
     setPanelState(value);
   };
@@ -448,6 +450,10 @@ function App(): React.JSX.Element {
       if (drawerOpen) changeDrawerOpen(false);
       focusPromptForEditing(promptRef, composer.setExpanded);
     },
+    'find-page': () => {
+      changeSurface('sites'); closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false);
+      void shell.setQuestionPanel(false).then(() => shell.openSiteFind()).catch(() => setAnnouncement(copy.findFailed));
+    },
     "set-think": () => { changeSurface("sites"); void workspaceFlow.changeTier("think"); },
     "set-fast": () => { changeSurface("sites"); void workspaceFlow.changeTier("fast"); },
     ...(participating.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
@@ -568,7 +574,10 @@ function App(): React.JSX.Element {
             warning={imageWarning}
             warningCount={unsupportedSites.length}
             error={imageSelection.error}
-            onOpenChange={(open) => { if (open) { changeSurface("sites"); changePanelState(null); setQuestionHistoryOpen(false); } imageSelection.setOpen(open); }}
+            onOpenChange={(open) => {
+              if (open) { void shell.closeSiteFind(false).catch(() => {}); changeSurface("sites"); changePanelState(null); setQuestionHistoryOpen(false); }
+              imageSelection.setOpen(open);
+            }}
             onFiles={(files) => { void imageSelection.choose(files); }}
             onRemove={imageSelection.remove}
             onAdjustScope={() => { imageSelection.setOpen(false); changeDrawerOpen(true); }}
@@ -655,6 +664,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
+      <SiteFind copy={copy} sites={sites} />
       <QuestionHistory active={surface === 'sites'} openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={value => { imageSelection.clear(); setText(value); focusPromptForEditing(promptRef, composer.setExpanded); }} />
       {retryReview.review}
       {pageClose.dialog}

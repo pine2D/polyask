@@ -141,6 +141,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 | `desktop/src/shared/copy.ts` | 主表。`en` / `zhCN` / `zhTW` 三档，外壳通用词条直接写在这里，并把下面各分表 `...` 展开合并 |
 | `desktop/src/shared/*-copy.ts` 分表 | 按领域拆的词条：archive / backup / command / data-admin / decision / library / productivity / prompt-library / sync / synthesis / task-folder / workspace，各自导出 `{ en, zhCN, zhTW }` 供主表合并 |
 | `desktop/src/shared/proxy-copy.ts` | 网络代理设置卡、同步设置里的「网络代理」行、待确认横幅，代理 IPC 失败码（`proxy_invalid`、`proxy_busy`、`proxy_apply_failed`、`proxy_test_busy`、`proxy_not_pending`、`proxy_pending_confirm`）、成功回包附 `secret: "failed"` 时的密码未保存提示（渲染层按 `proxy_secret_failed` 翻译），以及测试连接结果的三语词条。这些码不进 `SITE_CODES`；站点视图的 `proxy_failed` / `proxy_auth_failed` 仍走 `SITE_CODES` → `STATUS_COPY_KEY` → `copy.ts`，同步的 `oauth_proxy` / `drive_proxy` 走 `sync-copy.ts` |
+| `desktop/src/shared/site-find-copy.ts` | 跨 AI 页面查找的命令、范围、逐站计数、前后查找与刷新、不可用及已加载文字范围说明；经主表合并，查找 IPC 校验码不进 `SITE_CODES` |
 | `desktop/src/main/oauth-callback-page.ts` | 系统浏览器中的本地 OAuth 回调卡片：三语经同一 locale 解析器选择，收到与拒绝均不宣称 Drive 已连接 |
 
 `desktop/src/shared/status-copy.ts` **不是**第三张词条表，它是 `SiteCode → keyof DesktopCopy` 的映射（`STATUS_COPY_KEY`），把机器码翻译成主表里的某个键。 选择与提交证据的附加说明也在这里组合，使用 `copy.ts` 的 `selection*` / `submissionMessage` / `submissionComposer` 三语键；保持“页面本轮消息已出现”与“仅输入框变化”的确认程度，不写成服务端已接收。

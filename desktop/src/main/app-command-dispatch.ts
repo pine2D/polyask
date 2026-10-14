@@ -36,6 +36,6 @@ export function dispatchAppCommand(id: CommandId, manager: ViewManager | null, w
     return;
   }
   if (!window || window.isDestroyed()) return;
-  if (id === "focus-prompt") window.webContents.focus();
+  if (id === "focus-prompt" || id === 'find-page') window.webContents.focus();
   window.webContents.send("polyask:command", id);
 }

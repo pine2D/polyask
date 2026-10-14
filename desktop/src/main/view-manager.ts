@@ -63,6 +63,7 @@ import { applyWorkspaceLayout, computeWorkspaceLayout } from "./workspace-layout
 import { stackOrder } from "./view-visibility";
 import { SiteZoomController } from "./site-zoom";
 import { bindShellContents } from "./shell-contents-bindings";
+import { SiteFindController } from './site-find';
 
 // TODO(size-ratchet)：748 行，目标 ≤400——抽出 site-workspace-state（勾选/分页/布局纯状态）、
 // site-status-registry（pageStatus/runStatus 合并与 unread）、generation-watcher（生成态轮询）三块无 Electron 依赖的纯逻辑。
@@ -116,6 +117,13 @@ export class ViewManager {
   private drawerOpen = false;
   private surface: DesktopSurface = "sites";
   private readonly siteSession = session.fromPartition(SITE_PARTITION);
+  readonly siteFind = new SiteFindController({
+    targets: () => this.selected.map(site => ({ site, contents:this.views.get(site)?.webContents })),
+    focused: () => this.focused, allowed: () => this.surface === 'sites' && !this.historyAccess.panelOpen,
+    focus: site => { this.setLayout(this.mode, site, false); }, reserve: () => this.layout(),
+    restoreFocus: () => { const c = this.views.get(this.focused)?.webContents; if (c && !c.isDestroyed()) c.focus(); },
+    publish: state => { if (!this.window.isDestroyed()) this.window.webContents.send('polyask:find-state', state); }
+  });
 
   constructor(
     private readonly window: BrowserWindow,
@@ -156,6 +164,7 @@ export class ViewManager {
     window.on("resize", () => this.layout());
     window.on("restore", () => this.layout());
     bindShellContents(window.webContents, { relayout: () => this.layout(), reset: () => {
+      this.siteFind.close(false);
       this.composerExpanded = this.drawerOpen = this.historyAccess.panelOpen = false;
       if (this.surface === "sites") this.layout(); else this.setSurface("sites");
     } });
@@ -266,6 +275,7 @@ export class ViewManager {
     if (this.surface === value || this.window.isDestroyed()) return;
     const previous = this.surface;
     this.surface = value;
+    this.siteFind.sync();
     transitionSiteSurface(previous, value, {
       detach: () => { for (const site of [...this.attached]) this.detach(site); },
       cover: covered => coverSitesForHistory(this.window, covered),
@@ -576,6 +586,7 @@ export class ViewManager {
       height: cssHeight,
       density: this.display.density,
       composerExpanded: this.composerExpanded,
+      findOpen: this.siteFind.state.open,
       drawerOpen: this.drawerOpen,
       requestedMode: this.mode,
       focused: this.focused,
@@ -607,6 +618,7 @@ export class ViewManager {
     });
     const layout = this.getLayout();
     this.onLayout(layout);
+    this.siteFind.sync();
     this.options.onUiStateChange?.(this.getUiState());
   }
 
@@ -705,6 +717,7 @@ export class ViewManager {
   }
 
   private dispose(): void {
+    this.siteFind.dispose();
     this.cancelGenerationRun();
     this.commands.dispose();
     for (const view of this.views.values()) {

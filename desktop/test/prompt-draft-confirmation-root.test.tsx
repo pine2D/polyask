@@ -9,6 +9,7 @@ const { JSDOM } = req('jsdom');
 const { setShellApi } = req(`${base}/src/renderer/shell-api.ts`);
 const { SITES } = req(`${base}/src/main/sites.ts`);
 const { getCopy } = req(`${base}/src/shared/copy.ts`);
+const { initialSiteFindState } = req(`${base}/src/shared/site-find.ts`);
 const { createSyncDiagnosticSnapshot } = req(`${base}/src/shared/sync-diagnostics.ts`);
 
 test('production root blocks commands and direct send, tier and collection while prompt drafts cover native views', async () => {
@@ -40,6 +41,7 @@ test('production root blocks commands and direct send, tier and collection while
       workspace: { selectedSites: ['claude'], groups: [], tier: null },
       promptLibrary: { templates: [], history: [] }, pendingSynthesis: null, sync: status }),
     onCommand: (listener: typeof command) => { command = listener; return () => {}; },
+    getSiteFind: async () => initialSiteFindState(), closeSiteFind: async () => initialSiteFindState(),
     setSurface: (value: string) => { surfaces.push(value); },
     setDrawerOpen: () => {}, setComposerExpanded: () => {}, setCompletionNotifications: () => {},
     listDrafts: async () => ({ epoch: 0, deviceId: 'local', drafts: [draft] }),

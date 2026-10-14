@@ -12,12 +12,14 @@ import {
 } from "../shared/display";
 import { computeViewLayout, resolveLayoutMode, scaleBounds } from "./layout";
 import type { SiteZoomController } from "./site-zoom";
+import { SITE_FIND_HEIGHT } from '../shared/site-find';
 
 interface WorkspaceLayoutInput {
   readonly width: number;
   readonly height: number;
   readonly density: Density;
   readonly composerExpanded: boolean;
+  readonly findOpen?: boolean;
   readonly drawerOpen: boolean;
   readonly requestedMode: "overview" | "focus";
   readonly focused: SiteKey;
@@ -60,7 +62,7 @@ export function reserveWorkspaceArea(area: ViewBounds, drawerWidth: number): Vie
 
 export function computeWorkspaceLayout(input: WorkspaceLayoutInput): WorkspaceLayoutResult {
   const metrics = metricsForDensity(input.density);
-  const shellHeight = shellHeightForComposer(input.density, input.composerExpanded);
+  const shellHeight = shellHeightForComposer(input.density, input.composerExpanded) + (input.findOpen ? SITE_FIND_HEIGHT : 0);
   const baseArea = {
     x: metrics.edgeGap,
     y: shellHeight,

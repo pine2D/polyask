@@ -159,6 +159,8 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 ## 快捷键链路
 
+跨 AI 页面查找原生专项：`cd desktop && xvfb-run -a npm run test:unit -- test/site-find-native.check.ts`。受限入口在临时 cgroup 中编译生产外壳、preload、ViewManager 与查找 IPC，用九个本地网页验证站点内 Ctrl+F、命中数、跨页循环、鼠标按钮回焦、连续动作、取消导航、范围切换、DOM 刷新、Esc 与确认锁，以及查找和历史/侧栏/已有附件面板双向互斥。三语各 48 组明暗主题、两种密度、420/960/1600px、两档外壳缩放和输入区开合，共 144 组；等待退出动画及原生几何稳定，外壳截图只验证控件，另存站点 webContents 高亮截图。2026-10-14 最终完整门禁 1,985 项应用与界面测试 + 423 项运行时测试、typecheck、verify、Linux package 及 smoke（shell=1/sites=9/attached=9）通过。临时档案阻断 HTTP/HTTPS，不访问用户账号、对话或 Drive；不替代已登录九站及 Windows/macOS 物理快捷键、IME 和读屏验收。
+
 Desktop 的加速器分两类：`desktop/src/shared/commands.ts` 的 `COMMANDS` 表（`Alt+K/S/H/Q/T/Y/C/R/N`、`Alt+1..3`、`Alt+←/→`、`CmdOrCtrl+(Shift+)PageUp/Down`、`Control+,`），与**菜单 `role` 项自带的**那批（重新加载、缩放、全屏、撤销/复制/粘贴、退出）——后者不写在模板里、也不在 `COMMANDS` 表里，所以快捷键速查直接从 `Menu.getApplicationMenu()` 读真实菜单，菜单与速查从此不可能漂开。教训：**扫源码字面量的断言全绿 ≠ 用户看到的东西对**。离线由 `desktop/test/menu-shortcuts.test.ts` 与 `keyboard.test.ts` 守；**物理按键仍要人工按一遍**。
 
 ## 当前未发布改动的验收边界（2026-09-20）

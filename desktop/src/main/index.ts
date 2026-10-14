@@ -333,7 +333,7 @@ else {
   app.on("web-contents-created", (_event, contents) => {
     contents.on("will-attach-webview", (event) => event.preventDefault());
     contents.on("before-input-event", (event, input) => {
-      const command = commandAliasForInput(input);
+      const command = commandAliasForInput(input, process.platform);
       if (!command) return;
       event.preventDefault();
       dispatchAppCommand(command);

@@ -24,9 +24,11 @@ import { CONFIRMATION_COPY } from "./confirmation-copy";
 import { COMPARISON_COPY } from "./comparison-copy";
 import { PAGE_PROGRESS_COPY } from "./page-progress-copy";
 import { WORKBENCH_GUIDANCE_COPY } from './workbench-guidance-copy';
+import { SITE_FIND_COPY } from './site-find-copy';
 
 export const COPY = {
   en: {
+    ...SITE_FIND_COPY.en,
     ...PREFERENCE_SYNC_COPY.en,
     ...PROXY_COPY.en,
     ...DRAFT_COPY.en,
@@ -202,6 +204,7 @@ export const COPY = {
     checkForUpdates: "Check for updates"
   },
   zhCN: {
+    ...SITE_FIND_COPY.zhCN,
     ...PREFERENCE_SYNC_COPY.zhCN,
     ...PROXY_COPY.zhCN,
     ...DRAFT_COPY.zhCN,
@@ -377,6 +380,7 @@ export const COPY = {
     checkForUpdates: "检查更新"
   },
   zhTW: {
+    ...SITE_FIND_COPY.zhTW,
     ...PREFERENCE_SYNC_COPY.zhTW,
     ...PROXY_COPY.zhTW,
     ...DRAFT_COPY.zhTW,

@@ -14,6 +14,7 @@ export type CommandId =
   | "site-back"
   | "site-forward"
   | "focus-prompt"
+  | "find-page"
   | "set-think"
   | "set-fast"
   | "collect-compare"
@@ -51,6 +52,7 @@ export interface CommandInput {
   readonly control: boolean;
   readonly meta: boolean;
   readonly shift: boolean;
+  readonly isComposing?: boolean;
 }
 
 export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
@@ -71,6 +73,7 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "site-back", labelKey: "siteBackMenu", group: "navigate", accelerator: "Alt+Left" },
   { id: "site-forward", labelKey: "siteForwardMenu", group: "navigate", accelerator: "Alt+Right" },
   { id: "focus-prompt", labelKey: "focusPromptMenu", group: "compose", accelerator: "Alt+Q" },
+  { id: 'find-page', labelKey: 'findPage', group: 'navigate', accelerator: 'CmdOrCtrl+F' },
   { id: "set-think", labelKey: "chooseThinkMode", group: "compose", accelerator: "Alt+T" },
   { id: "set-fast", labelKey: "chooseFastMode", group: "compose", accelerator: "Alt+Y" },
   { id: "collect-compare", labelKey: "collectCompare", group: "results" },
@@ -102,7 +105,10 @@ export function commandAccelerator(id: CommandId, platform: NodeJS.Platform): st
   return platform === "darwin" ? command?.macAccelerator ?? command?.accelerator : command?.accelerator;
 }
 
-export function commandAliasForInput(input: CommandInput): CommandId | undefined {
+export function commandAliasForInput(input: CommandInput, platform: string = 'linux'): CommandId | undefined {
+  if (input.type === 'keyDown' && !input.isComposing && !input.alt && !input.shift &&
+    (platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta) &&
+    input.key.toLowerCase() === 'f') return 'find-page';
   if (input.type !== "keyDown" || input.alt || input.control || input.meta || input.shift) return undefined;
   return COMMANDS.find((command) => command.aliases?.some((alias) => alias === input.key))?.id;
 }
