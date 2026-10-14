@@ -118,7 +118,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 
 - 在 English / 简体中文 / 繁體中文下逐面看工作台、站点状态、结果库、综合、设置与命令面板：切换语言后无截断、异常换行或缺失的 `aria-label`。
 - 核对 `README.md`、`CHANGELOG.md` 与设置页是否覆盖本版新增功能、限制、**权限**与隐私行为；删除已失效的入口与描述。改过权限或数据流向的版本必须同时看设置页里同步与本机数据两块的隐私文案。
-- **模型映射逐站勾选**：拿 `README.md` 的映射表对着 `desktop/src/site-runtime/adapters-*.js` 的 `think()`/`fast()`/`state()` 九站过一遍（站点 A/B 灰度期要写清两条路径，不能只写新的）。
+- **模型映射逐站勾选**：拿 `docs/adapters.md` 的站点卡对着 `desktop/src/site-runtime/adapters-*.js` 的 `think()`/`fast()`/`state()` 九站过一遍（站点 A/B 灰度期要写清两条路径，不能只写新的）；README 仅保留功能概览并链接站点说明。
 - **破坏性操作、明文存储、权限范围、不可撤销后果、数据保留规则不得弱化**；按钮、确认文案与实际动作必须一致。特别是「本机重置不删 Drive 数据」「删除是 tombstone」这两条承诺语义。
 - 报障链路依赖两个 GitHub label：`release-watch` 由 `scripts/watch-releases.js` 自建；**`site-breakage` 必须在仓库里手工建过一次**（`gh label create site-breakage --color d73a4a --description "站点适配失灵"`），issue 模板引用不存在的 label 会静默丢弃、无任何报错。换仓库/fork 后要重建。
 - 更新 `CLAUDE.md` 顶部的「最后与代码核对」日期与版本。
