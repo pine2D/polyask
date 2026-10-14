@@ -54,6 +54,7 @@ require("../site-runtime/md-diagram.js");
 require("../site-runtime/md.js");
 require("../site-runtime/adapters-intl.js");
 require("../site-runtime/adapters-intl2.js");
+require("../site-runtime/adapters-intl3.js");
 require("../site-runtime/adapters-cn.js");
 require("../site-runtime/adapters-cn2.js");
 require("../site-runtime/adapters-cn3.js");

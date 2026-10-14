@@ -17,7 +17,7 @@ function runtime(host, document) {
     t: key => key, console: { debug() {} }, MouseEvent: Event, KeyboardEvent: Event, CustomEvent: Event,
     Date: { now: () => now }, setTimeout: (fn, ms) => { now += ms; fn(); },
   });
-  for (const file of ["core.js", "tier.js", "selection-match.js", "adapters-intl.js", "adapters-intl2.js", "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js"])
+  for (const file of ["core.js", "tier.js", "selection-match.js", "adapters-intl.js", "adapters-intl2.js", "adapters-intl3.js", "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js"])
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8"), context);
   return { S: context.window.__AMS, now: () => now, events, dispatch: msg => new Promise(resolve => listener({ source: "AMS", ...msg }, {}, resolve)) };
 }

@@ -140,7 +140,7 @@ test("九站 diagnose 的每条检查都带合法 kind，且恰有一条 reach",
   });
   // 按 preload 顺序带上 history 三卷，并停在会话路由上：九站的 capture 探针真的产出，kind 才在本断言的覆盖面内。
   Object.assign(ctx, { URL, location: { href: "https://example.test/chat/id-1", hostname: "example.test" } });
-  for (const file of ["selection-match.js", "adapters-intl.js", "adapters-intl2.js",
+  for (const file of ["selection-match.js", "adapters-intl.js", "adapters-intl2.js", "adapters-intl3.js",
     "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js",
     "history-route.js", "history.js", "history-locate.js", "history-adapters.js"]) vm.runInNewContext(source(file), ctx);
   vm.runInNewContext(source("diag.js"), ctx);

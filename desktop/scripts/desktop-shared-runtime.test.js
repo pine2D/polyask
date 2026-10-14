@@ -146,8 +146,8 @@ function diagMustResolveTranslationAcrossModuleBoundary() {
 
 // 磁盘上 site-runtime 的每一个 *.js 都必须被 preload require（没有豁免：扩展专用的 pill.js 已随扩展删除）。
 // preload 注入的完整顺序链：i18n 先于一切；core 先于 send/upload/md（它们读 window.__AMS）；
-// 六卷适配器先于 generation/diag（后两者包装 __AMS.adapters）。新开一卷适配器要在这里登记位置。
-const PRELOAD_CHAIN = Object.freeze(["i18n", "core", "read-commands", "tier", "selection-match", "send", "upload", "md-head", "md-diagram", "md", "adapters-intl", "adapters-intl2",
+// 七卷适配器先于 generation/diag（后两者包装 __AMS.adapters）。新开一卷适配器要在这里登记位置。
+const PRELOAD_CHAIN = Object.freeze(["i18n", "core", "read-commands", "tier", "selection-match", "send", "upload", "md-head", "md-diagram", "md", "adapters-intl", "adapters-intl2", "adapters-intl3",
   "adapters-cn", "adapters-cn2", "adapters-cn3", "adapters-cn4", "generation", "history-route", "history", "history-locate", "history-adapters", "diag"].map((name) => `${SITE_RUNTIME}/${name}.js`));
 
 // 自洽锚点：preload 的 require 列表 ↔ 磁盘上的 site-runtime/*.js 双向覆盖 + 完整顺序链。
@@ -189,6 +189,7 @@ siteRuntimeMustRegisterExactlyOneMessageListener();
 coreMustResolveTranslationAcrossModuleBoundary();
 adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-intl.js`, "claude.ai", "diag_modelEntry");
 adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-intl2.js`, "chatgpt.com", "diag_intelEntry");
+adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-intl3.js`, "gemini.google.com", "diag_modelEntry");
 adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-cn.js`, "deepseek.com", "diag_deepThink");
 adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-cn2.js`, "kimi.com", "diag_modelEntry");
 adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-cn3.js`, "yuanbao.tencent.com", "diag_modeBtn");

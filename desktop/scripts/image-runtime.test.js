@@ -125,7 +125,7 @@ async function geminiMissingControlsRequireAction() {
     window: { __AMS: S }, t: (key) => key, console,
     document: { querySelector: () => null, querySelectorAll: () => [] },
   };
-  vm.runInNewContext(fs.readFileSync(path.join(ROOT, "adapters-intl.js"), "utf8"), context);
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, "adapters-intl3.js"), "utf8"), context);
   assert.equal(await S.adapters["gemini.google.com"].attach([{}], {}, Date.now() + 500), "attachment_action_required");
 }
 

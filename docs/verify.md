@@ -1183,3 +1183,15 @@ Windows/macOS 本轮原生、物理输入法与读屏、真实 Drive 授权及�
 **macOS**
 
 - [ ] M1 没有真机，未执行。拿到真机后至少补做 W1、W2、W3、W8、W10 的对应项（「跟随系统」读系统网络设置；启动阻断开关能被 `system` 和自定义覆盖；钥匙串首次访问提示时保存密码不会把保存流程卡住超过 10s）。拿到真机之前，Release 正文的验收限制必须写「自定义代理未在 macOS 上真机验证」。
+
+
+## 2026-10-14 Gemini 4 与发布情报适配复核
+
+复用已授权 Linux/WSL 档案，启动前确认临时开发运行时与发行包的 Cookie 加密 fuse 一致，每次改适配器后重启 `npm start`；所有实际切档均调用目标站点隔离上下文的生产 `__AMS`。未发送提问，结束恢复原模型/模式，关闭本轮启动的实例。
+
+- Gemini：真实模型项为 3.5 Flash-Lite / 3.8 Flash / 3.1 Pro / 4 Argon；Argon 的 Thinking level 内为 Low/Medium/High。先发现旧预设继续选 Pro、Argon 状态未知，再发现等级跨模型保留导致 Flash High，均先 RED 后修。最终快→思→思→快为 Flash Low / Argon High / Argon High / Flash Low，生产 `resolveTier` 均为 `mode_only`、状态匹配、菜单残留为零。Low 关闭标签省略等级，动作流程重开关联等级菜单复读 selected。旧 Extended 菜单与明确关联的独立浮层、新版缺级/禁用/未生效及其它菜单同名项由离线回归覆盖。
+- 豆包：真实新版 model testid 按钮只有箭头，父触发器 id 与菜单 aria-labelledby 关联；两项为豆包快速/豆包专家，选中项直属 SVG 勾。最终快→思→快均在生产关联菜单读到对应勾，菜单收尾为零；关闭后 `state=null`，`resolveTier=unconfirmed`，不缓存展开时的观察，不把粗档位确认外推到无标签布局。control 诊断已通过，tier 提示仍保留，不阻止群发。Escape 关闭延迟/失效先 RED 再补回点当前入口的兜底；隐藏选中项与不关联菜单由离线负例守住。
+- ChatGPT：实际模型短标签 6，现有 GPT-6 预设快/思/快/思复读 0/4/0/4，展开时 selection=preferred；结束恢复原思考档。Claude：快/思/快为 Opus 5.5 Medium / Fable 5.1 Max / Opus 5.5 Medium，手动 Haiku 5.5 Medium 的 state=fast；结束恢复 Fable 5.1 Medium。千问真实菜单仍为 Qwen3.7-千问 / Qwen3.7-Max / Qwen3.6-Flash，百炼图像 API 公告未改变当前日常聊天入口。
+- 九站生产只读巡检已执行。DeepSeek 当时为登录路由与手机号验证码表单，没有输入框，未把它归因于适配器；Kimi 当前非预设档的 tier 提示保留。其余页面输入框与本轮目标控制入口可用，不等同于九站真实发送验收。
+
+独立只读审查发现的菜单范围、旧布局兼容、隐藏证据及轮询异常边界均已修复并复核无遗留。验收范围仅本机英文站点页面和离线回归；没有覆盖其它账号灰度、中文站点布局、Windows/macOS 真机、真实发送或交互式回答采集。

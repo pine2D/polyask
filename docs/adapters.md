@@ -7,7 +7,7 @@
 ## 加新站点
 
 1. **站点登记三处**：`desktop/src/main/sites.ts` 的 `SITES`（`{key,host,label,url,authHosts,transitHosts?,image,intl}`——`image` 决定图片群发可用性，**必须与适配器是否实现 `attach` 一致**；`intl` 决定「国外/国内」的分组语义）、`desktop/src/shared/contracts.ts` 的 `SITE_KEYS`（**两者顺序必须一致**，否则 `desktop/src/main/diagnostics.ts` 判 `site_order`——它要求上报的站点序列仍是 `SITE_KEYS` 的子序列）、`desktop/src/site-runtime/generation.js` 的停止键表（键就是**适配器注册键**；不补 = 永远观测不到该站的「生成中/已完成」，卡片停在「已提交」）。
-2. 适配器：`desktop/src/site-runtime/adapters-intl.js` / `adapters-intl2.js`（国际）或 `adapters-cn.js` / `adapters-cn2.js` / `adapters-cn3.js` / `adapters-cn4.js`（国内）。**分卷只因 300 行上限而存在，按站切，不按职责切**：当前 `intl` = Claude + Gemini、`intl2` = ChatGPT、`cn` = DeepSeek + 豆包、`cn2` = Kimi + 智谱、`cn3` = 元宝、`cn4` = 千问。
+2. 适配器：`desktop/src/site-runtime/adapters-intl.js` / `adapters-intl2.js` / `adapters-intl3.js`（国际）或 `adapters-cn.js` / `adapters-cn2.js` / `adapters-cn3.js` / `adapters-cn4.js`（国内）。**分卷只因 300 行上限而存在，按站切，不按职责切**：当前 `intl` = Claude、`intl2` = ChatGPT、`intl3` = Gemini、`cn` = DeepSeek + 豆包、`cn2` = Kimi + 智谱、`cn3` = 元宝、`cn4` = 千问。
    **新开一卷要登记三处**（漏哪处都是静默失效）：① 分卷文件本身；② `desktop/src/preload/site.ts` 的 `require` 列表——**排在其它适配器之后、`generation.js` 与 `diag.js` 之前**（这两份按「已填充的注册表」统一包装，注册晚于包装就静默拿不到通用检查与生成态）；③ `desktop/scripts/desktop-shared-runtime.test.js` 的 `PRELOAD_CHAIN`（与 require 列表逐项等值对账，只改一边就红），顺手在文末补一行 `adapterMustResolveTranslation(<新卷>, <某 host>, <某 diag key>)`。**`scripts/test-site-selection.js` 的适配器清单是从 `site.ts` 的 require 列表派生的**：新开一卷只写文件、不 require 进 preload，九站对账当场红——没有「挂上就自动纳入」的旁路。
 3. `.github/ISSUE_TEMPLATE/site-breakage.yml` 的「哪个站点」下拉：`标签 (host)` 两项都要与站点表对上，站点名不一致也红。
 4. 按下方契约表补可选钩子。不补 = 该能力静默降级，不是报错。
@@ -96,8 +96,8 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 例外全部在 `adapters-*.js` 里。`core.js` 没有这条规则，它只负责把适配器抛出的异常转成 `runMode` 返回 false 或 `submitPrompt` 的 `code:"error"`（`adapter.submit` 抛 `inject_failed` / `timeout` 时原样保留该码；`timeout` 与 `error` 同属提交不确定，重试仍需用户确认）。
 
 1. **DeepSeek `_selectMode`** 找不到模式 radio → 静默跳过。radio 仅空对话首屏存在，聊天中缺失属正常态，档位真值由 DeepThink 开关兜底。
-2. **Gemini `_setThinking`** 没有直达开关且 `on === false` → 静默 return（关思考时没有开关可关）。
-3. **Gemini `_setThinking`** 找不到「thinking level / 思考等级」子菜单入口 → 静默 return（窄屏或该模型无此项，属合法缺席）。反例：**子菜单在但目标等级缺失必须 throw**，静默会漏设等级。
+2. **Gemini `_setThinking`** 没有直达开关、没有等级入口且 `on === false` → 静默 return（旧布局没有开关可关）；已展开并在入口后代或 `aria-labelledby` 明确关联的等级菜单读到旧 Extended、且没有 Low/Medium/High 时也保留此旧快档分支。其它菜单的 Extended 不算旧布局证据。新版有等级入口时必须选 Low 并复读，不再跳过。
+3. **Gemini `_setThinking`** Pro 旧布局找不到「thinking level / 思考等级」子菜单入口 → 静默 return（窄屏或该模型无此项，属合法缺席）。Argon 的 High 必需，入口缺失也 throw；**子菜单在但目标等级缺失必须 throw**，静默会漏设等级。
 4. **千问 `_selectModel`** 无模型入口，且可见的已选中日常标签、输入框、快速/思考研究菜单按钮同时存在 → 跳过选模型，继续 `_setThink` 并复读。只承诺模式、不承诺底层模型；工作页、未就绪页、模式按钮缺失仍抛错，目标选项缺失或点击未生效也仍抛错。
 
 **已撤销的例外**：原第 2 条「Claude `_setThinking` 连裸 Thinking 开关也缺失 → 静默结束」于 2026-08-31 删除。当时的理由是「思考控件整个缺席在旧布局属合法态」，但真机复核发现控件一直在、只是 `effort-menu-trigger` / `effort-option-*` 两个 testid 改没了；静默让 `think()` 一路假成功、上报绿而档位纹丝不动（本次事故里最难发现的一站）。现在 Claude 的 effort 入口缺失、档位为空一律 throw。**加新例外前先想清楚：它是「站点本就没有这个能力」，还是「我们的选择子过期了」——后者永远不该静默。**
@@ -186,7 +186,7 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 ### ChatGPT（`chatgpt.com`，**`desktop/src/site-runtime/adapters-intl2.js`**）
 
-- **本站单独一卷**：`adapters-intl.js` 触及 300 行上限后按站分卷，ChatGPT 移到 `adapters-intl2.js`（Claude / Gemini 留在 `adapters-intl.js`）。分卷登记见本文「加新站点」。
+- **本站单独一卷**：按 300 行上限拆到 `adapters-intl2.js`；Claude 在 `adapters-intl.js`、Gemini 在 `adapters-intl3.js`。分卷登记见本文「加新站点」。
 - 档位：think = `_selectModel()`（显式优先 GPT-6，账号未提供时使用已知备用 GPT-5.6 Sol） + `_pickEdge(true)`（当前滑块最高可用端点）；fast = 同模型 + `_pickEdge(false)`（最低端点）。不泛匹配其它版本或 GPT-6.1 Sol/Astra；重复最高优先候选、未知或不可用候选不能被猜测点击。新旧菜单、备用及不同 min/max 范围已离线回归；本次真实页面核验另记 `docs/verify.md`。
 - `state()` 只读关闭菜单后的可见标签，剥已知模型前缀再判粗档位；未知 GPT-6.x / Sol / Astra 标签不冒充本次预设。`selection()` 仅在当前页面可同时读取已选模型及滑块端点时返回精确证据：GPT-6 为 `preferred`、GPT-5.6 Sol 为 `alternative`；关闭后无模型证据则为 `mode_only`，不缓存上轮读数。中间档或控件缺失不能证明目标端点。
 - **2026-10-08 英文菜单实测**：新模型项短标签为 `6`，显式登记为 GPT-6 别名，与 `GPT-6` 共用唯一候选校验；不泛认其它数字。滑块实际范围 0..4，快→思→快分别复读 0/4/0、精确模型均为 GPT-6；闭合标签为 Instant/Pro/Instant。
@@ -201,16 +201,17 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - **2026-09-29 切档证据**：现代菜单的 Power 最近 `role=menu` 包含模型 radio，匹配范围限定此菜单（兼容旧 testid）。实际选中 GPT-5.6 Sol 并复读后，把滑块推到 4/4 或 0/4；`selection()` 在菜单仍可读时返回 `preferred`，关闭后仅凭标签返回 `mode_only`，不复用缓存模型。缺字段、隐藏滑块、模型未选中均不能宣称精确确认。
 - **2026-09-30 副本实测**：首轮先出现 `/c/local-chatgpt%3A<id>`，再变为 `/c/<server-id>`；旧规则只识别 `WEB:<id>`，会误判用户切会话并封存空副本。`history.js` 只把 `WEB` / `local-chatgpt` 加 `:` 或 `%3A` 的明确临时格式视为尚未确定路由，正式地址仍锁定；未知前缀、浏览器前后退、其它正式会话不能沿用归属。流式正文还会在首 token 后新增 `[data-chatgpt-selection-message-id]` 包装；历史回答根优先用生成前后都存在的 `[data-content-search-unit-key]` 及其 key，旧布局仍回退原根。不要用延迟插入的 selection 包装锁定首 token，否则下一次读取就误判替换，仅保存开头。
 
-### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl.js`）
+### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl3.js`）
 
-- 档位：think = `_selectModel(/\b\d+(?:\.\d+)?\s*pro\b/i)` + `_setThinking(/^(extended|扩展)/i)`（开）；fast = `_selectModel(/\b\d+(?:\.\d+)?\s*flash\b(?!\s*-?\s*lite)/i)` + 同项**关**。**两侧模型正则现在都版本无关**：2026-08-31 事故当天只修了 fast 一半，深档写死 `3.1 Pro` 同样会在 Google 升版号那天整站抛「未找到模型」。Pro 侧没有 Flash-Lite 式的更弱同名档，因此不需要后瞻。
-- **快档模型正则必须版本无关**（2026-08-31 事故）：菜单从 `3.6 Flash` 换成 `3.7 Flash`，写死版本号的旧正则当天让整站 `fast()` 抛「未找到模型」。现按「任意版本号 + Flash、且不是 Flash-Lite」匹配，后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法——**Lite 是更弱的另一档，绝不能被当成快档选中**。think 侧已对称改成「任意版本号 + Pro」，Extended thinking 开关不动。
+- 档位：think 优先实际菜单 `4 Argon` + High；菜单没有 Argon 时继续匹配任意版本 Pro + Extended（新版等级菜单则 High）。Argon 在场但禁用或同优先项重复时直接报错，不偷偷改选 Pro；`4.1 Argon` / `4 Argon-Lite` 不当已确认模型。fast 仍匹配任意版本 Flash，排除 Flash-Lite；旧版关闭 Extended，新版选择 Low。Argon 与新版 Low/High 必须复读子菜单的 `.selected` / `aria-checked`，不靠粗档位判断冒充等级确认。
+- **2026-10-14 英文菜单实测**：`3.5 Flash-Lite` / `3.8 Flash` / `3.1 Pro` / `4 Argon Complex tasksNew`，Thinking level 展开后 Low / Medium / High 是入口节点的后代（`gem-menu-item` / `role=menuitem`）。等级跨模型保留，Argon High 后仅切 Flash 会变成 `currently Flash High`；选 Low 后标签省略等级、显示 `currently Gemini Flash`，所以必须重开子菜单复读选中态。High/Low 只认该入口的后代，排除同 role 的其它同名项。Gemini 拆入独立分卷为完整等级流程留出行数余量。
+- **快档模型正则必须版本无关**（2026-08-31 事故）：菜单从 `3.6 Flash` 换成 `3.7 Flash`，写死版本号的旧正则当天让整站 `fast()` 抛「未找到模型」。现按「任意版本号 + Flash、且不是 Flash-Lite」匹配，后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法——**Lite 是更弱的另一档，绝不能被当成快档选中**。think 的 Pro 备用同样版本无关，Argon 使用实测明确版本。
 - 菜单项实测（2026-08-31）：`3.5 Flash-Lite Fastest answers` / `3.7 Flash All-around helpNew` / `3.1 Pro Advanced reasoning`(selected) / `Extended thinking Complex problem solving`。当前选中项带 `.selected` 类，鼠标高亮项带 `.active` 类——**判选中只能看 `.selected`**。
 - **`escMenus()` 对本站无效**（2026-08-31 真机：Escape 与点 `.cdk-overlay-backdrop` 都关不掉，`aria-expanded` 一直是 `true`），**只有再点一次触发器才收**。所有收尾一律走 `_close()`：先 `escMenus()`，仍开着就 `clickEl(_modelBtn())`。菜单不关会罩住输入框、让随后的注入点空。`_selectModel` / `_setThinking` 的每条出口（含 throw 前）都已改走它。
 - 模型按钮 `_modelBtn()`：先找 aria-label 含 `mode picker` 的 button，回退 `button[class*="input-area-swi"]`（窄屏模型按钮无 `aria-haspopup`）。菜单项选择子常量 `_MI = "button.mat-mdc-menu-item, [role=menuitem]"`；菜单可能要 `openMenu` 两次。
 - **`_MI` 必须过 `_items()` 只取可见项**（2026-08-14 真机）：页面常驻一个隐藏的导出菜单（`gv-pm-saved-export-menu gv-hidden`，含 JSON / Markdown 两个 `[role=menuitem]`）。老写法 `if (!document.querySelector(this._MI)) openMenu(btn)` 因此恒判「菜单已展开」，**模型按钮从来没被点开过**，随后在 `[JSON, Markdown]` 里找 Flash 自然抛「未找到模型」。开菜单改用 `aria-expanded !== "true" || !this._items().length` 判定，找项一律走 `this._find(re)`。
-- **`state()` 按模式名判粗档位，不是复合条件**：aria-label 现为 `Open mode picker, currently <Mode>`（切到深度思考后是 `currently Pro Extended`）。判定顺序是 `flash` → fast，否则 `\bpro\b|extended|扩展` → think，其余 null——aria-label 不报 Extended thinking 开关状态，所以不能拿它证明思考已开；`think()` 仍会幂等地把 Extended thinking 一并打开。
-- `_setThinking` 双布局：当前布局是模型菜单里的直达开关（按 `.selected` 类或 `aria-checked` 幂等点击）；旧布局走 `/thinking level|思考(等级|程度)?/i` 嵌套子菜单，最多重开子菜单（`openMenu(trig)` 指针序列，**不是 hover**——重发 hover 那招是 Kimi 的，两站机理不同别互抄）并重取目标项 6 轮，命中后先 `focus()` + Enter keydown 再 `clickEl`。**子菜单在但目标等级缺失必须抛「Gemini: 思考等级选项未找到」**；整段子菜单缺席才算合法静默跳过。
+- **`state()` 按模式名判粗档位，不是复合条件**：aria-label 为 `Open mode picker, currently <Mode>`。Flash 判 fast，Pro / Argon / Extended 判 think，其余 null；它不证明模型版本或等级。实际 Argon High 的标签已确认，Low 标签会省略等级；等级确认由动作流程单独复读，读状态不会开菜单。
+- `_setThinking` 兼容直达 Extended 开关与嵌套等级菜单，按 `.selected` / `aria-checked` 幂等操作。子菜单最多重开并重取 6 轮，沿用 `openMenu(trig)` 指针序列与 `focus()` + Enter keydown + `clickEl`；High/Low 点击后重开复读，所有等待透传 deadline。子菜单在但目标缺失、禁用或未生效必须 throw；Argon 不允许缺少等级入口，Pro 旧布局缺整个入口才保留合法静默分支。
 - `attach` 先展开 Upload & tools，再取无 capture 的 `image/*` 输入并等待附件确认，finally 关菜单。`answer()` 取末个 `message-content` → `.markdown`，回退整块。
 - 中文界面报「切不动」时，先真机核对「扩展」这个标签再改正则——英文 Extended 已真机确认，中文是直译候选。真机探测坑（同 URL 双 page target；**批量重载站点视图可能触发 Google「unusual traffic」验证码插页**）见 `docs/verify.md`「探测坑」。
 
@@ -230,6 +231,7 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - 档位：think = `_select(/专家$/, "think")`、fast = `_select(/快速$/, "fast")`。**锚定的是后缀不是前缀**——菜单项实测带品牌与版本前缀（`豆包 2.1 Turbo 专家`），写成 `/^专家/` 会一项都匹配不上。**只切 composer 模式按钮的菜单项，无独立思考开关、无模型选择。**
 - `state()` 读模式按钮文本：`/专家$/` 或 `/^豆包\s+[\d.]/`→think、`/快速$/`→fast、**其余 → null**。「超能模式」是**历史档位**（2026-08-31 真机复核菜单只剩 `豆包 快速` / `豆包 2.1 Turbo专家` 两项），`state()` 里**没有它的判定分支**：它若回归会落进「其余 → null」，表现为档位读不出，统一编排保留未确认提示后继续发送。`^豆包\s+版本号` 这条分支是因为选中专家档后按钮只回显 `豆包 2.1 Turbo`、后缀被吃掉（真机 2026-08-26）。
 - `_select(re, expected)` 的第二参是**幂等短路的判据**：先 `state() === expected` 就直接返回，不开菜单。改档位正则时两个参数要一起对，只改正则会让短路永久失效（每次群发都白开一次菜单）。`_modeBtn()` 从候选中取离 composer 最近者，避免撞到侧栏标题；`_select` 最多 3 轮，`openMenu` 展开后对 `[role="menuitem"]` 用**原生 `item.click()`**，每轮 `escMenus()`；按钮缺失或 3 轮未选中都抛异常。
+- **2026-10-14 新版图标入口实测**：优先 `button[data-testid="chat_input_action_model"]`；其父触发器有 `data-slot="dropdown-menu-trigger"` / `aria-haspopup="menu"` 与 id，菜单必须 `data-state="open"` 且 `aria-labelledby` 指回该 id。菜单两项为 `豆包 快速` / `豆包 专家`，选中标记是该项直属的 SVG 勾，项目图标为内部 IMG；多枚勾或不属于 model 入口的菜单不作档位证据。动作重取 React 重绘后的按钮，重新打开关联菜单复读，结束收起；隐藏/禁用项不点。关闭后的按钮只有箭头、没有文本/aria-label/title，因此 `state()` 返回 null，统一编排保留 `unconfirmed` 提示；诊断 control 正常、tier 提示，不影响群发。只读状态不开菜单、不缓存前次读数；旧文本按钮路径保留。
 - `answer()` 从 `[data-message-id]` 中过滤掉自身或子节点带 `justify-end` 的用户消息（AI 消息无右对齐），取末条 → 不在思考块里的第一个 `.md-box-root`。思考块认三种标记（只在本条消息内）：插件节点 `data-plugin-identifier="block_type:10040 | thinking_block.scene:N"`（正文块是 `block_type:10000`）、思考进度区 `data-message-selection-module="thinking_progress"`、类名含 think（`think-collapse-block-<hash>` 等）。思考中展开的步骤标题同样用 MdBox 渲染成 `.md-box-root`，2026-10-04 第 4 轮快照里中途的副本是「正在思考\n\n规划说明结构」。现在没有正文、只有思考块时返回 null（同千问/Kimi），空占位消息仍返回消息本身；思考块折叠常驻而终态不是 MdBox（繁忙/违规提示、卡片、图片）时，取最后一个最外层思考块之后（逐层向上到消息为止）第一个自身不含思考块、有字或有图的兄弟，副本不带思考步骤（回归 `capture-chrome-regress.test.js`）。标记取自豆包前端包与真机 `data-plugin-identifier` 属性；思考中的真机 DOM 尚未直接采到。`attach` 走 `input[type="file"][accept*="png"]`。
 - 渲染会**在中英文与数字之间插空格**——marker 匹配先去空白再比。
 

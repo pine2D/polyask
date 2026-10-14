@@ -43,7 +43,7 @@ function fixture(file, host, mode = 'ok') {
 }
 
 for (const [label, file, host] of [
-  ['Gemini', 'adapters-intl.js', 'gemini.google.com'],
+  ['Gemini', 'adapters-intl3.js', 'gemini.google.com'],
   ['千问', 'adapters-cn4.js', 'qianwen.com'],
   ['智谱', 'adapters-cn2.js', 'chatglm.cn']
 ]) {

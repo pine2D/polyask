@@ -79,7 +79,7 @@ function geminiCase(build) {
   // 真机 2026-08-31：Escape / backdrop 都关不掉 Gemini 的 mode picker（escMenus 故意不改 open），
   // 只有再点一次触发器才收 —— 假对象照抄这个语义，否则 _close 的兜底分支永远测不到。
   S.clickEl = (el) => { clicked.push(el); if (el === button) open = false; return true; };
-  vm.runInNewContext(source("adapters-intl.js"), { window: { __AMS: S }, t: (key) => key, document, console });
+  vm.runInNewContext(source("adapters-intl3.js"), { window: { __AMS: S }, t: (key) => key, document, console });
   return { adapter: S.adapters["gemini.google.com"], S, clicked, items, state, button, isOpen: () => open };
 }
 

@@ -92,9 +92,19 @@
       },
     },
 
-    // 豆包：composer 模式按钮(显示当前模式)，菜单两项 [role=menuitem]：「豆包 快速」/「豆包 2.1 Turbo」+专家角标（真机 2026-09-15 复核不变；「超能」仅历史档位，留在 _modeBtn 过滤里兜底）
+    // 豆包：新版 model testid 按钮仅图标；旧版仍按当前模式文本定位。
     "doubao.com": {
+      _visible: function (node) {
+        const r = node.getBoundingClientRect();
+        const style = typeof getComputedStyle === "function" ? getComputedStyle(node) : null;
+        return r.width > 0 && r.height > 0 && !node.hidden &&
+          (!style || style.display !== "none" && !/hidden|collapse/.test(style.visibility));
+      },
       _modeBtn: function () {
+        const modern = document.querySelector?.('button[data-testid="chat_input_action_model"]');
+        if (modern?.getAttribute("data-testid") === "chat_input_action_model") {
+          if (this._visible(modern)) return modern;
+        }
         const found = [...document.querySelectorAll("button")].filter((x) => {
           const t = (x.textContent || "").trim();
           return (/^豆包\s+\S/.test(t) || /^(快速|专家|超能)/.test(t)) && t.length < 30;
@@ -107,6 +117,30 @@
           .sort((a, b) => Math.abs(a.r.y - cr.y) - Math.abs(b.r.y - cr.y))[0];
         return near && Math.abs(near.r.y - cr.y) < 240 ? near.el : null;
       },
+      _modeMenu: function (btn) {
+        const id = btn?.closest?.('[data-slot="dropdown-menu-trigger"][aria-haspopup="menu"]')?.id;
+        if (!id) return null;
+        return [...document.querySelectorAll('[role="menu"]')].find(menu => {
+          return this._visible(menu) && menu.getAttribute("data-state") === "open" &&
+            (menu.getAttribute("aria-labelledby") || "").split(/\s+/).includes(id);
+        }) || null;
+      },
+      _menuState: function (btn) {
+        const menu = this._modeMenu(btn);
+        const selected = menu ? [...menu.querySelectorAll('[role="menuitem"]')].filter(item =>
+          this._visible(item) && /^豆包\s+.*(?:快速|专家)$/.test((item.textContent || "").trim()) && item.querySelector(":scope > svg")) : [];
+        if (selected.length !== 1) return null;
+        return /专家$/.test(selected[0].textContent.trim()) ? "think" : "fast";
+      },
+      _closeModeMenu: async function (deadline) {
+        escMenus();
+        const btn = this._modeBtn();
+        if (btn?.getAttribute?.("data-testid") !== "chat_input_action_model") return;
+        // 等 React 关闭状态落地；仍开启才回点入口。到期后只允许关闭，不再选项。
+        if (!deadline || Date.now() < deadline) await sleep(Math.min(250, Math.max(0, (deadline || Infinity) - Date.now())));
+        if (this._modeMenu(this._modeBtn())) clickEl(this._modeBtn());
+        if (!deadline || Date.now() < deadline) await sleep(Math.min(250, Math.max(0, (deadline || Infinity) - Date.now())));
+      },
       _select: async function (re, expected, deadline) {
         try {
           checkDeadline(deadline);
@@ -114,13 +148,28 @@
             if (this.state() === expected) return;
             const btn = this._modeBtn();
             if (!btn) throw new Error("豆包: 模式按钮未找到"); // 静默 return 会让 runMode 误报"已切到"
-            if (!findByText('[role="menuitem"]', re)) tierAction(deadline, () => openMenu(btn));
-            const item = await waitFor(() => findByText('[role="menuitem"]', re), 1500, 120, deadline);
+            const modern = btn.getAttribute?.("data-testid") === "chat_input_action_model";
+            if (modern ? !this._modeMenu(btn) : !findByText('[role="menuitem"]', re)) tierAction(deadline, () => openMenu(btn));
+            const item = await waitFor(() => {
+              if (!modern) return findByText('[role="menuitem"]', re);
+              const menu = this._modeMenu(this._modeBtn());
+              const items = menu ? [...menu.querySelectorAll('[role="menuitem"]')].filter(node => {
+                return this._visible(node) && !node.disabled && node.getAttribute("aria-disabled") !== "true" &&
+                  node.getAttribute("data-disabled") == null && re.test((node.textContent || "").trim());
+              }) : [];
+              return items.length === 1 ? items[0] : null;
+            }, 1500, 120, deadline);
+            if (modern && item && this.state() === expected) return;
             if (item) { tierAction(deadline, () => item.click()); await sleep(500, deadline); } // 选项 onclick，用原生 click
-            escMenus(); await sleep(200, deadline);
+            await this._closeModeMenu(deadline); await sleep(200, deadline);
+            if (modern && item) {
+              tierAction(deadline, () => openMenu(this._modeBtn())); // React 重绘后重取入口
+              if (await waitFor(() => this.state() === expected, 1500, 120, deadline)) return;
+              await this._closeModeMenu(deadline);
+            }
           }
           throw new Error("豆包: 目标模式未选中");
-        } finally { escMenus(); }
+        } finally { await this._closeModeMenu(deadline); }
       },
       diagnose: function () {
         return [
@@ -130,6 +179,7 @@
       },
       state: function () {
         const b = this._modeBtn();
+        if (b?.getAttribute?.("data-testid") === "chat_input_action_model") return this._menuState(b);
         const t = b ? (b.textContent || "").trim() : "";
         return (/专家$/.test(t) || /^豆包\s+[\d.]/.test(t)) ? "think" : /快速$/.test(t) ? "fast" : null;
       },
