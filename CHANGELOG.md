@@ -8,9 +8,11 @@
 
 ## [未发布]
 
-### 变更
+## [1.21.0] - 2026-10-14
 
-- README 改为简洁的关键功能列表，整理安装、使用与数据说明，模型映射和适配细节统一链接专题文档。
+验收范围：Linux/WSL 下通过 1,985 项应用与界面测试、432 项运行时测试、三语共 144 种原生查找布局回归及打包冒烟；重启开发态后在真实 Gemini、豆包页面验证切档，未发送问题。
+
+验收限制：查找布局使用本地测试页面，未在真实已登录 AI 页面上逐站核验，也未在 Windows、macOS 真机验证；五种发行包的实机安装和经代理的真实 Google Drive 同步未在本轮核验。
 
 ### 新增
 
@@ -20,6 +22,10 @@
 
 - Gemini 深度思考优先选择新上线的 Gemini 4 Argon，并设置 High；未提供 Argon 的账号继续使用 Pro。新版快速档选择 Flash 并恢复 Low，避免沿用深度思考的等级；旧版 Extended thinking 开关继续兼容。等级缺失、不可用或点击未生效时会报告切档失败。
 - 豆包支持新版仅显示图标的模型入口，可切换“专家”和“快速”，并复读入口关联菜单的勾选状态。关闭菜单后没有可读档位标签的页面仍保留未确认提示，群发继续进行；不把该入口误报为控件缺失。
+
+### 变更
+
+- README 改为简洁的关键功能列表，整理安装、使用与数据说明，模型映射和适配细节统一链接专题文档。
 
 ## [1.20.0] - 2026-10-13
 
@@ -1301,7 +1307,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.20.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.21.0...HEAD
+[1.21.0]: https://github.com/pine2D/polyask/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/pine2D/polyask/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/pine2D/polyask/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/pine2D/polyask/compare/v1.17.0...v1.18.0

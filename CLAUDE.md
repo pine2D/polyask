@@ -2,7 +2,7 @@
 
 PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点并排比较。**切档可报错，群发不能断。** 仅发五个未签名 Desktop 包；Chrome 扩展已停维并删除（tag `archive/extension-v0.25.1`）。
 
-<!-- 最后与代码核对：2026-10-10 · desktop/package.json v1.17.0。发版前重核并更新。
+<!-- 最后与代码核对：2026-10-14 · desktop/package.json v1.21.0。发版前重核并更新。
      本文件 ≤11 KiB；新增硬约束先精简或外迁 docs/。 -->
 
 ## 按任务读取专题文档
@@ -21,7 +21,7 @@ PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点�
 
 - **提交不确定 ≠ 可以重发**：命令超时、无回包、`submit_unconfirmed` 一律原样交给用户点 retry。**只有**实现了只读 `adapter.submitted(text)` 的站（目前仅 Kimi）、且 `wasSubmitted` 回包 `supported:true, ok:false` 明确确认「末条用户消息不是本次内容」，才允许自动重发一次；这条分支由 `broadcast.ts` 的常量 `POLYASK_KIMI_RESUBMIT` 拦着，**默认 `false`，F067 两条真机硬用例通过前不得打开**。回包形状不对一律按不支持处理（`normalizeSubmitted` fail-closed）。给没有 `submitted()` 的站加自动重发 = 同一个问题被问两遍且用户无从察觉。
 - **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删；清空历史/结果库也要留标记，否则其它设备会同步回来。草稿墓碑在超过 30 天且所有已知 fragment 都不再携带该活草稿后才回收墓碑本身（`draft-retention.ts`，规则见 `docs/desktop.md`），别的实体不得照搬。**唯一例外是「重置全部本机数据」**：先断开 Drive、再物理清空本机库并保留 `deviceId`（tombstone 比云端记录新，重连后会赢过云端副本并上传，等于把云端也删了）。本机重置不删 Drive 数据；要改先改承诺文案。
-- **实测阈值留 ≥20% 余量**：`findComposer` 高度用 `>=16`，不用 `>=20`。标称 20px 在缩放机器上实测 19.999998px，曾筛掉唯一编辑器、群发空等 44s（v0.15.2）。
+- **实测阈值留 ≥20% 余量**：`findComposer` 高度用 `>=16`，不用 `>=20`；标称 20px 在缩放机器上实测 19.999998px。
 - **`deadline` 是绝对时间戳、全链路透传**：`shell-ipc.ts` 的群发入口（44s / 带图 90s）→ `broadcast.ts` → `site-command-channel.ts` → `preload/site.ts` → site-runtime `submitPrompt` → `adapter.submit`/`attach` → `confirmSubmitted`。**循环等待、以及 ≥1s 的固定等待，一律夹取**：`Math.min(x, Math.max(0, deadline - Date.now()))`。例外两处：「让渲染跟上」的毫秒级 sleep（单条 ≤500ms、不得叠成秒级）；提交后的只读确认窗（1.5s，deadline 到点才开始，夹了就归零）。切档 `think`/`fast` 同样接收绝对 deadline，群发内取总截止时间与 10s 切档上限的较早者；超时仅收菜单，不再选择模型或档位。
 - **群发预算只有一个真源**：`shell-ipc.ts` 群发入口的 44s/90s；`main/window-data-services.ts` 辅助发送回调的 44s 必须跟随（硬编码、无带图分支）。改预算先改那一处，再改 `docs/desktop.md` 的预算表。
 - **只产 `code`，不产用户可见文案**：site-runtime / preload / 主进程返回错误码，渲染层翻译；轮询认 `r.code`，**绝不正则匹配文案**。新增可见码三处落点：`shared/protocol.ts` 的 `SITE_CODES`、`shared/status-copy.ts` 的 `STATUS_COPY_KEY`（漏映射 typecheck 红）、`shared/copy.ts` 三语；`desktop/test/status-copy-coverage.test.ts` 双向对账。IPC 抛出的裸码经 `shared/ipc-error.ts` 剥掉 Electron 前缀后才到渲染层。
@@ -38,24 +38,24 @@ PolyAsk 是 Electron 桌面应用：同一问题群发到 9 个真实 AI 站点�
 - **行数门禁**：`.js` ≤300 行；`desktop/src` 的 `.ts/.tsx` ≤400 行，越界的三个文件走 `verify.sh` 里的棘轮只降不升，豁免只有 `shared/copy.ts`。动手前用 `wc -l` 检查余量，要加行超限时按站点或职责拆分，不要靠压行/删注释续命。
 - **真机验证不可省，本机全绿 ≠ 用户环境可用**：适配器/切档/发送 bug 须重启开发态（`cd desktop && npm start`），在目标站点视图里用生产 `__AMS` 回归。**本机不能复现时先要现象再猜层次**（composer / inject / submit / state），四问话术见 `docs/verify.md`。
 - **已发布 tag 不覆盖**，改内容必须升版；推任何 `v*` tag 前先在 GitHub 手动跑一次 Release workflow 的 `dry_run`。版本真源是 `desktop/package.json`；Release 从 Repository Variable 注入 `POLYASK_GOOGLE_DESKTOP_CLIENT_ID`，缺 `resources/oauth.json` 拒发；五个包均未签名、无自动更新。
-- **`desktop/` 自包含 = 构建与测试自包含**（preload 只 require `desktop/` 内文件，干净 clone 上 `npm ci && npm test` 全绿）；仓库级动作（tag、CHANGELOG、发版、跨端 5 个测试）留在根。已**否决**把 `desktop/` 扁平到仓库根（收益全部来自 site-runtime 迁入）。
+- **`desktop/` 自包含 = 构建与测试自包含**（preload 只 require `desktop/` 内文件，干净 clone 上 `npm ci && npm test` 全绿）；仓库级动作（tag、CHANGELOG、发版、跨端 5 个测试）留在根。已**否决**把 `desktop/` 扁平到仓库根。
 
 ## 命令
 
 ```bash
-bash scripts/verify.sh               # 零依赖仓库卫生：.js/.mjs 语法 + JSON + 300 行 + desktop/src 400 行棘轮 + OAuth 卫生 + 文档/.github 引用 + workflow YAML + 根 scripts 五个跨端测试 + diff --check
-cd desktop && npm test               # Desktop 门禁：断言检查 + tsc + 串行 TS/运行时测试（含九站回归）；受限入口，verify.sh 不跑它
-cd desktop && npm run typecheck      # 与 npm test 编译检查重叠，CI 单独再跑是刻意的双保险
-cd desktop && npm run package && xvfb-run -a npm run smoke -- --skip-package   # preload 的 require 仍解析、九站视图挂上
-bash scripts/prepare-release.sh auto # 推导版本、晋升 CHANGELOG、同步 Desktop package/lock（只改文件不 commit）
-bash scripts/release.sh --publish    # 推 tag 并触发五个 Desktop 包发布（--build-only 只校验源码并提取 Release 正文）
+bash scripts/verify.sh               # 仓库卫生、行数、OAuth、文档引用与跨端测试
+cd desktop && npm test               # 受限入口：断言检查、tsc、串行测试；verify.sh 不跑它
+cd desktop && npm run typecheck      # 刻意重复编译检查
+cd desktop && npm run package && xvfb-run -a npm run smoke -- --skip-package   # preload 与九站视图
+bash scripts/prepare-release.sh auto # 晋升 CHANGELOG、同步 package/lock；不 commit
+bash scripts/release.sh --publish    # 推 tag 发布五包；--build-only 仅校验与提取正文
 ```
 
-## 架构（先在这里定位入口文件）
+## 架构入口
 
-- **主进程**：`desktop/src/main/index.ts`（装配）→ `view-manager.ts`（站点视图树/状态）、`broadcast.ts`（群发编排、deadline、epoch、Kimi 只读确认）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts`（IPC，全部过 `trustedShell`）。
+- **主进程**：`desktop/src/main/index.ts` → `view-manager.ts`（视图）、`broadcast.ts`（群发）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts`（IPC，全部过 `trustedShell`）。
 - **站点适配**：`desktop/src/site-runtime/`：core/tier 编排、selection-match 候选匹配、send/upload 提交与附件；intl/intl2/intl3/cn/cn2/cn3/cn4 按站分卷；注入顺序以 `preload/site.ts` 为准，classic script、`__AMS` 全局；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
-- **数据与同步**：`main/database.ts`（SQLite）+ `*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata，旧实体 schema 1 / 决策卡 schema 2 / 文件夹及关联 schema 3 / 逐次提问及回答 schema 4，fixture 在 `desktop/test/fixtures/`）、`data-admin-service.ts`（本机数据管理）、`backup-service.ts`（预览与事务恢复）；网络代理由 `proxy-runtime.ts`（应用、校验、fail-closed）和 `proxy-preference-store.ts`（唯一写入口：本机 meta 键 `proxyOverride` / `proxyFollowing` / `proxyAccepted`，加同步键 `preference:proxy`，不进备份）负责，契约见 `docs/desktop.md` §13。
+- **数据与同步**：`main/database.ts`（SQLite）、`*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata）；schema 1–4 与 fixture 见 `docs/desktop.md`、`desktop/test/fixtures/`。本机管理和备份恢复由 `data-admin-service.ts` / `backup-service.ts` 负责；代理应用、校验与 fail-closed 由 `proxy-runtime.ts` 负责，`proxy-preference-store.ts` 是唯一写入口，持久化、同步与备份边界见 `docs/desktop.md` §13。
 - **渲染层**：`desktop/src/renderer/`，所有 IPC 只经 `shell-api.ts` 的 `shell`（测试用 `setShellApi` 注入桩）。
 - **共享契约**：`desktop/src/shared/`（protocol、copy、locale、site-report、ipc-error）。
 
