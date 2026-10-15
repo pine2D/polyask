@@ -14,7 +14,7 @@ async function until(source) {
 }
 const frames = () => js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
 async function point(expression) {
-  win.focus(); await until('document.hasFocus()');
+  win.focus(); win.webContents.focus(); await until('document.hasFocus()');
   const box = await js(`(()=>{const n=${expression};if(!n)return null;n.scrollIntoView({block:'nearest',inline:'nearest'});
     const r=n.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);
     return {x,y,width:r.width,height:r.height,enabled:!n.disabled,hit:n===hit||n.contains(hit)};})()`);
@@ -57,7 +57,8 @@ async function measure(name, action, ready, keep) {
     fullBodyParseDelta: view.long - parserBefore.long, parseMs: view.parseMs - parserBefore.ms,
     rows: view.rows, total: view.total, readers: view.readers, columns: view.columns, hiddenReading: view.hiddenReading };
   if (name === 'read-to-compare' || name === 'compare-parent-redraw') check(view.readers === 0 && view.columns === 2 && sample.fullBodyParseDelta === 0, 'compare only renders its two active sources');
-  if (name === 'compare-parent-redraw') check(sample.parseDelta === 0, 'unchanged parent redraw adds no Markdown parse');
+  if (name.endsWith('-parent-redraw')) check(sample.parseDelta === 0, 'unchanged parent redraw adds no Markdown parse');
+  if (name === 'read-parent-redraw') check(view.readers === 9 && view.completeRead && view.columns === 0, 'reading redraw retains all nine complete answers');
   if (name === 'nine-long-open' || name === 'nine-long-switch' || name === 'compare-to-read') check(view.readers === 9 && view.completeRead && sample.fullBodyParseDelta === 9, 'reading renders all nine complete long answers through their final source headings');
   if (keep) samples.push(sample);
 }
@@ -116,6 +117,8 @@ app.whenReady().then(async () => {
       await nativeClick(row(d)); await until(`document.querySelector('.decision-editor h1')?.textContent===${JSON.stringify(d)}`);
       await clickSample('nine-long-open', row(a), readReady(a), keep);
       await clickSample('nine-long-switch', row(b), readReady(b), keep);
+      const readRevision = await js('window.u32Post.parentRevision');
+      await measure('read-parent-redraw', () => js('window.u32Post.redraw()'), `window.u32Post.parentRevision===${readRevision + 1}`, keep);
       await clickSample('read-to-compare', switcher('compare'), "document.querySelector('.archive-detail')?.dataset.view==='compare'&&document.querySelectorAll('.archive-compare-column').length===2", keep);
       const revision = await js('window.u32Post.parentRevision');
       await measure('compare-parent-redraw', () => js('window.u32Post.redraw()'), `window.u32Post.parentRevision===${revision + 1}`, keep);
@@ -123,7 +126,7 @@ app.whenReady().then(async () => {
       await clickSample('compare-to-read', switcher('read'), readReady(b), keep);
       if (round === 22) await snapshot('read');
     }
-    check(samples.length === 160 && requests === 0, 'all eight scenarios complete twenty measured samples with no HTTP');
+    check(samples.length === 180 && requests === 0, 'all nine scenarios complete twenty measured samples with no HTTP');
   } catch (caught) { error = String(caught.message).slice(0, 220); }
   const summary = summaries(), goals = { 'list-mount': 150, 'search-broad': 350, 'nine-long-open': 450, 'nine-long-switch': 350, 'read-to-compare': 250, 'compare-parent-redraw': 80 };
   const targets = Object.entries(goals).map(([scenario, p95TargetMs]) => ({ scenario, p95TargetMs,
@@ -133,7 +136,7 @@ app.whenReady().then(async () => {
     workload: await js('window.u32Post?.workload??null').catch(() => null),
     environment: { viewport: await js('({width:innerWidth,height:innerHeight})'), zoom: win.webContents.getZoomFactor(), locale: 'zh-CN', theme: 'light', versions: process.versions, gpu: app.getGPUFeatureStatus() },
     limits: { syntheticOnly: true, backend: 'in-memory shell; no SQLite, disk, real IPC or sites', warmups: 3, formalSamples: 20,
-      runtimeDeadlineMs: 60000, precision: 'analogous workload, not exact pre/post ratio; original synthetic source unavailable',
+      runtimeDeadlineMs: 60000, precision: 'compare runs only with identical fixture/runtime, viewport and host; historical original U32 source is unavailable',
       cpu: 'CDP ThreadTime interval includes measurement commands; do not divide it by event latency',
       heap: 'GC snapshot of the full library workload; not isolated comparison heap or a leak claim',
       originalIndependentCompareTargets: { elements: 5500, heapMiB: 10, pairedCpuP95ReductionPercent: 25 } } };

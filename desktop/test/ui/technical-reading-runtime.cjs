@@ -17,7 +17,7 @@ async function until(win, expression) {
 }
 const button = text => `[...document.querySelectorAll('button')].find(n=>n.textContent===${JSON.stringify(text)})`;
 async function click(win, expression) {
-  win.focus(); await until(win, 'document.hasFocus()');
+  win.focus(); win.webContents.focus(); await until(win, 'document.hasFocus()');
   const box = await win.webContents.executeJavaScript(`(()=>{const n=${expression}; if(!n)return null;
     n.scrollIntoView({block:'center',inline:'nearest'}); const r=n.getBoundingClientRect();
     const x=r.x+r.width/2,y=r.y+r.height/2,hit=document.elementFromPoint(x,y);window.technicalNativeClick=null;

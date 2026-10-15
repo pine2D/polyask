@@ -18,7 +18,9 @@ test('finite U32 post measurement retains one thousand mixed records and two com
   const output = mkdtempSync(join(tmpdir(), 'polyask-u32-post-')), before = manifest();
   writeFileSync(join(output, 'source-manifest.json'), JSON.stringify({ before, environment: {
     loadAverage: loadavg(), logicalCpus: cpus().length, cpuModel: cpus()[0]?.model ?? '', memoryBytes: totalmem(),
-    workload: 'new analogous finite synthetic data; original pre-measurement source is unavailable' } }));
+    workload: 'finite synthetic data; historical original U32 source is unavailable' },
+    harness: Object.fromEntries(['library-reading-performance-fixture.tsx', 'library-reading-performance-runtime.cjs'].map(path => [path,
+      createHash('sha256').update(readFileSync(join(__dirname, 'ui', path))).digest('hex')])) }));
   await new Promise<void>((resolve, reject) => {
     const compiler = webpack({ mode: 'production', optimization: { minimize: false }, context: join(__dirname, '..'), devtool: false,
       entry: join(__dirname, 'ui/library-reading-performance-fixture.tsx'), output: { path: output, filename: 'bundle.js', publicPath: './' },
@@ -46,17 +48,17 @@ test('finite U32 post measurement retains one thousand mixed records and two com
     workload: { total: number; archives: number; decisions: number; longRecords: number; answersPerRecord: number; longBytes: number[] };
     environment: { viewport: { width: number; height: number }; zoom: number };
   };
-  assert.equal(report.ok, true); assert.equal(report.requests, 0); assert.equal(report.samples.length, 160);
+  assert.equal(report.ok, true); assert.equal(report.requests, 0); assert.equal(report.samples.length, 180);
   assert.equal(report.workload.total, 1000); assert.equal(report.workload.archives, 500); assert.equal(report.workload.decisions, 500);
   assert.equal(report.workload.longRecords, 2); assert.equal(report.workload.answersPerRecord, 9); assert.equal(report.workload.longBytes.length, 18);
   assert.equal(report.workload.longBytes.every(value => value >= 31 * 1024 && value <= 32 * 1024), true);
   assert.equal(report.environment.viewport.width, 1600); assert.equal(report.environment.viewport.height, 1000); assert.equal(report.environment.zoom, 1);
-  for (const scenario of ['list-mount', 'search-narrow', 'search-broad', 'nine-long-open', 'nine-long-switch', 'read-to-compare', 'compare-parent-redraw', 'compare-to-read']) {
+  for (const scenario of ['list-mount', 'search-narrow', 'search-broad', 'nine-long-open', 'nine-long-switch', 'read-parent-redraw', 'read-to-compare', 'compare-parent-redraw', 'compare-to-read']) {
     assert.equal(report.summary.filter(row => row.scenario === scenario && row.n === 20).length, 1);
     assert.equal(report.samples.filter(row => row.scenario === scenario).length, 20);
   }
   assert.equal(report.samples.every(sample => sample.rows <= 100 && sample.hiddenReading === 0), true);
-  assert.equal(report.samples.filter(sample => sample.scenario === 'compare-parent-redraw').every(sample => sample.parseDelta === 0), true);
+  assert.equal(report.samples.filter(sample => sample.scenario.endsWith('-parent-redraw')).every(sample => sample.parseDelta === 0), true);
   assert.equal(report.snapshots.length, 2);
   assert.equal(report.snapshots.every(snapshot => snapshot.jsHeapBytes > 0 && snapshot.rendererResidentKiB > 0), true);
   // Retain engineering targets verbatim; report unmet targets without inventing a paired ratio.

@@ -1,4 +1,4 @@
-import { createElement, useMemo, type ReactNode } from 'react';
+import { createElement, useCallback, useLayoutEffect, useMemo, useRef, type ReactNode } from 'react';
 import { inlineTokens } from './markdown-inline';
 import { parseMarkdown, type MarkdownToken } from './markdown-parser';
 import { MermaidPreview } from './mermaid-preview';
@@ -45,5 +45,12 @@ function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler)
 
 export function MarkdownPreview({ value, onOpenLink }: { readonly value: string; readonly onOpenLink?: (url: string) => void }): React.JSX.Element {
   const tokens = useMemo(() => parseMarkdown(String(value ?? '')), [value]);
-  return <div className="markdown-preview">{renderTokens(tokens, onOpenLink)}</div>;
+  const handler = useRef(onOpenLink);
+  useLayoutEffect(() => { handler.current = onOpenLink; }, [onOpenLink]);
+  const openLink = useCallback((url: string) => handler.current?.(url), []);
+  const link = onOpenLink ? openLink : undefined;
+  // 复用当前正文的元素树；链接跟随已提交回调，语言改变时刷新子控件文案。
+  const language = typeof document === 'undefined' ? '' : document.documentElement.lang;
+  const content = useMemo(() => renderTokens(tokens, link), [tokens, link, language]);
+  return <div className="markdown-preview">{content}</div>;
 }

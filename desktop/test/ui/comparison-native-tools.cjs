@@ -23,7 +23,7 @@ exports.nativeReadingTools = (win, output, state) => {
       zoom: win.webContents.getZoomFactor(), lastInput: state.lastInput }, null, 2));
     throw new Error(`${state.scenario}/${state.step}: timed out ${label}`);
   };
-  const focus = async () => { win.focus(); await until('document.hasFocus()', 'native focus'); };
+  const focus = async () => { win.focus(); win.webContents.focus(); await until('document.hasFocus()', 'native focus'); };
   const key = async (keyCode, modifiers = []) => {
     await focus();
     await js(`(()=>{window.readingNativeKey=null;document.addEventListener('keydown',event=>{

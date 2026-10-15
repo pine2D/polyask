@@ -32,13 +32,38 @@ test('reused tokens still use the current link handler and language without alte
   const calls: string[] = []; const source = '[Source](https://example.test/source)\n\n```js\n\tconst exact = 1;\n```';
   const h = await mountDom(<MarkdownPreview value={source} onOpenLink={url => calls.push(`old:${url}`)} />);
   try {
-    h.document.documentElement.lang = 'zh-CN';
+    await h.click([...h.document.querySelectorAll<HTMLButtonElement>('.markdown-code button')]
+      .find(node => node.textContent === getCopy('en').readingHighlight)!);
+    const highlighted = h.document.querySelectorAll('pre code span').length;
+    assert.equal(highlighted > 0, true);
     await h.render(<MarkdownPreview value={source} onOpenLink={url => calls.push(`new:${url}`)} />);
+    assert.equal(h.document.querySelectorAll('pre code span').length, highlighted, 'parent redraw retains requested highlighting');
     await h.click(h.document.querySelector<HTMLAnchorElement>('.markdown-preview a')!);
     assert.equal(calls.join(','), 'new:https://example.test/source');
+    h.document.documentElement.lang = 'zh-CN';
+    await h.render(<MarkdownPreview value={source} onOpenLink={url => calls.push(`localized:${url}`)} />);
+    await h.click(h.document.querySelector<HTMLAnchorElement>('.markdown-preview a')!);
+    assert.equal(calls.at(-1), 'localized:https://example.test/source');
     assert.equal([...h.document.querySelectorAll('.markdown-code button')].some(node => node.textContent === getCopy('zh-CN').readingCopyCode), true);
+    await h.click([...h.document.querySelectorAll<HTMLButtonElement>('.markdown-code button')]
+      .find(node => node.textContent === getCopy('zh-CN').readingPlainCode)!);
+    assert.equal(h.document.querySelectorAll('pre code span').length, 0, 'local controls still update inside the reused tree');
     assert.equal(h.document.querySelector('pre code')?.textContent, '\tconst exact = 1;');
     assert.equal(parses, 1);
+  } finally { await h.close(); }
+});
+
+test('unchanged Markdown follows link availability and retains exact visible content', async () => {
+  const source = '[Source](https://example.test/source)\n\n**Complete answer**'; const calls: string[] = [];
+  const h = await mountDom(<MarkdownPreview value={source} />);
+  try {
+    assert.equal(h.document.querySelectorAll('a').length, 0);
+    await h.render(<MarkdownPreview value={source} onOpenLink={url => calls.push(url)} />);
+    await h.click(h.document.querySelector<HTMLAnchorElement>('a')!);
+    assert.equal(calls.join(','), 'https://example.test/source');
+    await h.render(<MarkdownPreview value={source} />);
+    assert.equal(h.document.querySelectorAll('a').length, 0);
+    assert.equal(h.document.querySelector('.markdown-preview')?.textContent, 'SourceComplete answer');
   } finally { await h.close(); }
 });
 
