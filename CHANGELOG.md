@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.21.1] - 2026-10-15
+
+验收范围：Linux/WSL 下通过 1,995 项应用与界面测试、432 项运行时测试及打包冒烟；三语界面验收覆盖 96 种外壳与设置布局、18 种结果库布局，以及设置分区导航、结果库入口和窄窗比较等交互。
+
+验收限制：界面验收使用本地测试数据，未在 Windows、macOS 真机验证；五种发行包的实机安装和真实 Google Drive 同步未在本轮核验。
+
 ### 变更
 
 - 设置的“应用更新”区域直接显示当前版本号，“检查更新”入口改为“查看最新版本”，明确点击后打开官方版本页面。
@@ -1318,7 +1324,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.21.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.21.1...HEAD
+[1.21.1]: https://github.com/pine2D/polyask/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/pine2D/polyask/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/pine2D/polyask/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/pine2D/polyask/compare/v1.18.0...v1.19.0
