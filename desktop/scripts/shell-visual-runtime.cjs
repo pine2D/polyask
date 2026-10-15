@@ -46,6 +46,7 @@ app.whenReady().then(async () => {
     win.destroy(); app.quit(); return;
   }
   await require('./settings-interaction-visual.cjs')({ win, output, run, wait, paint, shot });
+  await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./workspace-entry-visual.cjs')({ win, output, run, wait, paint, shot });

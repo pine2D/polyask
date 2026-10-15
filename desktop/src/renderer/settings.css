@@ -39,6 +39,7 @@
   color: var(--text); font: inherit; font-size: var(--font-meta);
 }
 .settings-section-navigation button:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+.settings-section-navigation button[aria-current=location] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); font-weight: 600; }
 .settings-section-navigation button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .settings-section-navigation button:disabled { color: var(--muted); cursor: default; }
 .settings-preference-facts { display: grid; gap: 6px; margin: 10px 0; font-size: var(--font-meta); line-height: 1.6; }
@@ -197,6 +198,7 @@
 }
 @media (forced-colors: active) {
   .settings-section-navigation button { color: ButtonText; border-color: ButtonText; }
+  .settings-section-navigation button[aria-current=location] { color: ButtonText; border-color: Highlight; outline: 1px solid Highlight; outline-offset: -3px; }
   .settings-section-navigation button:disabled { color: GrayText; border-color: GrayText; }
   .settings-section-navigation button:focus-visible { outline-color: Highlight; }
   .settings-card .settings-control, .danger-zone input, .sync-stage-list li { border-color: ButtonText; }

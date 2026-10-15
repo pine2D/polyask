@@ -38,6 +38,8 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 `workspace-entry-visual.cjs` 在三语和两种密度下读取 Chromium 无障碍树，核验隐藏文字后的总览/聚焦名称；同时检查结果库具名入口、收纳菜单命令、底栏下一步与进度共存，以及繁忙/回答不可用时不显示下一步。`workspace-next-step.test.tsx` 覆盖最新范围回调、错误恢复与撤销优先级。
 
+`settings-section-visual.cjs` 在三语和 640/1280px 下检查分区跳转、手动滚动后的唯一当前标记、焦点保持与横向导航可见性，输出 `settings-section-report.json`。结果库专项核验来源计数不被截断、完整名单保留，以及展开比较的返回动作与标题对齐；两类 Node 回归为 `settings-sections.test.tsx` 和 `library-source-summary.test.tsx`。
+
 新增控件或可见属性必须同时更新 `test/ui/shell-fixture.tsx`，使用生产组件及完整数据，不省略新增入口后再声称外壳布局通过。草稿与偏好同步组件已经纳入该夹具；`test:shell-ui` 包含 24 组草稿工具栏检查，覆盖三语、明暗主题、两密度、单页与分页、附件及失败计数、开合及 150% 外壳缩放，另检验键盘焦点、禁用动作、行内按钮及多副本弹窗的实际滚动、末项恢复确认焦点与可见性。仅运行本专项时，在 `desktop/` 使用 `node scripts/test-safe.mjs command env -u WAYLAND_DISPLAY xvfb-run -a node scripts/shell-visual.mjs --toolbar-only`；缩放检查维持应用支持的至少 960px CSS 视口。
 
 `preferences-drafts-native` 另从生产 `index.tsx` 启动真实 preload 与 ViewManager，检查整个工具栏的操作区未越过其下边界，草稿入口与既有历史入口尺寸及主题样式一致；失败时保留标量报告与截图。这用于防止夹具遗漏新控件，仍不代替 Windows/macOS 实机验收。每次交付新增界面元素时还须查看对应截图，检查默认、悬停、键盘焦点、禁用、加载、空内容和失败状态，不能只以点击功能通过作为外观验收。

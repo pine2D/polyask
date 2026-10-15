@@ -14,13 +14,43 @@ test('in-page section navigation opens data and focuses headings without running
     const data = h.document.querySelector<HTMLButtonElement>('[data-settings-section="data"]');
     assert.equal(data === null, false, 'settings sections must be reachable without command shortcuts');
     await h.click(data!);
+    assert.equal(data!.getAttribute('aria-current'), 'location');
     assert.equal(advanced(h.document).open, true);
     assert.equal(h.document.activeElement === h.document.getElementById('settings-advanced-toggle'), true);
     // R25：<summary> 本身可聚焦，跳转后不能被设成 tabIndex=-1 而退出 Tab 顺序。
     assert.equal(h.document.getElementById('settings-advanced-toggle')!.hasAttribute('tabindex'), false);
     await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="display"]')!);
+    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'display');
     assert.equal(h.document.activeElement === h.document.getElementById('settings-display-title'), true);
     assert.equal(clears, 0);
+  } finally { await h.close(); }
+});
+
+test('manual settings scrolling marks the visible section without moving keyboard focus', async () => {
+  const h = await mountSettings();
+  try {
+    const body = h.document.querySelector<HTMLElement>('.settings-body')!;
+    Object.defineProperties(body, { clientHeight: { value: 400 }, scrollHeight: { value: 2400 } });
+    body.style.scrollPaddingTop = '80px';
+    const headings = ['sync-title', 'backup-card-title', 'settings-display-title', 'completion-notifications-title', 'settings-proxy-title', 'app-updates-title', 'settings-advanced-toggle'];
+    headings.forEach((id, index) => {
+      const node = h.document.getElementById(id)!;
+      node.getClientRects = () => [{ top: index * 400 - body.scrollTop }] as unknown as DOMRectList;
+      node.getBoundingClientRect = () => ({ top: index * 400 - body.scrollTop }) as DOMRect;
+    });
+    const close = h.document.querySelector<HTMLButtonElement>('[aria-label="Close settings"]')!; close.focus();
+    await act(async () => { body.scrollTop = 750; body.dispatchEvent(new h.window.Event('scroll')); });
+    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'display');
+    assert.equal(h.document.querySelectorAll('[aria-current="location"]').length, 1);
+    assert.equal(h.document.activeElement === close, true);
+    const scroller = h.document.querySelector<HTMLElement>('.settings-section-scroller')!;
+    scroller.getBoundingClientRect = () => ({ left: 0, right: 160 }) as DOMRect;
+    h.document.querySelector<HTMLElement>('[data-settings-section=display]')!.getBoundingClientRect = () => ({ left: 180, right: 260 }) as DOMRect;
+    await act(async () => h.window.dispatchEvent(new h.window.Event('resize')));
+    assert.equal(scroller.scrollLeft, 100, 'resizing reveals the current item even when its identity does not change');
+    assert.equal(h.document.activeElement === close, true);
+    await act(async () => { body.scrollTop = 2000; body.dispatchEvent(new h.window.Event('scroll')); });
+    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'data');
   } finally { await h.close(); }
 });
 

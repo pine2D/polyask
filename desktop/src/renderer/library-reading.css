@@ -53,9 +53,14 @@
 .markdown-table tr:last-child td { border-bottom: 0; }
 .markdown-preview hr { margin: 24px 0; border: 0; border-top: 1px solid var(--border); }
 .library .archive-compare { margin: 0; padding: 0; border: 0; border-radius: 0; }
-.library .archive-compare > header h2 { font-size: 16px; margin-bottom: 8px; }
-.library .archive-compare > header p { line-height: 1.7; font-size: 12px; }
-.library .comparison-focus { min-height: 34px; padding: 6px 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--panel); }
+.library .archive-compare > header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 4px 16px; }
+.library .archive-compare > header h2 { grid-column: 1; font-size: 16px; margin: 0; }
+.library .archive-compare > header p { grid-column: 1; margin: 0; line-height: 1.7; font-size: 12px; }
+.library .comparison-focus { grid-column: 2; grid-row: 1 / span 2; min-height: 34px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--panel); }
+@container library-detail (max-width: 480px) {
+  .library .archive-compare > header { grid-template-columns: minmax(0, 1fr); }
+  .library .comparison-focus { grid-column: 1; grid-row: auto; justify-self: start; }
+}
 .library .comparison-filter { display: inline-flex; gap: 8px; align-items: center; margin: 16px 0 4px; font-size: 13px; }
 .library .comparison-filter input { accent-color: var(--accent); }
 .library .archive-compare-selectors, .library .archive-compare-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin-top: 16px; }

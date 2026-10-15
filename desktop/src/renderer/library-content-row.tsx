@@ -12,6 +12,7 @@ export function LibraryContentRow({ item, copy, labels, locale, current, checked
   current: boolean; checked: boolean; disabled: boolean; onCheck: () => void; onOpen: () => void;
 }) {
   const title = libraryTitle(item), time = item.kind === 'archive' ? item.record.ts : item.record.updatedAt;
+  const sources = item.kind === 'archive' ? item.record.results.map(result => result.label) : [];
   return <div className="library-content-row">
     <label className="library-row-check"><input type="checkbox" checked={checked} disabled={disabled}
       aria-label={formatCopy(labels.selectItem, { title: title || '—' })} onChange={onCheck} /></label>
@@ -21,7 +22,10 @@ export function LibraryContentRow({ item, copy, labels, locale, current, checked
         {item.kind === 'decision' ? <span className="library-status-badge" data-status={item.record.status}>{decisionStatusLabel(copy, item.record.status)}</span> : null}
       </span>
       <span className="library-item-title" title={title}>{title || '—'}</span>
-      {item.kind === 'archive' ? <small title={item.record.results.map(result => result.label).join(', ')}>{item.record.results.map(result => result.label).join(' / ')}</small> : null}
+      {item.kind === 'archive' ? <small className="library-item-sources" title={sources.join(', ')}>
+        <span className="library-source-count">{formatCopy(copy.librarySourceCount, { count: sources.length })}</span>
+        {sources.length ? <><span className="library-source-preview" aria-hidden="true">{sources.slice(0, 2).join(', ')}</span><span className="sr-only">{sources.join(', ')}</span></> : null}
+      </small> : null}
       <time dateTime={new Date(time).toISOString()}>{formatDateTime(time, locale)}</time>
       {item.kind === 'archive' && item.record.tags.length ? <span className="library-item-tags">{item.record.tags.slice(0, 2).map(tag => <i key={tag}>{tag}</i>)}{item.record.tags.length > 2 ? <i>+{item.record.tags.length - 2}</i> : null}</span> : null}
     </button>

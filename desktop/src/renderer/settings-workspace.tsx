@@ -25,6 +25,7 @@ import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
 import { syncNeedsReauthorization, syncOverview } from "./sync-overview";
 import { shell } from "./shell-api";
+import { useSettingsSectionNavigation } from "./settings-section-navigation";
 
 interface SettingsWorkspaceProps {
   readonly copy: DesktopCopy;
@@ -52,6 +53,7 @@ interface SettingsWorkspaceProps {
 type SyncAction = () => Promise<SyncStatus>;
 
 export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Element {
+  const { bodyRef, currentSection, markSection } = useSettingsSectionNavigation();
   const [actionBusy, setActionBusy] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [pendingAction, setPendingAction] = useState<"sync" | "connect" | "clear" | "other" | null>(null);
@@ -98,6 +100,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   }, [props.runtime, props.status]);
   useEffect(() => {
     const section = props.initialSection;
+    if (section) markSection(section === 'drive-diagnostics' ? 'overview' : section);
     if (section === "data") setDataOpen(true);
     if (section === "drive-diagnostics") setDiagnosticsOpen(true);
     const id = section === "data" ? "settings-advanced-toggle" : section === "display" ? "settings-display-title"
@@ -207,6 +210,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   ];
   const navigateSection = (section: string, id: string): void => {
     if (closeLocked) return;
+    markSection(section);
     if (section === "data") setDataOpen(true);
     queueMicrotask(() => {
       const target = document.getElementById(id);
@@ -229,9 +233,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         </div>
         <button className="panel-close" type="button" title={props.copy.closeSettings} aria-label={props.copy.closeSettings} disabled={closeLocked} onClick={props.onClose}><CloseIcon /></button>
       </header>
-      <div className="settings-body">
+      <div className="settings-body" ref={bodyRef}>
         <nav className="settings-section-navigation" aria-label={props.copy.settingsSectionNavigation}>
           <div className="settings-section-scroller">{sections.map(([section, id, label]) => <button type="button" key={section} data-settings-section={section}
+            aria-controls={id} aria-current={currentSection === section ? 'location' : undefined}
             disabled={closeLocked} onClick={() => navigateSection(section, id)}>{label}</button>)}</div>
         </nav>
         <div className="settings-group">

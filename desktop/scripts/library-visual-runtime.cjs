@@ -62,6 +62,10 @@ app.whenReady().then(async () => {
           assert.ok(box.right <= box.viewport + 2, `${locale}/${theme}/${width} offscreen ${JSON.stringify(box)}`);
         }
         assert.equal(await run('(() => { const e=document.querySelector(".archive-answer-nav"); return e.scrollWidth <= e.clientWidth + 2; })()'), true, `${locale}/${theme}/${width} source navigation overflow`);
+        const sources = await run(`(() => [...document.querySelectorAll('.library-item-sources')].map(e => ({
+          count:e.querySelector('.library-source-count').textContent, preview:e.querySelector('.library-source-preview')?.textContent,
+          all:e.title, clipped:e.querySelector('.library-source-count').getBoundingClientRect().right > e.getBoundingClientRect().right + 1})))()`);
+        assert.ok(sources.length > 0 && sources.every(source => source.count.includes('9') && source.preview === 'Claude, ChatGPT' && source.all.includes('Zhipu') && !source.clipped), 'source totals stay visible while full names remain available');
         const controls = await run(`(() => [...document.querySelectorAll('.library-selection-controls button, .library-pagination button, .library-list-summary button')]
           .filter(e => e.getClientRects().length).map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
         for (const control of controls) {
@@ -162,6 +166,16 @@ app.whenReady().then(async () => {
   assert.equal(await run('document.querySelector(".folder-workspace").dataset.focused'), 'true');
   assert.equal(await run('getComputedStyle(document.querySelector(".archive-compare-grid")).gridTemplateColumns.split(" ").length'), 2);
   await shot('comparison-narrow-expanded');
+  const comparisonHeader = await run(`(() => { const header=document.querySelector('.archive-compare > header'), title=header.querySelector('h2').getBoundingClientRect(), action=header.querySelector('button').getBoundingClientRect();
+    return {titleTop:title.top,actionTop:action.top,titleRight:title.right,actionLeft:action.left,height:header.getBoundingClientRect().height}; })()`);
+  assert.ok(Math.abs(comparisonHeader.titleTop-comparisonHeader.actionTop) <= 1 && comparisonHeader.titleRight <= comparisonHeader.actionLeft && comparisonHeader.height <= 64, 'comparison return aligns with its heading and leaves room for reading');
+  // Isolate the detail container breakpoint independently of the app's minimum window width.
+  await run('document.querySelector(".folder-detail").style.inlineSize = "460px"');
+  await shot('comparison-container-460');
+  const compactHeader = await run(`(() => { const header=document.querySelector('.archive-compare > header'), description=header.querySelector('p').getBoundingClientRect(), action=header.querySelector('button').getBoundingClientRect();
+    return {descriptionBottom:description.bottom,actionTop:action.top,width:header.clientWidth,scroll:header.scrollWidth,description:header.querySelector('p').textContent}; })()`);
+  assert.ok(compactHeader.actionTop >= compactHeader.descriptionBottom && compactHeader.scroll <= compactHeader.width + 1 && compactHeader.description.length > 0, 'small comparison containers stack the return action and retain the full explanation');
+  await run('document.querySelector(".folder-detail").style.inlineSize = ""');
   await click('.comparison-focus');
   assert.equal(await run('document.querySelector(".folder-workspace").dataset.focused'), 'false');
   // Decision editing shares the selector and protects the draft on navigation.
