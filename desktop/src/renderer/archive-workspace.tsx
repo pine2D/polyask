@@ -3,7 +3,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
 import type { PendingSynthesis, SynthesisCandidate } from "../shared/synthesis";
-import { formatDateTime } from "../shared/format";
+import { dateTimeAttribute, formatDateTime } from "../shared/format";
 import { ArchiveDetail } from "./archive-detail";
 import { ConfirmDialog } from './confirm-dialog';
 import { LibraryMenu } from './library-menu';
@@ -115,7 +115,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           ) : (
             props.items.map((record) => (
               <button type="button" key={record.id} aria-current={record.id === selected?.id ? "true" : undefined} disabled={props.busy} onClick={() => props.onSelect(record.id)}>
-                <time dateTime={new Date(record.ts).toISOString()}>{formatDateTime(record.ts, props.locale)}</time>
+                <time dateTime={dateTimeAttribute(record.ts)}>{formatDateTime(record.ts, props.locale)}</time>
                 <span>{record.task || record.preview || "—"}</span>
                 <small>{record.results.map((result) => result.label).join(" · ")}</small>
                 {record.favorite || record.tags.length ? <span className="archive-badges">{record.favorite ? <StarIcon /> : null}{record.tags.map((tag) => <i key={tag}>{tag}</i>)}</span> : null}

@@ -5,7 +5,7 @@ import type { DesktopCopy } from "../shared/copy";
 import type { PendingSynthesis, SynthesisCandidate } from "../shared/synthesis";
 import { SparklesIcon } from "./icons";
 import { MarkdownPreview } from "./markdown-preview";
-import { formatDateTime } from '../shared/format';
+import { dateTimeAttribute, formatDateTime } from '../shared/format';
 import { SynthesisProgress } from './synthesis-progress';
 import { matchingSynthesisSession, type SynthesisSession } from './synthesis-session';
 
@@ -39,7 +39,7 @@ export function ArchiveSynthesis(props: ArchiveSynthesisProps): React.JSX.Elemen
     <section className="archive-synthesis">
       {record.synthesis ? (
         <div className="synthesis-card saved">
-          <header><h2>{copy.analysisSaved}</h2><span>{record.synthesis.host}{record.synthesis.state ? ` · ${record.synthesis.state === "think" ? copy.think : copy.fast}` : ""}</span><time dateTime={new Date(record.synthesis.createdAt).toISOString()}>{formatDateTime(record.synthesis.createdAt, props.locale ?? 'en')}</time></header>
+          <header><h2>{copy.analysisSaved}</h2><span>{record.synthesis.host}{record.synthesis.state ? ` · ${record.synthesis.state === "think" ? copy.think : copy.fast}` : ""}</span><time dateTime={dateTimeAttribute(record.synthesis.createdAt)}>{formatDateTime(record.synthesis.createdAt, props.locale ?? 'en')}</time></header>
           <SynthesisProgress copy={copy} stage="saved" instruction={record.synthesis.instruction} />
           <p className="citation-notice">{copy.citationReportNotice}</p>
           <MarkdownPreview onOpenLink={props.onOpenLink} value={record.synthesis.text} />
@@ -47,7 +47,7 @@ export function ArchiveSynthesis(props: ArchiveSynthesisProps): React.JSX.Elemen
       ) : null}
       {pending ? (
         <div className="synthesis-card pending">
-          <header><h2><SparklesIcon />{session?.purpose === 'followUp' ? copy.followUpTitle : session?.purpose === 'synthesis' ? copy.synthesisTitle : copy.analysisTitle}</h2><span>{pending.targetHost}{pending.tier ? ` · ${pending.tier === 'think' ? copy.think : copy.fast}` : ''}</span><time dateTime={new Date(pending.sentAt).toISOString()}>{formatDateTime(pending.sentAt, props.locale ?? 'en')}</time></header>
+          <header><h2><SparklesIcon />{session?.purpose === 'followUp' ? copy.followUpTitle : session?.purpose === 'synthesis' ? copy.synthesisTitle : copy.analysisTitle}</h2><span>{pending.targetHost}{pending.tier ? ` · ${pending.tier === 'think' ? copy.think : copy.fast}` : ''}</span><time dateTime={dateTimeAttribute(pending.sentAt)}>{formatDateTime(pending.sentAt, props.locale ?? 'en')}</time></header>
           <SynthesisProgress copy={copy} stage={candidate ? 'collected' : 'submitted'} instruction={pending.instruction} />
           {session?.sourceUpdatedAt !== undefined && session.sourceUpdatedAt !== record.updatedAt ? <p className="answer-capture-warning">{copy.analysisSourceChanged}</p> : null}
           {candidate ? <p className="citation-notice">{copy.citationReportNotice}</p> : null}

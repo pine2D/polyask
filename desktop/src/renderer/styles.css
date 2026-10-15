@@ -223,6 +223,7 @@ button { cursor: default; }
 .archive-source { max-width: 100%; margin: 3px 0 0; padding: 0; display: block; overflow: hidden; text-align: left; border: 0; color: var(--accent); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; background: transparent; }
 .archive-fields { margin: 10px 0 6px; display: grid; grid-template-columns: minmax(160px, .45fr) minmax(260px, 1fr); gap: 6px; }
 .archive-fields label { display: grid; gap: 3px; color: var(--muted); font-size: 10px; }
+.archive-note-field { display: grid; gap: 3px; min-width: 0; }
 .archive-fields input { height: 30px; padding: 0 7px; color: inherit; }
 .archive-fields textarea { height: 52px; padding: 5px 7px; resize: vertical; color: inherit; }
 .archive-compare { margin: 8px 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }

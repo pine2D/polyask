@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import type { SiteDefinition } from "../shared/contracts";
 import type { DesktopCopy } from "../shared/copy";
+import { dateTimeAttribute } from "../shared/format";
 import type { Tier } from "../shared/protocol";
 import type { DraftReceipt } from './draft-receipt';
 import { describeSynthesisSendCode, errorCode } from "../shared/status-copy";
@@ -53,7 +54,7 @@ export interface ArchiveSurfaceProps {
 function downloadMarkdown(markdown: string, createdAt: number): void {
   const link = document.createElement("a");
   link.href = URL.createObjectURL(new Blob([markdown], { type: "text/markdown" }));
-  const stamp = new Date(createdAt).toISOString().slice(0, 16).replace(/[T:]/g, "-");
+  const stamp = dateTimeAttribute(createdAt)?.slice(0, 16).replace(/[T:]/g, "-") ?? 'undated';
   link.download = `polyask-${stamp}.md`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 5_000);

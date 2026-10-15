@@ -19,14 +19,19 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
   const [message, setMessage] = useState('');
   const pending = useRef(false);
   const tagsInput = useRef<HTMLInputElement>(null);
+  const noteInput = useRef<HTMLTextAreaElement>(null);
   const id = useId();
   const validation = validateArchiveTags(tags);
-  const invalid = validation.tooMany || validation.overlongIndices.length > 0;
-  const showErrors = attempt > 0 && invalid;
+  const invalidTags = validation.tooMany || validation.overlongIndices.length > 0;
+  const noteLength = [...note].length;
+  const invalidNote = noteLength > 4000;
+  const invalid = invalidTags || invalidNote;
+  const showErrors = attempt > 0 && invalidTags;
+  const showNoteError = attempt > 0 && invalidNote;
   const blocked = busy || saving;
   const dirty = tags !== savedTags || note !== record.note;
   useEffect(() => { setTags(savedTags); setNote(record.note); setAttempt(0); setMessage(''); }, [record.id, savedTags, record.note]);
-  useEffect(() => { if (attempt) tagsInput.current?.focus(); }, [attempt]);
+  useEffect(() => { if (attempt) (invalidTags ? tagsInput : noteInput).current?.focus(); }, [attempt]);
   useEffect(() => {
     if (!dirty) return;
     const unregister = registerDecisionNavigationGuard(action => setConfirm(() => action));
@@ -62,7 +67,14 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
               {validation.overlongIndices.map(index => <li key={index}>{formatCopy(copy.archiveTagTooLong, { index: index + 1 })}</li>)}
             </ul> : null}
           </div>
-          <label>{copy.archiveNote}<textarea name="archive-note" autoComplete="off" maxLength={4000} value={note} disabled={blocked} onChange={event => setNote(event.target.value)} /></label>
+          <div className="archive-note-field">
+            <label htmlFor={`${id}-note`}>{copy.archiveNote}</label>
+            <textarea id={`${id}-note`} ref={noteInput} name="archive-note" autoComplete="off" value={note} disabled={blocked}
+              aria-invalid={showNoteError || undefined} aria-describedby={`${id}-note-count${showNoteError ? ` ${id}-note-error` : ''}`}
+              onChange={event => setNote(event.target.value)} />
+            <p id={`${id}-note-count`} className="archive-field-hint">{formatCopy(copy.archiveNoteCount, { count: noteLength })}</p>
+            {showNoteError ? <p id={`${id}-note-error`} className="archive-field-errors" role="alert">{copy.archiveNoteTooLong}</p> : null}
+          </div>
         </div>
         <p role="status">{message}</p>
         <div className="library-metadata-actions"><button type="submit" disabled={!dirty || blocked}>{blocked ? copy.librarySaving : copy.librarySaveMetadata}</button>

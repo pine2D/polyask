@@ -234,8 +234,9 @@ app.whenReady().then(async () => {
   await click('.confirm-actions .primary');
   await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 8');
   assert.equal(await run('document.querySelector(".library").dataset.focused'), 'false');
+  const hardening = await require('./library-hardening-visual.cjs')({ win, nativeTheme, output, run, wait, click, fill, key, shot });
   assert.deepEqual(errors, []);
-  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, interactions: 'passed', consoleErrors: errors }, null, 2));
+  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, hardening, interactions: 'passed', consoleErrors: errors }, null, 2));
   console.log(`Library UI passed: ${reports.length} layout variants, four folder IME cases and keyboard/editing flows.`);
   app.quit();
 }).catch(error => { console.error(error); app.exit(1); });

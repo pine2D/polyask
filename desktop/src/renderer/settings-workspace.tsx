@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import type { DesktopCopy } from "../shared/copy";
 import { formatCopy } from "../shared/copy";
+import { formatDateTime } from "../shared/format";
 import { CLEAR_REMOTE_CONFIRMATION, type SyncStatus } from "../shared/sync";
 import {
   buildSyncDiagnosticReport,
@@ -74,6 +75,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   // authorization (up to five minutes) must never lock the exit.
   const closeLocked = clearingCloud || localWriting;
   const writes = useRef({ local: false, cloud: false });
+  const actionInFlight = useRef(false);
   const pendingFocus = useRef(false);
   const busy = actionBusy || props.status.state === "syncing";
   const proxy = useProxyState({ secret: true }); // 全仓唯一带密码读取标志的调用：设置卡与同步行共用这一个句柄
@@ -121,12 +123,12 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   }, [diagnostics, diagnosticsOpen]);
   const lastSuccess = props.status.lastSuccessAt
     ? formatCopy(props.copy.syncLastSuccess, {
-      time: new Intl.DateTimeFormat(props.locale, { dateStyle: "short", timeStyle: "short" })
-        .format(props.status.lastSuccessAt)
+      time: formatDateTime(props.status.lastSuccessAt, props.locale)
     })
     : props.copy.syncNever;
   const run = async (action: SyncAction, kind: "sync" | "connect" | "clear" | "other" = "other"): Promise<void> => {
-    if (busy) return;
+    if (actionInFlight.current || busy || writes.current.local) return;
+    actionInFlight.current = true;
     setPendingAction(kind);
     setActionBusy(true);
     try {
@@ -141,6 +143,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
       setFeedback(props.copy.syncActionFailed);
       props.onAnnounce(props.copy.syncActionFailed);
     } finally {
+      actionInFlight.current = false;
       setPendingAction(null);
       setActionBusy(false);
     }
@@ -174,7 +177,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     }
   };
   const checkUpdates = async (): Promise<void> => {
-    if (busy || !props.onCheckUpdates) return;
+    if (actionInFlight.current || busy || writes.current.local || writes.current.cloud || !props.onCheckUpdates) return;
+    actionInFlight.current = true;
     setActionBusy(true);
     try {
       await props.onCheckUpdates();
@@ -184,6 +188,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
       setFeedback(props.copy.updatePageFailed);
       props.onAnnounce(props.copy.updatePageFailed);
     } finally {
+      actionInFlight.current = false;
       setActionBusy(false);
     }
   };

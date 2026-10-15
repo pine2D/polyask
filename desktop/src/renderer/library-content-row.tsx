@@ -1,7 +1,7 @@
 import type { DesktopCopy } from '../shared/copy';
 import { formatCopy } from '../shared/copy';
 import type { LibraryCopy } from '../shared/library-scale-copy';
-import { formatDateTime } from '../shared/format';
+import { dateTimeAttribute, formatDateTime } from '../shared/format';
 import type { FolderContentSummary } from '../shared/task-folder-page';
 import { decisionStatusLabel } from './decision-editor';
 import { libraryTitle } from './library-list-model';
@@ -26,7 +26,7 @@ export function LibraryContentRow({ item, copy, labels, locale, current, checked
         <span className="library-source-count">{formatCopy(copy.librarySourceCount, { count: sources.length })}</span>
         {sources.length ? <><span className="library-source-preview" aria-hidden="true">{sources.slice(0, 2).join(', ')}</span><span className="sr-only">{sources.join(', ')}</span></> : null}
       </small> : null}
-      <time dateTime={new Date(time).toISOString()}>{formatDateTime(time, locale)}</time>
+      <time dateTime={dateTimeAttribute(time)}>{formatDateTime(time, locale)}</time>
       {item.kind === 'archive' && item.record.tags.length ? <span className="library-item-tags">{item.record.tags.slice(0, 2).map(tag => <i key={tag}>{tag}</i>)}{item.record.tags.length > 2 ? <i>+{item.record.tags.length - 2}</i> : null}</span> : null}
     </button>
   </div>;

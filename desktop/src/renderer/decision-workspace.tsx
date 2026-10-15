@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
 import type { DecisionInput, DecisionRecord, DecisionStatus } from "../shared/decision";
-import { formatDateTime } from "../shared/format";
+import { dateTimeAttribute, formatDateTime } from "../shared/format";
 import { DecisionEditor, decisionInput, decisionStatuses, decisionStatusLabel } from "./decision-editor";
 import { validateDecisionDraft } from "./decision-validation";
 import { ConfirmDialog } from "./confirm-dialog";
@@ -169,7 +169,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
     <div className="archive-body">
       {!embedded ? <aside className="archive-list" aria-label={copy.decisionTitle}>
         {loading ? <p role="status">{copy.archiveLoading}</p> : !items.length ? <p>{copy.decisionEmpty}</p> : items.map((record) => <button type="button" key={record.id} aria-current={saved?.id === record.id ? "true" : undefined} disabled={busy} onClick={() => select(record)}>
-          <time dateTime={new Date(record.updatedAt).toISOString()}>{formatDateTime(record.updatedAt, locale)}</time>
+          <time dateTime={dateTimeAttribute(record.updatedAt)}>{formatDateTime(record.updatedAt, locale)}</time>
           <span>{record.title}</span><small>{decisionStatusLabel(copy, record.status)} · {record.sourceTitle}</small>
         </button>)}
       </aside> : null}
