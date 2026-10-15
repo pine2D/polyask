@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.22.0] - 2026-10-15
+
+验收范围：Linux/WSL 下通过 2,044 项应用与界面测试、432 项运行时测试；三语界面验收覆盖 18 种结果库布局、五组来源导航与最佳标记流程（100%～200% 缩放），以及保存失败、空状态、键盘操作和长文阅读。
+
+验收限制：界面验收使用本地合成资料，未在 Windows、macOS 真机验证；五种发行包的实机安装、物理读屏和真实 Google Drive 同步未在本轮核验。长文优化仅确认减少未变化正文的重复渲染，不宣称首次打开或返回阅读整体加速。
+
 ### 变更
 
 - 将回答标为最佳后，来源导航同步显示星标，方便滚动后直接找回；保存失败时保留原选择，取消最佳后移除标记。
@@ -1340,7 +1346,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.21.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.22.0...HEAD
+[1.22.0]: https://github.com/pine2D/polyask/compare/v1.21.1...v1.22.0
 [1.21.1]: https://github.com/pine2D/polyask/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/pine2D/polyask/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/pine2D/polyask/compare/v1.19.0...v1.20.0
