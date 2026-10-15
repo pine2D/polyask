@@ -201,7 +201,7 @@ export const COPY = {
     guideReturnHint: "Open this guide again from More actions or search Getting started in the command palette (F1). Closing it returns to your sites and preserves your draft.",
     nextUnfinished: "Go to next unfinished site",
     nextFailed: "Go to next failed site",
-    checkForUpdates: "Check for updates"
+    checkForUpdates: "View latest release"
   },
   zhCN: {
     ...SITE_FIND_COPY.zhCN,
@@ -377,7 +377,7 @@ export const COPY = {
     guideReturnHint: "随时从“更多”重新打开指南，或按 F1 搜索“开始使用”。关闭后回到站点，草稿会保留。",
     nextUnfinished: "转到下一个未完成站点",
     nextFailed: "转到下一个失败站点",
-    checkForUpdates: "检查更新"
+    checkForUpdates: "查看最新版本"
   },
   zhTW: {
     ...SITE_FIND_COPY.zhTW,
@@ -553,7 +553,7 @@ export const COPY = {
     guideReturnHint: "隨時從「更多」重新開啟指南，或按 F1 搜尋「開始使用」。關閉後回到網站，草稿會保留。",
     nextUnfinished: "前往下一個未完成網站",
     nextFailed: "前往下一個失敗網站",
-    checkForUpdates: "檢查更新"
+    checkForUpdates: "檢視最新版本"
   }
 } as const;
 

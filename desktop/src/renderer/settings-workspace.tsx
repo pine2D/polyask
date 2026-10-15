@@ -301,8 +301,11 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           <SettingsProxy copy={props.copy} proxy={proxy} busy={busy || !!props.operationBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
             onOpenSync={props.preferenceSync ? () => navigateSection("preferences", "settings-preference-sync-title") : undefined} />
           <section className="settings-card settings-row update-card" aria-labelledby="app-updates-title">
-            <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
-            <p>{props.copy.appUpdatesDescription}</p>
+            <div className="settings-description">
+              <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
+              <p>{formatCopy(props.copy.currentAppVersion, { version: props.runtime.version })}</p>
+              <p>{props.copy.appUpdatesDescription}</p>
+            </div>
             <button type="button" className="settings-control" disabled={busy || !props.onCheckUpdates} onClick={() => { void checkUpdates(); }}>{props.copy.checkForUpdates}</button>
           </section>
         </div>

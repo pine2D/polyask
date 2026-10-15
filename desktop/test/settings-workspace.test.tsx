@@ -236,7 +236,7 @@ test("settings expose an explicit local-only completion notification preference"
   assert.match(html, /仅保存在这台设备/);
   assert.match(html, /<label class="settings-card preference-card"/);
   assert.match(html, /应用更新/);
-  assert.match(html, />检查更新</);
+  assert.match(html, />查看最新版本</);
 });
 
 test("settings restore confirmations that were turned off with don't ask again", () => {
