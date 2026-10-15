@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
@@ -47,13 +47,25 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const { copy, record } = props;
   const localReader = useArchiveReader(record, props.initialComparisonOpen);
   const reader = props.reader ?? localReader, view = reader.state.view;
-  const setView = (value: typeof view) => reader.change({ view: value });
+  const article = useRef<HTMLElement>(null);
+  const focusComparison = () => {
+    const width = article.current?.closest<HTMLElement>('.folder-detail')?.getBoundingClientRect().width ?? 0;
+    if (width > 0 && width <= 760 && !props.readingFocus?.focused) props.readingFocus?.onFocus(true);
+  };
+  const setView = (value: typeof view) => requestDecisionNavigation(() => {
+    if (value === 'compare') focusComparison();
+    reader.change({ view: value });
+  });
+  // 直接打开比较也遵循容器断点；返回浏览及之后的窗口缩放不再自动展开。
+  useLayoutEffect(() => {
+    if (view === 'compare' && reader.consumeComparisonEntry?.()) focusComparison();
+  }, [record.id, view]);
   useEffect(() => { if (props.pendingSynthesis?.archiveId === record.id) setView('synthesis'); }, [record.id, props.pendingSynthesis?.archiveId]);
   const favoriteLabel = record.favorite ? copy.unfavoriteArchive : copy.favoriteArchive;
   const successfulResults = record.results.filter((result) => !!result.text?.trim());
   const canSynthesize = successfulResults.length >= 2;
   return (
-    <article className="archive-detail" data-view={view}>
+    <article ref={article} className="archive-detail" data-view={view}>
       <header className="archive-detail-heading">
         <div>
           <h1>{record.task || record.text}</h1>

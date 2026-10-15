@@ -6,6 +6,7 @@ import { getCopy } from '../../src/shared/copy';
 import { SITES } from '../../src/main/sites';
 import { setShellApi } from '../../src/renderer/shell-api';
 import type { SynthesisDraftStore } from '../../src/renderer/synthesis-draft';
+import type { LibrarySessionStore } from '../../src/renderer/library-session';
 
 export const comparisonCopy = getCopy('en');
 export const comparisonRecord = createArchiveRecord({ text: 'Original research question', task: 'Compare saved answers',
@@ -19,7 +20,8 @@ export async function comparisonWait(predicate: () => unknown) {
     await act(async () => new Promise(resolve => setTimeout(resolve, 10))); }
 }
 
-export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraftStore; onArchiveEntered?: (id: string, mode: string) => void } = {}) {
+export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraftStore; onArchiveEntered?: (id: string, mode: string) => void;
+  detailWidth?: number; startInRead?: boolean; session?: LibrarySessionStore } = {}) {
   const css = require.extensions['.css']; require.extensions['.css'] = () => {};
   const resize = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
   Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, value: class { observe() {} disconnect() {} } });
@@ -38,12 +40,22 @@ export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraf
     }
   }) as any);
   const h = await mountDom(<StrictMode><ArchiveSurface copy={comparisonCopy} locale="en" sites={SITES} synthesisSites={SITES}
-    defaultTier={null} preferredId={comparisonRecord.id} comparisonId={comparisonRecord.id}
+    defaultTier={null} preferredId={comparisonRecord.id} comparisonId={options.startInRead ? null : comparisonRecord.id}
     synthesisDrafts={options.synthesisDrafts}
+    session={options.session}
     {...{ onArchiveEntered: options.onArchiveEntered }}
     pendingSynthesis={null} synthesisCandidate={null} onClose={() => {}} onCapture={async () => comparisonRecord}
-    onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => comparisonRecord} /></StrictMode>);
-  await comparisonWait(() => h.document.querySelector('.archive-compare'));
+    onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => comparisonRecord} /></StrictMode>, window => {
+    const bounds = window.HTMLElement.prototype.getBoundingClientRect;
+    if (options.detailWidth !== undefined) Object.defineProperty(window.HTMLElement.prototype, 'getBoundingClientRect', {
+      configurable: true, value(this: HTMLElement) {
+        const rect = bounds.call(this);
+        if (this.classList.contains('folder-detail')) rect.width = options.detailWidth!;
+        return rect;
+      }
+    });
+  });
+  await comparisonWait(() => h.document.querySelector(options.startInRead ? '.archive-answers' : '.archive-compare'));
   const button = (label: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')]
     .find(node => node.textContent === label || node.getAttribute('aria-label') === label);
   return { ...h, button, get writes() { return writes; }, get decisionWrites() { return decisionWrites; },

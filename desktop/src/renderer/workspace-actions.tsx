@@ -4,6 +4,7 @@ import type { SyncStatus } from "../shared/sync";
 import { ArchiveIcon, CompareIcon, MoreIcon, ReloadIcon } from "./icons";
 import { commandHint } from "./command-hint";
 import { describeSync, syncNeedsAttention } from "./sync-status";
+import { useIdleAction } from "./feedback-provider";
 
 interface WorkspaceActionsProps {
   readonly copy: DesktopCopy;
@@ -25,6 +26,7 @@ interface WorkspaceActionsProps {
 export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Element {
   const compareHintId = useId();
   const compareBlocked = props.disabled ? props.copy.compareBusy : !props.onCompare ? props.copy.compareNeedsAnswers : null;
+  useIdleAction(props.copy.collectCompare, compareBlocked ? undefined : props.onCompare);
   const syncAttention = syncNeedsAttention(props.syncStatus);
   const retryCount = props.failureCount;
   const uncertainCount = props.uncertainCount ?? props.cancelledCount;
@@ -53,7 +55,7 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
       {compareBlocked ? <span id={compareHintId} className="sr-only">{compareBlocked}</span> : null}
       <button type="button" className="archive-trigger" data-hint={props.disabled ? props.copy.archiveBusy : props.copy.openArchive}
         aria-label={props.copy.openArchive} aria-disabled={props.disabled} onClick={props.disabled ? undefined : props.onOpenArchive}>
-        <ArchiveIcon />
+        <ArchiveIcon /><span className="archive-label">{props.copy.archiveTitle}</span>
       </button>
       <button
         type="button"

@@ -1,5 +1,5 @@
 // Synthetic UI data; no Electron bridge, user profile, or external requests.
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CommandBar } from '../../src/renderer/command-bar';
 import { ImagePicker } from '../../src/renderer/image-picker';
@@ -10,7 +10,11 @@ import { SettingsWorkspace } from '../../src/renderer/settings-workspace';
 import { WorkspaceDrawer } from '../../src/renderer/workspace-drawer';
 import { SiteFrames } from '../../src/renderer/site-frames';
 import { ConfirmDialog } from '../../src/renderer/confirm-dialog';
-import { FeedbackProvider } from '../../src/renderer/feedback-provider';
+import { FeedbackProvider, useGlobalFeedback } from '../../src/renderer/feedback-provider';
+import { broadcastFeedback } from '../../src/renderer/broadcast-feedback';
+import { completeRun } from '../../src/renderer/broadcast-run';
+import { WorkspaceProgress } from '../../src/renderer/workspace-progress';
+import { moreMenuCommandIds } from '../../src/renderer/toolbar-fit';
 import { currentPlatform, type DesktopPlatform } from '../../src/renderer/platform';
 import { usePresence } from '../../src/renderer/presence';
 import { useComposerSession } from '../../src/renderer/use-composer-session';
@@ -47,6 +51,12 @@ const status: SyncStatus = { state: 'idle', connected: true, pending: 0, errorCo
   ...(query.get('connection') === 'auth' ? { state: 'auth' as const } : {}),
   ...(query.has('diagnosticError') ? { state: 'error' as const, reason: 'oauth_callback_timeout' as const } : {}) };
 const noop = () => {};
+function SubmittedSummary() {
+  const { announce } = useGlobalFeedback();
+  useEffect(() => announce(broadcastFeedback(copy, completeRun({ runId: 'fixture', text: 'Question', sites: ['claude', 'kimi'], tier: null, images: [] },
+    [{ site: 'claude', ok: true }, { site: 'kimi', ok: true }]))), [announce]);
+  return null;
+}
 const previewImages = ['white', 'black'].map(color => {
   const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 48;
   const context = canvas.getContext('2d')!; context.fillStyle = color; context.fillRect(0, 0, 64, 48);
@@ -127,8 +137,9 @@ function Fixture(): React.JSX.Element {
       onLayoutModeChange: async layoutMode => setPreferences(p => ({ ...p, values: { ...p.values, layoutMode } })),
       onDraftSyncChange: async draftSync => setPreferences(p => ({ ...p, draftSync })) }} />;
   return <div className={`app-shell${reservedExpanded ? ' is-composer-expanded' : ''}`} data-sent={sent} data-opened={selected.join(',')} data-participating={participation.participating.join(',')}>
+    {query.has('progress') ? <SubmittedSummary /> : null}
     <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
-      layoutMode={layout} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0} uncertainCount={stress ? 3 : 0} onReviewUncertain={noop}
+      layoutMode={layout} automaticFocus={query.has('automaticFocus')} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0} uncertainCount={stress ? 3 : 0} onReviewUncertain={noop}
       scopeLabel={copy.allSites} healthAttention={stress ? 2 : 0} panelTab={panel?.tab ?? null}
       pageControl={!query.has('singlePage') && <PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}
       draftRecovery={<PromptDraftRecovery copy={copy} busy={!!query.get('sending')} onClearImages={() => setImages([])}
@@ -137,10 +148,17 @@ function Fixture(): React.JSX.Element {
       imageControl={<ImagePicker copy={copy} images={query.has('details') ? images : stress ? previewImages.slice(0, 1) : []} open={imagesOpen} disabled={false} warning={null} warningCount={0}
         error={null} onOpenChange={open => { setImagesOpen(open); if (open) setPanel(null); }} onFiles={noop} onRemove={index => setImages(current => current.filter((_, i) => i !== index))} onAdjustScope={noop} />}
       sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded} reservedExpanded={reservedExpanded}
-      onTextChange={setText} onSubmit={() => setSent(true)} onCompare={query.has('blocked') ? undefined : noop} onRetry={noop} onCancel={noop}
+      onTextChange={setText} onSubmit={() => setSent(true)} onCompare={query.has('blocked') ? undefined : () => { document.body.dataset.compared = 'true'; }} onRetry={noop} onCancel={noop}
       onTierChange={setTier} onLayoutChange={setLayout} onExpandedChange={setExpanded}
       onPanelChange={tab => setPanel(tab ? { tab, detail: null, inputMethod: 'keyboard' } : null)}
-      onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onPasteImages={noop} />
+      onShowGroupMenu={noop} onOpenMore={() => { document.body.dataset.menuCommands = moreMenuCommandIds().join(','); }}
+      onOpenArchive={() => { document.body.dataset.archiveOpened = 'true'; }} onPasteImages={noop} />
+    {query.has('progress') ? <WorkspaceProgress copy={copy} runId="fixture" activeSites={['claude', 'kimi']}
+      statuses={{ claude: { site: 'claude', phase: 'complete', submission: { runId: 'fixture', state: 'sent' }, generation: { runId: 'fixture', state: 'complete' } },
+        kimi: { site: 'kimi', phase: 'complete', submission: { runId: 'fixture', state: 'sent' }, generation: { runId: 'fixture', state: 'complete' } } }}
+      progress={{ runId: 'fixture', questionId: 'question', revision: 1, state: 'available', answers: (['claude', 'kimi'] as const).map(site => ({
+        id: `answer-${site}`, site, attempt: 1, submission: 'submitted', capture: 'complete', hasText: true, truncated: false, sealedAt: 100
+      })) }} onRead={noop} /> : null}
     <SiteFrames copy={copy} sites={SITES} statuses={statuses} selected={new Set(selected)} history={{}}
       layout={{ mode: 'overview', focused: 'claude', page: 0, pageCount: 3,
         placements: SITES.slice(0, 2).map((site, i) => ({ key: site.key,
@@ -158,4 +176,4 @@ function Fixture(): React.JSX.Element {
   </div>;
 }
 createRoot(document.getElementById('root')!).render(query.get('surface') === 'native' ? <NativeFixture />
-  : query.has('details') ? <FeedbackProvider copy={copy}><Fixture /></FeedbackProvider> : <Fixture />);
+  : <FeedbackProvider copy={copy}><Fixture /></FeedbackProvider>);

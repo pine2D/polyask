@@ -156,9 +156,14 @@ app.whenReady().then(async () => {
   win.setContentSize(960, 900); await pause(100);
   assert.equal(await run('getComputedStyle(document.querySelector(".archive-compare-grid")).gridTemplateColumns.split(" ").length'), 1);
   await shot('comparison-narrow');
-  await click('.library-focus'); await pause(100);
+  // A fresh entry on a narrow detail pane expands automatically; resizing alone does not.
+  await click('.library-view-switch button:first-child');
+  await click('.library-view-switch button:nth-child(2)'); await pause(100);
+  assert.equal(await run('document.querySelector(".folder-workspace").dataset.focused'), 'true');
   assert.equal(await run('getComputedStyle(document.querySelector(".archive-compare-grid")).gridTemplateColumns.split(" ").length'), 2);
-  await click('.library-focus');
+  await shot('comparison-narrow-expanded');
+  await click('.comparison-focus');
+  assert.equal(await run('document.querySelector(".folder-workspace").dataset.focused'), 'false');
   // Decision editing shares the selector and protects the draft on navigation.
   await click('.library-segments button:nth-child(3)');
   await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 1');

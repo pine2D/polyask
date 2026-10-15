@@ -136,7 +136,7 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar[data-fit~="1"] :is(.mode-switch .priority-p1, .workspace-actions .priority-p1, kbd, .scope-label-full, .workspace-actions .retry-label) { display: none; }
 .command-bar[data-fit~="1"] .scope-label-compact { display: inline; }
 .command-bar[data-fit~="1"] > :is(.page-tabs, .workspace-actions, .mode-switch, .tier-switch, .image-picker, .prompt-history-tools) { min-width: max-content; }
-.command-bar[data-fit~="1"] .workspace-actions :is(.compare-trigger, .archive-trigger) { width: var(--target-size); min-width: var(--target-size); }
+.command-bar[data-fit~="1"] .workspace-actions .compare-trigger { width: var(--target-size); min-width: var(--target-size); }
 .command-bar[data-fit~="1"] .workspace-entry .scope-split { flex: 1; min-width: calc(var(--target-size) * 2 + 2px); }
 .command-bar[data-fit~="1"] > .workspace-entry { min-width: calc(var(--target-size) * 3 + 5px); }
 .command-bar[data-fit~="1"] .workspace-entry .health-trigger { flex: 0 0 var(--target-size); padding: 0; }
@@ -146,6 +146,8 @@ kbd { opacity: .7; font: 10px system-ui; }
 /* 图标化后每页只留一枚徽标：最严重的状态带数字，其余状态仍在 aria-label 与悬停说明里。 */
 .command-bar[data-fit~="1"] .page-tab-badge:not([data-primary]) { display: none; }
 .command-bar[data-fit~="2"] .tier-switch [data-current-tier] { display: none; }
+.command-bar[data-fit~="2"] .archive-label { display: none; }
+.command-bar[data-fit~="2"] .workspace-actions .archive-trigger { width: var(--target-size); min-width: var(--target-size); padding: 0; }
 .command-bar[data-fit~="2"] .primary-action { min-width: var(--control-height); width: var(--control-height); padding: 0; }
 .command-bar[data-fit~="2"] .primary-action > span { display: none; }
 .command-bar[data-fit~="2"] .send.primary-action { width: auto; padding: 0 8px; }

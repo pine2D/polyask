@@ -1,7 +1,7 @@
 import { act, type ReactNode } from 'react';
 
 /** Real component mount; only browser globals are supplied by jsdom. */
-export async function mountDom(element: ReactNode) {
+export async function mountDom(element: ReactNode, setup?: (window: Window & typeof globalThis) => void) {
   const { JSDOM } = require('jsdom');
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'https://polyask.test/' });
   dom.window.HTMLElement.prototype.scrollIntoView ??= () => undefined;
@@ -17,6 +17,7 @@ export async function mountDom(element: ReactNode) {
   }
   descriptors.set('IS_REACT_ACT_ENVIRONMENT', Object.getOwnPropertyDescriptor(globalThis, 'IS_REACT_ACT_ENVIRONMENT'));
   Object.defineProperty(globalThis, 'IS_REACT_ACT_ENVIRONMENT', { configurable: true, writable: true, value: true });
+  setup?.(dom.window);
   const { createRoot } = await import('react-dom/client');
   const root = createRoot(dom.window.document.getElementById('root'));
   const render = async (node: ReactNode) => { await act(async () => root.render(node)); };

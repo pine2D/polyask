@@ -17,6 +17,8 @@ export type ArchiveDetailView = ArchiveReaderState['view'];
 export interface ArchiveReaderBinding {
   readonly state: ArchiveReaderState;
   readonly change: (patch: Partial<Omit<ArchiveReaderState, 'archiveId'>>) => void;
+  /** 只消费新比较导航；从会话恢复或重挂详情不算再次进入。 */
+  readonly consumeComparisonEntry?: () => boolean;
 }
 
 export function initialArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results'>, compare = false): ArchiveReaderState {
@@ -30,6 +32,8 @@ export function initialArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results
 export function useArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results'>, compare = false,
   saved?: ArchiveReaderState | null, onSave?: (state: ArchiveReaderState) => void): ArchiveReaderBinding {
   const [state, setState] = useState(() => saved?.archiveId === record.id ? saved : initialArchiveReader(record, compare));
+  const entry = useRef({ id: record.id, pending: compare && saved?.archiveId !== record.id });
+  if (entry.current.id !== record.id) entry.current = { id: record.id, pending: compare };
   const current = useRef(state), publish = useRef(onSave);
   const previous = useRef(record);
   current.current = state.archiveId === record.id ? state : initialArchiveReader(record, compare); publish.current = onSave;
@@ -52,5 +56,6 @@ export function useArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results'>, 
       ...(current.current.view === 'compare' && sources.length < 2 ? { view: 'read' as const } : {}) });
     previous.current = record; publish.current?.(current.current);
   }, [record.id, record.results]);
-  return { state: state.archiveId === record.id ? state : initialArchiveReader(record, compare), change };
+  return { state: state.archiveId === record.id ? state : initialArchiveReader(record, compare), change,
+    consumeComparisonEntry: () => { const pending = entry.current.pending; entry.current.pending = false; return pending; } };
 }

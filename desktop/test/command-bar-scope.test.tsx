@@ -45,6 +45,19 @@ test("send has a localized scope name even when narrow layouts hide its text", (
   assert.match(render({ selectedCount: 9 }), /aria-label="Send to 9 sites"/);
 });
 
+test("layout buttons keep stable localized names when their visible labels collapse", () => {
+  for (const [locale, overview, focus] of [["en", "Overview", "Focus"], ["zh-CN", "总览", "聚焦"], ["zh-TW", "總覽", "聚焦"]]) {
+    for (const automaticFocus of [false, true]) {
+      const buttons = render({ copy: getCopy(locale), layoutMode: "focus", automaticFocus })
+        .match(/<div class="mode-switch[^]*?<\/div>/)![0].match(/<button[^>]*>/g)!;
+      assert.ok(buttons[0].includes(`aria-label="${overview}"`), `${locale} overview has a name independent of hidden text`);
+      assert.ok(buttons[1].includes(`aria-label="${focus}"`), `${locale} automatic focus does not replace the action name`);
+      assert.ok(buttons[1].includes('aria-pressed="true"'));
+      assert.ok(buttons[0].includes('aria-pressed="false"'));
+    }
+  }
+});
+
 test("blocked sending keeps the reason separate from the action name", () => {
   const html = render({ sendBlockedReason: "Unsupported image sites" });
   assert.match(html, /class="send [^"]*"[^>]*data-hint="Unsupported image sites"[^>]*aria-label="Send to 3 sites"[^>]*disabled=""/);

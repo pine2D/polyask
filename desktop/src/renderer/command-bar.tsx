@@ -83,8 +83,8 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
         <button type="button" className={healthOpen ? "health-trigger active" : "health-trigger"} data-hint={healthOpen ? props.copy.closeWorkbench : commandHint(props.copy.siteHealth, "open-site-health", props.isMac)} aria-label={healthOpen ? props.copy.closeWorkbench : props.copy.siteHealth} aria-pressed={healthOpen} aria-controls="workspace-panel" data-health-attention={props.healthAttention || undefined} onClick={() => props.onPanelChange(healthOpen ? null : "health")}><HealthIcon /></button>
       </div>
       <div className="mode-switch priority-p0" aria-label={props.copy.layoutLabel}>
-        <button type="button" data-hint={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
-        <button type="button" data-hint={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
+        <button type="button" aria-label={props.copy.overview} data-hint={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
+        <button type="button" aria-label={props.copy.focus} data-hint={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
       </div>
       {props.pageControl}
       <PromptComposer copy={props.copy} promptRef={props.promptRef} text={props.text} revision={props.draftRevision}

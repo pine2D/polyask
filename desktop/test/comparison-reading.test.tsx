@@ -1,6 +1,74 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { comparisonCopy as copy, comparisonMount, comparisonRecord, comparisonWait } from './ui/comparison-dom';
+import { createLibrarySessionStore } from '../src/renderer/library-session';
+
+test('reopening a comparison respects the browsing layout saved after returning from expansion', async () => {
+  const session = createLibrarySessionStore();
+  const first = await comparisonMount({ detailWidth: 700, session });
+  try {
+    await first.choose(copy.leftAnswer, 'Kimi');
+    await first.click(first.button('Return to browsing')!);
+  } finally { await first.close(); }
+  const restored = await comparisonMount({ detailWidth: 700, session });
+  try {
+    assert.equal(restored.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false');
+    assert.equal(restored.document.querySelector('.archive-compare-column h3')!.textContent, 'Kimi');
+    assert.equal(restored.writes, 0);
+  } finally { await restored.close(); }
+});
+
+test('entering comparison at the stacking breakpoint expands once and returning does not reopen it', async () => {
+  for (const [detailWidth, expected] of [[760, 'true'], [760.5, 'false'], [761, 'false']] as const) {
+    const h = await comparisonMount({ detailWidth });
+    try {
+      assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), expected);
+      if (expected === 'true') {
+        await h.click(h.button('Return to browsing')!);
+        assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false');
+        await h.choose(copy.leftAnswer, 'Kimi');
+        assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false', 'reading updates do not force expansion again');
+      }
+      assert.equal(h.writes, 0);
+    } finally { await h.close(); }
+  }
+});
+
+test('leaving supplementary analysis restores a comparison without expanding a second time', async () => {
+  const h = await comparisonMount({ detailWidth: 700 });
+  try {
+    await h.click(h.button('Return to browsing')!);
+    await h.click(h.button(copy.synthesisAction)!);
+    await comparisonWait(() => h.document.querySelector('.synthesis-workspace'));
+    await h.click(h.button(copy.synthesisCancel)!);
+    await comparisonWait(() => h.document.querySelector('.archive-compare'));
+    assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false');
+    assert.equal(h.writes, 0);
+  } finally { await h.close(); }
+});
+
+test('narrow comparison entry preserves browsing position and waits for unsaved metadata confirmation', async () => {
+  const h = await comparisonMount({ detailWidth: 700, startInRead: true });
+  try {
+    const list = h.document.querySelector<HTMLElement>('.folder-content-list .archive-list')!;
+    const detail = h.document.querySelector<HTMLElement>('.archive-detail-pane')!;
+    await h.scroll(list, 440); await h.scroll(detail, 320);
+    await h.input(h.document.querySelector<HTMLTextAreaElement>('[name=archive-note]')!, 'Keep this unsaved note.');
+    await h.click(h.button(copy.libraryCompare)!);
+    assert.equal(!!h.document.querySelector('.confirm-dialog'), true);
+    assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false');
+    await h.click([...h.document.querySelectorAll<HTMLButtonElement>('.confirm-dialog button')].find(node => node.textContent === copy.cancel)!);
+    assert.equal(h.document.querySelector('.archive-detail')!.getAttribute('data-view'), 'read');
+    await h.input(h.document.querySelector<HTMLTextAreaElement>('[name=archive-note]')!, '');
+    await h.click(h.button(copy.libraryCompare)!);
+    assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'true');
+    await h.choose(copy.leftAnswer, 'Kimi');
+    await h.click(h.button('Return to browsing')!);
+    assert.equal(list.scrollTop, 440); assert.equal(detail.scrollTop, 320);
+    assert.equal(h.document.querySelector('.archive-compare-column h3')!.textContent, 'Kimi');
+    assert.equal(h.writes, 0);
+  } finally { await h.close(); }
+});
 
 test('expanding comparison restores browsing and both answers without resetting choices or filtering', async () => {
   const h = await comparisonMount();

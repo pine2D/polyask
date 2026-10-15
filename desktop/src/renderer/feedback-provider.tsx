@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useId, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import type { DesktopCopy } from "../shared/copy";
 import { useControlHint } from "./control-hints";
 import { WORKSPACE_FEEDBACK_HEIGHT } from "../shared/display";
@@ -9,6 +9,7 @@ interface FeedbackState {
   readonly workspaceHost: HTMLElement | null;
   readonly setUndoAction: (action: FeedbackAction | null) => void;
   readonly setNoticeAction: (action: FeedbackAction | null) => void;
+  readonly setIdleAction: (action: FeedbackAction | null) => void;
   readonly announcement: string;
   readonly announcementSeq: number;
   readonly announce: (text: string, visible?: boolean, transient?: boolean) => void;
@@ -26,6 +27,7 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
   const [announced, setAnnounced] = useState({ text: "", seq: 0 });
   const [notice, setNotice] = useState({ text: "", seq: 0, transient: false });
   const [idleNotice, setIdleNotice] = useState<string | null>(null);
+  const [idleAction, setIdleAction] = useState<FeedbackAction | null>(null);
   const [live, setLive] = useState("");
   const hint = useControlHint(hintId, notice.seq);
   const announce = useCallback((text: string, visible = true, transient = false): void => {
@@ -49,13 +51,14 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
     const handle = frame ? requestAnimationFrame(() => setLive(announced.text)) : setTimeout(() => setLive(announced.text), 16);
     return () => { if (frame) cancelAnimationFrame(handle as number); else clearTimeout(handle); };
   }, [announced]);
-  return <FeedbackContext.Provider value={{ workspaceHost, announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction, setNoticeAction, setIdleNotice }}>
+  return <FeedbackContext.Provider value={{ workspaceHost, announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction, setNoticeAction, setIdleNotice, setIdleAction }}>
     {children}
     <div className="sr-only" aria-live="polite" aria-atomic="true">{live}</div>
     <footer className="feedback-bar" data-hint-visible={!!hint} data-has-notice={!!notice.text} style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
       <span className="feedback-notice" hidden={!notice.text && !!hint} title={notice.text || (idleNotice ?? "")}>{notice.text || idleNotice || copy.feedbackReady}</span>
       <span className="feedback-hint" id={hintId} role={hint ? "tooltip" : undefined} hidden={!hint} title={hint}>{hint}</span>
       <div className="feedback-workspace" ref={setWorkspaceHost} />
+      {!(notice.text && noticeAction) && !undoAction && idleAction ? <button type="button" className="feedback-next-step" onClick={idleAction.run}>{idleAction.label}</button> : null}
       {undoAction ? <button type="button" onClick={undoAction.run}>{undoAction.label}</button> : null}
       {notice.text && noticeAction ? <button type="button" onClick={noticeAction.run}>{noticeAction.label}</button> : null}
       {notice.text ? <button type="button" onClick={() => setNotice((current) => ({ ...current, text: "" }))}>{copy.dismissFeedback}</button> : null}
@@ -68,6 +71,17 @@ export function useIdleNotice(text: string): void {
   const set = useContext(FeedbackContext)?.setIdleNotice;
   useEffect(() => { set?.(text); }, [set, text]);
   useEffect(() => () => set?.(null), [set]);
+}
+
+/** 下一步只在可用时出现；错误恢复与撤销始终优先，回调随当前工作范围更新。 */
+export function useIdleAction(label: string, run: (() => void) | undefined): void {
+  const set = useContext(FeedbackContext)?.setIdleAction;
+  const latest = useRef(run); latest.current = run;
+  const available = !!run;
+  useEffect(() => {
+    set?.(available ? { label, run: () => latest.current?.() } : null);
+    return () => set?.(null);
+  }, [set, label, available]);
 }
 
 export function useGlobalFeedback(): FeedbackState {
