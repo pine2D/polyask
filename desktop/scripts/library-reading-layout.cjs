@@ -67,7 +67,7 @@ async function anchors({ win, nativeTheme, output, run, wait, click, key, shot }
   const reports = [];
   for (const [locale, width, zoom, theme] of [
     ['zh-CN', 1600, 1, 'light'], ['en', 780, 1, 'light'],
-    ['zh-TW', 960, 1.25, 'dark'], ['en', 960, 1.5, 'dark']
+    ['zh-TW', 960, 1.25, 'dark'], ['en', 960, 1.5, 'dark'], ['en', 1280, 2, 'light']
   ]) {
     win.webContents.setZoomFactor(1); win.setContentSize(width, 900); nativeTheme.themeSource = theme;
     await win.loadFile(require('node:path').join(output, 'index.html'), { query: { locale, longCode: '1' } });
@@ -97,7 +97,8 @@ async function anchors({ win, nativeTheme, output, run, wait, click, key, shot }
     assert.ok(focus.action && focus.source === 'archive-answer-8' && focus.top >= focus.navBottom - 1 && focus.bottom <= focus.paneBottom + 1,
       `keyboard focus remains visible below navigation: ${JSON.stringify(focus)}`);
     if (zoom === 1.25) await shot('reading-navigation-zoom-125');
-    reports.push({ locale, windowWidth: width, zoom, theme, ...geometry, line: undefined, focus });
+    const bookmark = await require('./library-best-navigation.cjs')({ win, run, wait, click, key, shot, locale, theme, zoom });
+    reports.push({ locale, windowWidth: width, zoom, theme, ...geometry, line: undefined, focus, bookmark });
   }
   win.webContents.setZoomFactor(1); win.setContentSize(1600, 1000); nativeTheme.themeSource = 'light';
   await win.loadFile(require('node:path').join(output, 'index.html'));

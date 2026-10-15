@@ -106,7 +106,13 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
         <button type="button" aria-pressed={view === 'synthesis'} onClick={() => setView('synthesis')}>{copy.librarySynthesis}{record.synthesis ? <span aria-hidden="true">✓</span> : null}</button>
       </nav>
       {view === 'read' ? <nav className="archive-answer-nav" aria-label={copy.siteViews}>
-        {record.results.map((result, index) => <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`}>{answerSourceId(index)} {result.label}</a>)}
+        {record.results.map((result, index) => {
+          const best = record.winnerHost === result.host;
+          const label = `${answerSourceId(index)} ${result.label}`;
+          return <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`} data-best={best || undefined}
+            aria-label={best ? `${label} · ${copy.archiveBestAnswer}` : undefined}>{label}
+            <span className="archive-answer-best" aria-hidden="true">{best ? <StarIcon /> : null}</span></a>;
+        })}
       </nav> : null}
       </div>
       {view === 'compare' ? <ArchiveCompare reader={reader} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} record={record} onEvidence={props.onCreateDecision} onFollowUp={props.onFollowUp} readingFocus={props.readingFocus} busy={props.busy} copy={copy} results={successfulResults} onOpenLink={props.onOpenSource} /> : null}
