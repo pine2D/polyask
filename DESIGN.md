@@ -294,7 +294,7 @@ components:
 
 精确阴影值放在 `.impeccable/design.json`，不扩展前置令牌的格式。原生站点视图的层序不是 CSS 阴影或 z-index 能解决的问题，覆盖面须沿用已有视图隐藏与恢复流程。
 
-**The Flat Reading Rule.** 回答、摘录和比较段落主要用间距与分隔线组织，延续结果库已有的平整阅读面。
+**The Flat Reading Rule.** 回答、摘录和比较段落主要用间距组织。比较块不逐块添加横线；保留原文分隔线、表格边界与共同段落标记，延续结果库已有的平整阅读面。
 
 来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`。
 
@@ -348,6 +348,8 @@ components:
 设置分组用面板底、面板圆角和细边界，组内卡片通过分隔线衔接，保留各自的标题、说明与操作。结果列表行以背景和轮廓表达当前项；回答、摘录、比较段落主要是平整分节，不复制设置卡的容器外观。
 
 结果列表先显示来源总数，再以较弱文字预览前两个站点；完整名单保留在提示与读屏文本中，详情继续提供全部来源。
+
+列表标题最多显示两行并裁切溢出，来源、时间和标签各占自己的位置；完整标题保留在悬停提示和详情中，裁切不改变存储内容。
 
 ### Site Frames and Reading Sections
 

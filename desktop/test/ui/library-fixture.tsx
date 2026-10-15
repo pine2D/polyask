@@ -19,10 +19,19 @@ let records = Array.from({length: 8}, (_, i) => createArchiveRecord({ id: `resul
 if (new URLSearchParams(location.search).has('longCode')) records = records.map(record => ({ ...record,
   results: record.results.map(result => ({ ...result, text: `${result.text}\n\n\`\`\`text\n${'unbroken_'.repeat(250)}\n\`\`\`` })) }));
 records=records.map(r=>({...r,tags:['产品设计','待讨论'], note:'保留原有数据契约。',favorite:true}));
+const longTitles = new URLSearchParams(location.search).has('longTitles');
+if (longTitles) {
+  const titles = ['如何整理多模型研究资料，并保留完整来源以便复核与继续比较？'.repeat(5),
+    'A complete saved research question with assumptions, evidence and follow-up steps. '.repeat(5),
+    'LongUnbrokenResearchIdentifier'.repeat(12), '跨站阅读与研究记录 🧪 '.repeat(14)];
+  records = records.map((record, index) => ({ ...record, task: titles[index % titles.length],
+    results: record.results.map(result => ({ ...result, text: `${result.text}\n\n---\n\n保留回答原文中的分隔线。` })) }));
+}
 if (new URLSearchParams(location.search).has('invalidTime')) records = records.map(record => ({ ...record,
   ts: Number.MAX_SAFE_INTEGER, createdAt: Number.MAX_SAFE_INTEGER, updatedAt: Number.MAX_SAFE_INTEGER }));
 const folders = [{ id: 'work', name: '产品设计与体验改进', createdAt: 1, updatedAt: 1, deviceId: 'fixture', schema: 3 }];
 let cards = [{ id: 'card-1', archiveId: records[0].id, title: '结果库体验优化决策', conclusion: '采用阅读优先的三栏布局。', rationale: '统一组件，减少重复操作。', uncertainties: '不同系统缩放下的效果待核实。', nextStep: '完成浏览器与 Electron 验证。', status: 'draft', evidence: [], sourceTitle: records[0].task, createdAt: Date.now(), updatedAt: Date.now(), deviceId: 'fixture', schema: 2 }];
+if (longTitles) cards = cards.map(card => ({ ...card, title: '一份需要完整保存并在列表中安全裁切的长标题决策卡。'.repeat(5) }));
 if (new URLSearchParams(location.search).has('colorStates')) cards = ['draft', 'verify', 'final'].map((status, i) => ({
   ...cards[0], id: `card-${i + 1}`, title: `${cards[0].title} · ${status}`, status }));
 if (new URLSearchParams(location.search).has('emptyLibrary')) { records = []; cards = []; }

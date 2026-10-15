@@ -45,7 +45,7 @@
 .library .archive-list > button[aria-current=true] { border-color: var(--accent); background: var(--accent-soft); }
 .library .archive-list > button:hover:not([aria-current=true]) { background: color-mix(in srgb, var(--panel) 88%, var(--muted)); }
 .library .archive-list small, .library .archive-list time { font-size: 12px; line-height: 1.5; }
-.library .archive-list .library-item-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; font-weight: 600; }
+.library .archive-list .library-item-title { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; overflow-wrap: anywhere; font-size: 14px; line-height: 1.5; font-weight: 600; }
 .library .archive-list .library-item-type { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 400; color: var(--muted); white-space: normal; }
 .library-item-type > svg { width: 13px; height: 13px; color: var(--accent); }
 .library .archive-list .library-item-sources { display: flex; align-items: baseline; gap: 8px; min-width: 0; }

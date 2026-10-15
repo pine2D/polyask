@@ -76,7 +76,7 @@
 .library .archive-compare-selectors label { font-size: 12px; gap: 8px; min-width: 0; }
 .library .archive-compare-column { max-height: 70vh; overflow: auto; overscroll-behavior: contain; padding: 2px 8px 16px 2px; }
 .library .archive-compare-column > h3 { position: sticky; top: 0; margin: 0; padding: 10px 0; background: var(--panel); font-size: 14px; z-index: 1; }
-.library .archive-compare-paragraph { padding: 14px 0; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; }
+.library .archive-compare-paragraph { padding: 14px 0; margin: 0; border: 0; border-radius: 0; }
 .library .archive-compare-paragraph.shared { background: color-mix(in srgb, var(--panel) 65%, var(--accent-soft)); padding: 12px 12px 12px 14px; border-radius: 0 6px 6px 0; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 55%, var(--border)); }
 .library .comparison-options { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin: 16px 0 4px; }
 .library .comparison-options .comparison-filter { margin: 0; }
