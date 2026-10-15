@@ -59,7 +59,7 @@ export function DecisionEditor({ copy, value, saved, source, sourceFailed, editi
     <div className="decision-meta">
       <label>{copy.decisionStatus}{editing ? <LibrarySelect label={copy.decisionStatus} disabled={busy} value={value.status}
         options={decisionStatuses.map(status => ({ value: status, label: decisionStatusLabel(copy, status) }))}
-        onChange={status => onChange({ ...value, status: status as DecisionStatus })} /> : <strong>{decisionStatusLabel(copy, value.status)}</strong>}</label>
+        onChange={status => onChange({ ...value, status: status as DecisionStatus })} /> : <strong className="library-status-badge" data-status={value.status}>{decisionStatusLabel(copy, value.status)}</strong>}</label>
       <p>{copy.decisionManual}</p>
     </div>
     <div className="decision-fields">{fields.map(([key, label]) => editing ? <div key={key} className="decision-field"><label htmlFor={fieldId(key)}>{label}</label><textarea {...aria(key)} name={`decision-${key}`} autoComplete="off" value={value[key]} disabled={busy} rows={key === "conclusion" ? 4 : 3} onChange={(event) => onChange({ ...value, [key]: event.target.value })} />{hints(key, value[key], 4000)}</div> : <section key={key}><h2>{label}</h2><MarkdownPreview onOpenLink={onOpenLink} value={value[key] || "—"} /></section>)}</div>

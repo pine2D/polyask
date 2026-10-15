@@ -21,6 +21,8 @@
   --success-ink: #167039;
   --warning-ink: #875900;
   --danger-ink: #b91c1c;
+  --success-soft: #e8f5ed;
+  --warning-soft: #fff4dc;
   --font-meta: 12px;
   --font-control: 13px;
   --font-body: 14px;
@@ -49,6 +51,8 @@
     --success-ink: #86d9a3;
     --warning-ink: #efc267;
     --danger-ink: #fca5a5;
+    --success-soft: #1e392c;
+    --warning-soft: #3c3220;
     --shadow-control: 0 1px 2px #00000033;
     --field-shadow: 0 1px 2px rgb(0 0 0 / .24), 0 0 1px rgb(0 0 0 / .12);
     --field-focus-shadow: 0 1px 4px rgb(0 0 0 / .38), 0 0 2px rgb(0 0 0 / .2);

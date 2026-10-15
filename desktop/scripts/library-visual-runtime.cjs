@@ -51,6 +51,7 @@ app.whenReady().then(async () => {
     return selectors.flatMap(selector=>[...document.querySelectorAll(selector)].filter(e=>e.getClientRects().length).map(e=>({selector,width:e.clientWidth,scroll:e.scrollWidth,right:e.getBoundingClientRect().right,viewport:innerWidth})));
   })()`);
   const reports = [];
+  const colors = await require('./library-color-visual.cjs')({ win, nativeTheme, output, run, wait, click, shot });
   for (const locale of (process.env.POLYASK_UI_QUICK ? [] : ['zh-CN', 'zh-TW', 'en'])) {
     for (const theme of ['light', 'dark']) {
       nativeTheme.themeSource = theme;
@@ -239,7 +240,7 @@ app.whenReady().then(async () => {
   assert.equal(await run('document.querySelector(".library").dataset.focused'), 'false');
   const hardening = await require('./library-hardening-visual.cjs')({ win, nativeTheme, output, run, wait, click, fill, key, shot });
   assert.deepEqual(errors, []);
-  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, anchorLayouts, comparisonLayout, hardening, interactions: 'passed', consoleErrors: errors }, null, 2));
+  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, colors, anchorLayouts, comparisonLayout, hardening, interactions: 'passed', consoleErrors: errors }, null, 2));
   console.log(`Library UI passed: ${reports.length} layout variants, four folder IME cases and keyboard/editing flows.`);
   app.quit();
 }).catch(error => { console.error(error); app.exit(1); });

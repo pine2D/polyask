@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T03:33:14.899599Z",
+  "generatedAt": "2026-10-15T12:16:54.691744Z",
   "title": "Design System: PolyAsk · AI 众答",
   "extensions": {
     "colorMeta": {
@@ -409,6 +409,22 @@
           "oklch(83.57% 0.10349 19.57)",
           "oklch(95.00% 0.10349 19.57)"
         ]
+      },
+      "success-soft": {
+        "role": "semantic",
+        "displayName": "成功状态底"
+      },
+      "warning-soft": {
+        "role": "semantic",
+        "displayName": "待验证状态底"
+      },
+      "success-soft-dark": {
+        "role": "semantic",
+        "displayName": "成功状态底 · 暗色"
+      },
+      "warning-soft-dark": {
+        "role": "semantic",
+        "displayName": "待验证状态底 · 暗色"
       }
     },
     "typographyMeta": {
@@ -598,9 +614,9 @@
       "name": "结果状态标记",
       "kind": "chip",
       "refersTo": "status-badge-final",
-      "description": "非交互的草稿与定稿状态；不赋予按钮语义。",
-      "html": "<span class=\"ds-badge\">草稿</span> <span class=\"ds-badge\" data-status=\"final\">已定稿</span>",
-      "css": ".ds-badge{display:inline-block;padding:2px 6px;border-radius:4px;background:var(--panel,#ffffff);color:var(--muted,#626575);font:11px/1.5 var(--font-ui,system-ui,sans-serif);font-style:normal;font-weight:400;}.ds-badge[data-status=final]{color:var(--accent,#4f46e5);background:var(--accent-soft,#eeedff);}@media(forced-colors:active){.ds-badge{color:CanvasText;background:Canvas;}.ds-badge[data-status=final]{outline:1px solid Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
+      "description": "非交互的草稿、待验证与定稿状态；颜色表示人工选择的工作流状态，不代表内容已核实。",
+      "html": "<span class=\"ds-badge\" data-status=\"draft\">草稿</span> <span class=\"ds-badge\" data-status=\"verify\">待验证</span> <span class=\"ds-badge\" data-status=\"final\">已定稿</span>",
+      "css": ".ds-badge{display:inline-block;padding:2px 6px;border-radius:4px;background:var(--panel-muted,#edeef3);color:var(--muted,#626575);font:11px/1.5 var(--font-ui,system-ui,sans-serif);font-style:normal;font-weight:400;}.ds-badge[data-status=verify]{color:var(--warning-ink,#875900);background:var(--warning-soft,#fff4dc);}.ds-badge[data-status=final]{color:var(--success-ink,#167039);background:var(--success-soft,#e8f5ed);}@media(prefers-contrast:more){.ds-badge{outline:1px solid currentColor;}}@media(forced-colors:active){.ds-badge[data-status]{color:CanvasText;background:Canvas;outline:1px solid CanvasText;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
     },
     {
       "name": "设置分组卡片",
@@ -648,7 +664,7 @@
     "rules": [
       {
         "name": "The Paired Contrast Rule",
-        "body": "强调底色与其文字色成对使用；状态圆点色与状态文字色分别取值。",
+        "body": "强调底色与其文字色成对使用；状态圆点色与状态文字色分别取值。决策状态在列表和阅读详情共用灰色草稿、琥珀色待验证和绿色定稿；颜色不替代状态文字或人工核实。",
         "section": "colors"
       },
       {

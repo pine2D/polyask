@@ -18,6 +18,8 @@ colors:
   success-ink: '#167039'
   warning-ink: '#875900'
   danger-ink: '#b91c1c'
+  success-soft: '#e8f5ed'
+  warning-soft: '#fff4dc'
   accent-dark: '#a5a0ff'
   on-accent-dark: '#201d41'
   accent-soft-dark: '#2d2a50'
@@ -31,6 +33,8 @@ colors:
   success-ink-dark: '#86d9a3'
   warning-ink-dark: '#efc267'
   danger-ink-dark: '#fca5a5'
+  success-soft-dark: '#1e392c'
+  warning-soft-dark: '#3c3220'
 typography:
   meta:
     fontFamily: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa
@@ -112,13 +116,18 @@ components:
     textColor: '{colors.accent}'
     rounded: '{rounded.inset}'
   status-badge:
-    backgroundColor: '{colors.panel}'
+    backgroundColor: '{colors.panel-muted}'
     textColor: '{colors.muted}'
     rounded: '{rounded.chip}'
     padding: 2px 6px
+  status-badge-verify:
+    backgroundColor: '{colors.warning-soft}'
+    textColor: '{colors.warning-ink}'
+    rounded: '{rounded.chip}'
+    padding: 2px 6px
   status-badge-final:
-    backgroundColor: '{colors.accent-soft}'
-    textColor: '{colors.accent}'
+    backgroundColor: '{colors.success-soft}'
+    textColor: '{colors.success-ink}'
     rounded: '{rounded.chip}'
     padding: 2px 6px
   settings-card:
@@ -173,6 +182,7 @@ components:
 - **强调色上的文字**（`on-accent` / `on-accent-dark`）：与强调色成对切换，尤其是暗色主题的浅紫按钮。
 - **浅靛紫衬底**（`accent-soft` / `accent-soft-dark`）：悬停、收藏、选中导航和局部标记。
 - 弱选中底由强调色与面板混合（5%）；通用悬停底由次级文字色与面板混合（7%）。沿用源码公式，不另建近似色。
+- 结果库当前记录使用完整强调色轮廓与浅靛紫底，在悬停时保持选中反馈；可见轮廓与 `aria-current` 一同表达当前项。
 
 ### Neutral
 
@@ -191,6 +201,8 @@ components:
 ### Status
 
 `success`、`warning`、`danger` 用于圆点、进度和语义色块；正文使用各自的 `-ink` 令牌及暗色对应值。进度、异常与选中不能仅靠颜色区分，保留文字、图形或读屏播报。
+
+决策状态在列表和阅读详情共用配色：草稿为中性文字与次级表面，待验证用 `warning-ink / warning-soft`，定稿用 `success-ink / success-soft`。柔和状态底为明暗主题分别定义的不透明色，只用于带文字的状态标签；颜色表示用户选择的工作流状态，保留人工整理与核实说明，不代表内容已经验证。系统增加对比度时补标签轮廓，强制配色使用系统文字与画布。
 
 **The Paired Contrast Rule.** 强调底色与其文字色成对使用；状态圆点色与状态文字色分别取值。
 

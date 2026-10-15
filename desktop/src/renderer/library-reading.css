@@ -111,7 +111,7 @@
 .library .decision-meta { margin: 12px 0 24px; gap: 16px; flex-wrap: wrap; }
 .library .decision-meta label { min-width: 160px; gap: 8px; }
 .library .decision-meta p { line-height: 1.6; }
-.library .decision-meta strong { font-size: 13px; font-weight: 500; color: var(--accent); }
+.library .decision-meta strong { justify-self: start; font-size: 13px; font-weight: 500; }
 .library .decision-fields { gap: 28px; margin: 28px 0; }
 .library .decision-fields h2 { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 10px; }
 .library .decision-fields > section:first-child .markdown-preview { font-size: 18px; line-height: 1.7; }
