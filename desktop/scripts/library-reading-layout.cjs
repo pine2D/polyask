@@ -8,7 +8,18 @@ async function reading(run) {
     const body = answer.querySelector('.markdown-preview');
     const actions = [...answer.querySelectorAll(':scope > header button, :scope > button')];
     const boxes = actions.map(button => button.getBoundingClientRect());
+    const canvas = document.createElement('canvas').getContext('2d');
+    canvas.font = getComputedStyle(body).font;
+    const prose = [...body.querySelectorAll(':scope > p, :scope > ul, :scope > ol, :scope > blockquote')];
+    const h5 = getComputedStyle(body.querySelector('h5')), h6 = getComputedStyle(body.querySelector('h6'));
     return {
+      typography: { measure: canvas.measureText('0').width * 75, bodyWidth: body.clientWidth,
+        proseWidths: prose.map(node => node.getBoundingClientRect().width),
+        proseContained: prose.every(node => node.scrollWidth <= node.clientWidth + 1),
+        fullEnglish: prose.some(node => node.textContent.startsWith('A saved answer') && node.textContent.endsWith('losing your place.')),
+        headingWeights: [h5.fontWeight, h6.fontWeight], headingSizes: [h5.fontSize, h6.fontSize],
+        tableWidth: body.querySelector('.markdown-table').getBoundingClientRect().width,
+        codeWidth: body.querySelector('.markdown-code').getBoundingClientRect().width },
       firstMargin: parseFloat(getComputedStyle(body.firstElementChild).marginTop),
       lastMargin: parseFloat(getComputedStyle(body.lastElementChild).marginBottom),
       leading: body.firstElementChild.getBoundingClientRect().top - Math.max(...boxes.map(box => box.bottom)),
@@ -28,6 +39,10 @@ async function reading(run) {
   await run('document.querySelector(".archive-detail-pane").scrollTop = 0');
   await paint(run);
   const problems = [];
+  const type = metrics.typography;
+  if (!type.fullEnglish || !type.proseContained || type.proseWidths.some(width => width > type.measure + 1)) problems.push('prose exceeds its reading measure or loses content');
+  if (Math.abs(type.tableWidth - type.bodyWidth) > 1 || Math.abs(type.codeWidth - type.bodyWidth) > 1) problems.push('technical blocks lose available width');
+  if (type.headingSizes.some(size => size !== '16px') || Number(type.headingWeights[0]) <= Number(type.headingWeights[1])) problems.push('deep headings lose their weight hierarchy');
   if (metrics.firstMargin !== 0 || metrics.lastMargin !== 0) problems.push('body edges add paragraph spacing');
   if (metrics.leading < 12 || metrics.leading > 20) problems.push('source actions and body lose their reading rhythm');
   if (metrics.actionSpread > 1) problems.push('related source actions occupy separate rows despite available room');

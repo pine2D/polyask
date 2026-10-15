@@ -1,8 +1,11 @@
 .markdown-preview { font-size: var(--font-reading, 15px); line-height: 1.8; overflow-wrap: anywhere; }
+.markdown-preview > :where(p, ul, ol, blockquote) { max-inline-size: 75ch; }
 .markdown-preview p { margin: 12px 0; white-space: pre-wrap; }
 .markdown-preview h3 { margin: 24px 0 10px; font-size: 20px; line-height: 1.5; }
 .markdown-preview h4 { margin: 20px 0 8px; font-size: 17px; line-height: 1.6; }
 .markdown-preview h5, .markdown-preview h6 { margin: 16px 0 6px; font-size: 16px; }
+.markdown-preview h5 { font-weight: 700; }
+.markdown-preview h6 { font-weight: 500; }
 .markdown-preview ul, .markdown-preview ol { padding-left: 1.6em; margin: 12px 0; }
 .markdown-preview li { margin: 6px 0; }
 .markdown-preview li > ul, .markdown-preview li > ol { margin: 4px 0; }

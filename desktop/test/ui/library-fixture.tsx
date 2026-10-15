@@ -9,7 +9,12 @@ import '../../src/renderer/styles.css';
 import '../../src/renderer/accessibility.css';
 const state = { failSave: false, failLoad: false, writes: 0, folderWrites: 0, links: [] as string[] };
 (window as any).libraryTest = state;
-const text = '# 方案建议\n\n优先改善结果阅读体验，保留已确认的文件夹与决策卡能力。**可读性**比装饰更重要。\n\n| 方案 | 成本 | 结论 |\n| --- | --- | --- |\n| 修补样式 | 低 | 局部改善 |\n| 整理工作区 | 中 | 推荐 |\n\n1. 统一布局和控件\n2. 完善正文渲染\n   - 保留列表层级\n   - 支持安全链接\n\n> 比较不同回答，保留来源与证据。\n\n```ts\nconst result = await compare(answers);\n```\n\n[参考文档](https://example.com/docs)';
+const typography = [
+  'A saved answer should remain comfortable to read when the workspace grows wider. Compare the evidence, assumptions, and limitations before recording a decision. Keep the complete source available so that another reading can check the reasoning. Clear paragraphs make it easier to return to the next line without losing your place.',
+  '### 实施范围 · Scope', '保留原有系统字体、完整回答与操作路径。',
+  '#### 验证细节 · Validation', '检查三语换行、窄窗阅读、缩放和长代码。'
+].join('\n\n');
+const text = '# 方案建议\n\n优先改善结果阅读体验，保留已确认的文件夹与决策卡能力。**可读性**比装饰更重要。\n\n| 方案 | 成本 | 结论 |\n| --- | --- | --- |\n| 修补样式 | 低 | 局部改善 |\n| 整理工作区 | 中 | 推荐 |\n\n1. 统一布局和控件\n2. 完善正文渲染\n   - 保留列表层级\n   - 支持安全链接\n\n> 比较不同回答，保留来源与证据。\n\n```ts\nconst result = await compare(answers);\n```\n\n[参考文档](https://example.com/docs)' + '\n\n' + typography;
 let records = Array.from({length: 8}, (_, i) => createArchiveRecord({ id: `result-${i}`, task: i ? `产品优化调研 ${i}：在信息密度与阅读舒适度之间取得平衡` : '如何改善 AI 多模型结果库的阅读与比较体验？', text: '请比较优化方案', results: ['Claude', 'ChatGPT', 'Gemini', 'DeepSeek', 'Kimi', 'Doubao', 'Qianwen', 'Yuanbao', 'Zhipu'].map((label, j) => ({ host: `${label.toLowerCase()}.com`, label, text: text + (j ? '\n\n另一份独有的建议。' : ''), state: 'think' })), tags: ['产品设计', '待讨论', '长标签用于验证布局不能溢出容器'], note: '保留原有数据契约。', favorite: i === 0, ts: Date.now() - i * 86400000, createdAt: Date.now(), updatedAt: Date.now(), deviceId: 'fixture' }, {id: `result-${i}`, now: Date.now(), deviceId: 'fixture'}));
 if (new URLSearchParams(location.search).has('longCode')) records = records.map(record => ({ ...record,
   results: record.results.map(result => ({ ...result, text: `${result.text}\n\n\`\`\`text\n${'unbroken_'.repeat(250)}\n\`\`\`` })) }));

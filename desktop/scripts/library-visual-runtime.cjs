@@ -79,6 +79,10 @@ app.whenReady().then(async () => {
         const reading = await readingLayout.reading(run);
         reports.push({ locale, theme, width, boxes, reading });
         if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}`);
+        if (locale === 'en' && (width === 960 || width === 1600)) {
+          await run('document.querySelector(".archive-answer .markdown-preview h5").scrollIntoView({block:"center"})');
+          await shot(`typeset-${theme}-${width}`);
+        }
       }
     }
   }
