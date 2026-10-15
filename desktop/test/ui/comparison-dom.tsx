@@ -56,6 +56,8 @@ export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraf
     });
   });
   await comparisonWait(() => h.document.querySelector(options.startInRead ? '.archive-answers' : '.archive-compare'));
+  // 首选详情可早于列表返回；列表首次加载会恢复滚动位置，交互须等两者就绪。
+  await comparisonWait(() => h.document.querySelector('.folder-content-list .archive-list[aria-busy="false"] [aria-current="true"]'));
   const button = (label: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')]
     .find(node => node.textContent === label || node.getAttribute('aria-label') === label);
   return { ...h, button, get writes() { return writes; }, get decisionWrites() { return decisionWrites; },

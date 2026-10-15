@@ -52,6 +52,7 @@ test('narrow comparison entry preserves browsing position and waits for unsaved 
   try {
     const list = h.document.querySelector<HTMLElement>('.folder-content-list .archive-list')!;
     const detail = h.document.querySelector<HTMLElement>('.archive-detail-pane')!;
+    assert.equal(list.getAttribute('aria-busy'), 'false', 'the fixture waits for the initial result list before reading interactions');
     await h.scroll(list, 440); await h.scroll(detail, 320);
     await h.input(h.document.querySelector<HTMLTextAreaElement>('[name=archive-note]')!, 'Keep this unsaved note.');
     await h.click(h.button(copy.libraryCompare)!);
