@@ -15,11 +15,12 @@ export function LibraryMenu({ label, disabled, actions, icon }: {
   useEffect(() => { if (disabled) popover.close(false); }, [disabled, popover.close]);
   return <>
     <button ref={popover.trigger} type="button" className="library-menu-trigger" aria-label={label} title={label}
+      data-input-method={popover.inputMethod}
       aria-haspopup="menu" aria-expanded={popover.open} aria-controls={popover.open ? id : undefined} disabled={disabled}
-      onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); popover.setOpen(true); } }}
-      onClick={() => popover.open ? popover.close() : popover.setOpen(true)}>{icon ?? <MoreIcon />}</button>
+      onKeyDown={event => { if (event.key === 'ArrowDown') { event.preventDefault(); popover.show('keyboard'); } }}
+      onClick={event => popover.open ? popover.close() : popover.show(event.detail ? 'pointer' : 'keyboard')}>{icon ?? <MoreIcon />}</button>
     {popover.open && createPortal(<div ref={popover.panel} id={id} role="menu" aria-label={label}
-      className="library-popover library-action-menu" style={popover.position} onKeyDown={event => {
+      className="library-popover library-action-menu" data-input-method={popover.inputMethod} style={popover.position} onKeyDown={event => {
         if (event.key === 'Tab') { popover.close(); return; }
         if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
         event.preventDefault(); event.stopPropagation();

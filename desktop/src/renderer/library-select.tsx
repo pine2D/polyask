@@ -24,12 +24,12 @@ export function LibrarySelect({ name, label, value, options, onChange, disabled,
   const [active, setActive] = useState(-1);
   const filtered = options.filter(option => option.label.toLocaleLowerCase().includes(query.toLocaleLowerCase()));
   const current = options.find(option => option.value === value);
-  const show = () => {
+  const show = (method: 'pointer' | 'keyboard' = 'keyboard') => {
     if (disabled) return;
     setQuery('');
     const index = options.findIndex(option => option.value === value && !option.disabled);
     setActive(index >= 0 ? index : nextEnabledOption(options, -1, 1));
-    popover.setOpen(true);
+    popover.show(method);
   };
   useEffect(() => { if (popover.open && searchLabel) search.current?.focus(); }, [popover.open, searchLabel]);
   useEffect(() => { if (disabled) popover.close(false); }, [disabled, popover.close]);
@@ -57,12 +57,13 @@ export function LibrarySelect({ name, label, value, options, onChange, disabled,
   };
   return <>
     <button type="button" className="library-select" name={name} ref={popover.trigger} role="combobox" aria-label={label}
+      data-input-method={popover.inputMethod}
       aria-expanded={popover.open} aria-controls={popover.open ? id : undefined} aria-haspopup="listbox"
       aria-activedescendant={popover.open && active >= 0 && !searchLabel ? `${id}-${active}` : undefined}
-      disabled={disabled} onKeyDown={keydown} onClick={() => popover.open ? popover.close() : show()}>
+      disabled={disabled} onKeyDown={keydown} onClick={event => popover.open ? popover.close() : show(event.detail ? 'pointer' : 'keyboard')}>
       <span>{current?.label ?? label}</span><ChevronDownIcon />
     </button>
-    {popover.open && createPortal(<div ref={popover.panel} className="library-popover" style={popover.position} onKeyDown={keydown}>
+    {popover.open && createPortal(<div ref={popover.panel} className="library-popover" data-input-method={popover.inputMethod} style={popover.position} onKeyDown={keydown}>
       {searchLabel ? <input ref={search} type="search" name="library-option-search" autoComplete="off" role="combobox"
         aria-label={searchLabel} placeholder={`${searchLabel}…`} aria-expanded="true" aria-controls={id}
         aria-activedescendant={active >= 0 ? `${id}-${active}` : undefined} value={query}

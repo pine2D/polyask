@@ -341,9 +341,11 @@ components:
 
 高频动作主要用颜色、背景、明暗变化即时反馈。面板进入（180ms）、退出（140ms），位移仅（6px）；外壳页面切换为（160ms）淡入；字段反馈（120ms）。提问区展开使用（180ms）高度过渡，收起（140ms）；原生站点矩形只在相应边界更新，不逐帧追随 DOM 动画。
 
+结果库菜单沿真实触发按钮的中心与展开侧进入：指针打开使用 160ms 透明度和轻微缩放（0.97→1），选择器箭头用 140ms 旋转说明开合。键盘打开、输入或接管后立即呈现最终状态；关闭立即生效，正文和列表保持稳定。
+
 键盘打开工作台不播放位移过渡。减少动态效果时取消面板、提问框与控件过渡；加载指示保留静态可见状态。精确曲线和时长位于 sidecar 扩展。
 
-来源：`desktop/src/renderer/panel-motion.css`、`desktop/src/renderer/composer.css`、`desktop/src/renderer/native-feel.css`、`desktop/src/renderer/site-frames.css`、`desktop/src/renderer/styles.css`。
+来源：`desktop/src/renderer/panel-motion.css`、`desktop/src/renderer/composer.css`、`desktop/src/renderer/library-motion.css`、`desktop/src/renderer/native-feel.css`、`desktop/src/renderer/site-frames.css`、`desktop/src/renderer/styles.css`。
 
 ## Do's and Don'ts
 

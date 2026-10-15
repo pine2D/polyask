@@ -5,7 +5,9 @@ export function useLibraryPopover() {
   const trigger = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
-  const [position, setPosition] = useState({ left: 0, top: 0, width: 240, maxHeight: 320 });
+  const [inputMethod, setInputMethod] = useState<'pointer' | 'keyboard'>('keyboard');
+  const [position, setPosition] = useState({ left: 0, top: 0, width: 240, maxHeight: 320, transformOrigin: 'top left' });
+  const show = useCallback((method: 'pointer' | 'keyboard') => { setInputMethod(method); setOpen(true); }, []);
   const close = useCallback((restore = true) => {
     setOpen(false);
     if (restore) trigger.current?.focus();
@@ -21,8 +23,10 @@ export function useLibraryPopover() {
       const upwards = below < 220 && above > below;
       const maxHeight = Math.max(80, Math.min(360, upwards ? above : below));
       const height = Math.min(panel.current?.scrollHeight ?? maxHeight, maxHeight);
-      setPosition({ left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)),
-        top: upwards ? Math.max(12, rect.top - height - 6) : rect.bottom + 6, width, maxHeight });
+      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+      const origin = Math.max(0, Math.min(width, rect.left + rect.width / 2 - left));
+      setPosition({ left, top: upwards ? Math.max(12, rect.top - height - 6) : rect.bottom + 6, width, maxHeight,
+        transformOrigin: `${origin}px ${upwards ? 'bottom' : 'top'}` });
     };
     place();
     const observer = new ResizeObserver(place);
@@ -31,6 +35,7 @@ export function useLibraryPopover() {
       if (event.target instanceof Node && !panel.current?.contains(event.target) && !trigger.current?.contains(event.target)) close(false);
     };
     const key = (event: KeyboardEvent) => {
+      if (!event.isComposing && event.keyCode !== 229) setInputMethod('keyboard');
       if (event.key !== 'Escape') return;
       if (event.isComposing || event.keyCode === 229) { event.stopImmediatePropagation(); return; }
       event.preventDefault(); event.stopImmediatePropagation(); close();
@@ -47,5 +52,5 @@ export function useLibraryPopover() {
       window.removeEventListener('scroll', place, true);
     };
   }, [open, close]);
-  return { trigger, panel, open, setOpen, close, position };
+  return { trigger, panel, open, show, close, position, inputMethod };
 }
