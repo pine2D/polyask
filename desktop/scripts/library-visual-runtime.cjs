@@ -2,6 +2,7 @@ const { app, BrowserWindow, nativeTheme } = require('electron');
 const assert = require('node:assert/strict');
 const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
+const readingLayout = require('./library-reading-layout.cjs');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -17,7 +18,9 @@ app.whenReady().then(async () => {
     throw new Error(`UI wait timed out: ${source}`);
   };
   const click = async selector => {
-    const box = await run(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); e.scrollIntoView({block:'center',inline:'nearest'}); const r=e.getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}; })()`);
+    const center = await run(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); e.scrollIntoView({block:'center',inline:'nearest'}); const r=e.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
+    const scale = win.webContents.getZoomFactor();
+    const box = { x: Math.round(center.x * scale), y: Math.round(center.y * scale) };
     win.webContents.sendInputEvent({ type: 'mouseDown', ...box, button: 'left', clickCount: 1 });
     win.webContents.sendInputEvent({ type: 'mouseUp', ...box, button: 'left', clickCount: 1 });
     await pause(60);
@@ -72,7 +75,8 @@ app.whenReady().then(async () => {
           assert.equal(control.border, 'solid', `${locale}/${theme} list controls must use the themed border`);
           assert.ok(control.radius >= 4 && control.height >= 28, `${locale}/${theme} list controls must keep usable geometry`);
         }
-        reports.push({ locale, theme, width, boxes });
+        const reading = await readingLayout.reading(run);
+        reports.push({ locale, theme, width, boxes, reading });
         if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}`);
       }
     }
@@ -103,10 +107,8 @@ app.whenReady().then(async () => {
   }
   await win.loadFile(join(output, 'index.html'));
   await wait('!!document.querySelector(".archive-detail h1")');
-  // Wrapped sticky navigation must not cover the answer selected by its last link.
-  await click('.archive-answer-nav a:last-child');
-  assert.equal(await run('(() => { const nav=document.querySelector(".archive-answer-nav"), link=nav.querySelector("a:last-child"), answer=document.getElementById(link.hash.slice(1)); return answer.getBoundingClientRect().top >= nav.getBoundingClientRect().bottom - 2; })()'), true);
-  await run('document.querySelector(".archive-detail-pane").scrollTop = 0');
+  // Source jumps and native Tab share measured avoidance, including wrapped navigation at zoom.
+  const anchorLayouts = await readingLayout.anchors({ win, nativeTheme, output, run, wait, click, key, shot });
   // Tag/status/sort live in the collapsed filter panel; selection tools appear only in multi-select mode.
   assert.equal(await run('document.querySelector(".library-filter-panel").hidden && document.querySelector(".library-selection").hidden'), true);
   await click('.library-filter-toggle'); await click('[data-action=library-multi-select]');
@@ -156,6 +158,7 @@ app.whenReady().then(async () => {
   // Comparison uses two columns only when its own container has room.
   await click('.library-view-switch button:nth-child(2)');
   await wait('!!document.querySelector(".archive-compare-grid")');
+  const comparisonLayout = await readingLayout.comparison(run);
   await shot('comparison-wide');
   win.setContentSize(960, 900); await pause(100);
   assert.equal(await run('getComputedStyle(document.querySelector(".archive-compare-grid")).gridTemplateColumns.split(" ").length'), 1);
@@ -236,7 +239,7 @@ app.whenReady().then(async () => {
   assert.equal(await run('document.querySelector(".library").dataset.focused'), 'false');
   const hardening = await require('./library-hardening-visual.cjs')({ win, nativeTheme, output, run, wait, click, fill, key, shot });
   assert.deepEqual(errors, []);
-  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, hardening, interactions: 'passed', consoleErrors: errors }, null, 2));
+  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, anchorLayouts, comparisonLayout, hardening, interactions: 'passed', consoleErrors: errors }, null, 2));
   console.log(`Library UI passed: ${reports.length} layout variants, four folder IME cases and keyboard/editing flows.`);
   app.quit();
 }).catch(error => { console.error(error); app.exit(1); });

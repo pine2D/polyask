@@ -48,6 +48,22 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const localReader = useArchiveReader(record, props.initialComparisonOpen);
   const reader = props.reader ?? localReader, view = reader.state.view;
   const article = useRef<HTMLElement>(null);
+  const navigation = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const node = navigation.current, pane = article.current?.closest<HTMLElement>('.archive-detail-pane');
+    if (!node || !pane) return;
+    const property = '--library-reading-navigation-height', previous = pane.style.getPropertyValue(property);
+    // 让锚点和键盘滚动共同避让实际导航高度；换行、缩放和语言变化均由布局决定。
+    const update = () => pane.style.setProperty(property, `${Math.ceil(node.getBoundingClientRect().height)}px`);
+    update();
+    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null;
+    observer?.observe(node);
+    return () => {
+      observer?.disconnect();
+      if (previous) pane.style.setProperty(property, previous);
+      else pane.style.removeProperty(property);
+    };
+  }, [view]);
   const focusComparison = () => {
     const width = article.current?.closest<HTMLElement>('.folder-detail')?.getBoundingClientRect().width ?? 0;
     if (width > 0 && width <= 760 && !props.readingFocus?.focused) props.readingFocus?.onFocus(true);
@@ -83,16 +99,18 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
         {props.onCreateDecision ? <button type="button" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
       </div>
       <ArchiveMetadata record={record} copy={copy} busy={props.busy} onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} />
+      <div ref={navigation} className="library-reading-navigation">
       <nav className="library-view-switch" aria-label={copy.libraryAnswers}>
         <button type="button" aria-pressed={view === 'read'} onClick={() => setView('read')}>{copy.libraryRead}<span>{record.results.length}</span></button>
         {canSynthesize ? <button type="button" aria-pressed={view === 'compare'} onClick={() => setView('compare')}><CompareIcon />{copy.libraryCompare}</button> : null}
         <button type="button" aria-pressed={view === 'synthesis'} onClick={() => setView('synthesis')}>{copy.librarySynthesis}{record.synthesis ? <span aria-hidden="true">✓</span> : null}</button>
       </nav>
+      {view === 'read' ? <nav className="archive-answer-nav" aria-label={copy.siteViews}>
+        {record.results.map((result, index) => <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`}>{answerSourceId(index)} {result.label}</a>)}
+      </nav> : null}
+      </div>
       {view === 'compare' ? <ArchiveCompare reader={reader} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} record={record} onEvidence={props.onCreateDecision} onFollowUp={props.onFollowUp} readingFocus={props.readingFocus} busy={props.busy} copy={copy} results={successfulResults} onOpenLink={props.onOpenSource} /> : null}
       {view === 'read' ? <div>
-      <nav className="archive-answer-nav" aria-label={copy.siteViews}>
-        {record.results.map((result, index) => <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`}>{answerSourceId(index)} {result.label}</a>)}
-      </nav>
       <div className="archive-answers">
         {record.results.map((result, index) => {
           const successful = !!result.text?.trim();
@@ -100,8 +118,13 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           const tier = result.state === "think" ? ` · ${copy.think}` : result.state === "fast" ? ` · ${copy.fast}` : "";
           return (
             <section className="archive-answer" id={`archive-answer-${index}`} key={`${result.host}:${index}`}>
-              <header><h2>{answerSourceId(index)} {result.label}{tier}</h2>{successful ? <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} disabled={props.busy} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button> : null}</header>
-              {successful && props.onFollowUp ? <button type="button" disabled={props.busy} onClick={() => props.onFollowUp?.(result.host)}>{copy.followUpAction}</button> : null}
+              <header>
+                <h2>{answerSourceId(index)} {result.label}{tier}</h2>
+                {successful ? <div className="archive-answer-actions">
+                  <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} disabled={props.busy} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button>
+                  {props.onFollowUp ? <button type="button" disabled={props.busy} onClick={() => props.onFollowUp?.(result.host)}>{copy.followUpAction}</button> : null}
+                </div> : null}
+              </header>
               {successful && result.code === "answer_truncated" ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}
               {successful ? <ArchiveAnswerReading copy={copy} source={excerptSource(record, index)!} busy={props.busy} onEvidence={props.onCreateDecision} onFollowUp={props.onFollowUp ? excerpt => props.onFollowUp?.(result.host, excerpt) : undefined}>
                 <MarkdownPreview onOpenLink={props.onOpenSource} value={result.text!} />
