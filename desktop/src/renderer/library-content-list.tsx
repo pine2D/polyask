@@ -11,6 +11,12 @@ import { LIBRARY_PAGE_SIZE, pageLibraryContents, sortLibraryContents, type Libra
 import { matchingSelection, selectLibraryPage, toggleLibrarySelection } from './library-selection';
 import { LibraryContentRow } from './library-content-row';
 
+export function libraryEmptyHint(copy: DesktopCopy, filters: FolderFilters): string {
+  if (filters.query || filters.tag || filters.favorite || filters.status) return copy.libraryNoMatchesHint;
+  if (filters.folderId && filters.folderId !== '__unfiled__') return copy.libraryFolderEmptyHint;
+  return filters.kind === 'decision' ? copy.libraryDecisionEmptyHint : copy.libraryEmptyHint;
+}
+
 export function LibraryContentList<T extends FolderContentSummary>({ copy, locale, items, filters, tags, loading, failed, selectedKey, onChange, onSelect, onRetry,
   page: controlledPage, sort: controlledSort, selectedKeys: controlledKeys, onPageChange, onSortChange, onSelectedKeysChange, disabled = false, onScroll, listScroll = 0, serverPage }: {
   copy: DesktopCopy; locale: string; items: readonly T[]; filters: FolderFilters; tags: readonly string[];
@@ -50,6 +56,7 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     if (current.page !== page) setPage(current.page);
   }, [items, loading, failed, keys, page, current.page, setKeys, setPage, serverPage]);
   const filtered = !!(filters.query || filters.tag || filters.favorite || filters.status);
+  const emptyHint = libraryEmptyHint(copy, filters);
   return <section className="folder-content-list" aria-label={copy.folderAll}>
     <div className="folder-filters">
       <input type="search" name="library-search" autoComplete="off" aria-label={copy.folderSearch} placeholder={`${copy.folderSearch}…`}
@@ -93,7 +100,7 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     <div ref={scroller} className="archive-list" aria-busy={loading} onScroll={event => onScroll?.(event.currentTarget.scrollTop)}>
       {failed ? <div className="library-empty" role="status"><p>{copy.folderLoadFailed}</p><button onClick={onRetry}>{copy.retryShellLoad}</button></div>
         : loading ? <div className="library-empty" role="status">{copy.archiveLoading}</div>
-        : !items.length ? <div className="library-empty"><p>{filtered ? copy.archiveNoMatches : copy.folderEmpty}</p><small>{filtered ? copy.libraryClearFilters : copy.libraryEmptyHint}</small></div>
+        : !items.length ? <div className="library-empty"><p>{filtered ? copy.archiveNoMatches : copy.folderEmpty}</p><small>{emptyHint}</small></div>
         : current.items.map(item => {
           const key = `${item.kind}:${item.record.id}`;
           return <LibraryContentRow key={key} item={item} copy={copy} labels={labels} locale={locale}

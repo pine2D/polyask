@@ -7,7 +7,7 @@ import { getCopy } from '../../src/shared/copy';
 import { createArchiveRecord } from '../../src/shared/archive';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/accessibility.css';
-const state = { failSave: false, failLoad: false, writes: 0, folderWrites: 0, links: [] as string[] };
+const state = { failSave: false, failLoad: false, failMarkdown: false, failExternal: false, writes: 0, folderWrites: 0, links: [] as string[] };
 (window as any).libraryTest = state;
 const typography = [
   'A saved answer should remain comfortable to read when the workspace grows wider. Compare the evidence, assumptions, and limitations before recording a decision. Keep the complete source available so that another reading can check the reasoning. Clear paragraphs make it easier to return to the next line without losing your place.',
@@ -25,6 +25,7 @@ const folders = [{ id: 'work', name: '产品设计与体验改进', createdAt: 1
 let cards = [{ id: 'card-1', archiveId: records[0].id, title: '结果库体验优化决策', conclusion: '采用阅读优先的三栏布局。', rationale: '统一组件，减少重复操作。', uncertainties: '不同系统缩放下的效果待核实。', nextStep: '完成浏览器与 Electron 验证。', status: 'draft', evidence: [], sourceTitle: records[0].task, createdAt: Date.now(), updatedAt: Date.now(), deviceId: 'fixture', schema: 2 }];
 if (new URLSearchParams(location.search).has('colorStates')) cards = ['draft', 'verify', 'final'].map((status, i) => ({
   ...cards[0], id: `card-${i + 1}`, title: `${cards[0].title} · ${status}`, status }));
+if (new URLSearchParams(location.search).has('emptyLibrary')) { records = []; cards = []; }
 let memberships: string[] = [];
 setShellApi(withFolderPages({
   listFolders: async () => { if (state.failLoad) throw new Error('fixture_load_failed'); return folders; },
@@ -40,9 +41,11 @@ setShellApi(withFolderPages({
   folderMemberships: async () => memberships,
   patchFolderMemberships: async (_: any, changes: any[]) => {for (const c of changes) memberships=c.present?[...memberships,c.folderId]:memberships.filter(id=>id!==c.folderId);},
   updateDecision: async (id: string, value: any) => { if (state.failSave) throw new Error('fixture_save_failed'); state.writes++; cards=cards.map(c=>c.id===id?{...c,...value}:c);return cards.find(c=>c.id===id);},
-  archiveMarkdown: async () => '# Exported result',
-  openExternal: async (url: string) => { state.links.push(url); }
+  archiveMarkdown: async () => { if (state.failMarkdown) throw Error('fixture_markdown_failed'); return '# Exported result'; },
+  openExternal: async (url: string) => { if (state.failExternal) throw Error('fixture_open_failed'); state.links.push(url); }
 }) as any);
 const locale = new URLSearchParams(location.search).get('locale') || 'zh-CN';
 document.documentElement.lang = locale;
-createRoot(document.getElementById('root')!).render(<ArchiveSurface copy={getCopy(locale)} locale={locale} onClose={() => { document.body.dataset.closed='true'; }} onCapture={async () => records[0]} sites={[]} synthesisSites={[{key:"claude",label:"Claude",host:"claude.ai",url:"https://claude.ai"}] as any} defaultTier="think" preferredId="result-0" pendingSynthesis={null} synthesisCandidate={null} onSendSynthesis={async()=>{}} onCollectSynthesis={async()=>{}} onSaveSynthesis={async()=>records[0]} />);
+const copy = getCopy(locale);
+(window as any).libraryTest.copy = copy;
+createRoot(document.getElementById('root')!).render(<ArchiveSurface copy={copy} locale={locale} onClose={() => { document.body.dataset.closed='true'; }} onCapture={async () => records[0]} sites={[]} synthesisSites={[{key:"claude",label:"Claude",host:"claude.ai",url:"https://claude.ai"}] as any} defaultTier="think" preferredId="result-0" pendingSynthesis={null} synthesisCandidate={null} onSendSynthesis={async()=>{}} onCollectSynthesis={async()=>{}} onSaveSynthesis={async()=>records[0]} />);

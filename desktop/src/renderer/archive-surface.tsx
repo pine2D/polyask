@@ -232,19 +232,19 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       onCopy={() => { void run(async () => {
         await navigator.clipboard.writeText(await markdown());
         setStatus(props.copy.archiveCopied);
-      }, props.copy.archiveSaveFailed); }}
+      }, props.copy.archiveCopyFailed); }}
       onExport={() => { void run(async () => {
         if (!selected) return;
         downloadMarkdown(await markdown(), selected.ts);
         setStatus(props.copy.archiveExported);
-      }, props.copy.archiveSaveFailed); }}
+      }, props.copy.archiveExportFailed); }}
       onDelete={(id) => { void run(async () => {
         await shell.deleteArchive(id);
         props.onChanged(true);
       }, props.copy.archiveSaveFailed); }}
       onPatch={patch}
       onSaveMetadata={savePatch}
-      onOpenSource={(url) => { void run(() => shell.openExternal(url), props.copy.archiveLoadFailed); }}
+      onOpenSource={(url) => { void run(() => shell.openExternal(url), props.copy.archiveSourceOpenFailed); }}
       pendingSynthesis={props.pendingSynthesis}
       synthesisCandidate={props.synthesisCandidate}
       synthesisSession={props.synthesisSession}

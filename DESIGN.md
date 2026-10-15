@@ -363,6 +363,10 @@ components:
 
 来源：`desktop/src/renderer/panel-motion.css`、`desktop/src/renderer/composer.css`、`desktop/src/renderer/library-motion.css`、`desktop/src/renderer/native-feel.css`、`desktop/src/renderer/site-frames.css`、`desktop/src/renderer/styles.css`。
 
+### Actions and State Copy
+
+结果库用“保存”表示写入结果记录，“复制”表示写入剪贴板，“导出”表示生成 Markdown 文件。组合操作的名称说明完整结果；失败反馈指出对应动作，保存完成而复制失败时保留这一部分成功及库内重试指引。空列表先区分搜索或筛选无匹配，再按文件夹、决策卡或首次采集说明下一步；“未归档”不当作一个待加入的文件夹。空列表与详情欢迎区共用同一条上下文指引，三语按钮、可访问名称和指引使用相同产品术语。
+
 ## Do's and Don'ts
 
 ### Do:

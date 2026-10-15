@@ -7,7 +7,7 @@ import type { ArchiveSurfaceProps } from './archive-surface';
 import { FolderSidebar } from './folder-sidebar';
 import { FolderMembershipDialog } from './folder-membership-dialog';
 import { DecisionWorkspace } from './decision-workspace';
-import { LibraryContentList } from './library-content-list';
+import { LibraryContentList, libraryEmptyHint } from './library-content-list';
 import { changeFolderFilters } from './library-filters';
 import { ArchiveIcon, CloseIcon, FocusIcon, BackIcon } from './icons';
 import { requestDecisionNavigation } from './decision-navigation';
@@ -181,6 +181,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   };
   const folderName = folders.find(folder => folder.id === filters.folderId)?.name
     ?? (filters.folderId === '__unfiled__' ? copy.folderUnfiled : copy.folderAll);
+  const welcomeHint = !loading && !loadFailed && !items.length ? libraryEmptyHint(copy, filters) : copy.libraryPickHint;
   const targets = selectedKeys.flatMap(key => targetFromContentKey(key) ?? []);
   const unavailable = busy || loading || loadFailed || !targets.length;
   const startBulk = (action: BulkRequest['action'], favorite?: boolean, folderIds?: readonly string[]) => navigate(() => {
@@ -237,7 +238,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         }} />
       <div className="folder-detail">
         {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
-          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => { if (selecting.current === null) navigate(() => { setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{copy.libraryPickHint}</p></div>}
+          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => { if (selecting.current === null) navigate(() => { setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{welcomeHint}</p></div>}
       </div>
     </div>
     {message ? <div className="archive-status" role="status">{message}<button onClick={refresh}>{copy.retryShellLoad}</button></div> : null}

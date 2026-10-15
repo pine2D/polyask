@@ -11,11 +11,13 @@ export function archiveCollectionActions(options: {
   announce: (text: string, notice?: boolean, durable?: boolean) => void;
 }) {
   const collectAndCopy = () => options.runAuxiliary(async () => {
+    let record: ArchiveRecord;
+    try { record = await options.capture.capture(); }
+    catch { options.announce(options.copy.archiveCollectFailed); return; }
     try {
-      const record = await options.capture.capture();
       await navigator.clipboard.writeText(await shell.archiveMarkdown(record.id, navigator.language));
       options.announce(options.copy.archiveCollected, true, true);
-    } catch { options.announce(options.copy.archiveCollectFailed); }
+    } catch { options.announce(options.copy.archiveSavedCopyFailed); }
   });
   const collectSynthesis = () => options.runAuxiliary(async () => {
     try { const id = await options.synthesis.collect(); options.openArchive(id, 'read'); }
