@@ -85,7 +85,7 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
     <div className="image-picker priority-p0">
       <input
         ref={inputRef}
-        className="sr-only"
+        hidden
         type="file"
         name="images"
         accept="image/png,image/jpeg"

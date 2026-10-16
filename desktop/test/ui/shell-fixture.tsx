@@ -149,7 +149,7 @@ function Fixture(): React.JSX.Element {
         onBlockingChange={noop} recovery={{ deviceId: 'fixture-local', status: draftStatus, dirty: true, drafts,
           onRestore: async draft => { setText((draft.content as { text: string }).text); return true; }, onRemove: async () => true, onRetry: noop }} />}
       imageControl={<ImagePicker copy={copy} images={query.has('details') ? images : stress ? previewImages.slice(0, 1) : []} open={imagesOpen} disabled={false} warning={null} warningCount={0}
-        error={null} onOpenChange={open => { setImagesOpen(open); if (open) setPanel(null); }} onFiles={noop} onRemove={index => setImages(current => current.filter((_, i) => i !== index))} onAdjustScope={noop} />}
+        error={null} onOpenChange={open => { setImagesOpen(open); if (open) setPanel(null); }} onFiles={() => { document.body.dataset.fileChanges = String(Number(document.body.dataset.fileChanges ?? 0) + 1); }} onRemove={index => setImages(current => current.filter((_, i) => i !== index))} onAdjustScope={noop} />}
       sendBlockedReason={null} synthesisPending={false} syncStatus={status} isMac={platform === 'darwin'} expanded={expanded} reservedExpanded={reservedExpanded}
       onTextChange={setText} onSubmit={() => setSent(true)} onCompare={query.has('blocked') ? undefined : () => { document.body.dataset.compared = 'true'; }} onRetry={noop} onCancel={noop}
       onTierChange={setTier} onLayoutChange={setLayout} onExpandedChange={setExpanded}
