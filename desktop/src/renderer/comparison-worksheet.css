@@ -8,6 +8,8 @@
 .manual-comparison-source > label, .manual-comparison > label { display: grid; gap: 8px; margin: 16px 0; }
 .manual-comparison textarea { width: 100%; min-height: 80px; resize: vertical; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--field); color: inherit; font: inherit; font-size: 14px; line-height: 1.7; }
 .manual-category { margin: 16px 0; }
+.manual-category > summary { min-height: 32px; padding: 6px 0; cursor: pointer; font-size: 13px; font-weight: 600; }
+.manual-category > label { margin-top: 8px; }
 .manual-category textarea { margin-top: 8px; }
 .manual-category input { width: 16px; height: 16px; accent-color: var(--accent); }
 .manual-comparison > button { min-height: 36px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--panel); }

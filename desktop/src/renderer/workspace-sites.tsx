@@ -74,7 +74,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
     }}>
       <section className="drawer-section scope-section" aria-label={props.copy.scope} hidden={mode === 'order'}>
         <div className="drawer-section-heading"><h2>{props.copy.scope}</h2></div>
-        <div className="scope-presets" aria-label={props.copy.scope}>
+        <div className="scope-presets" role="group" aria-label={props.copy.scope}>
           {presets.map(([label, presetSites]) => (
             <button type="button" className="scope-preset" disabled={props.participationBusy} aria-pressed={groupSignature(presetSites) === selectedSignature} key={label} onClick={() => props.onParticipationChange([...selectedSites.filter((site) => presetSites.includes(site)), ...presetSites.filter((site) => !props.participating.has(site))])}>{label}</button>
           ))}

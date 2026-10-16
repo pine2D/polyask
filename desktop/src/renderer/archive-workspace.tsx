@@ -65,6 +65,7 @@ interface ArchiveWorkspaceProps {
 
 export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Element {
   const { copy, selected } = props;
+  const Detail = props.embedded ? 'div' : 'main';
   const localReader = useArchiveReader(selected ?? { id: '', results: [] }, selected?.id === props.comparisonId);
   const reader = props.reader ?? localReader;
   const pane = useRef<HTMLElement>(null);
@@ -106,7 +107,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
     { label: copy.deleteArchive, run: () => setConfirmDelete(selected?.id ?? null), danger: true }
   ];
   return (
-    <section className="archive-workspace" aria-label={copy.archiveTitle} aria-busy={props.busy}>
+    <section className="archive-workspace" aria-label={props.embedded ? copy.folderResults : copy.archiveTitle} aria-busy={props.busy}>
       <header className="archive-toolbar">
         {props.embedded ? <span className="library-record-kind">{copy.folderResults}</span> : null}
         {!props.embedded ? <div className="decision-tabs"><strong><ArchiveIcon />{copy.archiveTitle}</strong>{props.onDecisions ? <button type="button" disabled={props.busy} onClick={props.onDecisions}>{copy.decisionTitle}</button> : null}</div> : null}
@@ -142,12 +143,12 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
             ))
           )}
         </aside> : null}
-        <main ref={pane} className="archive-detail-pane" onScroll={event => { if (event.target === event.currentTarget) reader.change(capture()); }}>
+        <Detail ref={node => { pane.current = node; }} className="archive-detail-pane" onScroll={event => { if (event.target === event.currentTarget) reader.change(capture()); }}>
           {props.detailOverride ?? (selected ? <ArchiveDetail reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
             onSynthesize={() => { rememberEditorScroll(); props.onSynthesize(); }}
             onFollowUp={props.onFollowUp ? (host, excerpt) => { rememberEditorScroll(); props.onFollowUp?.(host, excerpt); } : undefined}
             onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
-        </main>
+        </Detail>
       </div>
       <div className="archive-status" role="status" aria-live="polite">{props.status}</div>
       {confirmDelete === selected?.id && selected ? <ConfirmDialog copy={copy} title={copy.deleteArchive} message={copy.confirmDeleteArchive}

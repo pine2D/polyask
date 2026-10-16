@@ -1,6 +1,7 @@
 export const COMPARISON_COPY = {
   en: {
     comparisonExpand: 'Expand comparison', comparisonBrowse: 'Return to browsing',
+    comparisonContext: 'Question and record details', manualClassify: 'Include this category',
     synthesisNewConversation: 'A new conversation will open at the selected site.',
     synthesisPayloadCount: '{count} characters', synthesisCopyPayload: 'Copy complete contents',
     synthesisPayloadCopied: 'Complete contents copied.', synthesisPayloadCopyFailed: 'Could not copy complete contents.',
@@ -26,6 +27,7 @@ export const COMPARISON_COPY = {
   },
   'zh-CN': {
     comparisonExpand: '展开比较', comparisonBrowse: '返回浏览',
+    comparisonContext: '问题与记录信息', manualClassify: '归入此分类',
     synthesisNewConversation: '将在所选站点打开新会话。',
     synthesisPayloadCount: '{count} 个字符', synthesisCopyPayload: '复制完整内容',
     synthesisPayloadCopied: '完整内容已复制。', synthesisPayloadCopyFailed: '完整内容复制失败。',
@@ -51,6 +53,7 @@ export const COMPARISON_COPY = {
   },
   'zh-TW': {
     comparisonExpand: '展開比較', comparisonBrowse: '返回瀏覽',
+    comparisonContext: '問題與記錄資訊', manualClassify: '歸入此分類',
     synthesisNewConversation: '將在所選站點開啟新對話。',
     synthesisPayloadCount: '{count} 個字元', synthesisCopyPayload: '複製完整內容',
     synthesisPayloadCopied: '完整內容已複製。', synthesisPayloadCopyFailed: '完整內容複製失敗。',

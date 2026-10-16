@@ -39,6 +39,10 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  if (process.argv.includes('--settings-section-only')) {
+    await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
+    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+  }
   if (process.argv.includes('--toolbar-resize-only')) {
     win.setContentSize(1280, 900);
     await win.loadFile(join(output, 'index.html'), { query: { surface: 'shell', locale: 'zh-TW' } });

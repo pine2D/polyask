@@ -14,7 +14,7 @@ export function TierControls({ copy, tier, isMac, onChange }: {
   ] as const;
   const short = tier === "think" ? copy.composerModeThink : tier === "fast" ? copy.composerModeFast : copy.composerModeSite;
   const description = formatCopy(copy.composerNextMode, { mode: options.find(item => item.value === tier)!.label });
-  return <div className="tier-switch priority-p0" aria-label={description}>
+  return <div className="tier-switch priority-p0" role="group" aria-label={description}>
     <span data-current-tier data-hint={description}>{short}</span>
     {options.map(({ value, label, icon, glyph }) => <button type="button" key={icon}
       data-hint={value === null ? label : commandHint(label, value === "think" ? "set-think" : "set-fast", isMac)}

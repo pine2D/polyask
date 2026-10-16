@@ -102,12 +102,13 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   }, [props.runtime, props.status]);
   useEffect(() => {
     const section = props.initialSection;
-    if (section) markSection(section === 'drive-diagnostics' ? 'overview' : section);
     if (section === "data") setDataOpen(true);
     if (section === "drive-diagnostics") setDiagnosticsOpen(true);
     const id = section === "data" ? "settings-advanced-toggle" : section === "display" ? "settings-display-title"
       : section === "drive-diagnostics" ? "sync-diagnostics-toggle" : section === "proxy" ? "settings-proxy-title" : null;
-    if (id) queueMicrotask(() => { const target = document.getElementById(id); target?.scrollIntoView({ block: "nearest" }); target?.focus(); });
+    if (id) queueMicrotask(() => { const target = document.getElementById(id); target?.scrollIntoView({ block: "nearest" }); target?.focus();
+      markSection(section === 'drive-diagnostics' ? 'overview' : section!); });
+    else if (section) markSection(section);
   }, [props.initialSection, props.sectionRequest]);
   useEffect(() => {
     if (!backupRequest) return;
@@ -215,14 +216,13 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   ];
   const navigateSection = (section: string, id: string): void => {
     if (closeLocked) return;
-    markSection(section);
     if (section === "data") setDataOpen(true);
     queueMicrotask(() => {
       const target = document.getElementById(id);
       if (!target) return;
       // 只给本不可聚焦的标题补 tabIndex；<summary> 等原生可聚焦元素保持在 Tab 顺序里。
       if (!target.matches("summary, button, a[href], input, select, textarea, [tabindex]")) target.tabIndex = -1;
-      target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true }); markSection(section);
     });
   };
 
@@ -361,7 +361,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           </section>
         </details>
       </div>
-      <footer className="archive-status" role="status" aria-live="polite">{progress || feedback}</footer>
+      <div className="archive-status" role="status" aria-live="polite">{progress || feedback}</div>
     </main>
   );
 }

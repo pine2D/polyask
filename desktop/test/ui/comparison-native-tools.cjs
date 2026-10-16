@@ -2,11 +2,11 @@ const { join } = require('node:path');
 const { writeFileSync } = require('node:fs');
 
 // 所有原生输入都先核对当前 CSS 命中，再换算为 Electron 的缩放前坐标。
-exports.nativeReadingTools = (win, output, state) => {
+exports.nativeReadingTools = (win, output, state, evaluate) => {
   const check = (ok, message) => { if (!ok) throw new Error(message); };
   const js = async source => {
     let result;
-    try { result = await win.webContents.executeJavaScript(`(async()=>{try{return {ok:true,value:await (0,eval)(${JSON.stringify(source)})};}
+    try { result = evaluate ? { ok: true, value: await evaluate(source) } : await win.webContents.executeJavaScript(`(async()=>{try{return {ok:true,value:await (0,eval)(${JSON.stringify(source)})};}
       catch(error){return {ok:false,name:String(error?.name||'Error').slice(0,32),message:String(error?.message||'renderer_error').replace(/\\s+/g,' ').slice(0,160)};}})()`); }
     catch (error) { result = { ok: false, name: 'ExecuteError', message: String(error.message).slice(0, 160) }; }
     if (!result.ok) {

@@ -9,7 +9,7 @@ import { requestDecisionNavigation } from "./decision-navigation";
 import { ArchiveMetadata } from "./archive-metadata";
 import { ArchiveCompare } from "./archive-compare";
 import { ArchiveSynthesis } from "./archive-synthesis";
-import { CompareIcon, SparklesIcon, StarIcon } from "./icons";
+import { ChevronDownIcon, CompareIcon, SparklesIcon, StarIcon } from "./icons";
 import { MarkdownPreview } from "./markdown-preview";
 import { answerSourceId } from "../shared/answer-source";
 import type { LibraryReadingFocus } from './library-reading-focus';
@@ -50,6 +50,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const localReader = useArchiveReader(record, props.initialComparisonOpen);
   const reader = props.reader ?? localReader, view = reader.state.view;
   const article = useRef<HTMLElement>(null);
+  const contextOpen = reader.state.comparisonContextExpanded;
   const navigation = useRef<HTMLDivElement>(null);
   const currentSource = useArchiveSourceLocation(article, navigation, record.id, view === 'read');
   useLayoutEffect(() => {
@@ -85,6 +86,12 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const canSynthesize = successfulResults.length >= 2;
   return (
     <article ref={article} className="archive-detail" data-view={view}>
+      <details className="archive-record-context" open={view !== 'compare' || contextOpen}
+        onToggle={event => { if (view === 'compare') reader.change({ comparisonContextExpanded: event.currentTarget.open }); }}>
+      <summary hidden={view !== 'compare'}>
+        <ChevronDownIcon /><span className="record-context-title" role={!contextOpen ? 'heading' : undefined} aria-level={!contextOpen ? 1 : undefined}
+          title={record.task || record.text}>{record.task || record.text}</span><span>{copy.comparisonContext}</span>
+      </summary>
       <header className="archive-detail-heading">
         <div>
           <ArchiveQuestionPrompt text={record.task || record.text} copy={copy} expanded={reader.state.questionExpanded}
@@ -104,6 +111,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
         {props.onCreateDecision ? <button type="button" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
       </div>
       <ArchiveMetadata record={record} copy={copy} busy={props.busy} onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} />
+      </details>
       <div ref={navigation} className="library-reading-navigation">
       <nav className="library-view-switch" aria-label={copy.libraryAnswers}>
         <button type="button" aria-pressed={view === 'read'} onClick={() => setView('read')}>{copy.libraryRead}<span>{record.results.length}</span></button>

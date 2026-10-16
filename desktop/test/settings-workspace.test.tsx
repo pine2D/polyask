@@ -56,7 +56,7 @@ test("idle Drive status distinguishes local-only data from an up-to-date connect
   assert.match(disconnected, /title="Close settings" aria-label="Close settings"/);
   assert.equal([...disconnected.matchAll(/aria-live="polite"/g)].length, 1);
   assert.equal([...disconnected.matchAll(/>Local only</g)].length, 1);
-  assert.match(disconnected, /<footer class="archive-status" role="status" aria-live="polite"><\/footer>/);
+  assert.match(disconnected, /<div class="archive-status" role="status" aria-live="polite"><\/div>/);
 
   const connected = renderSettings(status({ connected: true, state: "idle" }));
   assert.match(connected, /data-state="idle" data-connected="true"/);

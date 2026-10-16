@@ -50,7 +50,35 @@ test('manual settings scrolling marks the visible section without moving keyboar
     assert.equal(scroller.scrollLeft, 100, 'resizing reveals the current item even when its identity does not change');
     assert.equal(h.document.activeElement === close, true);
     await act(async () => { body.scrollTop = 2000; body.dispatchEvent(new h.window.Event('scroll')); });
-    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'data');
+    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'updates', 'a collapsed last section below the reading edge does not take over');
+  } finally { await h.close(); }
+});
+
+test('clamped settings jumps retain the requested section until the user scrolls elsewhere', async () => {
+  const h = await mountSettings();
+  try {
+    const body = h.document.querySelector<HTMLElement>('.settings-body')!;
+    Object.defineProperties(body, { clientHeight: { value: 604 }, scrollHeight: { value: 2497 } });
+    body.getBoundingClientRect = () => ({ top: 52, bottom: 656 }) as DOMRect;
+    h.document.querySelector<HTMLElement>('.settings-section-navigation')!.getBoundingClientRect = () => ({ bottom: 130 }) as DOMRect;
+    const positions = { 'sync-title': -1700, 'backup-card-title': -1400, 'settings-display-title': -1000,
+      'completion-notifications-title': -300, 'settings-proxy-title': 161, 'app-updates-title': 420, 'settings-advanced-toggle': 610 };
+    for (const [id, top] of Object.entries(positions)) {
+      const node = h.document.getElementById(id)!;
+      node.getClientRects = () => [{}] as unknown as DOMRectList;
+      node.getBoundingClientRect = () => ({ top: top + 1893 - body.scrollTop }) as DOMRect;
+      node.scrollIntoView = () => { body.scrollTop = 1893; };
+    }
+    const current = () => h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section');
+    for (const section of ['proxy', 'updates']) {
+      await h.click(h.document.querySelector<HTMLButtonElement>(`[data-settings-section=${section}]`)!);
+      await act(async () => { body.dispatchEvent(new h.window.Event('scroll')); h.window.dispatchEvent(new h.window.Event('resize')); });
+      assert.equal(current(), section, 'reaching the same bottom position must not replace the explicit target');
+    }
+    const focused = h.document.activeElement;
+    await act(async () => { body.scrollTop -= 100; body.dispatchEvent(new h.window.Event('scroll')); });
+    assert.equal(current(), 'notifications', 'manual scrolling resumes tracking actual content');
+    assert.equal(h.document.activeElement === focused, true, 'scroll tracking does not move focus');
   } finally { await h.close(); }
 });
 

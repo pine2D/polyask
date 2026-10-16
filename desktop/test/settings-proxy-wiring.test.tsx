@@ -103,7 +103,7 @@ test('proxy results reach the settings status line and the shell live announceme
     await settle();
     await h.click(settingsButton(h.document, copy.proxySave));
     await settle();
-    assert.equal(h.document.querySelector('footer[role="status"][aria-live="polite"]')!.textContent, copy.proxySaved);
+    assert.equal(h.document.querySelector('[role="status"][aria-live="polite"].archive-status')!.textContent, copy.proxySaved);
     assert.equal(announced.at(-1), copy.proxySaved);
   } finally { await h.close(); }
 });

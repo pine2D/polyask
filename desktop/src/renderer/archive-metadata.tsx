@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { ArchivePatch, ArchiveRecord } from '../shared/archive';
 import type { DesktopCopy } from '../shared/copy';
 import { formatCopy } from '../shared/copy';
@@ -82,8 +83,8 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
         </div>
       </form>
     </details>
-    {confirm ? <ConfirmDialog copy={copy} title={copy.libraryMetadata} message={copy.decisionDiscard}
+    {confirm ? createPortal(<ConfirmDialog copy={copy} title={copy.libraryMetadata} message={copy.decisionDiscard}
       confirmLabel={copy.decisionConfirm} cancelLabel={copy.cancel} onCancel={() => setConfirm(null)}
-      onConfirm={() => { const action = confirm; setConfirm(null); setTags(savedTags); setNote(record.note); action(); }} /> : null}
+      onConfirm={() => { const action = confirm; setConfirm(null); setTags(savedTags); setNote(record.note); action(); }} />, document.body) : null}
   </>;
 }

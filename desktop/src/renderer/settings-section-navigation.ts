@@ -12,7 +12,12 @@ function revealSection(body: HTMLElement | null, section: string): void {
 /** 分区位置只反映当前可见内容，不移动焦点或触发设置写入。 */
 export function useSettingsSectionNavigation() {
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [currentSection, markSection] = useState('overview');
+  const [currentSection, setCurrentSection] = useState('overview');
+  const anchor = useRef<{ key: string; top: number } | null>(null);
+  const markSection = (key: string) => {
+    anchor.current = { key, top: bodyRef.current?.scrollTop ?? 0 };
+    setCurrentSection(key);
+  };
   useLayoutEffect(() => {
     const body = bodyRef.current;
     if (!body) return;
@@ -28,8 +33,14 @@ export function useSettingsSectionNavigation() {
       const edge = Math.max(nav?.getBoundingClientRect().bottom ?? 0,
         body.getBoundingClientRect().top + (parseFloat(view.getComputedStyle(body).scrollPaddingTop) || 0)) + 1;
       const atBottom = body.scrollTop > 0 && body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
-      const section = atBottom ? sections.at(-1)! : sections.filter(item => item.top <= edge).at(-1) ?? sections[0];
-      markSection(section.key);
+      // 跳转可被底部夹住：同一滚动位置仍代表用户明确选择的分区。
+      const requested = anchor.current;
+      const pinned = requested?.top === body.scrollTop ? sections.find(item => item.key === requested.key) : null;
+      if (!pinned) anchor.current = null;
+      const section = pinned ?? (atBottom
+        ? sections.reduce((best, item) => Math.abs(item.top - edge) < Math.abs(best.top - edge) ? item : best)
+        : sections.filter(item => item.top <= edge).at(-1) ?? sections[0]);
+      setCurrentSection(section.key);
       revealSection(body, section.key);
     };
     body.addEventListener('scroll', update, { passive: true });

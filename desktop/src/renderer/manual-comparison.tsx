@@ -4,7 +4,7 @@ import type { DesktopCopy } from '../shared/copy';
 import type { DecisionInput } from '../shared/decision';
 import { answerSourceId } from '../shared/answer-source';
 import { validateExcerpt, type ExactExcerpt, type ExcerptSource } from './answer-excerpt';
-import { COMPARISON_CATEGORIES, comparisonCategoryLabel, comparisonDecisionInput, emptyComparisonDraft, type ComparisonDraft } from './comparison-draft';
+import { COMPARISON_CATEGORIES, comparisonCategoryLabel, comparisonDecisionInput, emptyComparisonDraft, type ComparisonCategory, type ComparisonDraft } from './comparison-draft';
 import { createComparisonDraftStore, type ComparisonDraftStore } from './comparison-draft-store';
 import { ExcerptReplacementDialog } from './excerpt-replacement-dialog';
 import { requestDecisionNavigation } from './decision-navigation';
@@ -12,6 +12,23 @@ import { shell } from './shell-api';
 import { usePersistentDraft } from './use-persistent-draft';
 import { DraftRecovery } from './draft-recovery';
 import { parseComparisonContent } from './editor-draft-content';
+import { ArchiveAnswerReading } from './archive-answer-reading';
+
+function ManualNote({ copy, category, source, value, selected, onSelect, onChange }: {
+  copy: DesktopCopy; category: ComparisonCategory; source: ExcerptSource; value: string; selected: boolean;
+  onSelect: (selected: boolean) => void; onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(!!value || selected);
+  useEffect(() => { if (value || selected) setOpen(true); }, [value, selected]);
+  return <details className="manual-category" open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+    <summary>{comparisonCategoryLabel(copy, category)}</summary>
+    <label><input type="checkbox" name="manual-category" data-source-index={source.resultIndex} value={category}
+      aria-label={`${source.label} · ${comparisonCategoryLabel(copy, category)}`}
+      checked={selected} onChange={event => onSelect(event.target.checked)} />{copy.manualClassify}</label>
+    <textarea aria-label={`${source.label} · ${comparisonCategoryLabel(copy, category)}`} name={`comparison-note-${category}-${source.resultIndex}`}
+      placeholder={copy.manualEmpty} value={value} onChange={event => onChange(event.target.value)} />
+  </details>;
+}
 
 export function useComparisonWorksheet(record: ArchiveRecord | undefined, provided?: ComparisonDraftStore) {
   const fallback = useRef<ComparisonDraftStore | null>(null);
@@ -53,6 +70,13 @@ export function ManualComparison(props: {
 }): React.JSX.Element | null {
   const { copy, worksheet, record } = props, draft = worksheet.draft;
   const [message, setMessage] = useState(''), [checking, setChecking] = useState(false);
+  const excerptFocus = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    const index = excerptFocus.current;
+    if (index === null) return;
+    const field = props.detailsRef?.current?.querySelector<HTMLTextAreaElement>(`[name=comparison-excerpt-${index}]`);
+    if (field) { excerptFocus.current = null; field.focus({ preventScroll: true }); field.scrollIntoView({ block: 'nearest' }); }
+  }, [draft?.quotes]);
   const latest = useRef(props); latest.current = props;
   if (!draft) return null;
   const invalid = draft.quotes.some(value => !validateExcerpt(record, value));
@@ -87,15 +111,15 @@ export function ManualComparison(props: {
         return <section className="manual-comparison-source" data-source-index={index} key={source.host}>
           <h3>{answerSourceId(index)} {source.label}</h3>
           {source.truncated ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}
-          {quote ? <><label>{copy.manualExcerpt}<textarea name={`comparison-excerpt-${index}`} readOnly value={quote.excerpt} /></label><button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => old.resultIndex !== index) })}>{copy.manualRemoveExcerpt}</button></> : <p>{copy.manualEmpty}</p>}
-          {COMPARISON_CATEGORIES.map(category => <section className="manual-category" key={category}>
-            <label><input type="checkbox" name="manual-category" data-source-index={index} value={category} checked={draft.categories[source.host]?.includes(category) ?? false}
-              onChange={event => change({ ...draft, categories: { ...draft.categories, [source.host]: event.target.checked
-                ? [...(draft.categories[source.host] ?? []), category] : (draft.categories[source.host] ?? []).filter(value => value !== category) } })} />{comparisonCategoryLabel(copy, category)}</label>
-            <textarea aria-label={`${source.label} · ${comparisonCategoryLabel(copy, category)}`} name={`comparison-note-${category}-${index}`} placeholder={copy.manualEmpty}
-              value={draft.notes[category][source.host] ?? ''} onChange={event => change({ ...draft, notes: { ...draft.notes,
-                [category]: { ...draft.notes[category], [source.host]: event.target.value } } })} />
-          </section>)}
+          {quote ? <><label>{copy.manualExcerpt}<textarea name={`comparison-excerpt-${index}`} readOnly value={quote.excerpt} /></label><button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => old.resultIndex !== index) })}>{copy.manualRemoveExcerpt}</button></> : <>
+            <p>{copy.manualEmpty}</p>{worksheet.open ? <ArchiveAnswerReading copy={copy} source={source} busy={props.busy}
+              onCompare={value => { excerptFocus.current = index; worksheet.add(value); }}>{null}</ArchiveAnswerReading> : null}
+          </>}
+          {COMPARISON_CATEGORIES.map(category => <ManualNote key={`${source.host}:${category}`} copy={copy} source={source} category={category}
+            selected={draft.categories[source.host]?.includes(category) ?? false} value={draft.notes[category][source.host] ?? ''}
+            onSelect={selected => change({ ...draft, categories: { ...draft.categories, [source.host]: selected
+              ? [...(draft.categories[source.host] ?? []), category] : (draft.categories[source.host] ?? []).filter(value => value !== category) } })}
+            onChange={value => change({ ...draft, notes: { ...draft.notes, [category]: { ...draft.notes[category], [source.host]: value } } })} />)}
         </section>;
       })}</div>
       <label>{copy.manualJudgment}<textarea name="comparison-judgment" value={draft.judgment} onChange={event => change({ ...draft, judgment: event.target.value })} /></label>

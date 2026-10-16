@@ -98,12 +98,15 @@ module.exports = async tools => {
   await until('!!document.querySelector(".archive-compare-side:last-child .answer-excerpt-actions")', 'second source native literal selection');
   check(await js(`document.querySelector('.archive-compare-side:last-child .answer-excerpt-actions blockquote').textContent===window.readingFixture.sources[1].text.split('\\r\\n')[0]`), 'second native quote retains its own saved source');
   await click(await label('excerptManualCompare', scope('.archive-compare-side:last-child .answer-excerpt-actions')));
+  await click('.manual-category:has([name=manual-category][data-source-index="0"][value=conditions]) > summary');
   await click('[name=manual-category][data-source-index="0"][value=conditions]');
   await type('[name=comparison-judgment]', 'My manual judgment.');
   await type('[name=comparison-next-step]', 'Verify the condition with the owner.');
   await type('[name=comparison-note-conditions-0]', 'Only under the stated conditions.');
+  await click('.manual-category:has([name=comparison-note-cost-0]) > summary');
   await type('[name=comparison-note-cost-0]', 'Two hours of manual verification.');
   state.step = 'existing-metadata-guard';
+  await click('.archive-record-context > summary');
   await click('.archive-metadata summary'); await type('[name=archive-note]', 'Keep this unsaved metadata.');
   await click(await label('manualFormDecision', scope('.manual-comparison')));
   await until('!!document.querySelector(".confirm-dialog:not(.folder-modal)")', 'unsaved metadata guard');
