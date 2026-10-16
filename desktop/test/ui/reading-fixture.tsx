@@ -63,6 +63,15 @@ function toolbarLayout() {
   const answer = toolbar.querySelector<HTMLElement>('.question-answer-actions')!.getBoundingClientRect();
   const question = toolbar.querySelector<HTMLElement>('.question-prompt-actions')!.getBoundingClientRect();
   check(!document.querySelector('.question-reader-intro button'), 'no duplicate heading actions');
+  for (const name of [copy.questionCopy, copy.questionCopyPrompt]) {
+    const button = toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
+    const label = button.parentElement!.querySelector<HTMLElement>('[aria-hidden="true"]');
+    check(!!label && label.textContent === name && label.getClientRects().length > 0, 'copy object label is visible beside its icon');
+    if (label) {
+      const l = label.getBoundingClientRect(), b = button.getBoundingClientRect();
+      check(l.left >= 0 && l.right <= b.left && Math.abs(l.top + l.height / 2 - b.top - b.height / 2) <= 1, 'copy label stays paired with its button');
+    }
+  }
   if (window.innerWidth >= 900) check(Math.abs(answer.top - question.top) <= 1, 'wide toolbar stays on one row');
   check(answer.right <= question.left + 1 || question.top >= answer.bottom, 'action groups never overlap');
   for (const node of toolbar.querySelectorAll<HTMLElement>('button')) {

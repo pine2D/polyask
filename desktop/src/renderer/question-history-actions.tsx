@@ -24,14 +24,14 @@ export function QuestionHistoryActions({ questionId, prompt, answer, site, conve
       <button type="button" className="question-icon-action" disabled={!conversationUrl} aria-label={copy.questionOpenBrowser} data-hint={conversationUrl ? copy.questionOpenBrowser : copy.questionMissing} onClick={() => {
         if (conversationUrl) void shell.openExternal(conversationUrl).catch(() => onAnnounce(copy.questionFailed));
       }}><ExternalLinkIcon /></button>
-      <button type="button" className="question-icon-action" aria-label={copy.questionCopy} data-hint={copy.questionCopy} disabled={!ready || !answer?.answerMarkdown} onClick={() => {
+      <span className="question-copy-action"><span aria-hidden="true">{copy.questionCopy}</span><button type="button" className="question-icon-action" aria-label={copy.questionCopy} data-hint={copy.questionCopy} disabled={!ready || !answer?.answerMarkdown} onClick={() => {
         void navigator.clipboard.writeText(answer?.answerMarkdown ?? '').then(() => onAnnounce(copy.questionCopied)).catch(() => onAnnounce(copy.questionFailed));
-      }}><CopyIcon /></button>
+      }}><CopyIcon /></button></span>
     </div>
     <div className="question-prompt-actions">
-      <button type="button" className="question-icon-action" data-action="copy-question" aria-label={copy.questionCopyPrompt} data-hint={copy.questionCopyPrompt} onClick={() => {
+      <span className="question-copy-action"><span aria-hidden="true">{copy.questionCopyPrompt}</span><button type="button" className="question-icon-action" data-action="copy-question" aria-label={copy.questionCopyPrompt} data-hint={copy.questionCopyPrompt} onClick={() => {
         void navigator.clipboard.writeText(prompt).then(() => onAnnounce(copy.questionPromptCopied)).catch(() => onAnnounce(copy.questionFailed));
-      }}><CopyIcon /></button>
+      }}><CopyIcon /></button></span>
       {onOrganize && <button type="button" data-action="organize-saved-answer" disabled={busy || !ready || !answer?.answerMarkdown} onClick={onOrganize}>{copy.questionOrganize}</button>}
       <button type="button" data-action="reask-question" disabled={busy} onClick={onReask}>{copy.questionReask}</button>
       <LibraryMenu key={questionId} label={copy.questionMenu} disabled={busy}

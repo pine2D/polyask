@@ -4,11 +4,24 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { getCopy } from '../src/shared/copy';
 import { QuestionHistoryList } from '../src/renderer/question-history-list';
 import { QuestionHistoryReader } from '../src/renderer/question-history-reader';
+import { QuestionHistoryActions } from '../src/renderer/question-history-actions';
+import { mountDom } from './ui/dom-harness';
 import { answerState, questionDay } from '../src/renderer/question-history-model';
 import { questionFixture, questionAnswerFixture } from './question-fixtures';
 const copy = getCopy('zh-CN');
 const noop = () => {};
 const answerFixture = (id: string) => ({ ...questionAnswerFixture(id), capture: 'unknown' as const });
+test('the two history copy actions show their object names without opening a tooltip', async () => {
+  const h = await mountDom(<QuestionHistoryActions questionId="q" prompt="original" site="claude" ready canRestoreAll={false}
+    copy={copy} busy={false} conversationUrl={null} onRestore={noop} onReask={noop} onDelete={noop} onAnnounce={noop} />);
+  try {
+    for (const name of [copy.questionCopy, copy.questionCopyPrompt]) {
+      const button = h.document.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
+      assert.equal(button.textContent, '', 'the established icon-only button remains');
+      assert.equal(button.parentElement!.textContent?.includes(name), true, 'a visible adjacent label identifies the copied object');
+    }
+  } finally { await h.close(); }
+});
 test('history separates restore, copies and menu buttons and never renders raw markup', () => {
   const q = questionFixture();
   const html = renderToStaticMarkup(<QuestionHistoryList copy={copy} sites={[]} busy={false}

@@ -43,7 +43,8 @@
 .question-actions .question-icon-action { width: 32px; padding: 4px; display: grid; place-items: center; }
 .question-reader-actions { align-items: center; gap: 12px 24px; }
 .question-reader-actions button { min-height: 32px; white-space: nowrap; }
-.question-answer-actions, .question-prompt-actions { display: flex; align-items: center; gap: 8px; }
+.question-answer-actions, .question-prompt-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: 100%; }
+.question-copy-action { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 4px; color: var(--muted); font-size: var(--font-meta); white-space: nowrap; }
 .question-prompt-actions { margin-inline-start: auto; }
 .question-reader-actions .library-menu-trigger { width: 32px; padding: 4px; display: grid; place-items: center; }
 .question-restore-split { display: flex; align-items: stretch; }
