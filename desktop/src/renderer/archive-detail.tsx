@@ -19,6 +19,7 @@ import type { SynthesisSession } from './synthesis-session';
 import type { ComparisonDraftStore } from './comparison-draft-store';
 import type { DecisionInput } from '../shared/decision';
 import { useArchiveReader, type ArchiveReaderBinding } from './archive-reader-session';
+import { useArchiveSourceLocation } from './archive-source-location';
 
 interface ArchiveDetailProps {
   readonly reader?: ArchiveReaderBinding;
@@ -49,6 +50,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const reader = props.reader ?? localReader, view = reader.state.view;
   const article = useRef<HTMLElement>(null);
   const navigation = useRef<HTMLDivElement>(null);
+  const currentSource = useArchiveSourceLocation(article, navigation, record.id, view === 'read');
   useLayoutEffect(() => {
     const node = navigation.current, pane = article.current?.closest<HTMLElement>('.archive-detail-pane');
     if (!node || !pane) return;
@@ -110,6 +112,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           const best = record.winnerHost === result.host;
           const label = `${answerSourceId(index)} ${result.label}`;
           return <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`} data-best={best || undefined}
+            aria-current={currentSource === index ? 'location' : undefined}
             aria-label={best ? `${label} · ${copy.archiveBestAnswer}` : undefined}>{label}
             <span className="archive-answer-best" aria-hidden="true">{best ? <StarIcon /> : null}</span></a>;
         })}

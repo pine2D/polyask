@@ -28,6 +28,7 @@
 .library .archive-answer-nav a { min-height: 30px; display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: var(--radius-control); font-size: var(--font-meta); }
 .library .archive-answer-nav a:hover { color: var(--accent); border-color: var(--accent); }
 .library .archive-answer-nav a[data-best=true] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+.library .archive-answer-nav a[aria-current=location] { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .library .archive-answer-best { display: inline-flex; width: 12px; height: 12px; flex-shrink: 0; }
 .library .archive-answer-best svg { width: 12px; height: 12px; }
 .library .archive-answer { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 16px 0 24px; margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; scroll-margin-top: 0; }

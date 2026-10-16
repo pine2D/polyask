@@ -17,14 +17,14 @@ module.exports = async ({ win, run, wait, click, key, shot, locale, theme, zoom 
       const style = getComputedStyle(link), colors = [luminance(style.color),luminance(style.backgroundColor)];
       return { count:links.length, href:link.getAttribute('href'), label:link.getAttribute('aria-label'),
         expected:source.querySelector('h2').textContent.split(' · ')[0]+' · '+window.libraryTest.copy.archiveBestAnswer,
-        icon:link.querySelector('svg')?.getAttribute('aria-hidden'), current:link.hasAttribute('aria-current'),
+        icon:link.querySelector('svg')?.getAttribute('aria-hidden'), current:link.getAttribute('aria-current'),
         contrast:(Math.max(...colors)+.05)/(Math.min(...colors)+.05),
         focused:active === source.querySelector('.archive-answer-actions button'),
         top:box.top, bottom:box.bottom, navBottom:nav.bottom, paneBottom:pane.bottom,
         saved:window.libraryTest.writes };
     })()`);
     assert.equal(metrics.count, 1); assert.equal(metrics.href, `#archive-answer-${index}`);
-    assert.equal(metrics.label, metrics.expected); assert.equal(metrics.icon, 'true'); assert.equal(metrics.current, false);
+    assert.equal(metrics.label, metrics.expected); assert.equal(metrics.icon, 'true'); assert.equal(metrics.current, 'location');
     assert.ok(metrics.contrast >= 4.5, `best source remains readable: ${JSON.stringify(metrics)}`);
     assert.ok(metrics.focused && metrics.top >= metrics.navBottom - 1 && metrics.bottom <= metrics.paneBottom + 1,
       `saved marker preserves source action focus: ${JSON.stringify(metrics)}`);
@@ -42,7 +42,11 @@ module.exports = async ({ win, run, wait, click, key, shot, locale, theme, zoom 
   assert.deepEqual(await layout(), initialLayout, 'marking best never reflows the sticky source navigation');
   await navigate(8);
   assert.equal(await run('location.hash'), '#archive-answer-8');
-  await navigate(0); await key('Return');
+  await navigate(0);
+  await wait('document.querySelector(".archive-answer-nav [aria-current=location]")?.getAttribute("href") === "#archive-answer-0"');
+  assert.equal(await run(`document.querySelector('${marked}')?.getAttribute('href')`), '#archive-answer-8', 'reading another source does not move best');
+  assert.equal(await run(`document.querySelector('${marked}')?.hasAttribute('aria-current')`), false, 'best and location remain independent');
+  await key('Return');
   await wait(`!!document.querySelector('${marked}[href="#archive-answer-0"]') && !document.querySelector('#archive-answer-0 button').disabled`);
   const first = await check(0);
   assert.deepEqual(await layout(), initialLayout, 'moving best never reflows the sticky source navigation');
