@@ -38,7 +38,7 @@ export function toolbarFitLevel(bar: HTMLElement | null | undefined): number {
 }
 
 /**
- * 挂载、每次渲染（计数/标签/分页变化）与命令栏宽度变化（窗口缩放、外壳缩放）时同步重算。
+ * 挂载、每次渲染（计数/标签/分页变化）时同步重算；宽度变化在下一帧重算。
  * 渲染后先比对宽度与密度签名；只观察命令栏本身，共享高度仅在档位或密度变化时写入。
  * 直接写 data-fit，不经 React 状态，避免二次渲染。
  */
@@ -47,10 +47,16 @@ export function useToolbarFit(ref: RefObject<HTMLElement | null>): void {
   const refit = (bar: HTMLElement): void => { fitToolbar(bar); signature.current = layoutSignature(bar); };
   useLayoutEffect(() => {
     const bar = ref.current;
-    if (!bar || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => refit(bar));
+    const view = bar?.ownerDocument.defaultView;
+    if (!bar || !view || typeof ResizeObserver === "undefined") return;
+    let frame: number | null = null;
+    // 档位切换会改变被观察元素自身的高度，移出本轮通知，避免 ResizeObserver 回路。
+    const observer = new ResizeObserver(() => {
+      if (frame !== null) return;
+      frame = view.requestAnimationFrame(() => { frame = null; refit(bar); });
+    });
     observer.observe(bar);
-    return () => observer.disconnect();
+    return () => { observer.disconnect(); if (frame !== null) view.cancelAnimationFrame(frame); };
   }, [ref]);
   useLayoutEffect(() => {
     const bar = ref.current;

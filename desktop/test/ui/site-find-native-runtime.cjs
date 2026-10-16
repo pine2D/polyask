@@ -166,7 +166,9 @@ app.whenReady().then(async () => {
       win.setContentSize(width, 1000); win.webContents.setZoomFactor(zoom); manager.relayout();
       await run(`(()=>{const e=document.querySelector('[data-composer-toggle]');if(e.getAttribute('aria-expanded')!==${JSON.stringify(String(expanded))})e.click()})()`);
       await until(() => run('document.documentElement.dataset.density===' + JSON.stringify(density)), 'density applied');
-      const expectedTop = expanded ? density === 'compact' ? 120 : 144 : density === 'compact' ? 52 : 64;
+      const stacked = width / zoom < 960;
+      const heights = density === 'compact' ? stacked ? [120,200] : [52,120] : stacked ? [144,240] : [64,144];
+      const expectedTop = heights[Number(expanded)];
       await until(() => run('document.querySelector(".app-shell").classList.contains("is-composer-expanded")===' + expanded), 'composer reservation settled');
       await until(() => manager.getLayout().placements[0].bounds.y === expectedTop + SITE_FIND_HEIGHT, 'native reservation settled');
       await paint();

@@ -9,7 +9,11 @@ app.whenReady().then(async () => {
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   win.setMenuBarVisibility(false);
   const errors = [], reports = [], failures = [];
-  win.webContents.on('console-message', event => { if (event.level === 'error') errors.push(event.message); });
+  win.webContents.on('console-message', event => {
+    if (event.level !== 'error') return;
+    const message = `${event.message} (${win.webContents.getURL()})`;
+    errors.push(message); console.error(message);
+  });
   const run = source => win.webContents.executeJavaScript(source).catch(error => {
     throw Error(`Synthetic shell evaluation failed: ${source.slice(0, 220)} (${String(error).slice(0, 180)})`);
   });
@@ -35,6 +39,23 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  if (process.argv.includes('--toolbar-resize-only')) {
+    win.setContentSize(1280, 900);
+    await win.loadFile(join(output, 'index.html'), { query: { surface: 'shell', locale: 'zh-TW' } });
+    await wait('!!document.querySelector(".command-bar")'); await paint();
+    for (const zoom of [1.5, 1, 2, 1]) {
+      win.webContents.setZoomFactor(zoom); await paint();
+      const geometry = await run(`(() => {const bar=document.querySelector('.command-bar'),prompt=bar.querySelector('.prompt-composer');
+        return {height:bar.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().width,layout:document.documentElement.dataset.toolbarLayout};})()`);
+      const stacked = zoom > 1;
+      assert.equal(geometry.layout, stacked ? 'stacked' : 'inline');
+      assert.equal(Math.abs(geometry.height - (stacked ? 120 : 52)) < 1, true);
+      assert.equal(geometry.prompt >= 320, true);
+    }
+    assert.deepEqual(errors, []);
+    console.log('Toolbar resize passed: four inline/stacked zoom transitions without observer errors.');
+    win.destroy(); app.quit(); return;
+  }
   if (process.argv.includes('--send-key-contrast-only')) {
     await require('./send-key-contrast-visual.cjs')({ win, output, run, wait, paint });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
