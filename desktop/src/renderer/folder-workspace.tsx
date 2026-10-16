@@ -22,6 +22,8 @@ import { LibraryBulkActions } from './library-bulk-actions';
 import { LibraryBulkFolderDialog } from './library-bulk-folder-dialog';
 import type { BulkRequest } from './library-bulk-runner';
 
+type LibraryFailure = 'capture' | 'load';
+
 export function FolderWorkspace(props: ArchiveSurfaceProps & {
   session?: LibrarySessionStore; navigationRevision?: number; onBlockingChange?: (value: boolean) => void;
   renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: () => void, readingFocus: LibraryReadingFocus, readerNavigationKey: string | null) => React.ReactNode;
@@ -47,7 +49,9 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState('');
+  const [failure, setFailure] = useState<LibraryFailure | null>(null);
+  const message = failure === 'capture' ? copy.archiveCollectFailed : failure === 'load' ? copy.folderLoadFailed : '';
+  const reportLoadFailure = () => setFailure(current => current === 'capture' ? current : 'load');
   const [bulkFolders, setBulkFolders] = useState(false);
   const [focused, setFocused] = useState(initial.focused);
   const [pane, setPane] = useState<'navigation' | 'list' | 'detail'>(initial.pane);
@@ -116,7 +120,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         setItems(contents.items); setTotal(contents.total); setPage(contents.page);
         const live = new Set(contents.selectedTargets.map(target => `${target.kind}:${target.id}`));
         setSelectedKeys(current => current.filter(key => live.has(key)));
-        setLoading(false); setLoadFailed(false); setMessage(detailFailed ? copy.folderLoadFailed : '');
+        setLoading(false); setLoadFailed(false);
+        setFailure(current => current === 'capture' ? current : detailFailed ? 'load' : null);
         const key = target ? `${target.kind}:${target.id}` : null;
         restoringKey.current = null;
         if (key && requestIntent === intent.current && !detailFailed && !(contents.selected && !reread)) {
@@ -134,7 +139,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
           listScroll.current = 0;
           filterChanged.current = false;
         }
-      }).catch(() => { if (request === epoch.current) { setLoading(false); setLoadFailed(true); setMessage(copy.folderLoadFailed); } });
+      }).catch(() => { if (request === epoch.current) { setLoading(false); setLoadFailed(true); reportLoadFailure(); } });
     }, filters.query ? 180 : 0);
     return () => { clearTimeout(timer); epoch.current++; };
   }, [filters, revision, page, sort, props.locale, copy.folderLoadFailed]);
@@ -149,7 +154,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         session.update({ reader: null });
         setFilters({ folderId: '' }); setSelected({ kind: 'archive', record }); setNewSource(null); setPane('detail');
       });
-    }).catch(() => { if (active) setMessage(copy.folderLoadFailed); });
+    }).catch(() => { if (active) reportLoadFailure(); });
     return () => { active = false; };
   }, [props.preferredId, props.navigationRevision]);
   const change = (patch: Partial<FolderFilters>) => navigate(() => {
@@ -162,11 +167,12 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   });
   const openArchive = (record?: ArchiveRecord) => navigate(() => { setNewSource(null); if (record) setFilters({ folderId: '' }); setSelected(record ? { kind: 'archive', record } : null); setPane(record ? 'detail' : 'list'); });
   const changed = (deleted = false) => { if (deleted) { setSelected(null); setFocused(false); setPane('list'); } refresh(); };
-  const savedArchive = (record: ArchiveRecord) => { setFilters({ folderId: '' }); setSelected({ kind: 'archive', record }); setNewSource(null); setPane('detail'); refresh(); };
+  const savedArchive = (record: ArchiveRecord) => { setFailure(null); setFilters({ folderId: '' }); setSelected({ kind: 'archive', record }); setNewSource(null); setPane('detail'); refresh(); };
   const capture = () => navigate(() => {
+    setFailure(null);
     blocking('capture', true);
     props.onCapture().then(value => { if (mounted.current) savedArchive(value); })
-      .catch(() => { if (mounted.current) setMessage(copy.archiveCollectFailed); }).finally(() => blocking('capture', false));
+      .catch(() => { if (mounted.current) setFailure('capture'); }).finally(() => blocking('capture', false));
   });
   const updateDecision = (record?: DecisionRecord) => {
     if (newSource && record) setFilters({ folderId: '' });
@@ -209,7 +215,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         const retryIntent = intent.current;
         shell.queryFolderContents({ ...filters, selectedTargets: bulk.result.outcome.failed }).then(result => {
           if (mounted.current && retryIntent === intent.current) bulk.retry(result.selectedTargets);
-        }).catch(() => { if (mounted.current) setMessage(copy.folderLoadFailed); });
+        }).catch(() => { if (mounted.current) reportLoadFailure(); });
       })} />
     <div className="folder-columns">
       <FolderSidebar copy={copy} locale={props.locale} folders={folders} selected={filters.folderId ?? ''} disabled={busy} onSelect={folderId => change({ folderId })} onChanged={refresh} />
@@ -232,16 +238,16 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
               if (!mounted.current || readingIntent !== intent.current || busyRef.current) return;
               listScroll.current = reading.root.current?.querySelector<HTMLElement>('.archive-list')?.scrollTop ?? listScroll.current;
               setSelected(record); setNewSource(null); setPane(record ? 'detail' : 'list');
-              setMessage(record ? '' : copy.folderLoadFailed);
+              setFailure(record ? null : 'load');
             });
-          }).catch(() => { if (mounted.current && readingIntent === intent.current) setMessage(copy.folderLoadFailed); });
+          }).catch(() => { if (mounted.current && readingIntent === intent.current) reportLoadFailure(); });
         }} />
       <div className="folder-detail">
         {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
           : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => { if (selecting.current === null) navigate(() => { setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{copy.libraryPick}</h1><p>{welcomeHint}</p></div>}
       </div>
     </div>
-    {message ? <div className="archive-status" role="status">{message}<button onClick={refresh}>{copy.retryShellLoad}</button></div> : null}
+    {message ? <div className="archive-status" role="status">{message}<button disabled={busy} onClick={failure === 'capture' ? capture : refresh}>{copy.retryShellLoad}</button></div> : null}
     {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={{ kind: membership.kind, id: membership.id }} targetTitle={membership.title} folders={folders} onCreated={createdFolder} onCancel={() => setMembership(null)} onSaved={() => { setMembership(null); refresh(); }} /> : null}
     {bulkFolders && <LibraryBulkFolderDialog copy={copy} labels={labels} folders={folders} count={targets.length}
       onCancel={() => setBulkFolders(false)} onConfirm={ids => startBulk('add-folder', undefined, ids)} />}
