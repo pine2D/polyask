@@ -41,7 +41,7 @@
   margin-left: var(--space-1); width: calc(100% - var(--space-1)); height: var(--control-height); resize: none; padding: 5px 10px; border: 1px solid var(--border);
   border-radius: var(--radius-control); color: inherit; background: var(--field); line-height: 20px; font-size: var(--font-body);
 }
-.command-bar.is-expanded textarea { height: calc(var(--composer-expanded-height) - var(--space-2)); }
+.command-bar.is-expanded textarea { height: calc(var(--composer-field-expanded-height) - var(--space-2)); }
 .command-bar textarea:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent); }
 .mode-switch button:hover:not(.active), .tier-switch button:hover:not(.active) { color: inherit; background: var(--panel); }
 .summary { max-width: 112px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -177,3 +177,13 @@ kbd { opacity: .7; font: 10px system-ui; }
   color: inherit; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border); font-size: 12px;
 }
 .tier-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* 高倍外壳缩放：保持 DOM / Tab 顺序，提问区独占中间一行。 */
+:root[data-toolbar-layout="stacked"] .command-bar {
+  display: flex; flex-wrap: wrap; align-content: start; align-items: center; gap: 4px;
+}
+:root[data-toolbar-layout="stacked"] .command-bar > .prompt-composer {
+  flex: 0 0 100%; margin-inline: 0;
+}
+:root[data-toolbar-layout="stacked"] .command-bar > :is(.workspace-entry, .mode-switch, .page-tabs) { flex: 0 0 auto; }
+:root[data-toolbar-layout="stacked"] .command-bar > .workspace-actions { margin-inline-start: auto; }

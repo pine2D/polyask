@@ -2,6 +2,12 @@ export const MIN_SITE_COLUMN_WIDTH = 380;
 export const WORKSPACE_FEEDBACK_HEIGHT = 32;
 
 export type Density = "compact" | "comfortable";
+export type ToolbarLayout = 'inline' | 'stacked';
+export const MIN_SINGLE_ROW_TOOLBAR_WIDTH = 960;
+
+export function toolbarLayoutForWidth(width: number): ToolbarLayout {
+  return width > 0 && width < MIN_SINGLE_ROW_TOOLBAR_WIDTH ? 'stacked' : 'inline';
+}
 export type SiteScale = 0.9 | 1;
 
 export interface DisplayPreferences {
@@ -35,7 +41,8 @@ export function metricsForDensity(density: Density): DisplayMetrics {
     : { shellHeight: 64, tileHeaderHeight: 32, edgeGap: 8, viewGap: 8 };
 }
 
-export function shellHeightForComposer(density: Density, expanded: boolean): number {
+export function shellHeightForComposer(density: Density, expanded: boolean, layout: ToolbarLayout = 'inline'): number {
+  if (layout === 'stacked') return density === 'compact' ? expanded ? 200 : 120 : expanded ? 240 : 144;
   const composer = expanded ? density === "compact" ? 120 : 144 : metricsForDensity(density).shellHeight;
   return composer;
 }

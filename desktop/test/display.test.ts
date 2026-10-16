@@ -6,6 +6,7 @@ import {
   metricsForDensity,
   parseDisplayPreferences,
   shellHeightForComposer,
+  toolbarLayoutForWidth,
   zoomForSite
 } from "../src/shared/display";
 import {
@@ -81,6 +82,14 @@ test("composer expansion reserves only the visible toolbar in every density", ()
   assert.equal(shellHeightForComposer("compact", true), 120);
   assert.equal(shellHeightForComposer("comfortable", false), 64);
   assert.equal(shellHeightForComposer("comfortable", true), 144);
+});
+
+test('narrow logical windows reserve three toolbar rows without changing inline density', () => {
+  assert.deepEqual([0, 480, 959, 960].map(toolbarLayoutForWidth), ['inline', 'stacked', 'stacked', 'inline']);
+  for (const [density, collapsed, expanded] of [['compact', 120, 200], ['comfortable', 144, 240]] as const) {
+    assert.equal(shellHeightForComposer(density, false, 'stacked'), collapsed);
+    assert.equal(shellHeightForComposer(density, true, 'stacked'), expanded);
+  }
 });
 
 test("stored display preferences survive reload and malformed values fall back", () => {

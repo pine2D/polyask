@@ -43,7 +43,9 @@ app.whenReady().then(async () => {
     await paint();
     // Explicit fixture setup of selection and scroll; subsequent actions use trusted native pointer/keys.
     await run('(()=>{const e=document.querySelector("textarea");e.setSelectionRange(17,43,"backward");e.scrollTop=190})()');
+    await paint();
     const before = await position();
+    console.log(`Composer selection setup ${locale}/${density}: ${JSON.stringify({start:before.start,end:before.end,scroll:before.scroll})}`);
     for (const selector of ['[data-tier-icon="fast"]', '[data-tier-icon="think"]', '[name="attachment-control"]']) {
       await click(selector);
       assert.deepEqual(await position(), before, `editing context survives trusted action: ${selector}`);
@@ -67,6 +69,7 @@ app.whenReady().then(async () => {
       assert.equal(bounds.height, density === 'compact' ? 120 : 144);
       layouts.push(bounds);
     }
+    await require('./toolbar-zoom.cjs')({ win, run, paint, wait, click, position, before, density, output, locale });
     win.setContentSize(1600, 900); win.webContents.setZoomFactor(1.5); await paint();
     assert.equal(await run('document.querySelector(".command-bar").scrollWidth<=innerWidth+1'), true, '150% toolbar fits');
     await click('[data-composer-toggle]');

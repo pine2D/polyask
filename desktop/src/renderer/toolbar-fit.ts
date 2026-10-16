@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, type RefObject } from "react";
 
 import type { CommandId } from "../shared/commands";
 import { MORE_MENU_GROUPS } from "../shared/more-menu";
+import { applyToolbarLayout } from './toolbar-layout';
 
 /** 输入框在命令栏里的保底宽度；低于它时逐级收起次要控件，而不是继续挤压输入框。 */
 export const MIN_PROMPT_WIDTH = 320;
@@ -17,6 +18,9 @@ export const COMPACT_MORE_COMMANDS: readonly CommandId[] = ["open-archive", "col
 export function fitToolbar(bar: HTMLElement, minimum = MIN_PROMPT_WIDTH): number {
   const composer = bar.querySelector<HTMLElement>(".prompt-composer");
   if (!composer || bar.getBoundingClientRect().width <= 0) { applyFit(bar, 0); return 0; }
+  const root = bar.ownerDocument.documentElement;
+  const layout = applyToolbarLayout(root, root.dataset.density === 'comfortable' ? 'comfortable' : 'compact', Math.floor(bar.getBoundingClientRect().width));
+  if (layout === 'stacked') { applyFit(bar, TOOLBAR_FIT_LEVELS - 1); return TOOLBAR_FIT_LEVELS - 1; }
   for (let level = 0; level < TOOLBAR_FIT_LEVELS; level++) {
     applyFit(bar, level);
     if (composer.getBoundingClientRect().width >= minimum) return level;
@@ -35,7 +39,7 @@ export function toolbarFitLevel(bar: HTMLElement | null | undefined): number {
 
 /**
  * 挂载、每次渲染（计数/标签/分页变化）与命令栏宽度变化（窗口缩放、外壳缩放）时同步重算。
- * 渲染后先比对各子项宽度签名，未变则跳过；只观察命令栏本身，适配不改它的尺寸，不会形成观察循环。
+ * 渲染后先比对宽度与密度签名；只观察命令栏本身，共享高度仅在档位或密度变化时写入。
  * 直接写 data-fit，不经 React 状态，避免二次渲染。
  */
 export function useToolbarFit(ref: RefObject<HTMLElement | null>): void {
@@ -55,7 +59,7 @@ export function useToolbarFit(ref: RefObject<HTMLElement | null>): void {
 }
 
 function layoutSignature(bar: HTMLElement): string {
-  return [bar.getBoundingClientRect().width, ...Array.from(bar.children, child =>
+  return [bar.ownerDocument.documentElement.dataset.density, bar.getBoundingClientRect().width, ...Array.from(bar.children, child =>
     child.classList.contains("prompt-composer") ? child.className : `${child.className}:${child.getBoundingClientRect().width}`)].join("|");
 }
 

@@ -5,6 +5,7 @@ import {
   WORKSPACE_FEEDBACK_HEIGHT,
   metricsForDensity,
   shellHeightForComposer,
+  toolbarLayoutForWidth,
   zoomForSite,
   type Density,
   type DisplayMetrics,
@@ -16,6 +17,7 @@ import { SITE_FIND_HEIGHT } from '../shared/site-find';
 
 interface WorkspaceLayoutInput {
   readonly width: number;
+  readonly toolbarWidth?: number;
   readonly height: number;
   readonly density: Density;
   readonly composerExpanded: boolean;
@@ -62,7 +64,8 @@ export function reserveWorkspaceArea(area: ViewBounds, drawerWidth: number): Vie
 
 export function computeWorkspaceLayout(input: WorkspaceLayoutInput): WorkspaceLayoutResult {
   const metrics = metricsForDensity(input.density);
-  const shellHeight = shellHeightForComposer(input.density, input.composerExpanded) + (input.findOpen ? SITE_FIND_HEIGHT : 0);
+  const toolbar = toolbarLayoutForWidth(input.toolbarWidth ?? input.width);
+  const shellHeight = shellHeightForComposer(input.density, input.composerExpanded, toolbar) + (input.findOpen ? SITE_FIND_HEIGHT : 0);
   const baseArea = {
     x: metrics.edgeGap,
     y: shellHeight,

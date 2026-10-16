@@ -19,7 +19,7 @@ export interface FakeSiteContents extends EventEmitter {
 export function viewManagerHarness({ sites = ["claude", "chatgpt"], committed = true, options = {} as Record<string, unknown> } = {}) {
   const require = createRequire(resolve(__dirname, "../src/main/view-manager.ts"));
   const views: FakeSiteContents[] = [];
-  const bounds: Array<{ id: number; width: number; height: number }> = [];
+  const bounds: Array<{ id: number; x: number; y: number; width: number; height: number }> = [];
   let nextId = 1;
   let shellZoom = 0;
   const shell = Object.assign(new EventEmitter(), {
@@ -63,7 +63,7 @@ export function viewManagerHarness({ sites = ["claude", "chatgpt"], committed = 
           setZoomMode() {}, getZoomFactor: () => zoom, setZoomFactor: (value: number) => { zoom = value; calls.push(`zoom:${value}`); }
         });
         views.push(webContents);
-        return { setVisible() {}, setBounds: (value: { width: number; height: number }) => bounds.push({ id, ...value }), webContents };
+        return { setVisible() {}, setBounds: (value: { x: number; y: number; width: number; height: number }) => bounds.push({ id, ...value }), webContents };
       } };
       return require(name);
     }

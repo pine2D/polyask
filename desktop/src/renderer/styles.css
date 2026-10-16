@@ -37,6 +37,7 @@
   --space-2: 8px;
   --shell-height: 52px;
   --composer-expanded-height: 120px;
+  --composer-field-expanded-height: 120px;
   --tile-header-height: 24px;
   --control-height: 32px;
   --target-size: 24px;
@@ -46,6 +47,7 @@
 :root[data-density="comfortable"] {
   --shell-height: 64px;
   --composer-expanded-height: 144px;
+  --composer-field-expanded-height: 144px;
   --tile-header-height: 32px;
   --control-height: 40px;
   --target-size: 32px;

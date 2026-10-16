@@ -3,6 +3,7 @@ import {
   type DisplayPreferences
 } from "../shared/display";
 import { readLocalUiPreferences, writeDisplayPreferences, type LocalUiStorage } from './local-ui-preferences';
+import { applyToolbarLayout } from './toolbar-layout';
 export type DisplayStorage = LocalUiStorage;
 
 export interface DisplayDensityTarget {
@@ -29,6 +30,7 @@ export function applyDisplayDensity(
   value: DisplayPreferences
 ): void {
   target.dataset.density = value.density;
+  applyToolbarLayout(target, value.density, typeof window === 'undefined' ? 0 : window.innerWidth);
 }
 
 export function applyDisplayPreferences(

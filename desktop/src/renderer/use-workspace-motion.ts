@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import type { DesktopSurface, LayoutState } from "../shared/protocol";
-import { shellHeightForComposer, type Density } from "../shared/display";
+import { shellHeightForComposer, toolbarLayoutForWidth, type Density } from "../shared/display";
 import { PANEL_EXIT_MS } from "./motion";
 import { usePresence } from "./presence";
 import { shell } from "./shell-api";
@@ -16,6 +16,6 @@ export function useWorkspaceMotion(surface: DesktopSurface, drawerOpen: boolean,
   useEffect(() => shell.setDrawerOpen(active && (drawerPresent || imagePresent)), [active, drawerPresent, imagePresent]);
   useEffect(() => shell.setComposerExpanded(composer.reservedExpanded), [composer.reservedExpanded]);
   const ready = !geometry || geometry.covered || !geometry.layout.placements.length ||
-    geometry.layout.placements.every(placement => placement.bounds.y >= shellHeightForComposer(geometry.density, true));
+    geometry.layout.placements.every(placement => placement.bounds.y >= shellHeightForComposer(geometry.density, true, toolbarLayoutForWidth(window.innerWidth)));
   return { composer: { ...composer, revealedExpanded: composer.expanded && ready }, drawerPresent };
 }

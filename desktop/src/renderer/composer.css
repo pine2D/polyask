@@ -4,7 +4,7 @@
   transition: height 140ms cubic-bezier(.2,.8,.2,1), background-color 120ms ease, box-shadow 120ms ease;
 }
 .prompt-composer[data-expanded="true"] {
-  height: calc(var(--composer-expanded-height) - var(--space-2));
+  height: calc(var(--composer-field-expanded-height) - var(--space-2));
   transition-duration: 180ms, 120ms, 120ms;
 }
 /* 文本区让出右侧展开按钮那一列：展开后的滚动条不再压在按钮下面。 */

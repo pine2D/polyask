@@ -1,5 +1,6 @@
 import { reclaimUnselectedViews } from "./view-reclamation";
-import { historyPanelWidth, coverSitesForHistory } from "./question-layout";
+import { coverSitesForHistory } from "./question-layout";
+import { workspaceViewport } from './workspace-viewport';
 import { transitionSiteSurface } from "./site-surface";
 import { siteHistoryState, navigateSiteHistory } from './site-history-navigation';
 import { SiteHistoryAccess } from "./site-history-access";
@@ -575,15 +576,14 @@ export class ViewManager {
     const [width, height] = this.window.getContentSize();
     // Windows maximized → minimized emits resize at 0×0; keep live page viewports intact.
     if (width <= 0 || height <= 0) return;
-    const zoom = Math.max(0.25, this.window.webContents.getZoomFactor());
-    const cssWidth = Math.floor(width / zoom);
-    const cssHeight = Math.floor(height / zoom);
+    const viewport = workspaceViewport([width, height], this.window.webContents.getZoomFactor(), this.historyAccess.panelOpen);
     const current = resolveSitePage(this.selected, this.page);
     this.page = current.page;
     this.pageCount = current.pageCount;
     const next = computeWorkspaceLayout({
-      width: cssWidth - historyPanelWidth(cssWidth, this.historyAccess.panelOpen),
-      height: cssHeight,
+      width: viewport.width,
+      height: viewport.height,
+      toolbarWidth: viewport.shellWidth,
       density: this.display.density,
       composerExpanded: this.composerExpanded,
       findOpen: this.siteFind.state.open,
@@ -610,7 +610,7 @@ export class ViewManager {
       views: this.views,
       placements: [...background, ...this.placements],
       metrics,
-      zoom,
+      zoom: viewport.zoom,
       display: this.display,
       siteZoom: this.siteZoom,
       mode: this.renderedMode,
