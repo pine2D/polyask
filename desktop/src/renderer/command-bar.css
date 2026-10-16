@@ -89,6 +89,7 @@
 .send:disabled { opacity: .45; }
 .cancel:disabled { opacity: .68; }
 kbd { opacity: .7; font: 10px system-ui; }
+.send kbd { opacity: 1; color: var(--on-accent); }
 
 .page-tabs {
   position: relative; flex-shrink: 0; height: var(--control-height); padding: 2px; display: grid; grid-auto-flow: column;

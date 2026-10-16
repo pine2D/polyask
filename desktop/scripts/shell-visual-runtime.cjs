@@ -35,6 +35,10 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  if (process.argv.includes('--send-key-contrast-only')) {
+    await require('./send-key-contrast-visual.cjs')({ win, output, run, wait, paint });
+    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+  }
   if (process.argv.includes('--image-picker-only')) {
     await require('./image-picker-accessibility-visual.cjs')({ win, output, run, wait, paint });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
@@ -47,6 +51,7 @@ app.whenReady().then(async () => {
   if (process.argv.includes('--shortcut-reference-only')) { assert.deepEqual(errors, []); win.destroy(); app.quit(); return; }
   await require('./settings-proxy-leave-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./image-picker-accessibility-visual.cjs')({ win, output, run, wait, paint });
+  await require('./send-key-contrast-visual.cjs')({ win, output, run, wait, paint });
   if (!process.argv.includes('--site-order-only')) {
     await require('./draft-tools-visual.cjs')({ win, output, run, wait, paint, shot });
     if (process.argv.includes('--toolbar-only')) { assert.deepEqual(errors, []); win.destroy(); app.quit(); return; }
