@@ -154,6 +154,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
   const [status, setStatus] = useState('');
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
+  const [editorFocusOrigin, setEditorFocusOrigin] = useState<string | null>(null);
   const entered = useRef<string | null>(null);
   useEffect(() => {
     if (synthesisId || reader.state.archiveId !== selected.id || selected.id !== props.embeddedRecord.id) { entered.current = null; return; }
@@ -164,11 +165,11 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
   const [synthesisSeed, setSynthesisSeed] = useState<(SynthesisDraft & { sourceChanged: boolean }) | null>(null);
   const excerpts = useExcerptActions({ copy: props.copy, busy, defaultTier: props.defaultTier, drafts: props.synthesisDrafts,
     onStatus: setStatus, onDecision: props.onCreateDecision,
-    onFollowUp: (record, value, draft) => { setSelected(record); setSynthesisSeed(draft); setFollowUpHost(value.host); setSynthesisId(record.id); } });
+    onFollowUp: (record, value, draft) => { setEditorFocusOrigin(`follow-up:${value.host}`); setSelected(record); setSynthesisSeed(draft); setFollowUpHost(value.host); setSynthesisId(record.id); } });
   useEffect(() => {
     const request = props.synthesisEditorRequest;
     if (request?.archiveId !== props.embeddedRecord.id) return;
-    setSynthesisSeed(null); setFollowUpHost(request.followUpHost); setSynthesisId(request.archiveId);
+    setEditorFocusOrigin(null); setSynthesisSeed(null); setFollowUpHost(request.followUpHost); setSynthesisId(request.archiveId);
     props.onSynthesisEditorOpened?.();
   }, [props.synthesisEditorRequest, props.embeddedRecord.id]);
   const actionQueue = useRef<SerialActions | null>(null);
@@ -248,9 +249,10 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       pendingSynthesis={props.pendingSynthesis}
       synthesisCandidate={props.synthesisCandidate}
       synthesisSession={props.synthesisSession}
+      editorFocusOrigin={editorFocusOrigin}
       detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} initialDraft={synthesisSeed ?? props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onReloadSource={reloadSource} onSourceReviewed={() => props.synthesisDrafts?.review(selected, followUpHost)} onCancel={() => { if (busy) shell.cancelSynthesis(); else setSynthesisId(null); }} onSend={(request, receipt) => { return run(() => props.onSendSynthesis(request, receipt), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
-      onSynthesize={() => requestDecisionNavigation(() => { setSynthesisSeed(null); setFollowUpHost(undefined); setSynthesisId(selected.id); })}
-      onFollowUp={(host, value) => value ? excerpts.followUp(value) : requestDecisionNavigation(() => { setSynthesisSeed(null); setFollowUpHost(host); setSynthesisId(selected.id); })}
+      onSynthesize={() => requestDecisionNavigation(() => { setEditorFocusOrigin('synthesis'); setSynthesisSeed(null); setFollowUpHost(undefined); setSynthesisId(selected.id); })}
+      onFollowUp={(host, value) => value ? excerpts.followUp(value) : requestDecisionNavigation(() => { setEditorFocusOrigin(`follow-up:${host}`); setSynthesisSeed(null); setFollowUpHost(host); setSynthesisId(selected.id); })}
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}
       onSaveSynthesis={(replaceExisting) => { void run(async () => {
         const record = await props.onSaveSynthesis(replaceExisting);

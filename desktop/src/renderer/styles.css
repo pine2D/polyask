@@ -265,7 +265,7 @@ button { cursor: default; }
 .synthesis-confirm button.danger { border-color: var(--danger-ink); color: var(--danger-ink); }
 .synthesis-workspace { height: 100%; display: grid; grid-template: 40px minmax(0, 1fr) 38px / minmax(250px, 34%) minmax(0, 1fr); background: var(--panel); }
 .synthesis-workspace > header { grid-column: 1 / -1; padding: 4px 7px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
-.synthesis-workspace > header strong { display: inline-flex; align-items: center; gap: 5px; }
+.synthesis-workspace > header h2 { display: inline-flex; align-items: center; gap: 5px; margin: 0; font-size: inherit; }
 .synthesis-workspace > header button { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 5px; color: var(--muted); background: transparent; }
 .synthesis-workspace > header button:hover { color: var(--accent); background: var(--accent-soft); }
 .synthesis-config { min-height: 0; padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow: auto; border-right: 1px solid var(--border); }

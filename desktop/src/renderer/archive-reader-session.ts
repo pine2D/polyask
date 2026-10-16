@@ -4,6 +4,9 @@ import type { ArchiveRecord } from '../shared/archive';
 export interface ArchiveReaderState {
   readonly archiveId: string;
   readonly view: 'read' | 'compare' | 'synthesis';
+  readonly questionExpanded: boolean;
+  /** 重挂详情时保留控件占位，避免浏览器滚动锚定因重新插入展开按钮而移动正文。 */
+  readonly questionOverflow: boolean | null;
   readonly leftHost: string;
   readonly rightHost: string;
   readonly differencesOnly: boolean;
@@ -23,7 +26,7 @@ export interface ArchiveReaderBinding {
 
 export function initialArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results'>, compare = false): ArchiveReaderState {
   const sources = record.results.filter(result => !!result.text?.trim());
-  return { archiveId: record.id, view: compare && sources.length >= 2 ? 'compare' : 'read',
+  return { archiveId: record.id, view: compare && sources.length >= 2 ? 'compare' : 'read', questionExpanded: false, questionOverflow: null,
     leftHost: sources[0]?.host ?? '', rightHost: sources[1]?.host ?? '', differencesOnly: false,
     readScroll: 0, leftScroll: 0, rightScroll: 0, synthesisScroll: 0 };
 }

@@ -20,6 +20,7 @@ import type { ComparisonDraftStore } from './comparison-draft-store';
 import type { DecisionInput } from '../shared/decision';
 import { useArchiveReader, type ArchiveReaderBinding } from './archive-reader-session';
 import { useArchiveSourceLocation } from './archive-source-location';
+import { ArchiveQuestionPrompt } from './archive-question-prompt';
 
 interface ArchiveDetailProps {
   readonly reader?: ArchiveReaderBinding;
@@ -86,7 +87,9 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
     <article ref={article} className="archive-detail" data-view={view}>
       <header className="archive-detail-heading">
         <div>
-          <h1>{record.task || record.text}</h1>
+          <ArchiveQuestionPrompt text={record.task || record.text} copy={copy} expanded={reader.state.questionExpanded}
+            overflow={reader.state.questionOverflow} onOverflowChange={questionOverflow => reader.change({ questionOverflow })}
+            onExpandedChange={questionExpanded => reader.change({ questionExpanded })} />
           <time dateTime={dateTimeAttribute(record.ts)}>
             {formatCopy(copy.archiveCapturedAt, { time: formatDateTime(record.ts, props.locale) })}
           </time>
@@ -97,7 +100,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
         </div>
       </header>
       <div className="library-record-actions">
-        {canSynthesize ? <button type="button" disabled={props.busy} onClick={props.onSynthesize}><SparklesIcon />{copy.synthesisAction}</button> : null}
+        {canSynthesize ? <button type="button" data-archive-editor="synthesis" disabled={props.busy} onClick={props.onSynthesize}><SparklesIcon />{copy.synthesisAction}</button> : null}
         {props.onCreateDecision ? <button type="button" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
       </div>
       <ArchiveMetadata record={record} copy={copy} busy={props.busy} onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} />
@@ -131,7 +134,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
                 <h2>{answerSourceId(index)} {result.label}{tier}</h2>
                 {successful ? <div className="archive-answer-actions">
                   <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} disabled={props.busy} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button>
-                  {props.onFollowUp ? <button type="button" disabled={props.busy} onClick={() => props.onFollowUp?.(result.host)}>{copy.followUpAction}</button> : null}
+                  {props.onFollowUp ? <button type="button" data-archive-editor={`follow-up:${result.host}`} disabled={props.busy} onClick={() => props.onFollowUp?.(result.host)}>{copy.followUpAction}</button> : null}
                 </div> : null}
               </header>
               {successful && result.code === "answer_truncated" ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}

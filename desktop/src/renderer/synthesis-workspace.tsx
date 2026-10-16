@@ -98,7 +98,7 @@ export function SynthesisWorkspace(props: SynthesisWorkspaceProps): React.JSX.El
   return (
     <section className="synthesis-workspace" aria-label={title}>
       <header>
-        <strong><SparklesIcon />{title}</strong>
+        <h2 tabIndex={-1}><SparklesIcon />{title}</h2>
         <button className="panel-close" type="button" title={props.busy ? props.copy.cancel : props.copy.synthesisCancel} aria-label={props.busy ? props.copy.cancel : props.copy.synthesisCancel} onClick={props.onCancel}>{props.busy ? <StopIcon /> : <CloseIcon />}</button>
       </header>
       <p className="synthesis-summary" data-synthesis-summary>{props.copy.synthesisCount.replace('{count}', String(selected.length))} → {props.sites.find(site => site.key === targetSite)?.label ?? props.copy.synthesisTargetMissing} · {tier === 'think' ? props.copy.think : tier === 'fast' ? props.copy.fast : props.copy.followSite}<br />{props.copy.synthesisNewConversation}</p>

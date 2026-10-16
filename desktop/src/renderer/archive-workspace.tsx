@@ -56,6 +56,7 @@ interface ArchiveWorkspaceProps {
   readonly synthesisCandidate: SynthesisCandidate | null;
   readonly synthesisSession?: SynthesisSession | null;
   readonly detailOverride?: React.ReactNode;
+  readonly editorFocusOrigin?: string | null;
   readonly onSynthesize: () => void;
   readonly onFollowUp?: (host: string, excerpt?: ExactExcerpt) => void;
   readonly onCollectSynthesis: () => void;
@@ -67,6 +68,8 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const localReader = useArchiveReader(selected ?? { id: '', results: [] }, selected?.id === props.comparisonId);
   const reader = props.reader ?? localReader;
   const pane = useRef<HTMLElement>(null);
+  const editorReturnScroll = useRef<number | null>(null);
+  const rememberEditorScroll = () => { editorReturnScroll.current = pane.current?.scrollTop ?? null; };
   const capture = () => {
     if (!pane.current) return {};
     return props.detailOverride || reader.state.view === 'synthesis' ? { synthesisScroll: pane.current.scrollTop }
@@ -77,6 +80,22 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
     if (pane.current) pane.current.scrollTop = props.detailOverride || reader.state.view === 'synthesis' ? reader.state.synthesisScroll
       : reader.state.view === 'read' ? reader.state.readScroll : 0;
   }, [reader.state.archiveId, reader.state.view, !!props.detailOverride]);
+  const editorWasOpen = useRef(false);
+  useLayoutEffect(() => {
+    const open = !!props.detailOverride, wasOpen = editorWasOpen.current;
+    editorWasOpen.current = open;
+    if (!pane.current || !props.editorFocusOrigin) return;
+    if (open) {
+      pane.current.scrollTop = 0;
+      pane.current.querySelector<HTMLElement>('.synthesis-workspace h2')?.focus({ preventScroll: true });
+    } else if (wasOpen) {
+      if (editorReturnScroll.current !== null) pane.current.scrollTop = editorReturnScroll.current;
+      editorReturnScroll.current = null;
+      const origins = [...pane.current.querySelectorAll<HTMLElement>('[data-archive-editor]')];
+      const origin = origins.find(node => node.dataset.archiveEditor === props.editorFocusOrigin) ?? origins[0];
+      origin?.focus({ preventScroll: true });
+    }
+  }, [!!props.detailOverride, props.editorFocusOrigin, selected?.id]);
   const emptyText = props.query || props.favoriteOnly || props.selectedTag
     ? copy.archiveNoMatches
     : copy.archiveEmpty;
@@ -124,7 +143,10 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           )}
         </aside> : null}
         <main ref={pane} className="archive-detail-pane" onScroll={event => { if (event.target === event.currentTarget) reader.change(capture()); }}>
-          {props.detailOverride ?? (selected ? <ArchiveDetail reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy} onSynthesize={props.onSynthesize} onFollowUp={props.onFollowUp} onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
+          {props.detailOverride ?? (selected ? <ArchiveDetail reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
+            onSynthesize={() => { rememberEditorScroll(); props.onSynthesize(); }}
+            onFollowUp={props.onFollowUp ? (host, excerpt) => { rememberEditorScroll(); props.onFollowUp?.(host, excerpt); } : undefined}
+            onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
         </main>
       </div>
       <div className="archive-status" role="status" aria-live="polite">{props.status}</div>

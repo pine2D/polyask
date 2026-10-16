@@ -1,6 +1,9 @@
 .library .archive-detail { max-width: 820px; padding: 24px 32px 64px; }
 .library .archive-detail[data-view=compare] { max-width: none; }
 .library .archive-detail h1 { font-size: 24px; font-weight: 650; line-height: 1.5; overflow-wrap: anywhere; text-wrap: pretty; }
+.archive-question-prompt h1 { white-space: pre-wrap; }
+.archive-question-prompt h1.is-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.archive-question-prompt > button { margin-top: 6px; min-height: 30px; padding: 4px 8px; font-size: 12px; line-height: 1.5; border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--accent); background: var(--panel); }
 .library .archive-detail-heading { gap: 16px; }
 .library .archive-detail-heading time { margin-top: 4px; font-size: 12px; line-height: 1.6; }
 .library .archive-source { font-size: 12px; line-height: 1.6; margin-top: 6px; }
