@@ -121,7 +121,7 @@ button { cursor: default; }
 .command-results > button > span { min-width: 0; display: grid; gap: 2px; }
 .command-results strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .command-results small { color: var(--muted); font-size: 12px; }
-.command-results kbd { flex: 0 0 auto; padding: 3px 6px; border: 1px solid var(--border); border-radius: 5px; }
+.command-results kbd { flex: 0 0 auto; max-width: 100%; padding: 3px 6px; border: 1px solid var(--border); border-radius: 5px; white-space: normal; overflow-wrap: anywhere; }
 .command-empty { margin: 28px 0; color: var(--muted); text-align: center; }
 .command-palette > footer { padding: 7px 12px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
 .prompt-library { min-height: 0; grid-row: 2 / -1; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
@@ -299,8 +299,9 @@ button { cursor: default; }
 @media (hover: hover) and (pointer: fine) {
   .page-tabs button:hover { color: var(--accent); }
 }
-/* 命令栏内的图标化由 command-bar.css 的 data-fit 级别决定；其它位置的快捷键提示沿用窄窗隐藏。 */
-@media (max-width: 1400px) { .summary, kbd { display: none; } }
+/* 命令栏键位由 data-fit 收纳，速查正文与搜索结果的键位始终保留。 */
+@media (max-width: 1400px) { .summary { display: none; } }
+@media (max-width: 600px) { .command-results > button { flex-wrap: wrap; } }
 @media (max-width: 860px) {
   .archive-compare-selectors, .archive-compare-grid { grid-template-columns: 1fr; }
 }

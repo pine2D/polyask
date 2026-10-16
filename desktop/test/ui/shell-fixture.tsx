@@ -2,6 +2,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { CommandBar } from '../../src/renderer/command-bar';
+import { CommandPalette, type CommandPaletteMode } from '../../src/renderer/command-palette';
+import { COMMANDS } from '../../src/shared/commands';
 import { ImagePicker } from '../../src/renderer/image-picker';
 import { PromptDraftRecovery } from '../../src/renderer/prompt-draft-recovery';
 import { DraftRecovery } from '../../src/renderer/draft-recovery';
@@ -175,5 +177,12 @@ function Fixture(): React.JSX.Element {
     <p style={{ position: 'absolute', top: 180, left: 360, color: 'var(--muted)' }}>UI fixture · 仅验证外壳，未加载 AI 站点</p>
   </div>;
 }
-createRoot(document.getElementById('root')!).render(query.get('surface') === 'native' ? <NativeFixture />
+function ShortcutFixture() {
+  const [mode, setMode] = useState<CommandPaletteMode>('shortcuts');
+  return <CommandPalette copy={copy} commands={COMMANDS} menuShortcuts={[]} groups={[]}
+    library={{ templates: [], history: [] }} draft="" isMac={platform === 'darwin'} mode={mode} onModeChange={setMode}
+    onExecute={id => { document.body.dataset.executed = id; }} onApplyGroup={noop} onInsertPrompt={noop}
+    onSaveTemplate={noop} onDeleteTemplate={noop} onClose={noop} />;
+}
+createRoot(document.getElementById('root')!).render(query.get('surface') === 'shortcuts' ? <ShortcutFixture /> : query.get('surface') === 'native' ? <NativeFixture />
   : <FeedbackProvider copy={copy}><Fixture /></FeedbackProvider>);

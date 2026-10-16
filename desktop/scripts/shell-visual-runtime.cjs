@@ -35,6 +35,8 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  await require('./shortcut-reference-visual.cjs')({ win, output, run, wait, paint, shot });
+  if (process.argv.includes('--shortcut-reference-only')) { assert.deepEqual(errors, []); win.destroy(); app.quit(); return; }
   if (!process.argv.includes('--site-order-only')) {
     await require('./draft-tools-visual.cjs')({ win, output, run, wait, paint, shot });
     if (process.argv.includes('--toolbar-only')) { assert.deepEqual(errors, []); win.destroy(); app.quit(); return; }
