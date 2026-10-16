@@ -52,3 +52,36 @@ test('leaving reading cancels its scheduled position work', async () => {
   } finally { await h.close(); }
   assert.equal(geometry.observed, 0);
 });
+
+test('a short final answer becomes current at the scroll end despite staying below the sticky boundary', async () => {
+  const geometry = readingGeometry();
+  geometry.metrics.starts[2] = 2000; geometry.metrics.answerHeights[2] = 90;
+  const h = await comparisonMount({ startInRead: true, configure: geometry.configure });
+  try {
+    await geometry.flush();
+    const pane = h.document.querySelector<HTMLElement>('.archive-detail-pane')!;
+    const maxScroll = pane.scrollHeight - pane.clientHeight;
+    await h.scroll(pane, maxScroll - 3); await geometry.flush();
+    assert.equal(current(h.document), '#archive-answer-1');
+    await h.scroll(pane, maxScroll - 0.75); await geometry.flush();
+    assert.equal(current(h.document), '#archive-answer-2', 'fractional scroll positions still reach the short final answer');
+    await h.scroll(pane, maxScroll); await geometry.flush();
+    assert.equal(current(h.document), '#archive-answer-2');
+    assert.equal(h.writes, 0);
+  } finally { await h.close(); }
+});
+
+test('a page without a scroll range starts at the first source', async () => {
+  const geometry = readingGeometry();
+  Object.assign(geometry.metrics, { paneHeight: 1600, scrollHeight: 1600, starts: [300, 500, 700], answerHeights: [100, 100, 100] });
+  const h = await comparisonMount({ startInRead: true, configure: geometry.configure });
+  try {
+    await geometry.flush();
+    assert.equal(current(h.document), '#archive-answer-0');
+    geometry.resize(); await geometry.flush();
+    assert.equal(current(h.document), '#archive-answer-0');
+    geometry.metrics.scrollHeight += 1; geometry.resize(); await geometry.flush();
+    assert.equal(current(h.document), '#archive-answer-0', 'a one-pixel overflow does not change the initial source');
+    assert.equal(h.writes, 0);
+  } finally { await h.close(); }
+});

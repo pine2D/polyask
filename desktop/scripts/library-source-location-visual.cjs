@@ -49,8 +49,25 @@ module.exports = async ({win,nativeTheme,output,run,wait,click,key,shot}) => {
     assert.equal(await run('window.libraryTest.writes'),2,'reading never adds a save beyond explicit mark/unmark');
     reports.push({locale,theme,width,zoom,marked});
   }
-  win.webContents.setZoomFactor(1); win.setContentSize(1600,1000); nativeTheme.themeSource='light';
+  win.webContents.setZoomFactor(1); win.setContentSize(1600,900); nativeTheme.themeSource='light';
+  await win.loadFile(join(output,'index.html'),{query:{locale:'en',shortLast:'1'}});
+  await wait('document.querySelector(".archive-answer-nav [aria-current=location]")?.getAttribute("href") === "#archive-answer-0"');
+  await click('.archive-answer-nav a[href="#archive-answer-8"]'); await paint();
+  const shortLast = await read(function() {
+    const pane=document.querySelector('.archive-detail-pane'), last=document.querySelector('#archive-answer-8');
+    return {current:document.querySelector('.archive-answer-nav [aria-current=location]')?.getAttribute('href'),
+      hash:location.hash, scrollTop:pane.scrollTop, maxScroll:pane.scrollHeight-pane.clientHeight,
+      lastTop:last.getBoundingClientRect().top, navBottom:document.querySelector('.library-reading-navigation').getBoundingClientRect().bottom,
+      lastBottom:last.getBoundingClientRect().bottom,paneBottom:pane.getBoundingClientRect().bottom,writes:window.libraryTest.writes};
+  });
+  assert.equal(shortLast.hash,'#archive-answer-8');
+  assert.ok(Math.abs(shortLast.scrollTop-shortLast.maxScroll)<=1,'the source anchor reaches the scroll end');
+  assert.ok(shortLast.lastTop>shortLast.navBottom,'the short final heading cannot reach the sticky boundary');
+  assert.ok(shortLast.lastBottom<=shortLast.paneBottom,'the complete final answer is visible');
+  assert.equal(shortLast.current,'#archive-answer-8'); assert.equal(shortLast.writes,0);
+  reports.push({shortLast});
+  win.setContentSize(1600,1000);
   await win.loadFile(join(output,'index.html')); await wait('!!document.querySelector(".archive-detail h1")');
-  console.log('Current source passed: '+reports.length+' source-location and best-answer groups.');
+  console.log('Current source passed: six source-location/best-answer groups and the short-final-answer boundary.');
   return reports;
 };

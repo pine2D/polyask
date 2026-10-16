@@ -15,6 +15,9 @@ export function useArchiveSourceLocation(article: RefObject<HTMLElement | null>,
       let index = 0;
       const boundary = nav.getBoundingClientRect().bottom + 1;
       sections.forEach((section, current) => { if (section.getBoundingClientRect().top <= boundary) index = current; });
+      const scrollRange = pane.scrollHeight - pane.clientHeight;
+      // 短末条标题可能到不了导航线；滚动到底时仍应归末来源，容忍1px舍入。
+      if (scrollRange > 0 && pane.scrollTop > 0 && scrollRange - pane.scrollTop <= 1) index = sections.length - 1;
       setLocation(previous => sections.length
         ? previous?.archiveId === archiveId && previous.index === index ? previous : { archiveId, index }
         : previous === null ? previous : null);
