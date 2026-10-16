@@ -7,7 +7,7 @@ import type { PromptLibraryState } from "../shared/prompt-library";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { shortcutLabel } from "./shortcut-label";
 import { CloseIcon } from "./icons";
-import { commandItems, menuShortcutItems, siteZoomShortcutItems, searchCommands, type PaletteCommand, type PaletteGroup } from "./command-search";
+import { commandItems, filterPaletteCommands, menuShortcutItems, paletteGroupLabel, siteZoomShortcutItems, searchCommands, type PaletteCommand } from "./command-search";
 import { pageTabKeyAction, paletteKeyAction } from "./keyboard";
 import { PromptLibrary } from "./prompt-library";
 import { GettingStarted } from "./getting-started";
@@ -34,25 +34,15 @@ interface CommandPaletteProps {
   readonly onClose: () => void;
 }
 
-const GROUP_LABEL_KEYS: Readonly<Record<PaletteGroup, keyof DesktopCopy>> = {
-  navigate: "commandGroupNavigate",
-  compose: "commandGroupCompose",
-  results: "commandGroupResults",
-  app: "commandGroupApp",
-  saved: "commandGroupSaved",
-  menu: "commandGroupMenu"
-};
-
-function groupLabel(copy: DesktopCopy, group: PaletteGroup): string {
-  return copy[GROUP_LABEL_KEYS[group]];
-}
-
 function shortcutText(item: PaletteCommand, isMac: boolean): string {
   return [item.accelerator, ...item.aliases].filter((value): value is string => !!value).map(value => shortcutLabel(value, isMac)).join(" · ");
 }
 
 export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   const [query, setQuery] = useState("");
+  const [shortcutQuery, setShortcutQuery] = useState('');
+  const shortcutMode = props.mode === 'shortcuts', searchable = shortcutMode || props.mode === 'commands';
+  const searchQuery = shortcutMode ? shortcutQuery : query;
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLElement>(null);
@@ -68,16 +58,18 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
       .filter((item) => item.accelerator || item.aliases.length), ...siteZoomShortcutItems(props.copy)];
     return [...listed, ...menuShortcutItems(props.menuShortcuts, listed, props.isMac)];
   }, [props.commands, props.copy, props.isMac, props.menuShortcuts]);
-  const visible = props.mode === "commands" ? results : shortcuts;
+  const filteredShortcuts = useMemo(() => filterPaletteCommands(shortcutQuery, shortcuts, props.copy, props.isMac),
+    [shortcutQuery, shortcuts, props.copy, props.isMac]);
+  const visible = props.mode === "commands" ? results : filteredShortcuts;
 
   useEffect(() => {
-    if (props.mode === "commands") inputRef.current?.focus();
+    if (searchable) inputRef.current?.focus();
     else panelRef.current?.focus();
   }, [props.mode]);
-  useEffect(() => setActiveIndex(0), [query, props.mode]);
+  useEffect(() => setActiveIndex(0), [searchQuery, props.mode]);
   useEffect(() => {
     document.getElementById(`command-option-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
-  }, [activeIndex]);
+  }, [activeIndex, searchQuery, props.mode]);
 
   const run = (item: PaletteCommand | undefined): void => {
     if (!item) return;
@@ -86,7 +78,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   };
   const onKeyDown = (event: React.KeyboardEvent): void => {
     const action = paletteKeyAction(event.key, event.nativeEvent.isComposing,
-      props.mode === "commands" && event.target === inputRef.current, event.nativeEvent.keyCode);
+      searchable && event.target === inputRef.current, event.nativeEvent.keyCode);
     if (!action) return;
     event.preventDefault();
     if (action === "close") props.onClose();
@@ -125,24 +117,27 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
           </div>
           <button type="button" className="panel-close command-close" title={props.copy.closeCommandPalette} aria-label={props.copy.closeCommandPalette} onClick={props.onClose}><CloseIcon /></button>
         </header>
-        {props.mode === "commands" ? (
-          <label className="command-search">
-            <span className="sr-only">{props.copy.commandPalette}</span>
-            <input
-              ref={inputRef}
-              type="search"
-              role="combobox"
-              autoComplete="off"
-              spellCheck={false}
-              value={query}
-              placeholder={props.copy.commandSearchPlaceholder}
-              aria-controls="command-results"
-              aria-expanded="true"
-              aria-activedescendant={visible[activeIndex] ? `command-option-${activeIndex}` : undefined}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </label>
-        ) : props.mode === "shortcuts" ? <p className="command-subtitle">{props.copy.shortcutReferenceHint}<br />{props.copy.siteZoomHint}</p> : null}
+        {searchable ? (
+          <div>
+            <label className="command-search">
+              <span className="sr-only">{shortcutMode ? props.copy.keyboardShortcuts : props.copy.commandPalette}</span>
+              <input
+                ref={inputRef}
+                type="search"
+                role="combobox"
+                autoComplete="off"
+                spellCheck={false}
+                value={searchQuery}
+                placeholder={shortcutMode ? props.copy.shortcutSearchPlaceholder : props.copy.commandSearchPlaceholder}
+                aria-controls="command-results"
+                aria-expanded="true"
+                aria-activedescendant={visible[activeIndex] ? `command-option-${activeIndex}` : undefined}
+                onChange={(event) => (shortcutMode ? setShortcutQuery : setQuery)(event.target.value)}
+              />
+            </label>
+            {shortcutMode ? <p className="command-subtitle">{props.copy.shortcutReferenceHint}<br />{props.copy.siteZoomHint}</p> : null}
+          </div>
+        ) : null}
         {props.mode === "guide" ? <GettingStarted copy={props.copy} commands={props.commands} onExecute={props.onExecute} /> : props.mode === "library" ? <PromptLibrary
           copy={props.copy}
           draft={props.draft}
@@ -164,10 +159,10 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
               onFocus={() => setActiveIndex(index)}
               onClick={() => run(item)}
             >
-              <span><strong>{item.label}</strong><small>{groupLabel(props.copy, item.group)}</small></span>
+              <span><strong>{item.label}</strong><small>{paletteGroupLabel(props.copy, item.group)}</small></span>
               {shortcutText(item, props.isMac) ? <kbd>{shortcutText(item, props.isMac)}</kbd> : null}
             </button>
-          )) : <p className="command-empty">{props.copy.commandSearchEmpty}</p>}
+          )) : <p className="command-empty">{shortcutMode ? props.copy.shortcutSearchEmpty : props.copy.commandSearchEmpty}</p>}
         </div>}
         {props.mode === "commands" ? <footer>{props.copy.commandSearchHint}</footer> : null}
       </section>

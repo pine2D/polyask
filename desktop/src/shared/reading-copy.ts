@@ -1,5 +1,6 @@
 export const READING_COPY = {
   en: {
+    readingTable: 'Table {count}', readingContextTable: '{context}, table {count}', readingContextParagraph: '{context}, paragraph {count}',
     readingCode: 'Code', readingCopyCode: 'Copy code', readingCodeCopied: 'Code copied.', readingHighlight: 'Highlight syntax', readingPlainCode: 'Plain code',
     readingHighlightLimit: 'This code exceeds the highlighting limit. Plain code is shown.', readingHighlightUnsupported: 'Syntax highlighting is unavailable for this language.',
     readingFormula: 'Formula', readingFormulaPreview: 'Preview formula', readingFormulaSource: 'Formula source', readingFormulaLoading: 'Previewing formula…',
@@ -15,6 +16,7 @@ export const READING_COPY = {
     questionCopyLink: 'Copy conversation link', questionLinkCopied: 'Conversation link copied.', questionOpenBrowser: 'Open conversation in browser'
   },
   zhCN: {
+    readingTable: '表格 {count}', readingContextTable: '{context}，表格 {count}', readingContextParagraph: '{context}，段落 {count}',
     readingCode: '代码', readingCopyCode: '复制代码', readingCodeCopied: '代码已复制。', readingHighlight: '语法高亮', readingPlainCode: '普通代码',
     readingHighlightLimit: '代码超过高亮限额，已显示普通代码。', readingHighlightUnsupported: '此语言暂不支持语法高亮。',
     readingFormula: '公式', readingFormulaPreview: '预览公式', readingFormulaSource: '公式源码', readingFormulaLoading: '正在预览公式…',
@@ -29,6 +31,7 @@ export const READING_COPY = {
     questionCopyLink: '复制对话链接', questionLinkCopied: '对话链接已复制。', questionOpenBrowser: '在浏览器打开原会话'
   },
   zhTW: {
+    readingTable: '表格 {count}', readingContextTable: '{context}，表格 {count}', readingContextParagraph: '{context}，段落 {count}',
     readingCode: '程式碼', readingCopyCode: '複製程式碼', readingCodeCopied: '程式碼已複製。', readingHighlight: '語法醒目提示', readingPlainCode: '一般程式碼',
     readingHighlightLimit: '程式碼超過醒目提示限額，已顯示一般程式碼。', readingHighlightUnsupported: '此語言暫不支援語法醒目提示。',
     readingFormula: '公式', readingFormulaPreview: '預覽公式', readingFormulaSource: '公式原始碼', readingFormulaLoading: '正在預覽公式…',

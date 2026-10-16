@@ -17,6 +17,11 @@ export function libraryEmptyHint(copy: DesktopCopy, filters: FolderFilters): str
   return filters.kind === 'decision' ? copy.libraryDecisionEmptyHint : copy.libraryEmptyHint;
 }
 
+export function libraryEmptyTitle(copy: DesktopCopy, filters: FolderFilters): string {
+  if (filters.query || filters.tag || filters.favorite || filters.status) return copy.libraryNoMatchesTitle;
+  return filters.folderId || filters.kind ? copy.libraryViewEmptyTitle : copy.libraryEmptyTitle;
+}
+
 export function LibraryContentList<T extends FolderContentSummary>({ copy, locale, items, filters, tags, loading, failed, selectedKey, onChange, onSelect, onRetry,
   page: controlledPage, sort: controlledSort, selectedKeys: controlledKeys, onPageChange, onSortChange, onSelectedKeysChange, disabled = false, onScroll, listScroll = 0, serverPage }: {
   copy: DesktopCopy; locale: string; items: readonly T[]; filters: FolderFilters; tags: readonly string[];

@@ -5,10 +5,11 @@ import { MermaidPreview } from './mermaid-preview';
 import { MarkdownCode } from './markdown-code';
 import { MarkdownMath } from './markdown-math';
 import { mathTokenValue } from './markdown-math-tokens';
+import { formatCopy, getCopy } from '../shared/copy';
 
 type LinkHandler = ((url: string) => void) | undefined;
-function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler): ReactNode[] {
-  let i = 0;
+function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler, tableLabel: (count: number) => string): ReactNode[] {
+  let i = 0, tableIndex = 0;
   function read(): ReactNode[] {
     const nodes: ReactNode[] = [];
     while (i < tokens.length) {
@@ -22,7 +23,7 @@ function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler)
       } else if (token.type === 'hr') nodes.push(<hr key={key} />);
       else if (token.type === 'html_block') nodes.push(<p key={key}>{token.content}</p>);
       else if (token.nesting === 1) {
-        const start = i, children = read();
+        const children = read();
         if (token.hidden) { nodes.push(...children); continue; }
         const tag = /^h[1-6]$/.test(token.tag) ? `h${Math.min(6, Number(token.tag[1]) + 2)}` : token.tag;
         const props: Record<string, unknown> = { key };
@@ -35,7 +36,7 @@ function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler)
         if (!['p', 'blockquote', 'ul', 'ol', 'li', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'h3', 'h4', 'h5', 'h6'].includes(tag)) { nodes.push(...children); continue; }
         const element = createElement(tag, props, children);
         nodes.push(tag === 'table' ? <div key={key} className="markdown-table" tabIndex={0} role="region"
-          aria-label={tokens.slice(start, i).filter(t => t.type === 'inline').slice(0, 8).map(t => t.content).join(' / ')}>{element}</div> : element);
+          aria-label={tableLabel(++tableIndex)}>{element}</div> : element);
       }
     }
     return nodes;
@@ -43,7 +44,9 @@ function renderTokens(tokens: readonly MarkdownToken[], onOpenLink: LinkHandler)
   return read();
 }
 
-export function MarkdownPreview({ value, onOpenLink }: { readonly value: string; readonly onOpenLink?: (url: string) => void }): React.JSX.Element {
+export function MarkdownPreview({ value, onOpenLink, contextLabel }: {
+  readonly value: string; readonly onOpenLink?: (url: string) => void; readonly contextLabel?: string;
+}): React.JSX.Element {
   const tokens = useMemo(() => parseMarkdown(String(value ?? '')), [value]);
   const handler = useRef(onOpenLink);
   useLayoutEffect(() => { handler.current = onOpenLink; }, [onOpenLink]);
@@ -51,6 +54,10 @@ export function MarkdownPreview({ value, onOpenLink }: { readonly value: string;
   const link = onOpenLink ? openLink : undefined;
   // 复用当前正文的元素树；链接跟随已提交回调，语言改变时刷新子控件文案。
   const language = typeof document === 'undefined' ? '' : document.documentElement.lang;
-  const content = useMemo(() => renderTokens(tokens, link), [tokens, link, language]);
+  const content = useMemo(() => {
+    const copy = getCopy(language);
+    return renderTokens(tokens, link, count => formatCopy(contextLabel ? copy.readingContextTable : copy.readingTable,
+      { context: contextLabel ?? '', count }));
+  }, [tokens, link, language, contextLabel]);
   return <div className="markdown-preview">{content}</div>;
 }

@@ -1,16 +1,33 @@
 const { app, BrowserWindow, session, nativeTheme } = require('electron');
 const { join } = require('node:path');
+const assert = require('node:assert/strict');
+const accessibility = require('../../scripts/ui-accessibility.cjs');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
 app.whenReady().then(async () => {
   nativeTheme.themeSource = 'light';
   session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_details, callback) => callback({ cancel: true }));
   const win = new BrowserWindow({ width: 1400, height: 900, show: false, webPreferences: { sandbox: true, contextIsolation: true } });
+  for (const locale of ['en', 'zh-CN', 'zh-TW']) {
+    await win.loadFile(join(output, 'index.html'), { query: { locale, scenario: 'list-semantics' } });
+    await win.webContents.executeJavaScript('(async()=>{while(!window.historyListReady) await new Promise(resolve=>setTimeout(resolve,20))})()');
+    const headings = (await accessibility(win)).filter(node => node.role === 'heading');
+    assert.equal(headings[0]?.level, 1);
+    assert.equal(headings.length > 1 && headings.slice(1).every(node => node.level === 2), true);
+    const style = await win.webContents.executeJavaScript('(()=>{const style=getComputedStyle(document.querySelector(".question-day"));return {size:style.fontSize,weight:style.fontWeight,margin:style.margin}})()');
+    assert.equal(style.size, '12px'); assert.equal(style.weight, '500'); assert.equal(style.margin, '16px 0px 8px');
+    await win.webContents.executeJavaScript('window.historyListDone=true; window.historyResult');
+    console.log(JSON.stringify({ scenario: 'list-semantics', locale, headings, style, ok: true }));
+  }
   let failed = false;
   for (const scenario of ['source-links', 'ime-composing', 'ime-229', 'back', 'escape', 'menu-tab', 'menu-shift-tab', 'close', 'switch', 'delete', 'pages', 'slow-list', 'slow-detail']) {
     await win.loadFile(join(output, 'index.html'), { query: { scenario } });
     if (scenario === 'source-links') {
       await win.webContents.executeJavaScript('(async()=>{while(!window.historyNativeReady) await new Promise(resolve=>setTimeout(resolve,20))})()');
+      const before = await win.webContents.executeJavaScript('({opacity:getComputedStyle(document.querySelector(".question-history")).opacity,visible:document.querySelector(".markdown-preview a").checkVisibility({checkOpacity:true}),focused:document.hasFocus()})');
+      win.show(); win.focus(); win.webContents.focus();
+      await win.webContents.executeJavaScript('(async()=>{while(getComputedStyle(document.querySelector(".question-history")).opacity!=="1") await new Promise(resolve=>requestAnimationFrame(resolve)); document.querySelector(".question-prompt-actions button[aria-haspopup=menu]").focus();})()');
+      console.log(JSON.stringify({ scenario: 'source-links-ready', before, painted: true }));
       let error = '';
       for (const [shift, selector, description] of [
         [false, '.markdown-preview a[href="https://example.com/first"]', 'toolbar Tab reaches the first source'],

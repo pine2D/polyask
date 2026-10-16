@@ -147,7 +147,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
               </header>
               {successful && result.code === "answer_truncated" ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}
               {successful ? <ArchiveAnswerReading copy={copy} source={excerptSource(record, index)!} busy={props.busy} onEvidence={props.onCreateDecision} onFollowUp={props.onFollowUp ? excerpt => props.onFollowUp?.(result.host, excerpt) : undefined}>
-                <MarkdownPreview onOpenLink={props.onOpenSource} value={result.text!} />
+                <MarkdownPreview contextLabel={`${answerSourceId(index)} ${result.label}`} onOpenLink={props.onOpenSource} value={result.text!} />
               </ArchiveAnswerReading> : <MarkdownPreview onOpenLink={props.onOpenSource} value={`> ${describeCollectionCode(copy, result.code)}`} />}
             </section>
           );

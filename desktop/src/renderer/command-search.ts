@@ -8,6 +8,7 @@ import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { MenuShortcut } from "../shared/protocol";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { SITE_ZOOM_SHORTCUTS } from "../shared/site-zoom";
+import { shortcutLabel } from './shortcut-label';
 
 export type PaletteGroup = CommandGroup | "saved" | "menu";
 
@@ -30,16 +31,24 @@ function normalized(value: string): string {
   return value.normalize("NFKC").trim().toLocaleLowerCase();
 }
 
-function itemMatches(item: PaletteCommand, query: string): boolean {
+const GROUP_LABEL_KEYS = {
+  navigate: 'commandGroupNavigate', compose: 'commandGroupCompose', results: 'commandGroupResults',
+  app: 'commandGroupApp', saved: 'commandGroupSaved', menu: 'commandGroupMenu'
+} as const;
+
+export function paletteGroupLabel(copy: DesktopCopy, group: PaletteGroup): string {
+  return copy[GROUP_LABEL_KEYS[group]];
+}
+
+export function filterPaletteCommands(query: string, items: readonly PaletteCommand[], copy: DesktopCopy, isMac = false): readonly PaletteCommand[] {
   const terms = normalized(query).split(/\s+/).filter(Boolean);
-  if (!terms.length) return true;
-  const haystack = normalized([
-    item.label,
-    item.id,
-    item.accelerator ?? "",
-    ...item.aliases
-  ].join(" "));
-  return terms.every((term) => haystack.includes(term));
+  if (!terms.length) return items;
+  return items.filter(item => {
+    const keys = [item.accelerator, ...item.aliases].filter((value): value is string => !!value);
+    const haystack = normalized([item.label, item.id, paletteGroupLabel(copy, item.group), ...keys,
+      ...keys.map(value => shortcutLabel(value, isMac))].join(' '));
+    return terms.every(term => haystack.includes(term));
+  });
 }
 
 export function siteZoomShortcutItems(copy: DesktopCopy): readonly PaletteCommand[] {
@@ -108,5 +117,5 @@ export function searchCommands(
   copy: DesktopCopy,
   options: SearchOptions = {}
 ): readonly PaletteCommand[] {
-  return commandItems(commands, copy, options).filter((item) => itemMatches(item, query));
+  return filterPaletteCommands(query, commandItems(commands, copy, options), copy, options.isMac);
 }

@@ -6,7 +6,9 @@ import { setShellApi } from '../../src/renderer/shell-api';
 import { getCopy } from '../../src/shared/copy';
 import type { QuestionDetail, QuestionSummary } from '../../src/shared/question-history';
 import '../../src/renderer/styles.css';
-const copy = getCopy('en');
+const locale = new URLSearchParams(location.search).get('locale') || 'en';
+document.documentElement.lang = locale;
+const copy = getCopy(locale);
 const scenario = new URLSearchParams(location.search).get('scenario');
 const ticks = new Map<number, () => void>();
 let tickId = 0;
@@ -48,17 +50,29 @@ function App() {
 createRoot(document.getElementById('root')!).render(<App />);
 const click = async (selector: string) => { const node = document.querySelector<HTMLButtonElement>(selector); check(node, `missing ${selector}`); node.click(); await pause(); };
 const cards = () => document.querySelectorAll('.question-main');
+const openFirst = async () => {
+  await click('.question-main');
+  for (let attempt = 0; attempt < 100 && !document.querySelector('.question-reader'); attempt++) await pause();
+  check(document.querySelector('.question-reader') !== null, 'first saved answer is ready');
+};
+const queueRefresh = async () => {
+  for (let attempt = 0; attempt < 100 && !pending.length; attempt++) await tick();
+  check(pending.length > 0, 'a delayed refresh is queued before leaving the saved answer');
+};
 async function run() {
   while (cards().length !== 50) await pause();
-  if (scenario === 'source-links') {
-    await click('.question-main');
+  if (scenario === 'list-semantics') {
+    (window as any).historyListReady = true;
+    while (!(window as any).historyListDone) await pause();
+  } else if (scenario === 'source-links') {
+    await openFirst();
     check(document.querySelectorAll('.markdown-preview a[href]').length === 2, 'two plain source links rendered without diagram controls');
     document.querySelector<HTMLButtonElement>(`button[aria-label="${copy.questionMenu}"]`)!.focus();
     (window as any).historyNativeReady = true;
     while (!(window as any).historyNativeDone) await pause();
     check(!(window as any).historyNativeError, (window as any).historyNativeError);
   } else if (scenario === 'ime-composing' || scenario === 'ime-229') {
-    await click('.question-main');
+    await openFirst();
     let hostEscapes = 0;
     window.addEventListener('keydown', event => { if (event.key === 'Escape') hostEscapes++; });
     const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true,
@@ -83,7 +97,7 @@ async function run() {
     delay = false; pending.shift()!(); await pause();
     check(document.querySelector('.question-scroll')?.getAttribute('aria-busy') === 'false', 'slow refresh must finish despite intervening polls');
   } else {
-    await click('.question-main'); delay = true; await tick();
+    await openFirst(); delay = true; await queueRefresh();
     if (scenario === 'back') await click('.question-header button');
     else if (scenario === 'escape') {
       await click(`button[aria-label="${copy.questionMenu}"]`);

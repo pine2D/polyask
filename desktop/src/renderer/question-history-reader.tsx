@@ -9,6 +9,7 @@ import { safeMarkdownUrl } from './markdown-inline';
 import { QuestionHistoryActions } from './question-history-actions';
 import { QuestionReaderSession } from './question-reader-session';
 import { QuestionPrompt } from './question-prompt';
+import { answerSourceId } from '../shared/answer-source';
 
 export function QuestionHistoryReader({ detail, view, session: suppliedSession, copy, sites, busy, onLoadAnswer,
   onRestore, onReask, onDelete, onAnnounce, onOrganize }: {
@@ -67,7 +68,9 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
       {!ready ? <div className="question-empty" data-state={view?.state} role={view?.state === 'failed' ? 'alert' : 'status'}>
         {view?.state === 'failed' ? copy.questionAnswerFailed : view?.state === 'missing' ? copy.questionCopyChanged : copy.questionAnswerLoading}
         {view?.state !== 'loading' && answer && <button type="button" onClick={() => onLoadAnswer?.(answer.id)}>{copy.questionRetry}</button>}
-      </div> : answer?.answerMarkdown ? <MarkdownPreview value={answer.answerMarkdown} onOpenLink={url => { void shell.openExternal(url).catch(() => onAnnounce(copy.questionFailed)); }} /> : <p className="question-empty">{copy.questionNoAnswer}</p>}
+      </div> : answer?.answerMarkdown ? <MarkdownPreview value={answer.answerMarkdown}
+        contextLabel={`${answerSourceId(detail.question.sites.indexOf(site))} ${sites.find(value => value.key === site)?.label ?? site}`}
+        onOpenLink={url => { void shell.openExternal(url).catch(() => onAnnounce(copy.questionFailed)); }} /> : <p className="question-empty">{copy.questionNoAnswer}</p>}
     </section>
   </div>;
 }

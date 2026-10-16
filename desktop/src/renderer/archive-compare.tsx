@@ -4,7 +4,8 @@ import type { ArchiveRecord, ArchiveResult } from "../shared/archive";
 import { compareAnswerParagraphs, comparisonParagraphs, type ComparedParagraph } from "../shared/archive-compare";
 import { LibrarySelect } from "./library-select";
 import { MarkdownPreview } from "./markdown-preview";
-import type { DesktopCopy } from "../shared/copy";
+import { formatCopy, type DesktopCopy } from "../shared/copy";
+import { answerSourceId } from '../shared/answer-source';
 import type { LibraryReadingFocus } from './library-reading-focus';
 import { ArchiveAnswerReading } from './archive-answer-reading';
 import { excerptSource, type ExactExcerpt, type ExcerptSource } from './answer-excerpt';
@@ -58,6 +59,7 @@ function ComparisonColumn(props: {
   useLayoutEffect(() => {
     if (node.current && props.initialScroll !== undefined) node.current.scrollTop = props.initialScroll;
   }, [props.initialScroll]);
+  const context = props.source ? `${answerSourceId(props.source.resultIndex)} ${props.label}` : props.label;
   const content = <>
       {props.code === "answer_truncated" ? <p className="answer-capture-warning">{props.copy.answerTruncated}</p> : null}
       {!props.paragraphs.length ? <p role="status">{props.copy.noDifferentParagraphs}</p> : null}
@@ -65,7 +67,8 @@ function ComparisonColumn(props: {
         <div className={`archive-compare-paragraph ${paragraph.relation}`} data-relation={paragraph.relation} key={`${index}:${paragraph.text}`}>
           {/* 共同/独有改用底色与左侧边线区分（图例在选项行）；文字标签留给读屏。 */}
           {props.paragraphs[index - 1]?.relation !== paragraph.relation ? <span className="sr-only">{paragraph.relation === "shared" ? props.copy.sharedParagraph : props.copy.uniqueParagraph}</span> : null}
-          <MarkdownPreview value={paragraph.text} onOpenLink={props.onOpenLink} />
+          <MarkdownPreview value={paragraph.text} onOpenLink={props.onOpenLink}
+            contextLabel={formatCopy(props.copy.readingContextParagraph, { context, count: index + 1 })} />
         </div>
       ))}</>;
   return (

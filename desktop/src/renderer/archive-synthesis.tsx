@@ -42,7 +42,7 @@ export function ArchiveSynthesis(props: ArchiveSynthesisProps): React.JSX.Elemen
           <header><h2>{copy.analysisSaved}</h2><span>{record.synthesis.host}{record.synthesis.state ? ` · ${record.synthesis.state === "think" ? copy.think : copy.fast}` : ""}</span><time dateTime={dateTimeAttribute(record.synthesis.createdAt)}>{formatDateTime(record.synthesis.createdAt, props.locale ?? 'en')}</time></header>
           <SynthesisProgress copy={copy} stage="saved" instruction={record.synthesis.instruction} />
           <p className="citation-notice">{copy.citationReportNotice}</p>
-          <MarkdownPreview onOpenLink={props.onOpenLink} value={record.synthesis.text} />
+          <MarkdownPreview contextLabel={`${copy.analysisSaved} · ${record.synthesis.host}`} onOpenLink={props.onOpenLink} value={record.synthesis.text} />
         </div>
       ) : null}
       {pending ? (
@@ -51,7 +51,7 @@ export function ArchiveSynthesis(props: ArchiveSynthesisProps): React.JSX.Elemen
           <SynthesisProgress copy={copy} stage={candidate ? 'collected' : 'submitted'} instruction={pending.instruction} />
           {session?.sourceUpdatedAt !== undefined && session.sourceUpdatedAt !== record.updatedAt ? <p className="answer-capture-warning">{copy.analysisSourceChanged}</p> : null}
           {candidate ? <p className="citation-notice">{copy.citationReportNotice}</p> : null}
-          {candidate ? <MarkdownPreview onOpenLink={props.onOpenLink} value={candidate.text} /> : null}
+          {candidate ? <MarkdownPreview contextLabel={`${copy.analysisTitle} · ${candidate.host}`} onOpenLink={props.onOpenLink} value={candidate.text} /> : null}
           {candidate ? (
             <div className="synthesis-confirm">
               {replaceArmed ? <><span>{copy.synthesisReplaceConfirm}</span><button type="button" disabled={props.busy} onClick={() => setReplaceArmed(false)}>{copy.cancelDelete}</button></> : null}

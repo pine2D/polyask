@@ -9,8 +9,8 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, fill, shot
     return { text: node.textContent, width: node.clientWidth, scroll: node.scrollWidth,
       height: box.height, top: box.top, bottom: box.bottom, right: box.right, viewport: innerWidth, viewportHeight: innerHeight };
   })()`);
-  const contained = box => {
-    assert.ok(box.width > 120 && box.height > 12 && box.scroll <= box.width + 1,
+  const contained = (box, minWidth = 120) => {
+    assert.ok(box.width > minWidth && box.height > 12 && box.scroll <= box.width + 1,
       `copy must remain visible and wrap: ${JSON.stringify(box)}`);
     assert.ok(box.right <= box.viewport + 1 && box.top >= 0 && box.bottom <= box.viewportHeight + 1,
       `copy must remain within the viewport: ${JSON.stringify(box)}`);
@@ -23,7 +23,8 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, fill, shot
     await wait('!!document.querySelector(".archive-detail h1")');
     const labels = await run(`(() => { const c = window.libraryTest.copy;
       return { copy: c.archiveCopyFailed, export: c.archiveExportFailed, source: c.archiveSourceOpenFailed,
-        capture: c.libraryEmptyHint, decision: c.libraryDecisionEmptyHint, folder: c.libraryFolderEmptyHint, search: c.libraryNoMatchesHint };
+        capture: c.libraryEmptyHint, decision: c.libraryDecisionEmptyHint, folder: c.libraryFolderEmptyHint, search: c.libraryNoMatchesHint,
+        emptyTitle: c.libraryEmptyTitle, viewTitle: c.libraryViewEmptyTitle, noMatchesTitle: c.libraryNoMatchesTitle };
     })()`);
     await run('window.libraryTest.failMarkdown=true; window.libraryTest.failExternal=true');
     const failures = [];
@@ -44,19 +45,25 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, fill, shot
     await win.loadFile(join(output, 'index.html'), { query: { locale, emptyLibrary: '1' } });
     win.webContents.setZoomFactor(zoom);
     const empty = [];
-    const checkHint = async expected => {
+    const checkHint = async (expected, title) => {
       await wait(`document.querySelector('.archive-list[aria-busy=false] .library-empty small')?.textContent === ${JSON.stringify(expected)}`);
       const box = await measure('.archive-list .library-empty small'); contained(box); empty.push(box);
       assert.equal(await run('document.querySelector(".library-welcome p")?.textContent'), expected,
         'empty list and welcome panel must offer the same contextual next step');
+      assert.equal(await run('document.querySelector(".library-welcome h1")?.textContent'), title);
+      const heading = await measure('.library-welcome h1');
+      if (heading.width) contained(heading, 0);
+      else assert.equal(await run('getComputedStyle(document.querySelector(".folder-detail")).display==="none" && ["list","navigation"].includes(document.querySelector(".library").dataset.pane)'), true,
+        'a hidden welcome heading belongs only to the responsive list or folder-navigation pane');
     };
-    await checkHint(labels.capture);
-    await click('.library-segments button:nth-child(3)'); await checkHint(labels.decision);
-    await click('.folder-back-navigation'); await click('.folder-sidebar nav button:nth-child(3)'); await checkHint(labels.folder);
+    await checkHint(labels.capture, labels.emptyTitle);
+    if (zoom === 1) await shot(`empty-library-${locale}-${theme}`);
+    await click('.library-segments button:nth-child(3)'); await checkHint(labels.decision, labels.viewTitle);
+    await click('.folder-back-navigation'); await click('.folder-sidebar nav button:nth-child(3)'); await checkHint(labels.folder, labels.viewTitle);
     if (zoom === 1) await shot(`empty-folder-${locale}-${theme}`);
-    await fill('[name=library-search]', 'unmatched'); await checkHint(labels.search);
-    await click('.library-list-summary button:nth-child(3)'); await checkHint(labels.folder);
-    await click('.folder-back-navigation'); await click('.folder-sidebar nav button:nth-child(2)'); await checkHint(labels.decision);
+    await fill('[name=library-search]', 'unmatched'); await checkHint(labels.search, labels.noMatchesTitle);
+    await click('.library-list-summary button:nth-child(3)'); await checkHint(labels.folder, labels.viewTitle);
+    await click('.folder-back-navigation'); await click('.folder-sidebar nav button:nth-child(2)'); await checkHint(labels.decision, labels.viewTitle);
     if (locale === 'zh-TW' && zoom === 2) await shot(`empty-decision-${theme}-200`);
     reports.push({ locale, theme, width, zoom, failures, empty, writes: await run('window.libraryTest.writes + window.libraryTest.folderWrites') });
   }
