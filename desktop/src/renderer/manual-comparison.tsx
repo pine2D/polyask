@@ -43,6 +43,7 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
 }
 
 export function ManualComparison(props: {
+  readonly detailsRef?: React.RefObject<HTMLDetailsElement | null>;
   readonly copy: DesktopCopy;
   readonly record: ArchiveRecord;
   readonly sources: readonly ExcerptSource[];
@@ -74,7 +75,7 @@ export function ManualComparison(props: {
     });
   };
   return <>
-    <details className="manual-comparison" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
+    <details ref={props.detailsRef} className="manual-comparison" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
       <summary>{copy.manualTitle}</summary><p>{copy.manualHint}</p>
       <DraftRecovery {...worksheet.recovery} copy={copy} sourceUpdatedAt={record.updatedAt} busy={props.busy || checking} />
       {invalid ? <p className="manual-source-changed" role="status">{copy.manualSourceChanged}</p> : null}

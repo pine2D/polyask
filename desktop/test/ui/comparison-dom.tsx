@@ -21,7 +21,7 @@ export async function comparisonWait(predicate: () => unknown) {
 }
 
 export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraftStore; onArchiveEntered?: (id: string, mode: string) => void;
-  detailWidth?: number; startInRead?: boolean; session?: LibrarySessionStore } = {}) {
+  detailWidth?: number; startInRead?: boolean; session?: LibrarySessionStore; configure?: Parameters<typeof mountDom>[1] } = {}) {
   const css = require.extensions['.css']; require.extensions['.css'] = () => {};
   const resize = Object.getOwnPropertyDescriptor(globalThis, 'ResizeObserver');
   Object.defineProperty(globalThis, 'ResizeObserver', { configurable: true, value: class { observe() {} disconnect() {} } });
@@ -54,6 +54,7 @@ export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraf
         return rect;
       }
     });
+    options.configure?.(window);
   });
   await comparisonWait(() => h.document.querySelector(options.startInRead ? '.archive-answers' : '.archive-compare'));
   // 首选详情可早于列表返回；列表首次加载会恢复滚动位置，交互须等两者就绪。
