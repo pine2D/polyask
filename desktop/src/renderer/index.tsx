@@ -86,6 +86,7 @@ import { reloadSiteWithFeedback } from "./site-reload";
 import { shell } from "./shell-api";
 import { SiteFind } from './site-find';
 import { requestDecisionNavigation } from "./decision-navigation";
+import { requestSurfaceChange } from './surface-transition';
 import { currentPlatform, isMac } from "./platform";
 import "./styles.css";
 import "./settings.css";
@@ -337,17 +338,12 @@ function App(): React.JSX.Element {
     shell.setLayout(mode, focused);
   };
 
-  const changeSurface = (value: DesktopSurface): void => {
-    draftConfirmation.surfaceChanged(value);
-    if (value !== "sites") {
-      setQuestionHistoryOpen(false);
-      imageSelection.invalidateAndClose();
-      if (value !== "confirmation" && value !== "question-history") composer.reset();
-      if (drawerOpen) changeDrawerOpen(false);
-    }
-    setSurface(value);
-    shell.setSurface(value);
-  };
+  const changeSurface = (value: DesktopSurface): void => requestSurfaceChange(surface, value, {
+    surfaceChanged: draftConfirmation.surfaceChanged,
+    closeHistory: () => setQuestionHistoryOpen(false), closeImages: imageSelection.invalidateAndClose,
+    resetComposer: composer.reset, closeDrawer: () => { if (drawerOpen) changeDrawerOpen(false); },
+    commit: next => { setSurface(next); shell.setSurface(next); }
+  });
   const runAuxiliary = async (action: () => Promise<void>): Promise<void> => {
     if (draftConfirmation.isBlocking() || runState !== "idle") return;
     await actionLock.current!.run(async () => {

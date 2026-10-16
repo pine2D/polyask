@@ -360,6 +360,8 @@ Mermaid 仅在需要预览时加载本地依赖，串行绘制、最多缓存 12
 
 ## 13. 网络代理
 
+- 代理表单的未保存输入只留在设置卡内，并显示未保存状态。关闭设置、Escape 或离开的全局命令先让用户选择继续编辑或放弃；取消保留输入及焦点，确认后才执行完整导航。切换设置分区不丢输入，密码不进入普通草稿。应用退出与强杀不在此保护范围。
+
 全应用只有一份代理配置，分三档：跟随系统（`system`，默认）、不使用代理（`direct`）、自定义（`custom`，支持 HTTP、HTTPS、SOCKS4、SOCKS5）。九站、外壳和 Google Drive 同步（包括 OAuth）都按这一份配置出网。值类型、默认值、字符校验和规范化都在 `shared/proxy-preference.ts`。设置卡 `renderer/settings-proxy.tsx` 只读 `polyask:proxy-state`，不读偏好快照。本期不做显式 PAC、分站分流，也不给每站单独配代理；「跟随系统」时，系统配置里的 PAC 交给 Chromium 处理。
 
 ### 出口

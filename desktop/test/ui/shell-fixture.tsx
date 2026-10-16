@@ -32,7 +32,8 @@ import type { OpenWorkspacePanelState } from '../../src/renderer/workspace-panel
 import type { LocalDataStats } from '../../src/shared/local-data';
 import { DEFAULT_PREFERENCE_VALUES, type PreferenceSnapshot } from '../../src/shared/preferences';
 import { SITES } from '../../src/main/sites';
-import { proxyShellStubs } from './proxy-state-fixture';
+import { customProxy, proxyShellStubs, proxyStateFixture } from './proxy-state-fixture';
+import { requestSurfaceChange } from '../../src/renderer/surface-transition';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
 import '../../src/renderer/accessibility.css';
@@ -90,7 +91,7 @@ const finishOperation = () => new Promise<void>(resolve => document.addEventList
 let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders: 0, answers: 9, memberships: 0,
   drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
-  ...proxyShellStubs(),
+  ...proxyShellStubs(query.get('surface') === 'proxy-edit' ? proxyStateFixture({ formValue: customProxy, applied: customProxy }) : undefined),
   getLocalDataStats: async () => dataStats,
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
   syncNow: async () => { await finishOperation(); return status; },
@@ -184,5 +185,15 @@ function ShortcutFixture() {
     onExecute={id => { document.body.dataset.executed = id; }} onApplyGroup={noop} onInsertPrompt={noop}
     onSaveTemplate={noop} onDeleteTemplate={noop} onClose={noop} />;
 }
-createRoot(document.getElementById('root')!).render(query.get('surface') === 'shortcuts' ? <ShortcutFixture /> : query.get('surface') === 'native' ? <NativeFixture />
+function ProxyEditFixture() {
+  const [open, setOpen] = useState(true);
+  const close = () => requestSurfaceChange('settings', 'sites', {
+    surfaceChanged: noop, closeHistory: noop, closeImages: noop, resetComposer: noop, closeDrawer: noop,
+    commit: () => setOpen(false)
+  });
+  return open ? <SettingsWorkspace copy={copy} locale={locale} status={status} runtime={runtime}
+    initialSection="proxy" onStatus={noop} onAnnounce={noop} onClose={close} />
+    : <button data-proxy-reopen onClick={() => setOpen(true)}>Reopen settings</button>;
+}
+createRoot(document.getElementById('root')!).render(query.get('surface') === 'proxy-edit' ? <ProxyEditFixture /> : query.get('surface') === 'shortcuts' ? <ShortcutFixture /> : query.get('surface') === 'native' ? <NativeFixture />
   : <FeedbackProvider copy={copy}><Fixture /></FeedbackProvider>);

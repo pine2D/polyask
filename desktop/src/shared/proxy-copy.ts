@@ -5,6 +5,9 @@ import type { ProxyField, ProxyMode, ProxyScheme } from "./proxy-preference";
 export const PROXY_COPY = {
   en: {
     proxyTitle: "Network proxy",
+    proxyUnsaved: 'Unsaved changes', proxyLeaveTitle: 'Unsaved proxy changes',
+    proxyLeaveMessage: 'Leaving discards your unsaved proxy input. Your active proxy setting will stay unchanged.',
+    proxyKeepEditing: 'Keep editing', proxyDiscardAndLeave: 'Discard and leave',
     proxyDescription: "The nine AI sites, this window and Google Drive sync all connect through this one proxy setting. Saved changes apply to new connections right away.",
     proxyLoading: "Reading proxy settings…",
     proxyUnavailable: "Proxy settings could not be read. Reopen Settings to try again.",
@@ -78,6 +81,9 @@ export const PROXY_COPY = {
   },
   zhCN: {
     proxyTitle: "网络代理",
+    proxyUnsaved: '有未保存修改', proxyLeaveTitle: '代理修改尚未保存',
+    proxyLeaveMessage: '离开会丢弃尚未保存的代理输入，已生效的设置保持不变。',
+    proxyKeepEditing: '继续编辑', proxyDiscardAndLeave: '放弃并离开',
     proxyDescription: "九个 AI 站点、本窗口和 Google Drive 同步都按这一项代理设置联网。保存后新连接立即按新设置。",
     proxyLoading: "正在读取代理设置…",
     proxyUnavailable: "无法读取代理设置，请重新打开设置再试。",
@@ -151,6 +157,9 @@ export const PROXY_COPY = {
   },
   zhTW: {
     proxyTitle: "網路代理",
+    proxyUnsaved: '有尚未儲存的變更', proxyLeaveTitle: '代理變更尚未儲存',
+    proxyLeaveMessage: '離開會捨棄尚未儲存的代理輸入，已生效的設定維持不變。',
+    proxyKeepEditing: '繼續編輯', proxyDiscardAndLeave: '捨棄並離開',
     proxyDescription: "九個 AI 網站、本視窗和 Google Drive 同步都依這一項代理設定連線。儲存後新連線立即依新設定。",
     proxyLoading: "正在讀取代理設定…",
     proxyUnavailable: "無法讀取代理設定，請重新開啟設定再試。",

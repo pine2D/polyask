@@ -1,6 +1,7 @@
 // desktop/src/renderer/settings-proxy.tsx
 // 「网络代理」设置卡（spec §6.2）。只读 proxy-state；写操作全部经主进程 proxy-* 通道，回包只带码，文案在这里翻译。
 import { useEffect, useRef, useState } from "react";
+import { useProxyLeaveGuard } from './use-proxy-leave-guard';
 import type { DesktopCopy } from "../shared/copy";
 import { formatCopy } from "../shared/copy";
 import { describeProxyField, describeProxyResult, PROXY_SCHEME_LABELS, proxyModeLabel } from "../shared/proxy-copy";
@@ -49,6 +50,8 @@ export function SettingsProxy(props: {
   feedback.current = props.onFeedback;
   // 草稿回到编辑起点（改了又改回）不算未保存修改；密码框有内容算。
   const editing = (draft !== null && base !== null && !sameProxyForm(draft, formFromPreference(base))) || !!password;
+  const reset = (): void => { setDraft(null); setPassword(null); setBase(null); setError(null); };
+  const leaveConfirmation = useProxyLeaveGuard(copy, editing, reset);
   editingNow.current = editing;
   useEffect(() => {
     // 不是本卡操作引起的变化（冲刷挂起、出现新的待确认项）由推送驱动播报；本卡操作由 run() 播报。
@@ -98,7 +101,6 @@ export function SettingsProxy(props: {
     setDraft(isSocks(next.scheme) ? { ...next, username: "" } : next);
     setError(null);
   };
-  const reset = (): void => { setDraft(null); setPassword(null); setBase(null); setError(null); };
   const editPassword = (value: string): void => {
     // 只改密码也算开始编辑：表单钉在当前已存值上，丢掉之前改回原样的旧草稿。
     if (!editing) { setBase(state.formValue); setDraft(null); }
@@ -214,6 +216,7 @@ export function SettingsProxy(props: {
   return <section className="settings-card settings-proxy" aria-labelledby="settings-proxy-title" aria-busy={working}>
     <h2 id="settings-proxy-title" tabIndex={-1}>{copy.proxyTitle}</h2>
     <p>{copy.proxyDescription}</p>
+    {editing ? <p className="settings-control-hint" data-proxy-unsaved>{copy.proxyUnsaved}</p> : null}
     {notice ? <p className={`settings-notice ${notice[0]}`} data-proxy-notice={notice[0]}>{notice[1]}</p> : null}
     {state.pending ? <p className="settings-control-hint" data-proxy-queued>{copy.proxyQueued}</p> : null}
     {state.following ? <p className="settings-control-hint" data-proxy-source="sync">{copy.proxyFromSync}</p> : null}
@@ -288,5 +291,6 @@ export function SettingsProxy(props: {
         aria-describedby={["settings-proxy-reload-hint", busyHint].filter(Boolean).join(" ")} onClick={reload}>{copy.proxyReload}</button>
     </div> : null}
     {saved ? <p id="settings-proxy-reload-hint" className="settings-control-hint">{copy.proxyReloadHint}</p> : null}
+    {leaveConfirmation}
   </section>;
 }
