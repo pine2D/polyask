@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.23.0] - 2026-10-16
+
+验收范围：Linux/WSL 下通过 2,086 项应用与界面测试、432 项运行时测试；三语、明暗主题和缩放检查覆盖结果库阅读、综合与追问返回、长问题展开、比较区域和快捷键等交互。
+
+验收限制：界面检查使用本地合成资料；本版五种发行包的实际安装、物理读屏和输入法、真实 Google Drive 双设备同步未在本轮核验。
+
 ### 修复
 
 - 结果库进入综合或追问表单时聚焦标题，关闭后回到原入口并恢复阅读位置；后台恢复不抢焦点。
@@ -1374,7 +1380,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.22.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.23.0...HEAD
+[1.23.0]: https://github.com/pine2D/polyask/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/pine2D/polyask/compare/v1.21.1...v1.22.0
 [1.21.1]: https://github.com/pine2D/polyask/compare/v1.21.0...v1.21.1
 [1.21.0]: https://github.com/pine2D/polyask/compare/v1.20.0...v1.21.0
