@@ -68,6 +68,10 @@ app.whenReady().then(async () => {
     await require('./image-picker-accessibility-visual.cjs')({ win, output, run, wait, paint });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
   }
+  if (process.argv.includes('--workspace-entry-only')) {
+    await require('./workspace-entry-visual.cjs')({ win, output, run, wait, paint, shot });
+    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+  }
   if (process.argv.includes('--proxy-leave-only')) {
     await require('./settings-proxy-leave-visual.cjs')({ win, output, run, wait, paint, shot });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;

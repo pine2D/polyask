@@ -28,6 +28,18 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
         assert.equal(nodes[0].role.value, 'button');
         assert.equal(nodes[0].name.value, names[locale][index], `${locale}/${density}: name survives hidden text and automatic-focus hint`);
       }
+      const entry = await run(`(() => { const e=document.querySelector('.archive-trigger'), r=e.getBoundingClientRect();
+        return {visible:e.getClientRects().length>0,width:r.width,height:r.height,left:r.left,right:r.right,
+          name:e.getAttribute('aria-label'),hint:e.dataset.hint,target:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--target-size')),
+          prompt:document.querySelector('.prompt-composer').getBoundingClientRect().width}; })()`);
+      assert.equal(entry.visible && entry.width >= entry.target && entry.height >= entry.target, true,
+        `${locale}/${density}: library stays visible at minimum desktop width: ${JSON.stringify(entry)}`);
+      assert.equal(entry.left >= 0 && entry.right <= 960 && entry.prompt >= 320, true,
+        `library and prompt retain their space: ${JSON.stringify({locale,density,...entry})}`);
+      assert.equal(!!entry.name && entry.name === entry.hint, true, 'icon entry retains its localized name and hint');
+      await run('document.querySelector(".archive-trigger").focus()');
+      for (const type of ['keyDown', 'char', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode: type === 'char' ? '\r' : 'Return' });
+      await wait('document.body.dataset.archiveOpened === "true"');
       const geometry = await run(`(() => { const bar=document.querySelector('.feedback-bar'), next=bar.querySelector('.feedback-next-step'), progress=bar.querySelector('.run-progress');
         const r=next.getBoundingClientRect(), notice=bar.querySelector('.feedback-notice'); return {width:bar.clientWidth,scroll:bar.scrollWidth,left:r.left,right:r.right,progressRight:progress.getBoundingClientRect().right,height:bar.getBoundingClientRect().height,notice:notice.textContent,noticeWidth:notice.clientWidth}; })()`);
       assert.equal(geometry.height, 32);
@@ -39,8 +51,9 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       assert.equal(await run('document.body.dataset.compared'), 'true');
       await click('.more-trigger');
       const commands = await run('(document.body.dataset.menuCommands ?? "").split(",")');
-      assert.ok(commands.includes('open-archive') && commands.includes('collect-compare'), 'folded actions have named command-menu fallbacks');
-      reports.push({ locale, density, names: names[locale], geometry, commands });
+      assert.ok(commands.includes('open-question-history') && commands.includes('collect-compare'), 'folded history and comparison remain reachable');
+      assert.equal(commands.includes('open-archive'), false, 'persistent library entry is not duplicated in More');
+      reports.push({ locale, density, names: names[locale], entry, geometry, commands });
       if (locale === 'zh-CN') await shot(`workspace-next-step-${density}`);
     }
     win.setContentSize(1600, 900);

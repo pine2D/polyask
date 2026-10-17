@@ -13,10 +13,12 @@ module.exports = async ({ win, run, paint, wait, click, position, before, densit
         const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.className,
           left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width};});
       return {width:innerWidth,height:rect.height,prompt:bar.querySelector('.prompt-composer').getBoundingClientRect().width,
+        libraryVisible:bar.querySelector('.archive-trigger').getClientRects().length>0,
         overflow:bar.scrollWidth>bar.clientWidth+1,boxes};
     })()`);
     const expanded = await measure();
     assert.equal(expanded.prompt >= 320 && !expanded.overflow, true, `zoom ${zoom}: ${JSON.stringify(expanded)}`);
+    assert.equal(expanded.libraryVisible, true, `library remains visible at zoom ${zoom}`);
     assert.equal(Math.abs(expanded.height - (zoom === 1 ? (density === 'compact' ? 120 : 144) : (density === 'compact' ? 200 : 240))) < 1, true);
     assert.equal(expanded.boxes.every(b => b.left >= -1 && b.right <= expanded.width + 1 && b.top >= 0 && b.bottom <= expanded.height + 1), true,
       `all visible controls fit at zoom ${zoom}: ${JSON.stringify(expanded.boxes)}`);

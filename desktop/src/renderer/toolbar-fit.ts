@@ -6,10 +6,10 @@ import { applyToolbarLayout } from './toolbar-layout';
 
 /** 输入框在命令栏里的保底宽度；低于它时逐级收起次要控件，而不是继续挤压输入框。 */
 export const MIN_PROMPT_WIDTH = 320;
-/** 0 = 完整文字；1 = 图标化；2 = 主操作只留图标；3 = 历史进菜单、档位下拉；4 = 比较/结果库/站点状态让位。 */
+/** 0 = 完整文字；1 = 图标化；2 = 主操作只留图标；3 = 历史进菜单、档位下拉；4 = 比较/站点状态让位，保留结果库。 */
 export const TOOLBAR_FIT_LEVELS = 5;
 /** 第 4 级隐藏的入口改由「更多」菜单承接，键盘仍可经菜单与命令面板到达。 */
-export const COMPACT_MORE_COMMANDS: readonly CommandId[] = ["open-archive", "collect-compare"];
+export const COMPACT_MORE_COMMANDS: readonly CommandId[] = ["collect-compare"];
 
 /**
  * 依实际内容选择最低的够用级别：逐级套用后量输入框宽度，取第一个不低于保底值的级别。
@@ -69,7 +69,7 @@ function layoutSignature(bar: HTMLElement): string {
     child.classList.contains("prompt-composer") ? child.className : `${child.className}:${child.getBoundingClientRect().width}`)].join("|");
 }
 
-/** 命令栏收起归档/比较入口时，「更多」菜单在结果组前补上它们。 */
+/** 命令栏收起比较入口时，「更多」菜单在结果组前补上它。 */
 export function moreMenuGroups(compact: boolean): readonly (readonly CommandId[])[] {
   return compact ? [COMPACT_MORE_COMMANDS, ...MORE_MENU_GROUPS] : MORE_MENU_GROUPS;
 }

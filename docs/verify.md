@@ -26,7 +26,7 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 ## 结果库视觉与交互回归
 
-在 `desktop/` 运行 `npm run test:library-ui`；无显示服务器的 Linux 使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:library-ui`。脚本构建生产组件＋隔离内存夹具，使用临时 Electron profile，不读取用户数据库、不连接站点或 Drive。输出路径包含截图与 `report.json`，由脚本每次打印；临时产物留供检查，不入库。
+在 `desktop/` 运行 `npm run test:library-ui`；无显示服务器的 Linux 使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:library-ui`。脚本构建生产组件＋隔离内存夹具；常规结果库与综合/比较夹具均加载生产外壳的全局输入和焦点样式，使用临时 Electron profile，不读取用户数据库、不连接站点或 Drive。输出路径包含截图与 `report.json`，由脚本每次打印；临时产物留供检查，不入库。
 
 覆盖简中/繁中/英文、明暗主题、960/1280/1600px 的 18 组布局；列表默认收起「筛选」面板与多选工具，专项先展开二者并截取 `library-filters`；另以 Electron 鼠标与按键输入检查菜单选项、Escape/Tab 焦点、删除确认、备注保存失败、决策卡未保存保护、文件夹多选搜索、对比容器断点及 150% 缩放。几何断言之外要看截图，尤其决策卡详情是否真正占满可用列。它不替代 Windows/macOS 原生字体、输入法和系统缩放验收。
 
@@ -38,7 +38,7 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 ## 外壳与设置页视觉回归
 
-`workspace-entry-visual.cjs` 在三语和两种密度下读取 Chromium 无障碍树，核验隐藏文字后的总览/聚焦名称；同时检查结果库具名入口、收纳菜单命令、底栏下一步与进度共存，以及繁忙/回答不可用时不显示下一步。`workspace-next-step.test.tsx` 覆盖最新范围回调、错误恢复与撤销优先级。
+`workspace-entry-visual.cjs` 在三语和两种密度下读取 Chromium 无障碍树，核验隐藏文字后的总览/聚焦名称；同时检查窄窗两密度下结果库入口常驻且可用 Enter 打开、提问框仍不少于 320px、收纳菜单保留历史与比较且不重复结果库、底栏下一步与进度共存，以及繁忙/回答不可用时不显示下一步。`workspace-next-step.test.tsx` 覆盖最新范围回调、错误恢复与撤销优先级。
 
 `settings-section-visual.cjs` 在三语和 640/1280px 下检查分区跳转、手动滚动后的唯一当前标记、焦点保持与横向导航可见性，输出 `settings-section-report.json`。结果库专项核验来源计数不被截断、完整名单保留，以及展开比较的返回动作与标题对齐；两类 Node 回归为 `settings-sections.test.tsx` 和 `library-source-summary.test.tsx`。
 

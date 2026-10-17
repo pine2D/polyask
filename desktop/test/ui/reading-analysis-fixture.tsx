@@ -16,6 +16,7 @@ import type { DecisionInput } from '../../src/shared/decision';
 import { validateSynthesisRequest, type PendingSynthesis, type SynthesisCandidate, type SynthesisSendRequest } from '../../src/shared/synthesis';
 import { nativeArchive, nativeOther } from './reading-analysis-data';
 import '../../src/renderer/styles.css';
+import '../../src/renderer/accessibility.css';
 
 const query = new URLSearchParams(location.search), locale = query.get('locale') || 'en', mode = query.get('mode') || 'comparison';
 document.documentElement.lang = locale;

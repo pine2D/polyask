@@ -39,15 +39,17 @@ test("toolbar fit picks the lowest level that keeps the prompt at least 320px wi
 test("folded toolbar entries stay reachable from the More menu", async () => {
   assert.deepEqual(moreMenuGroups(false).flat(), MORE_MENU_IDS);
   const compact = moreMenuGroups(true).flat();
-  for (const id of ["open-archive", "collect-compare", "open-question-history"] as const) assert.ok(compact.includes(id), id);
+  for (const id of ["collect-compare", "open-question-history"] as const) assert.ok(compact.includes(id), id);
+  assert.equal(compact.includes("open-archive"), false, "the persistent library entry needs no duplicate in More");
   assert.ok(compact.length <= 20, "native command menu accepts at most 20 entries");
   const dom = await mountDom(null);
   try {
     const bar = syntheticBar(dom.document, 960, 200, 25);
     fitToolbar(bar);
-    assert.ok(moreMenuCommandIds(dom.document).includes("open-archive"));
-    bar.dataset.fit = "1 2";
+    assert.ok(moreMenuCommandIds(dom.document).includes("collect-compare"));
     assert.equal(moreMenuCommandIds(dom.document).includes("open-archive"), false);
+    bar.dataset.fit = "1 2";
+    assert.equal(moreMenuCommandIds(dom.document).includes("collect-compare"), false);
   } finally { await dom.close(); }
 });
 

@@ -133,7 +133,7 @@ kbd { opacity: .7; font: 10px system-ui; }
 
 /* 命令栏适配级别（toolbar-fit.ts 按实际内容逐级累加，直到输入框 ≥320px；data-fit 记为 "1 2 …"）：
    1 = 图标化；2 = 主操作只留图标；3 = 历史入口进更多菜单、档位改为下拉；
-   4 = 站点状态/比较/结果库改由工作台与更多菜单承接。 */
+   4 = 站点状态/比较改由工作台与更多菜单承接，保留结果库图标。 */
 .command-bar[data-fit~="1"] :is(.mode-switch .priority-p1, .workspace-actions .priority-p1, kbd, .scope-label-full, .workspace-actions .retry-label) { display: none; }
 .command-bar[data-fit~="1"] .scope-label-compact { display: inline; }
 .command-bar[data-fit~="1"] > :is(.page-tabs, .workspace-actions, .mode-switch, .tier-switch, .image-picker, .prompt-history-tools) { min-width: max-content; }
@@ -163,7 +163,11 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar[data-fit~="3"] .tier-select { display: block; }
 .command-bar[data-fit~="3"] .uncertain-retry-trigger .review-glyph { display: inline; }
 .command-bar[data-fit~="4"] { column-gap: 3px; }
-.command-bar[data-fit~="4"] :is(.health-trigger, .compare-trigger, .archive-trigger) { display: none; }
+.command-bar[data-fit~="4"] :is(.health-trigger, .compare-trigger) { display: none; }
+/* 站点状态收起后释放原按钮的保底宽度，留给常驻的结果库入口。 */
+.command-bar[data-fit~="4"] > .workspace-entry { min-width: calc(var(--target-size) * 2 + 2px); }
+.command-bar[data-fit~="4"] .scope-main { padding-inline: var(--space-1); }
+.command-bar[data-fit~="4"] .page-tabs button { min-width: var(--target-size); }
 /* 站点状态入口收起后，需关注的红点挪到工作台入口上（工作台内有「站点状态」页签）。 */
 .command-bar[data-fit~="4"] .workspace-entry:has(.health-trigger[data-health-attention]) .scope-main { position: relative; }
 .command-bar[data-fit~="4"] .workspace-entry:has(.health-trigger[data-health-attention]) .scope-main::after {
