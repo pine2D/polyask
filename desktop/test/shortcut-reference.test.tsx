@@ -12,10 +12,10 @@ function Host({ locale = 'en', isMac = false, effects = [] }: { locale?: string;
   const [mode, setMode] = useState<CommandPaletteMode>('shortcuts');
   return <CommandPalette copy={getCopy(locale)} commands={COMMANDS} groups={[]} menuShortcuts={[{ group: 'View', label: 'Reload', accelerator: 'CmdOrCtrl+R' }]}
     library={{ templates: [], history: [] }} draft="" isMac={isMac} mode={mode} onModeChange={setMode}
-    onExecute={id => effects.push(id)} onApplyGroup={noop} onInsertPrompt={noop} onSaveTemplate={noop}
+    onExecute={id => effects.push(id)} onApplyGroup={id => effects.push(`group:${id}`)} onInsertPrompt={noop} onSaveTemplate={noop}
     onDeleteTemplate={noop} onClose={() => effects.push('close')} />;
 }
-const options = (doc: Document) => [...doc.querySelectorAll('#command-results [role="option"]')];
+const options = (doc: Document) => [...doc.querySelectorAll<HTMLButtonElement>('#command-results [role="option"]')];
 
 for (const [locale, isMac] of [['en', true], ['zh-CN', false], ['zh-TW', false]] as const) {
   test(`${locale}: shortcut reference searches actions, localized categories and displayed keys`, async () => {
@@ -69,3 +69,33 @@ test('command search and shortcut search retain independent queries when switchi
     await h.click(h.document.getElementById('command-tab-commands')!); assert.equal(input()?.value, 'drive');
   } finally { await h.close(); }
 });
+
+const sendLabels = {
+  en: 'Send prompt (in prompt field)', 'zh-CN': '发送提问（提问框内）', 'zh-TW': '傳送提問（提問框內）'
+} as const;
+for (const locale of ['en', 'zh-CN', 'zh-TW'] as const) for (const isMac of [false, true]) {
+  test(`${locale}/${isMac ? 'Mac' : 'Ctrl'}: send reference is searchable and never executes from the palette`, async () => {
+    const effects: string[] = [], h = await mountDom(<Host locale={locale} isMac={isMac} effects={effects} />);
+    try {
+      const input = () => h.document.querySelector<HTMLInputElement>('.command-search input')!;
+      const key = isMac ? '⌘↵' : 'Ctrl+Enter';
+      for (const query of ['发送', 'send', 'Enter', '↵', 'Ctrl+↵', key, sendLabels[locale]]) {
+        await h.input(input(), query);
+        assert.equal(options(h.document).length, 1, `one send reference for ${query}`);
+        const row = options(h.document)[0];
+        assert.equal(row.querySelector('strong')?.textContent, sendLabels[locale]);
+        assert.equal(row.querySelector('kbd')?.textContent, key, 'search terms are not displayed as extra key bindings');
+      }
+      await h.click(options(h.document)[0]);
+      for (const modifiers of [{}, { ctrlKey: true }, { metaKey: true }]) {
+        await act(async () => input().dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true, ...modifiers })));
+      }
+      assert.equal(effects.length, 0, 'reference click and Enter must not execute or close the palette');
+      assert.equal(input().isConnected, true);
+      await h.click(h.document.getElementById('command-tab-commands')!);
+      await h.input(input(), sendLabels[locale]);
+      assert.equal(options(h.document).some(row => row.querySelector('strong')?.textContent === sendLabels[locale]), false,
+        'local send shortcut does not become an executable palette command');
+    } finally { await h.close(); }
+  });
+}

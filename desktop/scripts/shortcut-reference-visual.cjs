@@ -39,6 +39,30 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     const sample = await run(`(() => {const first=document.querySelector('#command-results [role=option]');
       return {label:first.querySelector('strong').textContent,category:first.querySelector('small').textContent,key:first.querySelector('kbd').textContent.split(' · ')[0],total:document.querySelectorAll('#command-results [role=option]').length};})()`);
     const search = '.command-search input';
+    const sendLabels = { en: 'Send prompt (in prompt field)', 'zh-CN': '发送提问（提问框内）', 'zh-TW': '傳送提問（提問框內）' };
+    const sendKey = platform === 'darwin' ? '⌘↵' : 'Ctrl+Enter';
+    for (const query of ['发送', 'send', 'Enter', '↵', 'Ctrl+↵', sendKey]) {
+      await native.type(search, query);
+      const result = await run(`(() => {const rows=[...document.querySelectorAll('#command-results [role=option]')];
+        return {count:rows.length,label:rows[0]?.querySelector('strong')?.textContent,key:rows[0]?.querySelector('kbd')?.textContent};})()`);
+      assert.equal(result.count, 1, `${locale}/${platform}: send reference matches ${query}`);
+      assert.equal(result.label, sendLabels[locale]); assert.equal(result.key, sendKey);
+    }
+    await native.click('#command-results [role=option]');
+    await native.key('Return');
+    assert.equal(await run('document.body.dataset.executed??null'), null, 'send reference is read-only');
+    assert.equal(await run('!!document.querySelector(".command-search input")'), true);
+    win.setContentSize(1280, 900); win.webContents.setZoomFactor(2);
+    await wait('Math.abs(innerWidth-640)<=1'); await paint();
+    const sendZoom = await run(`(() => {const row=document.querySelector('#command-results [role=option]'), title=row.querySelector('strong'), key=row.querySelector('kbd');
+      const r=row.getBoundingClientRect(), t=title.getBoundingClientRect(), k=key.getBoundingClientRect();
+      return {overflow:row.scrollWidth>row.clientWidth+1,titleClipped:title.scrollWidth>title.clientWidth+1,
+        within:r.left>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1,separate:t.right<=k.left};})()`);
+    assert.equal(!sendZoom.overflow && !sendZoom.titleClipped && sendZoom.within && sendZoom.separate, true,
+      `${locale}/${platform}: send context and keys remain readable at 200%: ${JSON.stringify(sendZoom)}`);
+    await shot(`shortcut-send-${locale}-${platform}-zoom200`);
+    win.webContents.setZoomFactor(1); win.setContentSize(960, 680);
+    await wait('innerWidth===960'); await paint();
     await native.type(search, sample.category);
     assert.equal(await run(`[...document.querySelectorAll('#command-results [role=option]')].every(node=>node.querySelector('small').textContent===${JSON.stringify(sample.category)})`), true);
     await native.type(search, sample.key);
@@ -56,7 +80,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       return {bottom:panel.bottom,height:innerHeight,inputRight:input.right,width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth+1};})()`);
     assert.equal(geometry.bottom <= geometry.height + 1 && geometry.inputRight <= geometry.width + 1 && !geometry.overflow, true);
     await shot(`shortcut-search-${locale}-${platform}`);
-    searches.push({ locale, platform, theme, geometry, sample });
+    searches.push({ locale, platform, theme, geometry, sample, sendZoom });
   }
   await run('document.querySelector("#command-tab-commands").focus()');
   for (const type of ['keyDown', 'char', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode: type === 'char' ? '\r' : 'Enter' });

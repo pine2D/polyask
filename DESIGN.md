@@ -234,6 +234,8 @@ components:
 
 表格区域的可访问名称包含当前来源或字段与表格序号；比较视图补充段落定位。历史日期组使用主标题下的二级标题，沿用原有字号、字重和间距。空库标题反映当前内容范围，快捷键检索沿用命令面板的输入与列表样式。
 
+快捷键速查中的发送条目标明“提问框内”，按平台显示 Ctrl+Enter 或 ⌘↵；它与站点缩放、菜单参考项共用只读行为，点击或按 Enter 保留速查。检索词可兼容发送、send、Enter 与 ↵，只展示实际平台键位。
+
 来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/native-feel.css`、`desktop/src/renderer/markdown-reading.css`、`desktop/src/renderer/library-reading.css`。
 
 ## Layout

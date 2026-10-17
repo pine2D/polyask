@@ -7,7 +7,7 @@ import type { PromptLibraryState } from "../shared/prompt-library";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { shortcutLabel } from "./shortcut-label";
 import { CloseIcon } from "./icons";
-import { commandItems, filterPaletteCommands, menuShortcutItems, paletteGroupLabel, siteZoomShortcutItems, searchCommands, type PaletteCommand } from "./command-search";
+import { commandItems, filterPaletteCommands, menuShortcutItems, paletteGroupLabel, promptShortcutItems, siteZoomShortcutItems, searchCommands, type PaletteCommand } from "./command-search";
 import { pageTabKeyAction, paletteKeyAction } from "./keyboard";
 import { PromptLibrary } from "./prompt-library";
 import { GettingStarted } from "./getting-started";
@@ -51,11 +51,11 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
     groups: props.groups,
     isMac: props.isMac
   }), [props.commands, props.copy, props.groups, props.isMac, query]);
-  // 速查 = 本应用命令 + 菜单里由 Electron 给加速器的 role 项（重新加载/缩放/全屏/复制…）。
-  // 后者不在 COMMANDS 表里，只列前者会让速查名不副实——它的说明写的是「集中查看当前可用的应用快捷键」。
+  // 速查包含应用命令、提问框/站点的上下文键位，以及真实菜单里的其余快捷键。
+  // 上下文键位与菜单参考项不带执行 ID，避免在面板内触发实际操作。
   const shortcuts = useMemo(() => {
     const listed = [...commandItems(props.commands, props.copy, { isMac: props.isMac })
-      .filter((item) => item.accelerator || item.aliases.length), ...siteZoomShortcutItems(props.copy)];
+      .filter((item) => item.accelerator || item.aliases.length), ...promptShortcutItems(props.copy), ...siteZoomShortcutItems(props.copy)];
     return [...listed, ...menuShortcutItems(props.menuShortcuts, listed, props.isMac)];
   }, [props.commands, props.copy, props.isMac, props.menuShortcuts]);
   const filteredShortcuts = useMemo(() => filterPaletteCommands(shortcutQuery, shortcuts, props.copy, props.isMac),

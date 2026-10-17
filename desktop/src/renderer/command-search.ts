@@ -18,6 +18,7 @@ export interface PaletteCommand {
   readonly group: PaletteGroup;
   readonly accelerator?: string;
   readonly aliases: readonly string[];
+  readonly searchTerms?: readonly string[];
   readonly commandId?: CommandId;
   readonly groupId?: string;
 }
@@ -45,10 +46,18 @@ export function filterPaletteCommands(query: string, items: readonly PaletteComm
   if (!terms.length) return items;
   return items.filter(item => {
     const keys = [item.accelerator, ...item.aliases].filter((value): value is string => !!value);
-    const haystack = normalized([item.label, item.id, paletteGroupLabel(copy, item.group), ...keys,
+    const haystack = normalized([item.label, item.id, paletteGroupLabel(copy, item.group), ...(item.searchTerms ?? []), ...keys,
       ...keys.map(value => shortcutLabel(value, isMac))].join(' '));
     return terms.every(term => haystack.includes(term));
   });
+}
+
+export function promptShortcutItems(copy: DesktopCopy): readonly PaletteCommand[] {
+  // 提问框内的快捷键只作参考，不注册为可执行命令；检索词不作为额外键位展示。
+  return [{
+    id: "prompt:send", label: copy.sendPromptShortcut, group: "compose",
+    accelerator: "CmdOrCtrl+Enter", aliases: [], searchTerms: ["send", "发送", "發送", "↵", "Ctrl+↵"]
+  }];
 }
 
 export function siteZoomShortcutItems(copy: DesktopCopy): readonly PaletteCommand[] {
