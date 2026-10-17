@@ -39,13 +39,13 @@ export function ArchiveAnswerReading(props: {
   const canUseEvidence = !!selected && [...selected.excerpt].length <= 4000;
   return <div className="archive-answer-reading">
     <div className="archive-answer-reading-body" ref={body} onPointerUp={readSelection}>{props.children}</div>
-    <button className="answer-excerpt-open" data-archive-editor={`follow-up:${source.host}`} type="button" onClick={() => openRaw()}>{props.copy.excerptSelectOriginal}</button>
+    <button className="answer-excerpt-open" data-decision-origin={`excerpt:${source.resultIndex}`} data-archive-editor={`follow-up:${source.host}`} type="button" onClick={() => openRaw()}>{props.copy.excerptSelectOriginal}</button>
     {selected ? <div className="answer-excerpt-actions" onPointerDown={event => event.preventDefault()}>
       <strong>{answerSourceId(source.resultIndex)} {source.label}</strong>
       {source.truncated ? <p className="answer-capture-warning">{props.copy.answerTruncated}</p> : null}
       <blockquote>{selected.excerpt}</blockquote>
       <div>
-        {props.onEvidence ? <button type="button" disabled={props.busy || !canUseEvidence} onClick={() => props.onEvidence?.(selected)}>{props.copy.excerptUseEvidence}</button> : null}
+        {props.onEvidence ? <button type="button" data-decision-origin={`excerpt:${source.resultIndex}`} disabled={props.busy || !canUseEvidence} onClick={() => props.onEvidence?.(selected)}>{props.copy.excerptUseEvidence}</button> : null}
         {props.onFollowUp ? <button type="button" disabled={props.busy} onClick={() => props.onFollowUp?.(selected)}>{props.copy.excerptFollowUp}</button> : null}
         {props.onCompare ? <button type="button" disabled={props.busy || !canUseEvidence} onClick={() => props.onCompare?.(selected)}>{props.copy.excerptManualCompare}</button> : null}
         <button type="button" onClick={() => setSelected(null)}>{props.copy.excerptClear}</button>

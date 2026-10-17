@@ -24,7 +24,7 @@ interface ArchiveWorkspaceProps {
   readonly embedded?: boolean;
   readonly readingFocus?: LibraryReadingFocus;
   readonly comparisonDrafts?: ComparisonDraftStore;
-  readonly onCreateDecisionDraft?: (record: ArchiveRecord, draft: DecisionInput) => void;
+  readonly onCreateDecisionDraft?: (record: ArchiveRecord, draft: DecisionInput, origin?: string) => void;
   readonly onOrganize?: () => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
@@ -74,12 +74,12 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const capture = () => {
     if (!pane.current) return {};
     return props.detailOverride || reader.state.view === 'synthesis' ? { synthesisScroll: pane.current.scrollTop }
-      : reader.state.view === 'read' ? { readScroll: pane.current.scrollTop } : {};
+      : reader.state.view === 'read' ? { readScroll: pane.current.scrollTop } : { comparisonScroll: pane.current.scrollTop };
   };
   const change: ArchiveReaderBinding['change'] = patch => reader.change({ ...('view' in patch ? capture() : {}), ...patch });
   useLayoutEffect(() => {
     if (pane.current) pane.current.scrollTop = props.detailOverride || reader.state.view === 'synthesis' ? reader.state.synthesisScroll
-      : reader.state.view === 'read' ? reader.state.readScroll : 0;
+      : reader.state.view === 'read' ? reader.state.readScroll : reader.state.comparisonScroll;
   }, [reader.state.archiveId, reader.state.view, !!props.detailOverride]);
   const editorWasOpen = useRef(false);
   useLayoutEffect(() => {

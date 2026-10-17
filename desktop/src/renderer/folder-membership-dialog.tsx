@@ -4,6 +4,7 @@ import type { DesktopCopy } from '../shared/copy';
 import { validFolderName, type FolderMembershipChange, type FolderTarget, type TaskFolder } from '../shared/task-folder';
 import { FolderModal } from './folder-modal';
 import { shell } from './shell-api';
+import { useFailedActionFocus } from './use-failed-action-focus';
 
 export function membershipChanges(before: readonly string[], after: readonly string[]): FolderMembershipChange[] {
   const old = new Set(before), next = new Set(after);
@@ -16,6 +17,7 @@ export function FolderMembershipDialog({ copy, target, targetTitle, folders, onC
   const [original, setOriginal] = useState<string[] | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const rememberFocus = useFailedActionFocus(busy);
   const [message, setMessage] = useState('');
   const [query, setQuery] = useState('');
   const [created, setCreated] = useState<TaskFolder[]>([]);
@@ -46,14 +48,18 @@ export function FolderMembershipDialog({ copy, target, targetTitle, folders, onC
   }, [created]);
   const save = async () => {
     if (!original || pending.current) return;
+    const finishFocus = rememberFocus();
+    let failed = false;
     pending.current = true;
     setBusy(true); setMessage('');
     try { const changes = membershipChanges(original, selected); if (changes.length) await shell.patchFolderMemberships(target, changes); onSaved(); }
-    catch { setMessage(copy.folderFailed); } finally { pending.current = false; setBusy(false); }
+    catch { failed = true; setMessage(copy.folderFailed); } finally { finishFocus(failed); pending.current = false; setBusy(false); }
   };
   const create = async () => {
     if (!original || pending.current) return;
     if (!validFolderName(name)) { setNameAttempt(value => value + 1); return; }
+    const finishFocus = rememberFocus();
+    let failed = false;
     pending.current = true; setBusy(true); setMessage('');
     try {
       const folder = await shell.createFolder(name.trim());
@@ -61,8 +67,8 @@ export function FolderMembershipDialog({ copy, target, targetTitle, folders, onC
       setCreated(items => [...items, folder]); setSelected(ids => [...new Set([...ids, folder.id])]);
       onCreated?.(folder);
       setQuery(''); setCreating(false); setName(''); setNameAttempt(0);
-    } catch { setMessage(copy.folderFailed); }
-    finally { pending.current = false; setBusy(false); }
+    } catch { failed = true; setMessage(copy.folderFailed); }
+    finally { finishFocus(failed); pending.current = false; setBusy(false); }
   };
   return <FolderModal copy={copy} title={copy.folderMembership} busy={busy} onCancel={onCancel}>
     <p className="folder-target-context">{formatCopy(target.kind === 'archive' ? copy.folderTargetResult : copy.folderTargetDecision, { title: targetTitle })}</p>
@@ -75,7 +81,7 @@ export function FolderMembershipDialog({ copy, target, targetTitle, folders, onC
         aria-invalid={nameInvalid || undefined} aria-describedby={`${nameId}-count${nameInvalid ? ` ${nameId}-error` : ''}`} onChange={event => setName(event.target.value)} />
       <p id={`${nameId}-count`} className="archive-field-hint">{[...name.trim()].length} / 80</p>
       {nameInvalid ? <p id={`${nameId}-error`} className="archive-field-errors">{copy.folderNameInvalid}</p> : null}
-      <div className="confirm-actions"><button type="button" disabled={busy} onClick={() => setCreating(false)}>{copy.cancel}</button>
+      <div className="confirm-actions"><button type="button" disabled={busy} onClick={() => setCreating(false)}>{copy.folderCancelCreate}</button>
         <button type="submit" data-action="create-folder" disabled={busy}>{busy ? copy.librarySaving : copy.folderCreateAndSelect}</button></div>
     </form> : <button type="button" disabled={!original || busy} onClick={() => { setCreating(true); setMessage(''); }}>{copy.folderNew}</button>}
     <p role="status">{message}</p><div className="confirm-actions"><button disabled={busy} onClick={onCancel}>{copy.cancel}</button><button data-action="save-memberships" className="primary" disabled={!original || busy || creating} onClick={() => void save()}>{copy.decisionSave}</button></div>

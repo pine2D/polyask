@@ -16,7 +16,7 @@ export function useExcerptActions(props: {
   readonly defaultTier: Tier;
   readonly drafts?: SynthesisDraftStore;
   readonly onStatus: (value: string) => void;
-  readonly onDecision: (record: ArchiveRecord, draft: DecisionInput) => void;
+  readonly onDecision: (record: ArchiveRecord, draft: DecisionInput, origin?: string) => void;
   readonly onFollowUp: (record: ArchiveRecord, value: ExactExcerpt, draft: SynthesisDraft & { sourceChanged: boolean }) => void;
 }) {
   const mounted = useRef(false), epoch = useRef(0), busy = useRef(props.busy);
@@ -49,7 +49,7 @@ export function useExcerptActions(props: {
   };
   const evidence = (value: ExactExcerpt) => {
     if ([...value.excerpt].length > 4000) { props.onStatus(props.copy.excerptEvidenceLimit); return; }
-    start(value, (record, current) => props.onDecision(record, excerptDecisionDraft(record, current)));
+    start(value, (record, current) => props.onDecision(record, excerptDecisionDraft(record, current), `excerpt:${current.resultIndex}`));
   };
   const followUp = (value: ExactExcerpt) => start(value, (record, current, active) => {
     const previous = props.drafts?.restore(record, current.host);

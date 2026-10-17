@@ -21,12 +21,13 @@ import { useLibraryBulk } from './use-library-bulk';
 import { LibraryBulkActions } from './library-bulk-actions';
 import { LibraryBulkFolderDialog } from './library-bulk-folder-dialog';
 import type { BulkRequest } from './library-bulk-runner';
+import { useDecisionReturn } from './use-decision-return';
 
 type LibraryFailure = 'capture' | 'load';
 
 export function FolderWorkspace(props: ArchiveSurfaceProps & {
   session?: LibrarySessionStore; navigationRevision?: number; onBlockingChange?: (value: boolean) => void;
-  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: () => void, readingFocus: LibraryReadingFocus, readerNavigationKey: string | null) => React.ReactNode;
+  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput, origin?: string) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: () => void, readingFocus: LibraryReadingFocus, readerNavigationKey: string | null) => React.ReactNode;
 }): React.JSX.Element {
   const { copy } = props;
   const ownSession = useRef(createLibrarySessionStore());
@@ -91,6 +92,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     });
   };
   const reading = useLibraryReadingFocus(focused, selected ? contentKey(selected) : null);
+  const decisionReturn = useDecisionReturn(reading.root, !!newSource, selected ? contentKey(selected) : null, session);
   const focusDetail = (value: boolean) => navigate(() => { reading.capture(value); setFocused(value); });
   useLayoutEffect(() => {
     session.update({ filters, sort, page, listScroll: listScroll.current, pane, focused,
@@ -245,8 +247,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
           }).catch(() => { if (mounted.current && readingIntent === intent.current) reportLoadFailure(); });
         }} />
       <div className="folder-detail">
-        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
-          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft) => { if (selecting.current === null) navigate(() => { setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{welcomeTitle}</h1>{welcomeHint ? <p>{welcomeHint}</p> : null}</div>}
+        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onCancelNew={() => { decisionReturn.restore(); setNewSource(null); setNewDraft(undefined); }} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
+          : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft, origin) => { if (selecting.current === null) navigate(() => { decisionReturn.capture(origin); setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{welcomeTitle}</h1>{welcomeHint ? <p>{welcomeHint}</p> : null}</div>}
       </div>
     </div>
     {message ? <div className="archive-status" role="status">{message}<button disabled={busy} onClick={failure === 'capture' ? capture : refresh}>{copy.retryShellLoad}</button></div> : null}

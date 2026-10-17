@@ -20,7 +20,7 @@ function ManualNote({ copy, category, source, value, selected, onSelect, onChang
 }) {
   const [open, setOpen] = useState(!!value || selected);
   useEffect(() => { if (value || selected) setOpen(true); }, [value, selected]);
-  return <details className="manual-category" open={open} onToggle={event => setOpen(event.currentTarget.open)}>
+  return <details className="manual-category" data-library-return={`category:${source.resultIndex}:${category}`} open={open} onToggle={event => setOpen(event.currentTarget.open)}>
     <summary>{comparisonCategoryLabel(copy, category)}</summary>
     <label><input type="checkbox" name="manual-category" data-source-index={source.resultIndex} value={category}
       aria-label={`${source.label} · ${comparisonCategoryLabel(copy, category)}`}
@@ -66,7 +66,7 @@ export function ManualComparison(props: {
   readonly sources: readonly ExcerptSource[];
   readonly worksheet: ReturnType<typeof useComparisonWorksheet>;
   readonly busy: boolean;
-  readonly onCreate?: (record: ArchiveRecord, draft: DecisionInput) => void;
+  readonly onCreate?: (record: ArchiveRecord, draft: DecisionInput, origin?: string) => void;
 }): React.JSX.Element | null {
   const { copy, worksheet, record } = props, draft = worksheet.draft;
   const [message, setMessage] = useState(''), [checking, setChecking] = useState(false);
@@ -93,13 +93,13 @@ export function ManualComparison(props: {
         const input = source ? comparisonDecisionInput(source, draft, copy) : null;
         if (!source) setMessage(copy.excerptSourceMissing);
         else if (!input) setMessage(copy.synthesisSourceVersionChanged);
-        else props.onCreate?.(source, input);
+        else props.onCreate?.(source, input, 'manual');
       }).catch(() => { if (active()) setMessage(copy.archiveLoadFailed); })
         .finally(() => { if (worksheet.mounted.current && request === worksheet.epoch.current) setChecking(false); });
     });
   };
   return <>
-    <details ref={props.detailsRef} className="manual-comparison" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
+    <details ref={props.detailsRef} className="manual-comparison" data-library-return="manual" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
       <summary>{copy.manualTitle}</summary><p>{copy.manualHint}</p>
       <DraftRecovery {...worksheet.recovery} copy={copy} sourceUpdatedAt={record.updatedAt} busy={props.busy || checking} />
       {invalid ? <p className="manual-source-changed" role="status">{copy.manualSourceChanged}</p> : null}
@@ -124,7 +124,7 @@ export function ManualComparison(props: {
       })}</div>
       <label>{copy.manualJudgment}<textarea name="comparison-judgment" value={draft.judgment} onChange={event => change({ ...draft, judgment: event.target.value })} /></label>
       <label>{copy.manualNextStep}<textarea name="comparison-next-step" value={draft.nextStep} onChange={event => change({ ...draft, nextStep: event.target.value })} /></label>
-      <button type="button" disabled={props.busy || checking || invalid || !props.onCreate} onClick={form}>{copy.manualFormDecision}</button>
+      <button type="button" data-decision-origin="manual" disabled={props.busy || checking || invalid || !props.onCreate} onClick={form}>{copy.manualFormDecision}</button>
       <p role="status">{message}</p>
     </details>
     {worksheet.replacement ? <ExcerptReplacementDialog copy={copy} message={copy.manualReplaceQuote} busy={props.busy}

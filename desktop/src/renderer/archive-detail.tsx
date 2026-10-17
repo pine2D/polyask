@@ -29,7 +29,7 @@ interface ArchiveDetailProps {
   readonly initialComparisonOpen?: boolean;
   readonly readingFocus?: LibraryReadingFocus;
   readonly comparisonDrafts?: ComparisonDraftStore;
-  readonly onCreateDecisionDraft?: (record: ArchiveRecord, draft: DecisionInput) => void;
+  readonly onCreateDecisionDraft?: (record: ArchiveRecord, draft: DecisionInput, origin?: string) => void;
   readonly record: ArchiveRecord;
   readonly onSaveMetadata?: (patch: ArchivePatch) => Promise<boolean>;
   readonly onPatch: (patch: ArchivePatch) => void;
@@ -80,13 +80,21 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   useLayoutEffect(() => {
     if (view === 'compare' && reader.consumeComparisonEntry?.()) focusComparison();
   }, [record.id, view]);
-  useEffect(() => { if (props.pendingSynthesis?.archiveId === record.id) setView('synthesis'); }, [record.id, props.pendingSynthesis?.archiveId]);
+  const pendingKey = props.pendingSynthesis?.archiveId === record.id
+    ? JSON.stringify([record.id, props.pendingSynthesis.sentAt, props.pendingSynthesis.targetHost]) : null;
+  useEffect(() => {
+    let active = true;
+    if (pendingKey && reader.state.pendingSynthesisKey !== pendingKey) requestDecisionNavigation(() => {
+      if (active) reader.change({ view: 'synthesis', pendingSynthesisKey: pendingKey });
+    });
+    return () => { active = false; };
+  }, [record.id, pendingKey]);
   const favoriteLabel = record.favorite ? copy.unfavoriteArchive : copy.favoriteArchive;
   const successfulResults = record.results.filter((result) => !!result.text?.trim());
   const canSynthesize = successfulResults.length >= 2;
   return (
     <article ref={article} className="archive-detail" data-view={view}>
-      <details className="archive-record-context" open={view !== 'compare' || contextOpen}
+      <details className="archive-record-context" data-library-return="context" open={view !== 'compare' || contextOpen}
         onToggle={event => { if (view === 'compare') reader.change({ comparisonContextExpanded: event.currentTarget.open }); }}>
       <summary hidden={view !== 'compare'}>
         <ChevronDownIcon /><span className="record-context-title" role={!contextOpen ? 'heading' : undefined} aria-level={!contextOpen ? 1 : undefined}
@@ -108,7 +116,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
       </header>
       <div className="library-record-actions">
         {canSynthesize ? <button type="button" data-archive-editor="synthesis" disabled={props.busy} onClick={props.onSynthesize}><SparklesIcon />{copy.synthesisAction}</button> : null}
-        {props.onCreateDecision ? <button type="button" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
+        {props.onCreateDecision ? <button type="button" data-decision-origin="record" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
       </div>
       <ArchiveMetadata record={record} copy={copy} busy={props.busy} onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} />
       </details>

@@ -12,11 +12,13 @@ import { shell } from "./shell-api";
 import { DraftRecovery } from './draft-recovery';
 import { parseDecisionContent } from './editor-draft-content';
 import { usePersistentDraft } from './use-persistent-draft';
+import { useFailedActionFocus } from './use-failed-action-focus';
 
 interface Props {
   readonly embedded?: boolean;
   readonly onBusy?: (busy: boolean) => void;
   readonly onOrganize?: () => void;
+  readonly onCancelNew?: () => void;
   readonly initialRecord?: DecisionRecord;
   readonly initialDraft?: DecisionInput;
   readonly onChanged?: (record?: DecisionRecord) => void;
@@ -31,7 +33,7 @@ const newCard = (source: ArchiveRecord): DecisionInput => ({ archiveId: source.i
   title: [...(source.task || source.text)].slice(0, 160).join(""), conclusion: "", rationale: "",
   uncertainties: "", nextStep: "", status: "draft", evidence: [] });
 
-export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize, onBusy }: Props): React.JSX.Element {
+export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize, onBusy, onCancelNew }: Props): React.JSX.Element {
   const [items, setItems] = useState<DecisionRecord[]>([]);
   const [saved, setSaved] = useState<DecisionRecord | null>(initialRecord ?? null);
   const [value, setValue] = useState<DecisionInput | null>(() => initialSource ? initialDraft?.archiveId === initialSource.id ? initialDraft : newCard(initialSource) : initialRecord ? decisionInput(initialRecord) : null);
@@ -42,6 +44,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
   const [filter, setFilter] = useState<DecisionStatus | "">("");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const rememberFocus = useFailedActionFocus(busy);
   useEffect(() => { onBusy?.(busy); return () => onBusy?.(false); }, [busy, onBusy]);
   const [message, setMessage] = useState("");
   const [validationStarted, setValidationStarted] = useState(() => !!initialDraft
@@ -113,10 +116,12 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
   }, [dirty]);
   const run = async (action: () => Promise<void>) => {
     if (busyRef.current) return;
+    const finishFocus = rememberFocus();
+    let failed = false;
     busyRef.current = true;
     setBusy(true); setMessage("");
-    try { await action(); } catch { setMessage(copy.decisionFailed); }
-    finally { busyRef.current = false; setBusy(false); }
+    try { await action(); } catch { failed = true; setMessage(copy.decisionFailed); }
+    finally { finishFocus(failed); busyRef.current = false; setBusy(false); }
   };
   const select = (record: DecisionRecord) => guard(() => {
     setDraftSourceVersion(record.updatedAt);
@@ -180,7 +185,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
             <div className="library-decision-actions">
               {editing ? <>
                 {dirty ? <span>{copy.decisionUnsaved}</span> : null}
-                <button type="button" disabled={busy} onClick={() => guard(() => { if (saved) { setValue(decisionInput(saved)); setEditing(false); setValidationStarted(false); } else clearDetail(); })}>{copy.decisionCancel}</button>
+                <button type="button" disabled={busy} onClick={() => guard(() => { if (saved) { setValue(decisionInput(saved)); setEditing(false); setValidationStarted(false); } else { clearDetail(); onCancelNew?.(); } })}>{copy.decisionCancel}</button>
                 <button className="library-primary" type="button" disabled={busy} onClick={save}>{busy ? copy.librarySaving : copy.decisionSave}</button>
               </> : <>
                 {onOrganize ? <button type="button" disabled={busy} onClick={onOrganize}>{copy.libraryOrganize}</button> : null}

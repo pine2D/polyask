@@ -28,6 +28,8 @@ Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此�
 
 ## 结果库视觉与交互回归
 
+取消新卡与失败重试专项：在 `desktop/` 运行 `npm run test:unit -- test/library-recovery-interaction.check.ts`。使用生产组件和完整全局样式，三语、明暗主题、1440/960px 下检查原阅读/比较返回、笔记及各滚动位置、四类失败后的真实键盘重试、内外取消名称和等待期间不抢焦点。临时 Electron profile 阻断外网；Linux 隔离子进程会话总线，按实际各线程 children 与 app metrics 核对共同 4GiB/512MiB cgroup，退出后确认观测 PID 消失并移除 profile，截图/报告留在临时目录。不替代 Windows/macOS 和物理读屏验收。
+
 在 `desktop/` 运行 `npm run test:library-ui`；无显示服务器的 Linux 使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:library-ui`。脚本构建生产组件＋隔离内存夹具；常规结果库与综合/比较夹具均加载生产外壳的全局输入和焦点样式，使用临时 Electron profile，不读取用户数据库、不连接站点或 Drive。输出路径包含截图与 `report.json`，由脚本每次打印；临时产物留供检查，不入库。
 
 覆盖简中/繁中/英文、明暗主题、960/1280/1600px 的 18 组布局；列表默认收起「筛选」面板与多选工具，专项先展开二者并截取 `library-filters`；另以 Electron 鼠标与按键输入检查菜单选项、Escape/Tab 焦点、删除确认、备注保存失败、决策卡未保存保护、文件夹多选搜索、对比容器断点及 150% 缩放。几何断言之外要看截图，尤其决策卡详情是否真正占满可用列。它不替代 Windows/macOS 原生字体、输入法和系统缩放验收。

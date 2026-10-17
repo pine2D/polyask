@@ -13,6 +13,8 @@ export interface ArchiveReaderState {
   readonly rightHost: string;
   readonly differencesOnly: boolean;
   readonly readScroll: number;
+  readonly comparisonScroll: number;
+  readonly pendingSynthesisKey: string | null;
   readonly leftScroll: number;
   readonly rightScroll: number;
   readonly synthesisScroll: number;
@@ -30,7 +32,7 @@ export function initialArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results
   const sources = record.results.filter(result => !!result.text?.trim());
   return { archiveId: record.id, view: compare && sources.length >= 2 ? 'compare' : 'read', questionExpanded: false, comparisonContextExpanded: false, questionOverflow: null,
     leftHost: sources[0]?.host ?? '', rightHost: sources[1]?.host ?? '', differencesOnly: false,
-    readScroll: 0, leftScroll: 0, rightScroll: 0, synthesisScroll: 0 };
+    readScroll: 0, comparisonScroll: 0, pendingSynthesisKey: null, leftScroll: 0, rightScroll: 0, synthesisScroll: 0 };
 }
 
 // 只保留当前记录的选择与位置；正文和危险确认仍由各自组件管理。

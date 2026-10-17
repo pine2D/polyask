@@ -6,6 +6,7 @@ import { formatCopy } from '../shared/copy';
 import { ConfirmDialog } from './confirm-dialog';
 import { registerDecisionNavigationGuard } from './decision-navigation';
 import { validateArchiveTags } from './archive-metadata-validation';
+import { useFailedActionFocus } from './use-failed-action-focus';
 export { validateArchiveTags } from './archive-metadata-validation';
 
 export function ArchiveMetadata({ record, copy, busy, onSave }: {
@@ -30,6 +31,7 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
   const showErrors = attempt > 0 && invalidTags;
   const showNoteError = attempt > 0 && invalidNote;
   const blocked = busy || saving;
+  const rememberFocus = useFailedActionFocus(blocked);
   const dirty = tags !== savedTags || note !== record.note;
   useEffect(() => { setTags(savedTags); setNote(record.note); setAttempt(0); setMessage(''); }, [record.id, savedTags, record.note]);
   useEffect(() => { if (attempt) (invalidTags ? tagsInput : noteInput).current?.focus(); }, [attempt]);
@@ -43,13 +45,15 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
   const save = async () => {
     if (pending.current || blocked || !dirty) return;
     if (invalid) { setAttempt(value => value + 1); return; }
+    const finishFocus = rememberFocus();
+    let failed = false;
     pending.current = true; setSaving(true); setMessage('');
-    try { if (!await onSave({ tags: validation.tags, note })) setMessage(copy.archiveMetadataSaveFailed); }
-    catch { setMessage(copy.archiveMetadataSaveFailed); }
-    finally { pending.current = false; setSaving(false); }
+    try { if (!await onSave({ tags: validation.tags, note })) { failed = true; setMessage(copy.archiveMetadataSaveFailed); } }
+    catch { failed = true; setMessage(copy.archiveMetadataSaveFailed); }
+    finally { finishFocus(failed); pending.current = false; setSaving(false); }
   };
   return <>
-    <details className="archive-metadata">
+    <details className="archive-metadata" data-library-return="metadata">
       <summary><span>{copy.libraryMetadata}</span><span className="library-metadata-preview">{record.tags.join(' / ') || record.note}</span>{dirty ? <small>{copy.decisionUnsaved}</small> : null}</summary>
       <form aria-busy={saving} onSubmit={event => { event.preventDefault(); void save(); }}>
         <div className="archive-fields">

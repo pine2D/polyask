@@ -26,7 +26,7 @@ interface ArchiveCompareProps {
   readonly onEvidence?: (value: ExactExcerpt) => void;
   readonly onFollowUp?: (host: string, value?: ExactExcerpt) => void;
   readonly comparisonDrafts?: ComparisonDraftStore;
-  readonly onCreateDecisionDraft?: (record: ArchiveRecord, draft: DecisionInput) => void;
+  readonly onCreateDecisionDraft?: (record: ArchiveRecord, draft: DecisionInput, origin?: string) => void;
 }
 
 function ComparisonColumn(props: {
