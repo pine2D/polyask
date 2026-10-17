@@ -20,9 +20,11 @@
 
 安全写法保留原有严格语义：`assert.equal(el === null, true, message)`、`assert.equal(document.activeElement === button, true, message)`；回答文本、disabled、checked、数量仍直接比较对应标量。`assert.equal(el, null, message)`、直接比较两节点、把节点包入数组/对象后 deepEqual 都不允许。失败路径不得打印 DOM 或 Fiber。
 
-Linux 有可用的用户级 systemd 时，入口自动创建临时 scope，整个测试组 `MemoryMax=4G` / `MemorySwapMax=512M`；退出后不保留系统配置。离线 Node 门禁在无 systemd 的环境使用 `prlimit` 继承每进程 2 GiB `RLIMIT_DATA`，并限制 V8 旧生代 1 GiB；它覆盖原生匿名分配，但不是整个进程树的总内存上限。`prlimit` 不可用则失败退出，不自动无限额重跑。Windows/macOS 保留断言保护、串行及 V8 旧生代限制，OS 级原生内存上限尚未实现，不宣称与 Linux cgroup 等效。
+Linux 有可用的用户级 systemd 时，入口自动创建临时 scope，设置 `MemoryMax=4G` / `MemorySwapMax=512M`；退出后不保留系统配置。离线 Node 门禁在无 systemd 的环境使用 `prlimit` 继承每进程 2 GiB `RLIMIT_DATA`，并限制 V8 旧生代 1 GiB；它覆盖原生匿名分配，但不是整个进程树的总内存上限。`prlimit` 不可用则失败退出，不自动无限额重跑。Windows/macOS 保留断言保护、串行及 V8 旧生代限制，OS 级原生内存上限尚未实现，不宣称与 Linux cgroup 等效。
 
 Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限额；`test:shell-ui` / `test:library-ui` 已统一接入。其它专项经 `node scripts/test-safe.mjs command node scripts/example.mjs`；`.check.ts` 经 `test:unit`。从受限 scope 运行脚本不等于整个 Codex/其它程序已受限；Codex 包装脚本、earlyoom、全局安装和持久系统配置另需明确授权。
+
+Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此启动器打印的限额不等于浏览器实际共同边界。`test/ui/reading-native-check.ts` 仅对 Linux 合成 Electron 子进程隔离会话总线；阅读无障碍专项在启动、各场景和结束时枚举各线程 children，并以 `app.getAppMetrics()` 补充 PID，核对所有已观测 PID 的共同 cgroup 限额。进程退出竞态可忽略，其它读取错误直接失败。这些专项不覆盖 D-Bus 桌面集成，其它原生入口仍须核对实际进程边界。
 
 ## 结果库视觉与交互回归
 
@@ -1338,3 +1340,11 @@ Alt+C 三语名称明确“保存并复制所选回答”；采集保存成功�
 原生专项在`desktop/`运行`node scripts/test-safe.mjs command env -u WAYLAND_DISPLAY xvfb-run -a -s '-screen 0 1920x1200x24' node scripts/shell-visual.mjs --shortcut-reference-only`，保留30种三语、平台键位与窗口宽度布局，六组可信输入另核对发送项检索及只读点击/Enter。200%外壳缩放下上下文与键位完整可读，没有裁切、重叠或越出视口；控制台错误为零，已查看三语明暗截图。
 
 验收使用隔离Linux/WSL/Xvfb、临时cgroup和合成资料；平台参数验证键位展示，不替代Windows/macOS物理按键、输入法或读屏实机。本轮没有访问用户档案、真实站点或Drive。
+
+## 2026-10-17 采集命名与比较键盘阅读验收
+
+`test/reading-accessibility-interaction.check.ts` 在旧产品上分别检出采集按钮名称/提示缺失，以及比较正文缺少键盘入口；修复后三语、明暗主题、100%/200%缩放与强制颜色共13场景通过。按钮名称由Chromium可访问树读取；26次双栏Tab进入均保留当前阅读位置，方向键和PageDown只滚动本栏，重入保留位置，摘录与Shift+Tab返回来源仍可到达，来源切换后阅读区域名称跟随更新。已查看正文首个焦点、窄窗采集入口和强制颜色截图。
+
+最终串行原生验证同时通过既有比较和综合专项，各保留14组布局及原文选区、焦点返回、独立滚动、决策草稿、提交未确认和综合恢复等流程。完整Desktop门禁通过2,111项应用/界面测试与432项运行时测试，零失败、零取消、零跳过；独立typecheck及仓库verify通过。
+
+初次原生尝试在资源检查处提前失败，未计为产品RED。隔离合成子进程会话总线后才继续；最终无障碍专项15笔实际样本的所有已观测PID均在同一4GiB/512MiB共同scope内。独立复核没有产品阻断项，所提进程采样Minor已补强并在最终专项验证。全部使用临时档案与合成数据，不访问用户资料、真实站点或Drive；Windows/macOS物理按键、输入法和读屏实机未验。

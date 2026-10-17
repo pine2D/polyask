@@ -72,7 +72,7 @@ function ComparisonColumn(props: {
         </div>
       ))}</>;
   return (
-    <article ref={node} className="archive-compare-column" onScroll={event => {
+    <article ref={node} className="archive-compare-column" tabIndex={0} aria-label={context} onScroll={event => {
       const top = event.currentTarget.scrollTop;
       positions.current.set(props.host, { text: props.text, top }); props.onPosition?.(top);
       props.onUserScroll?.(event.currentTarget);

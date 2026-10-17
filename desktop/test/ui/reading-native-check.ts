@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import webpack from 'webpack';
 
-export async function checkNativeReading(suite: 'comparison' | 'analysis', expectedScenarios: readonly string[]) {
+export async function checkNativeReading(suite: 'comparison' | 'analysis' | 'accessibility', expectedScenarios: readonly string[]) {
   const output = mkdtempSync(join(tmpdir(), `polyask-${suite}-reading-`));
   console.log(`${suite} native evidence: ${output}`);
   await new Promise<void>((resolve, reject) => {
@@ -22,7 +22,9 @@ export async function checkNativeReading(suite: 'comparison' | 'analysis', expec
   const binary = require('electron') as string, args = [join(__dirname, 'reading-native-runtime.cjs'), output, suite];
   const headless = process.platform === 'linux' && !process.env.DISPLAY;
   const result = spawnSync(headless ? 'xvfb-run' : binary, headless ? ['-a', binary, ...args] : args,
-    { encoding: 'utf8', timeout: 45000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+    { encoding: 'utf8', timeout: 45000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '',
+      // 仅隔离合成 Electron 子进程的会话总线，避免 Chromium 自动迁出测试 cgroup。
+      ...(process.platform === 'linux' ? { DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` } : {}) } });
   writeFileSync(join(output, 'runtime.log'), `${result.stdout}\n${result.stderr}`);
   if (result.stdout) process.stdout.write(result.stdout);
   assert.equal(result.status, 0, `Native reading failed. Evidence: ${output}; ${result.error?.message || ''}`);
@@ -32,6 +34,12 @@ export async function checkNativeReading(suite: 'comparison' | 'analysis', expec
   };
   assert.equal(data.report.map(item => item.scenario).sort().join(','), [...expectedScenarios].sort().join(','));
   assert.equal(data.report.every(item => item.ok), true);
+  if (suite === 'accessibility') {
+    assert.equal(data.geometry.length, 13);
+    assert.equal(new Set(data.geometry.map(item => item.name)).size, 13);
+    assert.equal(data.geometry.every(item => !item.overflow && !item.controlOverflow), true);
+    return;
+  }
   assert.equal(data.geometry.length, 14); assert.equal(new Set(data.geometry.map(item => item.name)).size, 14);
   const expected = ['en', 'zh-CN', 'zh-TW'].flatMap(locale => ['light', 'dark'].flatMap(theme =>
     [1200, 640].map(width => `${locale}-${theme}-${width}-100-normal`)));
