@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.23.1] - 2026-10-19
+
+验收范围：Linux/WSL 下通过 2,132 项应用与界面测试、432 项运行时测试；原生界面检查覆盖三语、明暗主题、两种密度、200% 缩放，以及比较阅读、工具栏菜单和键盘操作。
+
+验收限制：界面检查使用本地合成资料；Windows、macOS 真机、五种发行包的实际安装、物理读屏和输入法、真实 Google Drive 双设备同步未在本轮核验。
+
 ### 修复
 
 - 结果库专注阅读与比较时，将文件夹和更多操作合入顶部工具栏，增加短窗口的正文空间；保留键盘菜单、返回浏览和两栏阅读位置。
@@ -1401,7 +1407,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.23.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.23.1...HEAD
+[1.23.1]: https://github.com/pine2D/polyask/compare/v1.23.0...v1.23.1
 [1.23.0]: https://github.com/pine2D/polyask/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/pine2D/polyask/compare/v1.21.1...v1.22.0
 [1.21.1]: https://github.com/pine2D/polyask/compare/v1.21.0...v1.21.1
