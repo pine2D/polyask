@@ -17,6 +17,10 @@ app.whenReady().then(async () => {
     await require('./reading-accessibility-native.cjs')({ app, win, state, output, ...tools });
     win.destroy(); app.exit(0); return;
   }
+  if (suite === 'layout') {
+    await require('./library-focused-toolbar-native.cjs')({ app, win, state, output, ...tools });
+    win.destroy(); app.exit(0); return;
+  }
   check(!only || (suite === 'comparison' && ['comparison-focus-and-scroll', 'literal-worksheet-and-decision', 'raw-follow-up-and-source-boundaries'].includes(only)), 'known diagnostic scenario');
   const mark = async (expression, name = 'target') => {
     await js(`(()=>{document.querySelectorAll('[data-native-target]').forEach(node=>node.removeAttribute('data-native-target'));

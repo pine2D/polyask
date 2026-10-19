@@ -1,4 +1,6 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useContext, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from 'react-dom';
+import { LibraryRecordToolbar } from './library-record-toolbar';
 
 import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
@@ -68,6 +70,8 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const Detail = props.embedded ? 'div' : 'main';
   const localReader = useArchiveReader(selected ?? { id: '', results: [] }, selected?.id === props.comparisonId);
   const reader = props.reader ?? localReader;
+  const toolbarHost = useContext(LibraryRecordToolbar);
+  const mergedToolbar = props.embedded && !props.detailOverride ? toolbarHost : null;
   const pane = useRef<HTMLElement>(null);
   const editorReturnScroll = useRef<number | null>(null);
   const rememberEditorScroll = () => { editorReturnScroll.current = pane.current?.scrollTop ?? null; };
@@ -106,9 +110,15 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
     { label: copy.exportArchive, run: props.onExport },
     { label: copy.deleteArchive, run: () => setConfirmDelete(selected?.id ?? null), danger: true }
   ];
+  const recordActions = <div className="archive-actions">
+    {!props.embedded ? <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button> : null}
+    {props.onOrganize ? <button className="library-organize" type="button" disabled={props.busy} onClick={props.onOrganize}>{copy.libraryOrganize}</button> : null}
+    <LibraryMenu label={copy.libraryMore} disabled={!selected || props.busy} actions={actions} />
+    {!props.embedded ? <button className="panel-close" type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
+  </div>;
   return (
-    <section className="archive-workspace" aria-label={props.embedded ? copy.folderResults : copy.archiveTitle} aria-busy={props.busy}>
-      <header className="archive-toolbar">
+    <section className="archive-workspace" data-toolbar-merged={!!mergedToolbar} aria-label={props.embedded ? copy.folderResults : copy.archiveTitle} aria-busy={props.busy}>
+      {mergedToolbar ? createPortal(recordActions, mergedToolbar) : <header className="archive-toolbar">
         {props.embedded ? <span className="library-record-kind">{copy.folderResults}</span> : null}
         {!props.embedded ? <div className="decision-tabs"><strong><ArchiveIcon />{copy.archiveTitle}</strong>{props.onDecisions ? <button type="button" disabled={props.busy} onClick={props.onDecisions}>{copy.decisionTitle}</button> : null}</div> : null}
         {!props.embedded ? <div className="archive-filters">
@@ -119,13 +129,8 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
             {props.tags.map((tag) => <option value={tag} key={tag}>{tag}</option>)}
           </select>
         </div> : null}
-        <div className="archive-actions">
-          {!props.embedded ? <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button> : null}
-          {props.onOrganize ? <button className="library-organize" type="button" disabled={props.busy} onClick={props.onOrganize}>{copy.libraryOrganize}</button> : null}
-          <LibraryMenu label={copy.libraryMore} disabled={!selected || props.busy} actions={actions} />
-          {!props.embedded ? <button className="panel-close" type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
-        </div>
-      </header>
+        {recordActions}
+      </header>}
       <div className="archive-body">
         {!props.embedded ? <aside className="archive-list" aria-label={copy.archiveTitle}>
           {props.loading || !props.items.length ? (

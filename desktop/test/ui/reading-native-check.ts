@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import webpack from 'webpack';
 
-export async function checkNativeReading(suite: 'comparison' | 'analysis' | 'accessibility', expectedScenarios: readonly string[]) {
+export async function checkNativeReading(suite: 'comparison' | 'analysis' | 'accessibility' | 'layout', expectedScenarios: readonly string[]) {
   const output = mkdtempSync(join(tmpdir(), `polyask-${suite}-reading-`));
   console.log(`${suite} native evidence: ${output}`);
   await new Promise<void>((resolve, reject) => {
@@ -34,9 +34,10 @@ export async function checkNativeReading(suite: 'comparison' | 'analysis' | 'acc
   };
   assert.equal(data.report.map(item => item.scenario).sort().join(','), [...expectedScenarios].sort().join(','));
   assert.equal(data.report.every(item => item.ok), true);
-  if (suite === 'accessibility') {
-    assert.equal(data.geometry.length, 13);
-    assert.equal(new Set(data.geometry.map(item => item.name)).size, 13);
+  if (suite === 'accessibility' || suite === 'layout') {
+    const count = suite === 'layout' ? 18 : 13;
+    assert.equal(data.geometry.length, count);
+    assert.equal(new Set(data.geometry.map(item => item.name)).size, count);
     assert.equal(data.geometry.every(item => !item.overflow && !item.controlOverflow), true);
     return;
   }

@@ -22,6 +22,7 @@ import { LibraryBulkActions } from './library-bulk-actions';
 import { LibraryBulkFolderDialog } from './library-bulk-folder-dialog';
 import type { BulkRequest } from './library-bulk-runner';
 import { useDecisionReturn } from './use-decision-return';
+import { LibraryRecordToolbar } from './library-record-toolbar';
 
 type LibraryFailure = 'capture' | 'load';
 
@@ -55,6 +56,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const reportLoadFailure = () => setFailure(current => current === 'capture' ? current : 'load');
   const [bulkFolders, setBulkFolders] = useState(false);
   const [focused, setFocused] = useState(initial.focused);
+  const [recordToolbar, setRecordToolbar] = useState<HTMLDivElement | null>(null);
   const [pane, setPane] = useState<'navigation' | 'list' | 'detail'>(initial.pane);
   const epoch = useRef(0);
   const intent = useRef(0);
@@ -199,13 +201,15 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     setBulkFolders(false); bulk.start({ action, favorite, folderIds, targets, locale: props.locale });
   });
   const labels = getLibraryCopy(props.locale);
-  return <section ref={reading.root} className="folder-workspace library" data-focused={focused} data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
+  return <LibraryRecordToolbar.Provider value={focused && !newSource && selected?.kind === 'archive' ? recordToolbar : null}>
+  <section ref={reading.root} className="folder-workspace library" data-focused={focused} data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
     <header className="folder-toolbar">
       <strong><ArchiveIcon />{copy.archiveTitle}</strong>
       <span className="library-scope" title={folderName}>{folderName}</span>
       <div className="library-toolbar-actions">
         <button className="folder-back-navigation" onClick={() => navigate(() => { setFocused(false); setPane('navigation'); })}>{copy.folderTitle}</button>
         <button className="folder-back-list" onClick={() => navigate(() => { setNewSource(null); setPane('list'); })}><BackIcon />{copy.folderBackList}</button>
+        <div className="library-record-toolbar" ref={setRecordToolbar} />
         <button className="library-focus" aria-pressed={focused} disabled={busy || (!focused && !selected && !newSource)} title={focused ? copy.libraryBrowse : copy.libraryFocus} aria-label={focused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => focusDetail(!focused)}><FocusIcon /></button>
         <button aria-label={copy.captureArchive} title={copy.captureArchive} disabled={busy} onClick={capture}><ArchiveIcon /><span>{copy.captureArchive}</span></button>
         <button className="panel-close library-close" aria-label={copy.closeArchive} title={copy.closeArchive} disabled={busy} onClick={() => navigate(props.onClose)}><CloseIcon /></button>
@@ -255,5 +259,5 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={{ kind: membership.kind, id: membership.id }} targetTitle={membership.title} folders={folders} onCreated={createdFolder} onCancel={() => setMembership(null)} onSaved={() => { setMembership(null); refresh(); }} /> : null}
     {bulkFolders && <LibraryBulkFolderDialog copy={copy} labels={labels} folders={folders} count={targets.length}
       onCancel={() => setBulkFolders(false)} onConfirm={ids => startBulk('add-folder', undefined, ids)} />}
-  </section>;
+  </section></LibraryRecordToolbar.Provider>;
 }

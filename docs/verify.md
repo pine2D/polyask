@@ -28,6 +28,8 @@ Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此�
 
 ## 结果库视觉与交互回归
 
+专注阅读合栏专项：在 `desktop/` 运行 `npm run test:unit -- test/library-focused-toolbar-interaction.check.ts`。18 组覆盖三语、明暗主题、两种密度与 200% 缩放；960×720 下检查顶部保持一行、移除独立记录栏并为正文回收空间，窄窗检查按钮尺寸、换行与无重叠。三语实际 Tab/方向键/Escape 核验文件夹→更多的顺序、菜单退出焦点，以及展开/返回后两栏节点和阅读位置；配合 `library-focused-toolbar.test.tsx` 检查删除确认取消与新建决策返回。临时 Electron 使用合成数据、阻断外网，并核对实际进程共同 4GiB/512MiB cgroup；不替代物理设备与读屏验收。
+
 取消新卡与失败重试专项：在 `desktop/` 运行 `npm run test:unit -- test/library-recovery-interaction.check.ts`。使用生产组件和完整全局样式，三语、明暗主题、1440/960px 下检查原阅读/比较返回、笔记及各滚动位置、四类失败后的真实键盘重试、内外取消名称和等待期间不抢焦点。临时 Electron profile 阻断外网；Linux 隔离子进程会话总线，按实际各线程 children 与 app metrics 核对共同 4GiB/512MiB cgroup，退出后确认观测 PID 消失并移除 profile，截图/报告留在临时目录。不替代 Windows/macOS 和物理读屏验收。
 
 在 `desktop/` 运行 `npm run test:library-ui`；无显示服务器的 Linux 使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:library-ui`。脚本构建生产组件＋隔离内存夹具；常规结果库与综合/比较夹具均加载生产外壳的全局输入和焦点样式，使用临时 Electron profile，不读取用户数据库、不连接站点或 Drive。输出路径包含截图与 `report.json`，由脚本每次打印；临时产物留供检查，不入库。
