@@ -32,7 +32,17 @@ export class OutboxRepository {
     return { ...value, revision };
   }
 
-  count(): number {
+  has(key: string): boolean { return !!this.database.prepare("SELECT 1 FROM outbox WHERE key = ?").get(key); }
+
+  count(eligible?: (operation: OutboxOperation) => boolean): number {
+    if (eligible) {
+      let count = 0;
+      for (const row of this.database.prepare("SELECT body FROM outbox").iterate()) {
+        const operation = readJson<OutboxOperation>(row);
+        if (operation && eligible(operation)) count++;
+      }
+      return count;
+    }
     const row = this.database.prepare("SELECT COUNT(*) AS count FROM outbox").get() as { count?: unknown } | undefined;
     return Number(row?.count) || 0;
   }
@@ -65,20 +75,25 @@ export class OutboxRepository {
     if (rows.length) for (const listener of this.listeners) listener();
   }
 
-  ready(now: number, limit = 100, excluded: readonly SyncEntityKind[] = []): (OutboxOperation & { readonly revision: number })[] {
+  ready(now: number, limit = 100, excluded: readonly SyncEntityKind[] = [], eligible?: (operation: OutboxOperation) => boolean): (OutboxOperation & { readonly revision: number })[] {
+    if (limit <= 0) return [];
     const rows = this.database.prepare(`
       SELECT body, revision FROM outbox
       WHERE next_at <= ? ${excluded.length ? `AND kind NOT IN (${excluded.map(() => "?").join(",")})` : ""}
-      ORDER BY next_at, key LIMIT ?
-    `).all(now, ...excluded, limit);
-    return rows.flatMap((row) => {
+      ORDER BY next_at, key
+    `).iterate(now, ...excluded);
+    const result: (OutboxOperation & { readonly revision: number })[] = [];
+    for (const row of rows) {
       const value = readJson<OutboxOperation>(row);
       const revision = Number((row as { revision?: unknown }).revision);
-      return value && Number.isSafeInteger(revision) ? [{ ...value, revision }] : [];
-    });
+      if (value && Number.isSafeInteger(revision) && (!eligible || eligible(value))) result.push({ ...value, revision });
+      if (result.length >= limit) break;
+    }
+    return result;
   }
 
-  nextAt(excluded: readonly SyncEntityKind[] = []): number | null {
+  nextAt(excluded: readonly SyncEntityKind[] = [], eligible?: (operation: OutboxOperation) => boolean): number | null {
+    if (eligible) return this.ready(Number.MAX_SAFE_INTEGER, 1, excluded, eligible)[0]?.nextAt ?? null;
     const row = this.database.prepare(`SELECT MIN(next_at) AS nextAt FROM outbox
       ${excluded.length ? `WHERE kind NOT IN (${excluded.map(() => "?").join(",")})` : ""}`).get(...excluded) as { nextAt: number | null };
     return row.nextAt;

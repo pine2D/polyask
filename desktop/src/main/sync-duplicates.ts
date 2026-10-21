@@ -6,7 +6,7 @@ export interface DuplicateDrive {
 }
 
 /** Shared entity files any device may rewrite; per-device files are converged only by their writer. */
-const SHARED_KINDS = new Set<OutboxOperation["kind"]>(["archive", "decision", "folder", "folderMembership", "question", "questionAnswer"]);
+const SHARED_KINDS = new Set<OutboxOperation["kind"]>(["archive", "decision", "folder", "folderMembership", "question", "questionAnswer", "questionAttachments"]);
 
 /**
  * A create whose response was lost (timeout, crash) leaves two Drive files for one logical key.
@@ -22,12 +22,19 @@ export async function convergeDuplicateFiles(repository: SyncRepository, drive: 
   for (const [key, ids] of byKey) {
     const operation = rewrite(key, deviceId);
     if (ids.length < 2 || !operation) continue;
+    if (operation.kind === "questionAttachments") {
+      // Only a verified complete winner may replace or remove other cloud copies.
+      if (!repository.imageOperationEligible(operation)) continue;
+      try { if (!repository.questionAttachments(operation.entityId!)) continue; } catch { continue; }
+      if (ids.some(id => repository.driveFile(id)?.seenAt === 0)) continue;
+    }
     const [, ...extra] = [...ids].sort();
     let removed = false;
     for (const id of extra) {
       signal.throwIfAborted();
       try {
         await drive.remove(id, signal);
+        signal.throwIfAborted();
         repository.deleteDriveFile(id);
         removed = true;
       } catch (error) {

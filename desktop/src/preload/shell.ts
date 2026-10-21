@@ -155,6 +155,7 @@ export interface PolyAskDesktopApi {
   deletePromptTemplate(id: string): Promise<PromptLibraryState>;
   connectSync(): Promise<SyncStatus>;
   syncNow(): Promise<SyncStatus>;
+  setImageSyncEnabled(enabled: boolean, confirmed?: boolean): Promise<SyncStatus>;
   disconnectSync(): Promise<SyncStatus>;
   clearRemoteSync(confirmation: string): Promise<SyncStatus>;
   syncDiagnostics(): Promise<SyncDiagnosticSnapshot>;
@@ -299,6 +300,8 @@ const api: PolyAskDesktopApi = Object.freeze({
   deletePromptTemplate: (id: string) => invoke("polyask:prompt-template-delete", id),
   connectSync: () => invoke("polyask:sync-connect"),
   syncNow: () => invoke("polyask:sync-now"),
+  setImageSyncEnabled: (enabled: boolean, confirmed?: boolean) => invoke("polyask:sync-images", enabled, confirmed),
+  questionFetchAttachments: (id: string) => invoke("polyask:question-fetch-attachments", id),
   disconnectSync: () => invoke("polyask:sync-disconnect"),
   clearRemoteSync: (confirmation: string) => invoke("polyask:sync-clear", confirmation),
   syncDiagnostics: () => invoke("polyask:sync-diagnostics"),

@@ -1,5 +1,10 @@
 export const QUESTION_ATTACHMENT_COPY = {
   en: {
+    imageSyncTitle: 'Sync original images on this device',
+    imageSyncDescription: 'Off by default. Originals use space on this device and in Drive. Enabling uploads saved and new originals to Google Drive and downloads originals from other devices. Turning it off stops image transfers and keeps local images and the queue; text sync and relevant deletion markers continue.',
+    imageSyncConfirm: 'Enable image sync',
+    imageSyncWarning: 'Original images, filenames and EXIF metadata will be stored in Google Drive app data. This includes existing saved images. Upgrade PolyAsk on every device first: older versions will stop uploading all synced data when they see the new format. Enable image sync on this device?',
+    imageSyncEnabled: 'Image sync is on for this device.', imageSyncDisabled: 'Image sync is off for this device.',
     questionOriginals: 'Original images', questionOriginalsLoading: 'Loading original images…',
     questionOriginalsMissing: 'Original images were not saved or have not synced to this device. Your draft is unchanged.',
     questionOriginalsFailed: 'Original images could not be read. Your draft is unchanged.',
@@ -13,6 +18,11 @@ export const QUESTION_ATTACHMENT_COPY = {
     questionReaskLoading: 'Preparing question draft…'
   },
   zhCN: {
+    imageSyncTitle: '在本机同步原始图片',
+    imageSyncDescription: '默认关闭。原图会占用本机和 Drive 空间。开启后，将已有和新保存的原图上传到 Google Drive，并下载其他设备的原图。关闭会停止图片传输，保留本机图片和队列；文字同步及相关删除标记继续传输。',
+    imageSyncConfirm: '开启图片同步',
+    imageSyncWarning: '原图、文件名和 EXIF 元数据将存入 Google Drive 应用数据，包含已保存的原图。请先升级所有设备上的 PolyAsk：旧版遇到新格式后会停止上传全部同步数据。要在本机开启图片同步吗？',
+    imageSyncEnabled: '本机已开启图片同步。', imageSyncDisabled: '本机已关闭图片同步。',
     questionOriginals: '原始图片', questionOriginalsLoading: '正在读取原图…',
     questionOriginalsMissing: '原图未保存或尚未同步到本机，当前草稿未改动。',
     questionOriginalsFailed: '原图读取失败，当前草稿未改动。',
@@ -26,6 +36,11 @@ export const QUESTION_ATTACHMENT_COPY = {
     questionReaskLoading: '正在准备提问草稿…'
   },
   zhTW: {
+    imageSyncTitle: '在本機同步原始圖片',
+    imageSyncDescription: '預設關閉。原圖會占用本機與 Drive 空間。開啟後，會將既有及新儲存的原圖上傳至 Google Drive，並下載其他裝置的原圖。關閉會停止圖片傳輸，保留本機圖片及佇列；文字同步與相關刪除標記仍會傳輸。',
+    imageSyncConfirm: '開啟圖片同步',
+    imageSyncWarning: '原圖、檔名及 EXIF 中繼資料將存入 Google Drive 應用程式資料，包含已儲存的原圖。請先升級所有裝置上的 PolyAsk：舊版遇到新格式後，會停止上傳所有同步資料。要在本機開啟圖片同步嗎？',
+    imageSyncEnabled: '本機已開啟圖片同步。', imageSyncDisabled: '本機已關閉圖片同步。',
     questionOriginals: '原始圖片', questionOriginalsLoading: '正在讀取原圖…',
     questionOriginalsMissing: '原圖未儲存或尚未同步到本機，目前草稿未變更。',
     questionOriginalsFailed: '原圖讀取失敗，目前草稿未變更。',

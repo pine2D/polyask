@@ -1,3 +1,4 @@
+import { boundedResponseText } from "./bounded-response";
 import { isProxyNetError } from "./proxy-net-error";
 
 export interface AccessTokenProvider {
@@ -86,8 +87,8 @@ export class DriveClient {
     return { changes, newStartPageToken: fresh };
   }
 
-  download(fileId: string, signal?: AbortSignal): Promise<unknown> {
-    return this.json(`${API}/files/${encodeURIComponent(fileId)}?alt=media`, { signal });
+  download(fileId: string, signal?: AbortSignal, maxBytes = Infinity): Promise<unknown> {
+    return this.json(`${API}/files/${encodeURIComponent(fileId)}?alt=media`, { signal }, this.requestTimeoutMs, maxBytes);
   }
 
   async upsert(fileId: string | null, name: string, appProperties: Readonly<Record<string, string>>, body: unknown, signal?: AbortSignal): Promise<DriveFile> {
@@ -153,10 +154,14 @@ export class DriveClient {
     }
   }
 
-  private async json<T>(url: string, init: RequestInit, timeoutMs = this.requestTimeoutMs): Promise<T> {
+  private async json<T>(url: string, init: RequestInit, timeoutMs = this.requestTimeoutMs, maxBytes = Infinity): Promise<T> {
     return this.withDeadline(init.signal, timeoutMs, async (signal, deadline) => {
       const response = await this.requestWithinDeadline(url, { ...init, signal }, init.signal, deadline);
-      try { return JSON.parse(await response.text()) as T; }
+      try {
+        const text = Number.isFinite(maxBytes) ? await boundedResponseText(response, maxBytes, signal) : await response.text();
+        signal.throwIfAborted();
+        return JSON.parse(text) as T;
+      }
       catch (error) {
         throwCallerAbort(init.signal);
         if (deadline.aborted || ["AbortError", "TimeoutError"].includes((error as { name?: string }).name || ""))

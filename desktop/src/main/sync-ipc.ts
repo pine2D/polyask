@@ -1,5 +1,6 @@
 import { ipcMain } from "electron";
 
+import { questionIdValid } from "../shared/question-history";
 import { CLEAR_REMOTE_CONFIRMATION } from "../shared/sync";
 import type { RuntimeInfo } from "../shared/runtime";
 import type { SyncEngine } from "./sync-engine";
@@ -20,7 +21,9 @@ const CHANNELS = [
   "polyask:sync-now",
   "polyask:sync-disconnect",
   "polyask:sync-clear",
-  "polyask:sync-diagnostics"
+  "polyask:sync-diagnostics",
+  "polyask:sync-images",
+  "polyask:question-fetch-attachments"
 ] as const;
 
 export function registerSyncIpc(options: SyncIpcOptions): () => void {
@@ -44,6 +47,16 @@ export function registerSyncIpc(options: SyncIpcOptions): () => void {
   ipcMain.handle(CHANNELS[4], (event) => {
     if (!options.trusted(event)) throw new Error("untrusted_sender");
     return options.sync.diagnostics(options.runtime);
+  });
+  ipcMain.handle(CHANNELS[5], (event, enabled: unknown, confirmed: unknown) => {
+    if (!options.trusted(event)) throw new Error("untrusted_sender");
+    if (typeof enabled !== "boolean" || (enabled && confirmed !== true)) throw new Error("invalid_image_sync_setting");
+    return options.sync.setImageSyncEnabled(enabled);
+  });
+  ipcMain.handle(CHANNELS[6], (event, id: unknown) => {
+    if (!options.trusted(event)) throw new Error("untrusted_sender");
+    if (!questionIdValid(id)) throw new Error("invalid_question");
+    return options.sync.fetchQuestionAttachments(id);
   });
   return () => { for (const channel of CHANNELS) ipcMain.removeHandler(channel); };
 }

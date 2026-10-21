@@ -1,3 +1,4 @@
+import { SyncImages } from "./sync-images";
 import { createHash } from "node:crypto";
 import {
   mergeStateFragments,
@@ -13,7 +14,7 @@ export interface SyncPullDrive extends DuplicateDrive {
   listFiles(signal?: AbortSignal): Promise<DriveFile[]>;
   getStartToken(signal?: AbortSignal): Promise<string>;
   listChanges(pageToken: string, signal?: AbortSignal): Promise<{ changes: DriveChange[]; newStartPageToken: string | null }>;
-  download(fileId: string, signal?: AbortSignal): Promise<unknown>;
+  download(fileId: string, signal?: AbortSignal, maxBytes?: number): Promise<unknown>;
 }
 
 type StateMap = Record<string, StateFragment>;
@@ -23,16 +24,19 @@ type FutureFiles = Map<string, number>;
 export class SyncPull {
   /** Corrupt files seen in this round only; the stored count is a snapshot, not a tally. */
   private roundCorrupt = 0;
+  private readonly imageRead = new Set<string>();
 
   constructor(
     private readonly repository: SyncRepository,
     private readonly drive: SyncPullDrive,
     private readonly now: () => number,
-    private readonly onWorkspaceChanged?: () => void
+    private readonly onWorkspaceChanged?: () => void,
+    private readonly images: SyncImages = new SyncImages(repository, drive, now)
   ) {}
 
   async run(signal: AbortSignal): Promise<void> {
     this.roundCorrupt = 0;
+    this.imageRead.clear();
     const config = this.repository.config();
     // Old binaries preserve unknown config fields, so a capability marker cannot prove
     // these skipped files were downloaded. Replay until each file is read or removed.
@@ -46,20 +50,33 @@ export class SyncPull {
       if (detail.code !== "page_token_expired" && detail.status !== 410) throw error;
       await this.fullScan(signal);
     }
+    signal.throwIfAborted();
+    if (this.repository.imageSyncEnabled()) {
+      const states = this.repository.remoteStates(), future = this.storedFutureFiles();
+      for (const file of this.repository.driveFiles().filter(file => file.seenAt === 0 && !this.imageRead.has(file.id))) {
+        signal.throwIfAborted();
+        if (file.appProperties?.kind === "questionAttachments") await this.readFile(file, states, future, this.now(), signal);
+      }
+      signal.throwIfAborted();
+      this.applyStates(states, future);
+    }
     // A newer schema on Drive makes this build read-only: it must not delete anything there either.
     if (!this.repository.config().readOnly) await convergeDuplicateFiles(this.repository, this.drive, signal);
   }
 
   private async fullScan(signal: AbortSignal): Promise<void> {
     const startToken = await this.drive.getStartToken(signal);
+    signal.throwIfAborted();
     const states: StateMap = {};
     const future = this.storedFutureFiles();
     const seen = new Set<string>();
     for (const file of await this.drive.listFiles(signal)) {
+      signal.throwIfAborted();
       seen.add(file.id);
       await this.readFile(file, states, future, this.now(), signal);
     }
     const changes = await this.drive.listChanges(startToken, signal);
+    signal.throwIfAborted();
     for (const change of changes.changes) await this.readChange(change, states, future, seen, signal);
     for (const indexed of this.repository.driveFiles()) {
       if (!seen.has(indexed.id)) this.repository.deleteDriveFile(indexed.id);
@@ -67,6 +84,7 @@ export class SyncPull {
     // A failed download is not proof of compatibility; only a successful read or
     // absence from both the listing and its subsequent changes releases the lock.
     for (const fileId of future.keys()) if (!seen.has(fileId)) future.delete(fileId);
+    signal.throwIfAborted();
     this.applyStates(states, future);
     this.repository.saveConfig({ pageToken: changes.newStartPageToken ?? startToken });
   }
@@ -76,6 +94,7 @@ export class SyncPull {
     const future = this.storedFutureFiles();
     const changes = await this.drive.listChanges(token, signal);
     for (const change of changes.changes) await this.readChange(change, states, future, null, signal);
+    signal.throwIfAborted();
     this.applyStates(states, future);
     this.repository.saveConfig({ pageToken: changes.newStartPageToken ?? token });
   }
@@ -87,6 +106,7 @@ export class SyncPull {
     seen: Set<string> | null,
     signal: AbortSignal
   ): Promise<void> {
+    signal.throwIfAborted();
     const id = change.file?.id ?? change.fileId;
     if (!id) return;
     if (change.removed || !change.file) {
@@ -108,9 +128,10 @@ export class SyncPull {
     seenAt: number,
     signal: AbortSignal
   ): Promise<void> {
+    signal.throwIfAborted();
     const props = file.appProperties ?? {};
     if (props.app !== "polyask") return;
-    const expectedSchema = (props.kind === "question" || props.kind === "questionAnswer") ? 4 : (props.kind === "folder" || props.kind === "folderMembership") ? 3 : props.kind === "decision" ? 2 : SYNC_SCHEMA;
+    const expectedSchema = props.kind === "questionAttachments" ? 5 : (props.kind === "question" || props.kind === "questionAnswer") ? 4 : (props.kind === "folder" || props.kind === "folderMembership") ? 3 : props.kind === "decision" ? 2 : SYNC_SCHEMA;
     if (Number(props.schema) > expectedSchema) {
       future.set(file.id, Number(props.schema));
       this.repository.deleteDriveFile(file.id);
@@ -121,9 +142,20 @@ export class SyncPull {
       this.noteCorrupt(file.id);
       return;
     }
+    if (props.kind === "questionAttachments") {
+      this.imageRead.add(file.id);
+      const result = await this.images.read(file, signal);
+      signal.throwIfAborted();
+      if (typeof result === "number") { future.set(file.id, result); this.repository.deleteDriveFile(file.id); }
+      else if (result === "corrupt") this.noteCorrupt(file.id);
+      else if (result === "failed") this.roundCorrupt++;
+      else if (result === "valid" || (future.get(file.id) ?? 0) <= SUPPORTED_SYNC_SCHEMA) future.delete(file.id);
+      return;
+    }
     let body: unknown;
     try {
       body = await this.drive.download(file.id, signal);
+      signal.throwIfAborted();
     } catch (error) {
       const code = (error as { code?: string }).code;
       if (code === "not_found") {
@@ -209,6 +241,7 @@ export class SyncPull {
 function logicalKey(file: DriveFile): string | null {
   const props = file.appProperties ?? {};
   if (!props.id) return null;
+  if (props.kind === "questionAttachments") return `questionAttachmentsHash:${props.id}`;
   if (props.kind === "state") return `state:${props.id}`;
   if (props.kind === "history" && props.device) return `history:${props.id}:${props.device}`;
   if (props.kind === "archive") return `archive:${props.id}`;

@@ -1,3 +1,5 @@
+import { SyncImageStore } from "./sync-image-store";
+import { isStoredQuestionAttachments } from "../shared/question-attachments";
 import { projectPreferences, applyPreferences } from './sync-preferences';
 import { projectDrafts, applyDrafts, carriedSettings } from './sync-drafts';
 import { purgeDraftTombstones } from './draft-retention';
@@ -73,7 +75,17 @@ const hostFor = (key: SiteKey) => SITES.find((site) => site.key === key)?.host;
 const keyFor = (host: string) => SITES.find((site) => site.host === host)?.key;
 
 export class SyncRepository {
-  constructor(private readonly database: DesktopDatabase, private readonly now: () => number = Date.now) {}
+  private readonly images: SyncImageStore;
+  constructor(private readonly database: DesktopDatabase, private readonly now: () => number = Date.now) { this.images = new SyncImageStore(database); }
+  imageSyncEnabled(): boolean { return this.images.enabled(); }
+  setImageSyncEnabled(enabled: boolean): void { this.images.setEnabled(enabled); }
+  imageLifecycle(): number { return this.database.questions.lifecycle; }
+  imageManifest(id: string) { return this.database.questionAttachments.get(id); }
+  importQuestionAttachments(value: unknown): boolean {
+    if (!isStoredQuestionAttachments(value)) return false;
+    try { this.database.questionAttachments.put(value, false); return true; } catch { return false; }
+  }
+  imageOperationEligible(operation: OutboxOperation): boolean { return this.images.eligible(operation); }
 
   deviceId(): string {
     const id = this.database.meta.get<unknown>("deviceId");
@@ -268,12 +280,11 @@ export class SyncRepository {
   history(id: string): StoredHistory | null { return this.database.history.get(id); }
   archive(id: string): StoredArchive | null { return this.database.archives.get(id); }
   enqueue(operation: OutboxOperation) { return this.database.outbox.enqueue(operation); }
-  // Keep originals queued locally until the dedicated opt-in transfer path is connected.
-  nextAt() { return this.database.outbox.nextAt(["questionAttachments"]); }
+  nextAt() { return this.database.outbox.nextAt([], this.images.selection()); }
   retry(operation: OutboxOperation & { readonly revision: number }) { this.database.outbox.retry(operation); }
-  ready(now: number) { return this.database.outbox.ready(now, 100, ["questionAttachments"]); }
+  ready(now: number) { return this.database.outbox.ready(now, 100, [], this.images.selection()); }
   complete(key: string, revision: number): boolean { return this.database.outbox.complete(key, revision); }
-  pending(): number { return this.database.outbox.count(); }
+  pending(): number { return this.database.outbox.count(this.images.selection()); }
   onLocalChange(listener: () => void): () => void { return this.database.outbox.onChange(listener); }
 
   driveFile(fileId: string) { return this.database.driveFiles.get(fileId); }

@@ -26,6 +26,7 @@ import { SyncDiagnosticsPanel } from "./sync-diagnostics-panel";
 import { describeSync } from "./sync-status";
 import { syncNeedsReauthorization, syncOverview } from "./sync-overview";
 import { shell } from "./shell-api";
+import { SettingsImageSync } from "./settings-image-sync";
 import { useSettingsSectionNavigation } from "./settings-section-navigation";
 
 interface SettingsWorkspaceProps {
@@ -270,6 +271,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
                 <button type="button" className="settings-control" title={props.copy.syncRevokeHint} disabled={busy} onClick={() => void run(() => shell.disconnectSync())}>{props.copy.syncRevoke}</button>
               ) : null}
             </div>
+            <SettingsImageSync copy={props.copy} status={props.status} blocked={closeLocked} onStatus={props.onStatus}
+              onFeedback={message => { setFeedback(message); props.onAnnounce(message); }} />
             <SyncDiagnosticsPanel
               copy={props.copy}
               snapshot={diagnostics}

@@ -29,20 +29,22 @@
 - `schema3-*.json`：任务文件夹、归属关系及删除标记，实体 schema 3。
 - `backup-format1.json`：八类业务数据备份，`format: "polyask-backup"` / `version: 1`；不是 Drive 同步封装，不含设备身份。
 
-`shared/sync.ts` 的 `SYNC_SCHEMA = 1` 继续用于旧 history/archive/state，`SUPPORTED_SYNC_SCHEMA = 4` 是客户端识别上限。决策卡和文件夹使用各自实体格式；已有样本始终保留，由对应 wire-format、同步和备份测试校验。
+`shared/sync.ts` 的 `SYNC_SCHEMA = 1` 继续用于旧 history/archive/state，`SUPPORTED_SYNC_SCHEMA = 5` 是客户端识别上限。决策卡和文件夹使用各自实体格式；已有样本始终保留，由对应 wire-format、同步和备份测试校验。
 
 ## 提问历史 schema 4 与备份 v2
 
 - `schema4-question.json` / `schema4-questionAnswer.json`：逐次提问与独立站点尝试；Drive 元数据 ID 为正文 ID 的 SHA-256，不附正文或 URL 预览。
 - `backup-format2.json`：包含新两类实体的业务备份；仍支持读取冻结的 version 1。
-- 当前识别上限为 `SUPPORTED_SYNC_SCHEMA = 4`，旧实体格式保持不变。
+- 提问/回答保持 schema 4；当前客户端识别上限为 `SUPPORTED_SYNC_SCHEMA = 5`，旧实体格式保持不变。
 
 ## 偏好与草稿备份 v3
 
 - `backup-v3-preferences-drafts.json`：新增 `preference` 与 `draft` 两类业务条目，不包含设备显示覆盖、是否跟随同步、草稿同步开关或原设备身份。仍读取版本 1 和 2。
 - 恢复的草稿作为独立备份副本，保留关联上下文，避免与当前设备正在编辑的分支合并。
 
-## 原图附件 schema 5（本机存储基础）
+## 原图附件 schema 5（可选同步）
 
 - `schema5-question-attachments.json` / `schema5-question-attachments-tombstone.json`：独立原图集及删除标记；正文保留 questionId，活记录携带有序 metadata/base64，墓碑不保留图片字段。现有 schema 1–4 样本保持冻结。
-- 当前同步引擎暂不传输新实体，识别上限仍为 schema 4；本机仓库验证格式、哈希与字节。正式同步接线后提升客户端支持上限。
+- 本机仓库及同步下行验证格式、哈希与字节；图片同步默认关闭，确认开启后传输新实体，客户端识别上限为 schema 5。旧样本不改写。
+- `schema4-sync-pull.ts.txt` 冻结自 `1e04254` 的实际 schema 4 下行实现，测试以旧版上限 4 执行，证明 schema 5 会锁住旧客户端的全局上传且不触发删除。
+- `image-sync-local-meta-v1.json` 记录仅本机的图片开关/确认键、reset 与投影排除契约；它不是 Drive 正文，也不进入业务备份。

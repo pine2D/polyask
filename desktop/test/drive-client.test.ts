@@ -157,3 +157,13 @@ test("Drive ignores a Retry-After hint that would schedule an immediate retry", 
     (error: unknown) => ((error as { retryAfter?: number }).retryAfter ?? 0) > 60_000
   );
 });
+
+test('image downloads enforce a streaming byte bound before parsing untrusted JSON', async () => {
+  let cancelled = false;
+  const client = new DriveClient({ accessToken: async () => 'token' }, async () => new Response(new ReadableStream({
+    start(controller) { controller.enqueue(new Uint8Array(64)); controller.enqueue(new Uint8Array(64)); setTimeout(() => { try { controller.close(); } catch { /* already cancelled */ } }, 20); },
+    cancel() { cancelled = true; }
+  })));
+  await assert.rejects(client.download('originals', undefined, 100), (error: any) => error.code === 'invalid_response');
+  assert.equal(cancelled, true, 'oversized body cancels remaining network reads');
+});

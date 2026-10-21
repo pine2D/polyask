@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "default": { "questionImageSyncEnabled": false, "questionImageSyncAcknowledged": false },
+  "confirmedEnable": { "questionImageSyncEnabled": true, "questionImageSyncAcknowledged": true },
+  "disabledAfterEnable": { "questionImageSyncEnabled": false, "questionImageSyncAcknowledged": true },
+  "resetRemoves": ["questionImageSyncEnabled", "questionImageSyncAcknowledged"],
+  "excludedFrom": ["stateFragments", "preferences", "businessBackup"]
+}

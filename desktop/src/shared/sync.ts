@@ -1,6 +1,6 @@
 export const SYNC_SCHEMA = 1;
-/** Questions use schema 4; folders stay 3, decisions 2 and legacy entities 1. */
-export const SUPPORTED_SYNC_SCHEMA = 4;
+/** Original image sets use schema 5; questions stay 4, folders 3, decisions 2 and legacy entities 1. */
+export const SUPPORTED_SYNC_SCHEMA = 5;
 export const CLEAR_REMOTE_CONFIRMATION = "DELETE";
 
 export interface HistoryRecord {
@@ -35,6 +35,7 @@ export interface SyncStatus {
   readonly state: SyncState;
   readonly connected: boolean;
   readonly pending: number;
+  readonly imageSyncEnabled?: boolean;
   readonly errorCount: number;
   readonly lastSuccessAt?: number;
   readonly reason?: string;

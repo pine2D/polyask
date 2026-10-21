@@ -1,16 +1,10 @@
-import type { StoredQuestion, StoredQuestionAnswer } from "../shared/question-history";
-import { createHash } from "node:crypto";
-import type { StoredArchive } from "../shared/archive";
-import type { StoredDecision } from "../shared/decision";
-import type { StoredTaskFolder, StoredFolderMembership } from "../shared/task-folder";
+import { uploadSyncOperation } from './sync-upload';
+import { SyncImages } from './sync-images';
 import type { RuntimeInfo } from "../shared/runtime";
 import { createSyncDiagnosticSnapshot, type SyncDiagnosticSnapshot } from "../shared/sync-diagnostics";
 import {
   retryDelay,
-  utf8Preview,
   type OutboxOperation,
-  type StateFragment,
-  type StoredHistory,
   type SyncStatus
 } from "../shared/sync";
 import type { DriveChange, DriveFile } from "./drive-client";
@@ -32,7 +26,7 @@ export interface SyncDrive extends DuplicateDrive {
   listFiles(signal?: AbortSignal): Promise<DriveFile[]>;
   getStartToken(signal?: AbortSignal): Promise<string>;
   listChanges(pageToken: string, signal?: AbortSignal): Promise<{ changes: DriveChange[]; newStartPageToken: string | null }>;
-  download(fileId: string, signal?: AbortSignal): Promise<unknown>;
+  download(fileId: string, signal?: AbortSignal, maxBytes?: number): Promise<unknown>;
   upsert(fileId: string | null, name: string, appProperties: Readonly<Record<string, string>>, body: unknown, signal?: AbortSignal): Promise<DriveFile>;
   clearAll(onProgress?: (count: number) => void | Promise<void>, signal?: AbortSignal): Promise<void>;
 }
@@ -44,12 +38,12 @@ export interface SyncAuth {
   disconnect(): Promise<void>;
 }
 
-type QueuedOperation = OutboxOperation & { readonly revision: number };
 const UPLOAD_ORDER: Readonly<Record<OutboxOperation["kind"], number>> = { state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7, questionAttachments: 8 };
 /** Failures caused by one request's own payload or target; other batches may still succeed. */
 const BATCH_LOCAL_FAILURES = new Set(["request_failed", "invalid_response", "not_found"]);
 export class SyncEngine {
   private readonly now: () => number;
+  private readonly images: SyncImages;
   private chain: Promise<unknown> = Promise.resolve();
   private localTimer: ReturnType<typeof setTimeout> | null = null;
   private localDue = 0;
@@ -65,6 +59,7 @@ export class SyncEngine {
 
   constructor(private readonly options: SyncEngineOptions) {
     this.now = options.now ?? Date.now;
+    this.images = new SyncImages(options.repository, options.drive, this.now);
   }
 
   start(): void {
@@ -101,6 +96,7 @@ export class SyncEngine {
       state: config.state,
       connected: config.connected,
       pending: this.options.repository.pending(),
+      imageSyncEnabled: this.options.repository.imageSyncEnabled(),
       errorCount: config.errorCount,
       ...(config.lastSuccessAt ? { lastSuccessAt: config.lastSuccessAt } : {}),
       ...(config.reason ? { reason: config.reason } : {}),
@@ -137,6 +133,20 @@ export class SyncEngine {
     const generation = this.generation;
     return this.serialize(() => generation === this.generation && !this.stopped && !this.disconnecting
       ? this.run(reason) : Promise.resolve(this.status()));
+  }
+
+  async setImageSyncEnabled(enabled: boolean): Promise<SyncStatus> {
+    this.images.cancel();
+    this.options.repository.setImageSyncEnabled(enabled);
+    const status = this.publish();
+    if (enabled) void this.syncNow("images");
+    return status;
+  }
+
+  async fetchQuestionAttachments(questionId: string): Promise<boolean> {
+    if (this.stopped || this.disconnecting) return false;
+    try { const result = await this.images.fetch(questionId); this.publish(); return result; }
+    catch (error) { this.fail(error); return false; }
   }
 
   disconnect(): Promise<SyncStatus> {
@@ -206,7 +216,8 @@ export class SyncEngine {
         this.options.repository,
         this.options.drive,
         this.now,
-        this.options.onWorkspaceChanged
+        this.options.onWorkspaceChanged,
+        this.images
       ).run(controller.signal);
       controller.signal.throwIfAborted();
       const rejected = await this.flush(controller.signal);
@@ -260,12 +271,17 @@ export class SyncEngine {
       for (const batch of batches) {
         try {
           signal.throwIfAborted();
-          await this.upload(batch[0], signal);
+          const operation = batch[0];
+          if (operation.kind === "questionAttachments") {
+            const transferred = await this.images.transfer(signal, (imageSignal, current) => uploadSyncOperation(this.options.repository, this.options.drive, this.now, operation, imageSignal, current));
+            if (!transferred) continue;
+          } else await uploadSyncOperation(this.options.repository, this.options.drive, this.now, operation, signal);
           for (const folded of batch.slice(1)) this.options.repository.complete(folded.key, folded.revision);
         } catch (error) {
           const code = (error as { code?: string }).code;
           const transient = code === "rate_limited" || code === "server_error";
-          if (!transient && !BATCH_LOCAL_FAILURES.has(code ?? "")) throw error;
+          const imageLocal = batch[0].kind === "questionAttachments" && ["network_error", "network_timeout"].includes(code ?? "");
+          if (!transient && !imageLocal && !BATCH_LOCAL_FAILURES.has(code ?? "")) throw error;
           // Retry-After may only push the retry further out, never pull it forward.
           const hint = (error as { retryAfter?: number }).retryAfter;
           // 整批同一 attempt 与 nextAt：折叠的 state 行若各自抖动退避，下一轮会拆成 N 次一模一样的整份上传。
@@ -280,70 +296,6 @@ export class SyncEngine {
       }
     }
     return rejected;
-  }
-
-  private async upload(operation: QueuedOperation, signal: AbortSignal): Promise<void> {
-    const deviceId = this.options.repository.deviceId();
-    let key = operation.key;
-    let name: string;
-    let properties: Record<string, string>;
-    let body: StoredQuestion | StoredQuestionAnswer | StateFragment | StoredHistory | StoredArchive | StoredDecision | StoredTaskFolder | StoredFolderMembership;
-    if (operation.kind === "state") {
-      key = `state:${deviceId}`;
-      name = `state-${deviceId}.json`;
-      properties = { app: "polyask", schema: "1", kind: "state", id: deviceId };
-      body = this.options.repository.localStateFragment();
-    } else if (operation.kind === "history" && operation.entityId) {
-      const record = this.options.repository.history(operation.entityId);
-      if (!record) { this.options.repository.complete(operation.key, operation.revision); return; }
-      name = `history-${record.textHash}-${deviceId}.json`;
-      properties = { app: "polyask", schema: "1", kind: "history", id: record.textHash, device: deviceId, deleted: "deletedAt" in record ? "1" : "0", preview: "deletedAt" in record ? "" : utf8Preview(record.text) };
-      body = { ...record, deviceId };
-    } else if (operation.kind === "archive" && operation.entityId) {
-      const record = this.options.repository.archive(operation.entityId);
-      if (!record) { this.options.repository.complete(operation.key, operation.revision); return; }
-      name = `archive-${record.id}.json`;
-      properties = { app: "polyask", schema: "1", kind: "archive", id: record.id, deleted: "deletedAt" in record ? "1" : "0", preview: "deletedAt" in record ? "" : utf8Preview(record.text) };
-      body = record;
-    } else if (operation.kind === "decision" && operation.entityId) {
-      const record = this.options.repository.decision(operation.entityId);
-      if (!record) { this.options.repository.complete(operation.key, operation.revision); return; }
-      key = `decision:${record.id}`;
-      name = `decision-${record.id}.json`;
-      properties = { app: "polyask", schema: "2", kind: "decision", id: record.id, deleted: "deletedAt" in record ? "1" : "0" };
-      body = record;
-    } else if ((operation.kind === "question" || operation.kind === "questionAnswer") && operation.entityId) {
-      const record = operation.kind === "question" ? this.options.repository.question(operation.entityId) : this.options.repository.questionAnswer(operation.entityId);
-      if (!record) { this.options.repository.complete(operation.key, operation.revision); return; }
-      key = `${operation.kind}:${record.id}`;
-      const wireId = createHash("sha256").update(record.id).digest("hex");
-      name = `${operation.kind}-${wireId}.json`;
-      properties = { app: "polyask", schema: "4", kind: operation.kind, id: wireId, deleted: "deletedAt" in record ? "1" : "0" };
-      body = record;
-    } else if ((operation.kind === "folder" || operation.kind === "folderMembership") && operation.entityId) {
-      const record = operation.kind === "folder" ? this.options.repository.folder(operation.entityId) : this.options.repository.folderMembership(operation.entityId);
-      if (!record) { this.options.repository.complete(operation.key, operation.revision); return; }
-      key = `${operation.kind}:${record.id}`;
-      const wireId = createHash("sha256").update(record.id).digest("hex");
-      name = `${operation.kind}-${wireId}.json`;
-      properties = { app: "polyask", schema: "3", kind: operation.kind, id: wireId, deleted: "deletedAt" in record ? "1" : "0" };
-      body = record;
-    } else { this.options.repository.complete(operation.key, operation.revision); return; }
-    const existing = this.options.repository.findDriveFile(key);
-    let saved: DriveFile;
-    try {
-      saved = await this.options.drive.upsert(existing?.id ?? null, name, properties, body, signal);
-    } catch (error) {
-      if (!existing || (error as { code?: string }).code !== "not_found") throw error;
-      // Another device converged this duplicate away: write to the surviving copy, or create one.
-      this.options.repository.deleteDriveFile(existing.id);
-      signal.throwIfAborted();
-      saved = await this.options.drive.upsert(this.options.repository.findDriveFile(key)?.id ?? null, name, properties, body, signal);
-    }
-    signal.throwIfAborted();
-    if (!saved.id) throw Object.assign(new Error("invalid_response"), { code: "invalid_response" });
-    this.options.repository.putDriveFile(saved, key, this.now());
-    this.options.repository.complete(operation.key, operation.revision);
   }
 
   private fail(error: unknown, stage: FailureStage = "sync"): SyncStatus {
@@ -364,6 +316,7 @@ export class SyncEngine {
 
   private cancelScheduled(): void {
     this.generation++;
+    this.images.cancel();
     this.activeController?.abort();
     if (this.localTimer) clearTimeout(this.localTimer);
     this.localTimer = null;
