@@ -19,7 +19,7 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10 # 实测最大 145s(2.4min)，上浮 ≥50% 留量级余量（含 xvfb 冒烟测试，偶发慢一档也不误杀）
+    timeout-minutes: 10 # 2026-10-21 全门禁实测 7m58s（含打包与 xvfb 冒烟），保留约 25% 余量
     steps:
       - name: 检出源码
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
@@ -73,7 +73,7 @@ jobs:
   desktop-cross-platform:
     name: Desktop (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10 # 实测最大 122s(2.03min，Windows)，上浮 ≥50% 留量级余量
+    timeout-minutes: 20 # 2026-10-21 Windows 测试与类型检查完成时已耗约 9min；为后续打包、便携包校验留余量
     strategy:
       fail-fast: false
       matrix:
