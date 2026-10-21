@@ -134,6 +134,8 @@ test('different v4 answer selections and later original child tombstones cannot 
     site: answer.site, attempt: answer.attempt, createdAt: answer.createdAt, updatedAt: time, deletedAt: time, deviceId: 'local' });
   remove(a, 30);
   let p = await service.previewFile(path);
+  assert.deepEqual(p.items.find(item => item.id === b.id)!.requires, ['question:q-a']);
+  assert.equal(service.previewSelection(p.token, [`questionAnswer:${b.id}`]).imported, 0);
   assert.equal(service.apply(p.token, [`questionAnswer:${b.id}`]).imported, 0, 'remapping needs an explicit parent choice');
   p = await service.previewFile(path);
   assert.equal(service.apply(p.token, ['question:q-a', `questionAnswer:${a.id}`]).imported, 2);

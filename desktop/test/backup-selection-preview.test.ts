@@ -4,6 +4,7 @@ import { DesktopDatabase } from '../src/main/database';
 import { BackupService } from '../src/main/backup-service';
 import { questionFixture, questionAnswerFixture } from './question-fixtures';
 import { questionAnswerId } from '../src/main/question-repository';
+import { initialBackupSelection, eligibleBackupSelection } from '../src/renderer/backup-selection';
 
 function partialAnswerDocument() {
   const source = DesktopDatabase.open(':memory:');
@@ -92,3 +93,32 @@ test('selection previews reject unknown, duplicate and stale keys without consum
     assert.throws(() => service.apply(preview.token, [key]), /backup_missing/);
   } finally { db.close(); }
 });
+
+for (const version of [2, 3, 4]) for (const includeParent of [false, true]) {
+  test(`v${version} without originals restores one new answer with ${includeParent ? 'included' : 'omitted'} live parent and an unselected deleted sibling`, () => {
+    const db = DesktopDatabase.open(':memory:');
+    const service = new BackupService(db, { deviceId: () => 'local', now: () => 100 });
+    try {
+      const q = questionFixture(), a = questionAnswerFixture(q.id, 1), b = questionAnswerFixture(q.id, 2);
+      db.questions.put(q); db.questions.putAnswer(a); db.questions.putAnswer(b);
+      const exported = service.export();
+      const document = { ...exported, version,
+        entries: exported.entries.filter(entry => includeParent || entry.kind === 'questionAnswer'),
+        ...(version === 4 ? { payloads: [], omissions: [] } : {}) };
+      db.resetLocalData(); db.questions.put(q);
+      db.questions.putAnswer({ schema: 4, id: a.id, questionId: q.id, site: a.site, attempt: a.attempt,
+        createdAt: a.createdAt, updatedAt: 30, deletedAt: 30, deviceId: 'local' });
+      const preview = service.preview(document), item = preview.items.find(entry => entry.id === b.id)!;
+      const selected = [item.key];
+      assert.equal(service.previewSelection(preview.token, selected).imported, 1);
+      assert.equal(item.blocked ?? false, false, 'the existing live parent leaves the new answer selectable');
+      assert.deepEqual(item.requires ?? [], [], 'an unselected sibling must not add a parent dependency');
+      assert.equal(initialBackupSelection(preview.items).has(item.key), true);
+      assert.equal(eligibleBackupSelection(preview.items, new Set(selected)).has(item.key), true);
+      assert.equal(service.apply(preview.token, selected).imported, 1);
+      assert.equal(db.questions.getAnswer(b.id)?.questionId, q.id);
+      assert.equal('deletedAt' in db.questions.getAnswer(a.id)!, true);
+      assert.equal(db.businessSnapshot().filter(row => row.table === 'questions').length, 1);
+    } finally { service.dispose(); db.close(); }
+  });
+}
