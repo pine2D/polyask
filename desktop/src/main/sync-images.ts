@@ -15,11 +15,16 @@ export class SyncImages {
   constructor(private readonly repository: SyncRepository, private readonly drive: Pick<SyncDrive, 'download' | 'listFiles'>, private readonly now: () => number) {}
   cancel(): void { this.generation++; for (const controller of this.active) controller.abort(); }
 
-  async transfer<T>(parent: AbortSignal, action: (signal: AbortSignal, current: () => boolean) => Promise<T>): Promise<boolean> {
+  checkpoint(): () => boolean {
     const generation = this.generation, lifecycle = this.repository.imageLifecycle();
+    return () => generation === this.generation && lifecycle === this.repository.imageLifecycle();
+  }
+
+  async transfer<T>(parent: AbortSignal, action: (signal: AbortSignal, current: () => boolean) => Promise<T>): Promise<boolean> {
+    const checkpoint = this.checkpoint();
     const controller = new AbortController(); this.active.add(controller);
     const signal = AbortSignal.any([parent, controller.signal]);
-    const current = () => !signal.aborted && generation === this.generation && lifecycle === this.repository.imageLifecycle();
+    const current = () => !signal.aborted && checkpoint();
     let stop: () => void = () => {};
     const cancelled = new Promise<boolean>(resolve => { stop = () => resolve(false); signal.addEventListener('abort', stop, { once: true }); });
     try {
@@ -80,15 +85,23 @@ export class SyncImages {
       signal.throwIfAborted(); if (!transferCurrent() || !current()) return;
       for (const file of files) {
         if (file.appProperties?.app !== 'polyask' || file.appProperties.kind !== 'questionAttachments' ||
-          file.appProperties.schema !== '5' || file.appProperties.id !== hash) continue;
+          file.appProperties.id !== hash) continue;
+        const schema = Number(file.appProperties.schema);
+        if (schema > 5) { this.rememberFuture(file.id, schema); continue; }
+        if (schema !== 5) continue;
         const result = await this.read(file, signal);
         signal.throwIfAborted(); if (!transferCurrent() || !current()) return;
-        if (typeof result === 'number') this.repository.saveConfig({readOnly: true,
-          futureFiles: {...this.repository.config().futureFiles, [file.id]: result}});
+        if (typeof result === 'number') this.rememberFuture(file.id, result);
       }
       const value = this.repository.questionAttachments(id);
       success = !!value && !('deletedAt' in value) && current();
     });
     return success && current();
+  }
+
+  private rememberFuture(fileId: string, schema: number): void {
+    this.repository.deleteDriveFile(fileId);
+    this.repository.saveConfig({ readOnly: true,
+      futureFiles: { ...this.repository.config().futureFiles, [fileId]: schema } });
   }
 }

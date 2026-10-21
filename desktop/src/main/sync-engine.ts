@@ -143,10 +143,17 @@ export class SyncEngine {
     return status;
   }
 
-  async fetchQuestionAttachments(questionId: string): Promise<boolean> {
-    if (this.stopped || this.disconnecting) return false;
-    try { const result = await this.images.fetch(questionId); this.publish(); return result; }
-    catch (error) { this.fail(error); return false; }
+  fetchQuestionAttachments(questionId: string): Promise<boolean> {
+    const current = this.images.checkpoint();
+    // Pull, flush and explicit reads share ownership of future-schema and failure state.
+    return this.serialize(async () => {
+      if (this.stopped || this.disconnecting || !current()) return false;
+      try {
+        const result = await this.images.fetch(questionId);
+        if (!current()) return false;
+        this.publish(); return result;
+      } catch (error) { if (current()) this.fail(error); return false; }
+    });
   }
 
   disconnect(): Promise<SyncStatus> {

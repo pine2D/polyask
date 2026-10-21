@@ -348,7 +348,7 @@ npm run soak -- --minutes=60
 
 Drive 附件文件固定命名 `questionAttachments-<SHA256(body.id)>.json`，appProperties 只有 app/schema/kind/哈希 id/deleted；名称、原父 ID、EXIF 和 base64 仅在正文。下载按 10 MiB 的 base64 展开加 64 KiB 封装余量限制流字节，再验证正文、哈希、MIME 和不可变身份。沿用既有大正文 resumable 会话上传：失败整集重试，不承诺字节级续传。关闭期间只索引 live 元数据，已验证的墓碑仍可下行；未验证索引不能删除重复 live 文件。启用后重放此前跳过或失败的文件，不依赖已推进的 changes token；升级可据 schema 5 元数据解除旧锁，已知 schema 6 锁仍保留。附件 payload/网络失败隔离，其它记录继续；账号鉴权与配额仍沿用全局失败语义。
 
-`SyncImages` 对图片请求单独持有 AbortController 和 generation，关闭立即取消图片请求而不打断文字同步；手动同步忙碌期间设置关闭仍可用。每次网络返回后检查 signal、仓库 lifecycle 及当前父状态，父墓碑终态，重置/断开后迟到下载不能恢复原图。受信 `question-fetch-attachments` 仅接收提问 ID，`fetchQuestionAttachments(id): Promise<boolean>` 不要求已有同步轮次；禁用/断开/父缺失或删除/附件墓碑返回 false，绝不自动开启开关。成功表示本机完整集合可用，可修复同版本损坏 BLOB；读取失败供界面重试。业务备份二进制容器尚未接入，现有 version 3 JSON 不含原图。
+`SyncImages` 对图片请求单独持有 AbortController 和 generation，关闭立即取消图片请求而不打断文字同步；手动同步忙碌期间设置关闭仍可用。每次网络返回后检查 signal、仓库 lifecycle 及当前父状态，父墓碑终态，重置/断开后迟到下载不能恢复原图。受信 `question-fetch-attachments` 仅接收提问 ID，`fetchQuestionAttachments(id): Promise<boolean>` 不要求已有同步轮次，但与常规同步共用串行队列；排队时捕获图片 generation 和仓库 lifecycle，关闭再开启、断开或重置会作废旧请求，关闭操作本身不排队。匹配目标的未来版本元数据直接建立全局只读锁，不下载未知正文；显式读取发现的未来正文同样保留锁。禁用/断开/父缺失或删除/附件墓碑返回 false，绝不自动开启开关。成功表示本机完整集合可用，可修复同版本损坏 BLOB；读取失败供界面重试。业务备份二进制容器尚未接入，现有 version 3 JSON 不含原图。
 
 Drive 提问、回答及原图文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或会话 URL；最高支持 schema 5，旧实体保持原格式。业务备份导出 version 3、兼容读取 version 1 和 2；子记录依赖父记录，缺依赖不能静默恢复。恢复已删除提问派生新身份并映射选中的副本，重复导入不复活再次删除的内容。
 
