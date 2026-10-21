@@ -55,7 +55,7 @@ bash scripts/release.sh --publish    # 推 tag 发布五包；--build-only 仅�
 
 - **主进程**：`desktop/src/main/index.ts` → `view-manager.ts`（视图）、`broadcast.ts`（群发）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts`（IPC，全部过 `trustedShell`）。
 - **站点适配**：`desktop/src/site-runtime/`：core/tier 编排、selection-match 候选匹配、send/upload 提交与附件；intl/intl2/intl3/cn/cn2/cn3/cn4 按站分卷；注入顺序以 `preload/site.ts` 为准，classic script、`__AMS` 全局；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
-- **数据与同步**：`main/database.ts`（SQLite）、`*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata）；schema 1–4 与 fixture 见 `docs/desktop.md`、`desktop/test/fixtures/`。本机管理和备份恢复由 `data-admin-service.ts` / `backup-service.ts` 负责；代理应用、校验与 fail-closed 由 `proxy-runtime.ts` 负责，`proxy-preference-store.ts` 是唯一写入口，持久化、同步与备份边界见 `docs/desktop.md` §13。
+- **数据与同步**：`main/database.ts`（SQLite）、`*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata）；schema 1–5（问答 4、原图集 5）见 `docs/desktop.md`、`desktop/test/fixtures/`。本机管理和备份恢复由 `data-admin-service.ts` / `backup-service.ts` 负责；代理应用、校验与 fail-closed 由 `proxy-runtime.ts` 负责，`proxy-preference-store.ts` 是唯一写入口，持久化、同步与备份边界见 `docs/desktop.md` §13。
 - **渲染层**：`desktop/src/renderer/`，所有 IPC 只经 `shell-api.ts` 的 `shell`（测试用 `setShellApi` 注入桩）。
 - **共享契约**：`desktop/src/shared/`（protocol、copy、locale、site-report、ipc-error）。
 
