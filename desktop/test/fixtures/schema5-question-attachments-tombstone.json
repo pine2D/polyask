@@ -1,0 +1,22 @@
+{
+  "file": {
+    "id": "fixture-drive-tombstone",
+    "name": "questionAttachments-38b6c3639e4f9d92e845cd6f97c17654e81bcdd03188866e040222d87cf16404.json",
+    "appProperties": {
+      "app": "polyask",
+      "schema": "5",
+      "kind": "questionAttachments",
+      "id": "38b6c3639e4f9d92e845cd6f97c17654e81bcdd03188866e040222d87cf16404",
+      "deleted": "1"
+    }
+  },
+  "body": {
+    "schema": 5,
+    "id": "a9cea386c0f719852f2412c65cd783d1b4fa2625249bf661df159ab9d34eeefb",
+    "questionId": "fixture-original-images-tombstone",
+    "createdAt": 10,
+    "updatedAt": 20,
+    "deviceId": "fixture-device",
+    "deletedAt": 20
+  }
+}

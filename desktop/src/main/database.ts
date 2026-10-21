@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
+import { QuestionAttachmentRepository } from "./question-attachment-repository";
 import { QuestionRepository } from "./question-repository";
 import { TaskFolderRepository } from "./task-folder-repository";
 import { DecisionRepository } from "./decision-repository";
@@ -14,7 +15,7 @@ import { inTransaction } from "./repository-utils";
 import { StateRepository } from "./state-repository";
 import { readLocalDataStats } from "./local-data-stats";
 
-const SCHEMA_VERSION = 4;
+const SCHEMA_VERSION = 5;
 
 function migrate(database: DatabaseSync): void {
   database.exec("PRAGMA foreign_keys = ON");
@@ -24,6 +25,13 @@ function migrate(database: DatabaseSync): void {
     CREATE INDEX IF NOT EXISTS question_sort ON questions(sort_time DESC, id);
     CREATE TABLE IF NOT EXISTS question_answers (id TEXT PRIMARY KEY, question_id TEXT NOT NULL, site TEXT NOT NULL, attempt INTEGER NOT NULL, body TEXT NOT NULL, deleted_at INTEGER);
     CREATE UNIQUE INDEX IF NOT EXISTS answer_attempt ON question_answers(question_id,site,attempt);
+    CREATE TABLE IF NOT EXISTS question_attachment_sets (
+      id TEXT PRIMARY KEY, question_id TEXT NOT NULL UNIQUE, body TEXT NOT NULL, deleted_at INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS question_attachment_items (
+      set_id TEXT NOT NULL REFERENCES question_attachment_sets(id), image_index INTEGER NOT NULL,
+      data BLOB NOT NULL, PRIMARY KEY(set_id,image_index)
+    );
     CREATE TABLE IF NOT EXISTS history (
       id TEXT PRIMARY KEY,
       body TEXT NOT NULL,
@@ -87,6 +95,7 @@ export class DesktopDatabase {
   readonly outbox: OutboxRepository;
   readonly history: HistoryRepository;
   readonly questions: QuestionRepository;
+  readonly questionAttachments: QuestionAttachmentRepository;
   readonly archives: ArchiveRepository;
   readonly decisions: DecisionRepository;
   readonly folders: TaskFolderRepository;
@@ -97,7 +106,8 @@ export class DesktopDatabase {
 
   private constructor(private readonly database: DatabaseSync) {
     this.outbox = new OutboxRepository(database);
-    this.questions = new QuestionRepository(database, this.outbox);
+    this.questionAttachments = new QuestionAttachmentRepository(database, this.outbox);
+    this.questions = new QuestionRepository(database, this.outbox, this.questionAttachments);
     this.history = new HistoryRepository(database, this.outbox);
     this.archives = new ArchiveRepository(database, this.outbox);
     this.decisions = new DecisionRepository(database, this.outbox);
@@ -146,7 +156,7 @@ export class DesktopDatabase {
     this.questions.invalidateLifecycle();
     inTransaction(this.database, () => {
       // state_items includes workspace.participation and its independent sync version.
-      for (const table of ["questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
+      for (const table of ["question_attachment_items", "question_attachment_sets", "questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");
     });
     // DELETE 只把页挂进 freelist，提问与回答明文仍留在 .sqlite / WAL 里；重置的承诺是「本机清空」，收缩一次。

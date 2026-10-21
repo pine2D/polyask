@@ -45,7 +45,7 @@ export interface SyncAuth {
 }
 
 type QueuedOperation = OutboxOperation & { readonly revision: number };
-const UPLOAD_ORDER: Readonly<Record<OutboxOperation["kind"], number>> = { state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7 };
+const UPLOAD_ORDER: Readonly<Record<OutboxOperation["kind"], number>> = { state: 0, history: 1, archive: 2, decision: 3, folder: 4, folderMembership: 5, question: 6, questionAnswer: 7, questionAttachments: 8 };
 /** Failures caused by one request's own payload or target; other batches may still succeed. */
 const BATCH_LOCAL_FAILURES = new Set(["request_failed", "invalid_response", "not_found"]);
 export class SyncEngine {

@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 
-import type { OutboxOperation } from "../shared/sync";
+import type { OutboxOperation, SyncEntityKind } from "../shared/sync";
 import { inTransaction, readJson } from "./repository-utils";
 
 export class OutboxRepository {
@@ -65,11 +65,12 @@ export class OutboxRepository {
     if (rows.length) for (const listener of this.listeners) listener();
   }
 
-  ready(now: number, limit = 100): (OutboxOperation & { readonly revision: number })[] {
+  ready(now: number, limit = 100, excluded: readonly SyncEntityKind[] = []): (OutboxOperation & { readonly revision: number })[] {
     const rows = this.database.prepare(`
       SELECT body, revision FROM outbox
-      WHERE next_at <= ? ORDER BY next_at, key LIMIT ?
-    `).all(now, limit);
+      WHERE next_at <= ? ${excluded.length ? `AND kind NOT IN (${excluded.map(() => "?").join(",")})` : ""}
+      ORDER BY next_at, key LIMIT ?
+    `).all(now, ...excluded, limit);
     return rows.flatMap((row) => {
       const value = readJson<OutboxOperation>(row);
       const revision = Number((row as { revision?: unknown }).revision);
@@ -77,8 +78,9 @@ export class OutboxRepository {
     });
   }
 
-  nextAt(): number | null {
-    const row = this.database.prepare("SELECT MIN(next_at) AS nextAt FROM outbox").get() as { nextAt: number | null };
+  nextAt(excluded: readonly SyncEntityKind[] = []): number | null {
+    const row = this.database.prepare(`SELECT MIN(next_at) AS nextAt FROM outbox
+      ${excluded.length ? `WHERE kind NOT IN (${excluded.map(() => "?").join(",")})` : ""}`).get(...excluded) as { nextAt: number | null };
     return row.nextAt;
   }
 

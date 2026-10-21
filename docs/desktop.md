@@ -336,7 +336,13 @@ npm run soak -- --minutes=60
 
 ### 提问历史存储与同步基础
 
-逐次提问采用独立 `question` 和 `questionAnswer`（每站每次尝试）schema 4，SQLite version 4 新增 questions/question_answers。相同文字不同发送不合并，重试保留独立尝试；自动副本上限 200,000 码点，不改变手动采集上限。父子删除为终态 tombstone + outbox，迟到子记录遇已删除父立即转为 tombstone；本机重置清新两表且保留 deviceId。旧文字 history 仍为 schema 1。
+逐次提问采用独立 `question` 和 `questionAnswer`（每站每次尝试）schema 4，SQLite version 5 保留 questions/question_answers 并新增原图存储。相同文字不同发送不合并，重试保留独立尝试；自动副本上限 200,000 码点，不改变手动采集上限。父子删除为终态 tombstone + outbox，迟到子记录遇已删除父立即转为 tombstone；本机重置清新两表且保留 deviceId。旧文字 history 仍为 schema 1。
+
+每条提问最多一份不可变原图集：`shared/question-attachments.ts` 的 `QUESTION_ATTACHMENTS_SCHEMA = 5` 定义身份、元数据及独立 JSON/base64 线格式，提问/回答仍为 schema 4。ID 是 `SHA256(JSON.stringify(['questionAttachments', questionId]))`。SQLite `question_attachment_sets` 仅存身份、图片名称/类型/字节数/SHA-256；`question_attachment_items` 按 set_id/image_index 存原始 BLOB，保留顺序、重复、字节与 EXIF，无全局去重。最多 4 张 PNG/JPEG，合计 10 MiB，名称限 128 码点且仅接受叶文件名。`get`/`forQuestion`/`all` 不读 BLOB；`readImage`/`readAll` 需要活动父提问，并核对图片数量、创建时间、MIME 签名与哈希；`project` 允许同步中的孤立子记录，但存在父记录时仍核对归属。损坏或缺失原图抛错，不降级为空数组；同版本、同不可变元数据且字节校验通过的 wire 可修复本机 BLOB。
+
+`history.begin` 先提交提问和本次尝试，再独立保存原图；附件事务失败不撤销文字记录、token 或发送流程。保存失败通过 `onAttachmentSaveFailure` / `setAttachmentSaveFailureHandler` 单独回报，不触发文字历史失败状态；外壳提示接线由后续原图界面提供。同 run 重试共享原图集，只有与最初请求图片完全相同的重试才能补存此前失败的附件，新 run 使用新身份。保存消耗现有 prepareRun 的绝对截止时间，不重开 44s/90s 预算。父/附件删除同事务写终态墓碑和 outbox，并移除 BLOB；迟到活附件遇父/附件墓碑不能复活。重置先清两张原图表，再清其它本机数据和 meta，仅保留 deviceId；不执行附件墓碑定期回收。
+
+原图 outbox kind 为 `questionAttachments`，`SyncRepository.questionAttachments(id)` 提供严格投影。本阶段只保留本机队列；同步层 ready/nextAt 在 SQL 中临时排除附件，避免旧上传分支将其当未知类型清除或堵住文字队列。原图开关、云端传输、界面读取与备份二进制容器由后续任务接入；当前 Drive 识别上限仍为 schema 4。
 
 Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或会话 URL；最高支持 schema 4，旧实体保持原格式。业务备份导出 version 3、兼容读取 version 1 和 2；子记录依赖父记录，缺依赖不能静默恢复。恢复已删除提问派生新身份并映射选中的副本，重复导入不复活再次删除的内容。
 
@@ -345,7 +351,7 @@ Drive 新两类文件名/属性 ID 使用正文 ID 的 SHA-256，不带正文或
 
 右侧历史面板宽 360 CSS px，与左侧面板互斥。共享最小站点列宽决定窄窗全页；阅读副本/确认操作时原位置隐藏原生站点视图，保持挂载、正尺寸与既有禁用后台节流设置，退出恢复可见性（BrowserWindow 默认外壳不是可重排子视图）。历史卡片点击始终读取副本；恢复原站走独立按钮，忙碌时仅保留阅读和复制等只读操作。结果库 surface 会 detach 站点视图，因此其顶部入口仍在发送/辅助操作期间禁用并说明原因。列表只传摘要和尝试元数据，正文仅按选中尝试读取；旧文字历史独立查询分页，顶部提问库的最近文字行为保持不变。错误提示由三语 `question-copy.ts` 提供。
 
-历史再问只恢复文字，原图片不入库或同步；详情和列表显示请求附图数量（不等同于成功发送数量）。恢复带图问题或替换有附件的草稿须提示确认，并清除当前草稿附件与尚未完成的选图读取，防止与历史文字混用。
+当前历史再问界面仍只恢复文字；原图已在本机入库，查看、完整再问及可选同步由后续界面接入。详情和列表目前显示请求附图数量（不等同于原图保存或成功发送数量）。恢复带图问题或替换有附件的草稿须提示确认，并清除当前草稿附件与尚未完成的选图读取，防止与历史文字混用。
 
 历史与结果库共用 `markdown-it` 分词、React 白名单元素渲染，禁止原始 HTML；URL 显示投影不修改快照或完整目标。纯 URL 标签从文字、简单强调/行内代码格式及换行中识别，裸域名沿用 linkifier 的整串匹配，不要求显示地址与目标相等。空标签、超长 URL 标签及带文字定位片段的 URL 标签按实际目标显示域名＋有限路径，可展开并复制完整地址；有意义的标题及独立代码里的 URL 原样保留。详情只保留副本信息下的一条工具栏：左侧「在应用中打开」传当前回答 ID，旁边菜单不传回答 ID，恢复本次提问各站最新尝试的会话；保留既有导航预览与确认。复制链接、系统浏览器打开及复制回答均为图标，取当前站点/尝试的地址或正文；缺失/不安全地址禁用会话操作，无地址仍可复制已存正文。右侧再次提问填入原问题，更多菜单删除整条提问及副本，保留确认。群发忙碌时仍可阅读、复制与系统浏览器打开，禁用应用内恢复、再问及删除；切换站点/尝试关闭旧会话菜单，Escape 只关闭菜单并归还焦点，窄窗口按两组换行。图表、链接文案三语在 `reading-copy.ts`，历史操作在 `question-copy.ts`，均并入 `DesktopCopy`。
 

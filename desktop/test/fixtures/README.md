@@ -41,3 +41,8 @@
 
 - `backup-v3-preferences-drafts.json`：新增 `preference` 与 `draft` 两类业务条目，不包含设备显示覆盖、是否跟随同步、草稿同步开关或原设备身份。仍读取版本 1 和 2。
 - 恢复的草稿作为独立备份副本，保留关联上下文，避免与当前设备正在编辑的分支合并。
+
+## 原图附件 schema 5（本机存储基础）
+
+- `schema5-question-attachments.json` / `schema5-question-attachments-tombstone.json`：独立原图集及删除标记；正文保留 questionId，活记录携带有序 metadata/base64，墓碑不保留图片字段。现有 schema 1–4 样本保持冻结。
+- 当前同步引擎暂不传输新实体，识别上限仍为 schema 4；本机仓库验证格式、哈希与字节。正式同步接线后提升客户端支持上限。

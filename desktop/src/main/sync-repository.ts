@@ -258,6 +258,7 @@ export class SyncRepository {
     if (!isStoredQuestionAnswer(value)) return false;
     try { this.database.questions.putAnswer(value, false); return true; } catch { return false; }
   }
+  questionAttachments(id: string) { return this.database.questionAttachments.project(id); }
   question(id: string) { return this.database.questions.get(id); }
   questionAnswer(id: string) { return this.database.questions.getAnswer(id); }
 
@@ -267,9 +268,10 @@ export class SyncRepository {
   history(id: string): StoredHistory | null { return this.database.history.get(id); }
   archive(id: string): StoredArchive | null { return this.database.archives.get(id); }
   enqueue(operation: OutboxOperation) { return this.database.outbox.enqueue(operation); }
-  nextAt() { return this.database.outbox.nextAt(); }
+  // Keep originals queued locally until the dedicated opt-in transfer path is connected.
+  nextAt() { return this.database.outbox.nextAt(["questionAttachments"]); }
   retry(operation: OutboxOperation & { readonly revision: number }) { this.database.outbox.retry(operation); }
-  ready(now: number) { return this.database.outbox.ready(now); }
+  ready(now: number) { return this.database.outbox.ready(now, 100, ["questionAttachments"]); }
   complete(key: string, revision: number): boolean { return this.database.outbox.complete(key, revision); }
   pending(): number { return this.database.outbox.count(); }
   onLocalChange(listener: () => void): () => void { return this.database.outbox.onChange(listener); }

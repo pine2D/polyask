@@ -1,0 +1,30 @@
+{
+  "file": {
+    "id": "fixture-drive",
+    "name": "questionAttachments-6390b7f1924c91d16b7fcc68d62c2760aa412fe091a63f5ddbe110b863304f91.json",
+    "appProperties": {
+      "app": "polyask",
+      "schema": "5",
+      "kind": "questionAttachments",
+      "id": "6390b7f1924c91d16b7fcc68d62c2760aa412fe091a63f5ddbe110b863304f91",
+      "deleted": "0"
+    }
+  },
+  "body": {
+    "schema": 5,
+    "id": "6f0b517c42d5551ed14c94ee9266cc5da53967157ac525fd1bfb76ac955ecf14",
+    "questionId": "fixture-original-images",
+    "createdAt": 10,
+    "updatedAt": 10,
+    "deviceId": "fixture-device",
+    "images": [
+      {
+        "name": "original.png",
+        "type": "image/png",
+        "size": 16,
+        "sha256": "1d1ddbca594da68f96b4a057574f42d37e6984044bcb859d7bbd4a48efa4372e",
+        "base64": "iVBORw0KGgoXFxcXFxcXFw=="
+      }
+    ]
+  }
+}

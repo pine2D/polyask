@@ -1,3 +1,4 @@
+import { originalImageRequestKey } from "./question-attachment-validation";
 import { randomUUID } from "node:crypto";
 import type { SiteKey } from "../shared/contracts";
 import type { BroadcastRequest, SiteRunResult } from "../shared/protocol";
@@ -29,6 +30,8 @@ interface CaptureEntry {
 export class QuestionHistoryService {
   private readonly progress: QuestionRunProgressTracker;
   private lastRun: { lifecycle: number; runId: string; id: string } | null = null;
+  private originalImages: { questionId: string; key: string } | null = null;
+  private reportAttachmentFailure: (() => void) | null = null;
   private readonly active = new Map<SiteKey, CaptureEntry>();
   private readonly releasableSites = new Map<SiteKey, number>();
   private reportFailure: (() => void) | null = null;
@@ -37,6 +40,7 @@ export class QuestionHistoryService {
   private reads = 0;
   constructor(readonly repository: QuestionRepository, private readonly options: {
     deviceId: () => string; now?: () => number; createId?: () => string; onFailure?: () => void;
+    onAttachmentSaveFailure?: () => void;
     safeUrl?: (site: SiteKey, value: string) => string | null;
     // 本轮首次归属成功时回报定位级别（诊断记账，每轮一次）。
     onLocate?: (site: SiteKey, locate: NonNullable<HistorySnapshot["locate"]>) => void;
@@ -50,6 +54,7 @@ export class QuestionHistoryService {
   publishRunProgress(): void { this.progress.publish(); }
   setProgressHandler(handler: ((progress: QuestionRunProgress) => void) | null): void { this.progress.listen(handler); }
   setFailureHandler(handler: (() => void) | null): void { this.reportFailure = handler; }
+  setAttachmentSaveFailureHandler(handler: (() => void) | null): void { this.reportAttachmentFailure = handler; }
   /** 迟到确认：本次尝试回包「提交未确认」后，归属快照给出本轮用户消息的正向证据，记录已升为 submitted 时回调（外壳据此改状态、开生成监视）。 */
   setSubmissionHandler(handler: ((runId: string, site: SiteKey) => void) | null): void { this.reportSubmitted = handler; }
   setGenerationResumeHandler(handler: ((runId: string, site: SiteKey) => void) | null): void { this.reportResumed = handler; }
@@ -95,6 +100,21 @@ export class QuestionHistoryService {
       return record;
     }, null);
     this.progress.begin(request.runId, record?.id ?? null);
+    if (record) {
+      // Parent/attempt commit and capture lifecycle survive a failed independent BLOB transaction.
+      try {
+        const key = originalImageRequestKey(request.images);
+        if (this.originalImages?.questionId !== record.id) this.originalImages = { questionId: record.id, key };
+        if (this.originalImages.key !== key) throw new Error("immutable_question_attachments");
+        if (record.inputImageCount > 0 && !this.repository.attachments.forQuestion(record.id)) {
+          this.repository.attachments.save(record, request.images);
+        }
+      } catch {
+        for (const notify of [this.options.onAttachmentSaveFailure, this.reportAttachmentFailure]) {
+          try { notify?.(); } catch { /* Image feedback must never break dispatch or text history. */ }
+        }
+      }
+    }
     return record;
   }
   token(site: SiteKey): string | undefined { const e = this.active.get(site); return e?.lifecycle === this.repository.lifecycle ? e.token : undefined; }

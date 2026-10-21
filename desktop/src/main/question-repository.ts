@@ -1,3 +1,4 @@
+import { QuestionAttachmentRepository } from "./question-attachment-repository";
 import { safeQuestionUrl } from "./question-navigation";
 import type { QuestionRunAnswerProgress } from '../shared/question-run-progress';
 import { createHash } from "node:crypto";
@@ -33,7 +34,8 @@ function foldQuestionSearch(value: unknown): string {
 export class QuestionRepository {
   lifecycle = 0;
   invalidateLifecycle(): void { this.lifecycle++; }
-  constructor(private readonly db: DatabaseSync, private readonly outbox: OutboxRepository) {
+  constructor(private readonly db: DatabaseSync, private readonly outbox: OutboxRepository,
+    readonly attachments = new QuestionAttachmentRepository(db, outbox)) {
     db.function("question_search_fold", { deterministic: true }, foldQuestionSearch);
   }
   get(id: string): StoredQuestion | null {
@@ -63,6 +65,7 @@ export class QuestionRepository {
         if (!enqueue) this.enqueue("question", current.id);
         return;
       }
+      if ("deletedAt" in value) this.attachments.deleteForQuestion(value.id, value.deletedAt, value.deviceId);
       this.db.prepare(`INSERT INTO questions(id, body, sort_time, deleted_at) VALUES(?,?,?,?)
         ON CONFLICT(id) DO UPDATE SET body=excluded.body, sort_time=excluded.sort_time, deleted_at=excluded.deleted_at`)
         .run(value.id, JSON.stringify(value), value.createdAt, "deletedAt" in value ? value.deletedAt : null);
