@@ -318,7 +318,7 @@ npm run soak -- --minutes=60
 - 用户导出经 `BackupService.exportFile` 生成单文件 `.polyask` v4，包含有效 history/archive/decision/folder/folderMembership/template/group/workspace/question/questionAnswer/questionAttachments/preference/draft 及提问原图；不包含凭据、Cookie、设备身份、同步游标、outbox、本机图片同步开关或确认记录。不导入删除指令。旧 v1–3 JSON 继续按 32 MiB / 20,000 条读取；内部 `export()` 保留 v3 元数据接口供兼容测试，生产 IPC 不再使用它直接写文件。
 - **v4 字节格式固定**：17 字节 ASCII magic `POLYASK-BACKUP-4\n`（末尾是真实 LF），随后 4 字节 unsigned big-endian 清单字节数、UTF-8 JSON 清单，最后按清单顺序串接 raw binary。无压缩、无新增依赖。清单字段为 `{format:"polyask-backup",version:4,exportedAt,entries,payloads,omissions}`；每个 payload 为 `{key,setId,index,size,sha256}`，key 必须严格等于顺序生成的 `images/0.bin`、`images/1.bin` 等。附件条目保留 schema 5 的 ID/questionId/createdAt/updatedAt/images 元数据，剥掉 deviceId/base64；每个原图对应一个 payload。文件总计 ≤512 MiB、清单 ≤32 MiB、业务条目与图片 payload 合计 ≤20,000；每提问仍最多 4 张 PNG/JPEG、合计 10 MiB。
 - `backup-container.ts` 仅以 64 KiB 分块读写，内存最多持有清单元数据及单个附件集（≤10 MiB）的原始数据/转换副本。导出先完整性预检、再逐集严格读取 BLOB、写同目录 0600 临时文件，fsync 后在最终 intent 检查与同步 rename 间不让出执行；失败保留已有目标文件。`QuestionAttachmentRepository.readBytes` 是严格的单集 binary 接口，不投影整库 base64。导入先读有界清单，在受管临时目录用生成的数字文件名暂存；不从备份路径解压，不使用图片名当路径。预览之前核对类型、哈希、长度、总量、重复、路径、截断、尾随数据、父提问数量/创建时间与依赖。
-- 缺图结果逐提问返回标题、应有数量及可知原图名称，未知名称只显示数量，不编造文件名。用户可取消、明确补下载或仅导出文字；补下载调用现有 `fetchQuestionAttachments`，不自动打开同步，返回 true 后仍重新核对本机完整集合。仅文字 v4 省略全部原图，`omissions` 按提问记录 `{questionId,count,images}`（images 是已知完整元数据或空数组）；完整附件与 omissions 不可重叠，所有正图片数父项须被其中之一覆盖。成功反馈区分仅文字，导入预览显示省略提示。
+- 缺图结果逐提问返回标题、应有数量及可知原图名称，未知名称只显示数量，不编造文件名。用户可取消、明确补下载或仅导出文字；未连接或须重新授权时引导至 Drive 连接设置，原图同步关闭时引导至图片同步设置，保留当前缺图任务，条件满足后才显示补下载入口。完成或取消后回到备份入口，下载失败或仍有缺图时恢复下载按钮焦点；等待期间主动移开焦点则保留新焦点。补下载调用现有 `fetchQuestionAttachments`，不自动打开同步，返回 true 后仍重新核对本机完整集合。仅文字 v4 省略全部原图，`omissions` 按提问记录 `{questionId,count,images}`（images 是已知完整元数据或空数组）；完整附件与 omissions 不可重叠，所有正图片数父项须被其中之一覆盖。成功反馈区分仅文字，导入预览显示省略提示。
 - 预览只向 renderer 返回业务/图片元数据和省略清单，不含 BLOB/base64、内部 payload 文件引用或 staging 路径。预览会话持有 staging，15 分钟过期；取消、换预览、错误、快照失效、reset、IPC dispose/正常退出均清理。只删除本任务生成的 staging/临时文件，绝不删除用户选中的原备份；异常断电/强杀不承诺执行退出清理。所有异步边界核对 service intent 与 question lifecycle，重置前断开入口立即作废会话，迟到下载/读取不能发布预览或替换导出文件。
 - 格式冻结样本 `desktop/test/fixtures/backup-format1.json` 覆盖八类业务数据；它独立于 Drive schema 1/2/3。偏好恢复写入使用当前设备身份和递增版本；草稿恢复为稳定独立备份分支，不进入本机正在编辑的分支。保留本机 deviceId，不从备份接收设备身份。
 - 原生文件选择仅在主进程进行，可信 shell IPC 不接受渲染层路径；读取限制实际字节数，导出先写同目录临时文件再替换。预览只返回文件名，错误只返回机器码。
@@ -339,6 +339,8 @@ npm run soak -- --minutes=60
 - 已打开站点保留页面会话，不参与群发不回收；明确关闭且监控/采集具备结束证据后事件触发回收。监控连续 5 次读不到状态或到达 45 秒／15 分钟观察上限时显示 `generation_unconfirmed`。采集一侧以完整封存、冻结结束或固定 15 分钟观察预算到期为观察结束；生成一侧须监控也已停下（读不到、到达上限或收口），「提交未确认」本就不开监控，采集结束即可（`site-page-protection.ts`）。两侧都结束后明确关闭不再报 `generation_pending`，已关闭的页面随即回收；任一侧仍在观察时保留页面，以免关闭可能仍在生成的回答。已打开站点休眠及新的后台可见性策略尚未实施，需单独决策与真机验证。
 
 ### 提问历史存储与同步基础
+
+历史原图查看器默认适应窗口，支持切换至 100% 原始尺寸并在图片区域滚动；标题显示文件名和顺序号。Tab 保留在查看器内，Escape 关闭后返回原缩略图；不提供连续缩放或前后切图。
 
 逐次提问采用独立 `question` 和 `questionAnswer`（每站每次尝试）schema 4，SQLite version 5 保留 questions/question_answers 并新增原图存储。相同文字不同发送不合并，重试保留独立尝试；自动副本上限 200,000 码点，不改变手动采集上限。父子删除为终态 tombstone + outbox，迟到子记录遇已删除父立即转为 tombstone；本机重置清新两表且保留 deviceId。旧文字 history 仍为 schema 1。
 

@@ -5,6 +5,7 @@ import { BackupCard, BackupWorkspace } from '../src/renderer/backup-workspace';
 import { getCopy } from '../src/shared/copy';
 import { setShellApi } from '../src/renderer/shell-api';
 import { mountDom } from './ui/dom-harness';
+import { settingsStatus } from './ui/settings-dom';
 import type { BackupExportMode, BackupPreview } from '../src/shared/backup';
 const missing = [{ questionId: 'unknown', title: 'Question without image names', count: 2, images: [] },
   { questionId: 'known', title: 'Question with known images', count: 1, images: [{ name: 'original.png', type: 'image/png' as const, size: 8, sha256: 'a'.repeat(64) }] }];
@@ -12,7 +13,7 @@ for (const locale of ['en', 'zh-CN', 'zh-TW']) test(`missing originals offer exp
   const copy = getCopy(locale), modes: (BackupExportMode | undefined)[] = [], cancelled: string[] = [], feedback: string[] = [];
   setShellApi({ exportBackup: async (mode?: BackupExportMode) => { modes.push(mode); return mode === 'text-only' ? 'text-only' : { missing }; },
     cancelBackup: async (token: string) => { cancelled.push(token); } } as any);
-  function App() { const [busy, onBusy] = useState(false); return <BackupCard copy={copy} locale={locale} busy={busy} onBusy={onBusy} onFeedback={message => feedback.push(message)} />; }
+  function App() { const [busy, onBusy] = useState(false); return <BackupCard syncStatus={{ ...settingsStatus, imageSyncEnabled: true }} onOpenSync={() => {}} copy={copy} locale={locale} busy={busy} onBusy={onBusy} onFeedback={message => feedback.push(message)} />; }
   const h = await mountDom(<App />);
   const button = (text: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(el => el.textContent === text)!;
   try {
@@ -37,7 +38,7 @@ test('unmount cancels pending export and ignores late success', async () => {
   const cancelled: string[] = [], feedback: string[] = [];
   setShellApi({ exportBackup: () => new Promise(resolve => { finish = resolve; }), cancelBackup: async (token: string) => { cancelled.push(token); } } as any);
   const copy = getCopy('en');
-  const h = await mountDom(<BackupCard copy={copy} locale="en" busy={false} onBusy={() => {}} onFeedback={message => feedback.push(message)} />);
+  const h = await mountDom(<BackupCard syncStatus={{ ...settingsStatus, imageSyncEnabled: true }} onOpenSync={() => {}} copy={copy} locale="en" busy={false} onBusy={() => {}} onFeedback={message => feedback.push(message)} />);
   await h.click([...h.document.querySelectorAll<HTMLButtonElement>('button')].find(el => el.textContent === copy.backupExport)!);
   await h.close();
   await act(async () => finish(true));
@@ -57,7 +58,7 @@ test('cancel during explicit download ignores its late result and feedback', asy
   setShellApi({ exportBackup: async (mode: BackupExportMode) => mode === 'download' ? new Promise(resolve => { finish = resolve; }) : { missing },
     cancelBackup: async (token: string) => { cancelled.push(token); } } as any);
   const copy = getCopy('en');
-  function App() { const [busy, onBusy] = useState(false); return <BackupCard copy={copy} locale="en" busy={busy} onBusy={onBusy} onFeedback={message => feedback.push(message)} />; }
+  function App() { const [busy, onBusy] = useState(false); return <BackupCard syncStatus={{ ...settingsStatus, imageSyncEnabled: true }} onOpenSync={() => {}} copy={copy} locale="en" busy={busy} onBusy={onBusy} onFeedback={message => feedback.push(message)} />; }
   const h = await mountDom(<App />);
   const button = (text: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(el => el.textContent === text)!;
   try {

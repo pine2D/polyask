@@ -1,5 +1,5 @@
 import { BackupMissingOriginalsNotice } from './backup-missing-originals';
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { BackupPreview, BackupExportMode, BackupMissingOriginals } from "../shared/backup";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
@@ -12,7 +12,9 @@ import { focusableControls } from "./focusable-controls";
 import { BackupDependencies } from './backup-dependencies';
 import { backupSkipCounts, visibleBackupSelection } from './backup-selection';
 import { useBackupSelectionPreview } from './use-backup-selection-preview';
+import type { SyncStatus } from "../shared/sync";
 import { backupItemTitle } from './backup-data';
+import { useFailedActionFocus } from './use-failed-action-focus';
 
 export function backupError(copy: DesktopCopy, error: unknown): string {
   const code = ipcErrorCode(error);
@@ -114,32 +116,60 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
   </div>, document.body);
 }
 
-export function BackupCard({ copy, locale, busy, onBusy, onFeedback }: {
+export function BackupCard({ copy, locale, busy, onBusy, onFeedback, syncStatus, onOpenSync }: {
   copy: DesktopCopy; locale: string; busy: boolean; onBusy: (busy: boolean) => void; onFeedback: (message: string) => void;
+  syncStatus: SyncStatus; onOpenSync: (target: "connection" | "images") => void;
 }): React.JSX.Element {
   const [preview, setPreview] = useState<BackupPreview | null>(null);
   const [missing, setMissing] = useState<readonly BackupMissingOriginals[]>([]);
+  const card = useRef<HTMLElement>(null), heading = useRef<HTMLHeadingElement>(null);
+  const exportButton = useRef<HTMLButtonElement>(null), restoreFocus = useRef(false);
   const tokenRef = useRef<string | null>(null);
   const mounted = useRef(true);
   const pending = useRef(false);
   const intent = useRef(0);
+  const rememberFocus = useFailedActionFocus(busy);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; void shell.cancelBackup(tokenRef.current ?? "pending").catch(() => undefined); }; }, []);
+  useLayoutEffect(() => {
+    if (!restoreFocus.current || missing.length) return;
+    restoreFocus.current = false;
+    // A user who moved to another setting keeps that focus, even after a late result.
+    if (document.activeElement !== document.body) return;
+    const target = busy ? heading.current : exportButton.current;
+    target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'nearest' });
+  }, [missing.length, busy]);
+  const dismissMissing = () => {
+    const notice = card.current?.querySelector('.backup-missing');
+    restoreFocus.current = !!notice && (notice.contains(document.activeElement) || document.activeElement === document.body);
+    setMissing([]);
+  };
   const close = () => { const token = tokenRef.current; tokenRef.current = null; setPreview(null); if (token) void shell.cancelBackup(token).catch(() => undefined); };
   const run = async (action: "export" | "import", mode: BackupExportMode = "complete") => {
     if (busy || pending.current) return;
     const request = ++intent.current;
+    const finishFocus = rememberFocus();
+    let incomplete = false;
     pending.current = true; onBusy(true);
     try {
       if (action === "export") {
         const result = await shell.exportBackup(mode);
         if (!mounted.current || request !== intent.current) return;
-        if (result && typeof result === 'object') setMissing(result.missing);
-        else { setMissing([]); if (result) onFeedback(result === 'text-only' ? copy.backupTextOnlyExported : copy.backupExported); }
+        if (result && typeof result === 'object') { if (result.missing.length) { incomplete = missing.length > 0; setMissing(result.missing); } else dismissMissing(); }
+        else { dismissMissing(); if (result) onFeedback(result === 'text-only' ? copy.backupTextOnlyExported : copy.backupExported); }
       }
       else { setMissing([]); const next = await shell.previewBackup(); if (!mounted.current || request !== intent.current) { if (next) await shell.cancelBackup(next.token); return; } tokenRef.current = next?.token ?? null; setPreview(next); }
-    } catch (error) { if (mounted.current && request === intent.current) onFeedback(backupError(copy, error)); }
-    finally { pending.current = false; if (mounted.current) onBusy(false); }
+    } catch (error) { if (mounted.current && request === intent.current) { incomplete = true; onFeedback(backupError(copy, error)); } }
+    finally { finishFocus(incomplete); pending.current = false; if (mounted.current) onBusy(false); }
   };
-  return <section className="settings-card settings-row" aria-labelledby="backup-card-title"><h2 id="backup-card-title">{copy.backupTitle}</h2><p>{copy.backupDescription}</p><div className="settings-actions"><button type="button" className="settings-control" disabled={busy} onClick={() => void run("export")}>{copy.backupExport}</button><button type="button" className="settings-control" disabled={busy} onClick={() => void run("import")}>{copy.backupImport}</button></div>{missing.length ? <BackupMissingOriginalsNotice missing={missing} copy={copy} busy={busy} onExport={mode => void run('export', mode)}
-    onCancel={() => { intent.current++; setMissing([]); void shell.cancelBackup('pending').catch(() => undefined); }} /> : null}{preview ? <BackupWorkspace preview={preview} copy={copy} locale={locale} onClose={close} onApplied={(message) => { close(); onFeedback(message); }} /> : null}</section>;
+  return <section ref={card} className="settings-card settings-row" aria-labelledby="backup-card-title">
+    <h2 id="backup-card-title" tabIndex={-1} ref={heading}>{copy.backupTitle}</h2><p>{copy.backupDescription}</p>
+    <div className="settings-actions">
+      <button type="button" ref={exportButton} className="settings-control" disabled={busy} onClick={() => void run("export")}>{copy.backupExport}</button>
+      <button type="button" className="settings-control" disabled={busy} onClick={() => void run("import")}>{copy.backupImport}</button>
+    </div>
+    {missing.length ? <BackupMissingOriginalsNotice missing={missing} copy={copy} busy={busy} syncStatus={syncStatus} onOpenSync={onOpenSync}
+      onExport={mode => void run('export', mode)}
+      onCancel={() => { intent.current++; dismissMissing(); void shell.cancelBackup('pending').catch(() => undefined); }} /> : null}
+    {preview ? <BackupWorkspace preview={preview} copy={copy} locale={locale} onClose={close} onApplied={(message) => { close(); onFeedback(message); }} /> : null}
+  </section>;
 }

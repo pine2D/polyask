@@ -1,5 +1,9 @@
 export const BACKUP_COPY = {
   en: {
+    backupGoConnection: "Go to Drive connection",
+    backupGoImageSync: "Go to image sync settings",
+    backupDownloadNeedsConnection: "Connect or reconnect Drive, then return here to download the missing originals.",
+    backupDownloadNeedsImageSync: "Enable image sync in settings, then return here to download the missing originals.",
     backupOriginalsBlocked: "This restored image set was deleted. It cannot be restored again from this backup.",
     backupKindQuestionAttachments: "Original images", backupImageBytes: "Size in bytes", backupImageType: "Image type", backupImageCount: "Image count",
     backupMissingOriginals: "Some original images are unavailable on this device",
@@ -38,6 +42,10 @@ export const BACKUP_COPY = {
     backupKindHistory: "Questions", backupKindArchive: "Saved results", backupKindDecision: "Decision cards", backupKindFolder: "Folders", backupKindMembership: "Folder links", backupKindState: "Templates & preferences", backupDetails: "Business data", backupFieldValue: "Value"
   },
   zhCN: {
+    backupGoConnection: "前往 Drive 连接设置",
+    backupGoImageSync: "前往图片同步设置",
+    backupDownloadNeedsConnection: "请先连接或重新连接 Drive，再回到这里补下载原图。",
+    backupDownloadNeedsImageSync: "请先在设置中开启图片同步，再回到这里补下载原图。",
     backupOriginalsBlocked: "此前恢复的原图已被删除，不能从同一份备份再次恢复。",
     backupKindQuestionAttachments: "提问原图", backupImageBytes: "字节数", backupImageType: "图片类型", backupImageCount: "图片数量",
     backupMissingOriginals: "部分提问原图在本机不可用",
@@ -74,6 +82,10 @@ export const BACKUP_COPY = {
     backupKindHistory: "提问历史", backupKindArchive: "保存结果", backupKindDecision: "决策卡", backupKindFolder: "文件夹", backupKindMembership: "归属关系", backupKindState: "模板与偏好", backupDetails: "业务数据", backupFieldValue: "内容"
   },
   zhTW: {
+    backupGoConnection: "前往 Drive 連線設定",
+    backupGoImageSync: "前往圖片同步設定",
+    backupDownloadNeedsConnection: "請先連線或重新連線至 Drive，再回到這裡補下載原圖。",
+    backupDownloadNeedsImageSync: "請先在設定中開啟圖片同步，再回到這裡補下載原圖。",
     backupOriginalsBlocked: "先前還原的原圖已刪除，無法從同一份備份再次還原。",
     backupKindQuestionAttachments: "提問原圖", backupImageBytes: "位元組數", backupImageType: "圖片類型", backupImageCount: "圖片數量",
     backupMissingOriginals: "部分提問原圖在本機無法使用",

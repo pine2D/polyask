@@ -36,7 +36,7 @@ test('reader loads ordered thumbnails from metadata and exposes explicit zoom an
     assert.equal(!!zoom?.getAttribute('aria-label'), true);
     await h.click(zoom);
     assert.equal(h.document.querySelectorAll('.question-image-dialog img').length, 1);
-    await h.click(h.document.querySelector<HTMLButtonElement>('.question-image-dialog button')!);
+    await h.click(h.document.querySelector<HTMLButtonElement>('.question-image-close')!);
     assert.equal(h.document.querySelector('.question-image-dialog') === null, true);
     assert.equal(h.document.activeElement === zoom, true);
   } finally { await h.close(); }
@@ -150,4 +150,50 @@ test('an old image decode error cannot contaminate a successful retry or another
       assert.equal(h.document.querySelector('[role="alert"]') === null, true, 'stale decode failure belongs to its original attempt');
     } finally { await h.close(); setShellApi(null); }
   }
+});
+
+
+test('original viewer identifies duplicate images and switches fit and actual size without leaving the dialog', async () => {
+  const h = await historyMount(api);
+  try {
+    await waitFor(() => h.document.querySelector('.question-main'));
+    await h.click(h.document.querySelector<HTMLElement>('.question-main')!);
+    const opener = h.document.querySelector<HTMLButtonElement>('[data-image-index="2"]')!;
+    await h.click(opener);
+    const panel = h.document.querySelector<HTMLElement>('.question-image-dialog')!;
+    const title = h.document.getElementById(panel.getAttribute('aria-labelledby') ?? '');
+    assert.equal(title !== null, true, 'the dialog has a visible identifying title');
+    assert.equal(title!.textContent!.includes(originals[2].name), true);
+    assert.equal(title!.textContent!.includes('3 / 4'), true, 'sequence disambiguates repeated filenames');
+    const fit = [...panel.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Fit to window');
+    const actual = [...panel.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === '100%');
+    assert.equal(fit !== undefined && actual !== undefined, true, 'both size modes are available');
+    assert.equal(fit!.getAttribute('aria-pressed'), 'true');
+    await h.click(actual!);
+    assert.equal(actual!.getAttribute('aria-pressed'), 'true');
+    assert.equal(fit!.getAttribute('aria-pressed'), 'false');
+    const viewport = panel.querySelector<HTMLElement>('[role="region"]');
+    assert.equal(viewport !== null && viewport.tabIndex === 0, true, 'original-size inspection is keyboard reachable');
+    viewport!.focus();
+    await act(async () => viewport!.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true })));
+    assert.equal(h.document.activeElement === fit, true, 'Tab wraps from the last control to the first');
+    await h.click(fit!); assert.equal(fit!.getAttribute('aria-pressed'), 'true');
+    await act(async () => window.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    assert.equal(h.document.querySelector('.question-image-dialog') === null, true);
+    assert.equal(h.document.activeElement === opener, true);
+  } finally { await h.close(); }
+});
+
+
+test('clicking the image backdrop keeps reverse Tab inside the viewer', async () => {
+  const h = await historyMount(api);
+  try {
+    await waitFor(() => h.document.querySelector('.question-main'));
+    await h.click(h.document.querySelector<HTMLElement>('.question-main')!);
+    await h.click(h.document.querySelector<HTMLElement>('[data-image-index="1"]')!);
+    const scrim = h.document.querySelector<HTMLElement>('.question-image-scrim')!;
+    await act(async () => scrim.dispatchEvent(new h.window.MouseEvent('mousedown', { bubbles: true, cancelable: true })));
+    await act(async () => window.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true })));
+    assert.equal(h.document.activeElement === h.document.querySelector('.question-image-viewport'), true, 'reverse Tab cannot escape via the panel focus stop');
+  } finally { await h.close(); }
 });

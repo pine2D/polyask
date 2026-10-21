@@ -68,6 +68,6 @@ export function QuestionAttachments({ questionId, inputImageCount, copy, imageSy
       {state !== 'loading' && imageSyncEnabled && shell.questionFetchAttachments && <button type="button" onClick={() => { void fetch(); }}>{copy.questionOriginalFetch}</button>}
     </p>}
     <p className="question-note">{copy.questionOriginalResults}</p>
-    {zoom !== null && images[zoom] && <QuestionImageDialog image={images[zoom]!.image} copy={copy} onClose={() => setZoom(null)} />}
+    {zoom !== null && images[zoom] && <QuestionImageDialog image={images[zoom]!.image} number={zoom + 1} count={inputImageCount} copy={copy} onClose={() => setZoom(null)} />}
   </section>;
 }

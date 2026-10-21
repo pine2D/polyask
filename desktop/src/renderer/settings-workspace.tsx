@@ -287,7 +287,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             />
             <p className="sync-privacy">{props.copy.syncPrivacy}</p>
           </section>
-          <BackupCard copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
+          <BackupCard syncStatus={props.status} onOpenSync={target => navigateSection("overview", target === "connection" ? "sync-title" : "question-image-sync-title")}
+            copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
           <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
             following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
           {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} proxy={proxy} copy={props.copy} busy={busy} /> : null}

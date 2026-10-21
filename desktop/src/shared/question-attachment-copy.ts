@@ -1,5 +1,6 @@
 export const QUESTION_ATTACHMENT_COPY = {
   en: {
+    questionOriginalPosition: '{number} / {count}', questionOriginalFit: 'Fit to window', questionOriginalActual: '100%',
     imageSyncTitle: 'Sync original images on this device',
     imageSyncDescription: 'Off by default. Originals use space on this device and in Drive. Enabling uploads saved and new originals to Google Drive and downloads originals from other devices. Turning it off stops image transfers and keeps local images and the queue; text sync and relevant deletion markers continue.',
     imageSyncConfirm: 'Enable image sync',
@@ -18,6 +19,7 @@ export const QUESTION_ATTACHMENT_COPY = {
     questionReaskLoading: 'Preparing question draft…'
   },
   zhCN: {
+    questionOriginalPosition: '{number} / {count}', questionOriginalFit: '适应窗口', questionOriginalActual: '100%',
     imageSyncTitle: '在本机同步原始图片',
     imageSyncDescription: '默认关闭。原图会占用本机和 Drive 空间。开启后，将已有和新保存的原图上传到 Google Drive，并下载其他设备的原图。关闭会停止图片传输，保留本机图片和队列；文字同步及相关删除标记继续传输。',
     imageSyncConfirm: '开启图片同步',
@@ -36,6 +38,7 @@ export const QUESTION_ATTACHMENT_COPY = {
     questionReaskLoading: '正在准备提问草稿…'
   },
   zhTW: {
+    questionOriginalPosition: '{number} / {count}', questionOriginalFit: '符合視窗', questionOriginalActual: '100%',
     imageSyncTitle: '在本機同步原始圖片',
     imageSyncDescription: '預設關閉。原圖會占用本機與 Drive 空間。開啟後，會將既有及新儲存的原圖上傳至 Google Drive，並下載其他裝置的原圖。關閉會停止圖片傳輸，保留本機圖片及佇列；文字同步與相關刪除標記仍會傳輸。',
     imageSyncConfirm: '開啟圖片同步',
