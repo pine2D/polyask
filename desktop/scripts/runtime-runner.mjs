@@ -36,10 +36,15 @@ export async function prepareRuntime(prefix, environmentForDirectory) {
   return { directory, userData, environment };
 }
 
-export async function launchRuntime(prefix, environmentForDirectory) {
+// Offline DNS is opt-in for synthetic packaged checks; normal startup keeps its existing arguments.
+export function runtimeArguments(userData, { offline = false } = {}) {
+  return [`--user-data-dir=${userData}`, ...(offline ? ["--host-resolver-rules=MAP * ~NOTFOUND", "--disable-background-networking"] : [])];
+}
+
+export async function launchRuntime(prefix, environmentForDirectory, options = {}) {
   const prepared = await prepareRuntime(prefix, environmentForDirectory);
   const logs = [];
-  const child = spawn(packagedExecutablePath(), [`--user-data-dir=${prepared.userData}`], {
+  const child = spawn(packagedExecutablePath(), runtimeArguments(prepared.userData, options), {
     cwd: desktopDirectory,
     env: { ...process.env, ...prepared.environment },
     stdio: ["ignore", "pipe", "pipe"]

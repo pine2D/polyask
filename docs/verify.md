@@ -26,6 +26,12 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此启动器打印的限额不等于浏览器实际共同边界。`test/ui/reading-native-check.ts` 仅对 Linux 合成 Electron 子进程隔离会话总线；阅读无障碍专项在启动、各场景和结束时枚举各线程 children，并以 `app.getAppMetrics()` 补充 PID，核对所有已观测 PID 的共同 cgroup 限额。进程退出竞态可忽略，其它读取错误直接失败。这些专项不覆盖 D-Bus 桌面集成，其它原生入口仍须核对实际进程边界。
 
+## 提问历史原图的隔离原生验收
+
+在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/history-images-native.mjs`。专项自行使用 Xvfb，生产历史、完整设置页（含备份卡）与真实 SQLite / BackupService 均只接合成数据；与外壳入口对账四份全局样式及加载顺序。三语 × 明暗 × 普通/短窗 150% 缩放共 12 组验证有效 PNG 的实际解码、有序重复图片、放大关闭焦点、可信 Tab/Enter/Escape、带脏草稿的完整再问且零发送、同步等待期间关闭图片同步、备份缺图选择键盘顺序；另验编辑/重置/关闭/返回后忽略迟到再问、显式下载刷新及 v4 原图备份往返。输出截图、标量几何、报告、逐线程子进程与 app metrics 的共同 cgroup 证据，退出后核对全部观测 PID 消失并清理自建 profile/数据库。它证明生产组件及服务行为，桥接是合成桩，不代替全 App IPC、全局快捷键或真实账户验收。
+
+补齐实际打包主进程/preload 链：先 `npm run package`，再运行 `node scripts/test-safe.mjs command node scripts/history-images-packaged-smoke.mjs`。该入口调用现有 smoke 的显式 `--offline` 模式（默认启动参数不变），用 Chromium 主机名解析阻断和临时 profile 检查 1 个外壳、9 个安全站点视图及挂载；采样全部线程子进程的共同 4 GiB/512 MiB 临时 cgroup，并核对实际离线参数、档案移除和进程退出。没有真实 AI 提交、Drive 登录或用户 profile；不覆盖 Windows/macOS、认证 Drive 双设备、D-Bus 桌面集成及物理读屏。日志保留已知 SQLite ExperimentalWarning；隔离会话总线导致的 Chromium D-Bus 连接错误与 renderer console error 分开记录。
+
 ## 结果库视觉与交互回归
 
 专注阅读合栏专项：在 `desktop/` 运行 `npm run test:unit -- test/library-focused-toolbar-interaction.check.ts`。18 组覆盖三语、明暗主题、两种密度与 200% 缩放；960×720 下检查顶部保持一行、移除独立记录栏并为正文回收空间，窄窗检查按钮尺寸、换行与无重叠。三语实际 Tab/方向键/Escape 核验文件夹→更多的顺序、菜单退出焦点，以及展开/返回后两栏节点和阅读位置；配合 `library-focused-toolbar.test.tsx` 检查删除确认取消与新建决策返回。临时 Electron 使用合成数据、阻断外网，并核对实际进程共同 4GiB/512MiB cgroup；不替代物理设备与读屏验收。

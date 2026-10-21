@@ -27,7 +27,7 @@ export function settingsElement(patch: Partial<Props> = {}) {
   return <SettingsWorkspace {...props as ComponentProps<typeof SettingsWorkspace>} />;
 }
 export function settingsShell(patch: Record<string, unknown> = {}) {
-  setShellApi({ ...proxyShellStubs(), syncDiagnostics: async () => createSyncDiagnosticSnapshot(settingsStatus, settingsRuntime),
+  setShellApi({ ...proxyShellStubs(), cancelBackup: async () => {}, syncDiagnostics: async () => createSyncDiagnosticSnapshot(settingsStatus, settingsRuntime),
     getLocalDataStats: async () => ({ history: 2, archives: 3, decisions: 4, folders: 5, answers: 7, memberships: 9,
       drafts: 0, reset: { preferences: 0, answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } }), ...patch } as any);
 }

@@ -14,7 +14,7 @@ let runtime;
 try {
   runtime = await launchRuntime("polyask-smoke-", (directory) => ({
     POLYASK_DIAGNOSTICS_FILE: join(directory, "diagnostic.json")
-  }));
+  }), { offline: process.argv.includes("--offline") });
   const diagnosticPath = runtime.environment.POLYASK_DIAGNOSTICS_FILE;
   const snapshot = await waitForJson(
     diagnosticPath,

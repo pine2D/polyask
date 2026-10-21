@@ -3,6 +3,7 @@ import { join } from "node:path";
 import test from "node:test";
 
 import {
+  runtimeArguments,
   packagedExecutablePath,
   prepareRuntime,
   removeRuntimeDirectory
@@ -35,4 +36,12 @@ test("runtime environment paths belong to the same temporary launch context", as
   } finally {
     await removeRuntimeDirectory(prepared.directory);
   }
+});
+
+test("offline packaged smoke arguments require an explicit option", () => {
+  const path = "/tmp/polyask-synthetic/user-data";
+  assert.equal(runtimeArguments(path).join("|"), `--user-data-dir=${path}`);
+  assert.equal(runtimeArguments(path, { offline: false }).join("|"), `--user-data-dir=${path}`);
+  assert.equal(runtimeArguments(path, { offline: true }).join("|"),
+    `--user-data-dir=${path}|--host-resolver-rules=MAP * ~NOTFOUND|--disable-background-networking`);
 });

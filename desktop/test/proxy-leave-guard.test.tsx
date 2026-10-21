@@ -135,7 +135,7 @@ for (const edit of ['before-preview', 'after-preview'] as const) for (const via 
       await h.click(h.cancel());
       assert.equal(h.host().value, 'draft.example'); assert.equal(h.password().value, 'synthetic-secret');
       await leave(); await h.click(h.confirm());
-      assert.deepEqual(h.effects, ['sites']); assert.deepEqual(h.cancelledBackups, ['synthetic-preview']);
+      assert.deepEqual(h.effects, ['sites']); assert.deepEqual(h.cancelledBackups, ['synthetic-preview', 'pending']);
     } finally { await h.close(); }
   });
 }
@@ -153,7 +153,7 @@ test('a navigation command closes backup preview but awaits proxy approval befor
     await h.openBackup(); await h.click(h.document.getElementById('navigate-archive')!);
     await h.click(h.document.getElementById('navigate-sites')!); await h.click(h.confirm());
     assert.deepEqual(h.effects, ['archive']); assert.deepEqual(h.writes, []);
-    assert.deepEqual(h.cancelledBackups, ['synthetic-preview', 'synthetic-preview']);
+    assert.deepEqual(h.cancelledBackups, ['synthetic-preview', 'synthetic-preview', 'pending']);
   } finally { await h.close(); }
 });
 

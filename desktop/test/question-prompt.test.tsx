@@ -5,7 +5,8 @@ import { copy, detail, historyMount, q, waitFor } from './ui/history-dom';
 
 const long = `  ORIGINAL QUESTION\n\n${'😀 文本 '.repeat(80)}\n\n  END  `;
 async function open(text: string, props: Record<string, unknown> = {}) {
-  const h = await historyMount({ getQuestion: async () => ({ ...detail(), question: { ...q, text } }) }, props);
+  const h = await historyMount({ getQuestion: async () => ({ ...detail(), question: { ...q, text } }),
+    questionReask: async () => ({ questionId: q.id, text, images: [] }) }, props);
   await waitFor(() => h.document.querySelector('.question-main'));
   await h.click(h.document.querySelector<HTMLElement>('.question-main')!);
   return h;
@@ -41,7 +42,7 @@ test('reasking a collapsed question preserves full original and keeps attachment
   try {
     assert.ok(h.button(copy.questionExpand), 'test starts with a collapsed original');
     await h.click(h.button(copy.questionReask));
-    assert.ok(h.document.querySelector('[role="dialog"]')); assert.deepEqual(drafts, []);
+    assert.equal(h.document.querySelector('[role="dialog"]') !== null, true); assert.deepEqual(drafts, []);
     await h.click(h.button(copy.cancel)); assert.deepEqual(drafts, []);
     await h.click(h.button(copy.questionReask));
     await act(async () => h.document.querySelector<HTMLButtonElement>('.confirm-actions .primary')!.click());
