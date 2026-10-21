@@ -32,6 +32,8 @@ Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此�
 
 补齐实际打包主进程/preload 链：先 `npm run package`，再运行 `node scripts/test-safe.mjs command node scripts/history-images-packaged-smoke.mjs`。该入口调用现有 smoke 的显式 `--offline` 模式（默认启动参数不变），用 Chromium 主机名解析阻断和临时 profile 检查 1 个外壳、9 个安全站点视图及挂载；采样全部线程子进程的共同 4 GiB/512 MiB 临时 cgroup，并核对实际离线参数、档案移除和进程退出。没有真实 AI 提交、Drive 登录或用户 profile；不覆盖 Windows/macOS、认证 Drive 双设备、D-Bus 桌面集成及物理读屏。日志保留已知 SQLite ExperimentalWarning；隔离会话总线导致的 Chromium D-Bus 连接错误与 renderer console error 分开记录。
 
+异常清理对拍（需先有当前平台的打包产物）：`node scripts/test-safe.mjs command node scripts/history-images-cleanup.check.mjs`。两个启动器共用按 PID 与启动时间确认归属的清理器，外层 finally 补采后代并有界 TERM→KILL，只清理本次生成的 profile/data，始终输出原错误及 cleanup 结果；失败截图仅作尽力采集。专项注入运行中 Electron 短超时（带忽略 TERM 的合成后代）、截图拒绝、打包监控失败及启动器 SIGTERM，检查非零/原信号退出、原错误保留、进程退出和档案删除；不重复正常视觉矩阵。
+
 ## 结果库视觉与交互回归
 
 专注阅读合栏专项：在 `desktop/` 运行 `npm run test:unit -- test/library-focused-toolbar-interaction.check.ts`。18 组覆盖三语、明暗主题、两种密度与 200% 缩放；960×720 下检查顶部保持一行、移除独立记录栏并为正文回收空间，窄窗检查按钮尺寸、换行与无重叠。三语实际 Tab/方向键/Escape 核验文件夹→更多的顺序、菜单退出焦点，以及展开/返回后两栏节点和阅读位置；配合 `library-focused-toolbar.test.tsx` 检查删除确认取消与新建决策返回。临时 Electron 使用合成数据、阻断外网，并核对实际进程共同 4GiB/512MiB cgroup；不替代物理设备与读屏验收。

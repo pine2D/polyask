@@ -13,6 +13,20 @@ app.whenReady().then(async()=>{
   session.defaultSession.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_,done)=>done({cancel:true}));
   win=new BrowserWindow({width:1200,height:900,show:true,webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}});
   boundary=processBoundary(app,output);
+  const fault = process.env.POLYASK_HISTORY_NATIVE_FAULT;
+  if (fault) {
+    mkdirSync(join(output,'synthetic-data'));
+    writeFileSync(join(output,'synthetic-data','owned-marker'),'synthetic');
+    if (fault === 'capture') {
+      win.webContents.capturePage = async () => { throw new Error('injected_capture_failure'); };
+      throw new Error('injected_native_failure');
+    }
+    require('node:child_process').spawn(process.execPath,
+      ['-e', "process.on('SIGTERM',()=>{});setInterval(()=>{},1000)"],
+      {env:{...process.env,ELECTRON_RUN_AS_NODE:'1'},stdio:'ignore'});
+    process.on('SIGTERM',()=>{});
+    await new Promise(()=>{});
+  }
   win.webContents.on('console-message',event=>{if(event.level==='error')errors.push(String(event.message));});
   win.webContents.on('render-process-gone',(_,detail)=>errors.push(`renderer:${detail.reason}`));
   const js=source=>win.webContents.executeJavaScript(source);
@@ -119,7 +133,13 @@ app.whenReady().then(async()=>{
   writeFileSync(join(output,'report.json'),JSON.stringify({report,geometry,errors,proof:'Production components and services, synthetic bridge; not full-application IPC'},null,2));
   win.destroy();app.exit(0);
 }).catch(async error=>{
-  writeFileSync(join(output,'failure.json'),JSON.stringify({error:String(error),report,geometry,errors},null,2));
-  if(win&&!win.isDestroyed())writeFileSync(join(output,'failure.png'),(await win.webContents.capturePage()).toPNG());
-  console.error(String(error.stack));if(win&&!win.isDestroyed())win.destroy();app.exit(1);
+  // Capture can itself reject after renderer failure. Preserve the first error and always exit.
+  console.error(String(error.stack));
+  try {
+    writeFileSync(join(output,'failure.json'),JSON.stringify({error:String(error),report,geometry,errors},null,2));
+    try {
+      if(win&&!win.isDestroyed())writeFileSync(join(output,'failure.png'),(await win.webContents.capturePage()).toPNG());
+    } catch (captureError) { console.error(`failure_screenshot_unavailable:${captureError}`); }
+  } catch (evidenceError) { console.error(`failure_evidence_unavailable:${evidenceError}`); }
+  finally { try { if(win&&!win.isDestroyed())win.destroy(); } finally { app.exit(1); } }
 });
