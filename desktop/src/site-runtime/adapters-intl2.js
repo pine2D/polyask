@@ -186,7 +186,14 @@
       fast: async function (deadline) {
         checkDeadline(deadline); await this._selectModel(deadline); await this._pickEdge(false, deadline); },
       attach: function (files, el, deadline) {
-        return S.setInputFiles(document.querySelector("#upload-photos"), files, el, deadline);
+        if (deadline && Date.now() >= deadline) return false;
+        const form = el?.closest("form");
+        const legacy = (form || document).querySelector('input#upload-photos[type="file"]:not(:disabled)');
+        // 2026-10-21：新版改用动态 id；同表单另有拍照、视频和任意文件入口。
+        // 只认唯一的多图专用 input，不依赖随语言变化的 aria-label。
+        const photos = form?.querySelectorAll('input[type="file"][accept="image/*"][multiple]:not([capture]):not(:disabled)');
+        const input = legacy || (photos?.length === 1 ? photos[0] : null);
+        return input ? S.setInputFiles(input, files, el, deadline) : false;
       },
       stop: function () {
         const b = document.querySelector('[data-testid="stop-button"]') ||
