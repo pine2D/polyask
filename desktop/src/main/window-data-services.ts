@@ -52,7 +52,7 @@ export async function createWindowDataServices(options: {
     }
   });
   const dataAdmin = new DataAdminService({ database, deviceId: local.deviceId, sync, wipeSecrets: () => options.proxy.runtime.wipeSecrets(),
-    beforeDisconnect: () => { coordinator.cancel(); synthesisCoordinator.cancel(); },
+    beforeDisconnect: () => { local.backup.invalidate(); coordinator.cancel(); synthesisCoordinator.cancel(); },
     beforeWipe: () => { preferences.drafts.invalidate(); collection.clearRun(); synthesis.reset(); manager.resetRunStatus(); }
   });
   return { ...local, collection, preferences, synthesis, sync, dataAdmin };

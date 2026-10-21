@@ -102,6 +102,12 @@ export class QuestionAttachmentRepository {
       const bytes = Buffer.from(row.data); verifyQuestionImage(manifest.images[index], bytes); return bytes;
     });
   }
+  /** Bounded raw read for the backup stream; no whole-library or base64 projection. */
+  readBytes(questionId: string): readonly Buffer[] {
+    const manifest = this.forQuestion(questionId);
+    if (!manifest || 'deletedAt' in manifest) throw new Error('question_attachments_unavailable');
+    return this.payloads(manifest, true);
+  }
   readAll(questionId: string): DesktopImage[] {
     const manifest = this.forQuestion(questionId);
     if (!manifest || 'deletedAt' in manifest) throw new Error('question_attachments_unavailable');

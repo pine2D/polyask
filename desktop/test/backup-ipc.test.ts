@@ -17,10 +17,13 @@ test("backup IPC uses native paths only, guards trust, handles cancel, and publi
       showOpenDialog:async()=>{ await waitForOpen; return {canceled:cancelled,filePaths:["/chosen/backup.json"]}; },
       showSaveDialog:async()=>({canceled:cancelled,filePath:"/chosen/export.json"})
     }};
-    assert.equal(name,"./backup-files");
-    return {readBackupFile:async(path:string)=>{assert.equal(path,"/chosen/backup.json");reads++;return {valid:true};},writeBackupFile:async(path:string)=>{assert.equal(path,"/chosen/export.json");writes++;}};
+    throw new Error(name);
   }});
-  const backup={export:()=>({format:"polyask-backup"}),preview:()=>({token:"preview"}),apply:()=>{applies++;return {imported:1,skipped:0};},cancel:()=>{},
+  let generation=0;
+  const backup={beginOperation:()=>{const current=++generation;return ()=>{if(current!==generation)throw new Error('backup_stale');};},
+    missingOriginals:async()=>[], dispose:()=>{generation++;},
+    exportFile:async(path:string)=>{assert.equal(path,"/chosen/export.json");writes++;},
+    previewFile:async(path:string)=>{assert.equal(path,"/chosen/backup.json");reads++;return {token:"preview"};}, export:()=>({format:"polyask-backup"}),preview:()=>({token:"preview"}),apply:()=>{applies++;return {imported:1,skipped:0};},cancel:()=>{},
     previewSelection:(token:string,keys:string[])=>{assert.equal(token,'preview');assert.deepEqual(Array.from(keys),['archive:a']);counts++;return {imported:1,skipped:0,keys};}};
   const dispose=exported.exports.registerBackupIpc({window:{},backup,trusted:(e:unknown)=>e===true,afterApply:()=>{published++;}});
   assert.equal(handlers.size,5);

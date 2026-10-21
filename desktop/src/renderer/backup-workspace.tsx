@@ -1,6 +1,7 @@
+import { BackupMissingOriginalsNotice } from './backup-missing-originals';
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { BackupPreview } from "../shared/backup";
+import type { BackupPreview, BackupExportMode, BackupMissingOriginals } from "../shared/backup";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import { formatDateTime } from "../shared/format";
 import { ipcErrorCode } from "../shared/ipc-error";
@@ -17,6 +18,7 @@ export function backupError(copy: DesktopCopy, error: unknown): string {
   const code = ipcErrorCode(error);
   if (code === "backup_stale" || code === "backup_missing") return copy.backupStale;
   if (code === "backup_invalid" || code === "backup_version") return copy.backupInvalid;
+  if (code === "backup_images_missing") return copy.backupMissingOriginals;
   if (code === "backup_too_large") return copy.backupTooLarge;
   return copy.backupFailed;
 }
@@ -91,6 +93,7 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
   return createPortal(<div className="backup-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) { event.preventDefault(); panel.current?.focus(); } }}>
     <div className="backup-workspace" role="dialog" aria-modal="true" aria-labelledby="backup-review-title" tabIndex={-1} ref={panel} aria-busy={applying}>
       <header className="backup-header"><div><h2 id="backup-review-title">{confirming ? copy.backupConfirmTitle : copy.backupReview}</h2>{preview.filename ? <p className="backup-filename">{preview.filename}</p> : null}<p>{formatCopy(copy.backupDate, { date: formatDateTime(preview.exportedAt, locale) })}</p></div><button type="button" disabled={applying} ref={cancel} onClick={() => confirming ? setConfirming(false) : onClose()}>{copy.cancel}</button></header>
+      {preview.omissions?.length ? <p role="note">{formatCopy(copy.backupOmissionsNotice, { count: preview.omissions.length })}</p> : null}
       {error || countError ? <p role="alert" className="backup-error">{error || countError}</p> : null}
       {confirming ? <section className="backup-summary"><h3>{summary}</h3><p>{copy.backupSyncNotice}</p><p>{skipReasons}</p><ul>{preview.items.filter((item) => eligible.has(item.key)).map((item) => <li key={item.key}>{backupKind(copy, item.kind)} · {backupItemTitle(copy, item)}{item.status === "deleted" ? ` · ${copy.backupRestoreDeleted}` : ""}</li>)}</ul></section> : <>
         <div className="backup-filters"><label>{copy.backupType}<select aria-label={copy.backupType} value={filter} onChange={event => setFilter(event.target.value)}>{['all', ...new Set(preview.items.map(item => item.kind))].map(kind => <option key={kind} value={kind}>{kind === 'all' ? copy.backupAll : backupKind(copy, kind)}</option>)}</select></label>
@@ -115,19 +118,28 @@ export function BackupCard({ copy, locale, busy, onBusy, onFeedback }: {
   copy: DesktopCopy; locale: string; busy: boolean; onBusy: (busy: boolean) => void; onFeedback: (message: string) => void;
 }): React.JSX.Element {
   const [preview, setPreview] = useState<BackupPreview | null>(null);
+  const [missing, setMissing] = useState<readonly BackupMissingOriginals[]>([]);
   const tokenRef = useRef<string | null>(null);
   const mounted = useRef(true);
   const pending = useRef(false);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; if (tokenRef.current) void shell.cancelBackup(tokenRef.current).catch(() => undefined); }; }, []);
+  const intent = useRef(0);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; void shell.cancelBackup(tokenRef.current ?? "pending").catch(() => undefined); }; }, []);
   const close = () => { const token = tokenRef.current; tokenRef.current = null; setPreview(null); if (token) void shell.cancelBackup(token).catch(() => undefined); };
-  const run = async (action: "export" | "import") => {
+  const run = async (action: "export" | "import", mode: BackupExportMode = "complete") => {
     if (busy || pending.current) return;
+    const request = ++intent.current;
     pending.current = true; onBusy(true);
     try {
-      if (action === "export") { if (await shell.exportBackup() && mounted.current) onFeedback(copy.backupExported); }
-      else { const next = await shell.previewBackup(); if (!mounted.current) { if (next) await shell.cancelBackup(next.token); return; } tokenRef.current = next?.token ?? null; setPreview(next); }
-    } catch (error) { if (mounted.current) onFeedback(backupError(copy, error)); }
+      if (action === "export") {
+        const result = await shell.exportBackup(mode);
+        if (!mounted.current || request !== intent.current) return;
+        if (result && typeof result === 'object') setMissing(result.missing);
+        else { setMissing([]); if (result) onFeedback(result === 'text-only' ? copy.backupTextOnlyExported : copy.backupExported); }
+      }
+      else { setMissing([]); const next = await shell.previewBackup(); if (!mounted.current || request !== intent.current) { if (next) await shell.cancelBackup(next.token); return; } tokenRef.current = next?.token ?? null; setPreview(next); }
+    } catch (error) { if (mounted.current && request === intent.current) onFeedback(backupError(copy, error)); }
     finally { pending.current = false; if (mounted.current) onBusy(false); }
   };
-  return <section className="settings-card settings-row" aria-labelledby="backup-card-title"><h2 id="backup-card-title">{copy.backupTitle}</h2><p>{copy.backupDescription}</p><div className="settings-actions"><button type="button" className="settings-control" disabled={busy} onClick={() => void run("export")}>{copy.backupExport}</button><button type="button" className="settings-control" disabled={busy} onClick={() => void run("import")}>{copy.backupImport}</button></div>{preview ? <BackupWorkspace preview={preview} copy={copy} locale={locale} onClose={close} onApplied={(message) => { close(); onFeedback(message); }} /> : null}</section>;
+  return <section className="settings-card settings-row" aria-labelledby="backup-card-title"><h2 id="backup-card-title">{copy.backupTitle}</h2><p>{copy.backupDescription}</p><div className="settings-actions"><button type="button" className="settings-control" disabled={busy} onClick={() => void run("export")}>{copy.backupExport}</button><button type="button" className="settings-control" disabled={busy} onClick={() => void run("import")}>{copy.backupImport}</button></div>{missing.length ? <BackupMissingOriginalsNotice missing={missing} copy={copy} busy={busy} onExport={mode => void run('export', mode)}
+    onCancel={() => { intent.current++; setMissing([]); void shell.cancelBackup('pending').catch(() => undefined); }} /> : null}{preview ? <BackupWorkspace preview={preview} copy={copy} locale={locale} onClose={close} onApplied={(message) => { close(); onFeedback(message); }} /> : null}</section>;
 }

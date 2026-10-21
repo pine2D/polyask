@@ -48,3 +48,9 @@
 - 本机仓库及同步下行验证格式、哈希与字节；图片同步默认关闭，确认开启后传输新实体，客户端识别上限为 schema 5。旧样本不改写。
 - `schema4-sync-pull.ts.txt` 冻结自 `1e04254` 的实际 schema 4 下行实现，测试以旧版上限 4 执行，证明 schema 5 会锁住旧客户端的全局上传且不触发删除。
 - `image-sync-local-meta-v1.json` 记录仅本机的图片开关/确认键、reset 与投影排除契约；它不是 Drive 正文，也不进入业务备份。
+
+## 含原图的备份 v4
+
+- `backup-format4.polyask`：冻结的 988 字节二进制容器，SHA-256 `56864beeca35b925a7e08ebc04e182d1e49500c45265ab010597be61efd4b2c9`。包含一条 schema 4 提问、一份 schema 5 附件元数据和真实可解码 1×1 PNG；没有 deviceId/base64 或同步开关。既有 v1–3 样本不改写。
+- 字节顺序为 ASCII `POLYASK-BACKUP-4\n`（17 字节，最后一字节 LF）、uint32BE 清单长度、UTF-8 JSON、清单 payloads 顺序的原始图片字节。payload key 固定为 `images/<从0开始的顺序>.bin`，只作为校验标识，不作为解压路径。完整字段与上限见 `docs/desktop.md`「业务备份与恢复契约」。
+- `backup-container.test.ts` 读取冻结文件并逐字节恢复。`test/lib/backup-image-fixtures.ts` 的 `seedLargeBackupImages` 为合成数据库保存四组有效 2048×1536 RGB PNG（每组约 9 MiB），可供大于 32 MiB 流转与原生解码检查复用；不会访问真实用户数据或网络。

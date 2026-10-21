@@ -170,7 +170,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   const publishDrafts = () => { if (!window.isDestroyed()) window.webContents.send('polyask:drafts-changed'); };
   const disposeSiteFind = registerSiteFindIpc(ipcMain, manager.siteFind, trustedShell, window.webContents);
   const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
-  const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); options.preferences?.refresh(); publishDrafts(); } });
+  const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, fetchAttachments: id => options.sync.fetchQuestionAttachments(id), trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); options.preferences?.refresh(); publishDrafts(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
   const disposeSyncIpc = registerSyncIpc({ sync, runtime: options.runtime, trusted: trustedShell });

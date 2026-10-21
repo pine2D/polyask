@@ -15,7 +15,7 @@ export function eligibleBackupSelection(items: readonly BackupPreviewItem[], sel
   return new Set(items.filter(item => {
     if (!ready(item.key) || item.note === 'folder_reused' || item.reusesIdentity) return false;
     if (item.status !== 'same') return true;
-    return item.note === 'question_new_identity' && items.some(answer => answer.kind === 'questionAnswer'
+    return item.note === 'question_new_identity' && items.some(answer => (answer.kind === 'questionAnswer' || answer.kind === 'questionAttachments')
       && answer.backup.questionId === item.id && answer.status === 'deleted' && selected.has(answer.key));
   }).map(item => item.key));
 }

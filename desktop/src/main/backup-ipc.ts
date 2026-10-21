@@ -1,12 +1,12 @@
 import { dialog, ipcMain, type BrowserWindow } from "electron";
 import { basename } from "node:path";
 import type { BackupService } from "./backup-service";
-import { readBackupFile, writeBackupFile } from "./backup-files";
+import type { BackupExportMode } from "../shared/backup";
 
 interface BackupIpcEvent {readonly sender:Electron.WebContents;readonly senderFrame:Electron.WebFrameMain|null}
 const CHANNELS=["polyask:backup-export","polyask:backup-preview","polyask:backup-apply","polyask:backup-cancel","polyask:backup-selection-preview"] as const;
 const CODES=new Set(["backup_invalid","backup_version","backup_stale","backup_selection","backup_missing","backup_too_large",
-  "backup_read_failed","backup_write_failed","backup_dependency","backup_busy","invalid_request"]);
+  "backup_images_missing","backup_read_failed","backup_write_failed","backup_dependency","backup_busy","invalid_request"]);
 const token=(v:unknown):v is string=>typeof v==="string"&&v.length>0&&v.length<=128;
 function selection(value: unknown): { token: string; selectedKeys: string[] } {
   if(!value||typeof value!=="object"||Array.isArray(value))throw new Error("invalid_request");
@@ -16,30 +16,48 @@ function selection(value: unknown): { token: string; selectedKeys: string[] } {
 }
 
 export function registerBackupIpc(options:{readonly window:BrowserWindow;readonly backup:BackupService;
+  readonly fetchAttachments?:(questionId:string)=>Promise<boolean>;
   readonly trusted:(event:BackupIpcEvent)=>boolean;readonly afterApply:()=>void}):()=>void {
   let busy=false,disposed=false;
   const handle=(channel:typeof CHANNELS[number],action:(value:unknown)=>unknown|Promise<unknown>)=>{
     ipcMain.handle(channel,async(event,value:unknown)=>{
       if(!options.trusted(event))throw new Error("untrusted_sender");
-      if(busy||disposed)throw new Error("backup_busy");
-      busy=true;
+      const cancelling=channel==="polyask:backup-cancel";
+      if((busy&&!cancelling)||disposed)throw new Error("backup_busy");
+      if(!cancelling)busy=true;
       try {return await action(value);}
       catch(error){throw new Error(error instanceof Error&&CODES.has(error.message)?error.message:"backup_failed");}
-      finally{busy=false;}
+      finally{if(!cancelling)busy=false;}
     });
   };
-  handle(CHANNELS[0],async()=>{
-    const result=await dialog.showSaveDialog(options.window,{defaultPath:`polyask-backup-${new Date().toISOString().slice(0,10)}.json`,filters:[{name:"JSON",extensions:["json"]}]});
+  handle(CHANNELS[0],async value=>{
+    const mode: BackupExportMode = value === undefined ? 'complete' : (value as any)?.mode;
+    if (!['complete','download','text-only'].includes(mode) || (value !== undefined &&
+      (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).some(key=>key!=='mode')))) throw new Error('invalid_request');
+    const guard=options.backup.beginOperation();
+    if(mode!=='text-only') {
+      let missing=await options.backup.missingOriginals(guard); guard();
+      if(mode==='download') {
+        for(const item of missing) {
+          guard(); await options.fetchAttachments?.(item.questionId); guard();
+        }
+        missing=await options.backup.missingOriginals(guard); guard();
+      }
+      if(missing.length)return {missing};
+    }
+    const result=await dialog.showSaveDialog(options.window,{defaultPath:`polyask-backup-${new Date().toISOString().slice(0,10)}.polyask`,filters:[{name:"PolyAsk",extensions:["polyask"]}]});
     if(result.canceled||!result.filePath||disposed)return false;
-    await writeBackupFile(result.filePath,options.backup.export());
-    return true;
+    guard();
+    await options.backup.exportFile(result.filePath,mode==='text-only'?'text-only':'complete',guard);
+    guard(); return mode==='text-only'?'text-only':true;
   });
   handle(CHANNELS[1],async()=>{
-    const result=await dialog.showOpenDialog(options.window,{properties:["openFile"],filters:[{name:"JSON",extensions:["json"]}]});
+    const guard=options.backup.beginOperation();
+    const result=await dialog.showOpenDialog(options.window,{properties:["openFile"],filters:[{name:"PolyAsk",extensions:["polyask","json"]}]});
     if(result.canceled||!result.filePaths[0]||disposed)return null;
-    const document=await readBackupFile(result.filePaths[0]);
-    if(disposed)return null;
-    return { ...options.backup.preview(document), filename: basename(result.filePaths[0]) };
+    guard();
+    const preview=await options.backup.previewFile(result.filePaths[0],guard);
+    guard(); return { ...preview, filename: basename(result.filePaths[0]) };
   });
   handle(CHANNELS[2],value=>{
     const v=selection(value);
@@ -56,5 +74,5 @@ export function registerBackupIpc(options:{readonly window:BrowserWindow;readonl
     const v=selection(value);
     return options.backup.previewSelection(v.token,v.selectedKeys);
   });
-  return ()=>{disposed=true;for(const channel of CHANNELS)ipcMain.removeHandler(channel);};
+  return ()=>{disposed=true;options.backup.dispose();for(const channel of CHANNELS)ipcMain.removeHandler(channel);};
 }

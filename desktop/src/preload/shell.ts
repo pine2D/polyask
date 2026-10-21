@@ -8,7 +8,7 @@ import type { SitePageClosePreview, SitePageCloseRequest, SitePageCloseResult } 
 import type { QuestionRunProgress } from '../shared/question-run-progress';
 import type { LocalDataStats } from "../shared/local-data";
 import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
-import type { BackupPreview, BackupApplyResult, BackupSelectionPreview } from "../shared/backup";
+import type { BackupPreview, BackupApplyResult, BackupSelectionPreview, BackupExportMode, BackupExportResult } from "../shared/backup";
 import type { TaskFolder, TaskFolderSummary, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
 import type { FolderContentPage, FolderPageRequest } from '../shared/task-folder-page';
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
@@ -97,7 +97,7 @@ export interface PolyAskDesktopApi {
   menuShortcuts(): Promise<MenuShortcut[]>;
   broadcast(request: BroadcastRequest): Promise<SiteRunResult[]>;
   collectAnswers(request: CollectionRequest): Promise<CollectedAnswer[]>;
-  exportBackup(): Promise<boolean>;
+  exportBackup(mode?: BackupExportMode): Promise<BackupExportResult>;
   previewBackup(): Promise<BackupPreview | null>;
   previewBackupSelection(token: string, selectedKeys: readonly string[]): Promise<BackupSelectionPreview>;
   applyBackup(token: string, selectedKeys: readonly string[]): Promise<BackupApplyResult>;
@@ -240,7 +240,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   menuShortcuts: () => invoke("polyask:menu-shortcuts"),
   broadcast: (request: BroadcastRequest) => invoke("polyask:broadcast", request),
   collectAnswers: (request: CollectionRequest) => invoke("polyask:collect", request),
-  exportBackup: () => invoke("polyask:backup-export"),
+  exportBackup: (mode?: BackupExportMode) => invoke("polyask:backup-export", mode ? { mode } : undefined),
   previewBackup: () => invoke("polyask:backup-preview"),
   previewBackupSelection: (token: string, selectedKeys: readonly string[]) => invoke("polyask:backup-selection-preview", { token, selectedKeys }),
   applyBackup: (token: string, selectedKeys: readonly string[]) => invoke("polyask:backup-apply", { token, selectedKeys }),

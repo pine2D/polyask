@@ -64,3 +64,6 @@
 .backup-error { margin: 12px 24px; color: var(--danger-ink); }
 @media (max-width: 850px) { .backup-scrim { padding: 10px; } .backup-body { grid-template-columns: 190px minmax(0, 1fr); } .backup-comparison { padding: 16px; } .backup-versions { grid-template-columns: 1fr; } .backup-footer { gap: 12px; padding: 14px; } }
 @media (max-width: 850px) { .backup-complete-versions { grid-template-columns: 1fr; } .backup-bulk, .backup-filters { padding: 10px 14px; } }
+.backup-missing { grid-column: 1 / -1; min-width: 0; margin-top: 16px; padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
+.backup-missing ul { max-height: 16rem; overflow-y: auto; overflow-wrap: anywhere; padding-inline-start: 1.5rem; }
+.backup-missing li + li { margin-top: 12px; }

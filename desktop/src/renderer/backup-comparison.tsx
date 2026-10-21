@@ -12,11 +12,12 @@ export function BackupComparison({ item, copy, selected, onSelect, locale = 'en'
   return <section className="backup-comparison" aria-label={backupItemTitle(copy, item)}>
     <header><span className="backup-muted">{backupKind(copy, item.kind)}</span><h3 tabIndex={-1}>{backupItemTitle(copy, item)}</h3></header>
     <div className="backup-choice">
-      {item.blocked ? <p role="status">{item.kind === 'draft' ? copy.backupDraftBlocked : copy.backupBlocked}</p> : item.status === "same" ? <p>{copy.backupSame}</p> : item.status === "conflict" ?
+      {item.blocked ? <p role="status">{item.kind === 'draft' ? copy.backupDraftBlocked : item.kind === 'questionAttachments' ? copy.backupOriginalsBlocked : copy.backupBlocked}</p> : item.status === "same" ? <p>{copy.backupSame}</p> : item.status === "conflict" ?
         <div className="backup-segments" role="group" aria-label={copy.backupReview}>
           <button type="button" aria-pressed={!selected} onClick={() => onSelect(false)}>{copy.backupKeepLocal}</button>
           <button type="button" aria-pressed={selected} onClick={() => onSelect(true)}>{copy.backupUseIncoming}</button>
         </div> : <label><input type="checkbox" checked={selected} onChange={(event) => onSelect(event.target.checked)} />{item.note === "folder_reused" ? copy.backupReuseFolder : item.status === "deleted" ? copy.backupRestoreDeleted : copy.backupInclude}</label>}
+      {item.note === "originals_unavailable" ? <p>{copy.backupMissingOriginals}</p> : null}
       {item.note === "question_new_identity" ? <p>{copy.backupQuestionRemap}</p> : null}
       {item.note === "folder_reused" ? <p>{copy.backupFolderReused}</p> : null}
       {item.note === "folder_new_identity" ? <p>{copy.backupFolderRemap}</p> : null}
