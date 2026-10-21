@@ -1,3 +1,5 @@
+import type { QuestionAttachmentsManifest, QuestionReask } from '../shared/question-attachments';
+import type { DesktopImage } from '../shared/images';
 import type { GeneralPreferenceGroup, PreferenceKey, PreferenceSnapshot, PreferenceValues } from '../shared/preferences';
 import type { DraftInput, DraftKind, StoredDraft } from '../shared/drafts';
 import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
@@ -79,6 +81,11 @@ export interface PolyAskDesktopApi {
   listLegacyQuestions(filters?: QuestionFilters): Promise<QuestionLegacyPage>;
   listQuestions(filters: QuestionFilters): Promise<QuestionPage>;
   getQuestion(id: string, answerId?: string): Promise<QuestionDetail | null>;
+  questionAttachments(questionId: string): Promise<QuestionAttachmentsManifest | null>;
+  questionAttachment(request: { questionId: string; index: number }): Promise<DesktopImage>;
+  questionReask(questionId: string): Promise<QuestionReask>;
+  questionFetchAttachments?(questionId: string): Promise<boolean>;
+  onQuestionAttachmentSaveFailed(listener: () => void): () => void;
   createQuestionArchive(request: QuestionArchiveRequest): Promise<ArchiveRecord>;
   getLocalDataStats(): Promise<LocalDataStats>;
   previewQuestion(questionId: string, answerId?: string): Promise<QuestionRestorePreview>;
@@ -217,6 +224,10 @@ const api: PolyAskDesktopApi = Object.freeze({
   listLegacyQuestions: (filters?: QuestionFilters) => invoke("polyask:question-legacy", filters),
   listQuestions: (filters: QuestionFilters) => invoke("polyask:question-list", filters),
   getQuestion: (id: string, answerId?: string) => invoke("polyask:question-get", { questionId: id, answerId }),
+  questionAttachments: (id: string) => invoke('polyask:question-attachments', id),
+  questionAttachment: (request: { questionId: string; index: number }) => invoke('polyask:question-attachment', request),
+  questionReask: (id: string) => invoke('polyask:question-reask', id),
+  onQuestionAttachmentSaveFailed: (listener: () => void) => subscribe('polyask:question-attachment-save-failed', listener),
   createQuestionArchive: (request: QuestionArchiveRequest) => invoke("polyask:question-archive", request),
   getLocalDataStats: () => invoke("polyask:local-data-stats"),
   previewQuestion: (questionId: string, answerId?: string) => invoke("polyask:question-preview", { questionId, answerId }),

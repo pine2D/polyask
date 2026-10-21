@@ -28,3 +28,19 @@ test('add and replace use the same native file input, preserve file order and al
     assert.deepEqual(batches, [['one.png', 'two.jpg'], ['one.png', 'two.jpg']]);
   } finally { await h.close(); }
 });
+
+
+test('a native picker opened before history restoration cannot replace the restored batch', async () => {
+  const batches: string[][] = []; let intent = 0;
+  const h = await mountDom(<ImagePicker copy={getCopy('en')} open={false} images={[]} disabled={false}
+    warning={null} warningCount={0} error={null} onOpenChange={() => {}} onRemove={() => {}}
+    onAdjustScope={() => {}} onFiles={files => batches.push(files.map(f => f.name))} selectionIntent={() => intent} />);
+  try {
+    const input = h.document.querySelector<HTMLInputElement>('input[type=file]')!; input.click = () => {};
+    await h.click(h.document.querySelector<HTMLElement>('.image-trigger')!);
+    intent++; // The original picker is still open when history atomically replaces the draft.
+    Object.defineProperty(input, 'files', { configurable: true, value: [new h.window.File(['late'], 'late.png', { type: 'image/png' })] });
+    await act(async () => input.dispatchEvent(new h.window.Event('change', { bubbles: true })));
+    assert.equal(batches.length, 0, 'late native selection must not overwrite a history restoration');
+  } finally { await h.close(); }
+});

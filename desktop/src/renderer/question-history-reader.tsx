@@ -1,3 +1,4 @@
+import { QuestionAttachments } from './question-attachments';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import type { SiteDefinition, SiteKey } from '../shared/contracts';
@@ -12,10 +13,11 @@ import { QuestionPrompt } from './question-prompt';
 import { answerSourceId } from '../shared/answer-source';
 
 export function QuestionHistoryReader({ detail, view, session: suppliedSession, copy, sites, busy, onLoadAnswer,
-  onRestore, onReask, onDelete, onAnnounce, onOrganize }: {
+  onRestore, onReask, onDelete, onAnnounce, onOrganize, imageSyncEnabled }: {
   detail: QuestionDetail; view?: QuestionDetailView; session?: QuestionReaderSession;
   copy: DesktopCopy; sites: readonly SiteDefinition[]; busy: boolean; onLoadAnswer?: (id: string) => void;
   onRestore: (answerId?: string) => void; onReask: () => void; onDelete: () => void; onAnnounce: (text: string) => void;
+  imageSyncEnabled?: boolean;
   onOrganize?: (answerId: string) => void;
 }): React.JSX.Element {
   const fallback = useRef(new QuestionReaderSession()), scroller = useRef<HTMLDivElement>(null);
@@ -46,6 +48,7 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
       <time>{new Date(detail.question.createdAt).toLocaleString()}</time>
       <QuestionPrompt text={detail.question.text} copy={copy} />
       {detail.question.inputImageCount > 0 && <p>{formatCopy(copy.questionImages, { count: detail.question.inputImageCount })}</p>}
+      {detail.question.inputImageCount > 0 && <QuestionAttachments questionId={detail.question.id} inputImageCount={detail.question.inputImageCount} copy={copy} imageSyncEnabled={imageSyncEnabled} />}
     </header>
     <div className="question-site-tabs" role="group" aria-label={copy.sitesCompact}>
       {detail.question.sites.map(key => <button type="button" key={key} aria-pressed={site === key}

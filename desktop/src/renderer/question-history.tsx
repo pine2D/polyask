@@ -1,4 +1,6 @@
-import { questionReaskWarning, questionHistorySurface, type QuestionDetailView } from "./question-history-model";
+import { useQuestionReask } from './use-question-reask';
+import type { DesktopImage } from '../shared/images';
+import { questionHistorySurface, type QuestionDetailView } from "./question-history-model";
 import { QuestionReaderSession } from './question-reader-session';
 import type { ArchiveRecord } from '../shared/archive';
 import { resolveLocale } from '../shared/locale';
@@ -24,11 +26,11 @@ import { usePresence } from './presence';
 import { PANEL_EXIT_MS } from './motion';
 
 type Confirmation = { title: string; message: string; label: string; danger?: boolean; run: () => void };
-export function QuestionHistory({ open, active = true, copy, sites, draft, draftImageCount = 0, busy, onOpen, onClose, onDraft, onBlockingChange, onArchiveCreated, openRequest, onReadAccepted, onReadingCancelled, locale = navigator.language }: {
-  open: boolean; copy: DesktopCopy; sites: readonly SiteDefinition[]; draft: string; draftImageCount?: number; busy: boolean;
+export function QuestionHistory({ open, active = true, copy, sites, draft, draftImageCount = 0, draftIntent, imageSyncEnabled = false, busy, onOpen, onClose, onDraft, onBlockingChange, onArchiveCreated, openRequest, onReadAccepted, onReadingCancelled, locale = navigator.language }: {
+  open: boolean; copy: DesktopCopy; sites: readonly SiteDefinition[]; draft: string; draftImageCount?: number; draftIntent?: () => string; imageSyncEnabled?: boolean; busy: boolean;
   active?: boolean;
   onBlockingChange: (value: boolean) => void;
-  onOpen: () => void; onClose: () => void; onDraft: (text: string) => void;
+  onOpen: () => void; onClose: () => void; onDraft: (text: string, images: readonly DesktopImage[]) => void;
   onArchiveCreated?: (record: ArchiveRecord, mode: 'read' | 'compare', selection: { questionId: string; answerIds: readonly string[] }) => void; locale?: string;
   openRequest?: QuestionReadingRequest | null;
   onReadAccepted?: (questionId: string, request: number) => void;
@@ -56,9 +58,10 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   const pageRef = useRef(page); pageRef.current = page;
   const scroll = useRef<HTMLDivElement>(null);
   const anchor = useRef<{ id: string; top: number } | null>(null);
-  const leaveDetail = useCallback(() => { detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; setOrganizing(null); setGuideChoices([]); setDetail(null); setDetailView(null); }, []);
+  const reaskFlow = useQuestionReask({ open, active, busy, draft, draftImageCount, draftIntent, imageSyncEnabled, copy, onDraft, onDone: () => close() });
+  const leaveDetail = useCallback(() => { reaskFlow.invalidate(); detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; setOrganizing(null); setGuideChoices([]); setDetail(null); setDetailView(null); }, []);
   const back = () => { if (openRequest?.source === 'guide') onReadingCancelled?.(openRequest.request); leaveDetail(); };
-  const close = () => { sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; closeRef.current(); };
+  const close = () => { reaskFlow.invalidate(); sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; closeRef.current(); };
   useLayoutEffect(() => {
     const saved = anchor.current; anchor.current = null;
     if (!saved || !scroll.current) return;
@@ -66,14 +69,15 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     if (node) scroll.current.scrollTop += node.getBoundingClientRect().top - saved.top;
   }, [page]);
   const panel = useRef<HTMLElement>(null), opener = useRef<HTMLElement | null>(null);
-  const full = narrow || !!detailView || !!confirmation || restoring;
+  const full = narrow || !!detailView || !!confirmation || restoring || reaskFlow.blocking;
   const lastFull = useRef(full); if (open) lastFull.current = full;
   const renderedFull = open ? full : lastFull.current;
   const covered = useRef(false);
   const disabled = busy || restoring;
-  useEffect(() => { onBlockingChange(open && (!!confirmation || restoring || !!organizing)); return () => onBlockingChange(false); }, [open, confirmation, restoring, organizing, onBlockingChange]);
+  useEffect(() => { onBlockingChange(open && (!!confirmation || restoring || !!organizing || reaskFlow.blocking)); return () => onBlockingChange(false); }, [open, confirmation, restoring, organizing, reaskFlow.blocking, onBlockingChange]);
   useEffect(() => { if (busy || !open || !active) { archiveEpoch.current++; setOrganizing(null); } }, [busy, open, active]);
   const closeRef = useRef(onClose); closeRef.current = onClose;
+  useEffect(() => shell.onQuestionAttachmentSaveFailed?.(() => announce(copy.questionOriginalSaveFailed)), [copy, announce]);
   useEffect(() => shell.onQuestionSaveFailed(() => announce(copy.questionSaveFailed)), [copy, announce]);
   useEffect(() => {
     const resize = () => setNarrow(window.innerWidth < QUESTION_PANEL_BREAKPOINT);
@@ -98,9 +102,10 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     return () => { void shell.setQuestionPanel(false).catch(() => {}); };
   }, [present, renderedFull, active, copy, announce]);
   useEffect(() => {
-    if (!open || confirmation || organizing) return;
+    if (!open || confirmation || organizing || reaskFlow.confirming) return;
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && (e.isComposing || e.keyCode === 229)) { e.stopImmediatePropagation(); return; }
+      if (panel.current?.querySelector('.question-image-dialog')) return;
       // Portaled action menus handle Escape and Tab before the history surface.
       if (panel.current?.querySelector('[aria-haspopup="menu"][aria-expanded="true"]')) return;
       if (e.key === 'Escape') {
@@ -120,7 +125,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
       }
     };
     window.addEventListener('keydown', key, true); return () => window.removeEventListener('keydown', key, true);
-  }, [open, detailView, confirmation, organizing, full, openRequest, onReadingCancelled]);
+  }, [open, detailView, confirmation, organizing, full, openRequest, onReadingCancelled, reaskFlow.confirming]);
   const load = useCallback(async (cursor?: string, refresh = false) => {
     if (refresh && listPending.current) return;
     const request = ++sequence.current;
@@ -149,6 +154,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   const read = async (id: string, answerId?: string, refresh = false, navigation?: number) => {
     if (refresh && detailPending.current) return;
     if (refresh && detailView?.state !== 'ready') return;
+    if (!refresh) reaskFlow.invalidate();
     const rememberedId = !answerId && !refresh ? readerSession.current.preferredAnswer(id) : undefined;
     answerId ??= rememberedId;
     const request = ++detailSequence.current;
@@ -175,7 +181,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
         }
       }
       if (request !== detailSequence.current) return;
-      if (!result) { setDetail(null); setDetailView({ questionId: id, answerId, state: 'missing' }); if (navigation !== undefined) onReadingCancelled?.(navigation); return; }
+      if (!result) { reaskFlow.invalidate(); setDetail(null); setDetailView({ questionId: id, answerId, state: 'missing' }); if (navigation !== undefined) onReadingCancelled?.(navigation); return; }
       if (result.question.id !== id || (answerId && result.loadedAnswerId !== answerId)) throw new Error('history_not_found');
       const requestedAnswer = answerId && result.answers.find(answer => answer.id === answerId);
       if (!refresh && requestedAnswer) readerSession.current.select(result, requestedAnswer.site, requestedAnswer.id);
@@ -220,23 +226,18 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     if (detail) panel.current?.querySelector<HTMLButtonElement>('.question-header button')?.focus();
     else input.current?.focus();
   }, [open, detail?.question.id]);
-  const reask = (text: string, imageCount = 0) => {
-    const apply = () => { onDraft(text); setConfirmation(null); close(); };
-    const warning = questionReaskWarning(draft, draftImageCount, text, imageCount, copy);
-    if (warning) setConfirmation({ title: copy.questionDraftTitle, message: warning, label: copy.questionReask, run: apply });
-    else apply();
-  };
-  const remove = (id: string) => setConfirmation({ title: copy.questionDeleteTitle, message: copy.questionDeleteWarning, label: copy.questionDelete, danger: true, run: () => {
-    detailSequence.current++; detailPending.current = 0;
+  const reask = (id: string, text: string, imageCount: number) => reaskFlow.start({ id, text, imageCount });
+  const remove = (id: string) => { reaskFlow.invalidate(); setConfirmation({ title: copy.questionDeleteTitle, message: copy.questionDeleteWarning, label: copy.questionDelete, danger: true, run: () => {
+    reaskFlow.invalidate(); detailSequence.current++; detailPending.current = 0;
     void shell.deleteQuestion(id).then(() => {
       if (detail?.question.id === id) leaveDetail();
       sequence.current++; listPending.current = 0;
       void load(undefined, true); announce(copy.questionDeleted);
     }).catch(() => setError(copy.questionFailed)).finally(() => setConfirmation(null));
-  } });
+  } }); };
   const restore = async (id: string, answerId?: string) => {
     if (disabled) return;
-    const request = ++detailSequence.current; detailPending.current = request;
+    reaskFlow.invalidate(); const request = ++detailSequence.current; detailPending.current = request;
     setError('');
     try {
       const preview = await shell.previewQuestion(id, answerId);
@@ -271,7 +272,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     </header>
     {restoring && <div role="status" className="question-notice">{copy.questionBusy} <button type="button" onClick={() => { void shell.cancelQuestionRestore(); }}>{copy.cancel}</button></div>}
     {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(undefined, true); }}>{copy.questionRetry}</button></div>}
-    {detail ? <QuestionHistoryReader key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} copy={copy} sites={sites} busy={disabled} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
+    {detail ? <QuestionHistoryReader key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} copy={copy} sites={sites} busy={disabled} imageSyncEnabled={imageSyncEnabled} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.id, detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { reaskFlow.invalidate(); archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
       <p data-state={detailView.state} role={detailView.state === 'failed' ? 'alert' : 'status'}>{detailView.state === 'loading' ? copy.questionDetailLoading : detailView.state === 'missing' ? copy.questionRecordMissing : copy.questionDetailFailed}</p>
       {detailView.state !== 'loading' && <button type="button" onClick={() => { void read(detailView.questionId, detailView.answerId); }}>{copy.questionRetry}</button>}
     </div> : <>
@@ -280,9 +281,10 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
         {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}
         <QuestionHistoryList items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
         {page.cursor && <button type="button" className="question-load-more" disabled={loading} onClick={() => { void load(page.cursor!); }}>{copy.questionMore}</button>}
-        <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={reask} />
+        <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={text => reaskFlow.start({ text, imageCount: 0 })} />
       </div>
     </>}
+    {reaskFlow.feedback}
     {confirmation && <ConfirmDialog copy={copy} title={confirmation.title} message={confirmation.message} confirmLabel={confirmation.label} cancelLabel={copy.cancel} tone={confirmation.danger ? "danger" : undefined} onConfirm={confirmation.run} onCancel={() => setConfirmation(null)} />}
     {organizing && detail && <QuestionArchivePicker key={`picker:${detail.question.id}:${archiveEpoch.current}`} detail={detail} answerId={organizing} initialAnswerIds={guideChoices}
       copy={copy} sites={sites} busy={disabled} locale={resolveLocale(locale) === 'zhCN' ? 'zh-CN' : resolveLocale(locale) === 'zhTW' ? 'zh-TW' : 'en'}

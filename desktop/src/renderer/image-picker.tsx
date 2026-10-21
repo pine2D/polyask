@@ -10,6 +10,8 @@ import {
 import { CloseIcon, ImagePlusIcon, ReplaceImagesIcon, WarningIcon } from "./icons";
 
 interface ImagePickerProps {
+  readonly selectionIntent?: () => number;
+  readonly onPickerOpen?: () => number;
   readonly copy: DesktopCopy;
   readonly images: readonly DesktopImage[];
   readonly open: boolean;
@@ -55,6 +57,7 @@ export async function readDesktopImages(files: readonly File[]): Promise<ImageRe
 }
 
 export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
+  const pickerIntent = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const trayRef = useRef<HTMLDivElement>(null);
@@ -78,6 +81,7 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
   }, [props.onOpenChange, props.open]);
   const choose = () => {
     if (props.disabled || !inputRef.current) return;
+    pickerIntent.current = props.onPickerOpen?.() ?? props.selectionIntent?.() ?? 0;
     inputRef.current.value = "";
     inputRef.current.click();
   };
@@ -92,6 +96,8 @@ export function ImagePicker(props: ImagePickerProps): React.JSX.Element {
         multiple
         tabIndex={-1}
         onChange={(event) => {
+          const expected = pickerIntent.current; pickerIntent.current = null;
+          if (props.disabled || (props.selectionIntent && expected !== props.selectionIntent())) return;
           const files = [...(event.currentTarget.files ?? [])];
           if (files.length) props.onFiles(files);
         }}

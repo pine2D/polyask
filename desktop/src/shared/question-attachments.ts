@@ -2,6 +2,8 @@ import { IMAGE_TYPES, MAX_IMAGE_BYTES, MAX_IMAGE_COUNT, type DesktopImageType } 
 import { questionIdValid } from './question-history';
 import { validSyncTime } from './sync';
 
+export interface QuestionReask { readonly questionId: string; readonly text: string; readonly images: readonly import('./images').DesktopImage[] }
+
 export const QUESTION_ATTACHMENTS_SCHEMA = 5;
 export interface QuestionImageMetadata {
   readonly name: string;

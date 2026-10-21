@@ -1,3 +1,4 @@
+import { QUESTION_ATTACHMENT_COPY } from './question-attachment-copy';
 import { PREFERENCE_SYNC_COPY } from './preference-sync-copy';
 import { PROXY_COPY } from './proxy-copy';
 import { DRAFT_COPY } from './draft-copy';
@@ -35,6 +36,7 @@ export const COPY = {
     ...LIBRARY_COPY.en,
     ...BACKUP_COPY.en,
     ...QUESTION_COPY.en,
+    ...QUESTION_ATTACHMENT_COPY.en,
     ...READING_COPY.en,
     ...ARCHIVE_COPY.en,
     ...DECISION_COPY.en,
@@ -211,6 +213,7 @@ export const COPY = {
     ...LIBRARY_COPY.zhCN,
     ...BACKUP_COPY.zhCN,
     ...QUESTION_COPY.zhCN,
+    ...QUESTION_ATTACHMENT_COPY.zhCN,
     ...READING_COPY.zhCN,
     ...ARCHIVE_COPY.zhCN,
     ...DECISION_COPY.zhCN,
@@ -387,6 +390,7 @@ export const COPY = {
     ...LIBRARY_COPY.zhTW,
     ...BACKUP_COPY.zhTW,
     ...QUESTION_COPY.zhTW,
+    ...QUESTION_ATTACHMENT_COPY.zhTW,
     ...READING_COPY.zhTW,
     ...ARCHIVE_COPY.zhTW,
     ...DECISION_COPY.zhTW,

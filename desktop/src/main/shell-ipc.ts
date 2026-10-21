@@ -1,3 +1,4 @@
+import { registerQuestionAttachmentIpc } from './question-attachment-ipc';
 import type { PreferenceRuntime } from './preference-runtime';
 import { registerPreferencesDraftsIpc } from './preferences-drafts-ipc';
 import { registerQuestionHistoryIpc } from "./question-history-ipc";
@@ -159,6 +160,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
     return state;
   };
+  const disposeQuestionAttachments = registerQuestionAttachmentIpc({ questions: options.questions, window, trusted: trustedShell });
   const disposeQuestionIpc = registerQuestionHistoryIpc({ flush: sites => capture.flush(sites), questions: options.questions, archives: options.archives, manager, workspace, gate: operationGate, window, trusted: trustedShell, publishWorkspace });
   const disposeSitePageIpc = registerSitePageIpc({ trusted: trustedShell, service: new SitePageService({
     workspace, gate: operationGate, publish: publishWorkspace, release: () => manager.releaseUnselectedViews(),
@@ -379,6 +381,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     disposePreferences();
     disposeSitePageIpc();
     disposeQuestionIpc();
+    disposeQuestionAttachments();
     disposeSynthesisIpc();
     capture.dispose();
     disposeBackupIpc();

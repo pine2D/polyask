@@ -78,3 +78,18 @@ test('clearing attachments invalidates in-flight and queued pasted files', async
     assert.deepEqual(h.flow().images, []);
   } finally { await h.close(); }
 });
+
+
+test('restoring a historical batch cancels an already pending image picker', async () => {
+  const h = await selection();
+  try {
+    assert.equal(typeof (h.flow() as any).replace, 'function', 'history needs an atomic image replacement');
+    const { originals } = await import('./lib/history-image-fixtures');
+    await act(async () => {
+      const pending = h.flow().choose([h.file('late.png')], 'append');
+      (h.flow() as any).replace(originals);
+      await pending;
+    });
+    assert.deepEqual(h.flow().images.map(i => i.name), originals.map(i => i.name));
+  } finally { await h.close(); }
+});

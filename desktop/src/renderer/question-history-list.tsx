@@ -4,7 +4,7 @@ import type { QuestionSummary } from '../shared/question-history';
 import { answerState, questionDay } from './question-history-model';
 export function QuestionHistoryList({ items, sites, copy, busy, onRestore, onRead, onReask, onDelete }: {
   items: readonly QuestionSummary[]; sites: readonly SiteDefinition[]; copy: DesktopCopy; busy: boolean;
-  onRestore: (id: string) => void; onRead: (id: string) => void; onReask: (text: string, imageCount: number) => void; onDelete: (id: string) => void;
+  onRestore: (id: string) => void; onRead: (id: string) => void; onReask: (id: string, text: string, imageCount: number) => void; onDelete: (id: string) => void;
 }): React.JSX.Element {
   const now = Date.now();
   return <ol className="question-list">{items.map((q, index) => {
@@ -31,7 +31,7 @@ export function QuestionHistoryList({ items, sites, copy, busy, onRestore, onRea
         <div className="question-card-actions">
           <button type="button" className="question-restore" aria-disabled={busy || !canRestore} data-hint={restoreHint} onClick={busy || !canRestore ? undefined : () => onRestore(q.id)}>{copy.questionRestore}</button>
           <details className="question-menu"><summary aria-label={`${copy.questionMenu}: ${q.text}`}>···</summary><div>
-            <button type="button" disabled={busy} onClick={() => onReask(q.text, q.inputImageCount)}>{copy.questionReask}</button>
+            <button type="button" disabled={busy} onClick={() => onReask(q.id, q.text, q.inputImageCount)}>{copy.questionReask}</button>
             <button type="button" disabled={busy} onClick={() => onDelete(q.id)}>{copy.questionDelete}</button>
           </div></details>
         </div>

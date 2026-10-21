@@ -25,6 +25,9 @@ export function useImageSelection(
   idle: boolean,
   announce: (value: string) => void
 ): {
+  readonly beginPick: () => number;
+  readonly intent: () => number;
+  readonly replace: (images: readonly DesktopImage[]) => void;
   readonly images: readonly DesktopImage[];
   readonly error: string | null;
   readonly open: boolean;
@@ -36,6 +39,7 @@ export function useImageSelection(
   readonly invalidateAndClose: () => void;
 } {
   const epoch = useRef(0);
+  const selectionIntent = useRef(0);
   const currentImages = useRef<readonly DesktopImage[]>([]);
   const pendingRead = useRef<Promise<void>>(Promise.resolve());
   const [images, setImages] = useState<readonly DesktopImage[]>([]);
@@ -45,6 +49,7 @@ export function useImageSelection(
   const choose = async (files: readonly File[], mode: "append" | "replace" = "replace") => {
     const blocked = imageSelectionBlockedMessage(copy, idle);
     if (blocked) { announce(blocked); return; }
+    selectionIntent.current += 1;
     const request = mode === "replace" ? ++epoch.current : epoch.current;
     const read = async () => {
       if (request !== epoch.current) return;
@@ -59,6 +64,7 @@ export function useImageSelection(
         return;
       }
       const next = [...previous, ...result.images];
+      selectionIntent.current += 1;
       currentImages.current = next;
       setImages(next);
       setError(null);
@@ -70,6 +76,7 @@ export function useImageSelection(
     await pendingRead.current;
   };
   const remove = (index: number) => {
+    selectionIntent.current += 1;
     epoch.current += 1;
     const next = currentImages.current.filter((_image, current) => current !== index);
     currentImages.current = next;
@@ -79,9 +86,14 @@ export function useImageSelection(
     announce(formatCopy(copy.imagesReady, { count: next.length }));
   };
   const invalidateAndClose = () => {
+    selectionIntent.current += 1;
     epoch.current += 1;
     setOpen(false);
   };
   const clear = () => { invalidateAndClose(); currentImages.current = []; setImages([]); setError(null); };
-  return { images, error, open, present, setOpen, choose, remove, clear, invalidateAndClose };
+  const beginPick = () => { epoch.current++; return ++selectionIntent.current; };
+  const replace = (next: readonly DesktopImage[]) => {
+    invalidateAndClose(); currentImages.current = [...next]; setImages(currentImages.current); setError(null);
+  };
+  return { beginPick, intent: () => selectionIntent.current, replace, images, error, open, present, setOpen, choose, remove, clear, invalidateAndClose };
 }
