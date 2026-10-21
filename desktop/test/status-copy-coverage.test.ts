@@ -50,6 +50,7 @@ function collectionCodes(): Set<string> {
 
 // 产出了但刻意不进状态/采集文案表的码（写明理由）。诊断码若只走 diagnose 通道，也登记在这里。
 const PRODUCED_WITHOUT_COPY: Record<string, string> = {
+  request_failed: "sync-upload.ts 的 Drive/同步批次业务失败码；SyncEngine.BATCH_LOCAL_FAILURES 对该批退避并继续其它批，classifySyncFailure 映射同步 error 状态，由同步文案翻译，不进入站点状态通道",
   shell: "runtime-gates.ts 的稳定性事件码（外壳窗口 unresponsive），只写入运行门禁的稳定性报告文件，不是站点状态码"
 };
 
