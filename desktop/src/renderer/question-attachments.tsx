@@ -5,15 +5,22 @@ import { validateImages, type DesktopImage } from '../shared/images';
 import { QuestionImageDialog } from './question-image-dialog';
 import { shell } from './shell-api';
 
+type LoadedQuestionImage = { image: DesktopImage; onDecodeError: () => void };
+
 export function QuestionAttachments({ questionId, inputImageCount, copy, imageSyncEnabled = false }: {
   questionId: string; inputImageCount: number; copy: DesktopCopy; imageSyncEnabled?: boolean;
 }) {
   const [manifest, setManifest] = useState<QuestionAttachmentsManifest | null>(null);
-  const [images, setImages] = useState<readonly (DesktopImage | null)[]>([]);
+  const [images, setImages] = useState<readonly (LoadedQuestionImage | null)[]>([]);
   const [state, setState] = useState<'loading' | 'missing' | 'failed' | 'ready'>('loading');
   const [zoom, setZoom] = useState<number | null>(null), [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    let active = true;
+    let active = true, failed = false;
+    const fail = (index?: number) => {
+      if (!active) return;
+      failed = true; setState('failed');
+      if (index !== undefined) setImages(old => old.map((image, i) => i === index ? null : image));
+    };
     setState('loading'); setManifest(null); setImages([]); setZoom(null);
     void (async () => {
       try {
@@ -22,7 +29,7 @@ export function QuestionAttachments({ questionId, inputImageCount, copy, imageSy
         if (!metadata) { setState('missing'); return; }
         if (!isStoredQuestionAttachmentManifest(metadata) || 'deletedAt' in metadata || metadata.questionId !== questionId || metadata.images.length !== inputImageCount) throw new Error('invalid_question_attachments');
         setManifest(metadata); setImages(metadata.images.map(() => null));
-        let next = 0, failed = false;
+        let next = 0;
         const worker = async () => {
           while (active && next < metadata.images.length) {
             const index = next++;
@@ -31,14 +38,14 @@ export function QuestionAttachments({ questionId, inputImageCount, copy, imageSy
               if (!active) return;
               const checked = validateImages([value])?.[0], expected = metadata.images[index];
               if (!checked || checked.name !== expected.name || checked.type !== expected.type || checked.size !== expected.size) throw new Error('invalid_question_attachments');
-              setImages(old => old.map((image, i) => i === index ? checked : image));
-            } catch { failed = true; }
+              setImages(old => old.map((image, i) => i === index ? { image: checked, onDecodeError: () => fail(index) } : image));
+            } catch { fail(); }
           }
         };
         // Read at most two bounded original payloads concurrently; unmount stops queued work.
         await Promise.all([worker(), worker()]);
         if (active) setState(failed ? 'failed' : 'ready');
-      } catch { if (active) setState('failed'); }
+      } catch { fail(); }
     })();
     return () => { active = false; };
   }, [questionId, inputImageCount, attempt]);
@@ -52,7 +59,7 @@ export function QuestionAttachments({ questionId, inputImageCount, copy, imageSy
     <ol>{manifest?.images.map((item, index) => <li key={index}>
       <button type="button" data-image-index={index} disabled={!images[index]}
         aria-label={formatCopy(copy.questionOriginalZoom, { number: index + 1, name: item.name })} onClick={event => { event.currentTarget.focus(); setZoom(index); }}>
-        {images[index] ? <img src={images[index]!.dataUrl} alt={item.name} onError={() => { setState('failed'); setImages(old => old.map((v, i) => i === index ? null : v)); }} /> : <span>{item.name}</span>}
+        {images[index] ? <img src={images[index]!.image.dataUrl} alt={item.name} onError={images[index]!.onDecodeError} /> : <span>{item.name}</span>}
       </button>
     </li>)}</ol>
     {state !== 'ready' && <p role={state === 'loading' ? 'status' : 'alert'}>
@@ -61,6 +68,6 @@ export function QuestionAttachments({ questionId, inputImageCount, copy, imageSy
       {state !== 'loading' && imageSyncEnabled && shell.questionFetchAttachments && <button type="button" onClick={() => { void fetch(); }}>{copy.questionOriginalFetch}</button>}
     </p>}
     <p className="question-note">{copy.questionOriginalResults}</p>
-    {zoom !== null && images[zoom] && <QuestionImageDialog image={images[zoom]!} copy={copy} onClose={() => setZoom(null)} />}
+    {zoom !== null && images[zoom] && <QuestionImageDialog image={images[zoom]!.image} copy={copy} onClose={() => setZoom(null)} />}
   </section>;
 }

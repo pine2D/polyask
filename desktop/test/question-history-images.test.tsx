@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { act } from 'react';
+import { QuestionAttachments } from '../src/renderer/question-attachments';
+import { setShellApi } from '../src/renderer/shell-api';
+import { mountDom } from './ui/dom-harness';
 import { copy, deferred, detail, historyMount, q, waitFor } from './ui/history-dom';
 import { originals, imageManifest } from './lib/history-image-fixtures';
 
@@ -106,4 +109,45 @@ test('leaving the reader stops queued image reads and ignores late metadata or b
     assert.equal(reads, 2, 'unmounted reader does not fetch remaining originals');
     assert.equal(h.document.querySelector('.question-attachments') === null, true);
   } finally { await h.close(); }
+});
+
+
+test('image decode failure and Retry remain visible after outstanding original reads finish', async () => {
+  const pending = originals.map(() => deferred<typeof originals[number]>());
+  setShellApi({ questionAttachments: async () => imageManifest('q-race'),
+    questionAttachment: ({ index }: { index: number }) => pending[index].promise } as any);
+  const h = await mountDom(<QuestionAttachments questionId="q-race" inputImageCount={4} copy={copy} />);
+  try {
+    await act(async () => pending[0].resolve(originals[0]));
+    const first = h.document.querySelector('img')!;
+    await act(async () => first.dispatchEvent(new h.window.Event('error')));
+    assert.equal(h.document.querySelector('[role="alert"]') !== null, true, 'decode error initially reports failure');
+    await act(async () => { pending[1].resolve(originals[1]); pending[2].resolve(originals[2]); });
+    await act(async () => pending[3].resolve(originals[3]));
+    assert.equal(h.document.querySelectorAll('img').length, 3);
+    assert.equal(h.document.querySelector('[role="alert"]') !== null, true, 'remaining reads must not erase the decode failure');
+    assert.equal([...h.document.querySelectorAll('button')].some(button => button.textContent === copy.questionRetry), true,
+      'decode failure retains the explicit Retry action');
+  } finally { await h.close(); setShellApi(null); }
+});
+
+test('an old image decode error cannot contaminate a successful retry or another question', async () => {
+  for (const change of ['retry', 'question']) {
+    setShellApi({ questionAttachments: async (id: string) => imageManifest(id),
+      questionAttachment: async ({ index }: { index: number }) => originals[index] } as any);
+    const h = await mountDom(<QuestionAttachments questionId="q-old" inputImageCount={4} copy={copy} />);
+    try {
+      const oldImage = h.document.querySelector('img')!;
+      if (change === 'retry') {
+        await act(async () => h.document.querySelectorAll('img')[3].dispatchEvent(new h.window.Event('error')));
+        const retry = [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === copy.questionRetry)!;
+        await h.click(retry);
+      } else await h.render(<QuestionAttachments questionId="q-new" inputImageCount={4} copy={copy} />);
+      assert.equal(h.document.querySelectorAll('img').length, 4);
+      assert.equal(h.document.querySelector('[role="alert"]') === null, true);
+      await act(async () => oldImage.dispatchEvent(new h.window.Event('error')));
+      assert.equal(h.document.querySelectorAll('img').length, 4, 'stale image error cannot remove a current thumbnail');
+      assert.equal(h.document.querySelector('[role="alert"]') === null, true, 'stale decode failure belongs to its original attempt');
+    } finally { await h.close(); setShellApi(null); }
+  }
 });
