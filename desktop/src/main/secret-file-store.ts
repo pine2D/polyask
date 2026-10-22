@@ -32,8 +32,12 @@ export function secureBackend(crypto: TokenCrypto): boolean {
 }
 
 export async function safeEncryptionAvailability(check: () => Promise<boolean>): Promise<boolean> {
-  try { return await check(); }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try { return await Promise.race([check(), new Promise<boolean>(resolve => {
+    timer = setTimeout(() => resolve(false), SECRET_KEYRING_TIMEOUT_MS);
+  })]); }
   catch { return false; }
+  finally { clearTimeout(timer); }
 }
 
 const stale = (guard: SecretWriteGuard | undefined): boolean =>
@@ -50,14 +54,16 @@ export class SecretFileStore {
   private pendingRead: Promise<SecretReadResult> | null = null;
   private readonly invalidCode: string;
   private readonly keyringTimeoutMs: number;
+  private readonly clearOnMemory: boolean;
 
   constructor(
     private readonly path: string,
     readonly crypto: TokenCrypto,
-    opts: { invalidCode?: string; keyringTimeoutMs?: number } = {}
+    opts: { invalidCode?: string; keyringTimeoutMs?: number; clearOnMemory?: boolean } = {}
   ) {
     this.invalidCode = opts.invalidCode ?? "invalid_secret";
     this.keyringTimeoutMs = opts.keyringTimeoutMs ?? SECRET_KEYRING_TIMEOUT_MS;
+    this.clearOnMemory = opts.clearOnMemory ?? false;
   }
 
   /** 不经过 promise 链，直接被 proxy-state、加密状态刷新调用；查询挂起时按「不能安全落盘」答复，不让调用方一直等。 */
@@ -125,7 +131,12 @@ export class SecretFileStore {
     // tmp 在时限内拿到密文之后才创建：超时一定没有 tmp、不动旧文件，迟到的密文也不会再 rename。
     // 以拒绝表达；明文由调用方保管（ProxyAuth 缓存 / TokenStore 内存副本），效果等同 "memory"，仅本次运行有效。
     if (encrypted === TIMED_OUT) throw new Error(SECRET_WRITE_TIMEOUT);
-    if (encrypted === null) return "memory";
+    if (encrypted === null) {
+      // OAuth reauthorization replaces account identity even when the new token
+      // is memory-only. Keep cleanup inside this queue, before any later write.
+      if (this.clearOnMemory && !stale(guard)) await this.clearNow();
+      return "memory";
+    }
     // 写锁之外的第二道保险：encrypt 可能卡在钥匙环上很久，期间发生本机重置就放弃落盘。
     if (stale(guard)) return "aborted";
     await mkdir(dirname(this.path), { recursive: true });

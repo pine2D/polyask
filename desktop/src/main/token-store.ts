@@ -12,7 +12,7 @@ export class TokenStore {
   private readonly file: SecretFileStore;
 
   constructor(path: string, readonly crypto: TokenCrypto) {
-    this.file = new SecretFileStore(path, crypto, { invalidCode: "invalid_refresh_token" });
+    this.file = new SecretFileStore(path, crypto, { invalidCode: "invalid_refresh_token", clearOnMemory: true });
   }
 
   securePersistence(): boolean {

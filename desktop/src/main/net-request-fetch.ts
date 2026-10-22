@@ -120,7 +120,14 @@ function exchange(send: Send, session: Session, hop: Hop, signal: AbortSignal | 
       if (phase !== "request") return;
       const nullBody = NULL_BODY_STATUS.has(incoming.statusCode) || hop.method === "HEAD";
       const holder: { controller?: BodyController } = {};
-      const stream = nullBody ? null : new ReadableStream<Uint8Array>({ start(controller) { holder.controller = controller; } });
+      const stream = nullBody ? null : new ReadableStream<Uint8Array>({
+        start(controller) { holder.controller = controller; },
+        cancel() {
+          if (phase !== 'body') return;
+          finish(); // Late native data/end events must no longer touch this closed stream.
+          request.abort();
+        }
+      });
       let response: Response;
       try {
         response = new Response(stream, { status: incoming.statusCode, statusText: reasonPhrase(incoming.statusMessage), headers: responseHeaders(incoming.headers) });

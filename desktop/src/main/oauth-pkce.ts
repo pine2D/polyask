@@ -104,7 +104,13 @@ export async function listenLoopback(locale = 'en'): Promise<LoopbackReceiver> {
   const receive = new Promise<{ code?: string; state?: string; error?: string }>((done) => { resolve = done; });
   let expectedState: string | undefined;
   const server = createServer((request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
+    const path = request.url ?? '/';
+    let url: URL;
+    try {
+      if (!path.startsWith('/') || path.startsWith('//')) throw new Error('invalid_callback_path');
+      url = new URL(path, 'http://127.0.0.1');
+      if (url.origin !== 'http://127.0.0.1') throw new Error('invalid_callback_path');
+    } catch { response.writeHead(404).end(); return; }
     const code = url.searchParams.get("code") ?? undefined;
     const state = url.searchParams.get("state") ?? undefined;
     const error = url.searchParams.get("error") ?? undefined;
