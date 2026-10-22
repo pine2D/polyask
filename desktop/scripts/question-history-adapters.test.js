@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const source = fs.readFileSync(path.join(__dirname, '../src/site-runtime/history-adapters.js'), 'utf8');
 function fixture(host, selector, nodes) {
+  if (host === 'doubao.com') selector = '[data-message-id], [data-testid="union_message"][data-target-id] [data-message-role="user"]';
   const answer = { isConnected: true };
   const adapter = { answer: () => answer };
   vm.runInNewContext(source, { window: { __AMS: { adapters: { [host]: adapter } } },
@@ -65,6 +66,8 @@ test('Doubao predecessor uses the prior logical text turn, not its image bubble'
 
 test('ChatGPT binds the new user bubble without including copy controls or counting its old wrapper twice', () => {
   const bubble = user('Synthetic question');
+  bubble.matches = selector => selector === '[data-user-message-bubble]';
+  bubble.getAttribute = name => name === 'data-content-search-unit-key' ? 'user-unit' : null;
   const wrapper = user('Synthetic question Copy', { '[data-user-message-bubble]': bubble });
   wrapper.contains = node => node === bubble;
   const selector = '[data-turn="user"], [data-message-author-role="user"], [data-user-message-bubble]';
@@ -76,6 +79,8 @@ test('ChatGPT binds the new user bubble without including copy controls or count
 });
 test('ChatGPT keeps the search-unit answer root when selection metadata wraps the same streaming Markdown', () => {
   const bubble = user('Synthetic question');
+  bubble.matches = selector => selector === '[data-user-message-bubble]';
+  bubble.getAttribute = name => name === 'data-content-search-unit-key' ? 'user-unit' : null;
   const selector = '[data-turn="user"], [data-message-author-role="user"], [data-user-message-bubble]';
   const a = fixture('chatgpt.com', selector, [bubble]);
   const root = { getAttribute: name => name === 'data-content-search-unit-key' ? 'answer-unit' : null };

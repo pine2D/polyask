@@ -157,6 +157,13 @@
     stop(e);
     return e.finalSnapshot;
   }
+  // 豆包的临时气泡只供 local_ 迁移绑定；不能据此确认提交或让主进程迟到快照升级成已发送。
+  function submissionConfirmed(e, turn) {
+    if (!/^(?:www\.)?doubao\.com$/.test(location.hostname)) return true;
+    if (turn.user.querySelector?.('[data-testid="message_box_failed_icon"]')) { stop(e, "turn_unconfirmed"); return false; }
+    if (!turn.userKey) { e.captureCode = "turn_unconfirmed"; return false; }
+    return true;
+  }
   function read(e, a, force) {
     const empty = { token: e.token, owned: false };
     // 读正文的这次定位不用锚点缓存（ctx.fresh）：缓存只证明节点还在，不复核同文是否仍唯一。
@@ -166,6 +173,8 @@
     // Some sites show Stop before rendering the submitted user turn. This only
     // keeps observation alive; no text or URL is attributed until bind succeeds.
     if (!bind(e, turn)) return { ...empty, ended: e.ended,
+      generation: !e.ended && a?.generation?.() === "generating" ? "generating" : null };
+    if (!submissionConfirmed(e, turn)) return { ...empty, ended: e.ended,
       generation: !e.ended && a?.generation?.() === "generating" ? "generating" : null };
     if (!turn.answer) {
       e.captureCode = turn.answerRoot?.querySelector?.('details,[class*="think" i],[class*="reason" i]') ? "thinking_only" : "answer_pending";
@@ -188,7 +197,7 @@
     // 原文锚点按本次问题找节点，文本校验是循环论证，不能当新消息证据。
     submitted(token) {
       if (!entry || entry.token !== token || entry.ended) return false;
-      try { const a = adapter(), turn = locateTurn(entry, a); return bind(entry, turn) && turn.locate !== "anchor"; } catch (_) { return false; }
+      try { const a = adapter(), turn = locateTurn(entry, a); return bind(entry, turn) && submissionConfirmed(entry, turn) && turn.locate !== "anchor"; } catch (_) { return false; }
     },
     // options.images：本次附件数。带附件的提问不走原文锚点。
     begin(token, text, deadline, options) {

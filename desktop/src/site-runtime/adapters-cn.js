@@ -192,10 +192,22 @@
       },
       // 发送键无标签但有稳定 id（真机审计 2026-07）；不可用时落回通用路径（textarea Enter 可发）。
       // 有意不声明 sendSel：真机 2026-08-18 实测空输入框时该按钮整个不在 DOM（非常驻），列进巡检会恒红误报
-      submit: function () {
+      submit: async function (el, deadline, historyToken) {
         const b = document.getElementById("flow-end-msg-send");
         if (!b || b.disabled || b.getAttribute("aria-disabled") === "true" || b.getAttribute("data-disabled") === "true") return false;
+        checkDeadline(deadline);
         b.click();
+        // 追问会先清空输入框、插入无 message-id 的乐观气泡，随后才可能显示失败图标。
+        // 单次点击后只读等待独立消息身份；不让通用 composer 变化把失败草稿判成已提交。
+        // 共用本轮基线、路由与插入证据；不同的末条 key 也可能来自用户切回的旧会话。
+        // history 不可用仍允许单次发送，但不宣称已确认；独立 key 真机可能在 10s 后才出现。
+        const end = Number(deadline) || Date.now() + 3000;
+        while (historyToken && Date.now() < end) {
+          await sleep(Math.min(120, Math.max(0, end - Date.now())));
+          if (S.history?.submitted(historyToken)) return;
+          if (document.querySelector('[data-testid="message_box_failed_icon"]') && S.history?.snapshot(historyToken)?.ended) break;
+        }
+        throw new Error("submit_unconfirmed");
       },
       // 最后一条回答（chrome-dbg 真机审计 2026-07：消息容器 [data-message-id]，用户消息右对齐带
       // justify-end、AI 无；正文在 .md-box-root。注意豆包渲染会在中文与数字间插空格）

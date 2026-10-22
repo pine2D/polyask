@@ -150,9 +150,9 @@
       // 点击成功也要过提交校验：新适配的发送键（div 无 role 等）点了未必生效，不校验就是假成功回归。
       try {
         const before = readText(el);
-        if ((await a.submit(el, deadline)) !== false)
+        if ((await a.submit(el, deadline, historyToken)) !== false)
           return await confirmSubmitted(before, confirmUntil(), historyToken, watchMessage);
-      } catch (e) { return { ok: false, code: ["inject_failed", "timeout"].includes(e?.message) ? e.message : "error", reason: String((e && e.message) || e) }; }
+      } catch (e) { return { ok: false, code: ["inject_failed", "timeout", "submit_unconfirmed"].includes(e?.message) ? e.message : "error", reason: String((e && e.message) || e) }; }
     }
     // 发送键定位在 send.js：纵向锚定输入区，横向择近，排除侧栏里的同名按钮。
     // 每次动作前检查绝对截止时间，防止主进程已报超时后才迟到发送。

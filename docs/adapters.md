@@ -27,7 +27,7 @@
 | `state()` | ✓ | 同步 | `"think"` / `"fast"` / `null`。只表示粗档位，不能证明模型版本/强度/开关精确 |
 | `selection(mode)` | | 同步只读 | 返回 `{outcome, observed?, model?}`；`preferred`/`alternative` 需精确模型及目标模式证据，`mode_only` 只证明模式，其他为 `unconfirmed`。不得开菜单或复用上轮缓存；未实现时由 `state()` 提供模式证据 |
 | `diagnose()` | ✓ | 同步 | 锚点命中报告，供巡检标芯片。只列**常驻**控件，会随对话阶段消失的控件不许列（否则巡检恒红误报）。**每条检查必须带 `kind`**，见下方「检查项的 `kind`」 |
-| `submit(el, deadline)` | | `async` | `false` = 发送键此刻不可用 → 落回通用链；**抛异常 = core 直接终止、不回退**（输入在等待中回滚时报 `inject_failed`，其余异常报 `error`），所以内部必须自行判空返回 false。点击成功也要过 `confirmSubmitted` 才算成功 |
+| `submit(el, deadline, historyToken?)` | | `async` | `false` = 发送键此刻不可用 → 落回通用链；**抛异常 = core 直接终止、不回退**（保留 `inject_failed` / `timeout` / `submit_unconfirmed`，其余异常报 `error`），所以内部必须自行判空返回 false。点击成功也要过 `confirmSubmitted` 才算成功 |
 | `inject(el, text)` | | 同步 | `false` = 交回通用注入链（beforeinput→execCommand→textContent）；**抛异常 = 通用链对本站不安全**（Kimi），core 直接报 `inject_failed` 不回退 |
 
 注入后与提交前，core 都逐字核对输入框仍是本次问题（`promptMatches`，否则 `inject_failed`、不提交）。段落型编辑器（ProseMirror/Quill 每行一个 `<p>`、空行为 `<p><br></p>`）按块级子元素逐块取行：整体 `innerText` 在块间多一个空行，2026-10-10 真机六站多行问题因此全报 `inject_failed`（v1.12.0 起的回归）。只抹平零宽字符与不换行空格；词间空格、缩进、空行数仍逐字比较，换行被吞（Kimi 旧注入）照样拒绝。
@@ -83,7 +83,7 @@
 | ChatGPT | core 通用链 | 无 `submit`（优先 `send`/`发送` 标签按钮，无可用按钮才用 Enter） |
 | Gemini | core 通用链 | 无 `submit` |
 | DeepSeek | `submit(el, deadline)` | `[role="button"].ds-button--primary.ds-button--circle` 取最后一个，`waitFor` 到既无 `ds-button--disabled` 类也无 `aria-disabled="true"` 才原生 `click()`；超时（deadline 剩余，无 deadline 则 10s）返回 false |
-| 豆包 | `submit()` | `#flow-end-msg-send`；缺失或 disabled/aria-disabled/data-disabled 为真时返回 false 落回通用链（textarea Enter 可发） |
+| 豆包 | `submit(el, deadline, historyToken?)` | 单击后共用本轮历史归属确认，未确认不补发；`#flow-end-msg-send`；缺失或 disabled/aria-disabled/data-disabled 为真时返回 false 落回通用链（textarea Enter 可发） |
 | 千问 | core 通用链 | 无 `submit`；受控编辑器靠合成 `beforeinput` 注入 |
 | Kimi | `submit()` | `.send-button-container`（无 role 的 div，Enter 只插换行）；用 `clickEl(b)` 合成 pointer 序列 + `detail:1` 拟真，**不是原生 `click()`** |
 | 元宝 | `submit()` | `[aria-label="Send"], [aria-label="发送"]`（非 button），排除 disabled 后用 `clickEl()` |
@@ -147,6 +147,10 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 纯文字提问也在注入前通过 `hasPendingAttachments` 只读检查残留：本轮上传凭据记录的草稿分支内仍有预览，或聊天附件区/同一表单内有原生附件（含隐藏的待处理缩略图），即返回 `attachment_conflict`，不改文字、不点击发送，也不自动删除附件。草稿分支取新预览与输入框最近共同祖先下、仅含预览的子树，并核对其父节点仍包住输入框；分支内子节点重绘仍拦截，原图片或分支搬入历史区后不再按凭据拦截。普通历史消息图片不算待发附件。
 
+上传凭据在 `finally` 采集，适配器抛错也不能漏掉已经插入的预览。`input/change/drop` 派发后若失败且实际预览不足本批张数，保留未决状态并拦截后续纯文字和带图发送；空快照或移除已显示的部分附件不能排除其余文件迟到，需要刷新本站后重试。没有派发上传的入口失败不触发此限制。带图复用与纯文字检查共用草稿区域归属：历史里的旧图片（含原节点/整条分支搬移或克隆）不能证明草稿仍有图片，同图主动重试和不同图均须重新上传。
+
+整个附件分支重挂时，以原父节点和前后兄弟限定唯一槽位；替换分支只可证明仍有残留，不能授权复用。分支及父节点一并重挂、槽位证据丢失时保留未决状态，不以旧图片 token 消失推定已清空。完整移除且原槽位可确认清空，或原分支仍连接而明确搬离草稿父节点时，才解除该分支的残留判定。
+
 提交回包附 `submissionEvidence`：本轮 history token 在动作前尚未绑定、动作后出现新的同轮用户消息为 `message`；只观察到输入框清空或变化为 `composer`。前者表示页面已出现本轮消息，不保证服务端持久化；后者保留兼容但明确消息尚未确认。旧同文消息、旧 token、已结束历史均不能提供新消息证据。`history.submitted(token)` 只读且不序列化正文，和可参与 Kimi 恢复的 `adapter.submitted(text)` 是不同能力，绝不据此自动补发。
 
 **这三个数字有七处落点，改一个就要全改**（`scripts/test-image-limits.js` 逐处按锚点对账，抠不到锚点即红，不静默跳过）：
@@ -204,6 +208,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - **2026-09-29 切档证据**：现代菜单的 Power 最近 `role=menu` 包含模型 radio，匹配范围限定此菜单（兼容旧 testid）。实际选中 GPT-5.6 Sol 并复读后，把滑块推到 4/4 或 0/4；`selection()` 在菜单仍可读时返回 `preferred`，关闭后仅凭标签返回 `mode_only`，不复用缓存模型。缺字段、隐藏滑块、模型未选中均不能宣称精确确认。
 - **2026-09-30 副本实测**：首轮先出现 `/c/local-chatgpt%3A<id>`，再变为 `/c/<server-id>`；旧规则只识别 `WEB:<id>`，会误判用户切会话并封存空副本。`history.js` 只把 `WEB` / `local-chatgpt` 加 `:` 或 `%3A` 的明确临时格式视为尚未确定路由，正式地址仍锁定；未知前缀、浏览器前后退、其它正式会话不能沿用归属。流式正文还会在首 token 后新增 `[data-chatgpt-selection-message-id]` 包装；历史回答根优先用生成前后都存在的 `[data-content-search-unit-key]` 及其 key，旧布局仍回退原根。不要用延迟插入的 selection 包装锁定首 token，否则下一次读取就误判替换，仅保存开头。
 
+- **2026-10-22 首问预览**：首页无逐消息 key 的 `[data-user-message-bubble]` 先出现，真实带 `[data-content-search-unit-key]` 的消息插入时，临时泡仍 connected、藏在 `display:none` 的另一 workspace。带图和纯文字均可触发；新式泡必须有逐消息身份才计数，临时泡不进入原文锚点兜底，也不能提供提交正向证据。旧角色壳仍计一次，多个真实用户轮次及不同 key 仍拒绝归属。
+
 ### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl3.js`）
 
 - 档位：think 优先实际菜单 `4 Argon` + High；菜单没有 Argon 时继续匹配任意版本 Pro + Extended（新版等级菜单则 High）。Argon 在场但禁用或同优先项重复时直接报错，不偷偷改选 Pro；`4.1 Argon` / `4 Argon-Lite` 不当已确认模型。fast 仍匹配任意版本 Flash，排除 Flash-Lite；旧版关闭 Extended，新版选择 Low。Argon 与新版 Low/High 必须复读子菜单的 `.selected` / `aria-checked`，不靠粗档位判断冒充等级确认。
@@ -229,6 +235,9 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 ### 豆包（`www.doubao.com` / 键 `doubao.com`，`desktop/src/site-runtime/adapters-cn.js`）
 
+- **2026-10-22 图文轮次**：local_ 上先出现两个 `union_message[data-target-id]` 内的 `data-message-role=user` 节点，图片占位尚无 img；旧选择器会漏掉它们，让语义级误计两轮。第 ① 级优先现代用户角色，仅合并同 target-id 的连续无正文图片占位→文字；已有正文或间隔助手（包括无 message-id 的助手）即断组。target-id 会被下一条乐观消息复用，绝不作为用户或助手身份。用户始终返回稳定 role 节点，独立 key 从唯一 message-id 内层读取，原地补 key 不换节点；助手沿用独立 key，无 key 时按节点身份判断。没有现代节点时保留旧版分组和语义兜底；local_ 迁移、同槽位及多轮保护不放宽。真实 DOM fixture 仅把用户预期注解移到已有 role，未改捕获结构。
+- **2026-10-22 提交确认**：豆包会先清空输入框并展示乐观用户泡，随后可能出现 `message_box_failed_icon`。专用 submit 单次点击后共用 `history.submitted(historyToken)` 的基线、原文、插入和路由证据，并要求独立 userKey；只读等待到现有绝对 deadline（真机独立 key 曾在点击约 10.8 秒后出现），不增加群发总预算。无 token 仍允许单次发送，但返回未确认。临时气泡保留内部绑定以支持 local_ 迁移，对外快照 `owned:false`，明确失败同样不归属并结束观察，避免主进程迟到确认误升已发送。明确失败或未获确认抛出既有 `submit_unconfirmed`，core 原样保留，不落回通用点击/Enter，不自动补发。
+
 - Mermaid 卡的缩放工具栏使用 `justify-end`（2026-10-07 Windows 真机），并非用户消息；`answer()` 与 `historyTurn()` 的右对齐用户证据均排除 `.md-box-root` / `message_text_content` 正文中的后代，消息壳本身或正文外的气泡对齐布局仍有效。前后用户 key、计数、归属及封存规则不放宽；已结束的旧空副本不会改写。
 
 - 档位：think = `_select(/专家$/, "think")`、fast = `_select(/快速$/, "fast")`。**锚定的是后缀不是前缀**——菜单项实测带品牌与版本前缀（`豆包 2.1 Turbo 专家`），写成 `/^专家/` 会一项都匹配不上。**只切 composer 模式按钮的菜单项，无独立思考开关、无模型选择。**
@@ -249,6 +258,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - 受控编辑器，走 core 的 `beforeinput` 注入。`answer()` 取末个 `.answer-common-card` 内、排除祖先 `[class*="thinkingContent"]` 后的最后一个 `.qk-markdown`（思考段与正文同为 `.qk-markdown`，祖先类名带 CSS-module 哈希后缀）；只有思考段时返回 null，空占位卡仍返回卡本身。长文写作卡（「创建于 …」卡片）挂在正文之后，由 `md.js` 按外壳 `data-card-highlight-target` 剔除，见上文「汇总复制」第 4 条。代码块是 react-syntax-highlighter：每行一个块级 span、行首 `span.linenumber`（user-select:none）、行尾自带 `\n` 文本，`md.js` 逐文本节点取代码并跳过行号栏（2026-10-03 真机曾把行号和空行带进围栏）。`attach` 使用 PointerEvent 展开附件菜单，再选上传图片创建动态 input；不使用 drop/paste，finally 关菜单。
 
 ### Kimi（`www.kimi.com` / 键 `kimi.com`，`desktop/src/site-runtime/adapters-cn2.js`）
+
+- **2026-10-22 上传失败状态**：`[data-testid="input-attachment-list"] .image-thumbnail.error` 是明确失败缩略图，内部仅背景图/图标，没有 img 或 alert 文字。附件确认将它计入新增错误并及时返回 `attachment_failed`，不耗尽群发预算后才误呈提交未确认；这不解决站点自身的上传失败，也不授权自动重试。
 
 - 档位（2026-07-21 用户定案）：**think = K3 + Max、fast = K3 + Standard**。模型非 K3 时先 `_select("K3")` 再 `_setEffort`：think 用 `/^(Max|极致|最大|最高|最强)$/i`，fast 用 `/^(Standard|标准)$/i`。**`state()` 要求 `_model()` 严格等于 "K3"**，否则直接 null（K2.6 只有 Standard / High，无 Max 档——这是判断「用户停在 K2.6 时 state() 为何恒 null」的唯一依据）；再看 effort 映射两档，其余 null。中文 UI 的 Max 标签是「极致」（用户实证；chrome-dbg 里站点跟账号语言恒英文，中文标签只能靠用户回报）。effort 切换不导航。
 - 锚点：模型入口 `.current-model`（`.name` 读模型名、`.current-effort` 读强度），菜单项 `.model-item`（按 `.name` 精确等值），强度行 `.effort-item`（`.effort-title` 命中 `Thinking|思考|推理`），子菜单项 `.effort-option`（`.effort-name`）。**读到的每一处文本都先过 `_zap()` 剥零宽字符再比**——`_model()` 与 `.model-item` 的比对同样要过（此前只有 effort 两处过，`.name` 带零宽时 `state()` 恒 null、`_select` 抛「目标选项未找到」并把排障误指到 effort）。

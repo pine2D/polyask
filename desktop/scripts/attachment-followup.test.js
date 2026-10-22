@@ -25,7 +25,8 @@ function fixture(t, { outsideForm = false } = {}) {
   const add = () => attachments.insertAdjacentHTML('beforeend', '<img class="preview-image" src="pending.png">');
   const data = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
   const images = [{ name: 'fixture.png', type: 'image/png', size: data.length, dataUrl: `data:image/png;base64,${data.toString('base64')}` }];
-  return { S, document, composer, attachments, add, clicks: () => clicks,
+  return { S, document, composer, attachments, add, images, window: w, deadline: () => now + 5000, clicks: () => clicks,
+    uploadWith: attach => S.uploadImages(images, { attach }, composer, now + 5000),
     upload: ok => S.uploadImages(images, { attach: async () => { add(); return ok; } }, composer, now + 5000),
     send: () => S.submitPrompt('Plain follow-up', now + 5000, []) };
 }
@@ -96,3 +97,79 @@ test('composer remount during upload keeps pending attachments tied to the curre
   assert.equal((await h.send()).code, 'attachment_conflict');
   assert.equal(h.clicks(), 0);
 });
+
+test('an attachment placed before the adapter throws still blocks a plain follow-up', async t => {
+  const h = fixture(t, { outsideForm: true });
+  assert.equal((await h.uploadWith(async () => { h.add(); throw Error('interrupted'); })).code, 'attachment_failed');
+  h.composer.value = 'Existing site draft';
+  assert.equal((await h.send()).code, 'attachment_conflict');
+  assert.equal(h.composer.value, 'Existing site draft');
+  assert.equal(h.clicks(), 0);
+});
+
+test('a dispatched upload with no confirmed previews cannot authorize a text send before or after a late preview', async t => {
+  const h = fixture(t, { outsideForm: true });
+  h.window.DataTransfer = class { constructor() { this.files = []; this.items = { add: file => this.files.push(file) }; } };
+  const input = { dispatchEvent() {} };
+  const result = await h.uploadWith((files, el, deadline) => h.S.setInputFiles(input, files, el, deadline));
+  assert.equal(result.code, 'attachment_timeout');
+  assert.equal((await h.send()).code, 'attachment_conflict', 'an empty snapshot cannot rule out a late upload');
+  h.add();
+  assert.equal((await h.send()).code, 'attachment_conflict');
+  assert.equal(h.clicks(), 0);
+});
+
+test('failure before any upload dispatch does not block a plain follow-up', async t => {
+  const h = fixture(t, { outsideForm: true });
+  assert.equal((await h.uploadWith(async () => 'attachment_action_required')).code, 'attachment_action_required');
+  assert.equal((await h.send()).ok, true);
+  assert.equal(h.clicks(), 1);
+});
+
+test('Kimi explicit failed thumbnail ends upload before the deadline without injecting a question', async t => {
+  const h = fixture(t, { outsideForm: true });
+  h.window.DataTransfer = class { constructor() { this.files = []; this.items = { add: file => this.files.push(file) }; } };
+  const input = { dispatchEvent(event) {
+    if (event.type === 'change') h.attachments.innerHTML = '<div data-testid="input-attachment-list"><div class="image-thumbnail error"><div class="image-mask"></div></div></div>';
+  } };
+  const started = h.window.Date.now();
+  const result = await h.uploadWith((files, el, deadline) => h.S.setInputFiles(input, files, el, deadline));
+  assert.equal(result.code, 'attachment_failed');
+  assert.equal(h.window.Date.now() - started < 1000, true, 'explicit upload failure must not wait out the send budget');
+  assert.equal(h.composer.value, '');
+  assert.equal(h.clicks(), 0);
+});
+
+for (const wholeParent of [false, true]) for (const withImage of [false, true]) test(`a remounted ${wholeParent ? 'draft parent' : 'draft branch'} blocks ${withImage ? 'duplicate attachment upload' : 'a plain follow-up'}`, async t => {
+  const h = fixture(t, { outsideForm: true }); await h.upload(true);
+  const target = wholeParent ? h.attachments.parentElement : h.attachments;
+  target.replaceWith(target.cloneNode(true));
+  let uploads = 0;
+  const result = withImage ? await h.S.uploadImages(h.images, { attach: async () => { uploads++; return true; } },
+    h.document.querySelector('textarea'), h.deadline()) : await h.send();
+  assert.equal(result.code, 'attachment_conflict');
+  assert.equal(uploads, 0);
+  assert.equal(h.clicks(), 0);
+});
+
+for (const sameImage of [true, false]) for (const move of ['image', 'region', 'clone']) {
+  test(`an image consumed by manual or late submission is uploaded again for ${sameImage ? 'explicit retry' : 'a new image'} (${move})`, async t => {
+    const h = fixture(t, { outsideForm: true });
+    assert.equal((await h.upload(true)).ok, true);
+    const history = h.document.querySelector('#answer');
+    if (move === 'region') history.append(h.attachments);
+    else if (move === 'image') history.append(h.attachments.querySelector('img'));
+    else { history.append(h.attachments.querySelector('img').cloneNode(true)); h.attachments.replaceChildren(); }
+    let uploads = 0;
+    const images = sameImage ? h.images : h.images.map(image => ({ ...image, name: 'second.png' }));
+    const result = await h.S.uploadImages(images, { attach: async () => {
+      uploads++;
+      h.composer.before(h.document.createElement('img'));
+      h.composer.previousElementSibling.src = 'new-upload.png';
+      return true;
+    } }, h.composer, h.deadline());
+    assert.equal(result.ok, true);
+    assert.equal(uploads, 1, 'historical image must never count as a reusable draft attachment');
+    assert.equal(h.composer.parentElement.querySelectorAll('img').length, 1);
+  });
+}

@@ -33,13 +33,16 @@ function append(run, html) {
   run.document.querySelector(".list_items").append(...box.children);
 }
 // 首问起步：begin → push local_ → 用户与回答节点（尚无 data-message-id）插入 → 第 ② 级绑定。
-async function firstTurn(run, html = USER + ANSWER) {
+async function firstTurn(run, html = USER + ANSWER, confirmed = false) {
   run.S.history.begin("tok", PROMPT, Date.now() + 44_000, { images: 0 });
   run.window.history.pushState(null, "", "/chat/local_6289182192238156");
   append(run, html);
+  if (confirmed) run.document.querySelector('[data-message-role="user"]').setAttribute('data-message-key', 'local-user');
   await tick();
   const bound = run.S.history.snapshot("tok");
-  assert.deepEqual({ owned: bound.owned, locate: bound.locate }, { owned: true, locate: "semantic" }, "local_ 阶段由第 ② 级接住");
+  assert.equal(run.adapter.historyTurn().locate, "semantic", "local_ 阶段由第 ② 级接住");
+  assert.equal(bound.owned, confirmed, "无独立 key 仅内部绑定，不确认已发送");
+  assert.equal(bound.ended === true, false);
 }
 const stamp = (run) => {
   const time = run.document.createElement("time");
@@ -53,8 +56,8 @@ test("Doubao new chat: the action-bar <time> inserted after binding does not end
     stamp(run);
     await tick();
     const stamped = run.S.history.snapshot("tok");
-    assert.equal(stamped.ended, undefined, "时间戳不是用户原文，不得判原文不符");
-    assert.equal(stamped.owned, true);
+    assert.equal(stamped.ended, false, "时间戳不是用户原文，不得判原文不符");
+    assert.equal(stamped.owned, false);
     assert.equal(run.S.historyLocate.locate({ method: "semantic" }).text.replace(/\s+/g, " ").trim(), PROMPT, "第 ② 级用户文本只取正文");
   }));
 
@@ -98,14 +101,14 @@ for (const variant of ["same batch, answer locked on local_", "interim batch, no
   test(`Doubao new chat: local_ → server id replace followed by a user-node swap migrates once (${variant})`, () =>
     withRun(async (run) => {
       // 第 1 种：local_ 阶段快照已锁回答根（e.answer 已置位）；第 2 种：local_ 阶段回答仍空，replace 后、换节点前还有一批变动。
-      await firstTurn(run, variant.startsWith("interim") ? USER + EMPTY : USER + ANSWER);
+      await firstTurn(run, variant.startsWith("interim") ? USER + EMPTY : USER + ANSWER, variant.startsWith("same batch"));
       stamp(run);
       await tick();
       run.window.history.replaceState(null, "", SERVER);
       if (variant.startsWith("interim")) {
         run.document.querySelector('[data-testid="receive_message"] [data-testid="message_text_content"]').innerHTML = "<p>阳光</p>";
         await tick();
-        assert.equal(run.S.history.snapshot("tok").owned, true, "replace 后、换节点前副本仍归属本轮");
+        assert.equal(run.S.history.snapshot("tok").ended, false, "replace 后、换节点前保留内部绑定，等独立 key 确认");
       }
       const old = run.document.querySelector('[data-message-role="user"]');
       swapRows(run);
@@ -162,7 +165,9 @@ test("Doubao new chat: a level-one bubble outside the bound user never takes ove
     await tick();
     assert.equal(run.adapter.historyTurn({ method: "selector" }).userCount, 1, "噪声让第 ① 级恰好数到 1，用例才有意义");
     const snapshot = run.S.history.snapshot("tok");
-    assert.deepEqual({ owned: snapshot.owned, locate: snapshot.locate }, { owned: true, locate: "semantic" });
+    assert.equal(snapshot.owned, false);
+    assert.equal(snapshot.captureCode, "turn_unconfirmed");
+    assert.equal(run.adapter.historyTurn({ method: "semantic" }).text, PROMPT);
   }));
 
 test("generic level two: <time> and action-bar subtrees are not part of the user text", () => {
@@ -247,7 +252,7 @@ const modal = (run, marker) => {
 test("Doubao new chat: a Radix modal hiding <main> (data-aria-hidden) does not block first-prompt binding", () =>
   withRun(async (run) => {
     modal(run, true);
-    await firstTurn(run);
+    await firstTurn(run, USER + ANSWER, true);
     assert.match(run.S.history.snapshot("tok").text, /阳光射入水滴/);
   }));
 
@@ -271,6 +276,6 @@ test("Doubao new chat: a marked aria-hidden region outside the composer column s
     stale.setAttribute("data-aria-hidden", "true");
     stale.innerHTML = '<div data-testid="send_message" data-message-role="user">隐藏区里的旧提问</div>';
     run.document.body.append(stale);
-    await firstTurn(run);
+    await firstTurn(run, USER + ANSWER, true);
     assert.match(run.S.history.snapshot("tok").text, /阳光射入水滴/);
   }));

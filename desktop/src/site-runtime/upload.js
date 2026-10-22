@@ -8,6 +8,7 @@
   const MAX_BYTES = 10 * 1024 * 1024;
   const TYPES = new Set(["image/png", "image/jpeg"]);
   const CANDIDATES = 'img,canvas,[class*="attach"],[class*="upload"],[class*="preview"]';
+  const FAILED_PREVIEW = '[data-testid="input-attachment-list"] .image-thumbnail.error';
 
   async function decodeImage(payload) {
     if (!payload || !TYPES.has(payload.type) || !Number.isInteger(payload.size) ||
@@ -84,9 +85,9 @@
     const tokens = nodes.map(token);
     const busy = [...document.querySelectorAll('[role="progressbar"],[aria-busy="true"],[class*="loading"],[class*="spinner"]')]
       .some((el) => el !== document.body && el !== document.documentElement && visibleNear(el, anchor));
-    const errors = new Set([...document.querySelectorAll('[role="alert"]')].filter((el) => {
+    const errors = new Set([...document.querySelectorAll(`[role="alert"],${FAILED_PREVIEW}`)].filter((el) => {
       if (!visibleNear(el, anchor)) return false;
-      return /upload|image|file|图片|文件|格式|大小|失败/i.test(el.textContent || "");
+      return el.matches?.(FAILED_PREVIEW) || /upload|image|file|图片|文件|格式|大小|失败/i.test(el.textContent || "");
     }).map(errToken));
     return { tokens, nodes, busy, errors };
   }
@@ -121,6 +122,7 @@
       const transfer = new DataTransfer();
       files.forEach((file) => transfer.items.add(file));
       input.files = transfer.files;
+      if (receipt) receipt.started = true;
       input.dispatchEvent(new Event("input", { bubbles: true }));
       input.dispatchEvent(new Event("change", { bubbles: true }));
     } catch (e) { return false; }
@@ -132,6 +134,7 @@
     try {
       const transfer = new DataTransfer();
       files.forEach((file) => transfer.items.add(file));
+      if (receipt) receipt.started = true;
       for (const type of ["dragenter", "dragover", "drop"]) {
         target.dispatchEvent(new DragEvent(type, {
           bubbles: true, cancelable: true, dataTransfer: transfer,
@@ -151,14 +154,31 @@
     let root = node;
     while (root.parentElement && !root.parentElement.contains(composer)) root = root.parentElement;
     const parent = root.parentElement;
-    return parent && !root.contains(composer) ? { root, parent } : null;
+    return parent && !root.contains(composer) ? { root, parent, previous: root.previousElementSibling, next: root.nextElementSibling } : null;
+  }
+  function currentDraftRoot({ root, parent, previous, next }, composer) {
+    if (root.parentElement === parent && parent.contains(composer)) return root;
+    if (root.isConnected) return null; // 原分支已搬到历史，不能复用。
+    if (parent.contains(composer) && (!previous || previous.parentElement === parent) && (!next || next.parentElement === parent)) {
+      const replacement = previous ? previous.nextElementSibling : parent.firstElementChild;
+      if (replacement === next) return null; // 原槽位已清空。
+      if (replacement && replacement.nextElementSibling === next && !replacement.contains(composer)) return replacement;
+    }
+    // 整块重挂而槽位证据也消失：不能根据旧 token 消失推断附件已清空。
+    receipt.uncertain = true;
+    return null;
+  }
+  function receiptDraftNodes(composer, current) {
+    if (!receipt || receipt.url !== location.href) return [];
+    const roots = receipt.regions.map(region => currentDraftRoot(region, composer)).filter(Boolean);
+    return current.nodes.filter(node => roots.some(root => root.contains(node)));
   }
   // 纯文字也要检查：上次上传后未提交的原生附件不能悄悄跟进下一条提问。
   function hasPendingAttachments(composer) {
     const current = snapshot(anchorRect(composer));
     // 认上传时的草稿分支：预览子节点可重绘，整个分支/图片搬到历史区后不再归属草稿。
-    return !!(receipt && receipt.url === location.href && receipt.regions.some(({ root, parent }) =>
-      root.parentElement === parent && parent.contains(composer) && current.nodes.some(node => root.contains(node)))) ||
+    const pending = receiptDraftNodes(composer, current);
+    return !!(receipt && receipt.url === location.href && receipt.uncertain) || pending.length > 0 ||
       nativeDraftAttachments(composer, current);
   }
   async function uploadImages(payloads, adapter, composer, deadline) {
@@ -173,11 +193,12 @@
     if (Date.now() >= end) return { ok: false, code: "attachment_timeout" };
     const anchor = anchorRect(composer), before = snapshot(anchor);
     if (receipt && receipt.url === location.href) {
-      const remaining = addedTokens(before, receipt.before);
+      const pending = receiptDraftNodes(composer, before), remaining = pending.map(token);
+      if (receipt.uncertain) return { ok: false, code: "attachment_conflict" };
       if (remaining.length) {
         const same = payloads.length === receipt.payloads.length && payloads.every((p, i) =>
           p.name === receipt.payloads[i].name && p.dataUrl === receipt.payloads[i].dataUrl);
-        const unchanged = receipt.nodes.length === payloads.length && receipt.nodes.every(node => before.nodes.includes(node));
+        const unchanged = receipt.nodes.length === payloads.length && receipt.nodes.every(node => pending.includes(node));
         if (receipt.ok && same && unchanged && !before.busy && before.errors.size === 0 &&
             remaining.slice().sort().join("\n") === receipt.signature) return { ok: true };
         return { ok: false, code: "attachment_conflict" };
@@ -186,21 +207,25 @@
     // 部分站点把原生草稿留到刷新后；没有本次运行期凭据时，不能把旧附件混进新问题。
     // 入场动画可能让整个编辑器透明，但原生附件模型已存在；拦截不能依赖可见性。
     if (nativeDraftAttachments(composer, before)) return { ok: false, code: "attachment_conflict" };
-    receipt = { url: location.href, before, payloads: payloads.slice(), ok: false, nodes: [], regions: [], signature: "" };
+    const attempt = receipt = { url: location.href, payloads: payloads.slice(), ok: false, started: false, uncertain: false, nodes: [], regions: [], signature: "" };
     try {
       const ok = await adapter.attach(files, composer, end);
-      const after = snapshot(anchor);
-      receipt.nodes = after.nodes.filter(node => !before.nodes.includes(node));
-      const added = addedTokens(after, before);
-      const currentComposer = S.findComposer?.() || composer;
-      receipt.regions = receipt.nodes.filter(node => added.includes(token(node)))
-        .map(node => draftRegion(node, currentComposer)).filter(Boolean);
-      receipt.signature = added.sort().join("\n");
-      receipt.ok = ok === true;
+      attempt.ok = ok === true;
       if (typeof ok === "string") return { ok: false, code: ok };
       if (ok) return { ok: true };
       return { ok: false, code: Date.now() >= end ? "attachment_timeout" : "attachment_failed" };
     } catch (e) { return { ok: false, code: "attachment_failed" }; }
+    finally {
+      // 抛错也可能已经上传；派发后缺少预览不能证明没有附件，迟到上传须由用户刷新站点解除。
+      const after = snapshot(anchor);
+      attempt.nodes = after.nodes.filter(node => !before.nodes.includes(node));
+      const added = addedTokens(after, before);
+      const currentComposer = S.findComposer?.() || composer;
+      attempt.regions = attempt.nodes.filter(node => added.includes(token(node)))
+        .map(node => draftRegion(node, currentComposer)).filter(Boolean);
+      attempt.signature = added.sort().join("\n");
+      attempt.uncertain = attempt.started && !attempt.ok && attempt.nodes.length < files.length;
+    }
   }
 
   Object.assign(S, { uploadImages, setInputFiles, dropFiles, clearUploadReceipt, hasPendingAttachments });

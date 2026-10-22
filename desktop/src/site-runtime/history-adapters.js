@@ -9,7 +9,7 @@
     "chatgpt.com": '[data-turn="user"], [data-message-author-role="user"], [data-user-message-bubble]',
     "gemini.google.com": "user-query",
     "deepseek.com": ".ds-message",
-    "doubao.com": "[data-message-id]",
+    "doubao.com": '[data-message-id], [data-testid="union_message"][data-target-id] [data-message-role="user"]',
     "qianwen.com": ".question-text-card",
     "kimi.com": ".chat-content-item-user",
     "yuanbao.tencent.com": ".agent-chat__list__item--human",
@@ -23,10 +23,14 @@
     "chatglm.cn": ".answer-content"
   };
   const directKey = node => node?.getAttribute?.("data-message-id") || node?.getAttribute?.("data-turn-id") || node?.getAttribute?.("data-chatgpt-selection-message-id") || node?.getAttribute?.("data-content-search-unit-key") || node?.getAttribute?.("data-turn-key") || null;
-  // 真实脱敏 DOM：Claude/ChatGPT 的轮次 key、DeepSeek 的虚拟项 key 在气泡祖先上。只认逐消息属性，绝不用会话/列表 id。
+  // 只认逐消息身份。豆包 target-id 会被下一条乐观消息复用，不能作用户或助手 key。
   const wrapperAttr = () => /(^|\.)deepseek\.com$/.test(location.hostname) ? "data-virtual-list-item-key"
     : location.hostname === "claude.ai" ? "data-turn-key" : location.hostname === "chatgpt.com" ? "data-content-search-unit-key" : null;
   function key(node) {
+    if (/(^|\.)doubao\.com$/.test(location.hostname) && node?.matches?.('[data-message-role="user"]')) {
+      const inner = node.querySelectorAll('[data-message-id]');
+      return directKey(node) || (inner.length === 1 ? directKey(inner[0]) : null);
+    }
     const attr = wrapperAttr();
     if (attr) for (let el = node, depth = 0; el && depth < 8; el = el.parentElement, depth++) {
       const value = el.getAttribute?.(attr); if (value) return value;
@@ -52,14 +56,37 @@
       const method = ctx?.method;
       let turn = method && method !== "selector" ? null : selectorTurn.call(this);
       if (turn?.user) turn.locate = "selector";
-      else if (method !== "selector") turn = S.historyLocate?.locate(ctx) || turn;
+      else if (method !== "selector" && !turn?.provisional) turn = S.historyLocate?.locate(ctx) || turn;
       return turn?.user ? turn : { user: null, userCount: 0 };
     };
     function selectorTurn() {
       let nodes = [...document.querySelectorAll(selector)], userCount, previousUserKey;
       nodes = nodes.filter(node => !nodes.some(parent => parent !== node && parent.contains(node)));
+      if (host === "chatgpt.com") {
+        // 首页先渲染无 key 的临时泡；真实消息插入时它仍留在隐藏 workspace 中。
+        // 新式泡须有逐消息身份；旧版角色壳仍有效。临时泡也不能被原文锚点兜底认领。
+        const confirmed = nodes.filter(node => !node.matches?.('[data-user-message-bubble]') || key(node));
+        if (nodes.length && !confirmed.length) return { user: null, userCount: 0, provisional: true };
+        nodes = confirmed;
+      }
       if (host === "deepseek.com") nodes = nodes.filter(node => node.querySelector(".ds-collapsible-text") && !node.querySelector(".ds-markdown"));
-      if (host === "doubao.com") {
+      const modern = host === "doubao.com" ? nodes.filter(node => node.matches?.('[data-message-role="user"]')
+        && node.closest?.('[data-testid="union_message"][data-target-id]')) : [];
+      if (modern.length) {
+        // 图未加载时先按连续空泡→文字配对；正文或助手会断组，不能只凭复用的 target-id 合并追问。
+        const target = node => node?.closest('[data-testid="union_message"]')?.getAttribute('data-target-id');
+        const assistants = [...document.querySelectorAll('[data-message-role="assistant"]')];
+        nodes = []; let previous = null, attachment = false;
+        for (const node of modern) {
+          const separated = previous && assistants.some(answer => (previous.compareDocumentPosition(answer) & 4) && (answer.compareDocumentPosition(node) & 4));
+          if (attachment && target(previous) && target(previous) === target(node) && !separated) nodes[nodes.length - 1] = node;
+          else nodes.push(node);
+          previous = node;
+          const body = node.querySelector('[data-testid="message_text_content"]');
+          attachment = !(body?.innerText || body?.textContent || "").trim();
+        }
+        // 始终返回 role：原地补内层 message-id 只升级 key，不更换已绑定的用户节点。
+      } else if (host === "doubao.com") {
         // One image prompt renders as consecutive image-only bubbles then its text.
         // An assistant response or a text bubble ends the group: never merge follow-ups.
         let attachment = false; userCount = 0;

@@ -14,8 +14,8 @@ function bound({ navigation = true } = {}) {
   s.navigate("https://www.doubao.com/chat/");
   s.S.history.begin("token", "Question");
   s.navigate(LOCAL);
-  s.insert({ user, text: "Question", userCount: 1, answer: node("Local answer") });
-  // local_ 阶段的快照已锁旧节点的回答根（e.answer 置位）：迁移须能重新确立回答根。
+  s.insert({ user, text: "Question", userCount: 1, userKey: "local-user", answer: node("Local answer") });
+  // local_ 阶段已有独立 userKey，快照已锁旧节点的回答根（e.answer 置位）：迁移须能重新确立回答根。
   assert.equal(s.S.history.snapshot("token").text, "Local answer");
   return { s, user };
 }

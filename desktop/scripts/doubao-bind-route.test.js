@@ -52,7 +52,7 @@ test("Doubao: begun on one local_ route, a different local_ route cannot bind th
 test("Doubao: binding on the home route itself (no local_ push) still captures", () =>
   withRun("/chat/", async (run) => {
     run.S.history.begin("tok", PROMPT, Date.now() + 44_000, { images: 0 });
-    append(run, user(PROMPT) + answer("阳光射入水滴"));
+    append(run, user(PROMPT, "home-user") + answer("阳光射入水滴", "home-answer"));
     await tick();
     assert.deepEqual(state(run.S.history.snapshot("tok")), { owned: true, ended: undefined, text: "阳光射入水滴" });
   }));
@@ -61,7 +61,7 @@ test("Doubao: bind on local_, then the replace to the server id and node swap ke
   withRun("/chat/", async (run) => {
     run.S.history.begin("tok", PROMPT, Date.now() + 44_000, { images: 0 });
     run.window.history.pushState(null, "", "/chat/local_6289182192238156");
-    append(run, user(PROMPT) + answer("阳光"));
+    append(run, user(PROMPT, "local-user") + answer("阳光", "local-answer"));
     await tick();
     assert.equal(run.S.history.snapshot("tok").owned, true);
     run.window.history.replaceState(null, "", "/chat/38445542823827970");
@@ -110,7 +110,7 @@ test("Doubao: begun on a stuck local_ page, a push to another chat after the rep
 for (const keyed of [true, false]) test(`Doubao: after binding on the home route, a push to an old same-text chat ends the copy (${keyed ? "level one" : "level two"})`, () =>
   withRun("/chat/", async (run) => {
     run.S.history.begin("tok", PROMPT, Date.now() + 44_000, { images: 0 });
-    append(run, user(PROMPT));
+    append(run, user(PROMPT, "home-user"));
     await tick();
     assert.equal(run.S.history.snapshot("tok").owned, true);
     run.window.history.pushState(null, "", "/chat/11111111111111111");
@@ -123,10 +123,10 @@ for (const keyed of [true, false]) test(`Doubao: after binding on the home route
 test("Doubao: after binding on the home route, an in-place replace to the server id keeps the copy", () =>
   withRun("/chat/", async (run) => {
     run.S.history.begin("tok", PROMPT, Date.now() + 44_000, { images: 0 });
-    append(run, user(PROMPT));
+    append(run, user(PROMPT, "home-user"));
     await tick();
     run.window.history.replaceState(null, "", "/chat/38445542823827970");
-    run.document.querySelector(".list_items").append(...(() => { const b = run.document.createElement("div"); b.innerHTML = answer("阳光射入水滴"); return b.children; })());
+    run.document.querySelector(".list_items").append(...(() => { const b = run.document.createElement("div"); b.innerHTML = answer("阳光射入水滴", "home-answer"); return b.children; })());
     await tick();
     assert.deepEqual(state(run.S.history.snapshot("tok")), { owned: true, ended: undefined, text: "阳光射入水滴" });
   }));

@@ -5,7 +5,7 @@
   "promptToken": "POLYASK_PROMPT",
   "source": "captured",
   "capturedAt": "2026-10-03",
-  "note": "Real page, one finished turn; root includes composer, excludes sidebar.",
+  "note": "Real page, one finished turn; root includes composer, excludes sidebar. User expectation marks the stable role wrapper; captured DOM structure is unchanged.",
   "expect": {
     "userCount": 1,
     "userText": "POLYASK_PROMPT",
