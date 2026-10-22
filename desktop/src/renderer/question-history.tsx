@@ -55,6 +55,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   const [narrow, setNarrow] = useState(() => window.innerWidth < QUESTION_PANEL_BREAKPOINT);
   const sequence = useRef(0), detailSequence = useRef(0), input = useRef<HTMLInputElement>(null);
   const listPending = useRef(0), detailPending = useRef(0);
+  const deleting = useRef(new Set<string>());
   const pageRef = useRef(page); pageRef.current = page;
   const scroll = useRef<HTMLDivElement>(null);
   const anchor = useRef<{ id: string; top: number } | null>(null);
@@ -145,6 +146,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     } catch { if (request === sequence.current) setError(copy.questionLoadFailed); }
     finally { if (listPending.current === request) listPending.current = 0; if (request === sequence.current) setLoading(false); }
   }, [query, copy]);
+  const latestLoad = useRef(load); latestLoad.current = load;
   useEffect(() => {
     if (!open) return;
     sequence.current++;
@@ -228,12 +230,16 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   }, [open, detail?.question.id]);
   const reask = (id: string, text: string, imageCount: number) => reaskFlow.start({ id, text, imageCount });
   const remove = (id: string) => { reaskFlow.invalidate(); setConfirmation({ title: copy.questionDeleteTitle, message: copy.questionDeleteWarning, label: copy.questionDelete, danger: true, run: () => {
-    reaskFlow.invalidate(); detailSequence.current++; detailPending.current = 0;
+    setConfirmation(null);
+    if (deleting.current.has(id)) return;
+    deleting.current.add(id);
+    reaskFlow.invalidate(); const request = ++detailSequence.current; detailPending.current = 0;
     void shell.deleteQuestion(id).then(() => {
-      if (detail?.question.id === id) leaveDetail();
+      if (request === detailSequence.current && detail?.question.id === id) leaveDetail();
       sequence.current++; listPending.current = 0;
-      void load(undefined, true); announce(copy.questionDeleted);
-    }).catch(() => setError(copy.questionFailed)).finally(() => setConfirmation(null));
+      void latestLoad.current(undefined, true); announce(copy.questionDeleted);
+    }).catch(() => { if (request === detailSequence.current) setError(copy.questionFailed); else announce(copy.questionFailed); })
+      .finally(() => deleting.current.delete(id));
   } }); };
   const restore = async (id: string, answerId?: string) => {
     if (disabled) return;

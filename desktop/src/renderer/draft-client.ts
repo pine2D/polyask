@@ -92,7 +92,9 @@ export class PersistentDraftClient {
         return draft && !Object.hasOwn(draft, 'deletedAt') && draft.kind === this.input?.kind && draft.context === this.input?.context ? [draft] : [];
       });
       this.adoptIdenticalOwnCopy();
-      if (this.status === 'loading') this.status = 'ready';
+      if (this.status === 'loading' || this.status === 'error') {
+        this.status = this.saved?.task.signature === this.signature ? 'saved' : 'ready';
+      }
       this.notify(); this.schedule();
     } catch {
       if (this.mounted && generation === this.generation && sequence === this.refreshSequence) {
@@ -108,6 +110,13 @@ export class PersistentDraftClient {
     const operation = this.tail.then(() => this.write(task));
     this.tail = operation;
     return (await operation)?.draft ?? null;
+  }
+
+  async retry(): Promise<StoredDraft | null> {
+    const generation = this.generation;
+    await this.refresh();
+    if (generation !== this.generation || this.status === 'error') return null;
+    return this.flush();
   }
 
   async clearSaved(expected?: DraftReceipt): Promise<boolean> {

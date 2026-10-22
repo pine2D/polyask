@@ -33,7 +33,16 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
   const blocked = busy || saving;
   const rememberFocus = useFailedActionFocus(blocked);
   const dirty = tags !== savedTags || note !== record.note;
-  useEffect(() => { setTags(savedTags); setNote(record.note); setAttempt(0); setMessage(''); }, [record.id, savedTags, record.note]);
+  const baseline = useRef({ id: record.id, tags: savedTags, note: record.note });
+  useEffect(() => {
+    const previous = baseline.current, changedRecord = previous.id !== record.id;
+    baseline.current = { id: record.id, tags: savedTags, note: record.note };
+    // Same-record sync refreshes may arrive while a user types: update only
+    // untouched fields. Explicit navigation still adopts the selected record.
+    setTags(value => changedRecord || value === previous.tags ? savedTags : value);
+    setNote(value => changedRecord || value === previous.note ? record.note : value);
+    if (changedRecord) { setAttempt(0); setMessage(''); }
+  }, [record.id, savedTags, record.note]);
   useEffect(() => { if (attempt) (invalidTags ? tagsInput : noteInput).current?.focus(); }, [attempt]);
   useEffect(() => {
     if (!dirty) return;
@@ -48,7 +57,10 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
     const finishFocus = rememberFocus();
     let failed = false;
     pending.current = true; setSaving(true); setMessage('');
-    try { if (!await onSave({ tags: validation.tags, note })) { failed = true; setMessage(copy.archiveMetadataSaveFailed); } }
+    try {
+      if (!await onSave({ tags: validation.tags, note })) { failed = true; setMessage(copy.archiveMetadataSaveFailed); }
+      else if (baseline.current.id === record.id) { setTags([...new Set(validation.tags)].join(', ')); setAttempt(0); }
+    }
     catch { failed = true; setMessage(copy.archiveMetadataSaveFailed); }
     finally { finishFocus(failed); pending.current = false; setSaving(false); }
   };
