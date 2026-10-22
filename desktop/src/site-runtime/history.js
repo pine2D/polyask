@@ -4,7 +4,7 @@
   const S = window.__AMS;
   if (!S?.historyRoute) return;
   // 路由判定、原文归一化与豆包 local_ 迁移在 history-route.js（按 300 行上限拆出，preload 先于本卷注入）。
-  const { normalize, same, route, slot, freshBind, leftHome } = S.historyRoute;
+  const { normalize, matchesPrompt, same, route, slot, freshBind, leftHome } = S.historyRoute;
   const rebase = (e, turn) => S.historyRoute.rebase(e, turn, stop);
   let entry = null;
   // 一批 MutationObserver 回调里定位 + 绑定超过它算一次卡顿（Linux 实测 1.25–1.46s，Windows 最大 98.7ms，2026-10-04）。
@@ -99,7 +99,7 @@
       if (turn.userCount > expected || e.user) stop(e);
       return false;
     }
-    if (normalize(turn.text) !== e.text) { e.captureCode = "prompt_mismatch"; if (e.user) stop(e, "prompt_mismatch"); return false; }
+    if (!matchesPrompt(turn, e)) { e.captureCode = "prompt_mismatch"; if (e.user) stop(e, "prompt_mismatch"); return false; }
     if (!e.user) {
       const old = e.baseline;
       if (old?.user && (same(old.user, old.userKey, turn.user, turn.userKey) || (!old.user.isConnected && !adjacent))) return false;
@@ -129,7 +129,7 @@
   function promote(e, a, turn) {
     if (!e.promotable || !e.user || e.locate?.method !== "semantic" || e.ended) return turn;
     const sel = a?.historyTurn?.({ method: "selector" });
-    if (sel?.locate !== "selector" || !sel.user || sel.userCount !== 1 || !e.user.contains(sel.user) || normalize(sel.text) !== e.text) return turn;
+    if (sel?.locate !== "selector" || !sel.user || sel.userCount !== 1 || !e.user.contains(sel.user) || !matchesPrompt(sel, e)) return turn;
     if (e.answerRoot && !(sel.answer?.isConnected && e.answerRoot.contains(sel.answer))) return turn;
     e.promotable = false; e.locate.method = "selector"; e.user = sel.user; e.userKey = sel.userKey || null;
     e.answer = null; e.answerRoot = null; e.answerKey = null;

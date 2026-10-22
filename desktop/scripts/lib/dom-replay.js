@@ -7,6 +7,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const { createRequire } = require("node:module");
 const { JSDOM } = require("jsdom");
 const { ROOT, preloadRequires } = require("./desktop-anchors");
 const { FIXTURE_DIR } = require("./dom-fixture-scan");
@@ -60,7 +61,8 @@ function replayHtml(html, { host, path: pathname = "/", files, lang = "en" } = {
   const context = dom.getInternalVMContext();
   for (const file of files || preloadRequires()) {
     const source = fs.readFileSync(path.join(ROOT, file), "utf8");
-    vm.runInContext(`(function () {\n${source}\n})()`, context, { filename: file });
+    // Module-local require mirrors webpack's bundled dependency boundary.
+    vm.runInContext(`(function (require) {\n${source}\n})`, context, { filename: file })(createRequire(path.join(ROOT, file)));
   }
   window.__AMS_I18N__?.setLang?.(lang);
   const S = window.__AMS;

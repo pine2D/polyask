@@ -52,6 +52,7 @@ require("../site-runtime/upload.js");
 require("../site-runtime/md-head.js");
 require("../site-runtime/md-diagram.js");
 require("../site-runtime/md.js");
+require("../site-runtime/prompt-markup.js");
 require("../site-runtime/adapters-intl.js");
 require("../site-runtime/adapters-intl2.js");
 require("../site-runtime/adapters-intl3.js");

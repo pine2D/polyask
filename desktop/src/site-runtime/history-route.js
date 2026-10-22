@@ -36,6 +36,15 @@
     return value;
   };
   const same = (node, key, other, otherKey) => key && otherKey ? key === otherKey : node === other;
+  // Doubao renders user Markdown. Compare both sides with the same serialization
+  // and semantic structure, using the original source (normalizing first loses lines).
+  function matchesPrompt(turn, entry) {
+    const plain = normalize(turn?.text) === entry.text;
+    if (!DOUBAO.test(location.hostname) || turn?.locate === "anchor") return plain;
+    const bodies = turn?.user?.querySelectorAll?.('[data-testid="message_text_content"]');
+    if (bodies?.length !== 1) return plain;
+    return S.matchesPromptMarkup?.(bodies[0], entry.locate.text, normalize) === true;
+  }
   function route() {
     const url = new URL(location.href);
     const cid = url.hostname === "chatglm.cn" ? url.searchParams.get("cid") : null;
@@ -74,7 +83,7 @@
     // 换了地址交给 checkRoute 结束；节点还在、或还没定位到新节点（重渲染中）时不判，期间 bind() 不归属任何内容。
     if (e.routeId !== current.id || e.user.isConnected || !turn?.user || same(e.user, e.userKey, turn.user, turn.userKey)) return false;
     // 原文锚点按本次问题找节点，同文校验是循环论证，不能给换节点作证。
-    if (Date.now() > e.swapUntil || turn.locate === "anchor" || turn.userCount !== 1 || normalize(turn.text) !== e.text) { stop(e); return false; }
+    if (Date.now() > e.swapUntil || turn.locate === "anchor" || turn.userCount !== 1 || !matchesPrompt(turn, e)) { stop(e); return false; }
     e.user = turn.user; e.userKey = turn.userKey || null; e.swapUntil = 0;
     e.answer = null; e.answerRoot = null; e.answerKey = null;
     return true;
@@ -98,5 +107,5 @@
     const current = route();
     return !current.home && !(DOUBAO_CHAT.test(current.id) && !!e.boundSlot && slot() === e.boundSlot);
   }
-  S.historyRoute = { normalize, same, route, slot, rebase, freshBind, leftHome };
+  S.historyRoute = { normalize, matchesPrompt, same, route, slot, rebase, freshBind, leftHome };
 }());
