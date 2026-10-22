@@ -44,6 +44,7 @@ import {
 } from "./portable-profile";
 import { createProxyServices, type ProxyServices } from "./proxy-services";
 import { blockProxyUntilApplied } from "./proxy-startup-block";
+import { disableWebBadging } from "./web-badging";
 import { createProxyTools } from "./proxy-tools";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { startRuntimeGates } from "./runtime-gates";
@@ -60,6 +61,7 @@ import { WorkspaceService } from "./workspace-service";
 if (squirrelStartup) app.quit();
 // ready 之前：每个 session 一实例化就会出网（拼写词典），首次 setProxy 之前一律走阻断地址。
 blockProxyUntilApplied(app.commandLine);
+disableWebBadging(app, WEB_BADGING_PRELOAD_WEBPACK_ENTRY);
 const startupLocale = (): string => {
   try { return app.getPreferredSystemLanguages()[0] ?? "en"; }
   catch { return "en"; }

@@ -6,6 +6,8 @@ export const SITE_VIEW_SECURITY = {
   sandbox: true,
   contextIsolation: true,
   nodeIntegration: false,
+  // sandbox 与 nodeIntegration:false 保持不变；子帧 preload 仅运行角标策略。
+  nodeIntegrationInSubFrames: true,
   webSecurity: true,
   // Rate-limit JavaScript dialogs so a page cannot lock the shared window with a
   // loop of alert()/confirm(). Not disableDialogs: sites still need their own

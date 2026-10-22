@@ -61,7 +61,11 @@ const config: ForgeConfig = {
             html: "./src/renderer/site.html",
             js: "./src/renderer/site.ts",
             name: "site_window",
-            preload: { js: "./src/preload/site.ts" }
+            preload: { js: "./src/preload/site-entry.ts" }
+          },
+          {
+            name: "web_badging",
+            preload: { js: "./src/preload/web-badging.ts" }
           }
         ]
       }

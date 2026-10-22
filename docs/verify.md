@@ -89,6 +89,7 @@ Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此�
 - 本机重置的真实 Electron 外壳交互：在 `desktop/` 运行 `npm run test:unit -- test/local-data-reset-interaction.check.ts`；测试自行编译合成夹具、在临时页面验证旧输入与综合状态清理，不访问真实站点、Drive 或用户档案。普通 `npm test` 不运行这项图形检查。
 - 单站缩放回归：在 `desktop/` 运行 `xvfb-run -a node scripts/test-safe.mjs command node scripts/site-zoom-smoke.mjs`（需要 Python 3、libX11、libXtst）。使用生产缩放控制器、布局与界面状态存储，两个同源本地自定义协议页面和临时 profile，拦截 HTTP/HTTPS 请求；键盘经 Electron 输入，Ctrl+滚轮经独立 Xvfb 的 XTest 系统事件验证（`sendInputEvent` 的合成 wheel 不触发 Chromium 原生缩放路径）。检查本站缩放、其它站点与外壳不变、共享登录域导航、布局及刷新保留、文件保存恢复和本机重置。不能替代 Windows/macOS 原生输入设备验收。
 - 进程诊断桥接实测：`xvfb-run -a node scripts/test-safe.mjs command node scripts/runtime-process-smoke.mjs`，在两个临时离线 Electron 窗口运行生产 runtime-gates、preload 与 site-health IPC。合成 `child-process-gone` 事件核对可信窗口取数、其它 sender 拒绝、报告白名单过滤及释放清理；不使实际 GPU/网络进程崩溃，不代表 Windows 原生启动失败复现。
+- 网页角标拦截实测：`node scripts/test-safe.mjs command node scripts/web-badging-native.mjs`，使用独立 Xvfb、临时 profile 和两个回环 HTTP 源，检查首段页面脚本、同源/跨域子帧、Worker、Service Worker 与刷新后的策略，保留通知接口与普通输入行为，并确认网页无 Node 能力。当前源码打包后加 `--built-preloads`，还会加载生产 preload 并验证站点命令 IPC 连通。证据保存在系统临时目录，启动器核对进程退出后清理测试 profile。此项不访问真实站点或用户档案，不代表 Windows 任务栏/macOS Dock 的物理显示验收。
 
 - `test:shell-ui` 另覆盖 Windows/macOS/Linux 的确认按钮 DOM 顺序、取消默认焦点、Tab 圈定、IME Escape、焦点恢复，以及强制颜色与减少动态效果的 Chromium 媒体模拟。截图与断言来自 Linux Electron，不能证明 Windows/macOS 的原生字体、系统菜单、输入法候选窗或读屏行为；这些仍需对应实机验收。
 
