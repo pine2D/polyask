@@ -29,6 +29,7 @@ app.whenReady().then(async()=>{
   ipcMain.handle('polyask:question-list',()=>({items:[{...question,savedSites:0,answers:[]}],cursor:null}));
   ipcMain.handle('polyask:question-run-progress',()=>null);
   ipcMain.handle('polyask:question-get',()=>({question,answers:[]}));
+  ipcMain.handle('polyask:question-reask',()=>({questionId:question.id,text:question.text,images:[]}));
   ipcMain.handle('polyask:question-legacy',()=>({items:[],cursor:null}));
   ipcMain.handle('polyask:question-panel',(_e,v)=>manager.historyAccess.setPanelOpen(v));
   ipcMain.handle('polyask:preview-site-page-close',(_e,site)=>({site,contentsId:views[0].webContents.id,reason:null}));
@@ -37,6 +38,11 @@ app.whenReady().then(async()=>{
     ipcMain.on('polyask:'+channel,(e,v)=>{if(trusted(e))action(v)});
   const run=s=>win.webContents.executeJavaScript(s),pause=ms=>new Promise(r=>setTimeout(r,ms));
   const wait=async s=>{const end=Date.now()+5000;while(!(await run(s))){if(Date.now()>end)throw Error('Timeout '+s);await pause(15)}};
+  const pasteImage=async()=>{
+    await run(`(()=>{const t=new DataTransfer();t.items.add(new File([Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII='),c=>c.charCodeAt(0))],'local.png',{type:'image/png'}));document.querySelector('[name=prompt]').dispatchEvent(new ClipboardEvent('paste',{bubbles:true,clipboardData:t}))})()`);
+    await wait('document.querySelector(".image-trigger").dataset.imageCount==="1"');
+  };
+  const imageCount=()=>run('Number(document.querySelector(".image-trigger").dataset.imageCount)');
   const paint=()=>run('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
   const state=()=>run(`(()=>{const a=document.querySelector('[name=prompt]');return{expanded:document.querySelector('[data-composer-toggle]')?.getAttribute('aria-expanded'),
     focused:document.activeElement===a,hasFocus:document.hasFocus(),height:a?.parentElement.getBoundingClientRect().height,value:a?.value,start:a?.selectionStart,end:a?.selectionEnd,scroll:a?.scrollTop}})()`);
@@ -111,8 +117,10 @@ app.whenReady().then(async()=>{
     {name:'successful old send preserves retyped identical draft',method:'keyboard',outcome:'success',next:'Local send draft',expanded:true}
   ]){
     await click('[name=prompt]');await key('A',['control']);await win.webContents.insertText('Local send draft');
+    if(!await imageCount())await pasteImage();
     if(scenario.method==='keyboard')await key('Enter',['control']);else await click('.send');
     await wait('!!document.querySelector(".cancel")');assert.equal(pendingSend!==null,true,'send reaches the controlled IPC boundary');
+    assert.equal(pendingSend.request.images.length,1,'the selected image reaches IPC');
     await check(scenario.name+' while pending',true);
     if(scenario.next){await click('[name=prompt]');await key('A',['control']);await key('Backspace');await win.webContents.insertText(scenario.next)}
     if(scenario.outcome==='cancelled')await click('.cancel');
@@ -122,8 +130,28 @@ app.whenReady().then(async()=>{
     }
     await wait('!!document.querySelector(".send")');await pause(190);await check(scenario.name,scenario.expanded);
     assert.equal((await state()).value,scenario.next||(scenario.expanded?'Local send draft':''));
+    assert.equal(await imageCount(),['success','partial'].includes(scenario.outcome)?0:1,'only submitted images leave the composer');
     assert.equal(await run('document.querySelector("[name=prompt]")===window.sendArea'),true,'send keeps the same editor');
     if(!scenario.expanded){await run('sendArea.blur();sendArea.focus()');await check(scenario.name+' focus restoration',false)}
+  }
+  await click('.send');await wait('!!document.querySelector(".cancel")');
+  assert.equal(pendingSend.request.images.length,0,'same-session follow-up sends no previous image');
+  pendingSend.resolve(keys.map(site=>({site,ok:true})));pendingSend=null;await wait('!!document.querySelector(".send")');
+  report.cases.push({name:'same-session plain follow-up has no images',images:await imageCount()});
+  for(const late of [false,true]){
+    await click('[name=prompt]');await win.webContents.insertText('Image recovery draft');await pasteImage();
+    await click('.send');await wait('!!document.querySelector(".cancel")');
+    const original=pendingSend.request;
+    pendingSend.resolve(keys.map(site=>({site,ok:false,code:late?'submit_unconfirmed':'attachment_failed'})));pendingSend=null;
+    await wait('!!document.querySelector(".send")');assert.equal(await imageCount(),1);
+    if(late)win.webContents.send('polyask:site-status',{site:'claude',phase:'submitted',submission:{runId:original.runId,state:'sent'}});
+    else{
+      win.webContents.send('polyask:command','retry-failed');await wait('!!document.querySelector(".cancel")');
+      assert.equal(pendingSend.request.runId,original.runId);assert.equal(pendingSend.request.images[0].dataUrl,original.images[0].dataUrl);
+      pendingSend.resolve(keys.map(site=>({site,ok:true})));pendingSend=null;
+    }
+    await wait('document.querySelector(".image-trigger").dataset.imageCount==="0"');
+    assert.equal((await state()).value,'');report.cases.push({name:late?'late sent status clears images':'successful retry clears images',images:0});
   }
   manager.setSurface('settings');
   await run(`(()=>{const panel=document.createElement('section');panel.id='field-gallery';panel.style='position:fixed;inset:60px 20px 40px;overflow:auto;z-index:100;background:var(--panel);padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px';

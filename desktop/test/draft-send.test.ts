@@ -34,9 +34,12 @@ for (const outcome of outcomes) for (const nextDraft of [null, "B", "A"]) test(`
     draftConfirmation:{isBlocking:()=>false},
     participation:{currentSites:()=>sites,pending:false},
     actionLock:{current:{run:(action:()=>Promise<void>)=>action()}}, imageWarning:null,
-    imageSelection:{invalidateAndClose(){}}, workspace:{tier:null}, images:[],
+    imageSelection:{prepareSend:()=>({images:[],clearSent(){}})}, workspace:{tier:null}, images:[],
     flushDraft:()=>{flushes++;return receipt;},
-    broadcast:{send:(input:{sites:string[]})=>{broadcasts++;assert.deepEqual([...input.sites],sites);return response;}},
+    broadcast:{send:async (input:{sites:string[]},onSubmitted:()=>void)=>{
+      broadcasts++;assert.deepEqual([...input.sites],sites);const result=await response;
+      if(outcome.sent)onSubmitted();return result;
+    }},
     clearSent:(sent:number,saved:Promise<StoredDraft|null>)=>{clears++;assert.equal(saved,receipt);if(revision.isCurrent(sent))draft="";},
     composer:{reset:()=>{expanded=false;}}
   });

@@ -318,18 +318,18 @@ function App(): React.JSX.Element {
         changeDrawerOpen(true);
         return;
       }
-      imageSelection.invalidateAndClose();
+      const sentImages = imageSelection.prepareSend();
       const savedDraft = flushDraft();
-      const completed = await broadcast.send({
+      await broadcast.send({
         text: prompt,
         tier: workspace.tier,
         sites: participation.currentSites(),
-        images
-      });
-      if (completed && [...completed.results.values()].some((result) => result.ok)) {
+        images: sentImages.images
+      }, () => {
+        sentImages.clearSent();
         if (draftRevision.isCurrent(sentRevision)) composer.reset();
         clearSent(sentRevision, savedDraft);
-      }
+      });
     });
   };
 

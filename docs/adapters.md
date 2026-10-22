@@ -145,6 +145,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 通用发送链一旦发出按钮或 Enter 动作，只读等待提交确认，不再交替点击/Enter 补发；无法确认原样返回 `submit_unconfirmed`。没有可用按钮时才选择 Enter。
 
+纯文字提问也在注入前通过 `hasPendingAttachments` 只读检查残留：本轮上传凭据记录的草稿分支内仍有预览，或聊天附件区/同一表单内有原生附件（含隐藏的待处理缩略图），即返回 `attachment_conflict`，不改文字、不点击发送，也不自动删除附件。草稿分支取新预览与输入框最近共同祖先下、仅含预览的子树，并核对其父节点仍包住输入框；分支内子节点重绘仍拦截，原图片或分支搬入历史区后不再按凭据拦截。普通历史消息图片不算待发附件。
+
 提交回包附 `submissionEvidence`：本轮 history token 在动作前尚未绑定、动作后出现新的同轮用户消息为 `message`；只观察到输入框清空或变化为 `composer`。前者表示页面已出现本轮消息，不保证服务端持久化；后者保留兼容但明确消息尚未确认。旧同文消息、旧 token、已结束历史均不能提供新消息证据。`history.submitted(token)` 只读且不序列化正文，和可参与 Kimi 恢复的 `adapter.submitted(text)` 是不同能力，绝不据此自动补发。
 
 **这三个数字有七处落点，改一个就要全改**（`scripts/test-image-limits.js` 逐处按锚点对账，抠不到锚点即红，不静默跳过）：

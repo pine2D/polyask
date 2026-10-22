@@ -25,7 +25,7 @@ export function useBroadcastFlow(
   forget: () => void,
   report: (run: BroadcastRun) => void
 ): {
-  readonly send: (payload: BroadcastPayload) => Promise<BroadcastRun | null>;
+  readonly send: (payload: BroadcastPayload, onSubmitted?: () => void) => Promise<BroadcastRun | null>;
   readonly retry: (sites?: SiteKey | readonly SiteKey[], uncertainConfirmed?: boolean, expectedRunId?: string) => Promise<BroadcastRun | null>;
   readonly cancel: () => void;
   readonly invalidate: () => void;
@@ -42,13 +42,21 @@ export function useBroadcastFlow(
   const [activeRequest, setActiveRequest] = useState<BroadcastRequest | null>(null);
   const [runState, setRunState] = useState<RunState>("idle");
   const state = useRef(new BroadcastFlowState()).current;
+  const pendingSubmission = useRef<{ runId: string; accept: () => void } | null>(null);
+
+  const acceptSubmitted = (completed: BroadcastRun): void => {
+    const pending = pendingSubmission.current;
+    if (pending?.runId !== completed.request.runId || ![...completed.results.values()].some(result => result.ok)) return;
+    pendingSubmission.current = null;
+    pending.accept();
+  };
 
   const syncState = (): void => {
     setRun(state.run);
     setRunState(state.runState);
   };
 
-  const send = async (payload: BroadcastPayload): Promise<BroadcastRun | null> => {
+  const send = async (payload: BroadcastPayload, onSubmitted?: () => void): Promise<BroadcastRun | null> => {
     return runWithBroadcastLock(state, true, async (operation) => {
       forget();
       syncState();
@@ -60,12 +68,14 @@ export function useBroadcastFlow(
           sites: [...payload.sites],
           images: [...payload.images]
         };
+        pendingSubmission.current = onSubmitted ? { runId: request.runId, accept: onSubmitted } : null;
         setActiveRequest(request);
         if (!state.commit(operation, completeRun(request, await shell.broadcast(request)))) return null;
         const completed = state.run!;
         setRun(completed);
         remember(completed);
         report(completed);
+        acceptSubmitted(completed);
         return completed;
       } catch {
         if (state.isCurrent(operation)) announce();
@@ -88,6 +98,7 @@ export function useBroadcastFlow(
         setRun(merged);
         remember(merged);
         report(merged);
+        acceptSubmitted(merged);
         return merged;
       } catch {
         if (state.isCurrent(operation)) announce();
@@ -106,9 +117,11 @@ export function useBroadcastFlow(
     setRun(state.run);
     remember(state.run);
     if (state.runState === "idle") report(state.run);
+    acceptSubmitted(state.run);
   };
   const invalidate = (): void => {
     state.invalidate();
+    pendingSubmission.current = null;
     setActiveRequest(null);
     syncState();
     forget();

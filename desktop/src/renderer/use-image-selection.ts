@@ -37,9 +37,11 @@ export function useImageSelection(
   readonly remove: (index: number) => void;
   readonly clear: () => void;
   readonly invalidateAndClose: () => void;
+  readonly prepareSend: () => { images: readonly DesktopImage[]; clearSent: () => void };
 } {
   const epoch = useRef(0);
   const selectionIntent = useRef(0);
+  const revision = useRef(0);
   const currentImages = useRef<readonly DesktopImage[]>([]);
   const pendingRead = useRef<Promise<void>>(Promise.resolve());
   const [images, setImages] = useState<readonly DesktopImage[]>([]);
@@ -57,13 +59,16 @@ export function useImageSelection(
       const metadataError = validateImageFiles([...previous, ...files]);
       const result = metadataError ? { ok: false as const, code: metadataError } : await readDesktopImages(files);
       if (request !== epoch.current) return;
-      if (!result.ok) {
-        const message = errorCopy(copy, result.code);
+      // 读取期间旧批次可能已确认发送；追加时以此刻的图片为准，避免重新带回已发图片。
+      const next = result.ok ? [...(mode === "append" ? currentImages.current : []), ...result.images] : [];
+      const code = result.ok ? validateImageFiles(next) : result.code;
+      if (code) {
+        const message = errorCopy(copy, code);
         setError(message);
         announce(message);
         return;
       }
-      const next = [...previous, ...result.images];
+      revision.current += 1;
       selectionIntent.current += 1;
       currentImages.current = next;
       setImages(next);
@@ -77,6 +82,7 @@ export function useImageSelection(
   };
   const remove = (index: number) => {
     selectionIntent.current += 1;
+    revision.current += 1;
     epoch.current += 1;
     const next = currentImages.current.filter((_image, current) => current !== index);
     currentImages.current = next;
@@ -90,10 +96,17 @@ export function useImageSelection(
     epoch.current += 1;
     setOpen(false);
   };
-  const clear = () => { invalidateAndClose(); currentImages.current = []; setImages([]); setError(null); };
+  const clearImages = () => { revision.current++; currentImages.current = []; setImages([]); setError(null); setOpen(false); };
+  const clear = () => { invalidateAndClose(); clearImages(); };
   const beginPick = () => { epoch.current++; return ++selectionIntent.current; };
   const replace = (next: readonly DesktopImage[]) => {
-    invalidateAndClose(); currentImages.current = [...next]; setImages(currentImages.current); setError(null);
+    revision.current++; invalidateAndClose(); currentImages.current = [...next]; setImages(currentImages.current); setError(null);
   };
-  return { beginPick, intent: () => selectionIntent.current, replace, images, error, open, present, setOpen, choose, remove, clear, invalidateAndClose };
+  const prepareSend = () => {
+    invalidateAndClose();
+    const sentRevision = revision.current;
+    // 只清本轮未改动的批次；保留较新的选图读取/文件框，取消或无效新图也不能留下已发旧图。
+    return { images: currentImages.current, clearSent: () => { if (revision.current === sentRevision) clearImages(); } };
+  };
+  return { beginPick, intent: () => selectionIntent.current, replace, images, error, open, present, setOpen, choose, remove, clear, invalidateAndClose, prepareSend };
 }

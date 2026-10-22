@@ -106,7 +106,7 @@
       const left = Number(deadline) ? Math.max(0, Number(deadline) - Date.now()) : 3500;
       el = findComposer() || (left ? await waitFor(findComposer, Math.min(3500, left)) : null);
       if (!el) return { ok: false, code: "attachment_timeout" }; // 不返回 composer_not_found，避免 bg 整包重传同一图片
-    }
+    } else if (window.__AMS.hasPendingAttachments?.(el)) return { ok: false, code: "attachment_conflict" };
     el.focus();
     if (el.tagName === "TEXTAREA" || el.tagName === "INPUT") {
       const proto = el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;

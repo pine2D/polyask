@@ -30,12 +30,10 @@ test("malformed or oversized draft storage is ignored", () => {
   });
 });
 
-test("the app restores drafts locally and clears only after a confirmed send", () => {
-  const app = readSource("src/renderer/index.tsx");
+test("the prompt hook persists locally and local reset removes the draft", () => {
   const hook = readSource("src/renderer/use-prompt-draft.ts");
   assert.match(hook, /loadDraft\(window\.localStorage\)/);
   assert.match(hook, /saveDraft\(window\.localStorage, text\)/);
-  assert.match(app, /completed[\s\S]{0,300}result\.ok/);
   assert.match(readSource("src/renderer/local-data-reset.ts"), /clearDraft\(storage\)/);
 });
 

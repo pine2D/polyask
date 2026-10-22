@@ -142,6 +142,25 @@
   }
   let receipt = null;
   const clearUploadReceipt = () => { receipt = null; };
+  function nativeDraftAttachments(composer, current) {
+    const draftRegions = '[data-chat-input-top-content], [data-testid="input-attachment-list"], .attachment-preview-wrapper';
+    return current.nodes.some(node => node.closest?.(draftRegions) || node.closest?.('form')?.contains(composer)) ||
+      document.querySelectorAll('[data-testid="input-attachment-list"] .image-thumbnail').length > 0;
+  }
+  function draftRegion(node, composer) {
+    let root = node;
+    while (root.parentElement && !root.parentElement.contains(composer)) root = root.parentElement;
+    const parent = root.parentElement;
+    return parent && !root.contains(composer) ? { root, parent } : null;
+  }
+  // 纯文字也要检查：上次上传后未提交的原生附件不能悄悄跟进下一条提问。
+  function hasPendingAttachments(composer) {
+    const current = snapshot(anchorRect(composer));
+    // 认上传时的草稿分支：预览子节点可重绘，整个分支/图片搬到历史区后不再归属草稿。
+    return !!(receipt && receipt.url === location.href && receipt.regions.some(({ root, parent }) =>
+      root.parentElement === parent && parent.contains(composer) && current.nodes.some(node => root.contains(node)))) ||
+      nativeDraftAttachments(composer, current);
+  }
   async function uploadImages(payloads, adapter, composer, deadline) {
     if (!Array.isArray(payloads) || !payloads.length || payloads.length > MAX_COUNT)
       return { ok: false, code: "image_invalid" };
@@ -165,17 +184,18 @@
       }
     }
     // 部分站点把原生草稿留到刷新后；没有本次运行期凭据时，不能把旧附件混进新问题。
-    const draftRegions = '[data-chat-input-top-content], [data-testid="input-attachment-list"], .attachment-preview-wrapper';
-    const retained = before.nodes.some(node => node.closest?.(draftRegions) || node.closest?.('form')?.contains(composer));
     // 入场动画可能让整个编辑器透明，但原生附件模型已存在；拦截不能依赖可见性。
-    const pending = document.querySelectorAll('[data-testid="input-attachment-list"] .image-thumbnail').length > 0;
-    if (retained || pending) return { ok: false, code: "attachment_conflict" };
-    receipt = { url: location.href, before, payloads: payloads.slice(), ok: false, nodes: [], signature: "" };
+    if (nativeDraftAttachments(composer, before)) return { ok: false, code: "attachment_conflict" };
+    receipt = { url: location.href, before, payloads: payloads.slice(), ok: false, nodes: [], regions: [], signature: "" };
     try {
       const ok = await adapter.attach(files, composer, end);
       const after = snapshot(anchor);
       receipt.nodes = after.nodes.filter(node => !before.nodes.includes(node));
-      receipt.signature = addedTokens(after, before).sort().join("\n");
+      const added = addedTokens(after, before);
+      const currentComposer = S.findComposer?.() || composer;
+      receipt.regions = receipt.nodes.filter(node => added.includes(token(node)))
+        .map(node => draftRegion(node, currentComposer)).filter(Boolean);
+      receipt.signature = added.sort().join("\n");
       receipt.ok = ok === true;
       if (typeof ok === "string") return { ok: false, code: ok };
       if (ok) return { ok: true };
@@ -183,5 +203,5 @@
     } catch (e) { return { ok: false, code: "attachment_failed" }; }
   }
 
-  Object.assign(S, { uploadImages, setInputFiles, dropFiles, clearUploadReceipt });
+  Object.assign(S, { uploadImages, setInputFiles, dropFiles, clearUploadReceipt, hasPendingAttachments });
 })();
