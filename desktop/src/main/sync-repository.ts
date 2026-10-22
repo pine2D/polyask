@@ -107,13 +107,16 @@ export class SyncRepository {
       selectedSites: [...SITE_KEYS], tier: null, updatedAt: 0, deviceId
     };
     const remoteStates = this.remoteStates();
-    const previous = Object.values(remoteStates).find((state) => state.deviceId === deviceId);
+    // Lost upload acknowledgements can leave several own fragments. Carry their
+    // merged winners before duplicate convergence removes any physical copy.
+    const ownFragments = Object.values(remoteStates).filter(state => state.deviceId === deviceId);
+    const previous = mergeStateFragments(ownFragments).materialized;
     const selected = Object.fromEntries(workspace.selectedSites.flatMap((key) => {
       const host = hostFor(key);
       return host ? [[host, true]] : [];
     }));
     const settings = {
-      ...carriedSettings(previous, this.database.meta),
+      ...carriedSettings({ ...previous, settings: { ...previous.settings, ...terminalDraftSettings(ownFragments) } }, this.database.meta),
       ...projectPreferences(this.database.state),
       ...projectDrafts(this.database.state, this.database.meta),
       ...projectParticipation(workspace.participation, remoteStates),

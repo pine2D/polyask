@@ -4,13 +4,14 @@ import { expiredDraftTombstone } from './draft-retention';
 import type { MetaRepository } from './meta-repository';
 import type { StateRepository } from './state-repository';
 
-/** Own live branches plus every known tombstone; other devices publish their own live drafts. */
+/** Own and independently restored live branches plus every known tombstone. */
 export function projectDrafts(state: StateRepository, meta: MetaRepository): Record<string, VersionedSyncValue> {
   if (meta.get(DRAFT_SYNC_META_KEY) !== true) return {};
   const self = meta.get<unknown>('deviceId');
   return Object.fromEntries(state.entries(DRAFT_STATE_PREFIX).flatMap(({ key, value }) => {
     const draft = parseStoredDraft(value);
-    if (!draft || key !== `${DRAFT_STATE_PREFIX}${draft.id}` || (draft.deletedAt === undefined && draft.deviceId !== self)) return [];
+    if (!draft || key !== `${DRAFT_STATE_PREFIX}${draft.id}` || (draft.deletedAt === undefined &&
+      draft.deviceId !== self && draft.deviceId !== `backup:${draft.id}`)) return [];
     const { updatedAt, deviceId, deletedAt, ...payload } = draft;
     return [[`${DRAFT_SETTING_PREFIX}${draft.id}`, { value: payload, updatedAt, deviceId,
       ...(deletedAt === undefined ? {} : { deletedAt }) }]];
