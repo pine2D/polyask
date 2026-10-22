@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.24.1] - 2026-10-22
+
+验收范围：Linux/WSL 下通过 2,724 项应用与运行时测试、类型检查、Linux 打包，以及安装包内预加载脚本的原生角标回归。
+
+验收限制：Windows 任务栏、macOS Dock 的实机显示，以及五种发行包的实际安装未在本轮核验。
+
 ### 修复
 
 - 禁止内嵌 AI 站点修改应用的任务栏／Dock 数字角标，避免 Kimi 等站点的未读计数被误认为 PolyAsk 的群发状态。
@@ -1437,7 +1443,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.24.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.24.1...HEAD
+[1.24.1]: https://github.com/pine2D/polyask/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/pine2D/polyask/compare/v1.23.1...v1.24.0
 [1.23.1]: https://github.com/pine2D/polyask/compare/v1.23.0...v1.23.1
 [1.23.0]: https://github.com/pine2D/polyask/compare/v1.22.0...v1.23.0
