@@ -12,9 +12,11 @@ function revealSection(body: HTMLElement | null, section: string): void {
 /** 分区位置只反映当前可见内容，不移动焦点或触发设置写入。 */
 export function useSettingsSectionNavigation() {
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [currentSection, setCurrentSection] = useState('overview');
+  const [currentSection, setCurrentSection] = useState('display');
   const anchor = useRef<{ key: string; top: number } | null>(null);
-  const markSection = (key: string) => {
+  const markSection = (section: string) => {
+    const key = section === 'preferences' || section === 'backup' ? 'overview'
+      : section === 'updates' ? 'proxy' : section === 'notifications' || section === 'confirmations' ? 'display' : section;
     anchor.current = { key, top: bodyRef.current?.scrollTop ?? 0 };
     setCurrentSection(key);
   };
@@ -26,20 +28,19 @@ export function useSettingsSectionNavigation() {
       if (!body.clientHeight) return;
       const sections = [...body.querySelectorAll<HTMLButtonElement>('[data-settings-section]')].flatMap(button => {
         const target = body.ownerDocument.getElementById(button.getAttribute('aria-controls') ?? '');
-        return target?.getClientRects().length ? [{ key: button.dataset.settingsSection!, top: target.getBoundingClientRect().top }] : [];
+        const group = target?.closest('.settings-group');
+        return target?.getClientRects().length && group ? [{ key: button.dataset.settingsSection!, bottom: group.getBoundingClientRect().bottom }] : [];
       });
       if (!sections.length) return;
       const nav = body.querySelector('.settings-section-navigation');
       const edge = Math.max(nav?.getBoundingClientRect().bottom ?? 0,
         body.getBoundingClientRect().top + (parseFloat(view.getComputedStyle(body).scrollPaddingTop) || 0)) + 1;
-      const atBottom = body.scrollTop > 0 && body.scrollTop + body.clientHeight >= body.scrollHeight - 1;
       // 跳转可被底部夹住：同一滚动位置仍代表用户明确选择的分区。
       const requested = anchor.current;
       const pinned = requested?.top === body.scrollTop ? sections.find(item => item.key === requested.key) : null;
       if (!pinned) anchor.current = null;
-      const section = pinned ?? (atBottom
-        ? sections.reduce((best, item) => Math.abs(item.top - edge) < Math.abs(best.top - edge) ? item : best)
-        : sections.filter(item => item.top <= edge).at(-1) ?? sections[0]);
+      // 分组间隙也归入下一段可见内容，避免已藏到吸顶导航后的分组仍高亮。
+      const section = pinned ?? sections.find(item => item.bottom > edge) ?? sections.at(-1)!;
       setCurrentSection(section.key);
       revealSection(body, section.key);
     };

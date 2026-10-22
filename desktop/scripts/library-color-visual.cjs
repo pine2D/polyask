@@ -32,6 +32,7 @@ function measureColors() {
     }),
     manual: document.querySelector('.decision-meta p')?.textContent,
     media: { contrast: matchMedia('(prefers-contrast: more)').matches, forced: matchMedia('(forced-colors: active)').matches },
+    pixelRatio: devicePixelRatio,
     overflow: [...document.querySelectorAll('.folder-content-list, .decision-editor')].some(node => node.scrollWidth > node.clientWidth + 1)
   };
 }
@@ -82,7 +83,7 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, shot }) =>
         await run('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))');
         const metrics = await measure(); checkSelection(metrics); checkBadges(metrics);
         assert.equal(features[0].name === 'forced-colors' ? metrics.media.forced : metrics.media.contrast, true, 'requested contrast media is active');
-        assert.ok(metrics.badges.every(badge => badge.outlineStyle === 'solid' && badge.outline >= 1), 'contrast modes draw a visible badge outline and text');
+        assert.ok(metrics.badges.every(badge => badge.outlineStyle === 'solid' && badge.outline * metrics.pixelRatio >= .8), 'contrast modes draw at least one physical pixel of outline, allowing rounding');
         modes.push({ feature: features[0].name, ...metrics });
         if (locale === 'en') await shot(`color-${features[0].name}-${theme}`);
       }

@@ -33,8 +33,9 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       await shot(label+'-draft-dialog'); press('Escape'); await wait('!document.querySelector("[role=dialog]")');
       assert.equal(await run('document.activeElement===document.querySelector("[data-draft-open]")'), true);
       press('Tab'); press('Tab', ['shift']); await paint();
-      assert.equal(await run(`(() => {const n=document.querySelector('[data-draft-open]'),s=getComputedStyle(n);
-        return document.activeElement===n && n.matches(':focus-visible') && s.outlineStyle!=='none';})()`), true, 'draft entry must expose keyboard focus');
+      const focus = await run(`(() => {const n=document.querySelector('[data-draft-open]'),s=getComputedStyle(n),a=document.activeElement;
+        return {active:a===n,visible:n.matches(':focus-visible'),outline:s.outlineStyle,target:a.className,fit:document.querySelector('.command-bar').dataset.fit};})()`);
+      assert.equal(focus.active && focus.visible && focus.outline !== 'none', true, `draft entry must expose keyboard focus: ${JSON.stringify({label,...focus})}`);
       // 150% shell zoom at a 1440px content width still exercises the supported 960px CSS viewport.
       win.setContentSize(1440, 900); win.webContents.setZoomFactor(1.5); await paint();
       await assertToolbar({win,run,output,label:label+'-zoom150'});

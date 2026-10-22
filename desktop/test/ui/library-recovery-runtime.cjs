@@ -59,14 +59,18 @@ app.whenReady().then(async () => {
     for (const mode of ['read', 'compare']) await run(async () => {
       await open(mode, sample);
       await until('!!document.querySelector(".archive-detail")&&document.querySelector(".folder-content-list .archive-list")?.getAttribute("aria-busy")==="false"', 'selected result');
+      let answerPositions = [];
       if (mode === 'compare') {
-        await click(await label('manualTitle'));
-        await type('[name=comparison-judgment]', 'Keep the reviewed judgment.');
         await js('document.querySelectorAll(".archive-compare-column").forEach((node,index)=>{node.scrollTop=200+index*100;node.dispatchEvent(new Event("scroll",{bubbles:true}));})');
+        answerPositions = await js('[...document.querySelectorAll(".archive-compare-column")].map(node=>node.scrollTop)');
+        await click('.comparison-manual-entry');
+        await type('[name=comparison-judgment]', 'Keep the reviewed judgment.');
+        await js('document.querySelector("[data-decision-origin=manual]").scrollIntoView({block:"nearest"})');
+        await settle();
       }
       const origin = mode === 'read' ? '[data-decision-origin=record]' : '[data-decision-origin=manual]';
       await js(`(()=>{const pane=document.querySelector('.archive-detail-pane'),list=document.querySelector('.folder-content-list .archive-list');list.scrollTop=140;${mode === 'read' ? 'pane.scrollTop=180;' : ''}})()`);
-      await js(`document.querySelector(${JSON.stringify(origin)}).focus({preventScroll:true});window.recoveryExpected={pane:document.querySelector('.archive-detail-pane').scrollTop,list:document.querySelector('.folder-content-list .archive-list').scrollTop,focused:document.querySelector('.folder-workspace').dataset.focused,columns:[...document.querySelectorAll('.archive-compare-column')].map(node=>node.scrollTop)};`);
+      await js(`document.querySelector(${JSON.stringify(origin)}).focus({preventScroll:true});window.recoveryExpected={pane:document.querySelector('.archive-detail-pane').scrollTop,list:document.querySelector('.folder-content-list .archive-list').scrollTop,focused:document.querySelector('.folder-workspace').dataset.focused,manual:document.querySelector('.manual-comparison')?.scrollTop};`);
       check(await js(`document.activeElement===document.querySelector(${JSON.stringify(origin)})`), 'source action has focus before native activation');
       await enter();
       await until('!!document.querySelector("[name=decision-title]")', 'new decision');
@@ -74,12 +78,20 @@ app.whenReady().then(async () => {
       await click('.confirm-actions .primary');
       await until('!!document.querySelector(".archive-detail")&&!document.querySelector(".decision-workspace")', 'return to source');
       await settle();
-      const restored = await js(`(()=>{const expected=window.recoveryExpected,pane=document.querySelector('.archive-detail-pane');return {view:document.querySelector('.archive-detail').dataset.view,pane:pane.scrollTop,expectedPane:expected.pane,list:document.querySelector('.folder-content-list .archive-list').scrollTop,expectedList:expected.list,focused:document.querySelector('.folder-workspace').dataset.focused,expectedFocused:expected.focused,columns:[...document.querySelectorAll('.archive-compare-column')].map(node=>node.scrollTop),expectedColumns:expected.columns,active:document.activeElement?.dataset.decisionOrigin,manual:document.querySelector('.manual-comparison')?.open,judgment:document.querySelector('[name=comparison-judgment]')?.value};})()`);
+      const restored = await js(`(()=>{const expected=window.recoveryExpected,pane=document.querySelector('.archive-detail-pane'),manual=document.querySelector('.manual-comparison'),box=manual?.getBoundingClientRect(),origin=document.querySelector('[data-decision-origin=manual]')?.getBoundingClientRect();return {view:document.querySelector('.archive-detail').dataset.view,pane:pane.scrollTop,expectedPane:expected.pane,list:document.querySelector('.folder-content-list .archive-list').scrollTop,expectedList:expected.list,focused:document.querySelector('.folder-workspace').dataset.focused,expectedFocused:expected.focused,active:document.activeElement?.dataset.decisionOrigin,manual:manual?.open,manualScroll:manual?.scrollTop,expectedManualScroll:expected.manual,originVisible:!!origin&&origin.top>=box.top-1&&origin.bottom<=box.bottom+1,judgment:document.querySelector('[name=comparison-judgment]')?.value};})()`);
       writeFileSync(join(output, `${state.scenario}-return.json`), JSON.stringify(restored, null, 2));
       check(restored.view === mode && Math.abs(restored.pane - restored.expectedPane) <= 1 && restored.list === restored.expectedList && restored.focused === restored.expectedFocused, 'original view, layout and positions');
       check(restored.active === (mode === 'read' ? 'record' : 'manual'), 'original trigger focus');
-      if (mode === 'compare') check(restored.manual && restored.judgment === 'Keep the reviewed judgment.' && JSON.stringify(restored.columns) === JSON.stringify(restored.expectedColumns), 'manual draft and both answer positions');
+      if (mode === 'compare') {
+        check(restored.manual && restored.judgment === 'Keep the reviewed judgment.', 'manual draft retained');
+        check(Math.abs(restored.manualScroll - restored.expectedManualScroll) <= 1 && restored.originVisible, 'worksheet scroll and visible return focus');
+      }
       report.push({ scenario: state.scenario, ok: true, restored }); await snapshot(`${state.scenario}-returned`);
+      if (mode === 'compare') {
+        await click('.comparison-manual-entry'); await settle();
+        const columns = await js('[...document.querySelectorAll(".archive-compare-column")].map(node=>node.scrollTop)');
+        check(JSON.stringify(columns) === JSON.stringify(answerPositions), 'both answer positions survive worksheet and decision return');
+      }
     });
     await run(async () => {
     await open('organization', sample);

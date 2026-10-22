@@ -85,6 +85,9 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       <div className="mode-switch priority-p0" role="group" aria-label={props.copy.layoutLabel}>
         <button type="button" aria-label={props.copy.overview} data-hint={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
         <button type="button" aria-label={props.copy.focus} data-hint={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
+        <button type="button" className="layout-toggle" aria-label={props.layoutMode === "focus" ? props.copy.overview : props.copy.focus}
+          data-hint={props.layoutMode === "focus" ? props.copy.overview : props.copy.focus} onClick={() => props.onLayoutChange(props.layoutMode === "focus" ? "overview" : "focus")}>
+          {props.layoutMode === "focus" ? <GridIcon /> : <FocusIcon />}</button>
       </div>
       {props.pageControl}
       <PromptComposer copy={props.copy} promptRef={props.promptRef} text={props.text} revision={props.draftRevision}
@@ -99,7 +102,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       <TierControls copy={props.copy} tier={props.tier} isMac={props.isMac} onChange={props.onTierChange} />
       {props.imageControl}
       {props.runState !== "idle" ? (
-        <button type="button" className="cancel primary-action priority-p0" data-hint={cancelLabel} aria-label={cancelLabel} disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{cancelLabel}</span></button>
+        <button type="button" className="cancel primary-action priority-p0" data-hint={cancelLabel} aria-label={cancelLabel} disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{props.copy.cancel}</span></button>
       ) : (
         <button type="button" className="send primary-action priority-p0" data-hint={props.sendBlockedReason ?? sendLabel} aria-label={sendLabel} disabled={props.auxiliaryBusy || !props.text.trim() || props.selectedCount === 0 || !!props.sendBlockedReason} onClick={props.onSubmit}><SendIcon /><span>{props.copy.send}</span><span className="send-count" aria-hidden="true">{props.selectedCount}</span><kbd>{props.isMac ? "⌘↵" : "Ctrl+↵"}</kbd></button>
       )}

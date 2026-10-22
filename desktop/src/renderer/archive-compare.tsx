@@ -46,6 +46,7 @@ function ComparisonColumn(props: {
   readonly onPosition?: (top: number) => void;
   readonly nodeRef?: React.RefObject<HTMLElement | null>;
   readonly onUserScroll?: (node: HTMLElement) => void;
+  readonly hidden?: boolean;
 }): React.JSX.Element {
   const ownNode = useRef<HTMLElement>(null), node = props.nodeRef ?? ownNode;
   const positions = useRef(new Map<string, { text: string; top: number }>());
@@ -59,6 +60,9 @@ function ComparisonColumn(props: {
   useLayoutEffect(() => {
     if (node.current && props.initialScroll !== undefined) node.current.scrollTop = props.initialScroll;
   }, [props.initialScroll]);
+  useLayoutEffect(() => {
+    if (!props.hidden && node.current) node.current.scrollTop = positions.current.get(props.host)?.top ?? props.initialScroll ?? 0;
+  }, [props.hidden]);
   const context = props.source ? `${answerSourceId(props.source.resultIndex)} ${props.label}` : props.label;
   const content = <>
       {props.code === "answer_truncated" ? <p className="answer-capture-warning">{props.copy.answerTruncated}</p> : null}
@@ -73,6 +77,7 @@ function ComparisonColumn(props: {
       ))}</>;
   return (
     <article ref={node} className="archive-compare-column" tabIndex={0} aria-label={context} onScroll={event => {
+      if (props.hidden) return;
       const top = event.currentTarget.scrollTop;
       positions.current.set(props.host, { text: props.text, top }); props.onPosition?.(top);
       props.onUserScroll?.(event.currentTarget);
@@ -86,8 +91,12 @@ function ComparisonColumn(props: {
 export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
   const root = useRef<HTMLElement>(null), manual = useRef<HTMLDetailsElement>(null);
   const manualFrame = useRef<number | null>(null);
-  useComparisonViewport(root);
-  const worksheet = useComparisonWorksheet(props.record, props.comparisonDrafts);
+  const worksheet = useComparisonWorksheet(props.record, props.comparisonDrafts, props.reader ? {
+    open: props.reader.state.manualComparisonOpen, change: open => props.reader!.change({ manualComparisonOpen: open })
+  } : undefined);
+  const wasManualOpen = useRef(worksheet.open);
+  useComparisonViewport(root, worksheet.open);
+  const manualEntry = useRef<HTMLButtonElement>(null);
   useLayoutEffect(() => {
     const view = root.current?.ownerDocument.defaultView;
     return () => {
@@ -95,19 +104,29 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
       manualFrame.current = null;
     };
   }, [props.record?.id]);
-  const openManual = () => {
-    worksheet.setOpen(true);
+  useLayoutEffect(() => {
+    const changed = wasManualOpen.current !== worksheet.open;
+    wasManualOpen.current = worksheet.open;
+    if (!changed) return; // 阅读会话重挂时由原导航恢复焦点。
+    if (!worksheet.open) {
+      if (manual.current?.contains(root.current?.ownerDocument.activeElement ?? null)) manualEntry.current?.focus({ preventScroll: true });
+      return;
+    }
     const focus = () => {
       manualFrame.current = null;
       manual.current?.querySelector('summary')?.focus({ preventScroll: true });
-      manual.current?.scrollIntoView({ block: 'start' });
+      manual.current?.scrollIntoView({ block: 'nearest' });
     };
     const view = root.current?.ownerDocument.defaultView;
     if (view?.requestAnimationFrame) {
       if (manualFrame.current !== null) view.cancelAnimationFrame(manualFrame.current);
       manualFrame.current = view.requestAnimationFrame(focus);
     } else focus();
-  };
+    return () => {
+      if (manualFrame.current !== null) view?.cancelAnimationFrame(manualFrame.current);
+      manualFrame.current = null;
+    };
+  }, [worksheet.open]);
   const [localDifferences, setLocalDifferences] = useState(false);
   const differencesOnly = props.reader?.state.differencesOnly ?? localDifferences;
   const setDifferencesOnly = (value: boolean) => props.reader ? props.reader.change({ differencesOnly: value }) : setLocalDifferences(value);
@@ -163,23 +182,25 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
         <label className="comparison-filter"><input type="checkbox" checked={differencesOnly} onChange={(event) => setDifferencesOnly(event.target.checked)} />{props.copy.onlyDifferences}</label>
         <label className="comparison-filter"><input type="checkbox" name="comparison-sync-scroll" checked={syncScroll} onChange={(event) => setSyncScroll(event.target.checked)} />{props.copy.syncComparisonScroll}</label>
         <span className="comparison-legend" aria-hidden="true"><i />{props.copy.sharedParagraph}</span>
-        {props.record ? <button className="comparison-manual-entry" type="button" disabled={props.busy} onClick={openManual}>{props.copy.manualTitle}</button> : null}
+        {props.record ? <button ref={manualEntry} className="comparison-manual-entry" type="button" disabled={props.busy}
+          aria-expanded={worksheet.open} aria-controls="comparison-worksheet" onClick={() => worksheet.setOpen(!worksheet.open)}>
+          {worksheet.open ? props.copy.comparisonReturnAnswers : props.copy.manualTitle}</button> : null}
       </div>
-      <div className="archive-compare-grid">
+      <div className="archive-compare-grid" hidden={worksheet.open}>
         <section className="archive-compare-side">
           <label className="archive-compare-picker">{props.copy.leftAnswer}
             <LibrarySelect label={props.copy.leftAnswer} value={left?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === right?.host }))} onChange={setLeftHost} />
           </label>
-          <ComparisonColumn nodeRef={leftNode} onUserScroll={follow} initialScroll={props.reader?.state.leftScroll} onPosition={top => props.reader?.change({ leftScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={leftSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={left?.host ?? ''} text={left?.text ?? ''} label={left?.label ?? ''} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
+          <ComparisonColumn hidden={worksheet.open} nodeRef={leftNode} onUserScroll={follow} initialScroll={props.reader?.state.leftScroll} onPosition={top => props.reader?.change({ leftScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={leftSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={left?.host ?? ''} text={left?.text ?? ''} label={left?.label ?? ''} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
         </section>
         <section className="archive-compare-side">
           <label className="archive-compare-picker">{props.copy.rightAnswer}
             <LibrarySelect label={props.copy.rightAnswer} value={right?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === left?.host }))} onChange={setRightHost} />
           </label>
-          <ComparisonColumn nodeRef={rightNode} onUserScroll={follow} initialScroll={props.reader?.state.rightScroll} onPosition={top => props.reader?.change({ rightScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={rightSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={right?.host ?? ''} text={right?.text ?? ''} label={right?.label ?? ''} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
+          <ComparisonColumn hidden={worksheet.open} nodeRef={rightNode} onUserScroll={follow} initialScroll={props.reader?.state.rightScroll} onPosition={top => props.reader?.change({ rightScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={rightSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={right?.host ?? ''} text={right?.text ?? ''} label={right?.label ?? ''} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
         </section>
       </div>
-      {props.record ? <ManualComparison detailsRef={manual} copy={props.copy} record={props.record} worksheet={worksheet} sources={[leftSource, rightSource].filter((value): value is ExcerptSource => !!value)} busy={props.busy ?? false} onCreate={props.onCreateDecisionDraft} /> : null}
+      {props.record ? <ManualComparison workspace detailsRef={manual} copy={props.copy} record={props.record} worksheet={worksheet} sources={[leftSource, rightSource].filter((value): value is ExcerptSource => !!value)} busy={props.busy ?? false} onCreate={props.onCreateDecisionDraft} /> : null}
     </section>
   );
 }

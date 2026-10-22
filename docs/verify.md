@@ -38,13 +38,13 @@ Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此�
 
 专注阅读合栏专项：在 `desktop/` 运行 `npm run test:unit -- test/library-focused-toolbar-interaction.check.ts`。18 组覆盖三语、明暗主题、两种密度与 200% 缩放；960×720 下检查顶部保持一行、移除独立记录栏并为正文回收空间，窄窗检查按钮尺寸、换行与无重叠。三语实际 Tab/方向键/Escape 核验文件夹→更多的顺序、菜单退出焦点，以及展开/返回后两栏节点和阅读位置；配合 `library-focused-toolbar.test.tsx` 检查删除确认取消与新建决策返回。临时 Electron 使用合成数据、阻断外网，并核对实际进程共同 4GiB/512MiB cgroup；不替代物理设备与读屏验收。
 
-取消新卡与失败重试专项：在 `desktop/` 运行 `npm run test:unit -- test/library-recovery-interaction.check.ts`。使用生产组件和完整全局样式，三语、明暗主题、1440/960px 下检查原阅读/比较返回、笔记及各滚动位置、四类失败后的真实键盘重试、内外取消名称和等待期间不抢焦点。临时 Electron profile 阻断外网；Linux 隔离子进程会话总线，按实际各线程 children 与 app metrics 核对共同 4GiB/512MiB cgroup，退出后确认观测 PID 消失并移除 profile，截图/报告留在临时目录。不替代 Windows/macOS 和物理读屏验收。
+取消新卡与失败重试专项：在 `desktop/` 运行 `npm run test:unit -- test/library-recovery-interaction.check.ts`。使用生产组件和完整全局样式，三语、明暗主题、1440/960px 下检查原阅读/比较返回、笔记及各滚动位置、四类失败后的真实键盘重试、内外取消名称和等待期间不抢焦点；人工对照创建后取消须保留工作表滚动与可见按钮焦点，返回回答再核对两栏位置。开发构建的 StrictMode 重挂也不得临时撤销阅读高度，造成浏览器夹取滚动位置。临时 Electron profile 阻断外网；Linux 隔离子进程会话总线，按实际各线程 children 与 app metrics 核对共同 4GiB/512MiB cgroup，退出后确认观测 PID 消失并移除 profile，截图/报告留在临时目录。不替代 Windows/macOS 和物理读屏验收。
 
 在 `desktop/` 运行 `npm run test:library-ui`；无显示服务器的 Linux 使用 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:library-ui`。脚本构建生产组件＋隔离内存夹具；常规结果库与综合/比较夹具均加载生产外壳的全局输入和焦点样式，使用临时 Electron profile，不读取用户数据库、不连接站点或 Drive。输出路径包含截图与 `report.json`，由脚本每次打印；临时产物留供检查，不入库。
 
 覆盖简中/繁中/英文、明暗主题、960/1280/1600px 的 18 组布局；列表默认收起「筛选」面板与多选工具，专项先展开二者并截取 `library-filters`；另以 Electron 鼠标与按键输入检查菜单选项、Escape/Tab 焦点、删除确认、备注保存失败、决策卡未保存保护、文件夹多选搜索、对比容器断点及 150% 缩放。几何断言之外要看截图，尤其决策卡详情是否真正占满可用列。它不替代 Windows/macOS 原生字体、输入法和系统缩放验收。
 
-比较回归另检查：宽窗进入后缩窄不强制展开，窄详情重新进入比较会展开且可返回。`comparison-reading.test.tsx` 覆盖 760/760.5/761px 边界、直接打开比较、未保存备注取消、重开结果库与综合编辑返回，以及列表/正文/来源阅读位置。
+比较回归另检查：宽窗进入后缩窄不强制展开，窄详情重新进入比较会展开且可返回。`library-comparison-viewport-visual.cjs` 的三语六组检查正常双栏不增加外层滚动、短窗/缩放保留退让，以及回答和人工对照往返后的两栏位置。`comparison-reading.test.tsx` 覆盖 760/760.5/761px 边界、直接打开比较、未保存备注取消、重开结果库与综合编辑返回，以及列表/正文/来源阅读位置。
 
 加固回归另用三语、640/1280px 共 6 组场景：以 Electron 原生文本插入完整输入 4000 码点的 emoji/CJK/阿拉伯文备注，再输入第 4001 字，确认就地报错且不写入；退格修正、模拟保存失败及手动重试均保留原文。超出日历范围但合法的同步时钟须正常显示结果并省略无效 `datetime`；另检查 200% 缩放。证据在 `hardening-report.json` 与 `harden-*` 截图；输入来自 Linux/Xvfb 的合成鼠标、按键与文本插入，不代表物理输入法或读屏验收。
 
@@ -52,9 +52,11 @@ Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此�
 
 ## 外壳与设置页视觉回归
 
-`workspace-entry-visual.cjs` 在三语和两种密度下读取 Chromium 无障碍树，核验隐藏文字后的总览/聚焦名称；同时检查窄窗两密度下结果库入口常驻且可用 Enter 打开、提问框仍不少于 320px、收纳菜单保留历史与比较且不重复结果库、底栏下一步与进度共存，以及繁忙/回答不可用时不显示下一步。`workspace-next-step.test.tsx` 覆盖最新范围回调、错误恢复与撤销优先级。
+2026-10-23 四项界面改进验收：2,318 项应用测试、505 项运行时测试、独立类型检查与仓库门禁通过。隔离 Linux Electron 外壳 96 组布局、24 组工具栏、三语两密度窄窗发送/取消状态及三语九组设置导航通过；结果库 18 组布局、六组比较视口及 37 条取消返回/失败恢复流程通过，已查看设置、站点参与、双栏回答与人工对照返回截图。人工对照恢复专项核对共同 cgroup 和进程退出，保留滚动与可见焦点。本轮使用合成数据，未验证真实站点发送、Drive 双设备、Windows/macOS 实机或物理读屏。
 
-`settings-section-visual.cjs` 在三语和 640/1280px 下检查分区跳转、手动滚动后的唯一当前标记、焦点保持与横向导航可见性，输出 `settings-section-report.json`。结果库专项核验来源计数不被截断、完整名单保留，以及展开比较的返回动作与标题对齐；两类 Node 回归为 `settings-sections.test.tsx` 和 `library-source-summary.test.tsx`。
+`workspace-entry-visual.cjs` 在三语和两种密度下读取 Chromium 无障碍树，核验总览/聚焦及极窄布局切换按钮名称；同时检查窄窗发送/取消、结果库文字常驻，发送中和取消中提问框仍不少于 320px，布局往返和缩放调整保留焦点，结果库可用 Enter 打开、收纳菜单保留历史与比较且不重复结果库、底栏下一步与进度共存，以及繁忙/回答不可用时不显示下一步。`workspace-next-step.test.tsx` 覆盖最新范围回调、错误恢复与撤销优先级。
+
+`settings-section-visual.cjs` 在三语和 640/960/1280px 下检查四组导航、分区跳转、手动滚动后的唯一当前标记、焦点保持与横向导航可见性；分组间隙与页面底部均须标记仍可见的内容，输出 `settings-section-report.json`。结果库专项核验来源计数不被截断、完整名单保留，以及展开比较的返回动作与标题对齐；两类 Node 回归为 `settings-sections.test.tsx` 和 `library-source-summary.test.tsx`。
 
 新增控件或可见属性必须同时更新 `test/ui/shell-fixture.tsx`，使用生产组件及完整数据，不省略新增入口后再声称外壳布局通过。草稿与偏好同步组件已经纳入该夹具；`test:shell-ui` 包含 24 组草稿工具栏检查，覆盖三语、明暗主题、两密度、单页与分页、附件及失败计数、开合及 150% 外壳缩放，另检验键盘焦点、禁用动作、行内按钮及多副本弹窗的实际滚动、末项恢复确认焦点与可见性。仅运行本专项时，在 `desktop/` 使用 `node scripts/test-safe.mjs command env -u WAYLAND_DISPLAY xvfb-run -a node scripts/shell-visual.mjs --toolbar-only`；缩放检查维持应用支持的至少 960px CSS 视口。
 

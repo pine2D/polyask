@@ -50,12 +50,12 @@ export function WorkspaceActions(props: WorkspaceActionsProps): React.JSX.Elemen
       <button type="button" className="compare-trigger" data-hint={compareBlocked ?? props.copy.collectCompare}
         aria-label={props.copy.collectCompare} aria-disabled={!!compareBlocked}
         aria-describedby={compareBlocked ? compareHintId : undefined} onClick={compareBlocked ? undefined : props.onCompare}>
-        <CompareIcon />
+        <CompareIcon /><span className="priority-p1">{props.copy.collectCompare}</span>
       </button>
       {compareBlocked ? <span id={compareHintId} className="sr-only">{compareBlocked}</span> : null}
       <button type="button" className="archive-trigger" data-hint={props.disabled ? props.copy.archiveBusy : props.copy.openArchive}
         aria-label={props.copy.openArchive} aria-disabled={props.disabled} onClick={props.disabled ? undefined : props.onOpenArchive}>
-        <ArchiveIcon /><span className="archive-label">{props.copy.archiveTitle}</span>
+        <ArchiveIcon /><span className="archive-label">{props.copy.archiveActionTitle}</span>
       </button>
       <button
         type="button"

@@ -106,7 +106,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     if (section === "data") setDataOpen(true);
     if (section === "drive-diagnostics") setDiagnosticsOpen(true);
     const id = section === "data" ? "settings-advanced-toggle" : section === "display" ? "settings-display-title"
-      : section === "drive-diagnostics" ? "sync-diagnostics-toggle" : section === "proxy" ? "settings-proxy-title" : null;
+      : section === "drive-diagnostics" ? "sync-diagnostics-toggle" : section === "proxy" ? "settings-proxy-title" : section === "overview" ? "sync-title" : null;
     if (id) queueMicrotask(() => { const target = document.getElementById(id); target?.scrollIntoView({ block: "nearest" }); target?.focus();
       markSection(section === 'drive-diagnostics' ? 'overview' : section!); });
     else if (section) markSection(section);
@@ -207,13 +207,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     : pendingAction === "clear" ? props.copy.syncClearing : props.copy.settingsWorking
     : props.status.state === "syncing" ? statusText : "";
   const sections = [
-    ["overview", "sync-title", props.copy.syncTitle], ["backup", "backup-card-title", props.copy.backupTitle],
-    ["display", "settings-display-title", props.copy.settingsDisplayTitle],
-    ...(props.preferenceSync ? [["preferences", "settings-preference-sync-title", props.copy.preferenceSyncTitle]] : []),
-    ["notifications", "completion-notifications-title", props.copy.completionNotifications],
-    ...(props.confirmations && props.onConfirmationChange ? [["confirmations", "settings-confirmations-title", props.copy.confirmationsTitle]] : []),
-    ["proxy", "settings-proxy-title", props.copy.proxyTitle],
-    ["updates", "app-updates-title", props.copy.appUpdates], ["data", "settings-advanced-toggle", props.copy.settingsAdvancedData]
+    ["display", "settings-display-title", props.copy.settingsGroupDisplay],
+    ["overview", "sync-title", props.copy.settingsGroupSync],
+    ["proxy", "settings-proxy-title", props.copy.settingsGroupApp],
+    ["data", "settings-advanced-toggle", props.copy.settingsGroupData]
   ];
   const navigateSection = (section: string, id: string): void => {
     if (closeLocked) return;
@@ -245,7 +242,31 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             aria-controls={id} aria-current={currentSection === section ? 'location' : undefined}
             disabled={closeLocked} onClick={() => navigateSection(section, id)}>{label}</button>)}</div>
         </nav>
-        <div className="settings-group">
+        <div className="settings-group" role="group" aria-label={props.copy.settingsGroupDisplay}>
+          <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
+            following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
+          <label className="settings-card preference-card">
+            <span className="preference-copy">
+              <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
+              <p>{props.copy.completionNotificationsDescription}</p>
+              <small>{props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}</small>
+            </span>
+            <span className="preference-switch">
+              <input
+                type="checkbox"
+                name="completion-notifications"
+                aria-labelledby="completion-notifications-title"
+                checked={!!props.completionNotifications}
+                disabled={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
+                onChange={(event) => props.onCompletionNotificationsChange?.(event.target.checked)}
+              />
+              <span aria-hidden="true" />
+            </span>
+          </label>
+          {props.confirmations && props.onConfirmationChange ? <SettingsConfirmations copy={props.copy} busy={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
+            confirmations={props.confirmations} onChange={props.onConfirmationChange} /> : null}
+        </div>
+        <div className="settings-group" role="group" aria-label={props.copy.settingsGroupSync}>
           <section className="settings-card sync-overview" aria-labelledby="sync-title">
             <div className="settings-description">
               <h1 id="sync-title">{props.copy.syncTitle}</h1>
@@ -289,29 +310,9 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           </section>
           <BackupCard syncStatus={props.status} onOpenSync={target => navigateSection("overview", target === "connection" ? "sync-title" : "question-image-sync-title")}
             copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
-          <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
-            following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
           {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} proxy={proxy} copy={props.copy} busy={busy} /> : null}
-          <label className="settings-card preference-card">
-            <span className="preference-copy">
-              <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
-              <p>{props.copy.completionNotificationsDescription}</p>
-              <small>{props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}</small>
-            </span>
-            <span className="preference-switch">
-              <input
-                type="checkbox"
-                name="completion-notifications"
-                aria-labelledby="completion-notifications-title"
-                checked={!!props.completionNotifications}
-                disabled={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
-                onChange={(event) => props.onCompletionNotificationsChange?.(event.target.checked)}
-              />
-              <span aria-hidden="true" />
-            </span>
-          </label>
-          {props.confirmations && props.onConfirmationChange ? <SettingsConfirmations copy={props.copy} busy={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
-            confirmations={props.confirmations} onChange={props.onConfirmationChange} /> : null}
+        </div>
+        <div className="settings-group" role="group" aria-label={props.copy.settingsGroupApp}>
           <SettingsProxy copy={props.copy} proxy={proxy} busy={busy || !!props.operationBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
             onOpenSync={props.preferenceSync ? () => navigateSection("preferences", "settings-preference-sync-title") : undefined} />
           <section className="settings-card settings-row update-card" aria-labelledby="app-updates-title">

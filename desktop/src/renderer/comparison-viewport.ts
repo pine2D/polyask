@@ -1,12 +1,12 @@
 import { useLayoutEffect, type RefObject } from 'react';
 
-export function useComparisonViewport(root: RefObject<HTMLElement | null>): void {
+export function useComparisonViewport(root: RefObject<HTMLElement | null>, manualOpen = false): void {
   useLayoutEffect(() => {
     const node = root.current, pane = node?.closest<HTMLElement>('.archive-detail-pane');
-    const column = node?.querySelector<HTMLElement>('.archive-compare-column');
+    const column = node?.querySelector<HTMLElement>(manualOpen ? '.manual-comparison' : '.archive-compare-column');
     const view = node?.ownerDocument.defaultView;
     if (!node || !pane || !column || !view) return;
-    const property = '--comparison-reading-height', previous = node.style.getPropertyValue(property);
+    const property = '--comparison-reading-height';
     let frame: number | null = null;
     const measure = () => {
       frame = null;
@@ -29,7 +29,7 @@ export function useComparisonViewport(root: RefObject<HTMLElement | null>): void
     return () => {
       observer?.disconnect();
       if (frame !== null) view.cancelAnimationFrame?.(frame);
-      if (previous) node.style.setProperty(property, previous); else node.style.removeProperty(property);
+      // 保留本节点的测量值；重挂期间退回 vh 高度会夹取已恢复的滚动位置。
     };
-  }, [root]);
+  }, [root, manualOpen]);
 }

@@ -11,10 +11,13 @@ for (const [mode, scrollEvent] of [['read', true], ['compare', true], ['read', f
     const focused = h.document.querySelector('.folder-workspace')!.getAttribute('data-focused');
     if (mode === 'compare') {
       await h.choose(copy.leftAnswer, 'Kimi');
-      await h.click(h.button(copy.manualTitle)!);
-      await h.input(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')!, 'Keep this reviewed judgment.');
       const columns = h.document.querySelectorAll<HTMLElement>('.archive-compare-column');
       await h.scroll(columns[0], 230); await h.scroll(columns[1], 370);
+      await h.click(h.button(copy.manualTitle)!);
+      await h.input(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')!, 'Keep this reviewed judgment.');
+      await h.scroll(h.document.querySelector<HTMLElement>('.manual-comparison')!, 320);
+      // Chromium 的隐藏栏不再有布局；离开时不能用它们的零值覆盖阅读会话。
+      columns.forEach(column => { column.scrollTop = 0; });
     }
     const list = h.document.querySelector<HTMLElement>('.folder-content-list .archive-list')!;
     await h.scroll(list, 110);
@@ -38,10 +41,12 @@ for (const [mode, scrollEvent] of [['read', true], ['compare', true], ['read', f
     if (mode === 'compare') {
       await comparisonWait(() => h.document.querySelector<HTMLDetailsElement>('.manual-comparison')?.open);
       assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')!.value, 'Keep this reviewed judgment.');
+      assert.equal(h.document.querySelector<HTMLElement>('.manual-comparison')!.scrollTop, 320);
+      assert.equal(h.document.activeElement === h.button(label), true, 'return restores the original action');
+      await h.click(h.button(copy.comparisonReturnAnswers)!);
       assert.equal([...h.document.querySelectorAll<HTMLElement>('.archive-compare-column')].map(node => node.scrollTop).join(','), '230,370');
       assert.equal(h.document.querySelector('.archive-compare-column h3')!.textContent, 'Kimi');
-    }
-    assert.equal(h.document.activeElement === h.button(label), true, 'return restores the original action');
+    } else assert.equal(h.document.activeElement === h.button(label), true, 'return restores the original action');
     assert.equal(h.writes + h.decisionWrites, 0);
   } finally { await h.close(); }
 });

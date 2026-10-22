@@ -6,7 +6,7 @@ import { applyToolbarLayout } from './toolbar-layout';
 
 /** 输入框在命令栏里的保底宽度；低于它时逐级收起次要控件，而不是继续挤压输入框。 */
 export const MIN_PROMPT_WIDTH = 320;
-/** 0 = 完整文字；1 = 图标化；2 = 主操作只留图标；3 = 历史进菜单、档位下拉；4 = 比较/站点状态让位，保留结果库。 */
+/** 0 = 完整文字；1 = 次要文字收起；2 = 档位说明收起；3 = 历史进菜单、档位下拉；4 = 比较/站点状态让位。主操作保留文字。 */
 export const TOOLBAR_FIT_LEVELS = 5;
 /** 第 4 级隐藏的入口改由「更多」菜单承接，键盘仍可经菜单与命令面板到达。 */
 export const COMPACT_MORE_COMMANDS: readonly CommandId[] = ["collect-compare"];

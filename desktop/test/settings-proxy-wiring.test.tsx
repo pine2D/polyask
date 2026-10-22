@@ -79,12 +79,13 @@ test('a corrupt synced value that this device does not follow leaves the row usa
   } finally { await h.close(); }
 });
 
-test('settings navigation lists the proxy card between confirmations and updates and focuses its heading', async () => {
+test('grouped settings navigation keeps the proxy heading reachable with its direct entry', async () => {
   const h = await mountSettings({ confirmations: { sitePageCloseConfirm: true, newSessionConfirm: true }, onConfirmationChange: () => {} });
   try {
     await settle();
     const sections = [...h.document.querySelectorAll('[data-settings-section]')].map(node => node.getAttribute('data-settings-section'));
-    assert.deepEqual(sections.slice(sections.indexOf('confirmations'), sections.indexOf('updates') + 1), ['confirmations', 'proxy', 'updates']);
+    assert.deepEqual(sections, ['display', 'overview', 'proxy', 'data']);
+    assert.equal(h.document.getElementById('settings-proxy-title')!.closest('.settings-group') === h.document.getElementById('app-updates-title')!.closest('.settings-group'), true);
     await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="proxy"]')!);
     assert.equal(h.document.activeElement === h.document.getElementById('settings-proxy-title'), true);
   } finally { await h.close(); }

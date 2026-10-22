@@ -1,5 +1,9 @@
 export const SETTINGS_RECOVERY_COPY = {
   en: {
+    settingsGroupDisplay: 'Display & controls',
+    settingsGroupSync: 'Sync & backup',
+    settingsGroupApp: 'Connection & app',
+    settingsGroupData: 'Data management',
     settingsDisplayTitle: 'Display and reading',
     settingsDensityLabel: 'App density',
     settingsScaleLabel: 'Default site page scale',
@@ -42,6 +46,10 @@ export const SETTINGS_RECOVERY_COPY = {
     healthAdviceReady: 'The site is ready. Focus it to view its current conversation.'
   },
   zhCN: {
+    settingsGroupDisplay: '显示与操作',
+    settingsGroupSync: '同步与备份',
+    settingsGroupApp: '连接与应用',
+    settingsGroupData: '数据管理',
     settingsDisplayTitle: '显示与阅读',
     settingsDensityLabel: '外壳密度',
     settingsScaleLabel: '站点网页默认比例',
@@ -84,6 +92,10 @@ export const SETTINGS_RECOVERY_COPY = {
     healthAdviceReady: '本站可提问，可聚焦查看当前对话。'
   },
   zhTW: {
+    settingsGroupDisplay: '顯示與操作',
+    settingsGroupSync: '同步與備份',
+    settingsGroupApp: '連線與應用',
+    settingsGroupData: '資料管理',
     settingsDisplayTitle: '顯示與閱讀',
     settingsDensityLabel: '外殼密度',
     settingsScaleLabel: '網站頁面預設比例',

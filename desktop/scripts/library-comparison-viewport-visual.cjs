@@ -23,6 +23,7 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, key, shot 
       const entry = document.querySelector('.comparison-manual-entry').getBoundingClientRect();
       return { paneBottom:box.bottom, firstTop:first.top, firstBottom:first.bottom,
         available:box.bottom-first.top-16, limit:parseFloat(getComputedStyle(columns[0]).maxHeight),
+        outerOverflow:pane.scrollHeight-pane.clientHeight, sideBySide:Math.abs(columns[0].getBoundingClientRect().top-columns[1].getBoundingClientRect().top)<1,
         width:innerWidth, bodyWidth:document.documentElement.scrollWidth,
         entryVisible:entry.top >= box.top && entry.bottom <= box.bottom,
         lengths:columns.map(column=>column.textContent.length) };
@@ -30,6 +31,7 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, key, shot 
     if (geometry.available >= 160) {
       assert.ok(geometry.firstBottom <= geometry.paneBottom - 14, 'answer fits the actual remaining pane height');
       assert.equal(geometry.entryVisible, true);
+      if (geometry.sideBySide) assert.ok(geometry.outerOverflow <= 1, 'two answer columns fit without a third scrolling surface');
     } else assert.equal(geometry.limit, 160, 'short viewports retain the reading floor and outer scrolling');
     assert.ok(geometry.bodyWidth <= geometry.width + 1);
     assert.ok(geometry.lengths.every(length => length > 500));
@@ -48,6 +50,11 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, key, shot 
     restored.forEach((column, index) => assert.ok(Math.abs(column.top - Math.min(position[index], column.max)) <= 1, 'resize keeps valid answer positions'));
     await click('.comparison-manual-entry');
     await wait('document.querySelector(".manual-comparison")?.open && document.activeElement === document.querySelector(".manual-comparison summary")');
+    assert.equal(await run('document.querySelector(".archive-compare-grid").hidden'), true);
+    await click('.comparison-manual-entry');
+    await wait('!document.querySelector(".archive-compare-grid").hidden');
+    const returned = await read(function() { return [...document.querySelectorAll('.archive-compare-column')].map(column=>column.scrollTop); });
+    returned.forEach((top,index) => assert.ok(Math.abs(top-restored[index].top) <= 1, 'worksheet switching preserves answer positions'));
     if (locale === 'en' && zoom === 1) {
       await read(function() { document.querySelector('.comparison-manual-entry').focus(); });
       await key('Return');

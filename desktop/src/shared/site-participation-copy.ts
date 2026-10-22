@@ -1,8 +1,9 @@
 export const SITE_PARTICIPATION_COPY = {
   en: {
     participationLabel: 'Send to',
-    participationSummary: 'Sending to {participating} sites',
-    participationSessionHint: 'Send selections are saved and synced when connected. Uncheck a site to skip future broadcasts; its page stays open.',
+    participationSummary: 'Open: {opened} · Send to: {participating}',
+    participationSelectionHint: 'Checked sites receive your question. Unchecking keeps the page open.',
+    participationSessionHint: 'Send selections are saved and synced when connected.',
     participationResourcesHint: 'Pages kept open still use resources. Close a page to release it.',
     sitePageRetained: 'Page open, skipped',
     sitePageClosed: 'Page closed',
@@ -28,8 +29,9 @@ export const SITE_PARTICIPATION_COPY = {
   },
   zhCN: {
     participationLabel: '发送站点',
-    participationSummary: '发送到 {participating} 站',
-    participationSessionHint: '发送勾选会保存，连接同步后可跨设备恢复；取消勾选不关闭页面。',
+    participationSummary: '已开 {opened} 页 · 发送到 {participating} 站',
+    participationSelectionHint: '勾选的站点参与发送；取消勾选后页面仍保留。',
+    participationSessionHint: '发送勾选会保存，连接同步后可跨设备恢复。',
     participationResourcesHint: '保留打开的页面仍占资源；关闭页面可以释放。',
     sitePageRetained: '保留页面，不发送',
     sitePageClosed: '页面已关闭',
@@ -55,8 +57,9 @@ export const SITE_PARTICIPATION_COPY = {
   },
   zhTW: {
     participationLabel: '傳送網站',
-    participationSummary: '傳送至 {participating} 站',
-    participationSessionHint: '傳送勾選會儲存，連線同步後可跨裝置恢復；取消勾選不關閉頁面。',
+    participationSummary: '已開 {opened} 頁 · 傳送至 {participating} 站',
+    participationSelectionHint: '勾選的網站參與傳送；取消勾選後頁面仍保留。',
+    participationSessionHint: '傳送勾選會儲存，連線同步後可跨裝置恢復。',
     participationResourcesHint: '保留開啟的頁面仍占資源；關閉頁面可以釋放。',
     sitePageRetained: '保留頁面，不傳送',
     sitePageClosed: '頁面已關閉',

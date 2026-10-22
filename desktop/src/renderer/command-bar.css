@@ -37,6 +37,7 @@
 .mode-switch button.active, .tier-switch button.active {
   color: inherit; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border);
 }
+.mode-switch .layout-toggle { display: none; }
 .command-bar textarea {
   margin-left: var(--space-1); width: calc(100% - var(--space-1)); height: var(--control-height); resize: none; padding: 5px 10px; border: 1px solid var(--border);
   border-radius: var(--radius-control); color: inherit; background: var(--field); line-height: 20px; font-size: var(--font-body);
@@ -132,8 +133,8 @@ kbd { opacity: .7; font: 10px system-ui; }
 .image-error button { border-color: var(--danger-ink); color: var(--danger-ink); }
 
 /* 命令栏适配级别（toolbar-fit.ts 按实际内容逐级累加，直到输入框 ≥320px；data-fit 记为 "1 2 …"）：
-   1 = 图标化；2 = 主操作只留图标；3 = 历史入口进更多菜单、档位改为下拉；
-   4 = 站点状态/比较改由工作台与更多菜单承接，保留结果库图标。 */
+   1 = 次要文字收起；2 = 档位说明收起；3 = 历史入口进更多菜单、档位改为下拉；
+   4 = 站点状态/比较改由工作台与更多菜单承接。发送和结果库始终保留文字。 */
 .command-bar[data-fit~="1"] :is(.mode-switch .priority-p1, .workspace-actions .priority-p1, kbd, .scope-label-full, .workspace-actions .retry-label) { display: none; }
 .command-bar[data-fit~="1"] .scope-label-compact { display: inline; }
 .command-bar[data-fit~="1"] > :is(.page-tabs, .workspace-actions, .mode-switch, .tier-switch, .image-picker, .prompt-history-tools) { min-width: max-content; }
@@ -147,12 +148,9 @@ kbd { opacity: .7; font: 10px system-ui; }
 /* 图标化后每页只留一枚徽标：最严重的状态带数字，其余状态仍在 aria-label 与悬停说明里。 */
 .command-bar[data-fit~="1"] .page-tab-badge:not([data-primary]) { display: none; }
 .command-bar[data-fit~="2"] .tier-switch [data-current-tier] { display: none; }
-.command-bar[data-fit~="2"] .archive-label { display: none; }
-.command-bar[data-fit~="2"] .workspace-actions .archive-trigger { width: var(--target-size); min-width: var(--target-size); padding: 0; }
-.command-bar[data-fit~="2"] .primary-action { min-width: var(--control-height); width: var(--control-height); padding: 0; }
-.command-bar[data-fit~="2"] .primary-action > span { display: none; }
-.command-bar[data-fit~="2"] .send.primary-action { width: auto; padding: 0 8px; }
-.command-bar[data-fit~="2"] .send.primary-action > .send-count { display: inline; }
+.command-bar[data-fit~="2"] .primary-action { min-width: max-content; padding: 0 8px; gap: 4px; }
+.command-bar[data-fit~="2"] :is(.primary-action, .archive-trigger) > svg { display: none; }
+.command-bar .workspace-actions > :is(.archive-trigger, .compare-trigger) { white-space: nowrap; }
 .command-bar[data-fit~="3"] { grid-template-columns: auto auto minmax(0, 1fr) auto auto auto auto auto; }
 .command-bar.has-pages[data-fit~="3"] { grid-template-columns: auto auto auto minmax(0, 1fr) auto auto auto auto auto; }
 .command-bar[data-fit~="3"] :is(.mode-switch, .prompt-composer) { margin-left: 0; }
@@ -164,6 +162,8 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar[data-fit~="3"] .uncertain-retry-trigger .review-glyph { display: inline; }
 .command-bar[data-fit~="4"] { column-gap: 3px; }
 .command-bar[data-fit~="4"] :is(.health-trigger, .compare-trigger) { display: none; }
+.command-bar[data-fit~="4"] .mode-switch > button:not(.layout-toggle) { display: none; }
+.command-bar[data-fit~="4"] .mode-switch > .layout-toggle { display: inline-flex; }
 /* 站点状态收起后释放原按钮的保底宽度，留给常驻的结果库入口。 */
 .command-bar[data-fit~="4"] > .workspace-entry { min-width: calc(var(--target-size) * 2 + 2px); }
 .command-bar[data-fit~="4"] .scope-main { padding-inline: var(--space-1); }

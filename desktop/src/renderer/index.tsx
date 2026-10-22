@@ -156,7 +156,7 @@ function App(): React.JSX.Element {
   const archiveNavigation = useArchiveNavigation();
   const [settingsBlocking, setSettingsBlocking] = useState(false);
   const blockSettings = useCallback((value: boolean) => { if (value) commandActions.current = {}; setSettingsBlocking(value); }, []);
-  const [settingsSection, setSettingsSection] = useState<{ section: "overview" | "drive-diagnostics" | "data" | "display" | "proxy"; request: number }>({ section: "overview", request: 0 });
+  const [settingsSection, setSettingsSection] = useState<{ section: "overview" | "drive-diagnostics" | "data" | "display" | "proxy"; request: number }>({ section: "display", request: 0 });
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(INITIAL_SYNC);
   const [runtime, setRuntime] = useState<RuntimeInfo>(INITIAL_RUNTIME);
@@ -463,7 +463,7 @@ function App(): React.JSX.Element {
     ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
     ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
     ...(selected.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
-    "open-settings": () => openSettings("overview"),
+    "open-settings": () => openSettings("display"),
     "open-drive-diagnostics": () => openSettings("drive-diagnostics"),
     "open-display-settings": () => openSettings("display"),
     "open-data-settings": () => openSettings("data"),

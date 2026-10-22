@@ -1,5 +1,5 @@
 .library .archive-detail { max-width: 820px; padding: 24px 32px 64px; }
-.library .archive-detail[data-view=compare] { max-width: none; }
+.library .archive-detail[data-view=compare] { max-width: none; padding-bottom: 16px; }
 .archive-record-context > summary:not([hidden]) { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 4px 0; cursor: pointer; font-size: 12px; color: var(--muted); }
 .archive-record-context > summary::-webkit-details-marker { display: none; }
 .record-context-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 16px; font-weight: 600; }
@@ -91,6 +91,8 @@
 .library .comparison-options { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin: 16px 0 4px; }
 .library .comparison-options .comparison-filter { margin: 0; }
 .library .comparison-manual-entry { min-height: 30px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--panel); color: var(--text); font-size: 12px; }
+.library .archive-compare > [hidden] { display: none; }
+.library .archive-compare > .manual-comparison { max-height: var(--comparison-reading-height, 70vh); overflow: auto; overscroll-behavior: contain; margin-top: 16px; padding-top: 0; border-top: 0; }
 .comparison-legend { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
 .comparison-legend i { display: inline-block; width: 14px; height: 14px; border-radius: 0 3px 3px 0; background: color-mix(in srgb, var(--panel) 65%, var(--accent-soft)); box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 55%, var(--border)); }
 .library .archive-compare-paragraph .markdown-preview { font-size: 15px; line-height: 1.8; }

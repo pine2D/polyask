@@ -38,6 +38,10 @@ test('skipping an open site changes participation without persisting a page remo
     await h.click(h.document.querySelector<HTMLInputElement>('input[name="scope-sites"][value="kimi"]')!);
     assert.deepEqual(h.persistentChanges, [], 'temporary exclusion must never close or persist page membership');
     assert.deepEqual(h.desired(), ['claude']);
+    assert.equal(h.document.querySelector('.participation-heading > span')?.textContent, 'Open: 2 · Send to: 1');
+    const hint = h.document.querySelector<HTMLElement>('.participation-selection-hint')!;
+    assert.equal(hint.textContent, getCopy('en').participationSelectionHint);
+    assert.equal(hint.closest('[hidden]') === null, true, 'the skip-versus-close explanation is visible without opening help');
     assert.equal(h.document.querySelector<HTMLInputElement>('input[value="kimi"]')!.checked, false);
     assert.equal(h.document.querySelector('[data-site-key="kimi"]') === null, false);
     await h.click(h.document.querySelector<HTMLInputElement>('input[value="kimi"]')!);

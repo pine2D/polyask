@@ -32,25 +32,30 @@ test('manual settings scrolling marks the visible section without moving keyboar
     const body = h.document.querySelector<HTMLElement>('.settings-body')!;
     Object.defineProperties(body, { clientHeight: { value: 400 }, scrollHeight: { value: 2400 } });
     body.style.scrollPaddingTop = '80px';
-    const headings = ['sync-title', 'backup-card-title', 'settings-display-title', 'completion-notifications-title', 'settings-proxy-title', 'app-updates-title', 'settings-advanced-toggle'];
+    const headings = ['settings-display-title', 'completion-notifications-title', 'sync-title', 'backup-card-title', 'settings-proxy-title', 'app-updates-title', 'settings-advanced-toggle'];
     headings.forEach((id, index) => {
       const node = h.document.getElementById(id)!;
       node.getClientRects = () => [{ top: index * 400 - body.scrollTop }] as unknown as DOMRectList;
       node.getBoundingClientRect = () => ({ top: index * 400 - body.scrollTop }) as DOMRect;
     });
+    h.document.querySelectorAll<HTMLElement>('.settings-group').forEach((node, index) => {
+      node.getBoundingClientRect = () => ({ bottom: (index + 1) * 800 - 40 - body.scrollTop }) as DOMRect;
+    });
     const close = h.document.querySelector<HTMLButtonElement>('[aria-label="Close settings"]')!; close.focus();
+    await act(async () => { body.scrollTop = 690; body.dispatchEvent(new h.window.Event('scroll')); });
+    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'overview', 'a group hidden above the sticky navigation yields to the visible group');
     await act(async () => { body.scrollTop = 750; body.dispatchEvent(new h.window.Event('scroll')); });
-    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'display');
+    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'overview');
     assert.equal(h.document.querySelectorAll('[aria-current="location"]').length, 1);
     assert.equal(h.document.activeElement === close, true);
     const scroller = h.document.querySelector<HTMLElement>('.settings-section-scroller')!;
     scroller.getBoundingClientRect = () => ({ left: 0, right: 160 }) as DOMRect;
-    h.document.querySelector<HTMLElement>('[data-settings-section=display]')!.getBoundingClientRect = () => ({ left: 180, right: 260 }) as DOMRect;
+    h.document.querySelector<HTMLElement>('[data-settings-section=overview]')!.getBoundingClientRect = () => ({ left: 180, right: 260 }) as DOMRect;
     await act(async () => h.window.dispatchEvent(new h.window.Event('resize')));
     assert.equal(scroller.scrollLeft, 100, 'resizing reveals the current item even when its identity does not change');
     assert.equal(h.document.activeElement === close, true);
     await act(async () => { body.scrollTop = 2000; body.dispatchEvent(new h.window.Event('scroll')); });
-    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'updates', 'a collapsed last section below the reading edge does not take over');
+    assert.equal(h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section'), 'proxy', 'a collapsed last section below the reading edge does not take over');
   } finally { await h.close(); }
 });
 
@@ -61,23 +66,26 @@ test('clamped settings jumps retain the requested section until the user scrolls
     Object.defineProperties(body, { clientHeight: { value: 604 }, scrollHeight: { value: 2497 } });
     body.getBoundingClientRect = () => ({ top: 52, bottom: 656 }) as DOMRect;
     h.document.querySelector<HTMLElement>('.settings-section-navigation')!.getBoundingClientRect = () => ({ bottom: 130 }) as DOMRect;
-    const positions = { 'sync-title': -1700, 'backup-card-title': -1400, 'settings-display-title': -1000,
-      'completion-notifications-title': -300, 'settings-proxy-title': 161, 'app-updates-title': 420, 'settings-advanced-toggle': 610 };
+    const positions = { 'sync-title': -1700, 'backup-card-title': -1400, 'settings-display-title': -2500,
+      'completion-notifications-title': -2300, 'settings-proxy-title': 161, 'app-updates-title': 420, 'settings-advanced-toggle': 610 };
     for (const [id, top] of Object.entries(positions)) {
       const node = h.document.getElementById(id)!;
       node.getClientRects = () => [{}] as unknown as DOMRectList;
       node.getBoundingClientRect = () => ({ top: top + 1893 - body.scrollTop }) as DOMRect;
       node.scrollIntoView = () => { body.scrollTop = 1893; };
     }
+    h.document.querySelectorAll<HTMLElement>('.settings-group').forEach((node, index) => {
+      node.getBoundingClientRect = () => ({ bottom: [-1800, 137, 575, 660][index] + 1893 - body.scrollTop }) as DOMRect;
+    });
     const current = () => h.document.querySelector('[aria-current="location"]')?.getAttribute('data-settings-section');
-    for (const section of ['proxy', 'updates']) {
+    for (const section of ['proxy', 'overview']) {
       await h.click(h.document.querySelector<HTMLButtonElement>(`[data-settings-section=${section}]`)!);
       await act(async () => { body.dispatchEvent(new h.window.Event('scroll')); h.window.dispatchEvent(new h.window.Event('resize')); });
       assert.equal(current(), section, 'reaching the same bottom position must not replace the explicit target');
     }
     const focused = h.document.activeElement;
     await act(async () => { body.scrollTop -= 100; body.dispatchEvent(new h.window.Event('scroll')); });
-    assert.equal(current(), 'notifications', 'manual scrolling resumes tracking actual content');
+    assert.equal(current(), 'overview', 'manual scrolling resumes tracking actual content');
     assert.equal(h.document.activeElement === focused, true, 'scroll tracking does not move focus');
   } finally { await h.close(); }
 });

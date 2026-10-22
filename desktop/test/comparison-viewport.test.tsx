@@ -31,8 +31,15 @@ test('manual comparison has a direct entry that opens and focuses the existing w
     assert.equal(details.open, true);
     assert.equal(h.document.activeElement === details.querySelector('summary'), true);
     await h.input(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')!, 'Keep my judgment');
+    assert.equal(h.document.querySelector<HTMLElement>('.archive-compare-grid')!.hidden, true, 'notes use the same workspace as answers');
+    await h.click(entry!);
+    assert.equal(details.open, false);
+    assert.equal(h.document.querySelector<HTMLElement>('.archive-compare-grid')!.hidden, false);
+    assert.equal(h.document.activeElement === entry, true, 'returning to answers retains a usable keyboard focus');
+    await h.click(entry!);
+    assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')?.value, 'Keep my judgment');
     await h.click(h.document.querySelector<HTMLButtonElement>('.library-view-switch button:first-child')!); await h.click(h.button(copy.libraryCompare)!);
-    await h.click(h.document.querySelector<HTMLButtonElement>('.comparison-manual-entry')!);
+    assert.equal(h.document.querySelector<HTMLDetailsElement>('.manual-comparison')!.open, true, 'returning restores the active worksheet');
     assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')?.value, 'Keep my judgment');
     assert.equal(h.writes, 0); assert.equal(h.decisionWrites, 0);
   } finally { await h.close(); }

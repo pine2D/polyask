@@ -91,6 +91,7 @@ const finishOperation = () => new Promise<void>(resolve => document.addEventList
 let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders: 0, answers: 9, memberships: 0,
   drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
+  cancelBackup: async () => {},
   ...proxyShellStubs(query.get('surface') === 'proxy-edit' ? proxyStateFixture({ formValue: customProxy, applied: customProxy }) : undefined),
   getLocalDataStats: async () => dataStats,
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
@@ -141,7 +142,7 @@ function Fixture(): React.JSX.Element {
       onDraftSyncChange: async draftSync => setPreferences(p => ({ ...p, draftSync })) }} />;
   return <div className={`app-shell${reservedExpanded ? ' is-composer-expanded' : ''}`} data-sent={sent} data-opened={selected.join(',')} data-participating={participation.participating.join(',')}>
     {query.has('progress') ? <SubmittedSummary /> : null}
-    <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
+    <CommandBar copy={copy} promptRef={promptRef} text={text} tier={tier} runState={query.get('cancelling') ? 'cancelling' : query.get('sending') ? 'sending' : 'idle'} auxiliaryBusy={false}
       layoutMode={layout} automaticFocus={query.has('automaticFocus')} selectedCount={participation.participating.length} failureCount={stress ? 6 : 0} cancelledCount={0} uncertainCount={stress ? 3 : 0} onReviewUncertain={noop}
       scopeLabel={copy.allSites} healthAttention={stress ? 2 : 0} panelTab={panel?.tab ?? null}
       pageControl={!query.has('singlePage') && <PageTabs copy={copy} sites={SITES} selectedSites={selected} statuses={stress ? statuses : {}} page={page} inputMethod={inputMethod} onPageChange={(next, method) => { setPage(next); setInputMethod(method); }} />}

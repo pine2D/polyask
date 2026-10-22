@@ -11,14 +11,14 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     nativeTheme.themeSource = width === 1280 ? 'light' : 'dark';
     win.setContentSize(width, width === 960 ? 680 : 900);
     await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, density: width === 1280 ? 'compact' : 'comfortable' } });
-    await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "overview"');
-    for (const section of ['proxy', 'updates']) {
+    await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "display"');
+    for (const section of ['proxy', 'overview']) {
       const target = await run(`(() => { const e=document.querySelector('[data-settings-section=${section}]'); e.scrollIntoView({block:'nearest',inline:'nearest'}); const r=e.getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}; })()`);
       for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, ...target, button: 'left', clickCount: 1 });
       await wait(`document.querySelector('[aria-current=location]')?.dataset.settingsSection === '${section}'`);
       await paint(); await paint();
       assert.equal(await run('document.querySelector("[aria-current=location]").dataset.settingsSection'), section, 'a clamped jump keeps its explicit section');
-      assert.equal(await run('document.activeElement.id'), section === 'proxy' ? 'settings-proxy-title' : 'app-updates-title');
+      assert.equal(await run('document.activeElement.id'), section === 'proxy' ? 'settings-proxy-title' : 'sync-title');
       if (width === 960 && section === 'proxy') await shot(`settings-proxy-position-${locale}`);
     }
     assert.equal((await accessibility(win)).filter(node => node.role === 'status').length, 1, 'settings feedback remains exposed as a status');
@@ -31,21 +31,21 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     if (locale === 'zh-CN') await shot(`settings-current-${width}`);
     await run(`(() => { document.querySelector('.settings-toolbar button').focus(); const body=document.querySelector('.settings-body');
       body.scrollTop += document.querySelector('#backup-card-title').getBoundingClientRect().top-body.getBoundingClientRect().top-parseFloat(getComputedStyle(body).scrollPaddingTop); })()`);
-    await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "backup"');
+    await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "overview"');
     assert.equal(await run('document.activeElement === document.querySelector(".settings-toolbar button")'), true, 'manual scrolling never steals keyboard focus');
     await run('document.querySelector(".settings-body").scrollTop = document.querySelector(".settings-body").scrollHeight');
     await paint(); await paint();
     assert.notEqual(await run('document.querySelector("[aria-current=location]").dataset.settingsSection'), 'data', 'the folded last section does not take over the visible content');
     const result = await run(`(() => { const nav=document.querySelector('.settings-section-scroller').getBoundingClientRect(), active=document.querySelector('[aria-current=location]').getBoundingClientRect();
-      const button=document.querySelector('[aria-current=location]'), section=document.getElementById(button.getAttribute('aria-controls')).closest('.settings-card,.settings-advanced').getBoundingClientRect(), body=document.querySelector('.settings-body').getBoundingClientRect();
-      return {left:active.left,right:active.right,navLeft:nav.left,navRight:nav.right,current:button.dataset.settingsSection,sectionVisible:section.bottom>nav.bottom&&section.top<body.bottom}; })()`);
+      const button=document.querySelector('[aria-current=location]'), section=document.getElementById(button.getAttribute('aria-controls')).closest('.settings-group').getBoundingClientRect(), body=document.querySelector('.settings-body').getBoundingClientRect();
+      return {left:active.left,right:active.right,navLeft:nav.left,navRight:nav.right,current:button.dataset.settingsSection,sectionTop:section.top,sectionBottom:section.bottom,navBottom:nav.bottom,bodyBottom:body.bottom,sectionVisible:section.bottom>nav.bottom&&section.top<body.bottom}; })()`);
     assert.ok(result.left >= result.navLeft - 1 && result.right <= result.navRight + 1, 'the current section stays visible in the horizontal navigation');
-    assert.equal(result.sectionVisible, true, 'passive tracking identifies visible section content');
+    assert.equal(result.sectionVisible, true, `passive tracking identifies visible section content: ${JSON.stringify({locale,width,...result})}`);
     reports.push({ locale, width, ...result });
     if (width === 1280) {
       win.setContentSize(640, 900); await paint(); await paint();
       const resized = await run(`(() => { const nav=document.querySelector('.settings-section-scroller').getBoundingClientRect(), button=document.querySelector('[aria-current=location]'), active=button.getBoundingClientRect();
-        const section=document.getElementById(button.getAttribute('aria-controls')).closest('.settings-card,.settings-advanced').getBoundingClientRect(), body=document.querySelector('.settings-body').getBoundingClientRect();
+        const section=document.getElementById(button.getAttribute('aria-controls')).closest('.settings-group').getBoundingClientRect(), body=document.querySelector('.settings-body').getBoundingClientRect();
         return {left:active.left,right:active.right,navLeft:nav.left,navRight:nav.right,current:button.dataset.settingsSection,sectionVisible:section.bottom>nav.bottom && section.top<body.bottom}; })()`);
       // Reflow can change the visible section; the marker must follow it and remain visible.
       assert.ok(resized.sectionVisible && resized.left >= resized.navLeft - 1 && resized.right <= resized.navRight + 1, 'resizing reveals the current navigation item after reflow');

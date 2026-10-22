@@ -20,13 +20,17 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       win.setContentSize(960, 900);
       await win.loadFile(join(output, 'index.html'), { query: { locale, density, stress: '1', automaticFocus: '1', progress: '1' } });
       await wait('!!document.querySelector(".feedback-next-step")'); await paint();
+      assert.equal(await run(`['.archive-label', '.send > span:first-of-type'].every(selector => {
+        const e=document.querySelector(selector); return !!e && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none';
+      })`), true, `${locale}/${density}: primary actions keep visible text at minimum width`);
       assert.equal(await run('getComputedStyle(document.querySelector(".mode-switch .priority-p1")).display'), 'none');
       const { root } = await win.webContents.debugger.sendCommand('DOM.getDocument');
-      for (let index = 0; index < 2; index++) {
-        const { nodeId } = await win.webContents.debugger.sendCommand('DOM.querySelector', { nodeId: root.nodeId, selector: `.mode-switch button:nth-child(${index + 1})` });
+      const compactLayout = await run('getComputedStyle(document.querySelector(".layout-toggle")).display !== "none"');
+      for (const index of compactLayout ? [0] : [0, 1]) {
+        const { nodeId } = await win.webContents.debugger.sendCommand('DOM.querySelector', { nodeId: root.nodeId, selector: compactLayout ? '.layout-toggle' : `.mode-switch button:nth-child(${index + 1})` });
         const { nodes } = await win.webContents.debugger.sendCommand('Accessibility.getPartialAXTree', { nodeId, fetchRelatives: false });
         assert.equal(nodes[0].role.value, 'button');
-        assert.equal(nodes[0].name.value, names[locale][index], `${locale}/${density}: name survives hidden text and automatic-focus hint`);
+        assert.equal(nodes[0].name.value, names[locale][compactLayout ? 1 : index], `${locale}/${density}: name survives hidden text and automatic-focus hint`);
       }
       const entry = await run(`(() => { const e=document.querySelector('.archive-trigger'), r=e.getBoundingClientRect();
         return {visible:e.getClientRects().length>0,width:r.width,height:r.height,left:r.left,right:r.right,
@@ -37,6 +41,16 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       assert.equal(entry.left >= 0 && entry.right <= 960 && entry.prompt >= 320, true,
         `library and prompt retain their space: ${JSON.stringify({locale,density,...entry})}`);
       assert.equal(!!entry.name && entry.name === entry.hint, true, 'icon entry retains its localized name and hint');
+      if (compactLayout) {
+        await run('document.querySelector(".layout-toggle").focus()');
+        win.setContentSize(968, 900); await paint();
+        assert.equal(await run('document.activeElement === document.querySelector(".layout-toggle")'), true, 'refitting retains keyboard focus on the visible layout action');
+        win.setContentSize(960, 900); await paint();
+        await click('.layout-toggle');
+        assert.equal(await run('document.querySelector(".layout-toggle").getAttribute("aria-label")'), names[locale][0], 'compact layout action switches to focus');
+        await click('.layout-toggle');
+        assert.equal(await run('document.querySelector(".layout-toggle").getAttribute("aria-label")'), names[locale][1], 'compact layout action returns to overview');
+      }
       await run('document.querySelector(".archive-trigger").focus()');
       for (const type of ['keyDown', 'char', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode: type === 'char' ? '\r' : 'Return' });
       await wait('document.body.dataset.archiveOpened === "true"');
@@ -55,6 +69,13 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       assert.equal(commands.includes('open-archive'), false, 'persistent library entry is not duplicated in More');
       reports.push({ locale, density, names: names[locale], entry, geometry, commands });
       if (locale === 'zh-CN') await shot(`workspace-next-step-${density}`);
+      for (const state of ['sending', 'cancelling']) {
+        await win.loadFile(join(output, 'index.html'), { query: {locale,density,stress:'1',[state]:'1'} });
+        await wait('!!document.querySelector(".cancel")'); await paint();
+        const action = await run(`(() => { const p=document.querySelector('.prompt-composer'),a=document.querySelector('.cancel');
+          return {prompt:p.getBoundingClientRect().width,label:a.textContent,width:a.getBoundingClientRect().width}; })()`);
+        assert.ok(action.prompt >= 320, `${locale}/${density}/${state}: ${JSON.stringify(action)}`);
+      }
     }
     win.setContentSize(1600, 900);
     await win.loadFile(join(output, 'index.html'), { query: { locale: 'zh-CN' } });

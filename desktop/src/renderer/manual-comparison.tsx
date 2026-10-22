@@ -30,15 +30,17 @@ function ManualNote({ copy, category, source, value, selected, onSelect, onChang
   </details>;
 }
 
-export function useComparisonWorksheet(record: ArchiveRecord | undefined, provided?: ComparisonDraftStore) {
+export function useComparisonWorksheet(record: ArchiveRecord | undefined, provided?: ComparisonDraftStore,
+  visibility?: { readonly open: boolean; readonly change: (open: boolean) => void }) {
   const fallback = useRef<ComparisonDraftStore | null>(null);
   if (!fallback.current) fallback.current = createComparisonDraftStore();
   const store = provided ?? fallback.current;
   const [draft, setDraft] = useState<ComparisonDraft | null>(() => record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null);
-  const [open, setOpen] = useState(false), [replacement, setReplacement] = useState<ExactExcerpt | null>(null);
+  const [localOpen, setLocalOpen] = useState(false), [replacement, setReplacement] = useState<ExactExcerpt | null>(null);
+  const open = visibility?.open ?? localOpen, setOpen = visibility?.change ?? setLocalOpen;
   const epoch = useRef(0), mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; epoch.current++; }; }, []);
-  useLayoutEffect(() => { setDraft(record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null); setReplacement(null); setOpen(false); epoch.current++; }, [record?.id, store]);
+  useLayoutEffect(() => { setDraft(record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null); setReplacement(null); setLocalOpen(false); epoch.current++; }, [record?.id, store]);
   const change = (next: ComparisonDraft) => { if (record?.id !== next.archiveId) return; epoch.current++; store.save(record, next); setDraft(next); };
   const persistent = usePersistentDraft({ kind: 'comparison', context: record?.id ?? '',
     title: [...(record?.task || record?.text || '')].slice(0, 160).join(''), content: draft,
@@ -61,6 +63,7 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
 
 export function ManualComparison(props: {
   readonly detailsRef?: React.RefObject<HTMLDetailsElement | null>;
+  readonly workspace?: boolean;
   readonly copy: DesktopCopy;
   readonly record: ArchiveRecord;
   readonly sources: readonly ExcerptSource[];
@@ -99,7 +102,8 @@ export function ManualComparison(props: {
     });
   };
   return <>
-    <details ref={props.detailsRef} className="manual-comparison" data-library-return="manual" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
+    <details ref={props.detailsRef} id={props.workspace ? 'comparison-worksheet' : undefined} hidden={props.workspace && !worksheet.open}
+      className="manual-comparison" data-library-return="manual" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
       <summary>{copy.manualTitle}</summary><p>{copy.manualHint}</p>
       <DraftRecovery {...worksheet.recovery} copy={copy} sourceUpdatedAt={record.updatedAt} busy={props.busy || checking} />
       {invalid ? <p className="manual-source-changed" role="status">{copy.manualSourceChanged}</p> : null}

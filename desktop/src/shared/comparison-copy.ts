@@ -1,5 +1,6 @@
 export const COMPARISON_COPY = {
   en: {
+    comparisonReturnAnswers: 'Back to answers',
     comparisonExpand: 'Expand comparison', comparisonBrowse: 'Return to browsing',
     comparisonContext: 'Question and record details', manualClassify: 'Include this category',
     synthesisNewConversation: 'A new conversation will open at the selected site.',
@@ -26,6 +27,7 @@ export const COMPARISON_COPY = {
     manualReplaceQuote: 'This source already has an excerpt. Replace it with the newly selected continuous passage? Your manual notes will be kept.', manualRemoveExcerpt: 'Remove excerpt'
   },
   'zh-CN': {
+    comparisonReturnAnswers: '返回回答',
     comparisonExpand: '展开比较', comparisonBrowse: '返回浏览',
     comparisonContext: '问题与记录信息', manualClassify: '归入此分类',
     synthesisNewConversation: '将在所选站点打开新会话。',
@@ -52,6 +54,7 @@ export const COMPARISON_COPY = {
     manualReplaceQuote: '这份来源已有摘录，是否替换为新选的连续片段？人工笔记会保留。', manualRemoveExcerpt: '移除摘录'
   },
   'zh-TW': {
+    comparisonReturnAnswers: '返回回答',
     comparisonExpand: '展開比較', comparisonBrowse: '返回瀏覽',
     comparisonContext: '問題與記錄資訊', manualClassify: '歸入此分類',
     synthesisNewConversation: '將在所選站點開啟新對話。',

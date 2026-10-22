@@ -81,11 +81,13 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
         </div>
       </section>
       <section className="drawer-section">
-        <div className="drawer-section-heading"><h2>{props.copy.participationLabel}</h2><span>{formatCopy(props.copy.participationSummary, { opened: props.selected.size, participating: selectedSites.length })}</span>
+        <div className="drawer-section-heading participation-heading"><h2>{props.copy.participationLabel}</h2>
         <button type="button" ref={modeButton} data-sites-mode-toggle aria-pressed={mode === 'order'} aria-controls="site-checklist" className="scope-preset site-order-toggle"
           disabled={props.participationBusy || (mode === 'select' && props.selected.size === 0)} onClick={() => changeMode(mode === 'order' ? 'select' : 'order')}>
-          {mode === 'order' ? props.copy.finishSiteOrder : props.copy.adjustSiteOrder}</button></div>
+          {mode === 'order' ? props.copy.finishSiteOrder : props.copy.adjustSiteOrder}</button>
+          <span>{formatCopy(props.copy.participationSummary, { opened: props.selected.size, participating: selectedSites.length })}</span></div>
         {mode === 'select' ? <>
+          <p className="participation-selection-hint">{props.copy.participationSelectionHint}</p>
           <button type="button" className="drawer-info-toggle" aria-expanded={helpOpen} aria-controls="participation-help" onClick={() => setHelpOpen(open => !open)}>
             <InfoIcon /><span>{props.copy.participationHelp}</span></button>
           <p id="participation-help" hidden={!helpOpen}>{props.copy.participationSessionHint}</p>

@@ -7,6 +7,7 @@ export interface ArchiveReaderState {
   readonly questionExpanded: boolean;
   /** 仅属阅读会话，保证综合编辑返回时原入口仍可见。 */
   readonly comparisonContextExpanded: boolean;
+  readonly manualComparisonOpen: boolean;
   /** 重挂详情时保留控件占位，避免浏览器滚动锚定因重新插入展开按钮而移动正文。 */
   readonly questionOverflow: boolean | null;
   readonly leftHost: string;
@@ -30,7 +31,7 @@ export interface ArchiveReaderBinding {
 
 export function initialArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results'>, compare = false): ArchiveReaderState {
   const sources = record.results.filter(result => !!result.text?.trim());
-  return { archiveId: record.id, view: compare && sources.length >= 2 ? 'compare' : 'read', questionExpanded: false, comparisonContextExpanded: false, questionOverflow: null,
+  return { archiveId: record.id, view: compare && sources.length >= 2 ? 'compare' : 'read', questionExpanded: false, comparisonContextExpanded: false, manualComparisonOpen: false, questionOverflow: null,
     leftHost: sources[0]?.host ?? '', rightHost: sources[1]?.host ?? '', differencesOnly: false,
     readScroll: 0, comparisonScroll: 0, pendingSynthesisKey: null, leftScroll: 0, rightScroll: 0, synthesisScroll: 0 };
 }
