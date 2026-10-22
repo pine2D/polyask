@@ -356,3 +356,7 @@ Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址，且同一�
 `generation.js` 补充五站实测停止键：ChatGPT `button[aria-label="Stop"]`，中文界面为 `button[aria-label="停止"]`（无 testid，2026-10-04 Windows zh-CN 真机；精确匹配，不吃「停止朗读」一类同前缀控件；页面侧停止键锁存用同一份选择器；zh-TW 用字相同但未真机核实），缺它时中文界面每次都报 `generation_unconfirmed`；DeepSeek `.ds-button--primary` 内 `path[d^="M2 4.88C2"]` 方形 SVG（同类发送箭头不能算停止键）；豆包 `[class*="break-btn-"]` 无 button 角色的容器；Kimi `.send-button-container.stop`；元宝 `#yuanbao-send-btn[aria-label="Stop Answering"]`，中文界面为「停止回答」，类名 `SendButton_sendStop__*` 与语言无关（2026-10-03 补）。继续执行可见性和输入区邻近检查，旧锚点保留。主进程仍须先观察到 generating（或页面侧锁存给出 `complete_observed`，2026-10-04 起，见契约表 `generation()` 行），再经连续完成确认；未改变轮询、预算、后台节流或不明确提交不重发的规则。此探针不能证明回答内容正确；但提问历史的「完整回答」以外壳 `GenerationMonitor` 用它连续确认收口为前提（再经确认之后的归属快照隔 3s 复读一致才封存，见上文「逐次提问的只读副本」），放宽停止键选择器或锁存（如误吃同前缀控件）会直接影响历史副本的完成判定。
 
 2026-09-29 多轮资源测试补充：ChatGPT 长回答会产生可编辑 Canvas，位于 `[data-chatgpt-selection-message-id]` 内（实测约 384×3252px）；真实提问框在 form 内约 405×26px。按面积选最大编辑区会误选回答。`core.findComposer()` 仅在 chatgpt.com 排除现代及两种旧版 assistant 容器中的编辑器，保留其它站原有几何规则。离线与真实 DOM 反例通过，重启后同一测试会话连续两轮生产发送均取得 message 确认，提问框为空、回答可读。
+
+### 2026-10-22 豆包格式化用户消息核对
+
+豆包会把用户提问中的 Markdown 标题和强调渲染为 HTML，`innerText` 会丢失标记；辅助综合的生产载荷即包含这些格式。`history-route.matchesPrompt` 对豆包、非原文锚点且唯一用户正文使用 `prompt-markup.js`：保留问题原始换行，以既有本地 markdown-it 渲染到不插入页面的惰性 template（禁用原始 HTML、图片），两端均使用默认 Markdown 导出和语义结构核对。正文转义、字面标点与格式节点保持区别，代码空格和换行逐字保留；用户正文 HTML 变化作废比较缓存，解析异常不确认。默认回答复制不变。独立消息 key、轮次数、插入与路由守卫保持生效，不据格式相近或旧同文消息确认发送。辅助发送同样带独立 historyToken，缺少标识不能宣称已确认。新增卷在 preload 中紧随 md.js 注入，依赖由 webpack 打包，不读取站点解析器或远程代码。
