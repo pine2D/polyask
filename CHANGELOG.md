@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.24.2] - 2026-10-23
+
+验收范围：Linux/WSL 下通过 2,823 项应用与运行时测试、类型检查、Linux 打包、九站视图冒烟及原生代理和结果库检查；七站完成带图提问与同会话纯文字追问，豆包辅助综合完成真实发送、采集和保存。
+
+验收限制：Windows/macOS 物理环境、真实 Drive 双设备同步及五种发行包的实际安装未在本轮核验；Kimi 和 DeepSeek 尚未完成本轮真实发送验收。
+
 ### 修复
 
 - 带图提问发送成功后清空本轮待发图片，同一会话继续提问不再自动重复发送旧图；部分成功、失败后重试成功和迟到确认均按同一规则清理，保留后来编辑的草稿和新选图片。
@@ -1463,7 +1469,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.24.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.24.2...HEAD
+[1.24.2]: https://github.com/pine2D/polyask/compare/v1.24.1...v1.24.2
 [1.24.1]: https://github.com/pine2D/polyask/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/pine2D/polyask/compare/v1.23.1...v1.24.0
 [1.23.1]: https://github.com/pine2D/polyask/compare/v1.23.0...v1.23.1
