@@ -2,6 +2,10 @@
 
 PolyAsk 是一个桌面应用，可将同一个问题发给多个 AI，并排比较回答。
 
+![PolyAsk 功能示意：同一问题发送到多个 AI 站点，并排比较回答、整理结果并导出 Markdown、HTML 或 PDF。](assets/polyask-overview.png)
+
+*功能示意图。各站使用原网页，实际界面随站点更新。*
+
 支持 Claude、ChatGPT、Gemini、DeepSeek、豆包、千问、Kimi、元宝和智谱清言。使用各站的原网页和你自己的账号，无需 API key。
 
 ## 主要功能
