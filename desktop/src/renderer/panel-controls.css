@@ -9,7 +9,7 @@ button.panel-close.panel-close svg { width: 16px; height: 16px; flex-shrink: 0; 
 button.panel-close.panel-close:disabled { opacity: .4; cursor: default; }
 button.panel-close.panel-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .workspace-actions .compare-trigger {
-  width: var(--control-height); min-width: var(--control-height); padding: 0; justify-content: center;
+  width: auto; min-width: var(--control-height); padding: 0 6px; justify-content: center;
 }
 .workspace-actions .archive-trigger { width: auto; min-width: var(--control-height); padding: 0 8px; justify-content: center; gap: 4px; }
 .workspace-actions > button svg { flex-shrink: 0; }

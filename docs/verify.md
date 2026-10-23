@@ -56,6 +56,8 @@ Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此�
 
 `workspace-entry-visual.cjs` 在三语和两种密度下读取 Chromium 无障碍树，核验总览/聚焦及极窄布局切换按钮名称；同时检查窄窗发送/取消、结果库文字常驻，发送中和取消中提问框仍不少于 320px，布局往返和缩放调整保留焦点，结果库可用 Enter 打开、收纳菜单保留历史与比较且不重复结果库、底栏下一步与进度共存，以及繁忙/回答不可用时不显示下一步。`workspace-next-step.test.tsx` 覆盖最新范围回调、错误恢复与撤销优先级。
 
+比较按钮的文字溢出回归还覆盖三语、两种密度、单页/分页、960/1120/1280/1600/1920px 与 100%/150%/200% 外壳缩放，共 180 组。`test/ui/command-bar-layout.cjs` 同时核验按钮外框、发送/取消及右侧操作按钮内部图标/文字的四边边界和提问框 320px 保底；不能仅凭工具栏没有整体滚动条判断内容不重叠。2026-10-23 在旧固定图标宽度上于 1120px 简中场景明确失败；修复后 180 组、六组入口操作及完整外壳 96 组布局、24 组草稿工具栏检查全部通过，已查看明暗主题 150% 截图。完整专项纳入新增矩阵后将运行上限由两分钟调为四分钟，保留软件渲染余量。隔离 Linux Electron 使用生产组件与合成数据，实际进程核对共同 4GiB/512MiB cgroup，退出后清理临时档案；不代替 Windows/macOS 物理环境验收。
+
 `settings-section-visual.cjs` 在三语和 640/960/1280px 下检查四组导航、分区跳转、手动滚动后的唯一当前标记、焦点保持与横向导航可见性；分组间隙与页面底部均须标记仍可见的内容，输出 `settings-section-report.json`。结果库专项核验来源计数不被截断、完整名单保留，以及展开比较的返回动作与标题对齐；两类 Node 回归为 `settings-sections.test.tsx` 和 `library-source-summary.test.tsx`。
 
 新增控件或可见属性必须同时更新 `test/ui/shell-fixture.tsx`，使用生产组件及完整数据，不省略新增入口后再声称外壳布局通过。草稿与偏好同步组件已经纳入该夹具；`test:shell-ui` 包含 24 组草稿工具栏检查，覆盖三语、明暗主题、两密度、单页与分页、附件及失败计数、开合及 150% 外壳缩放，另检验键盘焦点、禁用动作、行内按钮及多副本弹窗的实际滚动、末项恢复确认焦点与可见性。仅运行本专项时，在 `desktop/` 使用 `node scripts/test-safe.mjs command env -u WAYLAND_DISPLAY xvfb-run -a node scripts/shell-visual.mjs --toolbar-only`；缩放检查维持应用支持的至少 960px CSS 视口。

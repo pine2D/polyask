@@ -22,7 +22,8 @@ await new Promise((resolve, reject) => {
 });
 await writeFile(join(output, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; img-src data:; connect-src \'none\'"><title>PolyAsk synthetic shell fixture</title></head><body><div id="root"></div><script src="bundle.js"></script></body></html>');
 const child = spawn(require('electron'), [join(root, 'scripts/shell-visual-runtime.cjs'), output, ...process.argv.slice(2)], { stdio: 'inherit' });
-const timer = setTimeout(() => child.kill('SIGTERM'), 120_000);
+// The full suite includes 180 content-boundary layouts; keep headroom for software rendering.
+const timer = setTimeout(() => child.kill('SIGTERM'), 240_000);
 const status = await new Promise(resolve => child.on('exit', resolve));
 clearTimeout(timer);
 console.log(`Shell UI report and screenshots: ${output}`);

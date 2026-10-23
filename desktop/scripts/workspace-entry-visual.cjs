@@ -2,10 +2,28 @@ const assert = require('node:assert/strict');
 const { join } = require('node:path');
 const { writeFileSync } = require('node:fs');
 const { nativeTheme } = require('electron');
+const assertToolbar = require('../test/ui/command-bar-layout.cjs');
 
 // Real Chromium accessibility names, responsive entry points, and reserved footer geometry.
 module.exports = async ({ win, output, run, wait, paint, shot }) => {
   const reports = [];
+  const contentLayouts = [];
+  for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const density of ['compact', 'comfortable']) {
+    nativeTheme.themeSource = density === 'compact' ? 'light' : 'dark';
+    for (const singlePage of [true, false]) {
+      win.webContents.setZoomFactor(1);
+      await win.loadFile(join(output, 'index.html'), { query: { locale, density, ...(singlePage ? { singlePage: '1' } : {}) } });
+      await wait('!!document.querySelector(".command-bar")');
+      for (const width of [960, 1120, 1280, 1600, 1920]) for (const zoom of [1, 1.5, 2]) {
+        win.setContentSize(width, 900); win.webContents.setZoomFactor(zoom); await paint();
+        const label = `content-${locale}-${density}-${singlePage ? 'one' : 'many'}-${width}-${zoom}`;
+        await assertToolbar({ win, run, output, label });
+        contentLayouts.push(label);
+        if (locale === 'zh-CN' && singlePage && width === 1920 && zoom === 1.5) await shot(label);
+      }
+    }
+  }
+  win.webContents.setZoomFactor(1);
   const click = async selector => {
     const point = await run(`(() => { const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
     win.webContents.sendInputEvent({ type: 'mouseDown', ...point, button: 'left', clickCount: 1 });
@@ -89,6 +107,6 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       await wait('!!document.querySelector(".command-bar")'); await paint();
       assert.equal(await run('!!document.querySelector(".feedback-next-step")'), false, `${state}: no unavailable guidance`);
     }
-    writeFileSync(join(output, 'workspace-entry-report.json'), JSON.stringify({ reports, namedLibraryEntry: true, unavailableGuidanceHidden: true }, null, 2));
+    writeFileSync(join(output, 'workspace-entry-report.json'), JSON.stringify({ reports, contentLayouts, namedLibraryEntry: true, unavailableGuidanceHidden: true }, null, 2));
   } finally { win.webContents.debugger.detach(); }
 };
