@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.25.0] - 2026-10-23
+
+验收范围：Linux/WSL 下通过 2,898 项应用与运行时测试、类型检查、Linux 打包及包内九站视图检查；原生专项覆盖 12 组三语设置界面、8 项 PDF 导出、两轮九站视图生命周期，以及代理切换与认证。
+
+验收限制：本轮使用隔离环境和合成数据，未核验 Windows/macOS 物理快捷键、真实系统通知投递、系统睡眠唤醒、物理读屏、五种发行包的实际安装，以及真实站点发送和 Drive 双设备同步。
+
 ### 新增
 
 - 设置中可配置全局提问快捷键，从其他应用唤起已打开的 PolyAsk 提问框；默认关闭、仅本机保存，组合键注册失败时保留原有可用绑定。
@@ -1500,7 +1506,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.24.3...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.25.0...HEAD
+[1.25.0]: https://github.com/pine2D/polyask/compare/v1.24.3...v1.25.0
 [1.24.3]: https://github.com/pine2D/polyask/compare/v1.24.2...v1.24.3
 [1.24.2]: https://github.com/pine2D/polyask/compare/v1.24.1...v1.24.2
 [1.24.1]: https://github.com/pine2D/polyask/compare/v1.24.0...v1.24.1
