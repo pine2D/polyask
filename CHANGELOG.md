@@ -8,12 +8,22 @@
 
 ## [未发布]
 
+## [1.24.3] - 2026-10-23
+
+验收范围：Linux/WSL 下通过 2,823 项应用与运行时测试、类型检查，以及三语、明暗主题、两种密度和缩放条件下的原生界面检查；覆盖窄窗发送／取消、设置导航、比较阅读、人工对照和取消返回。
+
+验收限制：本轮使用合成数据，未核验真实站点发送、Drive 双设备同步、Windows/macOS 实机、物理读屏及五种发行包的实际安装。
+
 ### 改进
 
 - 窄窗口下保留“发送”和“结果库”文字，优先收纳次要控件；最紧凑时用单键切换总览与聚焦，提问框仍保留至少 320px。
 - 比较页在同一工作区切换回答与人工对照，保留回答阅读位置和笔记；双栏可容纳时去掉额外的外层滚动，短窗仍可滚动查看完整内容。
 - 站点列表常驻显示已开页数、参与发送站数，并说明取消勾选会保留页面；关闭页面按钮与勾选区域拉开间距。
 - 设置整理为“显示与操作、同步与备份、连接与应用、数据管理”四组，默认先显示日常偏好，保留快捷定位和数据操作确认。
+
+### 安全
+
+- 将 Mermaid 的 DOMPurify 传递依赖从 3.4.16 升级至 3.4.17，纳入上游[模板净化](https://github.com/advisories/GHSA-cg2g-xh64-v4q7)、[DOM 就地处理](https://github.com/advisories/GHSA-mrv2-3pqr-j5jr)和 [SVG 净化](https://github.com/advisories/GHSA-c6gr-qvv4-5v3f)边界修复。
 
 ## [1.24.2] - 2026-10-23
 
@@ -1476,7 +1486,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.24.2...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.24.3...HEAD
+[1.24.3]: https://github.com/pine2D/polyask/compare/v1.24.2...v1.24.3
 [1.24.2]: https://github.com/pine2D/polyask/compare/v1.24.1...v1.24.2
 [1.24.1]: https://github.com/pine2D/polyask/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/pine2D/polyask/compare/v1.23.1...v1.24.0
