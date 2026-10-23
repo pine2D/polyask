@@ -10,6 +10,8 @@ import { mountDom } from './ui/dom-harness';
 import { setShellApi } from '../src/renderer/shell-api';
 import { BackupDependencies } from '../src/renderer/backup-dependencies';
 import { backupDependencyPlan, visibleBackupSelection } from '../src/renderer/backup-selection';
+import { executeCommand } from '../src/renderer/command-dispatcher';
+import { createNotificationNavigation } from '../src/renderer/use-notification-navigation';
 
 export const previewItem = (key: string, kind: BackupPreviewItem['kind'], status: BackupPreviewItem['status'], extra: Partial<BackupPreviewItem> = {}): BackupPreviewItem =>
   ({ key, id: key.slice(key.indexOf(':') + 1), kind, status, title: key, local: status === 'new' ? null : { task: 'Local' }, backup: { task: 'Backup' }, ...extra });
@@ -121,9 +123,11 @@ test('backup conflict bulk choices stay in the visible type and never restore de
     previewItem('archive:a', 'archive', 'conflict', { title: 'Archive A' }), previewItem('archive:b', 'archive', 'conflict', { title: 'Archive B' }),
     previewItem('archive:deleted', 'archive', 'deleted', { title: 'Deleted archive' }), previewItem('decision:d', 'decision', 'conflict', { title: 'Decision D' })
   ] };
-  let applied: string[] | null = null;
+  let applied: string[] | null = null, closed = 0, navigated = 0;
   setShellApi({ previewBackupSelection: countFixture(preview), applyBackup: async (_token: string, keys: string[]) => { applied = keys; return { imported: keys.length, skipped: 4 - keys.length }; } } as any);
-  const h = await mountDom(<BackupWorkspace preview={preview} copy={getCopy('en')} locale="en" onClose={() => {}} onApplied={() => {}} />);
+  const h = await mountDom(<BackupWorkspace preview={preview} copy={getCopy('en')} locale="en" onClose={() => { closed++; }} onApplied={() => {}} />);
+  const navigation = createNotificationNavigation({ copy: getCopy('en'), blocked: () => false, canOpenSite: () => true,
+    onOpenQuestion: () => { navigated++; }, onOpenSite: () => { navigated++; }, onAnnounce: () => {} });
   const button = (label: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === label);
   try {
     const type = h.document.querySelector<HTMLSelectElement>('select[aria-label="Item type"]');
@@ -138,9 +142,15 @@ test('backup conflict bulk choices stay in the visible type and never restore de
     assert.ok(h.document.querySelector('.backup-summary')?.textContent?.includes('Archive A'));
     assert.ok(!h.document.querySelector('.backup-summary')?.textContent?.includes('Deleted archive'));
     assert.equal(applied, null, 'summary is a separate confirmation step');
+    await act(async () => {
+      executeCommand('focus-prompt', { 'focus-prompt': () => { navigated++; } });
+      navigation.accept({ site: 'claude', runId: 'run-a', questionId: 'question-a' });
+    });
+    assert.equal(closed, 0, 'external navigation cannot discard the pending import confirmation');
+    assert.equal(navigated, 0);
     await h.click(button('Confirm import')!);
     assert.deepEqual(applied, ['archive:a', 'archive:b']);
-  } finally { await h.close(); setShellApi(null); }
+  } finally { navigation.dispose(); await h.close(); setShellApi(null); }
 });
 
 test('backup dependency names can be located and safe dependencies added without restoring tombstones', async () => {

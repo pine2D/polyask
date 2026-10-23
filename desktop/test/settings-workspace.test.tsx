@@ -234,7 +234,8 @@ test("settings expose an explicit local-only completion notification preference"
   assert.match(html, /回答状态通知/);
   assert.match(html, /checked=""/);
   assert.match(html, /仅保存在这台设备/);
-  assert.match(html, /<label class="settings-card preference-card"/);
+  assert.match(html.match(/<input[^>]*name="completion-notifications"[^>]*>/)?.[0] ?? '', /aria-labelledby="completion-notifications-title"/);
+  assert.match(html, /aria-describedby="notification-test-status notification-test-hint"[^>]*>测试通知</);
   assert.match(html, /应用更新/);
   assert.match(html, />查看最新版本</);
 });

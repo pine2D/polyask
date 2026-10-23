@@ -33,6 +33,7 @@ import type { LocalDataStats } from '../../src/shared/local-data';
 import { DEFAULT_PREFERENCE_VALUES, type PreferenceSnapshot } from '../../src/shared/preferences';
 import { SITES } from '../../src/main/sites';
 import { customProxy, proxyShellStubs, proxyStateFixture } from './proxy-state-fixture';
+import { desktopToolsShellStubs } from './desktop-tools-fixture';
 import { requestSurfaceChange } from '../../src/renderer/surface-transition';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
@@ -92,6 +93,7 @@ let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders
   drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
   cancelBackup: async () => {},
+  ...desktopToolsShellStubs(),
   ...proxyShellStubs(query.get('surface') === 'proxy-edit' ? proxyStateFixture({ formValue: customProxy, applied: customProxy }) : undefined),
   getLocalDataStats: async () => dataStats,
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),

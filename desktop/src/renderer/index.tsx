@@ -1,4 +1,7 @@
 import { useSyncedPreferences } from './use-synced-preferences';
+import { useNotificationNavigation } from './use-notification-navigation';
+import { useCommandDiscovery } from './use-command-discovery';
+import { siteStatusRunId } from '../shared/protocol';
 import { PromptDraftRecovery } from './prompt-draft-recovery';
 import { useDraftConfirmation } from './use-draft-confirmation';
 import { confirmAndStartNewSession } from './new-session-action';
@@ -418,7 +421,16 @@ function App(): React.JSX.Element {
       .catch(() => setAnnouncement(copy.updatePageFailed));
   };
 
-  commandActions.current = draftConfirmation.blocking || pendingNewSession || questionHistoryBlocking || settingsBlocking || libraryBlocking || retryReview.open || pageClose.blocking || participation.pending ? {} : {
+  const navigationBlocked = !!(draftConfirmation.blocking || pendingNewSession || questionHistoryBlocking || settingsBlocking || libraryBlocking || retryReview.open || pageClose.blocking || participation.pending);
+  useNotificationNavigation({ copy, blocked: () => bootstrapPhase !== 'ready' || navigationBlocked || runState !== 'idle' || auxiliaryBusy,
+    canOpenSite: target => selected.has(target.site) && siteStatusRunId(statuses[target.site]) === target.runId,
+    onOpenSite: site => { closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false); focusSite(site); },
+    onAnnounce: setAnnouncement, onOpenQuestion: target => {
+      changeSurface('sites'); changePanelState(null); imageSelection.setOpen(false); changeDrawerOpen(false);
+      setQuestionReadRequest(previous => ({ request: (previous?.request ?? 0) + 1, questionId: target.questionId, answerId: target.answerId }));
+      setQuestionHistoryOpen(true);
+    } });
+  commandActions.current = navigationBlocked ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
     "open-sites": () => {
       openPanel("sites", "keyboard");
@@ -472,24 +484,7 @@ function App(): React.JSX.Element {
     "check-updates": checkForUpdates
   };
   const availableCommands = COMMANDS.filter((command) => !!commandActions.current[command.id]);
-  // 站内后退/前进的可用性来自主进程的真实导航历史。聚焦站点变了、或该站页面阶段变了
-  // （= 刚导航过），都要重算——否则命令面板里这两条的可用状态会停在上一次。
-  useEffect(() => {
-    let cancelled = false;
-    void shell.siteHistoryState()
-      .then((state) => { if (!cancelled) setSiteHistory(state); })
-      .catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [layout.focused, statuses, surface]);
-  // 菜单会随显示偏好重建，每次进速查都重新读一次真实菜单——速查因此不可能与菜单漂开。
-  useEffect(() => {
-    if (surface !== "commands") return;
-    let cancelled = false;
-    void shell.menuShortcuts()
-      .then((items) => { if (!cancelled) setMenuShortcuts(items); })
-      .catch(() => undefined);
-    return () => { cancelled = true; };
-  }, [surface]);
+  useCommandDiscovery({ focused: layout.focused, statuses, surface, setSiteHistory, setMenuShortcuts });
 
   if (bootstrapPhase !== "ready") {
     return (

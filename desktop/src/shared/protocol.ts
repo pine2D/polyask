@@ -204,12 +204,18 @@ export interface SiteGenerationStatus {
 }
 
 export interface SiteStatus extends SelectionMetadata {
+  /** Auxiliary send identity; never contributes to broadcast submission counters. */
+  readonly operationRunId?: string;
   readonly submission?: SubmissionStatus;
   readonly generation?: SiteGenerationStatus;
   readonly site: SiteKey;
   readonly phase: SitePhase;
   readonly code?: string;
   readonly unread?: boolean;
+}
+
+export function siteStatusRunId(status: SiteStatus | undefined): string | undefined {
+  return status?.operationRunId ?? status?.submission?.runId ?? status?.generation?.runId;
 }
 
 // 某个站点视图此刻能否后退/前进。群发或生成进行中一律 false——动历史会把正在写的回答一起丢掉。

@@ -210,6 +210,10 @@
   .local-confirm-tools button { border-color: ButtonText; }
 }
 .settings-confirmations > h2 { margin-bottom: 12px; }
+.settings-shortcut-key { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; font-size: var(--font-control); }
+.settings-shortcut-key select { min-height: max(34px, var(--control-height)); padding: 6px 10px; border: 1px solid var(--settings-control-border); border-radius: var(--radius-control); background: var(--settings-control-fill); color: var(--text); font: inherit; }
+.settings-global-shortcut select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.settings-global-shortcut fieldset:disabled label { color: var(--muted); }
 .settings-confirmations .preference-card + .preference-card { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
 
 /* 网络代理卡：自定义字段两列栅格，窄窗折成一列；按钮行复用 .settings-actions，提示复用 .settings-control-hint。 */

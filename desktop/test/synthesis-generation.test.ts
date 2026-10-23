@@ -5,7 +5,33 @@ import { BroadcastCoordinator } from "../src/main/broadcast";
 import type { ViewManager } from "../src/main/view-manager";
 import { buildSynthesisPrompt } from '../src/shared/synthesis';
 import { archiveFixture } from './fixtures';
+import { CompletionNotifier } from '../src/main/completion-notifier';
 const { replayHtml } = require('../scripts/lib/dom-replay');
+
+test('failed assisted sends notify once for their own run without changing broadcast counters', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const notices: string[] = [], statuses: any[] = [];
+  let runId = '';
+  const notifier = new CompletionNotifier({ copy: { title: 'PolyAsk', complete: site => site, failed: site => site },
+    focused: () => false, show: notice => notices.push(notice.runId) });
+  notifier.setEnabled(true);
+  const manager = {
+    beginGenerationRun: (id: string) => { runId = id; },
+    markStatus: (status: any) => { statuses.push(status); notifier.accept(status, 'Kimi'); },
+    sendCommand: async () => ({ ok: false, code: 'inject_failed' }),
+    confirmSubmitted: async () => null,
+    watchGeneration: () => assert.fail('failed sends cannot start generation monitoring')
+  } as unknown as ViewManager;
+  try {
+    const [result] = await sendTrackedSynthesis({ sites: ['kimi'], text: 'Synthetic', tier: null, images: [] }, manager, new BroadcastCoordinator(), 44_000);
+    assert.equal(result.ok, false);
+    t.mock.timers.tick(1_000);
+    assert.deepEqual(notices, [runId]);
+    notifier.accept(statuses.at(-1), 'Kimi'); t.mock.timers.tick(1_000);
+    assert.equal(notices.length, 1);
+    assert.equal(statuses.every(status => status.submission === undefined), true);
+  } finally { notifier.dispose(); }
+});
 
 test("assisted sends start completion monitoring without adding broadcast submission metadata", async () => {
   const events: any[] = [];

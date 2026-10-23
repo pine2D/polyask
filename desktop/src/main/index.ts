@@ -12,7 +12,7 @@ import {
   BrowserWindow,
   dialog,
   Menu,
-  Notification,
+  globalShortcut,
   screen,
   shell as electronShell,
   webContents,
@@ -23,7 +23,7 @@ import {
   commandAliasForInput,
   type CommandId
 } from "../shared/commands";
-import { formatCopy, getCopy } from "../shared/copy";
+import { getCopy } from "../shared/copy";
 import { parseDesktopUiState } from "../shared/desktop-ui-state";
 import {
   DEFAULT_DISPLAY_PREFERENCES,
@@ -32,7 +32,10 @@ import {
 import type { RuntimeInfo } from "../shared/runtime";
 import { BroadcastCoordinator } from "./broadcast";
 import { CollectionService } from "./collection-service";
-import { CompletionNotifier } from "./completion-notifier";
+import { createCompletionNotifications } from './completion-notifications';
+import { GlobalPromptShortcutRuntime } from './global-prompt-shortcut';
+import { GlobalPromptShortcutRepository } from './global-prompt-shortcut-repository';
+import type { QuestionHistoryService } from './question-history-service';
 import { DesktopDatabase } from "./database";
 import {
   applyPortableImportIdentity,
@@ -56,8 +59,6 @@ import { UiStateStore } from "./ui-state-store";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
 
-// TODO(size-ratchet)：548 行，目标 ≤400——抽出 createServices（数据库、archives/history/promptLibrary/synthesis/sync/dataAdmin 装配）
-// 与 createMainWindow（BrowserWindow、菜单、runtime gates），入口只留 app 生命周期。
 if (squirrelStartup) app.quit();
 // ready 之前：每个 session 一实例化就会出网（拼写词典），首次 setProxy 之前一律走阻断地址。
 blockProxyUntilApplied(app.commandLine);
@@ -141,6 +142,7 @@ let viewManager: ViewManager | null = null;
 let desktopDatabase: DesktopDatabase | null = null;
 let preferenceRuntime: PreferenceRuntime | null = null;
 let proxyServices: ProxyServices | null = null;
+let promptShortcut: GlobalPromptShortcutRuntime | null = null;
 
 if (app.isPackaged) app.commandLine.removeSwitch("remote-debugging-port");
 
@@ -225,17 +227,10 @@ async function createWindow(): Promise<void> {
   }
   installNativeShell(window);
   mainWindow = window;
-  const completionNotifier = new CompletionNotifier({
-    copy: {
-      title: copy.appTitle,
-      complete: (site) => formatCopy(copy.completionNotificationComplete, { site }),
-      failed: (site) => formatCopy(copy.completionNotificationFailed, { site })
-    },
-    focused: () => window.isFocused(),
-    show: (notification) => {
-      if (Notification.isSupported()) new Notification({ ...notification, silent: true }).show();
-    }
-  });
+  let notificationQuestions: QuestionHistoryService | null = null;
+  const completionNotifier = createCompletionNotifications({ window, copy,
+    questions: () => notificationQuestions, publish: sendToShell });
+  window.once('closed', () => completionNotifier.dispose());
   const guardShellNavigation = (event: Electron.Event, url: string) => {
     if (!isTrustedShellUrl(url, MAIN_WINDOW_WEBPACK_ENTRY)) event.preventDefault();
   };
@@ -276,6 +271,7 @@ async function createWindow(): Promise<void> {
     setNotifications: enabled => completionNotifier.setEnabled(enabled)
   });
   preferenceRuntime = preferences;
+  notificationQuestions = questions;
   collectionForWorkspace = collection;
   createMenu();
   const disposeIpc = registerShellIpc({
@@ -294,6 +290,7 @@ async function createWindow(): Promise<void> {
     synthesis,
     sync,
     dataAdmin, preferences, proxy: { ...proxy, ...createProxyTools(proxy, manager, () => workspace.getState().selectedSites) },
+    completionNotifications: completionNotifier, globalPromptShortcut: promptShortcut ?? undefined,
     shellEntry: MAIN_WINDOW_WEBPACK_ENTRY,
     applyDisplay: (value) => preferences.setDisplay(value),
     setCompletionNotifications: (enabled) => { preferences.set('completionNotifications', enabled); }
@@ -377,6 +374,13 @@ else {
       desktopDatabase!.adoptImportedProfile(deviceId);
     });
     proxyServices = createProxyServices(desktopDatabase);
+    promptShortcut = new GlobalPromptShortcutRuntime({ shortcuts: globalShortcut,
+      repository: new GlobalPromptShortcutRepository(desktopDatabase.meta), activate: () => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show(); mainWindow.focus(); dispatchAppCommand('focus-prompt');
+      } });
+    promptShortcut.restore();
     createMenu();
     await createWindow();
   }, failStartup));
@@ -384,6 +388,7 @@ else {
     if (process.platform !== "darwin") app.quit();
   });
   app.on("will-quit", () => {
+    promptShortcut?.dispose();
     desktopDatabase?.close();
     desktopDatabase = null;
   });

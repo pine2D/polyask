@@ -504,6 +504,32 @@ Mermaid 仅在需要预览时加载本地依赖，串行绘制、最多缓存 12
 - Chromium 的网络质量估计在启动时会对首个请求的主机名做一次只查 DNS 的解析（不建连），有没有启动阻断都一样；生产中这是一次系统 DNS 查询，SOCKS5 下也可能经本机 DNS 暴露该主机名。预期它只命中本机缓存或 hosts，有待真机抓包确认（`docs/verify.md` 真机清单）。
 - macOS 未经真机验证；启动阻断开关能被各模式覆盖这一点也只在 Linux 上实测过。
 
+## 14. 桌面通知、全局快捷键与报告导出
+
+### 通知
+
+`completion-notifier.ts` 按 runId 在 800ms 内聚合同轮的完成及需处理状态；没有明确完成证据时不报完成。辅助综合/追问通过 `SiteStatus.operationRunId` 携带身份，不新增 submission 或改变群发计数；页面失败保留身份，新群发清除旧身份。主窗口聚焦时不显示完成通知。`completion-notifications.ts` 负责通知目标与历史生命周期，`notification-delivery.ts` 负责原生事件与清理。
+
+设置页保留原有通知开关的同步规则，新增手动测试及运行态反馈，不新增持久化键。`Notification.isSupported()` 只判断环境能力；调用 `show()` 后为 requested，收到原生 show 才为 shown，5 秒无确认则 unknown；失败为 failed，不回传操作系统原始错误。测试不改变开关。macOS 未签名包可能无法投递，不能以 API 返回成功或 Linux 桩测试声称 macOS 可用。
+
+点击通知先恢复已有窗口，再校验记录、回答身份和 repository lifecycle；有效已存提问只打开历史阅读，不恢复远程会话。无已存目标时仅定位相同 runId 的仍打开站点。renderer 经过群发/确认/操作锁及既有未保存编辑导航保护；不自动重发、重载或替换提问草稿。禁用、重置、关窗会使旧通知及计时器失效。
+
+确认框等待用户选择时也禁止新的通知/全局命令导航：通用确认和本机数据确认由 `external-navigation-lock.ts` 持有保护，备份导入确认由原导航 guard 检查。阻挡新请求不作废原先待确认的导航；用户明确批准后，原操作仍可完成。
+
+### 全局提问快捷键
+
+`GlobalPromptShortcutRuntime` 在 app ready 后恢复，app 退出时只注销自身持有的绑定；macOS 关窗后保留注册但不新建窗口，Dock 重建后复用同一 runtime。触发只恢复、显示并聚焦已有主窗口，再走既有 `focus-prompt` 命令保护。默认关闭，不读剪贴板。
+
+`meta.globalPromptShortcut` 由 `global-prompt-shortcut-repository.ts` 单独存储，不写 state/outbox，不进入 Drive 投影或业务备份。`database.resetLocalData()` 的 meta 清理会移除它；重置收尾重新读取实际仓储，重置失败且未清库时保留原绑定。新增冻结样本 `desktop/test/fixtures/global-prompt-shortcut-local-meta-v1.json` 与存储回归覆盖这四处边界，不升级同步 schema。
+
+设置使用修饰键与主键选择器，避免录制按键先被原生菜单消费。更换时先注册候选、保存成功才释放旧绑定；冲突、保存失败或环境不支持均显示有限状态并保留原有效绑定。桌面环境保留的组合键及 Wayland 支持仍需真机核验。
+
+### HTML/PDF 报告
+
+结果库和决策卡的既有“更多”菜单调用 `polyask:report-export`，请求仅含 kind、id、format 和受限 locale，入口通过 trustedShell。主进程重新读取记录并构造统一模板，不接受任意 HTML 或路径；保存位置只来自原生保存对话框。报告读取已存正文、状态、备注、综合及人工决策依据；明确缺失/未验证内容，不含原图，公式/图表按文字或代码保留。来源缺失的独立决策卡仍可导出标题快照与原摘录。
+
+模板禁用 Markdown 原始 HTML，不嵌入远程图片/脚本，链接限制为不带凭据的 HTTP(S)。最多接受九份回答，输入、HTML 和 PDF 各限 64 MiB，超限明确拒绝。PDF 使用独立非持久 session、无 Node/JavaScript/preload 的隐藏窗口，仅允许本次模板加载，拒绝网络、权限、新窗和下载；30 秒超时、关闭或取消统一释放窗口，并等 WebContents 实际销毁后释放处理器（销毁等待上限 2 秒）。每次 await 后检查窗口、重置 epoch 与记录版本；临时文件写完后最后一次检查和 rename 同步相邻，变更、删除或重置后不得落下陈旧报告。报告状态使用专有有限码及三语文案，不进入站点发送状态通道。
+
 ## 实验：最小化空闲节流（默认关闭）
 
 仅启动命令显式设置 `POLYASK_IDLE_THROTTLING_EXPERIMENT=1` 时启用，不增加持久化键或用户设置。`runtime-gates.ts` 装配 `idle-throttling.ts`，纯策略在 `idle-throttling-policy.ts`。每 5 秒检查一次，仅在原生 `isMinimized()` 为真、所有已挂载站点正尺寸且未加载、外壳阶段均为 ready/complete、逐站生产 generation 回包均为 idle/complete/complete_observed 时，才对所有站点允许 backgroundThrottling。每个探针限 2.5 秒；提交未确认、未知、失败、取消或任一站生成中均不准入。异步返回后重验窗口、epoch、成员和阶段。

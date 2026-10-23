@@ -82,7 +82,8 @@ test("the shortcut reference reads the real application menu", () => {
   assert.match(main, /Menu\.getApplicationMenu\(\)/);
   assert.match(ipc, /polyask:menu-shortcuts/);
   assert.match(preload, /polyask:menu-shortcuts/);
-  assert.match(renderer, /menuShortcuts\(\)/);
+  assert.match(renderer, /useCommandDiscovery\(/);
+  assert.match(readSource('src/renderer/use-command-discovery.ts'), /shell\.menuShortcuts\(\)/);
   assert.match(palette, /menuShortcutItems/);
 });
 
@@ -518,7 +519,8 @@ test("completion notifications are boolean-only and update checks open the offic
   assert.match(ipc, /polyask:set-completion-notifications/);
   assert.match(ipc, /typeof value !== "boolean"/);
   assert.match(preload, /setCompletionNotifications/);
-  assert.match(main, /CompletionNotifier/);
+  assert.match(main, /createCompletionNotifications/);
+  assert.match(readSource('src/main/completion-notifications.ts'), /new CompletionNotifier/);
   assert.match(renderer, /github\.com\/pine2D\/polyask\/releases\/latest/);
   assert.match(renderer, /nextSiteForStatus/);
   assert.doesNotMatch(main, /autoUpdater/);
@@ -645,8 +647,9 @@ test("local data management crosses the trusted bridge through its own IPC modul
   }
   assert.equal((ipc.match(/ipcMain\.handle\(/g) ?? []).length, (ipc.match(/options\.trusted\(event\)/g) ?? []).length);
   assert.match(ipc, /for \(const channel of CHANNELS\) ipcMain\.removeHandler\(channel\)/);
-  assert.match(shellIpc, /registerDataAdminIpc\(/);
-  assert.match(shellIpc, /disposeDataAdminIpc\(\);/);
+  assert.match(shellIpc, /registerDesktopToolsIpc\(/);
+  assert.match(shellIpc, /disposeDesktopTools\(\);/);
+  assert.match(readSource('src/main/desktop-tools-ipc.ts'), /registerDataAdminIpc\(/);
   assert.match(preload, /clearHistory\(\): Promise<number>/);
   assert.match(preload, /resetLocalData\(\): Promise<SyncStatus>/);
 });

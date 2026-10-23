@@ -44,7 +44,9 @@ import { acceptBroadcastResult } from "./broadcast-result";
 import { ArchiveService } from "./archive-service";
 import { CollectionService } from "./collection-service";
 import type { DataAdminService } from "./data-admin-service";
-import { registerDataAdminIpc } from "./data-admin-ipc";
+import { registerDesktopToolsIpc } from './desktop-tools-ipc';
+import type { CompletionNotifications } from './completion-notifications';
+import type { GlobalPromptShortcutRuntime } from './global-prompt-shortcut';
 import { registerProxyIpc, type ProxyIpcServices } from "./proxy-ipc";
 import { HistoryService } from "./history-service";
 import { PromptLibraryService } from "./prompt-library-service";
@@ -91,6 +93,8 @@ export interface ShellIpcOptions {
   readonly shellEntry: string;
   readonly applyDisplay: (value: DisplayPreferences) => DisplayPreferences;
   readonly setCompletionNotifications: (enabled: boolean) => void;
+  readonly completionNotifications?: CompletionNotifications;
+  readonly globalPromptShortcut?: GlobalPromptShortcutRuntime;
 }
 
 const HANDLERS = [
@@ -175,13 +179,8 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
   const disposeSyncIpc = registerSyncIpc({ sync, runtime: options.runtime, trusted: trustedShell });
   const disposeSiteHealthIpc = registerSiteHealthIpc({ manager, trusted: trustedShell });
-  const disposeDataAdminIpc = registerDataAdminIpc({
-    admin: options.dataAdmin,
-    trusted: trustedShell,
-    afterHistoryChange: () => { options.questions.publishRunProgress(); publishPromptLibrary(); },
-    afterDraftsChange: () => { options.preferences?.drafts.invalidate(); publishDrafts(); },
-    afterReset: () => { options.questions.publishRunProgress(); options.preferences?.reset(); manager.siteZoom.clear(); publishWorkspace(); publishPromptLibrary(); publishDrafts(); }
-  });
+  const disposeDesktopTools = registerDesktopToolsIpc(options, { trusted: trustedShell,
+    gate: operationGate, publishWorkspace, publishPromptLibrary, publishDrafts });
   const disposeProxyIpc = options.proxy ? registerProxyIpc({ ...options.proxy, trusted: trustedShell, gate: operationGate, dataAdmin: options.dataAdmin,
     send: (channel, payload) => { if (!window.isDestroyed()) window.webContents.send(channel, payload); } }) : () => {};
 
@@ -389,7 +388,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     disposeDecisionIpc();
     disposeSyncIpc();
     disposeSiteHealthIpc();
-    disposeDataAdminIpc();
+    disposeDesktopTools();
     disposeProxyIpc();
     for (const channel of HANDLERS) ipcMain.removeHandler(channel);
     for (const channel of LISTENERS) ipcMain.removeAllListeners(channel);

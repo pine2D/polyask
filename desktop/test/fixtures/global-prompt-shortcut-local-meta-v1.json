@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "default": { "globalPromptShortcut": null },
+  "enabled": { "globalPromptShortcut": "Control+Alt+Q" },
+  "disabled": { "globalPromptShortcut": null },
+  "resetRemoves": ["globalPromptShortcut"],
+  "excludedFrom": ["stateFragments", "preferences", "businessBackup"]
+}

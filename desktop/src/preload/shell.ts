@@ -16,6 +16,9 @@ import { contextBridge, ipcRenderer } from "electron";
 import type { RuntimeProcessFailure } from "../shared/runtime-process";
 import type { CaptureLocateCounts } from "../shared/question-capture";
 import type { SiteFindRequest, SiteFindState } from '../shared/site-find';
+import { NOTIFICATION_CHANNELS, type NotificationApi, type NotificationStatus, type NotificationTarget } from '../shared/notification';
+import type { ReportExportRequest, ReportExportResult } from '../shared/report-export';
+import type { GlobalPromptShortcutState } from '../shared/global-prompt-shortcut';
 
 import { ipcErrorCode } from "../shared/ipc-error";
 
@@ -54,7 +57,10 @@ import type {
 } from "../shared/synthesis";
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 
-export interface PolyAskDesktopApi {
+export interface PolyAskDesktopApi extends NotificationApi {
+  globalPromptShortcutState(): Promise<GlobalPromptShortcutState>;
+  setGlobalPromptShortcut(accelerator: string | null): Promise<GlobalPromptShortcutState>;
+  exportReport(request: ReportExportRequest): Promise<ReportExportResult>;
   openSiteFind(): Promise<SiteFindState>;
   getSiteFind(): Promise<SiteFindState>;
   findSites(request: SiteFindRequest): Promise<SiteFindState>;
@@ -195,6 +201,13 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  globalPromptShortcutState: () => invoke('polyask:global-prompt-shortcut-state'),
+  setGlobalPromptShortcut: (accelerator: string | null) => invoke('polyask:global-prompt-shortcut-set', accelerator),
+  exportReport: (request: ReportExportRequest) => invoke('polyask:report-export', request),
+  getNotificationStatus: () => invoke(NOTIFICATION_CHANNELS.get),
+  testNotification: () => invoke(NOTIFICATION_CHANNELS.test),
+  onNotificationStatus: (listener: (status: NotificationStatus) => void) => subscribe(NOTIFICATION_CHANNELS.status, listener),
+  onNotificationOpen: (listener: (target: NotificationTarget) => void) => subscribe(NOTIFICATION_CHANNELS.open, listener),
   openSiteFind: () => invoke('polyask:find-open'),
   getSiteFind: () => invoke('polyask:find-state'),
   findSites: (request: SiteFindRequest) => invoke('polyask:find-query', request),

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
+import { holdExternalNavigation } from './external-navigation-lock';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { focusableControls } from './focusable-controls';
 import { currentPlatform } from './platform';
@@ -17,6 +18,7 @@ export function LocalDataConfirm({ copy, state, busy, onCancel, onConfirm, onRet
   copy: DesktopCopy; state: LocalDataConfirmation; busy: boolean;
   onCancel: () => void; onConfirm: () => void; onRetry: () => void; onBackup?: () => void;
 }): React.JSX.Element {
+  useLayoutEffect(holdExternalNavigation, []);
   const panel = useRef<HTMLDivElement>(null), cancel = useRef<HTMLButtonElement>(null);
   const latest = useRef({ state, onCancel }); latest.current = { state, onCancel };
   useEffect(() => {

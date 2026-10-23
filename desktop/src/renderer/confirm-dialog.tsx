@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { holdExternalNavigation } from './external-navigation-lock';
 
 import type { DesktopCopy } from "../shared/copy";
 import { CloseIcon } from "./icons";
@@ -24,6 +25,7 @@ interface ConfirmDialogProps {
 // 默认焦点落在**取消**上（沿用原生弹框 defaultId=1 的语义）：这类动作会离开当前对话，
 // 误触的代价不对称，回车不该直接确认。
 export function ConfirmDialog(props: ConfirmDialogProps): React.JSX.Element {
+  useLayoutEffect(holdExternalNavigation, []);
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const onCancelRef = useRef(props.onCancel);

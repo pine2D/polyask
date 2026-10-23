@@ -9,7 +9,7 @@ const radio = (doc: Document, name: string, value: string) => doc.querySelector<
 test('settings expose two independent display groups with only existing legal values', async () => {
   const h = await mountSettings({ display: { density: 'comfortable', siteScale: 1 }, onDisplayChange: async () => {} });
   try {
-    const groups = h.document.querySelectorAll('fieldset');
+    const groups = h.document.querySelectorAll('[aria-labelledby=settings-display-title] fieldset');
     assert.equal(groups.length, 2, 'display and reading must expose density and default site scale');
     assert.deepEqual([...h.document.querySelectorAll<HTMLInputElement>('input[name="settings-density"]')].map(node => node.value), ['compact', 'comfortable']);
     assert.deepEqual([...h.document.querySelectorAll<HTMLInputElement>('input[name="settings-site-scale"]')].map(node => node.value), ['0.9', '1']);
@@ -25,7 +25,7 @@ test('pending display save blocks duplicate intents and keeps accepted props vis
   const h = await mountSettings({ display: { density: 'compact', siteScale: 0.9 },
     onDisplayChange: value => { intents.push(value); return new Promise((_, reject) => { fail = reject; }); } });
   try {
-    assert.equal(h.document.querySelectorAll('fieldset').length, 2, 'display controls must exist before interaction');
+    assert.equal(h.document.querySelectorAll('[aria-labelledby=settings-display-title] fieldset').length, 2, 'display controls must exist before interaction');
     await act(async () => { radio(h.document, 'settings-density', 'comfortable').click(); radio(h.document, 'settings-site-scale', '1').click(); });
     assert.deepEqual(intents, [{ density: 'comfortable', siteScale: 0.9 }]);
     assert.equal(radio(h.document, 'settings-density', 'compact').checked, true);
@@ -33,7 +33,7 @@ test('pending display save blocks duplicate intents and keeps accepted props vis
     await act(async () => fail(Error('rejected')));
     assert.equal(radio(h.document, 'settings-density', 'compact').checked, true);
     assert.equal(radio(h.document, 'settings-site-scale', '1').disabled, false);
-    assert.equal(h.document.querySelector('.settings-display [role="alert"]') === null, false);
+    assert.equal(h.document.querySelector('[aria-labelledby=settings-display-title] [role="alert"]') === null, false);
   } finally { await h.close(); }
 });
 
@@ -42,7 +42,7 @@ test('menu pushes while saving are displayed and the next field edit keeps the l
   const save = (value: DisplayPreferences) => { intents.push(value); return new Promise<void>(resolve => { finish = resolve; }); };
   const h = await mountSettings({ display: { density: 'compact', siteScale: 0.9 }, onDisplayChange: save });
   try {
-    assert.equal(h.document.querySelectorAll('fieldset').length, 2, 'display controls must exist before interaction');
+    assert.equal(h.document.querySelectorAll('[aria-labelledby=settings-display-title] fieldset').length, 2, 'display controls must exist before interaction');
     await h.click(radio(h.document, 'settings-density', 'comfortable'));
     await h.render(settingsElement({ display: { density: 'comfortable', siteScale: 1 }, onDisplayChange: save }));
     await act(async () => finish());
@@ -56,7 +56,7 @@ test('menu pushes while saving are displayed and the next field edit keeps the l
 test('fixtures without a save callback show disabled display controls', async () => {
   const h = await mountSettings();
   try {
-    assert.equal(h.document.querySelectorAll('fieldset').length, 2, 'display controls must exist for older read-only fixtures');
-    assert.equal([...h.document.querySelectorAll<HTMLInputElement>('.settings-display input')].every(node => node.disabled), true);
+    assert.equal(h.document.querySelectorAll('[aria-labelledby=settings-display-title] fieldset').length, 2, 'display controls must exist for older read-only fixtures');
+    assert.equal([...h.document.querySelectorAll<HTMLInputElement>('[aria-labelledby=settings-display-title] input')].every(node => node.disabled), true);
   } finally { await h.close(); }
 });

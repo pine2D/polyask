@@ -1,9 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { effectiveStatus, markStatusRead, statusForResult, statusWithUnread } from "../src/main/status";
+import { beginSubmissionRun, effectiveStatus, markStatusRead, preserveSubmission, statusForResult, statusWithUnread } from "../src/main/status";
+import { siteStatusRunId, type SiteStatus } from '../src/shared/protocol';
 import { getCopy } from "../src/shared/copy";
 import { describeCollectionCode } from "../src/shared/status-copy";
+
+test('assisted run identity survives page failure and generation but is cleared by a new broadcast', () => {
+  const sending: SiteStatus = { site: 'claude', phase: 'sending', operationRunId: 'synthesis-a' };
+  const crashed = effectiveStatus(sending, { site: 'claude', phase: 'crashed', code: 'renderer_crashed' });
+  assert.equal(siteStatusRunId(crashed), 'synthesis-a'); assert.equal(crashed.submission, undefined);
+  const complete = preserveSubmission(sending, { site: 'claude', phase: 'complete' });
+  assert.equal(siteStatusRunId(complete), 'synthesis-a'); assert.equal(complete.generation?.state, 'complete');
+  assert.equal(complete.submission, undefined);
+  const statuses = new Map<SiteStatus['site'], SiteStatus>([['claude', crashed]]);
+  let published = 0;
+  beginSubmissionRun(false, statuses, () => { published++; });
+  assert.equal(siteStatusRunId(statuses.get('claude')), undefined); assert.equal(published, 1);
+});
 
 test("successful submit with an unconfirmed tier remains a visible warning", () => {
   assert.deepEqual(

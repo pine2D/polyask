@@ -4,7 +4,13 @@ const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
+if (process.argv.includes('--desktop-tools-only')) {
+  app.commandLine.appendSwitch('disable-background-networking');
+  app.commandLine.appendSwitch('host-resolver-rules', 'MAP * ~NOTFOUND');
+}
 app.whenReady().then(async () => {
+  if (process.argv.includes('--desktop-tools-only')) require('electron').session.defaultSession.webRequest
+    .onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_request, callback) => callback({ cancel: true }));
   const win = new BrowserWindow({ width: 1600, height: 1000, show: true,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   win.setMenuBarVisibility(false);
@@ -39,6 +45,10 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  if (process.argv.includes('--desktop-tools-only')) {
+    await require('./desktop-tools-visual.cjs')({ win, output, run, wait, paint, shot });
+    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+  }
   if (process.argv.includes('--settings-section-only')) {
     await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;

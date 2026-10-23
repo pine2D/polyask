@@ -9,11 +9,11 @@ export function sendTrackedSynthesis(request: BroadcastPayload, manager: ViewMan
   coordinator: BroadcastCoordinator, budget: number) {
   const runId = `synthesis-${randomUUID()}`;
   manager.beginGenerationRun(runId, request.sites, false);
-  for (const site of request.sites) manager.markStatus({ site, phase: "sending" });
+  for (const site of request.sites) manager.markStatus({ site, phase: "sending", operationRunId: runId });
   return coordinator.send(request,
     (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: runId }, signal), budget,
     result => {
-      manager.markStatus(statusForResult(result.site, result));
+      manager.markStatus({ ...statusForResult(result.site, result), operationRunId: runId });
       if (result.ok) manager.watchGeneration(runId, result.site);
     },
     { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) });

@@ -1,6 +1,6 @@
 // Isolated production-component render: no user profile or network access.
 import { createRequire } from 'node:module';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,10 +21,23 @@ await new Promise((resolve, reject) => {
   compiler.run((error, stats) => compiler.close(() => error || stats.hasErrors() ? reject(error || new Error(stats.toString({ all: false, errors: true }))) : resolve()));
 });
 await writeFile(join(output, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; img-src data:; connect-src \'none\'"><title>PolyAsk synthetic shell fixture</title></head><body><div id="root"></div><script src="bundle.js"></script></body></html>');
-const child = spawn(require('electron'), [join(root, 'scripts/shell-visual-runtime.cjs'), output, ...process.argv.slice(2)], { stdio: 'inherit' });
+const desktopTools = process.argv.includes('--desktop-tools-only');
+const env = desktopTools ? { ...process.env, ELECTRON_RUN_AS_NODE: '', WAYLAND_DISPLAY: '', WAYLAND_SOCKET: '',
+  DBUS_SESSION_BUS_ADDRESS: 'unix:path=/nonexistent-polyask-settings-bus' } : process.env;
+const child = spawn(require('electron'), [join(root, 'scripts/shell-visual-runtime.cjs'), output, ...process.argv.slice(2)], { stdio: 'inherit', env });
 // The full suite includes 180 content-boundary layouts; keep headroom for software rendering.
 const timer = setTimeout(() => child.kill('SIGTERM'), 240_000);
 const status = await new Promise(resolve => child.on('exit', resolve));
 clearTimeout(timer);
+if (desktopTools && process.platform === 'linux') {
+  let boundary;
+  try { boundary = JSON.parse(await readFile(join(output, 'process-boundary.json'), 'utf8')); }
+  catch (error) { if (status === 0 || error.code !== 'ENOENT') throw error; }
+  for (const pid of boundary?.observed ?? []) {
+    let live = false; try { process.kill(pid, 0); live = true; } catch { /* expected after Electron exit */ }
+    if (live) throw Error(`Native settings process ${pid} did not exit`);
+  }
+  if (boundary) await rm(join(output, 'profile'), { recursive: true, force: true });
+}
 console.log(`Shell UI report and screenshots: ${output}`);
 if (status !== 0) process.exitCode = 1;

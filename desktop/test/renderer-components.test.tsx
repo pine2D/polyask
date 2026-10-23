@@ -835,7 +835,8 @@ test("archive workspace keeps the detail pane mounted while the list column load
   assert.match(html, /Synthesis draft in progress/);
 });
 
-test("completion notifier fires for a background window even when the site page is currently visible", () => {
+test("completion notifier fires for a background window even when the site page is currently visible", (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   // F157: unread only tracks the page-badge (whether the site tab is showing), not
   // window focus. The most common "PolyAsk is in the background" posture is: window
   // unfocused, but still parked on some site page, so unread is false for that site.
@@ -843,13 +844,16 @@ test("completion notifier fires for a background window even when the site page 
   const notifier = new CompletionNotifier({
     copy: { title: "PolyAsk", complete: (site) => `${site} finished`, failed: (site) => `${site} failed` },
     focused: () => false,
-    show: (notification) => { shown.push(notification); }
+    show: ({ title, body }) => { shown.push({ title, body }); }
   });
   notifier.setEnabled(true);
 
-  notifier.accept({ site: "claude", phase: "complete", unread: false }, "Claude");
+  notifier.accept({ site: "claude", phase: "complete", unread: false, submission: { runId: 'run-notify', state: 'sent' },
+    generation: { runId: 'run-notify', state: 'complete' } }, "Claude");
+  t.mock.timers.tick(1_000);
 
   assert.deepEqual(shown, [{ title: "PolyAsk", body: "Claude finished" }]);
+  notifier.dispose();
 });
 
 test("image selection announces a busy message instead of silently dropping a paste mid-broadcast", () => {

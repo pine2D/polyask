@@ -102,6 +102,7 @@ export class SyncRepository {
   }
 
   localStateFragment(): StateFragment {
+    // meta.globalPromptShortcut is device-local: never project it or apply it from shared preferences.
     const deviceId = this.deviceId();
     const workspace = this.database.state.get<StoredWorkspace>("workspace") ?? {
       selectedSites: [...SITE_KEYS], tier: null, updatedAt: 0, deviceId

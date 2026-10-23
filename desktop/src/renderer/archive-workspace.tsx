@@ -9,6 +9,8 @@ import { dateTimeAttribute, formatDateTime } from "../shared/format";
 import { ArchiveDetail } from "./archive-detail";
 import { ConfirmDialog } from './confirm-dialog';
 import { LibraryMenu } from './library-menu';
+import { reportExportActions } from './use-report-export';
+import type { ReportFormat } from '../shared/report-export';
 import type { LibraryReadingFocus } from './library-reading-focus';
 import type { ExactExcerpt } from './answer-excerpt';
 import type { SynthesisSession } from './synthesis-session';
@@ -50,6 +52,7 @@ interface ArchiveWorkspaceProps {
   readonly onCapture: () => void;
   readonly onCopy: () => void;
   readonly onExport: () => void;
+  readonly onExportReport?: (format: ReportFormat) => void;
   readonly onDelete: (id: string) => void;
   readonly onSaveMetadata?: (patch: ArchivePatch) => Promise<boolean>;
   readonly onPatch: (patch: ArchivePatch) => void;
@@ -108,6 +111,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const actions = [
     { label: copy.copyArchive, run: props.onCopy },
     { label: copy.exportArchive, run: props.onExport },
+    ...(props.onExportReport ? reportExportActions(copy, props.onExportReport) : []),
     { label: copy.deleteArchive, run: () => setConfirmDelete(selected?.id ?? null), danger: true }
   ];
   const recordActions = <div className="archive-actions">

@@ -19,7 +19,8 @@ test("status navigation wraps in selected-site order", () => {
   assert.equal(nextSiteForStatus(sites, "gemini", statuses, "failed"), "gemini");
 });
 
-test("completion notifications are opt-in, unfocused, deduplicated and contain no content", () => {
+test("completion notifications are opt-in, unfocused, deduplicated and contain no content", (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
   const shown: { title: string; body: string }[] = [];
   let focused = false;
   const notifier = new CompletionNotifier({
@@ -29,18 +30,22 @@ test("completion notifications are opt-in, unfocused, deduplicated and contain n
       failed: (site) => `${site} needs attention`
     },
     focused: () => focused,
-    show: (notification) => { shown.push(notification); }
+    show: ({ title, body }) => { shown.push({ title, body }); }
   });
-  notifier.accept({ site: "claude", phase: "complete", unread: true }, "Claude");
+  const complete = { site: 'claude', phase: 'complete', unread: true,
+    submission: { runId: 'run-notify', state: 'sent' }, generation: { runId: 'run-notify', state: 'complete' } } as const;
+  notifier.accept(complete, "Claude"); t.mock.timers.tick(1_000);
   assert.equal(shown.length, 0);
   notifier.setEnabled(true);
-  notifier.accept({ site: "claude", phase: "complete", unread: true }, "Claude");
-  notifier.accept({ site: "claude", phase: "complete", unread: true }, "Claude");
+  notifier.accept(complete, "Claude");
+  notifier.accept(complete, "Claude"); t.mock.timers.tick(1_000);
   assert.deepEqual(shown, [{ title: "PolyAsk", body: "Claude finished" }]);
-  notifier.accept({ site: "claude", phase: "sending" }, "Claude");
+  notifier.accept({ site: "claude", phase: "sending", submission: { runId: 'run-notify', state: 'sending' } }, "Claude");
   focused = true;
-  notifier.accept({ site: "claude", phase: "failed", unread: true }, "Claude");
+  notifier.accept({ site: "claude", phase: "failed", unread: true, submission: { runId: 'run-notify', state: 'failed' } }, "Claude");
+  t.mock.timers.tick(1_000);
   assert.equal(shown.length, 1);
+  notifier.dispose();
 });
 
 test("notification copy names both completion and failure states accurately", async () => {

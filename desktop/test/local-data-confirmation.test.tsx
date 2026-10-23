@@ -8,6 +8,8 @@ import { SETTINGS_RECOVERY_COPY } from '../src/shared/settings-recovery-copy';
 import type { LocalDataStats } from '../src/shared/local-data';
 import type { SyncStatus } from '../src/shared/sync';
 import { mountDom } from './ui/dom-harness';
+import { createNotificationNavigation } from '../src/renderer/use-notification-navigation';
+import { executeCommand } from '../src/renderer/command-dispatcher';
 
 const copy = { ...getCopy('en'), ...SETTINGS_RECOVERY_COPY.en };
 const stats = (history = 2): LocalDataStats => ({ history, archives: 3, decisions: 4, folders: 5,
@@ -17,6 +19,29 @@ const mount = (feedback: (message: string) => void = noop, backup: () => void = 
   onBusy={noop} onFeedback={feedback} onStatus={noop} {...{ onBackup: backup }} />);
 const button = (doc: Document, text: string) => [...doc.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === text)!;
 const confirm = (doc: Document) => doc.querySelector<HTMLButtonElement>('[role="dialog"] .primary')!;
+
+test('an open local data confirmation blocks notification and global focus navigation until cancelled', async () => {
+  let opened = 0, focused = 0, writes = 0;
+  setShellApi({ getLocalDataStats: async () => stats(), resetLocalData: async () => { writes++; } } as any);
+  const h = await mount();
+  const navigation = createNotificationNavigation({ copy, blocked: () => false, canOpenSite: () => true,
+    onOpenQuestion: () => { opened++; }, onOpenSite: () => { opened++; }, onAnnounce: noop });
+  try {
+    await h.click(button(h.document, copy.resetLocalAction));
+    assert.equal(h.document.querySelector('.local-data-confirm') !== null, true);
+    assert.equal(confirm(h.document).disabled, false, 'confirmation is open but no write is running');
+    navigation.accept({ site: 'claude', runId: 'run-1', questionId: 'question-1' });
+    executeCommand('focus-prompt', { 'focus-prompt': () => { focused++; } });
+    assert.equal(opened, 0, 'notification cannot leave the open reset confirmation');
+    assert.equal(focused, 0, 'global shortcut cannot leave the open reset confirmation');
+    assert.equal(writes, 0);
+    await h.click(button(h.document, copy.cancel));
+    navigation.accept({ site: 'claude', runId: 'run-1', questionId: 'question-1' });
+    executeCommand('focus-prompt', { 'focus-prompt': () => { focused++; } });
+    assert.equal(opened, 1);
+    assert.equal(focused, 1);
+  } finally { navigation.dispose(); await h.close(); setShellApi(null); }
+});
 
 test('counts loading disables confirmation and cancellation discards a late read', async () => {
   let finish!: (value: LocalDataStats) => void, clears = 0;

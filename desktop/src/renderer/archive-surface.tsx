@@ -23,6 +23,7 @@ import type { SynthesisSession } from './synthesis-session';
 import { createComparisonDraftStore, type ComparisonDraftStore } from './comparison-draft-store';
 import { createLibrarySessionStore, type LibrarySessionStore } from './library-session';
 import { useArchiveReader, type ArchiveDetailView } from './archive-reader-session';
+import { useReportExport } from './use-report-export';
 export type { ArchiveDetailView } from './archive-reader-session';
 
 export interface ArchiveSurfaceProps {
@@ -154,6 +155,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
     props.session?.read().reader, value => props.session?.update({ reader: value }));
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const exportReport = useReportExport({ kind: 'archive', id: selected.id, copy: props.copy, locale: props.locale, onStatus: setStatus });
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
   const [editorFocusOrigin, setEditorFocusOrigin] = useState<string | null>(null);
@@ -241,6 +243,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
         downloadMarkdown(await markdown(), selected.ts);
         setStatus(props.copy.archiveExported);
       }, props.copy.archiveExportFailed); }}
+      onExportReport={format => { void run(() => exportReport(format), props.copy.reportFailed); }}
       onDelete={(id) => { void run(async () => {
         await shell.deleteArchive(id);
         props.onChanged(true);

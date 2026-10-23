@@ -28,6 +28,8 @@ import { syncNeedsReauthorization, syncOverview } from "./sync-overview";
 import { shell } from "./shell-api";
 import { SettingsImageSync } from "./settings-image-sync";
 import { useSettingsSectionNavigation } from "./settings-section-navigation";
+import { NotificationSettings } from './notification-settings';
+import { SettingsGlobalPromptShortcut } from './settings-global-prompt-shortcut';
 
 interface SettingsWorkspaceProps {
   readonly copy: DesktopCopy;
@@ -72,6 +74,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   const [dataOpen, setDataOpen] = useState(() => props.initialSection === "data");
   const [localWriting, setLocalWriting] = useState(false);
   const [backupRequest, setBackupRequest] = useState(0);
+  const [localResetRevision, setLocalResetRevision] = useState(0);
   // Only a destructive write may hold the page hostage; waiting on browser
   // authorization (up to five minutes) must never lock the exit.
   const closeLocked = clearingCloud || localWriting;
@@ -245,24 +248,12 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         <div className="settings-group" role="group" aria-label={props.copy.settingsGroupDisplay}>
           <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
             following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
-          <label className="settings-card preference-card">
-            <span className="preference-copy">
-              <strong id="completion-notifications-title" className="preference-title">{props.copy.completionNotifications}</strong>
-              <p>{props.copy.completionNotificationsDescription}</p>
-              <small>{props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}</small>
-            </span>
-            <span className="preference-switch">
-              <input
-                type="checkbox"
-                name="completion-notifications"
-                aria-labelledby="completion-notifications-title"
-                checked={!!props.completionNotifications}
-                disabled={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
-                onChange={(event) => props.onCompletionNotificationsChange?.(event.target.checked)}
-              />
-              <span aria-hidden="true" />
-            </span>
-          </label>
+          <NotificationSettings copy={props.copy} enabled={!!props.completionNotifications}
+            busy={busy || closeLocked || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
+            preferenceHint={props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}
+            onChange={props.onCompletionNotificationsChange} onAnnounce={props.onAnnounce} />
+          <SettingsGlobalPromptShortcut copy={props.copy} disabled={busy || closeLocked || props.operationBusy}
+            resetKey={localResetRevision} />
           {props.confirmations && props.onConfirmationChange ? <SettingsConfirmations copy={props.copy} busy={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
             confirmations={props.confirmations} onChange={props.onConfirmationChange} /> : null}
         </div>
@@ -333,7 +324,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             onBusy={(value) => { setWriteBlocking("local", value); setActionBusy(value); }}
             onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
             onStatus={props.onStatus}
-            onReset={props.onLocalReset}
+            onReset={() => { setLocalResetRevision(value => value + 1); props.onLocalReset?.(); }}
             onBackup={() => setBackupRequest(value => value + 1)}
           />
           <section className="settings-card settings-row danger-zone cloud-data-row" aria-labelledby="clear-sync-title">

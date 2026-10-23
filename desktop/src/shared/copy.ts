@@ -26,9 +26,15 @@ import { COMPARISON_COPY } from "./comparison-copy";
 import { PAGE_PROGRESS_COPY } from "./page-progress-copy";
 import { WORKBENCH_GUIDANCE_COPY } from './workbench-guidance-copy';
 import { SITE_FIND_COPY } from './site-find-copy';
+import { NOTIFICATION_COPY } from './notification-copy';
+import { REPORT_EXPORT_COPY } from './report-export-copy';
+import { GLOBAL_PROMPT_SHORTCUT_COPY } from './global-prompt-shortcut-copy';
 
 export const COPY = {
   en: {
+    ...GLOBAL_PROMPT_SHORTCUT_COPY.en,
+    ...NOTIFICATION_COPY.en,
+    ...REPORT_EXPORT_COPY.en,
     ...SITE_FIND_COPY.en,
     ...PREFERENCE_SYNC_COPY.en,
     ...PROXY_COPY.en,
@@ -206,6 +212,9 @@ export const COPY = {
     checkForUpdates: "View latest release"
   },
   zhCN: {
+    ...GLOBAL_PROMPT_SHORTCUT_COPY.zhCN,
+    ...NOTIFICATION_COPY.zhCN,
+    ...REPORT_EXPORT_COPY.zhCN,
     ...SITE_FIND_COPY.zhCN,
     ...PREFERENCE_SYNC_COPY.zhCN,
     ...PROXY_COPY.zhCN,
@@ -383,6 +392,9 @@ export const COPY = {
     checkForUpdates: "查看最新版本"
   },
   zhTW: {
+    ...GLOBAL_PROMPT_SHORTCUT_COPY.zhTW,
+    ...NOTIFICATION_COPY.zhTW,
+    ...REPORT_EXPORT_COPY.zhTW,
     ...SITE_FIND_COPY.zhTW,
     ...PREFERENCE_SYNC_COPY.zhTW,
     ...PROXY_COPY.zhTW,

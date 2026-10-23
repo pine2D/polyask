@@ -13,6 +13,7 @@ import { DraftRecovery } from './draft-recovery';
 import { parseDecisionContent } from './editor-draft-content';
 import { usePersistentDraft } from './use-persistent-draft';
 import { useFailedActionFocus } from './use-failed-action-focus';
+import { reportExportActions, useReportExport } from './use-report-export';
 
 interface Props {
   readonly embedded?: boolean;
@@ -47,6 +48,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
   const rememberFocus = useFailedActionFocus(busy);
   useEffect(() => { onBusy?.(busy); return () => onBusy?.(false); }, [busy, onBusy]);
   const [message, setMessage] = useState("");
+  const exportReport = useReportExport({ kind: 'decision', id: saved?.id, copy, locale, onStatus: setMessage });
   const [validationStarted, setValidationStarted] = useState(() => !!initialDraft
     && Object.keys(validateDecisionDraft(initialDraft, initialSource, null)).length > 0);
   const [validationAttempt, setValidationAttempt] = useState(0);
@@ -190,7 +192,9 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
               </> : <>
                 {onOrganize ? <button type="button" disabled={busy} onClick={onOrganize}>{copy.libraryOrganize}</button> : null}
                 <button type="button" disabled={busy} onClick={() => setEditing(true)}>{copy.decisionEdit}</button>
-                <LibraryMenu label={copy.libraryMore} disabled={busy} actions={[{ label: copy.decisionExport, run: exportCard }, { label: copy.decisionDelete, run: remove, danger: true }]} />
+                <LibraryMenu label={copy.libraryMore} disabled={busy} actions={[{ label: copy.decisionExport, run: exportCard },
+                  ...reportExportActions(copy, format => { void run(() => exportReport(format)); }),
+                  { label: copy.decisionDelete, run: remove, danger: true }]} />
               </>}
             </div>
           </div>

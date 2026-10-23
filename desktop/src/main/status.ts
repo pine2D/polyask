@@ -1,5 +1,5 @@
 import type { SiteKey } from "../shared/contracts";
-import type { SiteResult, SiteStatus, SubmissionStatus } from "../shared/protocol";
+import { siteStatusRunId, type SiteResult, type SiteStatus, type SubmissionStatus } from "../shared/protocol";
 import { normalizeSelectionMetadata } from "../shared/selection";
 
 export function statusForResult(site: SiteKey, result: SiteResult, runId?: string): SiteStatus {
@@ -28,7 +28,9 @@ export function effectiveStatus(
   pageStatus: SiteStatus
 ): SiteStatus {
   if (pageStatus.phase === "failed" || pageStatus.phase === "crashed")
-    return { ...pageStatus, ...normalizeSelectionMetadata(runStatus), ...(runStatus?.submission ? { submission: runStatus.submission } : {}), ...(runStatus?.generation ? { generation: runStatus.generation } : {}) };
+    return { ...pageStatus, ...normalizeSelectionMetadata(runStatus),
+      ...(runStatus?.operationRunId ? { operationRunId: runStatus.operationRunId } : {}),
+      ...(runStatus?.submission ? { submission: runStatus.submission } : {}), ...(runStatus?.generation ? { generation: runStatus.generation } : {}) };
   return runStatus ?? pageStatus;
 }
 
@@ -46,7 +48,7 @@ export function statusForSending(site: SiteKey, runId: string): SiteStatus {
 }
 
 export function preserveSubmission(previous: SiteStatus | undefined, next: SiteStatus): SiteStatus {
-  const runId = next.generation?.runId ?? previous?.generation?.runId ?? previous?.submission?.runId;
+  const runId = next.generation?.runId ?? siteStatusRunId(previous);
   const generation: SiteStatus['generation'] = runId && (next.phase === "generating" || next.phase === "complete") ? { runId, state: next.phase } : next.generation;
   return next.phase === "generating" || next.phase === "complete"
     ? { ...next, ...normalizeSelectionMetadata(previous), ...(previous?.submission ? { submission: previous.submission } : {}), ...(generation ? { generation } : {}) } : next;
@@ -55,8 +57,8 @@ export function preserveSubmission(previous: SiteStatus | undefined, next: SiteS
 // 新一轮清除上轮统计；同 runId 的失败子集重试保留其他站的结果。
 export function beginSubmissionRun(resumed: boolean, statuses: Map<SiteKey, SiteStatus>, publish: (site: SiteKey) => void): boolean {
   if (!resumed) for (const [site, status] of statuses) {
-    if (!status.submission && !status.selection && !status.submissionEvidence && !status.generation) continue;
-    const { submission: _, selection: _selection, submissionEvidence: _evidence, generation: _generation, ...rest } = status;
+    if (!status.submission && !status.selection && !status.submissionEvidence && !status.generation && !status.operationRunId) continue;
+    const { submission: _, selection: _selection, submissionEvidence: _evidence, generation: _generation, operationRunId: _operation, ...rest } = status;
     statuses.set(site, rest);
     publish(site);
   }

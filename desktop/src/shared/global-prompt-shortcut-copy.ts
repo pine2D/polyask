@@ -1,0 +1,61 @@
+export const GLOBAL_PROMPT_SHORTCUT_COPY = {
+  en: {
+    globalShortcutTitle: 'Global question shortcut',
+    globalShortcutDescription: 'Return to the question box from another app. A PolyAsk window must be open. Off by default; this setting is saved only on this device and is excluded from sync and backups.',
+    globalShortcutCombination: 'Choose a key combination', globalShortcutKey: 'Main key',
+    globalShortcutChooseKey: 'Choose a key', globalShortcutSpace: 'Space',
+    globalShortcutHint: 'Select Ctrl, Alt, or Command/Windows/Super, then a main key. You can also add Shift.',
+    globalShortcutSave: 'Save shortcut', globalShortcutOff: 'Turn off',
+    globalShortcutLoading: 'Loading shortcut settings…', globalShortcutRetry: 'Try again',
+    globalShortcutReadFailed: 'Could not read shortcut settings. Try again.',
+    globalShortcutDisabled: 'Global shortcut is off.', globalShortcutActive: 'Active shortcut: {shortcut}',
+    globalShortcutInactive: 'Saved shortcut is unavailable: {shortcut}. Save to try again or choose another combination.',
+    globalShortcutInvalid: 'Choose a supported combination with Ctrl, Alt, or Command/Windows/Super and a main key.',
+    globalShortcutConflict: 'This shortcut could not be registered. Another app may be using it. Any working shortcut is unchanged.',
+    globalShortcutUnavailable: 'Global shortcuts are unavailable right now. Try again. Any working shortcut is unchanged.',
+    globalShortcutSaveFailed: 'Could not save the shortcut. Any working shortcut is unchanged.',
+    globalShortcutBusy: 'Wait for the current action to finish, then try again.',
+    globalShortcutLeaveTitle: 'Unsaved shortcut', globalShortcutLeaveMessage: 'Discard the shortcut changes and leave settings?',
+    globalShortcutKeepEditing: 'Keep editing', globalShortcutDiscard: 'Discard and leave'
+  },
+  zhCN: {
+    globalShortcutTitle: '全局提问快捷键',
+    globalShortcutDescription: '在其他应用中唤起提问框，需要有已打开的 PolyAsk 窗口。默认关闭，仅本机保存，不参与同步或备份。',
+    globalShortcutCombination: '选择组合键', globalShortcutKey: '主键',
+    globalShortcutChooseKey: '选择按键', globalShortcutSpace: '空格',
+    globalShortcutHint: '选择 Ctrl、Alt 或 Command／Windows／Super，再选一个主键；也可加上 Shift。',
+    globalShortcutSave: '保存快捷键', globalShortcutOff: '关闭快捷键',
+    globalShortcutLoading: '正在读取快捷键设置…', globalShortcutRetry: '重试',
+    globalShortcutReadFailed: '快捷键设置读取失败，请重试。',
+    globalShortcutDisabled: '全局快捷键已关闭。', globalShortcutActive: '当前生效：{shortcut}',
+    globalShortcutInactive: '已保存的快捷键暂不可用：{shortcut}。可再次保存以重试，或选择其他组合。',
+    globalShortcutInvalid: '请选择 Ctrl、Alt 或 Command／Windows／Super，再搭配支持的主键。',
+    globalShortcutConflict: '快捷键注册失败，可能已被其他应用占用；原有可用快捷键保持不变。',
+    globalShortcutUnavailable: '暂时无法注册全局快捷键，请重试；原有可用快捷键保持不变。',
+    globalShortcutSaveFailed: '快捷键保存失败，原有可用快捷键保持不变。',
+    globalShortcutBusy: '请等待当前操作完成后重试。',
+    globalShortcutLeaveTitle: '快捷键尚未保存', globalShortcutLeaveMessage: '放弃快捷键修改并离开设置？',
+    globalShortcutKeepEditing: '继续编辑', globalShortcutDiscard: '放弃并离开'
+  },
+  zhTW: {
+    globalShortcutTitle: '全域提問快速鍵',
+    globalShortcutDescription: '在其他應用程式中叫出提問框，需要有已開啟的 PolyAsk 視窗。預設關閉，僅儲存在本機，不納入同步或備份。',
+    globalShortcutCombination: '選擇按鍵組合', globalShortcutKey: '主要按鍵',
+    globalShortcutChooseKey: '選擇按鍵', globalShortcutSpace: '空白鍵',
+    globalShortcutHint: '選擇 Ctrl、Alt 或 Command／Windows／Super，再選一個主要按鍵；也可加上 Shift。',
+    globalShortcutSave: '儲存快速鍵', globalShortcutOff: '關閉快速鍵',
+    globalShortcutLoading: '正在讀取快速鍵設定…', globalShortcutRetry: '重試',
+    globalShortcutReadFailed: '無法讀取快速鍵設定，請重試。',
+    globalShortcutDisabled: '全域快速鍵已關閉。', globalShortcutActive: '目前生效：{shortcut}',
+    globalShortcutInactive: '已儲存的快速鍵暫時無法使用：{shortcut}。可再次儲存以重試，或選擇其他組合。',
+    globalShortcutInvalid: '請選擇 Ctrl、Alt 或 Command／Windows／Super，再搭配支援的主要按鍵。',
+    globalShortcutConflict: '無法註冊快速鍵，可能已由其他應用程式使用；原有可用快速鍵維持不變。',
+    globalShortcutUnavailable: '暫時無法註冊全域快速鍵，請重試；原有可用快速鍵維持不變。',
+    globalShortcutSaveFailed: '快速鍵儲存失敗，原有可用快速鍵維持不變。',
+    globalShortcutBusy: '請等待目前操作完成後重試。',
+    globalShortcutLeaveTitle: '快速鍵尚未儲存', globalShortcutLeaveMessage: '放棄快速鍵變更並離開設定？',
+    globalShortcutKeepEditing: '繼續編輯', globalShortcutDiscard: '放棄並離開'
+  }
+} as const;
+
+export type GlobalPromptShortcutCopy = { readonly [K in keyof typeof GLOBAL_PROMPT_SHORTCUT_COPY.en]: string };

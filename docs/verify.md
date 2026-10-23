@@ -1423,3 +1423,19 @@ Linux 原生 `proxy-native.check.ts` 与 `library-organization-interaction.check
 本轮真实发送仅使用合成内容与已有授权的 Linux 档案，临时 Electron 的 Cookie 加密 fuse 与发行包一致，未访问 Windows 档案。最终实例发送前后观测 16～18 个进程均处于同一 4 GiB/512 MiB 临时 scope；正常关闭后 18 个观测进程全部退出。既有档案与测试会话保留。Kimi 当前认证/发送限制与 DeepSeek 登录状态沿用上轮记录，未据其它站点成功扩大验收结论。
 
 最终 Linux package 通过，产物 preload source map 与最终 `prompt-markup.js` 逐字一致。`history-images-packaged-smoke.mjs` 的离线隔离验证通过：1 个外壳、9 个安全且挂载的站点视图；实际共同资源边界已核对，27 个归属进程全部退出，临时档案清理。没有发布或推送。
+
+## 2026-10-23 Electron 维护升级与桌面工具
+
+Electron 从 44.5.0 升级到 44.8.0；本机 npm 的七天发布冷静期尚不接受已调研的 44.9.3，因此使用满足配置的维护版本，没有改变全局配置或生产 Fuse。新增通知测试与点击定位、本机全局提问快捷键、保存副本的 HTML/PDF 报告，以及项目内 `polyask-electron` 技能。
+
+`electron-lifecycle.check.ts` 使用生产 ViewManager 和绘制恢复逻辑，完成两轮开窗、九站隐藏导航、恢复绘制、分页和销毁，共销毁 18 个站点 WebContents。`proxy-native.check.ts` 在该版本完成启动阻断与主流程共 11 个阶段，含 HTTP/SOCKS、认证、测试连接与待确认；只访问本机源站和代理。原生专项均经 test-safe 的 4 GiB/512 MiB cgroup，DBus 仅在建立边界后为子进程隔离，未打开用户档案。
+
+设置原生专项 `shell-visual.mjs --desktop-tools-only` 通过 12 组：三语、明暗主题、1280px/100% 与 960px/150%。覆盖键盘选键、冲突时保留原绑定、通知 requested/failed 等有限反馈，以及异步禁用后恢复按钮焦点且不抢用户新焦点。视检截图无裁切；8 个观测 Electron 进程均处于共同资源边界、退出后均不存在，临时 profile 已清理。该专项使用合成 API，不代表真实通知中心投递或物理全局按键验收。
+
+`report-export.check.ts` 原生专项通过 8 项：英文、简中、繁中 PDF 分别为 10/7/7 页，90 行表格完整、A4 文本边界通过；外部网络请求为 0，正常、超时、取消与来源变化后 8 个打印 WebContents 全部实际销毁。修复了 `BrowserWindow.destroy()` 返回时 WebContents 仍可能存活的清理时序。三语首屏目视无裁切。图片禁载规则的临时负向对拍精确失败，恢复后报告 30 项定向回归全绿。
+
+独立审查补齐两处行为：本机重置、删除及备份导入的确认等待阶段禁止新通知/全局命令导航，原获批动作仍继续；辅助综合/追问的发送失败携带独立轮次身份，但不增加群发 submission 计数。相关 72 项定向回归、独立 typecheck 和仓库 verify 通过；复核无剩余 Critical/Important。项目技能通过结构验证。
+
+最终完整 `npm test` 通过 2,393 项应用/UI 测试与 505 项运行时测试，共 2,898 项，零失败、取消或跳过。最终 Linux package 通过，`history-images-packaged-smoke.mjs` 用包内真实 main/preload 完成离线检查：1 个外壳、9 个安全且挂载的站点视图；共同资源边界通过，33 个归属进程全部退出，临时档案清理。
+
+本轮覆盖 Linux/WSL 隔离原生环境；Windows/macOS 物理快捷键、真实系统通知、系统睡眠唤醒、真实站点发送与 Drive 双设备未测。后台节流保持默认关闭，未据维护升级宣称 CPU 或内存收益。

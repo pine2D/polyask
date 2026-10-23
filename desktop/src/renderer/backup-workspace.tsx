@@ -63,7 +63,7 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
     return () => { window.removeEventListener("keydown", keydown, true); opener?.focus(); };
   }, []);
   useEffect(() => registerDecisionNavigationGuard((action) => {
-    if (locked.current) return;
+    if (locked.current || confirmingRef.current) return;
     onCloseRef.current(); action();
   }), []);
   useEffect(() => { cancel.current?.focus(); }, [confirming]);
