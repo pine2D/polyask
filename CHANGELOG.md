@@ -8,6 +8,16 @@
 
 ## [未发布]
 
+## [1.25.1] - 2026-10-24
+
+验收范围：Linux/WSL 下完整通过 2,393 项应用测试与 515 项运行时测试、类型检查和仓库门禁；Electron 44.9.3 的 Linux 打包、包内九站视图、视图生命周期、代理与三语 PDF 专项通过。Kimi 真实菜单及切档已在升级前的开发态验证。
+
+验收限制：未核验真实发送、Windows/macOS 实机和 Drive；快速连续跨模型切换曾返回未确认，豆包当前页面缺少输入框和模式控件，均未在本版修复。
+
+### 安全
+
+- [CVE-2026-115570 / GHSA-jr5w-w6x2-84p9](https://github.com/electron/electron/security/advisories/GHSA-jr5w-w6x2-84p9)：Electron 从 44.8.0 升级至 44.9.3，为 Chromium 和 Node.js 的 TLS 连接增加受损 eMudhra 中间证书拦截。
+
 ### 修复
 
 - Kimi 的思考与快速预设跟进 K3.1 Pro，分别选择 Max 与 Standard；同步修复新模型的档位识别，避免继续查找旧模型 K3。
@@ -1514,7 +1524,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.25.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.25.1...HEAD
+[1.25.1]: https://github.com/pine2D/polyask/compare/v1.25.0...v1.25.1
 [1.25.0]: https://github.com/pine2D/polyask/compare/v1.24.3...v1.25.0
 [1.24.3]: https://github.com/pine2D/polyask/compare/v1.24.2...v1.24.3
 [1.24.2]: https://github.com/pine2D/polyask/compare/v1.24.1...v1.24.2

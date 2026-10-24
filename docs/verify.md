@@ -1453,3 +1453,14 @@ Kimi 真实菜单为 K3.1 Pro / K2.8 / Instant，Thinking effort 为 Standard / 
 发布提醒 #82–#93 共 12 条已逐条核对原始官方公告并备注关闭，随后查询开放 issue 为空。Gemini 4 Argon 在 v1.21.0 已支持，本次真实 Flash→Argon High→Flash 往返通过；DeepSeek 公告除搜索 API 外还含 Web/APP 的 V4.1-Flash-1017 更新，但真实 DeepThink 控件和快速→思考→快速往返仍兼容。Claude Duet 是独立应用，现有 Fable 5.1 / Opus 5.5 菜单不需更改；其余 OpenAI 公告为第三方案例、研究访问计划、云分发或广告动态，真实 ChatGPT 菜单仍为 6 Instant / 6 / GPT-5.6 Sol。未将公告名称直接加入选择器。
 
 两次开发实例均复用既有授权 Linux 档案，启动前核对临时运行时与发行包的 Cookie 加密 fuse 一致；最终分别观测 15 / 14 个进程处于共同 4 GiB / 512 MiB 临时 scope，正常退出后确认观测进程消失、调试端口关闭，保留原档案。本轮没有输入或发送测试问题、上传附件、访问 Drive 或核验 Windows/macOS 真实环境，不覆盖登录认证与端到端回答。
+
+
+## 2026-10-24 v1.25.1 Electron 安全维护升级
+
+发布审计发现 Electron 44.8.0 受 CVE-2026-115570 / GHSA-jr5w-w6x2-84p9 影响：受损 eMudhra 中间证书可能被用来冒充 TLS 服务端，官方要求升级到修复版本。用户明确批准后，将 Electron 精确升级为同主版本的 44.9.3；lock 差异仅含 Electron 的版本、下载地址和完整性信息，未引入其它依赖变更。初次命令使用 `--before` 与现有年龄配置冲突，未修改依赖；最终仅在安装命令传 `--min-release-age=0`，全局 npm 配置未修改。
+
+升级后完整 `npm test` 一次通过 2,393 项应用/UI 测试与 515 项运行时测试，零失败、取消或跳过；独立 typecheck、仓库 verify 和 `release.sh --build-only` 通过。生产依赖审计为零漏洞，Electron 运行时审计无漏洞公告。Linux package 通过，包内应用版本为 1.25.1、运行时为 44.9.3，站点 preload 含 K3.1 Pro，发行 Fuse 与既有配置一致。升级前在受限网络中的旧运行时打包曾因 GitHub DNS `EAI_AGAIN` 失败，不计为通过；新版本在允许网络的构建命令中重新完成。
+
+原生专项使用临时档案、Xvfb、本地合成页面和代理，子进程隔离会话总线，串行运行于共同 4 GiB / 512 MiB 临时 scope。`electron-lifecycle.check.ts` 在 44.9.3 完成两轮九站隐藏导航、恢复、重建与销毁，共实际销毁 18 个站点 WebContents；`proxy-native.check.ts` 完成两个启动阻断阶段和九个主流程阶段，覆盖 HTTP/SOCKS、认证、测试连接与待确认，只访问本机。`report-export.check.ts` 的三语及清理/超时/取消等八项通过：PDF 为 10/7/7 页，90 行表格和 A4 边界完整，外部网络请求为零，八个打印 WebContents 全部销毁；已查看三语首屏截图，无裁切。
+
+包内真实 main/preload 的 `history-images-packaged-smoke.mjs` 离线检查通过：1 个外壳、9 个安全且挂载的站点视图。资源元数据确认应用 1.25.1 / Electron 44.9.3，实际共同资源边界通过，28 个归属进程全部退出、临时档案清理。没有打开既有登录档案、输入或发送真实提问、访问 Drive；升级后的验证不覆盖 Windows/macOS 物理环境、真实系统通知、睡眠唤醒或站点认证。上一节 Kimi 真实菜单与切档证据来自升级前的 44.8.0，不据本次合成检查扩大该结论。
