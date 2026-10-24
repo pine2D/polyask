@@ -41,15 +41,15 @@ test("Kimi 模型名与菜单项文案含零宽字符时，判档和真实 _sele
   const zwsp = String.fromCharCode(0x200b); // 避免在源码里字面写 ​ 转义序列
   let clickedItem = false;
   const entry = { classList: { contains: () => false }, click() {},
-    querySelector: (s) => (s === ".name" ? { textContent: "K3" + zwsp } : s === ".current-effort" ? { textContent: "Max" } : null) };
-  const modelItem = { querySelector: (s) => (s === ".name" ? { textContent: "K3" + zwsp } : null), click() { clickedItem = true; } };
+    querySelector: (s) => (s === ".name" ? { textContent: "K3.1 Pro" + zwsp } : s === ".current-effort" ? { textContent: "Max" } : null) };
+  const modelItem = { querySelector: (s) => (s === ".name" ? { textContent: "K3.1 Pro" + zwsp } : null), click() { clickedItem = true; } };
   const document = { querySelector: (s) => (s === ".current-model" ? entry : null),
     querySelectorAll: (s) => (s === ".model-item" ? [modelItem] : []) };
   const context = helpers(document);
   vm.runInNewContext(source("adapters-cn2.js"), context);
   const kimi = context.window.__AMS.adapters["kimi.com"];
   assert.equal(kimi.state(), "think", "模型名带零宽字符不该让判档失效");
-  await kimi._select("K3"); // 真实调用，不 stub：菜单项 .name 也带零宽字符
+  await kimi._select("K3.1 Pro"); // 真实调用，不 stub：菜单项 .name 也带零宽字符
   assert.equal(clickedItem, true, "菜单项文案带零宽字符时精确等值比对仍要命中并点击");
 });
 

@@ -32,7 +32,7 @@ test("expired runMode never calls an adapter or focuses the composer", async () 
 test("slow Kimi menu stops at deadline without later option clicks", async () => {
   const clicks = [];
   const entry = { classList: { contains: () => false }, click: () => clicks.push("entry"),
-    querySelector: selector => ({ textContent: selector === ".name" ? "K3" : "Standard" }) };
+    querySelector: selector => ({ textContent: selector === ".name" ? "K3.1 Pro" : "Standard" }) };
   const r = runtime("kimi.com", { querySelector: () => entry, querySelectorAll: () => [] });
   assert.equal(await r.S.runMode("think", true, 1400), false);
   assert.equal(r.now(), 1400);
@@ -82,7 +82,7 @@ test("broadcast deadline stops slow tier work before any composer injection", as
   const composer = { focus: () => { focused++; },
     getBoundingClientRect: () => ({ width: 200, height: 30, bottom: 30, top: 0, right: 200, left: 0 }) };
   const entry = { classList: { contains: () => false }, click() {},
-    querySelector: selector => ({ textContent: selector === ".name" ? "K3" : "Standard" }) };
+    querySelector: selector => ({ textContent: selector === ".name" ? "K3.1 Pro" : "Standard" }) };
   const r = runtime("kimi.com", { querySelector: () => entry,
     querySelectorAll: selector => selector.includes("textarea") ? [composer] : [] });
   const result = await r.dispatch({ cmd: "submitPrompt", text: "must not be injected", tier: "think", deadline: 1400 });
@@ -121,7 +121,7 @@ test("menu selectors clean up even when their own wait reaches deadline", async 
 test("Kimi timeout closes its active root menu even when Escape is ignored", async () => {
   let active = false; const clicks = [];
   const entry = { classList: { contains: () => active }, click() { active = !active; clicks.push(active ? "open" : "close"); },
-    querySelector: selector => ({ textContent: selector === ".name" ? "K3" : "Standard" }) };
+    querySelector: selector => ({ textContent: selector === ".name" ? "K3.1 Pro" : "Standard" }) };
   const r = runtime("kimi.com", { querySelector: () => entry, querySelectorAll: () => [] });
   await assert.rejects(r.S.adapters["kimi.com"]._setEffort(/Max/, 1400), /timeout/);
   assert.equal(active, false);

@@ -1439,3 +1439,17 @@ Electron 从 44.5.0 升级到 44.8.0；本机 npm 的七天发布冷静期尚不
 最终完整 `npm test` 通过 2,393 项应用/UI 测试与 505 项运行时测试，共 2,898 项，零失败、取消或跳过。最终 Linux package 通过，`history-images-packaged-smoke.mjs` 用包内真实 main/preload 完成离线检查：1 个外壳、9 个安全且挂载的站点视图；共同资源边界通过，33 个归属进程全部退出，临时档案清理。
 
 本轮覆盖 Linux/WSL 隔离原生环境；Windows/macOS 物理快捷键、真实系统通知、系统睡眠唤醒、真实站点发送与 Drive 双设备未测。后台节流保持默认关闭，未据维护升级宣称 CPU 或内存收益。
+
+## 2026-10-24 Kimi K3.1 Pro 与发布提醒复核
+
+Kimi 真实菜单为 K3.1 Pro / K2.8 / Instant，Thinking effort 为 Standard / High / Max。旧实现仍查找 K3，在 K3.1 Pro / High 页面调用生产 `resolveTier('think')` 返回 `unconfirmed`；本轮将预设与只读状态判定同步改为 K3.1 Pro，思考取 Max、快速取 Standard，其余组合仍返回 null。
+
+新增 10 项生产 core/tier/adapter 回归，覆盖精确模型、零宽字符、旧 K3 与相近名称的负例、只读状态、双向切档、幂等、目标缺失、菜单收尾与 deadline。旧实现在新增专项中有 8 项失败；修复后与 deadline 专项共 22 项通过。完整 `npm test` 的 2,393 项应用/UI 测试通过；运行时首轮 515 项中一项旧零宽夹具仍使用 K3，更新该夹具及旧菜单收尾夹具后，重跑全部 515 项运行时测试通过，零失败、取消或跳过。独立 typecheck、仓库 verify 和只读代码复核通过。
+
+重启 Linux/WSL Electron 44.8.0 开发态后，在目标视图隔离上下文调用生产 `__AMS`：快速→思考→重复思考→快速依次读回 K3.1 Pro / Standard、Max、Max、Standard，均为 `mode_only`，状态匹配且菜单关闭；稳定的 K2.8 / High 页面执行思考预设也确认切到 K3.1 Pro / Max。最后恢复原 K3.1 Pro / High 和首页，根菜单关闭、无待发文字；High 返回 null 是预设之外的正常状态。
+
+验证边界：重启后首次探测早于页面水合，输入框/模型入口尚未出现，不计切档失败。快速连续准备跨模型初态时曾出现旧菜单仍在退场、随后预设未确认的情况；页面稳定后复验通过，本轮没有据此宣称高速连续跨模型切换可靠，也没有修改既有菜单时序。九站生产只读巡检均可调用；最终八站 reach/control 正常，Kimi 仅 High 的 tier 提示，豆包当前页面未定位到输入框和模式按钮，未在本轮追查该站或宣称九站全部可发送。
+
+发布提醒 #82–#93 共 12 条已逐条核对原始官方公告并备注关闭，随后查询开放 issue 为空。Gemini 4 Argon 在 v1.21.0 已支持，本次真实 Flash→Argon High→Flash 往返通过；DeepSeek 公告除搜索 API 外还含 Web/APP 的 V4.1-Flash-1017 更新，但真实 DeepThink 控件和快速→思考→快速往返仍兼容。Claude Duet 是独立应用，现有 Fable 5.1 / Opus 5.5 菜单不需更改；其余 OpenAI 公告为第三方案例、研究访问计划、云分发或广告动态，真实 ChatGPT 菜单仍为 6 Instant / 6 / GPT-5.6 Sol。未将公告名称直接加入选择器。
+
+两次开发实例均复用既有授权 Linux 档案，启动前核对临时运行时与发行包的 Cookie 加密 fuse 一致；最终分别观测 15 / 14 个进程处于共同 4 GiB / 512 MiB 临时 scope，正常退出后确认观测进程消失、调试端口关闭，保留原档案。本轮没有输入或发送测试问题、上传附件、访问 Drive 或核验 Windows/macOS 真实环境，不覆盖登录认证与端到端回答。

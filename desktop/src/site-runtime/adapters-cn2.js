@@ -8,7 +8,7 @@
   const { waitFor, findByText, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
 
   Object.assign(S.adapters, {
-    // Kimi：think=K3+Max、fast=K3+Standard（K3 才有 Max 档；effort 经 hover 子菜单选）。
+    // Kimi：think=K3.1 Pro+Max、fast=K3.1 Pro+Standard（2026-10-24 真机；effort 经 hover 子菜单选）。
     // 换模型会 SPA 路由跳 /agent?chat_enter_method=change_model（2026-07-21 真机），该面发送
     // 偶发对真人也失效（疑站点高峰限流禁用对话）——发送失败会诚实报 submit_unconfirmed 可 retry。
     "kimi.com": {
@@ -83,14 +83,14 @@
         ];
       },
       state: function () {
-        if (this._model() !== "K3") return null;
+        if (this._model() !== "K3.1 Pro") return null;
         const ef = this._effort();
         return /^(Max|极致|最大|最高|最强)$/i.test(ef) ? "think" : /^(Standard|标准)$/i.test(ef) ? "fast" : null; // 中文 UI Max=「极致」（用户实证 2026-07-21）
       },
       think: async function (deadline) {
-        checkDeadline(deadline); if (this._model() !== "K3") await this._select("K3", deadline); await this._setEffort(/^(Max|极致|最大|最高|最强)$/i, deadline); },
+        checkDeadline(deadline); if (this._model() !== "K3.1 Pro") await this._select("K3.1 Pro", deadline); await this._setEffort(/^(Max|极致|最大|最高|最强)$/i, deadline); },
       fast: async function (deadline) {
-        checkDeadline(deadline); if (this._model() !== "K3") await this._select("K3", deadline); await this._setEffort(/^(Standard|标准)$/i, deadline); },
+        checkDeadline(deadline); if (this._model() !== "K3.1 Pro") await this._select("K3.1 Pro", deadline); await this._setEffort(/^(Standard|标准)$/i, deadline); },
       attach: async function (files, el, deadline) {
         let input = document.querySelector('input.hidden-input[type="file"]');
         if (!input) {

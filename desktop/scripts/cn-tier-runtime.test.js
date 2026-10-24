@@ -184,7 +184,7 @@ async function kimiRootMenuMustBeClosedByRetrigger() {
   const entry = {
     classList: { contains: (name) => name === "active" && state.active },
     click() { clicked.push("entry"); state.active = !state.active; },
-    querySelector: (selector) => (selector === ".name" ? { textContent: "K3" }
+    querySelector: (selector) => (selector === ".name" ? { textContent: "K3.1 Pro" }
       : (selector === ".current-effort" ? { textContent: "Max" } : null)),
   };
   const document = {
