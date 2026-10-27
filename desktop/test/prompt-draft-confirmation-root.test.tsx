@@ -29,6 +29,7 @@ test('production root blocks commands and direct send, tier and collection while
   }
   const surfaces: string[] = [];
   let command: (id: string) => void = () => {};
+  let siteFocus = 0;
   let newSessions = 0, broadcasts = 0, removedDrafts = 0, tierChanges = 0, collections = 0;
   const status = { state: 'idle', connected: false, pending: 0, errorCount: 0, readOnly: false,
     oauthConfigured: false, secureTokenStorage: true };
@@ -41,9 +42,10 @@ test('production root blocks commands and direct send, tier and collection while
       workspace: { selectedSites: ['claude'], groups: [], tier: null },
       promptLibrary: { templates: [], history: [] }, pendingSynthesis: null, sync: status }),
     onCommand: (listener: typeof command) => { command = listener; return () => {}; },
+    listQuestions: async () => ({ items: [], cursor: null }),
     getSiteFind: async () => initialSiteFindState(), closeSiteFind: async () => initialSiteFindState(),
     setSurface: (value: string) => { surfaces.push(value); },
-    setDrawerOpen: () => {}, setComposerExpanded: () => {}, setCompletionNotifications: () => {},
+    focusCurrentSite: () => { siteFocus++; }, setDrawerOpen: () => {}, setComposerExpanded: () => {}, setCompletionNotifications: () => {},
     listDrafts: async () => ({ epoch: 0, deviceId: 'local', drafts: [draft] }),
     removeDraft: async () => { removedDrafts++; return true; },
     listFolders: async () => [], searchFolderContents: async () => [],
@@ -75,6 +77,17 @@ test('production root blocks commands and direct send, tier and collection while
   try {
     await act(async () => { req(`${base}/src/renderer/index.tsx`); });
     assert.equal(dom.window.document.querySelector('.app-shell') === null, false);
+    for (const id of ['edit-prompt', 'focus-prompt']) {
+      await emit('open-question-history');
+      assert.equal(document.querySelector('.question-search input') === null, false);
+      await emit(id);
+      assert.equal(document.querySelector('[data-composer-toggle]')?.getAttribute('aria-expanded'), 'true');
+      assert.equal(document.activeElement === document.querySelector('[name=prompt]'), true, `${id} owns focus after history closes`);
+    }
+
+    await emit('open-question-history');
+    await click('.question-history .panel-close');
+    assert.equal(document.activeElement === document.querySelector('.question-trigger'), true, 'ordinary close returns to the history trigger');
     await emit('open-settings');
     assert.equal(dom.window.document.querySelector('.settings-workspace') === null, false,
       'baseline: settings is reachable without a draft dialog');
@@ -85,6 +98,17 @@ test('production root blocks commands and direct send, tier and collection while
       prompt.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
     });
     assert.equal(document.querySelector<HTMLButtonElement>('.send')?.disabled, false, 'the baseline prompt is sendable');
+    const expanded = () => document.querySelector('[data-composer-toggle]')?.getAttribute('aria-expanded');
+    await emit('focus-prompt');
+    assert.equal(expanded(), 'true'); assert.equal(document.activeElement === prompt, true);
+    await emit('focus-prompt');
+    assert.equal(expanded(), 'false'); assert.equal(siteFocus, 1);
+    assert.equal(prompt.value, 'Synthetic active question');
+    await emit('edit-prompt'); await emit('edit-prompt');
+    assert.equal(expanded(), 'true', 'global activation always opens the input');
+    await emit('focus-current-site');
+    assert.equal(siteFocus, 2); assert.equal(prompt.value, 'Synthetic active question');
+
     await act(async () => {
       document.querySelector<HTMLButtonElement>('[data-draft-open]')!.click();
       const commandsBefore = surfaces.length;
@@ -98,7 +122,7 @@ test('production root blocks commands and direct send, tier and collection while
     assert.equal(tierChanges, 0, 'tier callbacks from the old render are blocked synchronously');
     const blockedFrom = surfaces.length;
     const focus = dom.window.document.activeElement;
-    for (const id of ['focus-prompt', 'open-settings', 'open-archive', 'new-session', 'set-think',
+    for (const id of ['focus-prompt', 'edit-prompt', 'focus-current-site', 'open-settings', 'open-archive', 'new-session', 'set-think',
       'set-fast', 'collect-answers', 'collect-compare', 'open-command-palette']) {
       await emit(id);
       assert.equal(surfaces.length, blockedFrom, `${id} cannot navigate through draft recovery`);

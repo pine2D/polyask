@@ -98,7 +98,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
         onExpandedChange={props.onExpandedChange} onSubmit={props.onSubmit} onPasteImages={props.onPasteImages} />
       <div className="prompt-history-tools">
         <button type="button" className="new-session-trigger" aria-label={props.copy.newSessionSelected}
-          data-hint={newSessionReason ?? props.copy.newSessionSelected} disabled={!!newSessionReason} onClick={props.onNewSession}>
+          data-hint={newSessionReason ?? commandHint(props.copy.newSessionSelected, "new-session", props.isMac)} disabled={!!newSessionReason} onClick={props.onNewSession}>
           <NewSessionIcon /><span className="new-session-label">{props.copy.newSessionCompact}</span>
         </button>
         <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>

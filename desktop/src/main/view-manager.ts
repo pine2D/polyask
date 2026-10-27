@@ -1,3 +1,4 @@
+import { bindSiteFocus } from './site-focus';
 import { reclaimUnselectedViews } from "./view-reclamation";
 import { coverSitesForHistory } from "./question-layout";
 import { workspaceViewport } from './workspace-viewport';
@@ -122,7 +123,7 @@ export class ViewManager {
     targets: () => this.selected.map(site => ({ site, contents:this.views.get(site)?.webContents })),
     focused: () => this.focused, allowed: () => this.surface === 'sites' && !this.historyAccess.panelOpen,
     focus: site => { this.setLayout(this.mode, site, false); }, reserve: () => this.layout(),
-    restoreFocus: () => { const c = this.views.get(this.focused)?.webContents; if (c && !c.isDestroyed()) c.focus(); },
+    restoreFocus: () => this.focusCurrentSite(),
     publish: state => { if (!this.window.isDestroyed()) this.window.webContents.send('polyask:find-state', state); }
   });
 
@@ -266,8 +267,7 @@ export class ViewManager {
     this.clearVisibleUnread();
     this.layout();
     if (activate && this.surface === 'sites' && mode === "focus" && current.keys.includes(focused)) {
-      const view = this.views.get(focused);
-      if (view && !view.webContents.isDestroyed()) view.webContents.focus();
+      this.focusCurrentSite();
     }
     return true;
   }
@@ -282,6 +282,12 @@ export class ViewManager {
       cover: covered => coverSitesForHistory(this.window, covered),
       restore: () => { this.reconcileViews(); this.clearVisibleUnread(); this.layout(); }
     });
+  }
+
+  focusCurrentSite(): void {
+    if (this.window.isDestroyed() || this.surface !== 'sites' || this.historyAccess.panelOpen || !this.selected.includes(this.focused)) return;
+    const contents = this.views.get(this.focused)?.webContents;
+    if (contents && !contents.isDestroyed()) contents.focus();
   }
 
   focusRelative(offset: -1 | 1): void {
@@ -564,6 +570,7 @@ export class ViewManager {
     });
     this.views.set(site.key, view);
     this.siteZoom.bind(site.key, view.webContents);
+    bindSiteFocus(view.webContents, site.key, () => this.getLayout(), () => this.surface === 'sites' && !this.historyAccess.panelOpen, key => this.setLayout(this.mode, key, false));
     // 已勾选即挂载（不再只挂当前页）：replaceView 后重建的后台视图若不回到视图树，
     // 下一轮群发又会打进 0×0 视口。层序由调用方随后的 reconcileViews 归位。
     if (this.surface === "sites" && this.selected.includes(site.key)) this.attach(site.key);

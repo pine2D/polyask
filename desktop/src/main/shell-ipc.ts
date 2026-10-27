@@ -1,3 +1,4 @@
+import { registerWorkbenchNavigationIpc } from './workbench-navigation-ipc';
 import { registerQuestionAttachmentIpc } from './question-attachment-ipc';
 import type { PreferenceRuntime } from './preference-runtime';
 import { registerPreferencesDraftsIpc } from './preferences-drafts-ipc';
@@ -36,7 +37,6 @@ import { unsupportedImageSites } from "../shared/images";
 import {
   parseBroadcastRequest,
   parseCollectionRequest,
-  parsePageIndex,
   type DesktopSurface,
   type SiteResponseEnvelope
 } from "../shared/protocol";
@@ -103,7 +103,6 @@ export interface ShellIpcOptions {
 const HANDLERS = [
   "polyask:bootstrap",
   "polyask:menu-shortcuts",
-  "polyask:site-history-state",
   "polyask:set-display",
   "polyask:broadcast",
   "polyask:collect",
@@ -132,11 +131,6 @@ const LISTENERS = [
   "polyask:set-composer-expanded",
   "polyask:set-drawer-open",
   "polyask:set-surface",
-  "polyask:set-layout",
-  "polyask:set-page",
-  "polyask:step-page",
-  "polyask:step-site",
-  "polyask:step-history",
   "polyask:set-completion-notifications",
   "polyask:site-response"
 ] as const;
@@ -175,6 +169,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     closeReason: site => manager.sitePageCloseReason(site)
   }) });
   const publishDrafts = () => { if (!window.isDestroyed()) window.webContents.send('polyask:drafts-changed'); };
+  const disposeNavigation = registerWorkbenchNavigationIpc(ipcMain, manager, trustedShell, mode => options.preferences?.set('layoutMode', mode));
   const disposeSiteFind = registerSiteFindIpc(ipcMain, manager.siteFind, trustedShell, window.webContents,
     state => showSiteFindMenu(window, state, SITES, options.copy));
   const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
@@ -333,42 +328,6 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     manager.setSurface(value as DesktopSurface);
     if (value === "confirmation") window.webContents.focus();
   });
-  ipcMain.on("polyask:set-layout", (event, value: unknown) => {
-    if (!trustedShell(event) || !value || typeof value !== "object") return;
-    const candidate = value as { mode?: unknown; focused?: unknown };
-    if (candidate.mode !== "overview" && candidate.mode !== "focus") return;
-    if (typeof candidate.focused !== "string" || !SITE_KEYS.includes(candidate.focused as SiteKey)) return;
-    if (manager.setLayout(candidate.mode, candidate.focused as SiteKey)) options.preferences?.set('layoutMode', candidate.mode);
-  });
-  ipcMain.on("polyask:set-page", (event, value: unknown) => {
-    if (!trustedShell(event)) return;
-    const page = parsePageIndex(value);
-    if (page !== null) manager.setPage(page);
-  });
-  // 相对翻页/换焦点只认 ViewManager 的当前页与聚焦顺序——渲染层自己算会与主进程漂开。
-  const step = (value: unknown): -1 | 1 | null => (value === 1 ? 1 : value === -1 ? -1 : null);
-  ipcMain.on("polyask:step-page", (event, value: unknown) => {
-    if (!trustedShell(event)) return;
-    const offset = step(value);
-    if (offset) manager.pageRelative(offset);
-  });
-  ipcMain.on("polyask:step-site", (event, value: unknown) => {
-    if (!trustedShell(event)) return;
-    const offset = step(value);
-    if (offset) manager.focusRelative(offset);
-  });
-  // 站内后退/前进：作用于当前聚焦的站点视图，能不能退由 ViewManager 按真实导航历史判定。
-  ipcMain.on("polyask:step-history", (event, value: unknown) => {
-    if (!trustedShell(event)) return;
-    const candidate = value as { site?: unknown; offset?: unknown } | null;
-    const offset = step(candidate?.offset);
-    const site = typeof candidate?.site === "string" && SITE_KEYS.includes(candidate.site as SiteKey)
-      ? candidate.site as SiteKey
-      : manager.getLayout().focused;
-    if (offset) manager.navigateHistory(site, offset);
-  });
-  ipcMain.handle("polyask:site-history-state", (event) =>
-    trustedShell(event) ? manager.historyState() : {});
   ipcMain.on("polyask:set-completion-notifications", (event, value: unknown) => {
     if (!trustedShell(event) || typeof value !== "boolean") return;
     options.setCompletionNotifications(value);
@@ -380,6 +339,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
 
   return () => {
+    disposeNavigation();
     disposeSiteFind();
     disposePreferences();
     disposeSitePageIpc();

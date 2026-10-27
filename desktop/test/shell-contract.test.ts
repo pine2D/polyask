@@ -24,11 +24,6 @@ test("production cancel recreates only the pending site view", () => {
   assert.doesNotMatch(sitePreload, /location\.reload\(\)/);
 });
 
-test("focus action transfers keyboard focus to the native site view", () => {
-  const manager = readSource("src/main/view-manager.ts");
-  assert.match(manager, /webContents\.focus\(\)/);
-});
-
 test("application menu offers a keyboard route back to the prompt", () => {
   const main = readSource("src/main/index.ts") + readSource("src/main/app-command-dispatch.ts")
     + readSource("src/main/application-command-routing.ts");
@@ -45,8 +40,7 @@ test("application menu offers a keyboard route back to the prompt", () => {
   // 翻页/换焦点的加速器登记在 COMMANDS 表里（菜单与快捷键速查同源），不再在菜单模板里手写
   assert.match(commands, /CmdOrCtrl\+Shift\+PageDown/);
   assert.match(commands, /CmdOrCtrl\+Shift\+PageUp/);
-  assert.match(commands, /CmdOrCtrl\+PageDown/);
-  assert.match(commands, /CmdOrCtrl\+PageUp/);
+  assert.match(commands, /Alt\+W/);
   assert.match(main, /pageRelative/);
   assert.match(main, /focusRelative/);
   assert.match(commands, /Alt\+1/);
@@ -227,7 +221,7 @@ test("portable setup failures localize without calling app.getLocale before read
 });
 
 test("display preferences cross only the trusted shell bridge", () => {
-  const main = readSource("src/main/shell-ipc.ts");
+  const main = readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
   assert.match(main, /polyask:set-display/);
   assert.match(main, /trustedShell\(event\)/);
@@ -236,7 +230,7 @@ test("display preferences cross only the trusted shell bridge", () => {
 });
 
 test("composer expansion crosses a boolean-only trusted shell bridge", () => {
-  const main = readSource("src/main/shell-ipc.ts");
+  const main = readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts");
   const manager = readSource("src/main/view-manager.ts");
   const preload = readSource("src/preload/shell.ts");
   assert.match(main, /polyask:set-composer-expanded/);
@@ -246,7 +240,7 @@ test("composer expansion crosses a boolean-only trusted shell bridge", () => {
 });
 
 test("workspace mutations cross the trusted shell bridge and the drawer reserves native bounds", () => {
-  const main = readSource("src/main/shell-ipc.ts");
+  const main = readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
   const manager = readSource("src/main/view-manager.ts");
   const workspaceLayout = readSource("src/main/workspace-layout.ts");
@@ -267,7 +261,7 @@ test("workspace mutations cross the trusted shell bridge and the drawer reserves
 });
 
 test("selected-site paging crosses a validated shell bridge", () => {
-  const main = readSource("src/main/shell-ipc.ts");
+  const main = readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
   assert.match(main, /polyask:set-page/);
   assert.match(main, /parsePageIndex/);

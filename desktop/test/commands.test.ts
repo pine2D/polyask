@@ -68,3 +68,10 @@ for (const platform of ['win32', 'linux', 'darwin'] as const) for (const mode of
     }
   });
 }
+
+
+test('current-site focus replaces the two relative site accelerators', () => {
+  assert.equal(commandById('focus-current-site')?.accelerator, 'Alt+W');
+  assert.equal(commandById('next-site')?.accelerator, undefined);
+  assert.equal(commandById('previous-site')?.accelerator, undefined);
+});

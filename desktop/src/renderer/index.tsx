@@ -414,6 +414,17 @@ function App(): React.JSX.Element {
     if (drawerOpen) changeDrawerOpen(false);
     setMode("focus", site);
   };
+  const activatePrompt = (): void => {
+    changeSurface('sites'); closeQuestionHistory(); changePanelState(null);
+    focusPromptForEditing(promptRef, composer.setExpanded);
+  };
+  const focusCurrentSite = (): void => {
+    changeSurface('sites'); closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false);
+    // 同一外壳按顺序解除问答/搜索覆盖，再把键盘交回当前原生视图。
+    void shell.setQuestionPanel(false).catch(() => {});
+    void shell.closeSiteFind(false).catch(() => {});
+    shell.focusCurrentSite();
+  };
   const openLatestReleasePage = (): Promise<void> => shell.openExternal(LATEST_RELEASE_URL);
   const openSettings = (section: typeof settingsSection.section): void => {
     setSettingsSection(value => ({ section, request: value.request + 1 }));
@@ -459,10 +470,11 @@ function App(): React.JSX.Element {
     // 站内后退/前进作用于当前聚焦的站点；能不能退由主进程按真实导航历史判定。
     ...(siteHistory[layout.focused]?.back ? { "site-back": () => { changeSurface("sites"); shell.stepHistory(-1); } } : {}),
     ...(siteHistory[layout.focused]?.forward ? { "site-forward": () => { changeSurface("sites"); shell.stepHistory(1); } } : {}),
+    "focus-current-site": focusCurrentSite,
+    "edit-prompt": activatePrompt,
     "focus-prompt": () => {
-      changeSurface("sites");
-      if (drawerOpen) changeDrawerOpen(false);
-      focusPromptForEditing(promptRef, composer.setExpanded);
+      if (surface === 'sites' && !questionHistoryOpen && composer.expanded) { composer.setExpanded(false); focusCurrentSite(); }
+      else activatePrompt();
     },
     'find-page': () => {
       changeSurface('sites'); closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false);

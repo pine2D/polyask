@@ -51,11 +51,13 @@ test('ViewManager refuses a stale focus request for a site outside current selec
   const declaration = source.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'ViewManager') as ts.ClassDeclaration;
   const method = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'setLayout') as ts.MethodDeclaration;
   const body = ts.transpileModule(`function ${method.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
+  const focusMethod = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'focusCurrentSite') as ts.MethodDeclaration;
+  const focusBody = ts.transpileModule(`function ${focusMethod.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
   let reconciles = 0, focuses = 0;
-  const manager = {selected: ['chatgpt'], focused: 'chatgpt', page: 0, mode: 'overview', surface: 'sites',
+  const manager = {window: {isDestroyed: () => false}, historyAccess: {panelOpen: false}, selected: ['chatgpt'], focused: 'chatgpt', page: 0, mode: 'overview', surface: 'sites',
     focusOrder: ['chatgpt'], focusedByPage: new Map(), views: new Map([['chatgpt', {webContents: {isDestroyed: () => false, focus: () => { focuses++; }}}]]),
     reconcileViews: () => { reconciles++; }, clearVisibleUnread: () => {}, layout: () => {}};
-  const accepted = vm.runInNewContext(`${body}\nsetLayout.call(manager, 'focus', 'claude');`, {manager,
+  const accepted = vm.runInNewContext(`${body}\n${focusBody}\nmanager.focusCurrentSite = focusCurrentSite;\nsetLayout.call(manager, 'focus', 'claude');`, {manager,
     resolveFocusedSite, resolveSitePage, resolveSitePageIndex, swapFocusedSite: (value: unknown) => value});
   assert.equal(accepted, false);
   assert.equal(focuses, 0);
@@ -69,11 +71,13 @@ test('ViewManager acknowledges only a successfully selected focus target', () =>
   const declaration = source.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'ViewManager') as ts.ClassDeclaration;
   const method = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'setLayout') as ts.MethodDeclaration;
   const body = ts.transpileModule(`function ${method.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
+  const focusMethod = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'focusCurrentSite') as ts.MethodDeclaration;
+  const focusBody = ts.transpileModule(`function ${focusMethod.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
   let focuses = 0;
-  const manager = {selected: ['claude'], focused: 'claude', page: 0, mode: 'overview', surface: 'sites',
+  const manager = {window: {isDestroyed: () => false}, historyAccess: {panelOpen: false}, selected: ['claude'], focused: 'claude', page: 0, mode: 'overview', surface: 'sites',
     focusOrder: ['claude'], focusedByPage: new Map(), views: new Map([['claude', {webContents: {isDestroyed: () => false, focus: () => { focuses++; }}}]]),
     reconcileViews: () => {}, clearVisibleUnread: () => {}, layout: () => {}};
-  const accepted = vm.runInNewContext(`${body}\nsetLayout.call(manager, 'focus', 'claude');`, {manager,
+  const accepted = vm.runInNewContext(`${body}\n${focusBody}\nmanager.focusCurrentSite = focusCurrentSite;\nsetLayout.call(manager, 'focus', 'claude');`, {manager,
     resolveFocusedSite, resolveSitePage, resolveSitePageIndex, swapFocusedSite: (value: unknown) => value});
   assert.equal(accepted, true);
   assert.equal(focuses, 1);

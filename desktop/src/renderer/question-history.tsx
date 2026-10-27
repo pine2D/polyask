@@ -88,7 +88,13 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     if (!open) return;
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     input.current?.focus();
-    return () => { sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; (document.querySelector<HTMLButtonElement>(".question-trigger") ?? opener.current)?.focus(); };
+    return () => {
+      sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0;
+      // 显式转向提问框或原生站点后，关闭历史不能再抢回焦点。
+      const focused = document.activeElement;
+      if (document.hasFocus() && (focused === document.body || panel.current?.contains(focused)))
+        (document.querySelector<HTMLButtonElement>(".question-trigger") ?? opener.current)?.focus();
+    };
   }, [open]);
   useEffect(() => {
     const surface = questionHistorySurface(present, renderedFull);

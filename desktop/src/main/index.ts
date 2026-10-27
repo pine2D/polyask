@@ -374,7 +374,7 @@ else {
       repository: new GlobalPromptShortcutRepository(desktopDatabase.meta), activate: () => {
         if (!mainWindow || mainWindow.isDestroyed()) return;
         if (mainWindow.isMinimized()) mainWindow.restore();
-        mainWindow.show(); mainWindow.focus(); dispatchAppCommand('focus-prompt');
+        mainWindow.show(); mainWindow.focus(); dispatchAppCommand('edit-prompt');
       } });
     promptShortcut.restore();
     paletteShortcut = new CommandPaletteShortcutRuntime({ repository: new CommandPaletteShortcutRepository(desktopDatabase.meta),

@@ -147,6 +147,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   setPage(page: number): void;
   stepPage(offset: -1 | 1): void;
   stepSite(offset: -1 | 1): void;
+  focusCurrentSite(): void;
   stepHistory(offset: -1 | 1, site?: SiteKey): void;
   siteHistoryState(): Promise<Record<string, SiteHistoryState>>;
   setDisplayPreferences(value: DisplayPreferences): Promise<DisplayPreferences>;
@@ -299,6 +300,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   inspectSite: (site: SiteKey) => invoke("polyask:inspect-site", site),
   setPage: (page: number) => ipcRenderer.send("polyask:set-page", page),
   stepPage: (offset: -1 | 1) => ipcRenderer.send("polyask:step-page", offset),
+  focusCurrentSite: () => ipcRenderer.send('polyask:focus-current-site'),
   stepSite: (offset: -1 | 1) => ipcRenderer.send("polyask:step-site", offset),
   stepHistory: (offset: -1 | 1, site?: SiteKey) => ipcRenderer.send("polyask:step-history", { offset, site }),
   siteHistoryState: () => invoke("polyask:site-history-state"),

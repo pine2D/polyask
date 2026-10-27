@@ -76,7 +76,7 @@ test('native menu commands neither dispatch nor move shell focus while confirmat
   h.window.webContents.send = () => { commandEvents++; };
   try {
     h.manager.setSurface('confirmation');
-    for (const id of ['show-page-2', 'next-page', 'next-site', 'site-back', 'focus-prompt', 'open-settings', 'new-session'] as const) {
+    for (const id of ['show-page-2', 'next-page', 'next-site', 'site-back', 'focus-prompt', 'edit-prompt', 'focus-current-site', 'open-settings', 'new-session'] as const) {
       dispatchAppCommand(id, h.manager, h.window as any);
     }
     assert.equal(shellFocus, 0); assert.equal(commandEvents, 0);
@@ -109,5 +109,39 @@ test('explicit retry inspection can locate while covered and focuses only after 
     h.manager.setSurface('sites');
     assert.equal(h.manager.setLayout('focus', 'chatgpt'), true);
     assert.equal(h.views[1].webContents.calls.filter((call: string) => call === 'focus').length, 1);
+  } finally { h.window.emit('closed'); }
+});
+
+
+test('focusing the current site preserves overview, page and order and refuses covered views', () => {
+  const h = harness();
+  try {
+    h.manager.setPage(1);
+    const before = JSON.stringify(h.manager.getUiState());
+    const current = h.manager.getLayout().focused;
+    h.manager.focusCurrentSite();
+    assert.equal(JSON.stringify(h.manager.getUiState()), before);
+    assert.equal(h.views[3].webContents.calls.includes('focus'), true);
+    assert.equal(h.manager.getLayout().focused, current);
+    for (const surface of ['settings', 'confirmation', 'question-history']) {
+      h.manager.setSurface(surface);
+      const count = h.views.reduce((n: number, v: any) => n + v.webContents.calls.length, 0);
+      h.manager.focusCurrentSite();
+      assert.equal(h.views.reduce((n: number, v: any) => n + v.webContents.calls.length, 0), count);
+    }
+  } finally { h.window.emit('closed'); }
+});
+
+
+test('current site follows native focus in overview and ignores covered or off-page views', () => {
+  const h = harness();
+  try {
+    h.views[1].webContents.emit('focus');
+    assert.equal(h.manager.getLayout().focused, 'chatgpt');
+    assert.equal(h.manager.getUiState().layoutMode, 'overview');
+    h.views[4].webContents.emit('focus');
+    assert.equal(h.manager.getLayout().focused, 'chatgpt');
+    h.manager.setSurface('confirmation'); h.views[0].webContents.emit('focus');
+    assert.equal(h.manager.getLayout().focused, 'chatgpt');
   } finally { h.window.emit('closed'); }
 });

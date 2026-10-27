@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,session,nativeTheme}=require('electron');
+const {app,BrowserWindow,ipcMain,session,nativeTheme,Menu}=require('electron');
 const {join}=require('node:path'),fs=require('node:fs'),assert=require('node:assert/strict');
 const output=process.argv[2];app.setPath('userData',join(output,'profile'));
 const keys=['claude','chatgpt','gemini','deepseek','doubao'];
@@ -8,7 +8,9 @@ app.whenReady().then(async()=>{
   for(const s of [session.defaultSession,session.fromPartition('persist:polyask-sites')])s.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_d,cb)=>{blocked++;cb({cancel:true})});
   const win=new BrowserWindow({show:true,width:1600,height:1000,webPreferences:{preload:join(output,'preload.cjs'),sandbox:true,contextIsolation:true}});
   win.setMenuBarVisibility(false);
-  const {ViewManager}=require(join(output,'manager.cjs'));
+  const {ViewManager,registerWorkbenchNavigationIpc,dispatchAppCommand,applicationMenu,getCopy,DEFAULT_DISPLAY_PREFERENCES}=require(join(output,'manager.cjs'));
+  const boundary=require('./native-process-boundary.cjs').processBoundary(app,output);boundary();
+  const boundaryTimer=setInterval(boundary,50);
   const manager=new ViewManager(win,()=>{},layout=>win.webContents.send('polyask:layout',layout),()=>{},{selectedSites:keys});
   const views=win.contentView.children.filter(v=>v.webContents&&v.webContents!==win.webContents);
   const startupEnd=Date.now()+5000;
@@ -21,7 +23,8 @@ app.whenReady().then(async()=>{
   ipcMain.handle('polyask:bootstrap',()=>({runtime:{version:'native-check',distribution:'installed'},sites,statuses:keys.map(site=>({site,phase:'ready'})),layout:manager.getLayout(),workspace:workspace(),
     promptLibrary:{templates:[{id:'local-template',name:'Local template',text:'Local template draft',updatedAt:1,deviceId:'fixture'}],history:[]},pendingSynthesis:null,sync}));
   ipcMain.handle('polyask:set-display',(_e,v)=>{manager.setDisplayPreferences(v);return v});
-  ipcMain.handle('polyask:site-history-state',()=>({}));ipcMain.handle('polyask:menu-shortcuts',()=>[]);
+  registerWorkbenchNavigationIpc(ipcMain,manager,trusted);
+  Menu.setApplicationMenu(Menu.buildFromTemplate(applicationMenu(process.platform,getCopy('en'),DEFAULT_DISPLAY_PREFERENCES,()=>{},id=>dispatchAppCommand(id,manager,win),'PolyAsk',()=>{})));ipcMain.handle('polyask:menu-shortcuts',()=>[]);
   ipcMain.handle('polyask:set-tier',()=>workspace());
   let pendingSend=null;
   ipcMain.handle('polyask:broadcast',(_e,request)=>new Promise(resolve=>{pendingSend={request,resolve}}));
@@ -34,7 +37,7 @@ app.whenReady().then(async()=>{
   ipcMain.handle('polyask:question-panel',(_e,v)=>manager.historyAccess.setPanelOpen(v));
   ipcMain.handle('polyask:preview-site-page-close',(_e,site)=>({site,contentsId:views[0].webContents.id,reason:null}));
   for(const [channel,action] of [['set-composer-expanded',v=>manager.setComposerExpanded(v)],['set-drawer-open',v=>manager.setDrawerOpen(v)],
-    ['set-page',v=>manager.setPage(v)],['set-surface',v=>{manager.setSurface(v);if(v==='confirmation')win.webContents.focus()}],['set-layout',v=>manager.setLayout(v.mode,v.focused)]])
+    ['set-surface',v=>{manager.setSurface(v);if(v==='confirmation')win.webContents.focus()}]])
     ipcMain.on('polyask:'+channel,(e,v)=>{if(trusted(e))action(v)});
   const run=s=>win.webContents.executeJavaScript(s),pause=ms=>new Promise(r=>setTimeout(r,ms));
   const wait=async s=>{const end=Date.now()+5000;while(!(await run(s))){if(Date.now()>end)throw Error('Timeout '+s);await pause(15)}};
@@ -91,7 +94,39 @@ app.whenReady().then(async()=>{
   assert.equal(await run('document.activeElement===document.querySelector(".scope-main")'),true,'cancel returns to a stable workbench control');
   await click('[name=prompt]');
   await run(`(()=>{const t=new DataTransfer();t.items.add(new File([Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII='),c=>c.charCodeAt(0))],'local.png',{type:'image/png'}));originalArea.dispatchEvent(new ClipboardEvent('paste',{bubbles:true,clipboardData:t}))})()`);
-  await wait('!!document.querySelector(".image-count")');await click('.image-trigger');await click('[name=prompt]');await key('Escape');
+  await wait('!!document.querySelector(".image-count")');
+  const shortcut=async(contents,keyCode)=>{for(const type of ['keyDown','keyUp'])contents.sendInputEvent({type,keyCode,modifiers:['alt']});await pause(250);};
+  const draftBefore=await state();const imagesBefore=await imageCount();
+  const currentId=manager.getDiagnosticSites().find(site=>site.site==='chatgpt').webContentsId;
+  const currentView=views.find(view=>view.webContents.id===currentId);
+  assert.equal(currentView!==undefined,true,'resolve current site by production identity, not stacking order');
+  manager.setLayout('overview','claude');currentView.webContents.focus();await pause(100);
+  assert.equal(manager.getLayout().focused,'chatgpt','current site follows native focus');
+  // 从站点触发一次先收起既有展开，再次展开并进入提问框。
+  await shortcut(currentView.webContents,'Q');await check('Alt+Q collapses and returns to current site',false);
+  assert.equal(currentView.webContents.isFocused(),true);
+  await shortcut(currentView.webContents,'Q');await check('Alt+Q opens from the native site',true);
+  assert.equal((await state()).focused,true);assert.equal(win.webContents.isFocused(),true);
+  await shortcut(win.webContents,'W');await check('Alt+W leaves the composer state intact',true);
+  assert.equal(currentView.webContents.isFocused(),true);
+  assert.equal(manager.getUiState().layoutMode,'overview');
+  assert.equal((await state()).value,draftBefore.value);assert.equal(await imageCount(),imagesBefore);
+  dispatchAppCommand('edit-prompt',manager,win);await pause(100);dispatchAppCommand('edit-prompt',manager,win);await pause(100);
+  await check('global activation always opens the prompt',true);
+  assert.equal((await state()).focused,true);
+  for(const reader of [false,true])for(const id of ['focus-prompt','edit-prompt','focus-current-site']){
+    win.webContents.focus();dispatchAppCommand('open-question-history',manager,win);
+    await wait('!!document.querySelector(".question-main")');
+    if(reader){await click('.question-main');await pause(220);}
+    if(id==='edit-prompt')dispatchAppCommand(id,manager,win);
+    else await shortcut(win.webContents,id==='focus-prompt'?'Q':'W');
+    await pause(350);
+    if(id==='focus-current-site')assert.equal(currentView.webContents.isFocused(),true,'history closes before returning native focus');
+    else{await check('history '+(reader?'reader':'list')+' to '+id,true);assert.equal((await state()).focused,true);assert.equal(win.webContents.isFocused(),true);}
+    assert.equal((await state()).value,draftBefore.value);assert.equal(await imageCount(),imagesBefore);
+  }
+  win.webContents.focus();dispatchAppCommand('edit-prompt',manager,win);await pause(180);
+  await click('.image-trigger');await click('[name=prompt]');await key('Escape');
   await check('first Escape only collapses editor',false);assert.equal(await run('document.querySelector(".image-trigger").getAttribute("aria-expanded")'),'true');
   await key('Escape');assert.equal(await run('document.querySelector(".image-trigger").getAttribute("aria-expanded")'),'false');
   await click('.image-trigger');await click('.image-preview button');await click('[name=prompt]');await key('A',['control']);await key('Backspace');await key('Escape');
@@ -181,5 +216,5 @@ app.whenReady().then(async()=>{
   }
   debug.detach();fs.writeFileSync(join(output,'report.json'),JSON.stringify(report,null,2));
   console.log(`Native composer passed: ${report.cases.length} intent cases, ${report.fields.length} field/theme cases, actual production renderer, five real local views, forced colors and reduced motion.`);
-  win.destroy();app.exit(0);
+  clearInterval(boundaryTimer);boundary();win.destroy();app.exit(0);
 }).catch(e=>{console.error(e.stack);app.exit(1)});

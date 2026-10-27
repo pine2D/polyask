@@ -14,6 +14,8 @@ export type CommandId =
   | "previous-site"
   | "site-back"
   | "site-forward"
+  | "focus-current-site"
+  | "edit-prompt" // 全局唤起只展开，不参与应用内 Alt+Q 切换。
   | "focus-prompt"
   | "find-page"
   | "set-think"
@@ -63,16 +65,16 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "show-page-1", labelKey: "showPageOne", group: "navigate", accelerator: "Alt+1" },
   { id: "show-page-2", labelKey: "showPageTwo", group: "navigate", accelerator: "Alt+2" },
   { id: "show-page-3", labelKey: "showPageThree", group: "navigate", accelerator: "Alt+3" },
-  // 这四条原本是 createMenu() 里手写的菜单项，没进本表 → 快捷键速查（只渲染本表）看不到它们，
-  // 而速查的文案承诺的是「集中查看当前可用的应用快捷键」。并进来后菜单也从本表生成，不会再漂。
+  // 相对站点导航保留命令面板入口，不再占用 Ctrl+PageUp/PageDown。
   { id: "next-page", labelKey: "nextPageMenu", group: "navigate", accelerator: "CmdOrCtrl+Shift+PageDown" },
   { id: "previous-page", labelKey: "previousPageMenu", group: "navigate", accelerator: "CmdOrCtrl+Shift+PageUp" },
-  { id: "next-site", labelKey: "nextSiteMenu", group: "navigate", accelerator: "CmdOrCtrl+PageDown" },
-  { id: "previous-site", labelKey: "previousSiteMenu", group: "navigate", accelerator: "CmdOrCtrl+PageUp" },
+  { id: "next-site", labelKey: "nextSiteMenu", group: "navigate" },
+  { id: "previous-site", labelKey: "previousSiteMenu", group: "navigate" },
   // 站内导航（点了回答里的站内链接、站点自己的跳转器）之后此前完全没有退路，唯一脱身办法是
   // 「新会话」——那会丢掉当前对话。Alt+方向键避开浏览器/站点自己的 Alt+Left。
   { id: "site-back", labelKey: "siteBackMenu", group: "navigate", accelerator: "Alt+Left" },
   { id: "site-forward", labelKey: "siteForwardMenu", group: "navigate", accelerator: "Alt+Right" },
+  { id: "focus-current-site", labelKey: "focusCurrentSiteMenu", group: "navigate", accelerator: "Alt+W" },
   { id: "focus-prompt", labelKey: "focusPromptMenu", group: "compose", accelerator: "Alt+Q" },
   { id: 'find-page', labelKey: 'findPage', group: 'navigate', accelerator: 'CmdOrCtrl+F' },
   { id: "set-think", labelKey: "chooseThinkMode", group: "compose", accelerator: "Alt+T" },

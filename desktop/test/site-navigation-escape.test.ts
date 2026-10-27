@@ -61,7 +61,7 @@ test("in-site back and forward are registered as real commands with accelerators
 
 test("history navigation is wired end to end and gated like reload", () => {
   const manager = readSource("src/main/view-manager.ts");
-  const ipc = readSource("src/main/shell-ipc.ts");
+  const ipc = (readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts"));
   const preload = readSource("src/preload/shell.ts");
   const renderer = readSource("src/renderer/index.tsx");
   const body = manager.slice(manager.indexOf("navigateHistory("), manager.indexOf("\n  canNavigateHistory("));

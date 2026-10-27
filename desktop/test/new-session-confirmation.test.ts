@@ -86,7 +86,7 @@ test("a pending auxiliary operation cannot be covered by a new-session confirmat
 
 test("confirmation surface reaches the manager only through a trusted shell and takes keyboard focus", () => {
   const source = readSource("src/main/shell-ipc.ts");
-  const body = source.slice(source.indexOf('  ipcMain.on("polyask:set-surface"'), source.indexOf('  ipcMain.on("polyask:set-layout"'));
+  const body = source.slice(source.indexOf('  ipcMain.on("polyask:set-surface"'), source.indexOf('  ipcMain.on("polyask:set-completion-notifications"'));
   let handler: (event: { trusted: boolean }, value: unknown) => void;
   const events: string[] = [];
   vm.runInNewContext(ts.transpileModule(body, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
