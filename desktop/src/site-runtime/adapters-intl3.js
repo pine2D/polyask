@@ -10,19 +10,30 @@
     "gemini.google.com": {
       attach: async function (files, el, deadline) {
         if (Date.now() >= deadline) return false;
-        const selector = 'input[type="file"][accept="image/*"]:not([capture])';
-        let input = document.querySelector(selector);
+        // 当前媒体入口同时声明 image/*,video/*；相机与文档入口不能接管图片。
+        const findInput = () => [...document.querySelectorAll('input[type="file"]:not([capture]):not(:disabled)')]
+          .find(node => (node.getAttribute('accept') || '').toLowerCase().split(',').some(type => type.trim() === 'image/*')) || null;
+        const add = [...document.querySelectorAll("button")].find(node =>
+          /upload.*tools|上传.*工具|上傳.*工具|添加文件/i.test(node.getAttribute("aria-label") || ""));
+        let input = findInput();
         try {
           if (!input) {
-            const add = [...document.querySelectorAll("button")].find(node =>
-              /upload.*tools|上传.*工具|上傳.*工具|添加文件/i.test(node.getAttribute("aria-label") || ""));
             if (!add) return "attachment_action_required";
-            add.click();
-            input = await waitFor(() => document.querySelector(selector), Math.min(1500, Math.max(0, deadline - Date.now())));
+            if (add.getAttribute('aria-expanded') !== 'true') add.click();
+            try { input = await waitFor(findInput, 1500, 120, deadline); }
+            catch (error) {
+              // 保留 uploadImages 的超时码；其它等待故障仍按上传失败处理。
+              if (error?.message === 'timeout' && Date.now() >= deadline) return false;
+              throw error;
+            }
           }
           if (!input || Date.now() >= deadline) return false;
           return await S.setInputFiles(input, files, el, deadline);
-        } finally { escMenus(); }
+        } finally {
+          escMenus();
+          // Gemini 的 Escape 可能不收菜单；仅切回仍展开的上传触发器。
+          if (add?.getAttribute('aria-expanded') === 'true') add.click();
+        }
       },
       _MI: "button.mat-mdc-menu-item, [role=menuitem]",
       // 只认可见项：页面常驻隐藏的导出菜单（`gv-pm-saved-export-menu gv-hidden` 的 JSON/Markdown 也是

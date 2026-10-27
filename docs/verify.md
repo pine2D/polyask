@@ -147,6 +147,14 @@ Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command n
 - **开发机与用户机不等价**：开发机是 WSL2 + Linux Electron（实测 `devicePixelRatio=1.5`，**不是无缩放**——缩放类量级问题本机可复现；界面英文），用户机是 Windows（缩放比例可能不同、界面可能非英文），layout 数值不同。本机跑通不构成「已修复」的证据。
 - **本机复现不出时先要现象、再猜层次**，四问按序问，答案直接落到四层：① 界面语言与显示缩放各是多少？（→ 词表 / 阈值余量）② 点了什么、屏幕上出现了什么？（→ 入口是否被点到）③ 输入框里有没有出现要发的文字？（→ composer / inject 的分界）④ `Alt+H` 站点状态怎么说、把诊断报告贴一份？（→ submit / state）。**没拿到①②就直接猜第三、四层，是返工的标准起手式。**
 
+## 2026-10-27 Gemini 图片与切档复验
+
+- 在已核验 Cookie 加密的 Linux 开发态复用指定测试档案；英文页面，站点视口约 466×1013，devicePixelRatio 约 1.35。重启加载最终补丁后，九站均有可见输入框、未出现可见登录入口；Gemini 有可见账号控件。没有读取或复制登录资料。
+- 当前上传媒体入口为 `accept="image/*,video/*"`。最终代码重启后，通过生产 `uploadImages` 添加新生成的 128×128 PNG 测试图，返回 `ok:true`、上传菜单关闭、输入框仍为空；测试图随后通过站点原生移除按钮移除，`hasPendingAttachments` 回到 false。未发送测试提问。
+- 生产 `runMode` 共 9 次成功：两轮 fast → think → think → fast，以及上传菜单预先展开时切 think；另有一次直接生产适配器 think 成功。回读为非 Lite Flash / Argon High；适配器内部复读 Low / High 选中态，结束均无模型菜单残留。最终重启后一轮耗时约 2.2–2.9 秒，使用既有 10 秒截止时间。
+- 原切档失败未在本机复现，触发条件尚不明确；没有据此修改切档策略或宣称该故障已修复。尚未覆盖 Windows 用户环境、带图群发的完整提交与生成链路。
+- 图片回归包含混合 MIME、相机/禁用输入排除、等待到期不设置文件、异常收尾，以及生产 `uploadImages` 对 `attachment_timeout` / `attachment_failed` 的分类；完整 runtime 538 项及仓库门禁通过。等待错误码用例使用合成时钟，不能替代真实平台的时序实测。
+
 ## 2026-09-29 自适应切档验收
 
 - 使用用户指定的 `~/.config/PolyAsk` 重启 Linux 开发态，通过目标视图隔离上下文的生产 `__AMS.runMode` 与只读 `selection` 验证；没有发送测试提问。

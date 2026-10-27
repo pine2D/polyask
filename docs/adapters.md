@@ -212,6 +212,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 ### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl3.js`）
 
+- 2026-10-27 真机：上传菜单媒体输入为 `accept="image/*,video/*"`；按逗号分隔的 MIME 项识别 `image/*`，排除 capture、disabled 和文档输入。上传菜单的 Escape 不可靠，结束时仅在触发器仍 `aria-expanded=true` 时再点击收尾；到期不得设置文件。等待入口时遇到明确到期的 `timeout` 返回 false，由上传总入口保留 `attachment_timeout`；其它异常继续抛出并按上传失败处理。
+
 - 档位：think 优先实际菜单 `4 Argon` + High；菜单没有 Argon 时继续匹配任意版本 Pro + Extended（新版等级菜单则 High）。Argon 在场但禁用或同优先项重复时直接报错，不偷偷改选 Pro；`4.1 Argon` / `4 Argon-Lite` 不当已确认模型。fast 仍匹配任意版本 Flash，排除 Flash-Lite；旧版关闭 Extended，新版选择 Low。Argon 与新版 Low/High 必须复读子菜单的 `.selected` / `aria-checked`，不靠粗档位判断冒充等级确认。
 - **2026-10-14 英文菜单实测**：`3.5 Flash-Lite` / `3.8 Flash` / `3.1 Pro` / `4 Argon Complex tasksNew`，Thinking level 展开后 Low / Medium / High 是入口节点的后代（`gem-menu-item` / `role=menuitem`）。等级跨模型保留，Argon High 后仅切 Flash 会变成 `currently Flash High`；选 Low 后标签省略等级、显示 `currently Gemini Flash`，所以必须重开子菜单复读选中态。High/Low 只认该入口的后代，排除同 role 的其它同名项。Gemini 拆入独立分卷为完整等级流程留出行数余量。
 - **快档模型正则必须版本无关**（2026-08-31 事故）：菜单从 `3.6 Flash` 换成 `3.7 Flash`，写死版本号的旧正则当天让整站 `fast()` 抛「未找到模型」。现按「任意版本号 + Flash、且不是 Flash-Lite」匹配，后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法——**Lite 是更弱的另一档，绝不能被当成快档选中**。think 的 Pro 备用同样版本无关，Argon 使用实测明确版本。
@@ -350,7 +352,7 @@ Kimi 首屏会先绑定临时 `/chat/<id>` 再换为服务端地址，且同一�
 
 ### 九站图片能力复核（2026-09-22）
 
-- Gemini：展开 Upload & tools 菜单，取 `accept="image/*"` 且没有 capture 的图片 input；支持多文件，finally 关菜单。缺入口返回 `attachment_action_required`（登录、额度等站点要求由用户处理）。
+- Gemini：展开 Upload & tools 菜单；旧入口曾为 `accept="image/*"`，2026-10-27 当前媒体入口为 `image/*,video/*`，按逗号分隔的 MIME 项匹配，排除 capture 与 disabled。支持多文件，finally 关闭仍展开的上传菜单。缺入口返回 `attachment_action_required`（登录、额度等站点要求由用户处理）。
 - 千问：添加附件通过 PointerEvent 的 pointerdown/up（pointerType=mouse）打开；选“上传图片”才会创建 `accept*=image/` 输入，捕获 file click 防止弹出系统选择器。每次重新走菜单；finally 移除监听并关菜单，所有等待夹取 deadline。
 - 智谱：本地文件选择的 `.upload-demo` 承载新聊天附件入口；旧 `.img-input` 虽接收 files，却不触发当前附件流程。
 - 开发态已用无个人信息的测试图验证上述三站与 Kimi 的附件确认；不把“附件确认”视为完整回答质量或所有账号额度的保证。

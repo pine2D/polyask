@@ -6,13 +6,13 @@ const { source, helpers } = require('./lib/site-send-harness');
 function fixture(file, host, mode = 'ok') {
   let now = 1000, menu = false, inputReady = false, closed = 0, attached = null;
   const listeners = new Set(), events = [], waits = [];
-  const input = { type: 'file' }, wrong = { avatar: true };
+  const input = { type: 'file', getAttribute: name => name === 'accept' ? 'image/*' : null }, wrong = { avatar: true };
   const item = { textContent: '上传图片', click() {
     let prevented = false;
     for (const listener of listeners) listener({ target: { matches: () => true }, preventDefault() { prevented = true; } });
     assert.ok(prevented, '菜单创建 input 时必须阻止系统选择窗'); inputReady = true;
   } };
-  const add = { getAttribute: () => 'Upload & tools', click() { menu = true; inputReady = true; },
+  const add = { getAttribute: name => name === 'aria-expanded' ? String(menu) : 'Upload & tools', click() { menu = true; inputReady = true; },
     dispatchEvent(e) { events.push(e); if (e.type === 'pointerdown' && e.pointerType === 'mouse') menu = true; }
   };
   const document = {
@@ -23,6 +23,7 @@ function fixture(file, host, mode = 'ok') {
       return inputReady && mode !== 'missing' ? input : null;
     },
     querySelectorAll(selector) {
+      if (selector.startsWith('input[type="file"]')) return inputReady && mode !== 'missing' ? [input] : [];
       if (selector === 'button') return mode === 'missing' ? [] : [add];
       if (selector.includes('menuitem')) return menu && mode !== 'missing' ? [item] : [];
       return [];
@@ -30,7 +31,7 @@ function fixture(file, host, mode = 'ok') {
     addEventListener(_type, fn) { listeners.add(fn); }, removeEventListener(_type, fn) { listeners.delete(fn); }
   };
   const context = helpers(document, {
-    waitFor: async (find, ms) => { waits.push(ms); if (mode === 'expired') now = 3000; return find(); },
+    waitFor: async (find, ms, _step, deadline) => { waits.push(deadline ? Math.min(ms, Math.max(0, deadline - now)) : ms); if (mode === 'expired') now = 3000; return find(); },
     setInputFiles: async (node, files, el, deadline) => { attached = { node, files, el, deadline }; if (mode === 'throw') throw Error('upload failed'); return mode !== 'failed'; },
     escMenus() { closed++; menu = false; }
   });
