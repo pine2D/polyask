@@ -51,7 +51,7 @@ module.exports = async tools => {
     check(await js('document.activeElement===document.querySelector(".archive-compare-column .answer-excerpt-open")'), 'Escape returns focus to the real opener');
     await view('read');
     check(await js(`document.querySelectorAll('.archive-answer-reading').length===9&&[...document.querySelectorAll('.archive-answer-reading-body')].every((node,index)=>node.textContent.includes(window.readingFixture.sources[index].text.split('\\r\\n\\r\\n').at(-1)))`), 'read restores all nine complete saved answers');
-    await view('compare'); await click('details.manual-comparison > summary');
+    await view('compare'); await click('.comparison-manual-entry');
     check(await js('document.querySelectorAll(".manual-comparison [name=manual-category]").length===8'), 'manual worksheet has four user categories for each current source');
     await snapshot(name);
   }
@@ -93,7 +93,8 @@ module.exports = async tools => {
   await until('!!document.querySelector(".answer-excerpt-actions")', 'unique rendered literal selection');
   check(await js(`document.querySelector('.answer-excerpt-actions blockquote').textContent===window.readingFixture.sources[0].text.split('\\r\\n')[0]`), 'native selected quote is the exact saved literal');
   await click(await label('excerptManualCompare', scope('.answer-excerpt-actions')));
-  await until('document.querySelector("details.manual-comparison").open', 'explicit manual worksheet');
+  await until('!document.querySelector(".manual-comparison").hidden', 'explicit manual worksheet');
+  await click('.comparison-manual-entry');
   await selectParagraph('last', 0, 1);
   await until('!!document.querySelector(".archive-compare-side:last-child .answer-excerpt-actions")', 'second source native literal selection');
   check(await js(`document.querySelector('.archive-compare-side:last-child .answer-excerpt-actions blockquote').textContent===window.readingFixture.sources[1].text.split('\\r\\n')[0]`), 'second native quote retains its own saved source');
@@ -107,12 +108,14 @@ module.exports = async tools => {
   await type('[name=comparison-note-cost-0]', 'Two hours of manual verification.');
   state.step = 'existing-metadata-guard';
   await click('.archive-record-context > summary');
-  await click('.archive-metadata summary'); await type('[name=archive-note]', 'Keep this unsaved metadata.');
+  await click('.library-organize'); await type('[name=archive-note]', 'Keep this unsaved metadata.');
+  await click('.archive-organization-close');
   await click(await label('manualFormDecision', scope('.manual-comparison')));
   await until('!!document.querySelector(".confirm-dialog:not(.folder-modal)")', 'unsaved metadata guard');
   await click(await label('cancel', scope('.confirm-dialog:not(.folder-modal)')));
   check(await js(`document.querySelector('[name=archive-note]').value==='Keep this unsaved metadata.'&&document.querySelector('[name=comparison-judgment]').value==='My manual judgment.'`), 'cancel preserves both metadata and manual worksheet');
   await click(await label('cancel', scope('.library-metadata-actions')));
+  await click('.archive-organization-close');
   await click(await label('manualFormDecision', scope('.manual-comparison')));
   await until('!!document.querySelector(".decision-editor")', 'formed decision draft');
   check(await js(`document.querySelector('[name=decision-conclusion]').value==='My manual judgment.'&&document.querySelector('[name=decision-evidence-0]').value===window.readingFixture.sources[0].text.split('\\r\\n')[0]&&document.querySelector('[name=decision-uncertainties]').value.includes('[S1]')&&document.querySelector('[name=decision-rationale]').value.includes('Two hours')`), 'decision contains manual judgment and literal indexed evidence');

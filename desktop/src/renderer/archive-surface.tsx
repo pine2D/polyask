@@ -149,7 +149,7 @@ export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
   return <FolderWorkspace {...props} session={session} renderArchive={(record, onChanged, onCreateDecision, onBusy, onSavedArchive, onOrganize, readingFocus, readerNavigationKey) => <ArchiveRecordSurface key={`${record.id}:${readerNavigationKey ?? ""}`} {...props} session={session} comparisonDrafts={props.comparisonDrafts ?? drafts.current!} readingFocus={readingFocus} onOrganize={onOrganize} onBusy={onBusy} onSavedArchive={onSavedArchive} preferredId={record.id} embeddedRecord={record} onChanged={onChanged} onCreateDecision={onCreateDecision} />} />;
 }
 
-function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; readingFocus: LibraryReadingFocus; onOrganize: () => void; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput, origin?: string) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
+function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: ArchiveRecord; readingFocus: LibraryReadingFocus; onOrganize: (afterSaved?: () => void) => void; onChanged: (deleted?: boolean) => void; onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput, origin?: string) => void; onBusy: (busy: boolean) => void; onSavedArchive: (record: ArchiveRecord) => void }): React.JSX.Element {
   const [selected, setSelected] = useState(props.embeddedRecord);
   const reader = useArchiveReader(selected, selected.id === props.comparisonId,
     props.session?.read().reader, value => props.session?.update({ reader: value }));

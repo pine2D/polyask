@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -8,6 +8,7 @@ import webpack from 'webpack';
 
 test('real organization forms recover tag and folder errors and retain the final membership confirmation', { timeout: 90000 }, async () => {
   const output = mkdtempSync(join(tmpdir(), 'polyask-organization-ui-'));
+  console.log(`Organization UI evidence: ${output}`);
   try {
     await new Promise<void>((resolve, reject) => {
       const compiler = webpack({ mode: 'development', context: join(__dirname, '..'), devtool: false,
@@ -25,8 +26,17 @@ test('real organization forms recover tag and folder errors and retain the final
     const args = [join(__dirname, 'ui/library-organization-runtime.cjs'), output];
     const headless = process.platform === 'linux' && !process.env.DISPLAY;
     const result = spawnSync(headless ? 'xvfb-run' : binary, headless ? ['-a', binary, ...args] : args,
-      { encoding: 'utf8', timeout: 60000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+      { encoding: 'utf8', timeout: 60000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '',
+        ...(process.platform === 'linux' ? { DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` } : {}) } });
+    writeFileSync(join(output, 'runtime.log'), `${result.stdout}\n${result.stderr}`);
+    if (process.platform === 'linux' && existsSync(join(output, 'process-boundary.json'))) {
+      const { observed } = JSON.parse(readFileSync(join(output, 'process-boundary.json'), 'utf8')) as { observed: number[] };
+      for (let round = 0; round < 20 && observed.some(pid => existsSync(`/proc/${pid}`)); round++) await new Promise(resolve => setTimeout(resolve, 50));
+      const remaining = observed.filter(pid => existsSync(`/proc/${pid}`));
+      writeFileSync(join(output, 'cleanup.json'), JSON.stringify({ remainingObservedPids: remaining }));
+      assert.equal(remaining.length, 0, 'native organization processes exit');
+    }
     if (result.stdout) process.stdout.write(result.stdout);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${result.error ?? ''}`);
-  } finally { rmSync(output, { recursive: true, force: true }); }
+  } finally { rmSync(join(output, 'profile'), { recursive: true, force: true }); }
 });

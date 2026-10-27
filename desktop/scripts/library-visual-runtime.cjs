@@ -149,7 +149,7 @@ app.whenReady().then(async () => {
   await key('Escape');
   assert.equal(await run('!!document.querySelector("[role=dialog]")'), false);
   // Metadata navigation guard and failure preserve unsaved input.
-  await click('.archive-metadata summary');
+  await click('.library-organize');
   await fill('[name=archive-note]', '未保存的备注');
   await click('.library-close');
   await wait('!!document.querySelector("[role=dialog]")');
@@ -162,7 +162,7 @@ app.whenReady().then(async () => {
   await run('window.libraryTest.failSave=false');
   await click('.library-metadata-actions button[type=submit]');
   await wait('window.libraryTest.writes === 1');
-  await click('.archive-metadata summary');
+  await click('.archive-organization-close');
   // Link opens through the shell facade; shell location stays on the fixture.
   await click('.archive-answers .markdown-preview a');
   assert.equal(await run('window.libraryTest.links.length'), 1);

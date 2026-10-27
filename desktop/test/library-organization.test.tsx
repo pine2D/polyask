@@ -142,7 +142,7 @@ test('a created folder remains visible in the library when association editing i
   const h = await mountDom(<FolderWorkspace copy={copy} locale="en" preferredId={record.id} onClose={() => {}}
     onCapture={async () => record} sites={[]} synthesisSites={[]} defaultTier={null} pendingSynthesis={null} synthesisCandidate={null}
     onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => record}
-    renderArchive={(_record, _changed, _decision, _busy, _saved, organize) => <button id="test-organize" onClick={organize}>Organize</button>} />);
+    renderArchive={(_record, _changed, _decision, _busy, _saved, organize) => <button id="test-organize" onClick={() => organize()}>Organize</button>} />);
   try {
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
     await h.click(h.document.querySelector<HTMLButtonElement>('#test-organize')!);
@@ -167,7 +167,7 @@ test('an older library refresh cannot remove a folder created during association
   const h = await mountDom(<FolderWorkspace copy={copy} locale="en" preferredId={record.id} onClose={() => {}}
     onCapture={async () => record} sites={[]} synthesisSites={[]} defaultTier={null} pendingSynthesis={null} synthesisCandidate={null}
     onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => record}
-    renderArchive={(_record, _changed, _decision, _busy, _saved, organize) => <button id="test-organize" onClick={organize}>Organize</button>} />);
+    renderArchive={(_record, _changed, _decision, _busy, _saved, organize) => <button id="test-organize" onClick={() => organize()}>Organize</button>} />);
   try {
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 30)); });
     assert.ok(finishContents.length > 0, 'a refresh has captured the earlier empty folder list');

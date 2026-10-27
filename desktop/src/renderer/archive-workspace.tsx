@@ -1,4 +1,4 @@
-import { useContext, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from 'react-dom';
 import { LibraryRecordToolbar } from './library-record-toolbar';
 
@@ -6,6 +6,7 @@ import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
 import type { PendingSynthesis, SynthesisCandidate } from "../shared/synthesis";
 import { dateTimeAttribute, formatDateTime } from "../shared/format";
+import { ArchiveOrganizationPanel } from './archive-organization-panel';
 import { ArchiveDetail } from "./archive-detail";
 import { ConfirmDialog } from './confirm-dialog';
 import { LibraryMenu } from './library-menu';
@@ -29,7 +30,7 @@ interface ArchiveWorkspaceProps {
   readonly readingFocus?: LibraryReadingFocus;
   readonly comparisonDrafts?: ComparisonDraftStore;
   readonly onCreateDecisionDraft?: (record: ArchiveRecord, draft: DecisionInput, origin?: string) => void;
-  readonly onOrganize?: () => void;
+  readonly onOrganize?: (afterSaved?: () => void) => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly items: readonly ArchiveRecord[];
@@ -71,6 +72,8 @@ interface ArchiveWorkspaceProps {
 export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Element {
   const { copy, selected } = props;
   const Detail = props.embedded ? 'div' : 'main';
+  const [organizing, setOrganizing] = useState(false), [organizationDirty, setOrganizationDirty] = useState(false);
+  useEffect(() => { setOrganizing(false); setOrganizationDirty(false); }, [selected?.id]);
   const localReader = useArchiveReader(selected ?? { id: '', results: [] }, selected?.id === props.comparisonId);
   const reader = props.reader ?? localReader;
   const toolbarHost = useContext(LibraryRecordToolbar);
@@ -118,7 +121,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   ];
   const recordActions = <div className="archive-actions">
     {!props.embedded ? <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button> : null}
-    {props.onOrganize ? <button className="library-organize" type="button" disabled={props.busy} onClick={props.onOrganize}>{copy.libraryOrganize}</button> : null}
+    {selected ? <button className="library-organize" type="button" disabled={props.busy} aria-expanded={organizing} data-dirty={organizationDirty || undefined} onClick={() => setOrganizing(value => !value)}>{copy.libraryOrganize}{organizationDirty ? <span className="sr-only"> · {copy.decisionUnsaved}</span> : null}</button> : null}
     <LibraryMenu label={copy.libraryMore} disabled={!selected || props.busy} actions={actions} />
     {!props.embedded ? <button className="panel-close" type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
   </div>;
@@ -155,13 +158,16 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           )}
         </aside> : null}
         <Detail ref={node => { pane.current = node; }} className="archive-detail-pane" onScroll={event => { if (event.target === event.currentTarget) reader.change(capture()); }}>
-          {props.detailOverride ?? (selected ? <ArchiveDetail recordActions={inlineActions ? recordActions : undefined} reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
+          {props.detailOverride ?? (selected ? <ArchiveDetail metadata={null} recordActions={inlineActions ? recordActions : undefined} reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
             onSynthesize={() => { rememberEditorScroll(); props.onSynthesize(); }}
             onFollowUp={props.onFollowUp ? (host, excerpt) => { rememberEditorScroll(); props.onFollowUp?.(host, excerpt); } : undefined}
             onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}
         </Detail>
       </div>
       <div className="archive-status" role="status" aria-live="polite">{props.status}</div>
+      {selected ? <ArchiveOrganizationPanel key={selected.id} record={selected} copy={copy} busy={props.busy} open={organizing && !props.detailOverride}
+        onOpenChange={setOrganizing} onDirtyChange={setOrganizationDirty} onOpenMembership={props.onOrganize}
+        onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} /> : null}
       {confirmDelete === selected?.id && selected ? <ConfirmDialog copy={copy} title={copy.deleteArchive} message={copy.confirmDeleteArchive}
         confirmLabel={copy.deleteArchive} cancelLabel={copy.cancel} tone="danger" onCancel={() => setConfirmDelete(null)}
         onConfirm={() => { setConfirmDelete(null); props.onDelete(selected.id); }} /> : null}

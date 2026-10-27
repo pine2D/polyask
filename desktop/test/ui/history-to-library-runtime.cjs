@@ -221,7 +221,7 @@ app.whenReady().then(async () => {
   check(saved.selectedIds === 'a1' && saved.resultCount === 1 && saved.oldIdentity && saved.oldTruncated, 'one-site snapshot keeps older attempt and truncation identity');
   check(saved.promptExact && saved.bodiesExact && saved.sourceNull && saved.captures === 0, 'result preserves saved data without current-page collection');
   lastStep = 'folder-membership';
-  await click('.library-organize');
+  await click('.library-organize'); await click('.archive-organization-membership');
   await until('!!document.querySelector("input[data-folder-id=fixture-folder]")', 'existing folder dialog');
   await click('input[data-folder-id=fixture-folder]'); await click('[data-action=save-memberships]');
   await until('!document.querySelector("[role=dialog]")', 'folder saved');

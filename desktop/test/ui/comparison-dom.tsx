@@ -21,7 +21,7 @@ export async function comparisonWait(predicate: () => unknown) {
     await act(async () => new Promise(resolve => setTimeout(resolve, 10))); }
 }
 
-export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraftStore; onArchiveEntered?: (id: string, mode: string) => void;
+export async function comparisonMount(options: { api?: Record<string, unknown>; synthesisDrafts?: SynthesisDraftStore; onArchiveEntered?: (id: string, mode: string) => void;
   pendingSynthesis?: PendingSynthesis;
   detailWidth?: number; startInRead?: boolean; session?: LibrarySessionStore; configure?: Parameters<typeof mountDom>[1] } = {}) {
   const css = require.extensions['.css']; require.extensions['.css'] = () => {};
@@ -32,14 +32,14 @@ export async function comparisonMount(options: { synthesisDrafts?: SynthesisDraf
   let writes = 0;
   let decisionWrites = 0;
   let read: ((id: string) => Promise<ArchiveRecord | null>) | null = null;
-  setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [],
+  setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [], folderMemberships: async () => [],
     searchFolderContents: async () => records.map(record => ({ kind: 'archive', record })),
     getArchive: async (id: string) => read && id === comparisonRecord.id ? read(id) : records.find(record => record.id === id) || null,
     createDecision: async () => { decisionWrites++; throw new Error('unexpected fixture write'); },
     updateArchive: async (id: string, patch: Parameters<typeof updateArchiveRecord>[1]) => {
       writes++; const saved = updateArchiveRecord(records.find(record => record.id === id)!, patch, { now: 200, deviceId: 'fixture' });
       records = records.map(record => record.id === id ? saved : record); return saved;
-    }
+    }, ...options.api
   }) as any);
   let pendingSynthesis = options.pendingSynthesis ?? null;
   const surface = () => <StrictMode><ArchiveSurface copy={comparisonCopy} locale="en" sites={SITES} synthesisSites={SITES}

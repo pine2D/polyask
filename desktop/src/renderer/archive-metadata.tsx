@@ -9,9 +9,15 @@ import { validateArchiveTags } from './archive-metadata-validation';
 import { useFailedActionFocus } from './use-failed-action-focus';
 export { validateArchiveTags } from './archive-metadata-validation';
 
-export function ArchiveMetadata({ record, copy, busy, onSave }: {
+export interface ArchiveMetadataProps {
   record: ArchiveRecord; copy: DesktopCopy; busy: boolean; onSave: (patch: ArchivePatch) => Promise<boolean>;
-}): React.JSX.Element {
+  presentation?: 'details' | 'panel'; onDirtyChange?: (dirty: boolean) => void; onRestoreEditing?: () => void;
+}
+
+export function ArchiveMetadata({ record, copy, busy, onSave, presentation = 'details', onDirtyChange, onRestoreEditing }: ArchiveMetadataProps): React.JSX.Element {
+  const Container = presentation === 'panel' ? 'div' : 'details';
+  const editedField = useRef<HTMLElement | null>(null);
+  const [restoreFocus, setRestoreFocus] = useState(0);
   const savedTags = record.tags.join(', ');
   const [tags, setTags] = useState(savedTags);
   const [note, setNote] = useState(record.note);
@@ -33,6 +39,11 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
   const blocked = busy || saving;
   const rememberFocus = useFailedActionFocus(blocked);
   const dirty = tags !== savedTags || note !== record.note;
+  useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+  useEffect(() => {
+    if (restoreFocus && editedField.current?.isConnected && !editedField.current.closest('[hidden],[inert]'))
+      editedField.current.focus({ preventScroll: true });
+  }, [restoreFocus]);
   const baseline = useRef({ id: record.id, tags: savedTags, note: record.note });
   useEffect(() => {
     const previous = baseline.current, changedRecord = previous.id !== record.id;
@@ -65,15 +76,15 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
     finally { finishFocus(failed); pending.current = false; setSaving(false); }
   };
   return <>
-    <details className="archive-metadata" data-library-return="metadata">
-      <summary><span>{copy.libraryMetadata}</span><span className="library-metadata-preview">{record.tags.join(' / ') || record.note}</span>{dirty ? <small>{copy.decisionUnsaved}</small> : null}</summary>
+    <Container className="archive-metadata" data-library-return="metadata">
+      {presentation === 'panel' ? <h3>{copy.libraryMetadata}{dirty ? <small>{copy.decisionUnsaved}</small> : null}</h3> : <summary><span>{copy.libraryMetadata}</span><span className="library-metadata-preview">{record.tags.join(' / ') || record.note}</span>{dirty ? <small>{copy.decisionUnsaved}</small> : null}</summary>}
       <form aria-busy={saving} onSubmit={event => { event.preventDefault(); void save(); }}>
         <div className="archive-fields">
           <div className="archive-tags-field">
             <label htmlFor={`${id}-tags`}>{copy.archiveTags}</label>
             <input id={`${id}-tags`} ref={tagsInput} name="archive-tags" autoComplete="off" value={tags} disabled={blocked}
               aria-invalid={showErrors || undefined} aria-describedby={`${id}-hint ${id}-count${showErrors ? ` ${id}-error` : ''}`}
-              onChange={event => setTags(event.target.value)} />
+              onFocus={event => { editedField.current = event.currentTarget; }} onChange={event => { editedField.current = event.currentTarget; setTags(event.target.value); }} />
             <p id={`${id}-hint`} className="archive-field-hint">{copy.archiveTagsHint}</p>
             <p id={`${id}-count`} className="archive-field-hint">{formatCopy(copy.archiveTagsCount, { count: validation.tags.length })}</p>
             {validation.tags.length ? <ul className="archive-tag-counts">{validation.tags.map((tag, index) =>
@@ -88,7 +99,7 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
             <label htmlFor={`${id}-note`}>{copy.archiveNote}</label>
             <textarea id={`${id}-note`} ref={noteInput} name="archive-note" autoComplete="off" value={note} disabled={blocked}
               aria-invalid={showNoteError || undefined} aria-describedby={`${id}-note-count${showNoteError ? ` ${id}-note-error` : ''}`}
-              onChange={event => setNote(event.target.value)} />
+              onFocus={event => { editedField.current = event.currentTarget; }} onChange={event => { editedField.current = event.currentTarget; setNote(event.target.value); }} />
             <p id={`${id}-note-count`} className="archive-field-hint">{formatCopy(copy.archiveNoteCount, { count: noteLength })}</p>
             {showNoteError ? <p id={`${id}-note-error`} className="archive-field-errors" role="alert">{copy.archiveNoteTooLong}</p> : null}
           </div>
@@ -98,9 +109,9 @@ export function ArchiveMetadata({ record, copy, busy, onSave }: {
           {dirty ? <button type="button" disabled={blocked} onClick={() => { setTags(savedTags); setNote(record.note); setAttempt(0); setMessage(''); }}>{copy.cancel}</button> : null}
         </div>
       </form>
-    </details>
+    </Container>
     {confirm ? createPortal(<ConfirmDialog copy={copy} title={copy.libraryMetadata} message={copy.decisionDiscard}
-      confirmLabel={copy.decisionConfirm} cancelLabel={copy.cancel} onCancel={() => setConfirm(null)}
+      confirmLabel={copy.decisionConfirm} cancelLabel={copy.cancel} onCancel={() => { setConfirm(null); onRestoreEditing?.(); setRestoreFocus(value => value + 1); }}
       onConfirm={() => { const action = confirm; setConfirm(null); setTags(savedTags); setNote(record.note); action(); }} />, document.body) : null}
   </>;
 }

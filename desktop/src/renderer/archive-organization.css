@@ -1,0 +1,22 @@
+.archive-workspace { position: relative; }
+.archive-organization-panel {
+  position: absolute; inset: 0 0 0 auto; z-index: 4; width: min(400px, 100%); min-width: 0;
+  overflow: auto; overscroll-behavior: contain; padding: 20px; background: var(--panel); color: var(--text);
+  border-left: 1px solid var(--border); box-shadow: -8px 0 24px #00000012;
+}
+.archive-organization-panel[hidden] { display: none; }
+.archive-organization-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.archive-organization-panel h2 { margin: 0; font-size: 18px; }
+.archive-organization-panel h3 { margin: 0 0 12px; font-size: 14px; }
+.archive-organization-panel button { min-height: var(--library-control, 34px); padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-control); color: inherit; background: var(--panel); }
+.archive-organization-close { display: inline-flex; align-items: center; gap: 6px; }
+.archive-organization-panel ul { padding-left: 20px; }
+.archive-organization-panel li, .archive-organization-panel p { overflow-wrap: anywhere; line-height: 1.6; }
+.archive-organization-panel p { font-size: 12px; color: var(--muted); }
+.archive-organization-panel .archive-metadata { margin-top: 20px; padding-top: 20px; border-bottom: 0; }
+.archive-organization-panel .archive-metadata small { color: var(--warning-ink); margin-left: 8px; font-weight: normal; }
+.library-organize[data-dirty=true]::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--warning-ink); }
+@container library-detail (max-width: 600px) {
+  .archive-organization-panel { width: 100%; border-left: 0; box-shadow: none; }
+}
+@media (forced-colors: active) { .archive-organization-panel { border-left: 1px solid CanvasText; } }

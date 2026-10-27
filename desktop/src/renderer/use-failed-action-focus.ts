@@ -16,7 +16,7 @@ export function useFailedActionFocus(busy: boolean) {
     if (busy || !attempt || attempt.failed === undefined) return;
     pending.current = null; attempt.stop();
     const { target } = attempt, doc = target.ownerDocument;
-    if (attempt.failed && !attempt.moved && target.isConnected && !target.matches(':disabled') && doc.activeElement === doc.body) {
+    if (attempt.failed && !attempt.moved && target.isConnected && !target.matches(':disabled') && !target.closest('[hidden],[inert]') && doc.activeElement === doc.body) {
       target.focus({ preventScroll: true });
     }
   });

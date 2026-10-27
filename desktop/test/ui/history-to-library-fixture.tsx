@@ -38,6 +38,10 @@ setShellApi(withFolderPages({
     if (delayReads) await new Promise<void>((resolve, reject) => reads.push({ id: answerId, resolve, reject: () => reject(new Error('capture_failed')) }));
     return value;
   },
+  questionReask: async (id: string) => {
+    if (id !== savedDetail.question.id) throw new Error('history_not_found');
+    return { questionId: id, text: originalPrompt, images: [] };
+  },
   createQuestionArchive: async (request: QuestionArchiveRequest) => {
     requests.push(request);
     if (failCreate) { failCreate = false; throw new Error('history_not_found'); }

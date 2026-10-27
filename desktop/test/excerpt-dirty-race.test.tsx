@@ -18,7 +18,7 @@ async function begin(h: Awaited<ReturnType<typeof comparisonMount>>) {
   const pending: ((record: ArchiveRecord | null) => void)[] = [];
   h.readWith(() => { reads++; return new Promise(resolve => pending.push(resolve)); });
   await h.click(h.button(copy.excerptFollowUp)!);
-  await h.click(h.document.querySelector<HTMLElement>('.archive-metadata summary')!);
+  await h.click(h.document.querySelector<HTMLElement>('.library-organize')!);
   await h.input(h.document.querySelector<HTMLTextAreaElement>('[name=archive-note]')!, 'A new note during the source read.');
   await act(async () => pending.shift()!(comparisonRecord));
   await comparisonWait(() => h.document.querySelector('.confirm-dialog'));

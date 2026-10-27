@@ -28,7 +28,7 @@ type LibraryFailure = 'capture' | 'load';
 
 export function FolderWorkspace(props: ArchiveSurfaceProps & {
   session?: LibrarySessionStore; navigationRevision?: number; onBlockingChange?: (value: boolean) => void;
-  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput, origin?: string) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: () => void, readingFocus: LibraryReadingFocus, readerNavigationKey: string | null) => React.ReactNode;
+  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput, origin?: string) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: (afterSaved?: () => void) => void, readingFocus: LibraryReadingFocus, readerNavigationKey: string | null) => React.ReactNode;
 }): React.JSX.Element {
   const { copy } = props;
   const ownSession = useRef(createLibrarySessionStore());
@@ -45,7 +45,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [detailRevision, setDetailRevision] = useState(0);
   const [newSource, setNewSource] = useState<ArchiveRecord | null>(null);
   const [newDraft, setNewDraft] = useState<DecisionInput | undefined>(undefined);
-  const [membership, setMembership] = useState<(FolderTarget & { title: string }) | null>(null);
+  const [membership, setMembership] = useState<(FolderTarget & { title: string; afterSaved?: () => void }) | null>(null);
   const [tags, setTags] = useState<readonly string[]>([]);
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -183,7 +183,18 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     if (!record) { setFocused(false); setPane('list'); }
     setNewSource(null); setSelected(record ? { kind: 'decision', record } : null); refresh();
   };
-  const organize = () => navigate(() => { if (selected) { setDetailRevision(value => value + 1); setMembership({ kind: selected.kind, id: selected.record.id, title: selected.kind === 'decision' ? selected.record.title : selected.record.task || selected.record.text }); } });
+  const organize = (afterSaved?: () => void) => {
+    const target = selectedRef.current;
+    if (!target || busyRef.current || selecting.current !== null) return;
+    const open = () => {
+      const current = selectedRef.current;
+      if (busyRef.current || !current || contentKey(current) !== contentKey(target)) return;
+      if (target.kind === 'decision') setDetailRevision(value => value + 1);
+      setMembership({ kind: target.kind, id: target.record.id, afterSaved,
+        title: target.kind === 'decision' ? target.record.title : target.record.task || target.record.text });
+    };
+    if (target.kind === 'archive') open(); else navigate(open);
+  };
   const createdFolder = (folder: TaskFolder) => {
     epoch.current++;
     setFolders(items => [...items.filter(item => item.id !== folder.id), folder]);
@@ -251,12 +262,12 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
           }).catch(() => { if (mounted.current && readingIntent === intent.current) reportLoadFailure(); });
         }} />
       <div className="folder-detail">
-        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={organize} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onCancelNew={() => { decisionReturn.restore(); setNewSource(null); setNewDraft(undefined); }} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
+        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={() => organize()} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onCancelNew={() => { decisionReturn.restore(); setNewSource(null); setNewDraft(undefined); }} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
           : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft, origin) => { if (selecting.current === null) navigate(() => { decisionReturn.capture(origin); setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{welcomeTitle}</h1>{welcomeHint ? <p>{welcomeHint}</p> : null}</div>}
       </div>
     </div>
     {message ? <div className="archive-status" role="status">{message}<button disabled={busy} onClick={failure === 'capture' ? capture : refresh}>{copy.retryShellLoad}</button></div> : null}
-    {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={{ kind: membership.kind, id: membership.id }} targetTitle={membership.title} folders={folders} onCreated={createdFolder} onCancel={() => setMembership(null)} onSaved={() => { setMembership(null); refresh(); }} /> : null}
+    {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={{ kind: membership.kind, id: membership.id }} targetTitle={membership.title} folders={folders} onCreated={createdFolder} onCancel={() => setMembership(null)} onSaved={() => { membership.afterSaved?.(); setMembership(null); refresh(); }} /> : null}
     {bulkFolders && <LibraryBulkFolderDialog copy={copy} labels={labels} folders={folders} count={targets.length}
       onCancel={() => setBulkFolders(false)} onConfirm={ids => startBulk('add-folder', undefined, ids)} />}
   </section></LibraryRecordToolbar.Provider>;

@@ -24,6 +24,7 @@ import { ArchiveQuestionPrompt } from './archive-question-prompt';
 
 interface ArchiveDetailProps {
   readonly recordActions?: React.ReactNode;
+  readonly metadata?: React.ReactNode;
   readonly reader?: ArchiveReaderBinding;
   readonly copy: DesktopCopy;
   readonly locale: string;
@@ -120,7 +121,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
         {canSynthesize ? <button type="button" data-archive-editor="synthesis" disabled={props.busy} onClick={props.onSynthesize}><SparklesIcon />{copy.synthesisAction}</button> : null}
         {props.onCreateDecision ? <button type="button" data-decision-origin="record" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
       </div>
-      <ArchiveMetadata record={record} copy={copy} busy={props.busy} onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} />
+      {props.metadata !== undefined ? props.metadata : <ArchiveMetadata record={record} copy={copy} busy={props.busy} onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} />}
       </details>
       <div ref={navigation} className="library-reading-navigation">
       <nav className="library-view-switch" aria-label={copy.libraryAnswers}>

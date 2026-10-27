@@ -15,7 +15,7 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, fill, key,
     await wait('!!document.querySelector(".archive-detail h1") && !!document.querySelector(".archive-list[aria-busy=false] [aria-current=true]")');
     assert.equal(await run('document.querySelector(".archive-detail-heading time").hasAttribute("datetime")'), false);
     assert.ok((await run('document.querySelector(".archive-detail-heading time").textContent')).includes('—'));
-    await click('.archive-metadata summary');
+    await click('.library-organize');
     await fill(note, '');
     await win.webContents.insertText(value);
     await wait('[...document.querySelector("[name=archive-note]").value].length === 4000');

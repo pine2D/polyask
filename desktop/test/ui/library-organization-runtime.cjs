@@ -1,10 +1,12 @@
 const { app, BrowserWindow, session, nativeTheme } = require('electron');
 const { join } = require('node:path');
+const { processBoundary } = require('./native-process-boundary.cjs');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
 app.whenReady().then(async () => {
   session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_details, callback) => callback({ cancel: true }));
   let win;
+  const boundary = processBoundary(app, output);
   app.on('window-all-closed', () => {});
   const run = expression => win.webContents.executeJavaScript(`(() => {
     const f=window.organizationFixture, q=selector=>document.querySelector(selector);
@@ -51,7 +53,7 @@ app.whenReady().then(async () => {
   let failed = false;
   for (const locale of ['zh-CN', 'zh-TW', 'en']) {
     nativeTheme.themeSource = locale === 'en' ? 'dark' : 'light';
-    for (const width of [1200, 640]) {
+    for (const width of [1200, 640, 480]) {
       try {
         win = new BrowserWindow({ width, height: 1000, show: true, webPreferences: { sandbox: true, contextIsolation: true } });
         win.webContents.on('console-message', details => { if (details.level === 'error') console.error(details.message); });
@@ -59,8 +61,9 @@ app.whenReady().then(async () => {
         await win.loadFile(join(output, 'index.html'), { query: { locale } });
         win.focus(); win.webContents.focus();
         await waitFor('f?.ready===true&&document.hasFocus()', 'fixture effects and window focus must be ready');
-        await click('.archive-metadata summary');
-        await waitFor('q(".archive-metadata").open', 'metadata fields must be expanded');
+        boundary();
+        await click('#organize');
+        await waitFor('!q(".archive-organization-panel").hidden', 'organization panel must open');
         await enter('[name="archive-tags"]', '😀'.repeat(33));
         await waitFor('q(".archive-tag-counts")?.textContent.includes("33 / 32")', 'the oversized tag must render before submission');
         await enter('[name="archive-note"]', 'Carefully written notes 😀');
@@ -79,7 +82,8 @@ app.whenReady().then(async () => {
           &&q('[name="archive-note"]').value==='Carefully written notes 😀'`, 'failed metadata save retains tags and notes');
         await click('button[type="submit"]');
         await waitFor('f.saves===2&&!q(".archive-metadata small")&&q(".archive-metadata form").getAttribute("aria-busy")==="false"', 'successful metadata save must finish');
-        await click('#organize');
+        await enter('[name=archive-note]', 'Draft retained during folder changes');
+        await click('.archive-organization-membership');
         await waitFor('!!q(".folder-modal")', 'membership dialog must mount');
         await check('q(".folder-modal").textContent.includes(f.source.task)', 'organizing displays the complete object title');
         await waitFor('[...q(".folder-modal").querySelectorAll("button")].some(button=>button.textContent===f.copy.folderNew&&!button.disabled)', 'folder choices must load before creation');
@@ -106,10 +110,22 @@ app.whenReady().then(async () => {
         await click('[data-action="save-memberships"]');
         await waitFor('!q(".folder-modal")', 'successful association confirmation must close the dialog');
         await check('f.patches===2&&f.inputEvents.every(event=>event.trusted)', 'final confirmation can recover with native input throughout');
-        console.log(JSON.stringify({ locale, width, ok: true, nativeInput: true }));
+        await check('f.dirty&&q("[name=archive-note]").value==="Draft retained during folder changes"', 'folder saves retain dirty metadata');
+        await waitFor('document.activeElement===q(".archive-organization-membership")', 'membership closes back to its trigger');
+        await key('Escape');
+        await check('q(".archive-organization-panel").hidden&&document.activeElement===q("#organize")', 'Escape hides only the organizer and restores its trigger');
+        await key('Tab');
+        await check('document.activeElement===q("#outside")', 'hidden editor is absent from Tab order');
+        const tree = await require('../../scripts/ui-accessibility.cjs')(win);
+        const fieldNames = [await run('f.copy.archiveTags'), await run('f.copy.archiveNote')];
+        if (tree.some(node => node.role === 'textbox' && fieldNames.includes(node.name)))
+          throw new Error('Hidden metadata remains in the accessibility tree');
+        await click('#organize');
+        await check('q("[name=archive-note]").value==="Draft retained during folder changes"&&f.dirty', 'reopening retains draft');
+        console.log(JSON.stringify({ locale, width, ok: true, nativeInput: true, hiddenEditor: true }));
       } catch (error) { failed = true; console.log(JSON.stringify({ locale, width, ok: false, error: String(error) })); }
       finally { win?.destroy(); }
     }
   }
-  app.exit(failed ? 1 : 0);
+  boundary(); app.exit(failed ? 1 : 0);
 }).catch(error => { console.error(error); app.exit(1); });
