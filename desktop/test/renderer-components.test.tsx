@@ -81,7 +81,7 @@ test("the confirm dialog renders both choices and defaults away from the destruc
   assert.match(html, /role="dialog"/);
   assert.match(html, /aria-modal="true"/);
   assert.match(html, /要新建会话吗？/);
-  assert.match(html, /这会离开 9 个已选站点中的当前对话/);
+  assert.match(html, /这会离开 9 个参与站点中的当前对话/);
   assert.match(html, /新建会话/);
   assert.match(html, /保留当前对话/);
   // 破坏性的那个才带 primary；默认焦点在取消上（焦点是运行时行为，此处只钉结构）
@@ -252,7 +252,7 @@ test("bootstrap states keep non-blocking announcements available to assistive te
 
 test("command bar renders one compact command surface with stateful controls", () => {
   const html = renderToStaticMarkup(
-    <CommandBar
+    <CommandBar onNewSession={() => undefined} newSessionBlockedReason={null}
       copy={getCopy("en")}
       promptRef={createRef<HTMLTextAreaElement>()}
       text="Question"
@@ -305,7 +305,7 @@ test("command bar renders one compact command surface with stateful controls", (
   assert.match(html, /aria-controls="workspace-panel"/);
   assert.match(html, /aria-label="Custom · 9"/);
   assert.match(html, /aria-label="More actions"/);
-  assert.doesNotMatch(html, /aria-label="New session for selected sites"/);
+  assert.match(html, /aria-label="New session for participating sites"/);
   assert.match(html, /data-test="images"/);
   assert.match(html, /data-test="pages"/);
   assert.doesNotMatch(html, /sync-attention/);
@@ -356,7 +356,7 @@ test("command bar begins with adjacent workspace and health entries", () => {
 
 test("command bar surfaces actionable sync state without consuming toolbar width", () => {
   const html = renderToStaticMarkup(
-    <CommandBar
+    <CommandBar onNewSession={() => undefined} newSessionBlockedReason={null}
       copy={getCopy("en")}
       promptRef={createRef<HTMLTextAreaElement>()}
       text=""

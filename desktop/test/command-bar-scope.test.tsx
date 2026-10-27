@@ -15,7 +15,7 @@ function render(overrides: Partial<ComponentProps<typeof CommandBar>> = {}) {
     syncStatus={{ state: "idle", connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true }}
     isMac={false} expanded={false} onTextChange={noop} onSubmit={noop} onCancel={noop}
     onTierChange={noop} onLayoutChange={noop} onExpandedChange={noop} onPanelChange={noop}
-    onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onRetry={noop} onPasteImages={noop} {...overrides}
+    onNewSession={noop} newSessionBlockedReason={null} onShowGroupMenu={noop} onOpenMore={noop} onOpenArchive={noop} onRetry={noop} onPasteImages={noop} {...overrides}
   />);
 }
 
@@ -92,4 +92,30 @@ test("busy archive entry explains the restriction and history stays available", 
   const html = render({ runState: "sending" });
   assert.match(html, /class="archive-trigger"[^>]*data-hint="[^"]+"[^>]*aria-disabled="true"/);
   assert.doesNotMatch(html, /class="question-trigger"[^>]*disabled/);
+});
+
+
+test("new session sits after the editor and before history with a stable accessible name", () => {
+  for (const locale of ["en", "zh-CN", "zh-TW"]) {
+    const copy = getCopy(locale), html = render({ copy });
+    const button = html.match(/<button[^>]*class="new-session-trigger"[^>]*>/)?.[0];
+    assert.ok(button, "new-session button is always present");
+    assert.ok(button.includes(`aria-label="${copy.newSessionSelected}"`));
+    assert.ok(button.includes('data-hint="'));
+    assert.ok(html.indexOf("</textarea>") < html.indexOf('class="new-session-trigger"'));
+    assert.ok(html.indexOf('class="new-session-trigger"') < html.indexOf('class="question-trigger"'));
+    assert.doesNotMatch(button, /disabled/);
+  }
+});
+
+test("new session explains busy, empty participation and navigation restrictions", () => {
+  for (const options of [{ runState: "sending" as const }, { auxiliaryBusy: true }, { selectedCount: 0 }, { newSessionBlockedReason: "Finish the open confirmation" }]) {
+    const html = render(options), button = html.match(/<button[^>]*class="new-session-trigger"[^>]*>/)?.[0];
+    assert.ok(button);
+    assert.match(button, /disabled=""/);
+    assert.match(button, /data-hint="[^"]+"/);
+    assert.ok(!button.includes('data-hint="New session for participating sites"'), "restriction has its own reason");
+  }
+  assert.match(render({ newSessionBlockedReason: "Finish the open confirmation" }), /data-hint="Finish the open confirmation"/);
+  assert.doesNotMatch(render({ sendBlockedReason: "Unsupported image sites" }).match(/<button[^>]*class="new-session-trigger"[^>]*>/)![0], /disabled/);
 });

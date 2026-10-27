@@ -13,7 +13,7 @@ module.exports = async ({ win, run, output, label }) => {
         left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width,height:r.height};
     });
     // 按钮外框在栏内，不代表新增的文字/图标仍在按钮内；不能只检查外框。
-    const contents=[...bar.querySelectorAll('.primary-action, .workspace-actions > button')].filter(visible).flatMap(button=>{
+    const contents=[...bar.querySelectorAll('.primary-action, .new-session-trigger, .workspace-actions > button')].filter(visible).flatMap(button=>{
       const owner=button.getBoundingClientRect();
       return [...button.children].filter(visible).map(child=>{
         const r=child.getBoundingClientRect();return {name:button.getAttribute('aria-label'),part:child.tagName,
@@ -26,6 +26,8 @@ module.exports = async ({ win, run, output, label }) => {
     const style=e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();return {
       width:folded?s.minWidth:r.width,height:folded?s.height:r.height,color:s.color,background:s.backgroundColor,border:s.borderRadius};};
     return {bar:{left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom},boxes,contents,
+      actions:[...bar.querySelectorAll('.prompt-composer,.new-session-trigger,.question-trigger,.draft-trigger,.send,.archive-trigger')].filter(visible).map(e=>{
+        const r=e.getBoundingClientRect();return {name:e.className,left:r.left,right:r.right,top:r.top,bottom:r.bottom};}),
       prompt:bar.querySelector('.prompt-composer').getBoundingClientRect().width,
       history:style(bar.querySelector('.question-trigger')),draft:style(bar.querySelector('[data-draft-open]'))};
   })()`);
@@ -34,6 +36,10 @@ module.exports = async ({ win, run, output, label }) => {
   for (const part of result.contents) {
     if (part.left < part.owner.left - 1 || part.right > part.owner.right + 1 ||
       part.top < part.owner.top - 1 || part.bottom > part.owner.bottom + 1) failures.push(`outside button: ${part.name} ${part.part}`);
+  }
+  for (const [index, a] of result.actions.entries()) for (const b of result.actions.slice(index + 1)) {
+    if (Math.min(a.right,b.right)-Math.max(a.left,b.left)>1 && Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top)>1)
+      failures.push(`overlapping actions: ${a.name} / ${b.name}`);
   }
   if (result.prompt < 320) failures.push(`prompt narrower than 320px: ${result.prompt}`);
   for (const key of ['width', 'height', 'color', 'background', 'border']) {

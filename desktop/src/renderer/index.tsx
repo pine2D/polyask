@@ -129,6 +129,7 @@ function App(): React.JSX.Element {
   const layoutPage = useRef(0);
   const automaticFocus = useRef(false);
   const requestedPage = useRef<{ readonly page: number; readonly inputMethod: "keyboard" | "pointer" } | null>(null);
+  const newSessionInFlight = useRef(false);
   const actionLock = useRef<ExclusiveActionLock | null>(null);
   const commandActions = useRef<CommandActions>({});
   const draftConfirmation = useDraftConfirmation(commandActions);
@@ -365,10 +366,12 @@ function App(): React.JSX.Element {
     openArchive: (id, mode) => { if (id && mode === 'read') archiveNavigation.history(id, 'read'); else archiveNavigation.collection(id); changeSurface("archive"); }});
   const startNewSession = async (): Promise<void> => {
     if (draftConfirmation.isBlocking() || pendingNewSession || auxiliaryBusy || runState !== "idle") return;
-    await confirmAndStartNewSession({ sites: [...selected], copy, confirm: preferences.confirmations.newSessionConfirm, show: setPendingNewSession, changeSurface,
+    if (newSessionInFlight.current || participation.pending || actionLock.current!.busy) return;
+    newSessionInFlight.current = true;
+    try { await confirmAndStartNewSession({ sites: participation.currentSites(), copy, confirm: preferences.confirmations.newSessionConfirm, show: setPendingNewSession, changeSurface,
       run: runAuxiliary, send: shell.newSession, recover: workspaceFlow.recover, announce: setAnnouncement,
       invalidate: () => { broadcast.invalidate(); runProgress.invalidate(); archiveCapture.invalidate(); }
-    });
+    }); } finally { newSessionInFlight.current = false; }
   };
   const showGroupMenu = async (): Promise<void> => {
     try {
@@ -476,7 +479,7 @@ function App(): React.JSX.Element {
     } : {}),
     ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
     ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
-    ...(selected.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
+    ...(participating.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
     "open-settings": () => openSettings("display"),
     "open-drive-diagnostics": () => openSettings("drive-diagnostics"),
     "open-display-settings": () => openSettings("display"),
@@ -550,6 +553,8 @@ function App(): React.JSX.Element {
         layoutMode={layout.mode}
         automaticFocus={layout.automaticFocus}
         selectedCount={participating.size}
+        onNewSession={() => executeCommand("new-session", commandActions.current)}
+        newSessionBlockedReason={navigationBlocked ? copy.newSessionBlocked : null}
         failureCount={broadcast.failureCount}
         cancelledCount={broadcast.cancelledCount}
         uncertainCount={broadcast.uncertainSites.length}

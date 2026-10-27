@@ -4,6 +4,7 @@ const { writeFileSync } = require('node:fs');
 const assert = require('node:assert/strict');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
+const boundary = require('./native-process-boundary.cjs').processBoundary(app, output);
 app.whenReady().then(async () => {
   session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_details, callback) => callback({ cancel: true }));
   const win = new BrowserWindow({ width: 1280, height: 900, show: true,
@@ -34,7 +35,7 @@ app.whenReady().then(async () => {
     win.webContents.setZoomFactor(1);
     win.setContentSize(1280, 900);
     await win.loadFile(join(output, 'index.html'), { query: { locale, density } });
-    await wait('!!document.querySelector("textarea")');
+    await wait('!!document.querySelector("textarea")'); boundary();
     await click('textarea');
     const draft = 'Long question / 长问题 / 長問題\n'.repeat(40);
     await win.webContents.insertText(draft);
@@ -46,7 +47,7 @@ app.whenReady().then(async () => {
     await paint();
     const before = await position();
     console.log(`Composer selection setup ${locale}/${density}: ${JSON.stringify({start:before.start,end:before.end,scroll:before.scroll})}`);
-    for (const selector of ['[data-tier-icon="fast"]', '[data-tier-icon="think"]', '[name="attachment-control"]']) {
+    for (const selector of ['[data-tier-icon="fast"]', '[data-tier-icon="think"]', '.image-trigger']) {
       await click(selector);
       assert.deepEqual(await position(), before, `editing context survives trusted action: ${selector}`);
       assert.equal(await run('document.querySelector(".command-bar").classList.contains("is-expanded")'), true);
@@ -54,6 +55,8 @@ app.whenReady().then(async () => {
     assert.equal(await run('JSON.parse(document.querySelector("#composer-transitions").textContent).includes(false)'), false);
     const label = await run('document.querySelector("[data-current-tier]").textContent');
     assert.equal(label, locale === 'en' ? 'Think' : '深思');
+    await click('.image-trigger');
+    await wait('!document.querySelector(".image-tray")');
     const layouts = [];
     for (const width of [960, 1101, 1280, 1401, 1600]) {
       win.setContentSize(width, 900); await paint();
@@ -83,6 +86,7 @@ app.whenReady().then(async () => {
     assert.equal(await run('document.activeElement===document.querySelector("textarea")'), true);
     await paint();
     writeFileSync(join(output, `${locale}-${density}.png`), (await win.webContents.capturePage()).toPNG());
+    await require('./new-session-native-flow.cjs')({ win, run, wait, click, paint, draft, locale }); boundary();
     reports.push({ locale, density, label, layouts, zoom: 1.5, trustedPointerAndKeyboard: true,
       selectionScrollSetup: 'programmatic', physicalIme: 'not-tested', nativeFileDialog: 'not-tested' });
   }

@@ -235,7 +235,7 @@ test("run recovery and new-session copy keeps matching keys and placeholders", (
       "Retry {count} failed sites",
       "Retry {count} cancelled sites",
       "Retry {count} failed or cancelled sites",
-      "New sessions opened for {count} selected sites",
+      "New sessions opened for {count} participating sites",
       "New sessions opened for {ok} sites; {failed} failed"
     ]
   );
@@ -257,7 +257,7 @@ test("run recovery and new-session copy keeps matching keys and placeholders", (
       "重试 {count} 个失败站点",
       "重试 {count} 个已取消站点",
       "重试 {count} 个失败或已取消站点",
-      "已为 {count} 个已选站点新建会话",
+      "已为 {count} 个参与站点新建会话",
       "已为 {ok} 个站点新建会话，{failed} 个失败"
     ]
   );
@@ -279,7 +279,7 @@ test("run recovery and new-session copy keeps matching keys and placeholders", (
       "重試 {count} 個失敗網站",
       "重試 {count} 個已取消網站",
       "重試 {count} 個失敗或已取消網站",
-      "已為 {count} 個已選網站新增對話",
+      "已為 {count} 個參與網站新增對話",
       "已為 {ok} 個網站新增對話，{failed} 個失敗"
     ]
   );

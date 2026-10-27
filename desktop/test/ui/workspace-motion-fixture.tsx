@@ -31,7 +31,7 @@ function Fixture() {
   useEffect(() => (window as any).motionTest.onNative((bounds: unknown) => { (window as any).motionNative = bounds; }), []);
   const openDrawer = (open: boolean) => { setDrawer(open); if (open) { setTray(false); setHistory(false); } };
   return <main className={`app-shell${composer.reservedExpanded ? ' is-composer-expanded' : ''}`}>
-    <CommandBar copy={copy} promptRef={ref} text={text} tier={tier} runState="idle" auxiliaryBusy={false}
+    <CommandBar onNewSession={() => undefined} newSessionBlockedReason={null} copy={copy} promptRef={ref} text={text} tier={tier} runState="idle" auxiliaryBusy={false}
       layoutMode={layout.mode} selectedCount={4} failureCount={0} cancelledCount={0} scopeLabel={copy.allSites}
       healthAttention={0} panelTab={drawer ? 'sites' : null} expanded={composer.expanded}
       reservedExpanded={composer.reservedExpanded} revealedExpanded={composer.revealedExpanded}

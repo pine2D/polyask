@@ -11,7 +11,7 @@ const noop = () => undefined;
 async function composer() {
   const batches: File[][] = [];
   const effects: string[] = [];
-  const h = await mountDom(<CommandBar
+  const h = await mountDom(<CommandBar onNewSession={() => undefined} newSessionBlockedReason={null}
     copy={getCopy('en')} promptRef={createRef()} text="Question" tier={null}
     runState="idle" auxiliaryBusy={false} layoutMode="overview" selectedCount={3}
     failureCount={0} cancelledCount={0} scopeLabel="Custom · 3" healthAttention={0}

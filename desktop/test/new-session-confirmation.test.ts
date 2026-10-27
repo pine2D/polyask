@@ -15,6 +15,8 @@ for (const approved of [false, true]) {
     let pending: { count: number; decide: (ok: boolean) => void } | null = null;
     const context = vm.createContext({
       selected: new Set(["claude", "chatgpt", "deepseek"]),
+      participation: { pending: false, currentSites: () => ["claude", "chatgpt", "deepseek"] },
+      newSessionInFlight: { current: false }, actionLock: { current: { busy: false } },
       pendingNewSession: null, runState: "idle", auxiliaryBusy: false,
       draftConfirmation: { isBlocking: () => false },
       changeSurface: (surface: string) => events.push(surface),
@@ -32,11 +34,11 @@ for (const approved of [false, true]) {
     assert.deepEqual(events, ["confirmation"], "站点原生视图必须先让出确认框");
     assert.equal(pending!.count, 3);
     const original = pending;
-    context.pendingNewSession = pending;
-    await vm.runInContext("startNewSession()", context);
-    assert.equal(pending, original, "重复调用不得替换仍在等待的确认");
+    // React has not rendered the pending state yet: the second call must still be blocked.
+    const repeated = vm.runInContext("startNewSession()", context);
+    assert.equal(pending === original, true, "重复调用不得替换仍在等待的确认");
     pending!.decide(approved);
-    await result;
+    await Promise.all([result, repeated]);
     assert.deepEqual(events, approved ? ["confirmation", "sites", "invalidate-progress", "new-session"] : ["confirmation", "sites"]);
     assert.equal(pending, null);
   });
@@ -47,7 +49,9 @@ test("new session skips the dialog after don't ask again without bypassing busy 
   const body = app.slice(app.indexOf("  const startNewSession ="), app.indexOf("  const showGroupMenu ="));
   const events: string[] = [];
   const context = vm.createContext({
-    selected: new Set(["claude", "kimi"]), pendingNewSession: null, runState: "idle", auxiliaryBusy: false,
+    selected: new Set(["claude", "kimi", "chatgpt", "deepseek", "gemini"]),
+    participation: { pending: false, currentSites: () => ["claude", "kimi"] },
+    newSessionInFlight: { current: false }, actionLock: { current: { busy: false } }, pendingNewSession: null, runState: "idle", auxiliaryBusy: false,
     draftConfirmation: { isBlocking: () => false },
     changeSurface: (surface: string) => events.push(surface),
     setPendingNewSession: () => assert.fail("no confirmation after don't ask again"),

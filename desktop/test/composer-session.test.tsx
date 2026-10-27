@@ -13,7 +13,7 @@ async function composerSession() {
   function Session() {
     const [expanded, setExpanded] = useState(false);
     const [tier, setTier] = useState<Tier>(null);
-    return <CommandBar copy={getCopy('en')} promptRef={ref} text={'long draft\n'.repeat(30)}
+    return <CommandBar onNewSession={() => undefined} newSessionBlockedReason={null} copy={getCopy('en')} promptRef={ref} text={'long draft\n'.repeat(30)}
       tier={tier} runState="idle" auxiliaryBusy={false} layoutMode="overview" selectedCount={2}
       failureCount={0} cancelledCount={0} scopeLabel="Custom · 2" healthAttention={0} panelTab={null}
       imageControl={<button name="attachments">Manage images</button>} sendBlockedReason={null}

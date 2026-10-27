@@ -120,14 +120,15 @@ kbd { opacity: .7; font: 10px system-ui; }
 
 .image-picker { position: static; height: var(--control-height); display: flex; align-items: center; gap: 2px; }
 .prompt-history-tools { height: var(--control-height); display: flex; align-items: center; gap: var(--space-1); }
-.question-trigger, .draft-trigger, .image-trigger, .image-warning button, .image-error button {
+.new-session-trigger, .question-trigger, .draft-trigger, .image-trigger, .image-warning button, .image-error button {
   min-width: var(--control-height); height: var(--control-height); padding: 0; display: inline-flex;
   align-items: center; justify-content: center; gap: 2px; border: 1px solid transparent; border-radius: var(--radius-control);
   color: var(--muted); background: var(--hover-soft);
 }
+.new-session-trigger { padding-inline: 6px; gap: 4px; white-space: nowrap; }
 .question-trigger[aria-expanded="true"], .draft-trigger[aria-expanded="true"], .image-trigger.active { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
 .question-trigger:hover, .draft-trigger:hover:not(:disabled), .image-trigger:hover:not(:disabled) { background: var(--hover-soft); }
-.draft-trigger:disabled, .image-trigger:disabled { opacity: .4; }
+.new-session-trigger:disabled, .draft-trigger:disabled, .image-trigger:disabled { opacity: .4; }
 .image-count, .image-warning span { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .image-warning button, .image-error button { min-width: var(--target-size); width: var(--target-size); border-color: var(--warning-ink); color: var(--warning-ink); background: transparent; }
 .image-error button { border-color: var(--danger-ink); color: var(--danger-ink); }
@@ -135,7 +136,7 @@ kbd { opacity: .7; font: 10px system-ui; }
 /* 命令栏适配级别（toolbar-fit.ts 按实际内容逐级累加，直到输入框 ≥320px；data-fit 记为 "1 2 …"）：
    1 = 次要文字收起；2 = 档位说明收起；3 = 历史入口进更多菜单、档位改为下拉；
    4 = 站点状态/比较改由工作台与更多菜单承接。发送和结果库始终保留文字。 */
-.command-bar[data-fit~="1"] :is(.mode-switch .priority-p1, .workspace-actions .priority-p1, kbd, .scope-label-full, .workspace-actions .retry-label) { display: none; }
+.command-bar[data-fit~="1"] :is(.mode-switch .priority-p1, .workspace-actions .priority-p1, kbd, .scope-label-full, .workspace-actions .retry-label, .new-session-label) { display: none; }
 .command-bar[data-fit~="1"] .scope-label-compact { display: inline; }
 .command-bar[data-fit~="1"] > :is(.page-tabs, .workspace-actions, .mode-switch, .tier-switch, .image-picker, .prompt-history-tools) { min-width: max-content; }
 .command-bar[data-fit~="1"] .workspace-actions .compare-trigger { width: var(--target-size); min-width: var(--target-size); }
@@ -164,8 +165,12 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar[data-fit~="4"] :is(.health-trigger, .compare-trigger) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > button:not(.layout-toggle) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > .layout-toggle { display: inline-flex; }
+/* 最紧凑档将分组快捷入口交给工作台，图标保持当前密度的最小点击宽度。 */
+.command-bar[data-fit~="4"] .scope-menu { display: none; }
+.command-bar[data-fit~="4"] .workspace-entry .scope-split { grid-template-columns: minmax(0, 1fr); min-width: calc(var(--target-size) + 2px); }
+.command-bar[data-fit~="4"] :is(.new-session-trigger, .question-trigger, .draft-trigger) { min-width: var(--target-size); }
 /* 站点状态收起后释放原按钮的保底宽度，留给常驻的结果库入口。 */
-.command-bar[data-fit~="4"] > .workspace-entry { min-width: calc(var(--target-size) * 2 + 2px); }
+.command-bar[data-fit~="4"] > .workspace-entry { min-width: calc(var(--target-size) + 2px); }
 .command-bar[data-fit~="4"] .scope-main { padding-inline: var(--space-1); }
 .command-bar[data-fit~="4"] .page-tabs button { min-width: var(--target-size); }
 /* 站点状态入口收起后，需关注的红点挪到工作台入口上（工作台内有「站点状态」页签）。 */

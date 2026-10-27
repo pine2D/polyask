@@ -3,7 +3,7 @@ import { useRef, type ReactNode, type RefObject } from "react";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
-import { ChevronDownIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, ScopeIcon, SendIcon, StopIcon } from "./icons";
+import { ChevronDownIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, NewSessionIcon, ScopeIcon, SendIcon, StopIcon } from "./icons";
 import { commandHint } from "./command-hint";
 import { PromptComposer } from "./prompt-composer";
 import { TierControls } from "./tier-controls";
@@ -46,6 +46,8 @@ interface CommandBarProps {
   readonly onOpenHistory?: () => void;
   readonly historyOpen?: boolean;
   readonly onSubmit: () => void;
+  readonly onNewSession: () => void;
+  readonly newSessionBlockedReason: string | null;
   readonly onCompare?: () => void;
   readonly onRetry: () => void;
   readonly onCancel: () => void;
@@ -61,6 +63,7 @@ interface CommandBarProps {
 
 export function CommandBar(props: CommandBarProps): React.JSX.Element {
   const busy = props.runState !== "idle" || props.auxiliaryBusy;
+  const newSessionReason = props.newSessionBlockedReason ?? (busy ? props.copy.operationBusy : props.selectedCount === 0 ? props.copy.newSessionNoSites : null);
   const sendLabel = formatCopy(props.selectedCount === 1 ? props.copy.sendToOneSite : props.copy.sendToSites, { count: props.selectedCount });
   const cancelLabel = props.runState === "cancelling" ? props.copy.cancelling : props.copy.cancel;
   const workbenchOpen = props.panelTab !== null;
@@ -94,6 +97,10 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
         expanded={props.expanded} revealedExpanded={props.revealedExpanded} busy={busy} isMac={props.isMac} onTextChange={props.onTextChange}
         onExpandedChange={props.onExpandedChange} onSubmit={props.onSubmit} onPasteImages={props.onPasteImages} />
       <div className="prompt-history-tools">
+        <button type="button" className="new-session-trigger" aria-label={props.copy.newSessionSelected}
+          data-hint={newSessionReason ?? props.copy.newSessionSelected} disabled={!!newSessionReason} onClick={props.onNewSession}>
+          <NewSessionIcon /><span className="new-session-label">{props.copy.newSessionCompact}</span>
+        </button>
         <button type="button" className="question-trigger" data-hint={props.copy.questionHistory} aria-label={props.copy.questionHistory} aria-expanded={props.historyOpen ?? false} onClick={props.onOpenHistory}>
           <HistoryIcon />
         </button>

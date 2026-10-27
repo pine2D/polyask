@@ -4,6 +4,7 @@ const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
+const boundary = require('../test/ui/native-process-boundary.cjs').processBoundary(app, output);
 if (process.argv.includes('--desktop-tools-only')) {
   app.commandLine.appendSwitch('disable-background-networking');
   app.commandLine.appendSwitch('host-resolver-rules', 'MAP * ~NOTFOUND');
@@ -23,7 +24,7 @@ app.whenReady().then(async () => {
   const run = source => win.webContents.executeJavaScript(source).catch(error => {
     throw Error(`Synthetic shell evaluation failed: ${source.slice(0, 220)} (${String(error).slice(0, 180)})`);
   });
-  const paint = () => run('document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))');
+  const paint = async () => { await run('document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))'); boundary(); };
   const wait = async source => {
     const deadline = Date.now() + 5000;
     while (!(await run(source))) {

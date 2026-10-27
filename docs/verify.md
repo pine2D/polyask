@@ -1472,3 +1472,5 @@ Kimi 真实菜单为 K3.1 Pro / K2.8 / Instant，Thinking effort 为 Standard / 
 原生专项使用临时档案、Xvfb、本地合成页面和代理，子进程隔离会话总线，串行运行于共同 4 GiB / 512 MiB 临时 scope。`electron-lifecycle.check.ts` 在 44.9.3 完成两轮九站隐藏导航、恢复、重建与销毁，共实际销毁 18 个站点 WebContents；`proxy-native.check.ts` 完成两个启动阻断阶段和九个主流程阶段，覆盖 HTTP/SOCKS、认证、测试连接与待确认，只访问本机。`report-export.check.ts` 的三语及清理/超时/取消等八项通过：PDF 为 10/7/7 页，90 行表格和 A4 边界完整，外部网络请求为零，八个打印 WebContents 全部销毁；已查看三语首屏截图，无裁切。
 
 包内真实 main/preload 的 `history-images-packaged-smoke.mjs` 离线检查通过：1 个外壳、9 个安全且挂载的站点视图。资源元数据确认应用 1.25.1 / Electron 44.9.3，实际共同资源边界通过，28 个归属进程全部退出、临时档案清理。没有打开既有登录档案、输入或发送真实提问、访问 Drive；升级后的验证不覆盖 Windows/macOS 物理环境、真实系统通知、睡眠唤醒或站点认证。上一节 Kimi 真实菜单与切档证据来自升级前的 44.8.0，不据本次合成检查扩大该结论。
+
+- 新会话入口的原生验收：`test/composer-session-native.check.ts` 在三语/两密度/100–200% 缩放验证按钮几何、确认与取消、仅 2 个参与站点（5 个已打开，另 1 个当前聚焦）、部分失败、重复点击及草稿/附件保留；Electron 使用合成页面与临时 profile。此检查与完整 shell UI 检查均采样实际 Electron PID 的共同 cgroup，并验证退出及清理 profile；Linux 测试进程隔离会话 D-Bus，不代表桌面集成或真实站点验收。
