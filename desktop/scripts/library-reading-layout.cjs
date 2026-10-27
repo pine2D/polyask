@@ -65,26 +65,31 @@ async function comparison(run) {
 
 async function anchors({ win, nativeTheme, output, run, wait, click, key, shot }) {
   const reports = [];
-  for (const [locale, width, zoom, theme] of [
+  for (const [locale, width, zoom, theme, density = 'compact'] of [
     ['zh-CN', 1600, 1, 'light'], ['en', 780, 1, 'light'],
-    ['zh-TW', 960, 1.25, 'dark'], ['en', 960, 1.5, 'dark'], ['en', 1280, 2, 'light']
+    ['zh-TW', 960, 1.25, 'dark'], ['en', 960, 1.5, 'dark'], ['en', 1280, 2, 'light'],
+    ['zh-CN', 1440, 1, 'light', 'comfortable'], ['en', 1200, 1, 'dark'],
+    ['zh-TW', 960, 1, 'light', 'comfortable'], ['en', 720, 1, 'dark'], ['zh-CN', 960, 2, 'light', 'comfortable']
   ]) {
     win.webContents.setZoomFactor(1); win.setContentSize(width, 900); nativeTheme.themeSource = theme;
     await win.loadFile(require('node:path').join(output, 'index.html'), { query: { locale, longCode: '1' } });
     win.webContents.setZoomFactor(zoom);
     await wait(`Math.abs(innerWidth-${width / zoom}) <= 1 && !!document.querySelector('.archive-answer h2')`);
+    await run(`document.documentElement.dataset.density=${JSON.stringify(density)}`);
     await paint(run);
+    assert.equal(await run('document.querySelectorAll(".archive-answer").length'), 9);
     await click('.archive-answer-nav a:last-child');
     const geometry = await run(`(() => {
       const pane = document.querySelector('.archive-detail-pane'), nav = document.querySelector('.library-reading-navigation');
       const target = document.querySelector('#archive-answer-8'), pre = [...target.querySelectorAll('pre')].at(-1);
       return { targetTop: target.getBoundingClientRect().top, navigationBottom: nav.getBoundingClientRect().bottom,
         height: nav.getBoundingClientRect().height, viewport: innerWidth, width: target.clientWidth, scroll: target.scrollWidth,
-        paneBottom: pane.getBoundingClientRect().bottom, hash: location.hash,
+        pageWidth: document.documentElement.scrollWidth, paneBottom: pane.getBoundingClientRect().bottom, hash: location.hash,
         line: pre.textContent, codeWidth: pre.clientWidth, codeScroll: pre.scrollWidth };
     })()`);
     assert.ok(geometry.hash === '#archive-answer-8' && geometry.targetTop >= geometry.navigationBottom - 1 && geometry.targetTop < geometry.paneBottom - 16,
       `source target clears variable navigation and is visible: ${JSON.stringify({ ...geometry, line: undefined })}`);
+    assert.ok(geometry.pageWidth <= geometry.viewport + 1, 'library fits the viewport');
     assert.ok(geometry.scroll <= geometry.width + 1, 'long code stays inside the answer');
     assert.ok(geometry.line.includes('unbroken_'.repeat(250)) && geometry.codeScroll > geometry.codeWidth, 'full long code scrolls within its own block');
     await key('Tab');
@@ -98,7 +103,7 @@ async function anchors({ win, nativeTheme, output, run, wait, click, key, shot }
       `keyboard focus remains visible below navigation: ${JSON.stringify(focus)}`);
     if (zoom === 1.25) await shot('reading-navigation-zoom-125');
     const bookmark = await require('./library-best-navigation.cjs')({ win, run, wait, click, key, shot, locale, theme, zoom });
-    reports.push({ locale, windowWidth: width, zoom, theme, ...geometry, line: undefined, focus, bookmark });
+    reports.push({ locale, windowWidth: width, zoom, theme, density, ...geometry, line: undefined, focus, bookmark });
   }
   win.webContents.setZoomFactor(1); win.setContentSize(1600, 1000); nativeTheme.themeSource = 'light';
   await win.loadFile(require('node:path').join(output, 'index.html'));

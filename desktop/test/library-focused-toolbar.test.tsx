@@ -45,3 +45,27 @@ test('new decision editing removes saved-result toolbar actions and restores the
     assert.equal(h.document.activeElement === h.button(copy.decisionCreate), true);
   } finally { await h.close(); }
 });
+
+test('ordinary reading keeps one record action group beside its heading and all answers after navigation', async () => {
+  const h = await comparisonMount({ startInRead: true });
+  try {
+    assert.equal(h.document.querySelector('.archive-detail-heading .library-organize') !== null, true);
+    assert.equal(h.document.querySelectorAll('.library-organize').length, 1);
+    assert.equal(h.document.querySelector('.archive-toolbar') === null, true);
+    const answers = [...h.document.querySelectorAll('.archive-answer')];
+    await h.click(h.document.querySelector<HTMLAnchorElement>('.archive-answer-nav a:last-child')!);
+    assert.equal(h.document.querySelectorAll('.archive-answer').length, 3);
+    assert.equal(answers.every(node => node.isConnected), true);
+    const menu = h.document.querySelector<HTMLButtonElement>('.archive-detail-heading .library-menu-trigger')!;
+    await h.click(menu);
+    await h.click(h.button(copy.deleteArchive)!);
+    await h.click(h.button(copy.cancel)!);
+    assert.equal(h.document.activeElement === menu, true);
+    await h.click(h.document.querySelector<HTMLButtonElement>('.library-focus')!);
+    assert.equal(h.document.querySelector('.folder-toolbar .library-organize') !== null, true);
+    assert.equal(h.document.querySelectorAll('.library-organize').length, 1);
+    assert.equal(answers.every(node => node.isConnected), true);
+    await h.click(h.document.querySelector<HTMLButtonElement>('.library-focus')!);
+    assert.equal(h.document.querySelector('.archive-detail-heading .library-organize') !== null, true);
+  } finally { await h.close(); }
+});

@@ -11,6 +11,11 @@
 .archive-question-prompt h1.is-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .archive-question-prompt > button { margin-top: 6px; min-height: 30px; padding: 4px 8px; font-size: 12px; line-height: 1.5; border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--accent); background: var(--panel); }
 .library .archive-detail-heading { gap: 16px; }
+.library .archive-detail-actions { align-items: center; gap: 8px; }
+@container library-detail (max-width: 600px) {
+  .library .archive-detail-heading { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .library .archive-detail-actions { justify-content: flex-end; }
+}
 .library .archive-detail-heading time { margin-top: 4px; font-size: 12px; line-height: 1.6; }
 .library .archive-source { font-size: 12px; line-height: 1.6; margin-top: 6px; }
 .library-record-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

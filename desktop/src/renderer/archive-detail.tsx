@@ -23,6 +23,7 @@ import { useArchiveSourceLocation } from './archive-source-location';
 import { ArchiveQuestionPrompt } from './archive-question-prompt';
 
 interface ArchiveDetailProps {
+  readonly recordActions?: React.ReactNode;
   readonly reader?: ArchiveReaderBinding;
   readonly copy: DesktopCopy;
   readonly locale: string;
@@ -112,6 +113,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
         </div>
         <div className="archive-detail-actions">
           <button type="button" className={record.favorite ? 'active' : ''} title={favoriteLabel} aria-label={favoriteLabel} aria-pressed={record.favorite} disabled={props.busy} onClick={() => requestDecisionNavigation(() => props.onPatch({ favorite: !record.favorite }))}><StarIcon /></button>
+          {props.recordActions}
         </div>
       </header>
       <div className="library-record-actions">

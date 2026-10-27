@@ -75,6 +75,8 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const reader = props.reader ?? localReader;
   const toolbarHost = useContext(LibraryRecordToolbar);
   const mergedToolbar = props.embedded && !props.detailOverride ? toolbarHost : null;
+  const inlineActions = props.embedded && selected && !props.detailOverride && !mergedToolbar
+    && (reader.state.view !== 'compare' || reader.state.comparisonContextExpanded);
   const pane = useRef<HTMLElement>(null);
   const editorReturnScroll = useRef<number | null>(null);
   const rememberEditorScroll = () => { editorReturnScroll.current = pane.current?.scrollTop ?? null; };
@@ -121,8 +123,8 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
     {!props.embedded ? <button className="panel-close" type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
   </div>;
   return (
-    <section className="archive-workspace" data-toolbar-merged={!!mergedToolbar} aria-label={props.embedded ? copy.folderResults : copy.archiveTitle} aria-busy={props.busy}>
-      {mergedToolbar ? createPortal(recordActions, mergedToolbar) : <header className="archive-toolbar">
+    <section className="archive-workspace" data-toolbar-merged={!!mergedToolbar} data-toolbar-inline={!!inlineActions} aria-label={props.embedded ? copy.folderResults : copy.archiveTitle} aria-busy={props.busy}>
+      {mergedToolbar ? createPortal(recordActions, mergedToolbar) : inlineActions ? null : <header className="archive-toolbar">
         {props.embedded ? <span className="library-record-kind">{copy.folderResults}</span> : null}
         {!props.embedded ? <div className="decision-tabs"><strong><ArchiveIcon />{copy.archiveTitle}</strong>{props.onDecisions ? <button type="button" disabled={props.busy} onClick={props.onDecisions}>{copy.decisionTitle}</button> : null}</div> : null}
         {!props.embedded ? <div className="archive-filters">
@@ -153,7 +155,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           )}
         </aside> : null}
         <Detail ref={node => { pane.current = node; }} className="archive-detail-pane" onScroll={event => { if (event.target === event.currentTarget) reader.change(capture()); }}>
-          {props.detailOverride ?? (selected ? <ArchiveDetail reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
+          {props.detailOverride ?? (selected ? <ArchiveDetail recordActions={inlineActions ? recordActions : undefined} reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
             onSynthesize={() => { rememberEditorScroll(); props.onSynthesize(); }}
             onFollowUp={props.onFollowUp ? (host, excerpt) => { rememberEditorScroll(); props.onFollowUp?.(host, excerpt); } : undefined}
             onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}

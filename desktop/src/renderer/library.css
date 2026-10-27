@@ -11,7 +11,7 @@
 .library button { font: inherit; }
 .library .folder-toolbar button, .library .archive-actions button, .library .decision-detail-actions button { min-height: var(--library-control); height: auto; width: auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; }
 .library .folder-toolbar .library-close, .library .folder-toolbar .library-focus { width: var(--library-control); padding: 0; }
-.library .folder-columns { grid-template-columns: 200px 300px minmax(0, 1fr); }
+.library .folder-columns { grid-template-columns: 184px 280px minmax(0, 1fr); }
 .library .folder-sidebar { padding: 20px 12px; gap: 20px; }
 .library .folder-sidebar strong { font-size: 12px; font-weight: 600; color: var(--muted); }
 .library .folder-sidebar nav { gap: 4px; }
@@ -62,7 +62,7 @@
 .library .library-status-badge[data-status=final] { color: var(--success-ink); background: var(--success-soft); }
 .library .folder-detail { container: library-detail / inline-size; background: var(--panel); }
 .library .folder-detail > .archive-workspace { background: var(--panel); grid-template-rows: auto minmax(0, 1fr) auto; }
-.library .folder-detail > .archive-workspace[data-toolbar-merged=true] { grid-template-rows: minmax(0, 1fr) auto; }
+.library .folder-detail > .archive-workspace:is([data-toolbar-merged=true], [data-toolbar-inline=true]) { grid-template-rows: minmax(0, 1fr) auto; }
 .library .folder-detail > .decision-workspace { grid-template-rows: minmax(0, 1fr) auto; }
 .library .archive-toolbar { padding: 10px 24px; gap: 12px; min-height: 54px; justify-content: space-between; }
 .library-record-kind { color: var(--muted); font-size: 12px; }
