@@ -28,8 +28,8 @@ const MENU_SHORTCUTS = [
   { group: "视图", label: "Reload", accelerator: "CmdOrCtrl+R" },
   { group: "视图", label: "Toggle Full Screen", accelerator: "F11" },
   { group: "编辑", label: "Copy", accelerator: "CommandOrControl+C" },
-  // 与 COMMANDS 里的 Alt+K 同一个组合，必须被去重掉，不能在速查里出现两遍
-  { group: "视图", label: "命令面板", accelerator: "Alt+K" }
+  // 与 COMMANDS 里的 CmdOrCtrl+Shift+P 同一个组合，必须被去重掉，不能在速查里出现两遍
+  { group: "视图", label: "命令面板", accelerator: "CmdOrCtrl+Shift+P" }
 ];
 
 const noop = () => undefined;
@@ -110,8 +110,8 @@ test("shortcut reference lists registered accelerators and aliases", () => {
   );
 
   assert.match(html, /快捷键速查/);
-  assert.match(html, /Alt\+K/);
-  assert.match(html, /F1/);
+  assert.doesNotMatch(html, /Alt\+K/);
+  assert.match(html, /Ctrl\+Shift\+P/);
   assert.match(html, /Alt\+1/);
   // 菜单里由 Electron 给加速器的 role 项也必须列出——只列 COMMANDS 会让速查名不副实
   assert.match(html, /Reload/);
@@ -126,8 +126,8 @@ test("shortcut reference lists registered accelerators and aliases", () => {
   assert.match(html, /Ctrl\+-/);
   assert.match(html, /Ctrl\+0/);
   assert.match(html, /Ctrl \+ 鼠标滚轮/);
-  // Alt+K 在 COMMANDS 与菜单里各有一份，去重后只能出现一次
-  assert.equal(html.split("Alt+K").length - 1, 1);
+  // CmdOrCtrl+Shift+P 在 COMMANDS 与菜单里各有一份，去重后只能出现一次
+  assert.equal(html.split("<kbd>Ctrl+Shift+P</kbd>").length - 1, 1);
 });
 
 test("command palette exposes the prompt library without motion", () => {
@@ -829,7 +829,11 @@ test("archive workspace keeps the detail pane mounted while the list column load
     detailOverride: <p>Synthesis draft in progress</p>
   });
 
-  assert.equal([...html.matchAll(/Loading results…/g)].length, 1);
+  const dom = new (require('jsdom').JSDOM)(html);
+  try {
+    assert.equal(dom.window.document.querySelector('.archive-list [role=status]')?.textContent, 'Loading results…');
+    assert.equal(dom.window.document.querySelector('.archive-detail-pane')?.textContent.includes('Synthesis draft in progress'), true);
+  } finally { dom.window.close(); }
   assert.equal([...html.matchAll(/class="archive-list"/g)].length, 1);
   assert.equal([...html.matchAll(/class="archive-detail-pane"/g)].length, 1);
   assert.match(html, /Synthesis draft in progress/);

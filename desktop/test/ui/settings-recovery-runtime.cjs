@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, nativeTheme } = require('electron');
 const { join } = require('node:path');
 const { writeFileSync } = require('node:fs');
 const output = process.argv[2];
+const boundary = require('./native-process-boundary.cjs').processBoundary(app, output);
 app.setPath('userData', join(output, 'profile'));
 app.on('window-all-closed', () => {});
 const report = [];
@@ -64,7 +65,7 @@ async function visualBounds(win, selector) {
 async function settingsFlow(win, name) {
   await wait(win, '!!window.recoveryFixture && !!document.querySelector(".settings-advanced")', 'settings disclosure');
   check(await read(win, '!document.querySelector(".settings-advanced").open'), 'advanced starts collapsed');
-  check(await read(win, 'document.querySelectorAll(".settings-display fieldset").length===2'), 'two display groups');
+  check(await read(win, 'document.querySelectorAll(".settings-display:not(.settings-global-shortcut) fieldset").length===2'), 'two display groups');
   await read(win, 'document.querySelector(".settings-advanced > summary").focus()');
   for (let count = 0; count < 16; count++) {
     await key(win, 'Tab');
@@ -130,6 +131,16 @@ async function settingsFlow(win, name) {
   await wait(win, 'document.querySelector("input[name=settings-density][value=comfortable]").checked', 'density accepted');
   await click(win, `${find('input[name=settings-site-scale][value="1"]')}.closest('label')`);
   await wait(win, `${find('input[name=settings-site-scale][value="1"]')}.checked`, 'site scale accepted');
+  await read(win, 'document.querySelector("#command-palette-shortcut").scrollIntoView({block:"center"});document.querySelector("#command-palette-shortcut").focus()');
+  await key(win, 'End');
+  await wait(win, 'document.querySelector("#command-palette-shortcut").value==="obsidian"', 'shortcut accepted');
+  await read(win, 'window.recoveryFixture.failShortcut()');
+  await read(win, 'document.querySelector("#command-palette-shortcut").scrollIntoView({block:"center"});document.querySelector("#command-palette-shortcut").focus()'); await key(win, 'Home');
+  await wait(win, '!!document.querySelector(".settings-command-shortcut [role=status]")', 'shortcut save failure');
+  check(await read(win, 'document.querySelector("#command-palette-shortcut").value==="obsidian"'), 'shortcut failure preserves effective option');
+  await wait(win, 'document.activeElement?.id==="command-palette-shortcut"', 'shortcut failure restores native focus');
+  await read(win, 'document.querySelector("#command-palette-shortcut").scrollIntoView({block:"center"});document.querySelector("#command-palette-shortcut").focus()'); await key(win, 'Home');
+  await wait(win, 'document.querySelector("#command-palette-shortcut").value==="standard"', 'shortcut retry');
   await navigate(win, 'data');
   await type(win, '[name=clear-cloud-confirmation]', 'DELETE');
   await click(win, find('.settings-advanced > summary')); await click(win, find('.settings-advanced > summary'));
@@ -170,10 +181,11 @@ app.whenReady().then(async () => {
   for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const width of [1200, 640]) {
     nativeTheme.themeSource = locale === 'en' ? 'dark' : 'light';
     const win = new BrowserWindow({ width, height: 1000, show: true, webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
+    win.webContents.on('console-message', (_event, level, message) => { if (level >= 3) console.log('FIXTURE_RENDER_ERROR: ' + message); });
     const name = `${locale}-${width}`;
     try {
       await win.loadFile(join(output, 'index.html'), { query: { locale } });
-      await settingsFlow(win, name); await healthFlow(win, name);
+      boundary(); await settingsFlow(win, name); await healthFlow(win, name);
       if (locale === 'en' && width === 640) {
         win.webContents.setZoomFactor(1.5);
         win.webContents.debugger.attach('1.3');
@@ -186,7 +198,7 @@ app.whenReady().then(async () => {
         await shot(win, `${name}-settings-forced-colors-150`);
         win.webContents.debugger.detach();
       }
-      report.push({ locale, width, ok: true, simulatedIme: true, nativeInput: true });
+      boundary(); report.push({ locale, width, ok: true, simulatedIme: true, nativeInput: true });
     } catch (error) { report.push({ locale, width, ok: false, error: String(error) }); }
     finally { win.destroy(); }
   }

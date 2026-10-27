@@ -80,7 +80,10 @@ export function menuShortcutItems(
     .filter((value): value is string => !!value)
     .map((value) => normalizeAccelerator(value, isMac)));
   const items: PaletteCommand[] = [];
+  const palette = listed.find(item => item.commandId === 'open-command-palette');
   for (const shortcut of shortcuts) {
+    // An older menu read may finish while the live palette binding is changing.
+    if (palette && shortcut.label === palette.label) continue;
     const key = normalizeAccelerator(shortcut.accelerator, isMac);
     if (seen.has(key)) continue;
     seen.add(key);

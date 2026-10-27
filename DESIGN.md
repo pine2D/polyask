@@ -293,7 +293,7 @@ components:
 
 设置正文围绕（1040px）的内容宽度居中，常规外围与组间距（24px），卡片内边距（20px 24px）。不超过（760px）时外围和卡片改为（16px），行内操作移到说明下方；不超过（560px）时事实列表等进一步堆叠。分区导航保持单行滚动与吸顶。
 
-命令面板最大宽（720px），确认框最大宽（440px），均受当前窗口约束。页面根区域固定到窗口，滚动归各内容区域负责。
+命令面板默认使用 Ctrl+Shift+P（macOS 为 Cmd+Shift+P），设置可选本机 Ctrl+P / Cmd+P；仅展示当前有效键位及必要覆盖提示，不在操作界面解释选型。命令面板最大宽（720px），确认框最大宽（440px），均受当前窗口约束。页面根区域固定到窗口，滚动归各内容区域负责。
 
 来源：`desktop/src/shared/display.ts`、`desktop/src/main/layout.ts`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/toolbar-fit.ts`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`、`desktop/src/renderer/settings.css`。
 

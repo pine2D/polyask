@@ -160,6 +160,9 @@ export type SitePhase =
 // 类型收不了口；但 describeStatus 用 Record<SiteCode, …> 查表，这里加一条码而没配文案，typecheck 阶段就红。
 // 反向（源码产出的码必须在这里）由 test/status-copy-coverage.test.ts 守着。
 export const SITE_CODES = [
+  "command_shortcut_read_failed",
+  "command_shortcut_save_failed",
+  "command_shortcut_apply_failed",
   "tier_unconfirmed",
   "composer_not_found",
   "not_ready",

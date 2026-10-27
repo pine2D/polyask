@@ -1,3 +1,4 @@
+import type { CommandPaletteShortcutMode } from './command-palette-shortcut';
 import type { DesktopCopy } from "./copy";
 
 export type CommandId =
@@ -56,7 +57,7 @@ export interface CommandInput {
 }
 
 export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
-  { id: "open-command-palette", labelKey: "commandPalette", group: "navigate", accelerator: "Alt+K", aliases: ["F1"] },
+  { id: "open-command-palette", labelKey: "commandPalette", group: "navigate", accelerator: "CmdOrCtrl+Shift+P" },
   { id: "open-sites", labelKey: "sitesAndGroups", group: "navigate", accelerator: "Alt+S" },
   { id: "open-site-health", labelKey: "siteHealth", group: "navigate", accelerator: "Alt+H" },
   { id: "show-page-1", labelKey: "showPageOne", group: "navigate", accelerator: "Alt+1" },
@@ -94,21 +95,22 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "check-updates", labelKey: "checkForUpdates", group: "app" }
 ]);
 
-const BY_ID = new Map<string, CommandDescriptor>(COMMANDS.map((command) => [command.id, command]));
-
-export function commandById(id: string): CommandDescriptor | undefined {
-  return BY_ID.get(id);
+const OBSIDIAN_COMMANDS: readonly CommandDescriptor[] = Object.freeze(COMMANDS.map(command =>
+  command.id === 'open-command-palette' ? { ...command, accelerator: 'CmdOrCtrl+P' } : command));
+export function resolveCommands(mode: CommandPaletteShortcutMode): readonly CommandDescriptor[] {
+  return mode === 'obsidian' ? OBSIDIAN_COMMANDS : COMMANDS;
 }
-
-export function commandAccelerator(id: CommandId, platform: NodeJS.Platform): string | undefined {
-  const command = commandById(id);
-  return platform === "darwin" ? command?.macAccelerator ?? command?.accelerator : command?.accelerator;
+export function commandById(id: string, mode: CommandPaletteShortcutMode = 'standard'): CommandDescriptor | undefined {
+  return resolveCommands(mode).find(command => command.id === id);
 }
-
-export function commandAliasForInput(input: CommandInput, platform: string = 'linux'): CommandId | undefined {
-  if (input.type === 'keyDown' && !input.isComposing && !input.alt && !input.shift &&
-    (platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta) &&
-    input.key.toLowerCase() === 'f') return 'find-page';
-  if (input.type !== "keyDown" || input.alt || input.control || input.meta || input.shift) return undefined;
-  return COMMANDS.find((command) => command.aliases?.some((alias) => alias === input.key))?.id;
+export function commandAccelerator(id: CommandId, platform: NodeJS.Platform, mode: CommandPaletteShortcutMode = 'standard'): string | undefined {
+  const command = commandById(id, mode);
+  return platform === 'darwin' ? command?.macAccelerator ?? command?.accelerator : command?.accelerator;
+}
+export function commandAliasForInput(input: CommandInput, platform = 'linux', mode: CommandPaletteShortcutMode = 'standard'): CommandId | undefined {
+  if (input.type !== 'keyDown' || input.isComposing || input.alt ||
+    !(platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta)) return undefined;
+  if (input.key.toLowerCase() === 'f' && !input.shift) return 'find-page';
+  if (input.key.toLowerCase() === 'p' && input.shift === (mode === 'standard')) return 'open-command-palette';
+  return undefined;
 }

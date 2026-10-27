@@ -65,3 +65,9 @@ test("duplicate accelerators inside the menu itself collapse to one row", () => 
 
   assert.deepEqual(items.map((item) => item.label), ["Reload"]);
 });
+
+test('a stale native menu snapshot cannot reintroduce the inactive palette shortcut', () => {
+  const listed = [{ id: 'open-command-palette', commandId: 'open-command-palette' as const, label: 'Command palette',
+    group: 'navigate' as const, accelerator: 'CmdOrCtrl+P', aliases: [] }];
+  assert.equal(menuShortcutItems([{ group: 'View', label: 'Command palette', accelerator: 'CmdOrCtrl+Shift+P' }], listed).length, 0);
+});

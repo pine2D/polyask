@@ -43,7 +43,8 @@ test('shortcut filtering preserves IME, activates a result with Enter and exits 
   try {
     const input = h.document.querySelector<HTMLInputElement>('input[type="search"]');
     assert.equal(input !== null, true);
-    await h.input(input!, 'F1'); assert.equal(options(h.document).length, 1);
+    await h.input(input!, 'F1'); assert.equal(options(h.document).length, 0);
+    await h.input(input!, 'command palette Ctrl+Shift+P'); assert.equal(options(h.document).length, 1);
     for (const key of ['Enter', 'Escape']) {
       const event = new h.window.KeyboardEvent('keydown', { key, keyCode: 229, bubbles: true, cancelable: true });
       await act(async () => input!.dispatchEvent(event)); assert.equal(event.defaultPrevented, false);

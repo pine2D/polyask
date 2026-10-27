@@ -18,6 +18,7 @@ import type { CaptureLocateCounts } from "../shared/question-capture";
 import type { SiteFindRequest, SiteFindState } from '../shared/site-find';
 import { NOTIFICATION_CHANNELS, type NotificationApi, type NotificationStatus, type NotificationTarget } from '../shared/notification';
 import type { ReportExportRequest, ReportExportResult } from '../shared/report-export';
+import type { CommandPaletteShortcutMode, CommandPaletteShortcutState } from '../shared/command-palette-shortcut';
 import type { GlobalPromptShortcutState } from '../shared/global-prompt-shortcut';
 
 import { ipcErrorCode } from "../shared/ipc-error";
@@ -58,6 +59,9 @@ import type {
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 
 export interface PolyAskDesktopApi extends NotificationApi {
+  commandPaletteShortcutState(): Promise<CommandPaletteShortcutState>;
+  setCommandPaletteShortcut(mode: CommandPaletteShortcutMode): Promise<CommandPaletteShortcutState>;
+  onCommandPaletteShortcut(listener: (state: CommandPaletteShortcutState) => void): () => void;
   globalPromptShortcutState(): Promise<GlobalPromptShortcutState>;
   setGlobalPromptShortcut(accelerator: string | null): Promise<GlobalPromptShortcutState>;
   exportReport(request: ReportExportRequest): Promise<ReportExportResult>;
@@ -201,6 +205,9 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  commandPaletteShortcutState: () => invoke('polyask:command-palette-shortcut-state'),
+  setCommandPaletteShortcut: (mode: CommandPaletteShortcutMode) => invoke('polyask:command-palette-shortcut-set', mode),
+  onCommandPaletteShortcut: (listener: (state: CommandPaletteShortcutState) => void) => subscribe('polyask:command-palette-shortcut-changed', listener),
   globalPromptShortcutState: () => invoke('polyask:global-prompt-shortcut-state'),
   setGlobalPromptShortcut: (accelerator: string | null) => invoke('polyask:global-prompt-shortcut-set', accelerator),
   exportReport: (request: ReportExportRequest) => invoke('polyask:report-export', request),

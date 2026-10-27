@@ -10,7 +10,7 @@ import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "r
 import { createRoot } from "react-dom/client";
 
 import { moreMenuCommandIds } from "./toolbar-fit";
-import { COMMANDS, type CommandId } from "../shared/commands";
+import { resolveCommands, type CommandId } from "../shared/commands";
 import type { SiteDefinition } from "../shared/contracts";
 import type { CommandActions } from "./command-dispatcher";
 import { formatCopy, getCopy, resolveLocale } from "../shared/copy";
@@ -42,6 +42,7 @@ import { ExclusiveActionLock } from "./broadcast-flow-state";
 import { CommandBar } from "./command-bar";
 import { ConfirmDialog } from "./confirm-dialog";
 import type { PendingSessionConfirmation } from "./session-confirmation";
+import { useCommandPaletteShortcut } from './use-command-palette-shortcut';
 import { CommandPalette, type CommandPaletteMode } from "./command-palette";
 import { executeCommand } from "./command-dispatcher";
 import {
@@ -135,6 +136,7 @@ function App(): React.JSX.Element {
   if (!actionLock.current) actionLock.current = new ExclusiveActionLock();
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>("loading");
   const [sites, setSites] = useState<readonly SiteDefinition[]>([]);
+  const paletteShortcut = useCommandPaletteShortcut();
   const [menuShortcuts, setMenuShortcuts] = useState<readonly MenuShortcut[]>([]);
   const [siteHistory, setSiteHistory] = useState<Record<string, SiteHistoryState>>({});
   // Alt+N 的确认改用应用内弹层（原生 dialog.showMessageBox 与本应用外观格格不入）。
@@ -483,8 +485,8 @@ function App(): React.JSX.Element {
     "open-getting-started": () => openCommandSurface("guide"),
     "check-updates": checkForUpdates
   };
-  const availableCommands = COMMANDS.filter((command) => !!commandActions.current[command.id]);
-  useCommandDiscovery({ focused: layout.focused, statuses, surface, setSiteHistory, setMenuShortcuts });
+  const availableCommands = resolveCommands(paletteShortcut.state?.mode ?? 'standard').filter((command) => !!commandActions.current[command.id]);
+  useCommandDiscovery({ shortcutRevision: paletteShortcut.state?.revision, focused: layout.focused, statuses, surface, setSiteHistory, setMenuShortcuts });
 
   if (bootstrapPhase !== "ready") {
     return (

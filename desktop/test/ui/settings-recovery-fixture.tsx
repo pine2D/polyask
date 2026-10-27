@@ -4,6 +4,7 @@ import { SettingsWorkspace } from '../../src/renderer/settings-workspace';
 import { SiteHealthPanel } from '../../src/renderer/site-health';
 import { setShellApi } from '../../src/renderer/shell-api';
 import { getCopy } from '../../src/shared/copy';
+import type { CommandPaletteShortcutState } from '../../src/shared/command-palette-shortcut';
 import type { DisplayPreferences } from '../../src/shared/display';
 import type { LocalDataStats } from '../../src/shared/local-data';
 import type { SiteHealth } from '../../src/shared/site-health';
@@ -25,8 +26,19 @@ let countReply: ((value: LocalDataStats) => void) | undefined, cloudReply: (() =
 const calls = { clears: 0, exports: 0, resets: 0, closes: 0, display: [] as DisplayPreferences[], health: [] as string[], blocking: [] as boolean[] };
 const stats = (): LocalDataStats => ({ history, archives: 3, decisions: 4, folders: 5, answers: 7, memberships: 9,
   drafts: 0, reset: { preferences: 0, answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } });
+let shortcut: CommandPaletteShortcutState = { mode: 'standard', revision: 1, error: null }, shortcutFail = false;
+const shortcutListeners = new Set<(state: CommandPaletteShortcutState) => void>();
 setShellApi({
+  commandPaletteShortcutState: async () => shortcut,
+  onCommandPaletteShortcut: (listener: (state: CommandPaletteShortcutState) => void) => { shortcutListeners.add(listener); return () => shortcutListeners.delete(listener); },
+  setCommandPaletteShortcut: async (mode: 'standard' | 'obsidian') => {
+    await new Promise(resolve => setTimeout(resolve, 40));
+    shortcut = { mode: shortcutFail ? shortcut.mode : mode, revision: shortcut.revision + 1,
+      error: shortcutFail ? 'command_shortcut_save_failed' : null };
+    shortcutFail = false; for (const listener of shortcutListeners) listener(shortcut); return shortcut;
+  },
   ...proxyShellStubs(),
+  cancelBackup: async () => {},
   syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
   getLocalDataStats: async () => {
     if (statsFail) { statsFail = false; throw Error('fixture-stats-failed'); }
@@ -45,7 +57,7 @@ function Fixture(): React.JSX.Element {
   const [healthCase, setHealthCase] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
   (window as any).recoveryFixture = {
-    copy, calls,
+    copy, calls, failShortcut: () => { shortcutFail = true; },
     navigate: (next: typeof section) => { setHealthCase(null); setSection(next); setRequest(value => value + 1); },
     holdCounts: () => { holdCounts = true; },
     releaseCounts: () => { countReply?.(stats()); countReply = undefined; },

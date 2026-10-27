@@ -1,8 +1,12 @@
+import type { CommandPaletteShortcutError } from './command-palette-shortcut';
 import { formatCopy, type DesktopCopy } from "./copy";
 import type { SiteCode, SitePhase, SiteStatus } from "./protocol";
 import { normalizeSelectionMetadata } from "./selection";
 
 const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
+  command_shortcut_read_failed: "commandShortcutReadFailed",
+  command_shortcut_save_failed: "commandShortcutSaveFailed",
+  command_shortcut_apply_failed: "commandShortcutApplyFailed",
   tier_unconfirmed: "tierUnconfirmed",
   composer_not_found: "composerNotFound",
   not_ready: "siteNotReady",
@@ -100,4 +104,8 @@ export function describeSynthesisSendCode(copy: DesktopCopy, code?: string): str
 
 export function errorCode(error: unknown): string {
   return error instanceof Error ? error.message : "";
+}
+
+export function describeCommandPaletteShortcutError(copy: DesktopCopy, error: CommandPaletteShortcutError): string {
+  return copy[STATUS_COPY_KEY[error]];
 }

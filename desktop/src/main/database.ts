@@ -129,7 +129,7 @@ export class DesktopDatabase {
   localDataStats(): import('../shared/local-data').LocalDataStats { return readLocalDataStats(this.database); }
 
   businessSnapshot(): { table: string; id: string; body: unknown }[] {
-    // Local meta (including globalPromptShortcut) never enters a business backup.
+    // Local meta (including globalPromptShortcut and commandPaletteShortcut) never enters a business backup.
     return ["questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items"].flatMap(table => {
       const key = table === "state_items" ? "key" : "id";
       return this.database.prepare(`SELECT ${key} AS id, body FROM ${table} ORDER BY ${key}`).all().flatMap(row => {
@@ -158,7 +158,7 @@ export class DesktopDatabase {
     inTransaction(this.database, () => {
       // state_items includes workspace.participation and its independent sync version.
       for (const table of ["question_attachment_items", "question_attachment_sets", "questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
-      // Includes local globalPromptShortcut; its runtime releases the owned registration in afterReset.
+      // Includes local shortcut preferences; their runtimes re-read actual storage in afterReset.
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");
     });
     // DELETE 只把页挂进 freelist，提问与回答明文仍留在 .sqlite / WAL 里；重置的承诺是「本机清空」，收缩一次。

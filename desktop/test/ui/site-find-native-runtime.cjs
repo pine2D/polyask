@@ -5,12 +5,13 @@ process.on('uncaughtException', error => { console.error(String(error.stack || e
 const step = name => fs.appendFileSync(join(output, 'trace-' + locale + '.jsonl'), JSON.stringify({ name, time:Date.now() }) + '\n');
 step('start');
 app.setPath('userData', join(output, 'profile-' + locale));
+const boundary = require('./native-process-boundary.cjs').processBoundary(app, output);
 const services = require(join(output, 'services.cjs'));
-let win, manager;
-app.on('web-contents-created', (_event, contents) => contents.on('before-input-event', (event, input) => {
-  const command = services.commandAliasForInput(input, process.platform);
-  if (command) { event.preventDefault(); services.dispatchAppCommand(command, manager, win); }
-}));
+let win, manager, palette;
+const dispatched = [];
+const dispatch = id => { dispatched.push(id); services.dispatchAppCommand(id, manager, win); };
+app.on('web-contents-created', (_event, contents) =>
+  services.bindApplicationCommandInput(contents, () => palette?.getState().mode ?? 'standard', dispatch));
 app.whenReady().then(async () => {
   step('ready');
   const { SITES, SITE_FIND_HEIGHT } = services, keys = SITES.map(site => site.key);
@@ -23,14 +24,14 @@ app.whenReady().then(async () => {
   win.setMenuBarVisibility(false);
   manager = new services.ViewManager(win, () => {}, layout => win.webContents.send('polyask:layout', layout), () => {}, { selectedSites:keys });
   step('manager');
-  const trusted = event => event.sender === win.webContents && event.senderFrame?.parent === null;
+  const trusted = event => !win.isDestroyed() && event.sender === win.webContents && event.senderFrame?.parent === null;
   const dispose = services.registerSiteFindIpc(ipcMain, manager.siteFind, trusted, win.webContents);
   const pages = manager.getDiagnosticSites().map(site => ({ key:site.site,
     view:win.contentView.children.find(view => view.webContents?.id === site.webContentsId) }));
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
   const until = async (condition, label) => {
     const end = Date.now() + 6000;
-    while (!(await condition())) { if (Date.now() >= end) throw Error('Timeout: ' + label); await pause(20); }
+    while (!(await condition())) { if (Date.now() >= end) throw Error('Timeout: ' + label + ' :: ' + await win.webContents.executeJavaScript('document.body.innerText.slice(-900)')); await pause(20); }
   };
   await until(() => blocked >= keys.length && pages.every(page => !page.view.webContents.isLoadingMainFrame()), 'startup intercepted');
   step('startup intercepted');
@@ -62,9 +63,23 @@ app.whenReady().then(async () => {
     ['set-page', value => manager.setPage(value)], ['set-layout', value => manager.setLayout(value.mode, value.focused)],
     ['set-surface', value => { manager.setSurface(value); if (value === 'confirmation') win.webContents.focus(); }]
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (trusted(event)) action(value); });
-  const dispatch = id => services.dispatchAppCommand(id, manager, win);
-  Menu.setApplicationMenu(Menu.buildFromTemplate(services.applicationMenu(process.platform, services.getCopy(locale),
-    { density:'compact', siteScale:0.9 }, () => {}, dispatch, 'PolyAsk', () => {})));
+  const database = services.DesktopDatabase.open(join(output, 'palette-' + locale + '.sqlite'));
+  database.meta.put('deviceId', 'native-palette');
+  const repository = new services.CommandPaletteShortcutRepository(database.meta);
+  let writeFailed = false;
+  const startPalette = () => {
+    palette = new services.CommandPaletteShortcutRuntime({
+      repository: { read: () => repository.read(), write: mode => { if (writeFailed) throw Error('fixture-write-failed'); repository.write(mode); } },
+      transaction: action => database.transaction(action),
+      prepare: mode => services.prepareApplicationMenu([process.platform, services.getCopy(locale),
+        { density:'compact', siteScale:0.9 }, () => {}, dispatch, 'PolyAsk', () => {}, mode]),
+      publish: state => win.webContents.send('polyask:command-palette-shortcut-changed', state)
+    });
+    palette.restore();
+    return services.registerCommandPaletteShortcutIpc({ ipcMain, trustedShell: trusted, runtime: palette,
+      gate: new services.OperationGate(), isResetting: () => false });
+  };
+  let disposePalette = startPalette();
   const run = script => win.webContents.executeJavaScript(script);
   const paint = () => run('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
   const settled = () => until(() => manager.siteFind.state.open && manager.siteFind.state.query === needle &&
@@ -82,9 +97,42 @@ app.whenReady().then(async () => {
   };
   const report = { locale, cases:[], layouts:[], blockedStartup:blocked };
   await win.loadFile(join(output, 'index.html'));
-  step('shell loaded');
+  step('shell loaded'); boundary();
   await until(() => run('!!document.querySelector(".app-shell")'), 'production shell');
   assert.equal(await run('document.documentElement.lang'), locale === 'en-US' ? 'en' : locale);
+  for (const mode of ['standard', 'obsidian']) {
+    await run(`window.polyask.setCommandPaletteShortcut(${JSON.stringify(mode)})`);
+    for (const contents of [win.webContents, pages[0].view.webContents]) {
+      dispatch('focus-prompt'); await until(() => run('!document.querySelector(".command-surface")'), 'return to sites');
+      contents.focus(); const before = dispatched.filter(id => id === 'open-command-palette').length;
+      await key(contents, 'P', mode === 'standard' ? ['control','shift'] : ['control']);
+      await until(() => run('!!document.querySelector(".command-surface")'), 'palette from native key');
+      assert.equal(dispatched.filter(id => id === 'open-command-palette').length - before, 1);
+      dispatch('focus-prompt'); await until(() => run('!document.querySelector(".command-surface")'), 'close palette');
+      contents.focus(); const after = dispatched.length;
+      await contents.executeJavaScript('window.palettePassthrough=[];window.addEventListener("keydown",e=>{if(e.key.toLowerCase()==="p")window.palettePassthrough.push({prevented:e.defaultPrevented,shift:e.shiftKey})},{once:true})');
+      await key(contents, 'P', mode === 'standard' ? ['control'] : ['control','shift']);
+      assert.equal(await contents.executeJavaScript('window.palettePassthrough.length===1&&!window.palettePassthrough[0].prevented'), true, 'inactive palette key reaches the focused page');
+      await key(contents, 'F1'); await key(contents, 'K', ['alt']);
+      assert.equal(dispatched.length, after, 'inactive and removed keys never dispatch');
+    }
+    const items = Menu.getApplicationMenu().items.flatMap(item => item.submenu?.items ?? []);
+    const item = items.find(item => item.label === services.getCopy(locale).commandPalette);
+    assert.equal(item.accelerator, mode === 'standard' ? 'CmdOrCtrl+Shift+P' : 'CmdOrCtrl+P');
+    const before = dispatched.length; item.click(); assert.equal(dispatched.length - before, 1);
+    dispatch('focus-prompt'); await until(() => run('!document.querySelector(".command-surface")'), 'menu palette closed');
+  }
+  writeFailed = true;
+  assert.equal((await run('window.polyask.setCommandPaletteShortcut("standard")')).error, 'command_shortcut_save_failed');
+  assert.equal(repository.read(), 'obsidian'); assert.equal(palette.getState().mode, 'obsidian'); writeFailed = false;
+  disposePalette(); palette.dispose(); disposePalette = startPalette();
+  await win.loadFile(join(output, 'index.html'));
+  await until(() => run('!!document.querySelector(".app-shell")'), 'shell after runtime restart');
+  assert.equal((await run('window.polyask.commandPaletteShortcutState()')).mode, 'obsidian');
+  assert.equal(palette.refreshAfterReset().mode, 'obsidian', 'failed wipe retains actual saved mode');
+  database.resetLocalData(); assert.equal(palette.refreshAfterReset().mode, 'standard');
+  assert.equal(database.meta.get('deviceId'), 'native-palette');
+  report.cases.push('palette: both modes in shell/site, one dispatch, removed/inactive keys zero, menu/save rollback/restart/reset');
   const originalY = manager.getLayout().placements[0].bounds.y;
   pages[0].view.webContents.focus(); await key(pages[0].view.webContents, 'F', ['control']);
   await until(() => run('document.activeElement?.name==="site-find-query"'), 'native site Ctrl+F opens shell search');
@@ -149,7 +197,7 @@ app.whenReady().then(async () => {
   await until(() => !manager.siteFind.state.open, 'opening sidebar closes find');
   await until(() => run('!document.querySelector(".site-find")'), 'sidebar find UI released');
   assert.equal(await run('!!document.querySelector(".site-find")'), false);
-  await run(`(()=>{const data=new DataTransfer();data.items.add(new File([Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII='),c=>c.charCodeAt(0))],'find-fixture.png',{type:'image/png'}));const input=document.querySelector('[name=images]');input.files=data.files;input.dispatchEvent(new Event('change',{bubbles:true}))})()`);
+  await run(`(()=>{const data=new DataTransfer();data.items.add(new File([Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII='),c=>c.charCodeAt(0))],'find-fixture.png',{type:'image/png'}));document.querySelector('[name=prompt]').dispatchEvent(new ClipboardEvent('paste',{bubbles:true,clipboardData:data}))})()`);
   await until(() => run('document.querySelector(".image-trigger")?.dataset.imageCount==="1"'), 'fixture image loaded');
   dispatch('find-page'); await settled();
   await click('.image-trigger');
@@ -187,12 +235,12 @@ app.whenReady().then(async () => {
     }
   }
   manager.siteFind.close(false);
-  step('layouts');
+  step('layouts'); boundary();
   await win.loadFile(join(output, 'index.html'));
   await until(() => run('!!document.querySelector(".app-shell")'), 'shell reload');
   assert.equal(manager.siteFind.state.open, false);
   fs.writeFileSync(join(output, 'report-' + locale + '.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ locale, cases:report.cases, layouts:report.layouts.length, output }));
   console.log('SITE_FIND_NATIVE_COMPLETE');
-  dispose(); win.destroy(); app.exit(0);
+  disposePalette(); palette.dispose(); database.close(); dispose(); win.destroy(); app.exit(0);
 }).catch(error => { console.error(String(error.stack || error)); app.exit(1); });

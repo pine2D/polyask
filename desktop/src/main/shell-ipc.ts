@@ -46,6 +46,7 @@ import { CollectionService } from "./collection-service";
 import type { DataAdminService } from "./data-admin-service";
 import { registerDesktopToolsIpc } from './desktop-tools-ipc';
 import type { CompletionNotifications } from './completion-notifications';
+import type { CommandPaletteShortcutRuntime } from './command-palette-shortcut';
 import type { GlobalPromptShortcutRuntime } from './global-prompt-shortcut';
 import { registerProxyIpc, type ProxyIpcServices } from "./proxy-ipc";
 import { HistoryService } from "./history-service";
@@ -95,6 +96,7 @@ export interface ShellIpcOptions {
   readonly setCompletionNotifications: (enabled: boolean) => void;
   readonly completionNotifications?: CompletionNotifications;
   readonly globalPromptShortcut?: GlobalPromptShortcutRuntime;
+  readonly commandPaletteShortcut?: CommandPaletteShortcutRuntime;
 }
 
 const HANDLERS = [
@@ -293,7 +295,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   });
   ipcMain.handle("polyask:show-command-menu", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
-    return showCommandMenu(window, value, options.copy);
+    return showCommandMenu(window, value, options.copy, options.commandPaletteShortcut?.getState().mode);
   });
   ipcMain.handle("polyask:prompt-template-save", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");

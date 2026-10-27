@@ -1,3 +1,4 @@
+import { COMMAND_PALETTE_SHORTCUT_COPY } from './command-palette-shortcut-copy';
 import { QUESTION_ATTACHMENT_COPY } from './question-attachment-copy';
 import { PREFERENCE_SYNC_COPY } from './preference-sync-copy';
 import { PROXY_COPY } from './proxy-copy';
@@ -33,6 +34,7 @@ import { GLOBAL_PROMPT_SHORTCUT_COPY } from './global-prompt-shortcut-copy';
 export const COPY = {
   en: {
     ...GLOBAL_PROMPT_SHORTCUT_COPY.en,
+    ...COMMAND_PALETTE_SHORTCUT_COPY.en,
     ...NOTIFICATION_COPY.en,
     ...REPORT_EXPORT_COPY.en,
     ...SITE_FIND_COPY.en,
@@ -206,13 +208,14 @@ export const COPY = {
     guideAskBody: "Enter your question, check the selected sites and response mode, then press Send. Sent does not mean the answer is complete. If submission is uncertain, check the site before manually retrying to avoid a duplicate question.",
     guideCompareTitle: "Capture and compare",
     guideCompareBody: "Once the answers you need are ready, capture a snapshot in the result library and compare two answers. Capture reads the current pages; review the content and any truncation warnings. Exact paragraph matches do not establish factual accuracy.",
-    guideReturnHint: "Open this guide again from More actions or search Getting started in the command palette (F1). Closing it returns to your sites and preserves your draft.",
+    guideReturnHint: "Open this guide again from More actions or search Getting started in the command palette. Closing it returns to your sites and preserves your draft.",
     nextUnfinished: "Go to next unfinished site",
     nextFailed: "Go to next failed site",
     checkForUpdates: "View latest release"
   },
   zhCN: {
     ...GLOBAL_PROMPT_SHORTCUT_COPY.zhCN,
+    ...COMMAND_PALETTE_SHORTCUT_COPY.zhCN,
     ...NOTIFICATION_COPY.zhCN,
     ...REPORT_EXPORT_COPY.zhCN,
     ...SITE_FIND_COPY.zhCN,
@@ -386,13 +389,14 @@ export const COPY = {
     guideAskBody: "输入问题，确认发送站点和回答档位，再点发送。“已发送”不代表回答已完成。提交不确定时，先查看原站，再决定是否手动重试，避免重复提问。",
     guideCompareTitle: "采集并比较回答",
     guideCompareBody: "等需要的回答准备好后，将当前回答保存为结果库快照，并选择两份对照。采集读取当前页面，请核对内容和截断提示；段落文字相同不代表事实已核实。",
-    guideReturnHint: "随时从“更多”重新打开指南，或按 F1 搜索“开始使用”。关闭后回到站点，草稿会保留。",
+    guideReturnHint: "随时从“更多”重新打开指南，或在命令面板中搜索“开始使用”。关闭后回到站点，草稿会保留。",
     nextUnfinished: "转到下一个未完成站点",
     nextFailed: "转到下一个失败站点",
     checkForUpdates: "查看最新版本"
   },
   zhTW: {
     ...GLOBAL_PROMPT_SHORTCUT_COPY.zhTW,
+    ...COMMAND_PALETTE_SHORTCUT_COPY.zhTW,
     ...NOTIFICATION_COPY.zhTW,
     ...REPORT_EXPORT_COPY.zhTW,
     ...SITE_FIND_COPY.zhTW,
@@ -566,7 +570,7 @@ export const COPY = {
     guideAskBody: "輸入問題，確認傳送網站和回答模式，再點傳送。「已傳送」不代表回答已完成。提交不確定時，先查看原網站，再決定是否手動重試，避免重複提問。",
     guideCompareTitle: "擷取並比較回答",
     guideCompareBody: "等需要的回答準備好後，將目前回答儲存為結果庫快照，並選擇兩份對照。擷取讀取目前頁面，請核對內容和截斷提示；段落文字相同不代表事實已核實。",
-    guideReturnHint: "隨時從「更多」重新開啟指南，或按 F1 搜尋「開始使用」。關閉後回到網站，草稿會保留。",
+    guideReturnHint: "隨時從「更多」重新開啟指南，或在命令面板中搜尋「開始使用」。關閉後回到網站，草稿會保留。",
     nextUnfinished: "前往下一個未完成網站",
     nextFailed: "前往下一個失敗網站",
     checkForUpdates: "檢視最新版本"

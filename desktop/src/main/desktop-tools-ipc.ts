@@ -3,6 +3,7 @@ import type { ShellIpcOptions } from './shell-ipc';
 import type { OperationGate } from '../shared/operation-gate';
 import { registerDataAdminIpc } from './data-admin-ipc';
 import { registerNotificationIpc } from './notification-ipc';
+import { registerCommandPaletteShortcutIpc } from './command-palette-shortcut-ipc';
 import { registerGlobalPromptShortcutIpc } from './global-prompt-shortcut-ipc';
 import { registerReportExportIpc } from './report-export-ipc';
 
@@ -20,6 +21,7 @@ export function registerDesktopToolsIpc(options: ShellIpcOptions, bindings: {
     afterDraftsChange: () => { options.preferences?.drafts.invalidate(); publishDrafts(); },
     afterReset: () => {
       options.globalPromptShortcut?.refreshAfterReset();
+      options.commandPaletteShortcut?.refreshAfterReset();
       options.completionNotifications?.reset();
       options.questions.publishRunProgress(); options.preferences?.reset(); options.manager.siteZoom.clear();
       publishWorkspace(); publishPromptLibrary(); publishDrafts();
@@ -31,5 +33,7 @@ export function registerDesktopToolsIpc(options: ShellIpcOptions, bindings: {
   if (options.completionNotifications) cleanup.push(registerNotificationIpc({ notifications: options.completionNotifications, trusted }));
   if (options.globalPromptShortcut) cleanup.push(registerGlobalPromptShortcutIpc({ ipcMain, trustedShell: trusted,
     runtime: options.globalPromptShortcut, gate, isResetting: () => options.dataAdmin.isResetting }));
+  if (options.commandPaletteShortcut) cleanup.push(registerCommandPaletteShortcutIpc({ ipcMain, trustedShell: trusted,
+    runtime: options.commandPaletteShortcut, gate, isResetting: () => options.dataAdmin.isResetting }));
   return () => { for (const dispose of cleanup.reverse()) dispose(); };
 }

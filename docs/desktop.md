@@ -102,7 +102,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 
 **main 与站点运行时只产 `code`，绝不产用户可见文案**；判定认 `code`，**绝不正则匹配文案**。翻译只有两处落点：`shared/status-copy.ts` 的映射 + `shared/copy.ts` 的三语词条。
 
-`shared/protocol.ts` 的 `SITE_CODES`（23 个）与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
+`shared/protocol.ts` 的 `SITE_CODES`与 `status-copy.ts` 的 `STATUS_COPY_KEY` 一一对应：
 
 | code | copy key | | code | copy key |
 | --- | --- | --- | --- | --- |
@@ -118,6 +118,8 @@ i18n → core → read-commands → tier → selection-match → send → upload
 | `error` | `siteError` | | `adapter_unavailable` | `adapterUnavailable` |
 | `attachment_conflict` | `attachmentConflict` | | `source_changed` | `synthesisSourceVersionChanged` |
 | `proxy_failed` | `proxyFailed` | | `proxy_auth_failed` | `proxyAuthFailed` |
+| `command_shortcut_read_failed` | `commandShortcutReadFailed` | | `command_shortcut_save_failed` | `commandShortcutSaveFailed` |
+| `command_shortcut_apply_failed` | `commandShortcutApplyFailed` | | | |
 
 采集码另走 `describeCollectionCode`：`no_answer` → `noAnswer`、`no_view` / `no_window` → `siteUnavailable`（`no_window` 是 Drive schema 1 线格式里带进来的旧码，语义与 `no_view` 相通）、`not_ready` → `siteNotReady`、`answer_truncated` → `answerTruncated`，其余落 `failed`。辅助综合发送另有 `describeSynthesisSendCode`，另处理 `target_not_selected` 与 `operation_busy`。
 
@@ -515,6 +517,12 @@ Mermaid 仅在需要预览时加载本地依赖，串行绘制、最多缓存 12
 点击通知先恢复已有窗口，再校验记录、回答身份和 repository lifecycle；有效已存提问只打开历史阅读，不恢复远程会话。无已存目标时仅定位相同 runId 的仍打开站点。renderer 经过群发/确认/操作锁及既有未保存编辑导航保护；不自动重发、重载或替换提问草稿。禁用、重置、关窗会使旧通知及计时器失效。
 
 确认框等待用户选择时也禁止新的通知/全局命令导航：通用确认和本机数据确认由 `external-navigation-lock.ts` 持有保护，备份导入确认由原导航 guard 检查。阻挡新请求不作废原先待确认的导航；用户明确批准后，原操作仍可完成。
+
+### 命令面板快捷键
+
+默认 `CmdOrCtrl+Shift+P`，可在设置中切换为 `CmdOrCtrl+P`；仅一组生效，F1 和 Alt+K 不再绑定。`CommandPaletteShortcutRuntime` 在可交互前恢复，菜单、外壳和站点输入共享同一有效 mode；组合输入期间暂时抑制原生菜单快捷键，非组合输入或清理时恢复。Windows/Linux 的菜单还关闭这两项的自动加速器注册；macOS 不依赖该平台限定字段，物理键仍需实机核验。
+
+`meta.commandPaletteShortcut` 由专用仓储读写，不进 outbox、Drive 或业务备份，恢复备份不改变该选择；重置清除此键并保留 deviceId。冻结样本为 `desktop/test/fixtures/command-palette-shortcut-local-meta-v1.json`。非法存储值回退默认，非法 IPC 值拒绝；读、写、菜单应用失败分别返回 `command_shortcut_read_failed/save_failed/apply_failed`。候选菜单预先构建，写入和菜单切换在同步事务中完成，失败回滚；重置失败后重新读实际库，不盲目清除仍保存的选择。单调 revision 防止迟到读写回包覆盖较新事件。
 
 ### 全局提问快捷键
 

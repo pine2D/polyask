@@ -4,6 +4,7 @@ import type { SiteKey } from '../shared/contracts';
 import { shell } from './shell-api';
 
 export function useCommandDiscovery(options: {
+  readonly shortcutRevision?: number;
   readonly focused: SiteKey;
   readonly statuses: Readonly<Record<string, SiteStatus>>;
   readonly surface: DesktopSurface;
@@ -22,5 +23,5 @@ export function useCommandDiscovery(options: {
     let cancelled = false;
     void shell.menuShortcuts().then(items => { if (!cancelled) options.setMenuShortcuts(items); }).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [options.surface]);
+  }, [options.surface, options.shortcutRevision]);
 }

@@ -1,6 +1,7 @@
 import { Menu, type BrowserWindow, type MenuItemConstructorOptions } from "electron";
 
 import { commandAccelerator, commandById, type CommandId } from "../shared/commands";
+import type { CommandPaletteShortcutMode } from '../shared/command-palette-shortcut';
 import type { DesktopCopy } from "../shared/copy";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { MORE_MENU_GROUPS } from "../shared/more-menu";
@@ -43,14 +44,14 @@ export function showGroupMenu(
 export function showCommandMenu(
   window: BrowserWindow,
   value: unknown,
-  copy: DesktopCopy
+  copy: DesktopCopy, mode: CommandPaletteShortcutMode = 'standard'
 ): Promise<CommandId | null> {
   if (!Array.isArray(value) || value.length === 0 || value.length > 20) throw new Error("invalid_command_menu");
   const ids = value.filter((id): id is CommandId => typeof id === "string" && !!commandById(id));
   if (ids.length !== value.length || new Set(ids).size !== ids.length) throw new Error("invalid_command_menu");
   return popupChoice(window, ids.map((id) => {
     const command = commandById(id)!;
-    return { id, label: copy[command.labelKey], accelerator: commandAccelerator(id, process.platform),
+    return { id, label: copy[command.labelKey], accelerator: commandAccelerator(id, process.platform, mode),
       section: MORE_MENU_GROUPS.findIndex((group) => group.includes(id)) };
   }));
 }

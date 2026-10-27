@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  COMMANDS,
+  COMMANDS, resolveCommands,
   commandAliasForInput,
   commandAccelerator,
   commandById,
@@ -25,8 +25,8 @@ test("desktop commands have one unique registry entry and localized labels", () 
 });
 
 test("desktop command accelerators reserve Alt shortcuts and platform settings keys", () => {
-  assert.equal(commandAccelerator("open-command-palette", "win32"), "Alt+K");
-  assert.equal(commandById("open-command-palette")?.aliases?.includes("F1"), true);
+  assert.equal(commandAccelerator("open-command-palette", "win32"), "CmdOrCtrl+Shift+P");
+  assert.equal(commandById("open-command-palette")?.aliases?.includes("F1") ?? false, false);
   assert.equal(commandAccelerator("open-sites", "linux"), "Alt+S");
   assert.equal(commandAccelerator("open-site-health", "win32"), "Alt+H");
   assert.equal(commandAccelerator("show-page-1", "win32"), "Alt+1");
@@ -37,7 +37,7 @@ test("desktop command accelerators reserve Alt shortcuts and platform settings k
   assert.equal(commandAccelerator("set-fast", "win32"), "Alt+Y");
   assert.equal(commandAccelerator("open-settings", "darwin"), "Command+, ".trim());
   assert.equal(commandAccelerator("open-settings", "win32"), "Control+,");
-  assert.equal(commandAliasForInput({ type: "keyDown", key: "F1", alt: false, control: false, meta: false, shift: false }), "open-command-palette");
+  assert.equal(commandAliasForInput({ type: "keyDown", key: "F1", alt: false, control: false, meta: false, shift: false }), undefined);
   assert.equal(commandAliasForInput({ type: "keyUp", key: "F1", alt: false, control: false, meta: false, shift: false }), undefined);
 });
 
@@ -53,3 +53,18 @@ test("renderer command dispatch uses the shared command identifier", () => {
   assert.equal(executeCommand("show-page-1", actions), false);
   assert.deepEqual(called, ["open-sites", "focus-prompt"]);
 });
+
+for (const platform of ['win32', 'linux', 'darwin'] as const) for (const mode of ['standard', 'obsidian'] as const) {
+  test(`${platform}/${mode}: only the selected palette binding consumes a keydown`, () => {
+    const accelerator = mode === 'standard' ? 'CmdOrCtrl+Shift+P' : 'CmdOrCtrl+P';
+    assert.equal(commandAccelerator('open-command-palette', platform, mode), accelerator);
+    assert.equal(resolveCommands(mode).find(item => item.id === 'open-command-palette')?.accelerator, accelerator);
+    const input = { type: 'keyDown', key: 'p', alt: false, control: platform !== 'darwin', meta: platform === 'darwin', shift: mode === 'standard' };
+    assert.equal(commandAliasForInput(input, platform, mode), 'open-command-palette');
+    for (const patch of [{ type: 'keyUp' }, { isComposing: true }, { shift: !input.shift }, { alt: true },
+      { control: !input.control, meta: !input.meta }, { control: true, meta: true },
+      { key: 'F1', control: false, meta: false, shift: false }, { key: 'k', alt: true, control: false, meta: false, shift: false }]) {
+      assert.equal(commandAliasForInput({ ...input, ...patch }, platform, mode), undefined);
+    }
+  });
+}

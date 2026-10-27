@@ -44,3 +44,17 @@ test('Mac application menu exposes settings once and native lifecycle roles', ()
     } else assert.ok(!items.some(item => item.role === 'hide'));
   }
 });
+
+test('palette menu shows only the effective binding and each menu click dispatches once', () => {
+  for (const platform of ['darwin', 'win32', 'linux'] as const) for (const mode of ['standard', 'obsidian'] as const) {
+    const called: string[] = [];
+    const menu = applicationMenu(platform, COPY.en, DEFAULT_DISPLAY_PREFERENCES, () => {}, id => called.push(id), 'PolyAsk', () => {}, mode);
+    const flatten = (items: typeof menu): typeof menu => items.flatMap(item => [item, ...flatten(Array.isArray(item.submenu) ? item.submenu : [])]);
+    const items = flatten(menu), palette = items.filter(item => item.label === COPY.en.commandPalette);
+    assert.equal(palette.length, 1);
+    assert.equal(palette[0].accelerator, mode === 'standard' ? 'CmdOrCtrl+Shift+P' : 'CmdOrCtrl+P');
+    assert.equal(items.some(item => item.accelerator === 'Alt+K' || item.accelerator === 'F1'), false);
+    if (platform !== 'darwin') assert.equal(palette[0].registerAccelerator, false);
+    palette[0].click?.({} as any, {} as any, {} as any); assert.deepEqual(called, ['open-command-palette']);
+  }
+});

@@ -1,5 +1,6 @@
 import type { MenuItemConstructorOptions } from "electron";
-import { COMMANDS, commandAccelerator, type CommandId } from "../shared/commands";
+import { resolveCommands, commandAccelerator, type CommandId } from "../shared/commands";
+import type { CommandPaletteShortcutMode } from '../shared/command-palette-shortcut';
 import type { DesktopCopy } from "../shared/copy";
 import type { DisplayPreferences } from "../shared/display";
 import { VIEW_MENU_ITEMS, type ViewMenuAction } from "../shared/view-menu";
@@ -7,7 +8,7 @@ import { VIEW_MENU_ITEMS, type ViewMenuAction } from "../shared/view-menu";
 export function applicationMenu(
   platform: NodeJS.Platform, copy: DesktopCopy, display: DisplayPreferences,
   onDisplay: (value: DisplayPreferences) => void, dispatch: (id: CommandId) => void, appName: string,
-  onViewAction: (action: ViewMenuAction) => void
+  onViewAction: (action: ViewMenuAction) => void, mode: CommandPaletteShortcutMode = 'standard'
 ): MenuItemConstructorOptions[] {
   return [
     ...(platform === "darwin"
@@ -81,10 +82,12 @@ export function applicationMenu(
           ]
         },
         { type: "separator" },
-        ...COMMANDS.filter((command) => !!commandAccelerator(command.id, platform) && !(platform === "darwin" && command.id === "open-settings"))
+        ...resolveCommands(mode).filter((command) => !!commandAccelerator(command.id, platform, mode) && !(platform === "darwin" && command.id === "open-settings"))
           .map((command): MenuItemConstructorOptions => ({
             label: copy[command.labelKey],
-            accelerator: commandAccelerator(command.id, platform),
+            accelerator: commandAccelerator(command.id, platform, mode),
+            // before-input-event owns these keys; prevent a second native dispatch on Win/Linux.
+            ...(platform !== 'darwin' && ['find-page', 'open-command-palette'].includes(command.id) ? { registerAccelerator: false } : {}),
             click: () => dispatch(command.id)
           })),
         { type: "separator" }, { role: "togglefullscreen" }

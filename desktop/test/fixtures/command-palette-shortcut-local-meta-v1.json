@@ -1,0 +1,5 @@
+{
+  "default": { "commandPaletteShortcut": null },
+  "enabled": { "commandPaletteShortcut": "obsidian" },
+  "resetRemoves": ["commandPaletteShortcut"]
+}

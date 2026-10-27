@@ -30,6 +30,10 @@ function producedCodes(): Map<string, string> {
     for (const m of source.matchAll(/(?:\bcode:\s*|\.code\s*=\s*)"([a-z_]+)"/g)) {
       if (!produced.has(m[1])) produced.set(m[1], file);
     }
+    // 本机快捷键 runtime 通过有限 error 状态返回，未经过站点 code 属性。
+    for (const m of source.matchAll(/["'](command_shortcut_(?:read|save|apply)_failed)["']/g)) {
+      if (!produced.has(m[1])) produced.set(m[1], file);
+    }
     // IPC 前置验证以 Error 传码；仅将已登记站点码纳入这条附加产出通道。
     // 原有所有 code 属性仍做完整正向对账，不把其它数据业务错误混作站点状态码。
     for (const m of source.matchAll(/new\s+Error\(["']([a-z_]+)["']\)/g)) {

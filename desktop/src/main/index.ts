@@ -1,5 +1,8 @@
 import { dispatchAppCommand as dispatchShellCommand } from './app-command-dispatch';
-import { applicationMenu } from "./application-menu";
+import { prepareApplicationMenu, bindApplicationCommandInput } from './application-command-routing';
+import type { CommandPaletteShortcutMode } from '../shared/command-palette-shortcut';
+import { CommandPaletteShortcutRuntime } from './command-palette-shortcut';
+import { CommandPaletteShortcutRepository } from './command-palette-shortcut-repository';
 import { runViewMenuAction } from "./view-menu-actions";
 import { installNativeShell, initialShellBackground } from "./native-shell";
 import { createWindowDataServices } from './window-data-services';
@@ -11,7 +14,6 @@ import {
   app,
   BrowserWindow,
   dialog,
-  Menu,
   globalShortcut,
   screen,
   shell as electronShell,
@@ -19,10 +21,7 @@ import {
 } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 
-import {
-  commandAliasForInput,
-  type CommandId
-} from "../shared/commands";
+import type { CommandId } from "../shared/commands";
 import { getCopy } from "../shared/copy";
 import { parseDesktopUiState } from "../shared/desktop-ui-state";
 import {
@@ -143,6 +142,7 @@ let desktopDatabase: DesktopDatabase | null = null;
 let preferenceRuntime: PreferenceRuntime | null = null;
 let proxyServices: ProxyServices | null = null;
 let promptShortcut: GlobalPromptShortcutRuntime | null = null;
+let paletteShortcut: CommandPaletteShortcutRuntime | null = null;
 
 if (app.isPackaged) app.commandLine.removeSwitch("remote-debugging-port");
 
@@ -164,13 +164,13 @@ function applyDisplayPreferences(
   return value;
 }
 
-function createMenu(): void {
+function createMenu(): void { prepareMenu(paletteShortcut?.getState().mode ?? 'standard').commit(); }
+function prepareMenu(mode: CommandPaletteShortcutMode): ReturnType<typeof prepareApplicationMenu> {
   const copy = getCopy(app.getLocale());
   const display = viewManager?.getDisplayPreferences() ?? DEFAULT_DISPLAY_PREFERENCES;
-  const template = applicationMenu(process.platform, copy, display,
+  return prepareApplicationMenu([process.platform, copy, display,
     (value) => { if (preferenceRuntime) preferenceRuntime.setDisplay(value); else if (viewManager) applyDisplayPreferences(viewManager, value); }, dispatchAppCommand, app.name,
-    (action) => runViewMenuAction(action, viewManager, mainWindow?.webContents ?? null, webContents.getFocusedWebContents()));
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+    (action) => runViewMenuAction(action, viewManager, mainWindow?.webContents ?? null, webContents.getFocusedWebContents()), mode]);
 }
 
 async function createWindow(): Promise<void> {
@@ -291,6 +291,7 @@ async function createWindow(): Promise<void> {
     sync,
     dataAdmin, preferences, proxy: { ...proxy, ...createProxyTools(proxy, manager, () => workspace.getState().selectedSites) },
     completionNotifications: completionNotifier, globalPromptShortcut: promptShortcut ?? undefined,
+    commandPaletteShortcut: paletteShortcut ?? undefined,
     shellEntry: MAIN_WINDOW_WEBPACK_ENTRY,
     applyDisplay: (value) => preferences.setDisplay(value),
     setCompletionNotifications: (enabled) => { preferences.set('completionNotifications', enabled); }
@@ -331,12 +332,7 @@ else {
   });
   app.on("web-contents-created", (_event, contents) => {
     contents.on("will-attach-webview", (event) => event.preventDefault());
-    contents.on("before-input-event", (event, input) => {
-      const command = commandAliasForInput(input, process.platform);
-      if (!command) return;
-      event.preventDefault();
-      dispatchAppCommand(command);
-    });
+    bindApplicationCommandInput(contents, () => paletteShortcut?.getState().mode ?? 'standard', dispatchAppCommand);
   });
   app.on("activate", () => {
     if (!mainWindow) void runStartup(createWindow, failStartup);
@@ -381,6 +377,10 @@ else {
         mainWindow.show(); mainWindow.focus(); dispatchAppCommand('focus-prompt');
       } });
     promptShortcut.restore();
+    paletteShortcut = new CommandPaletteShortcutRuntime({ repository: new CommandPaletteShortcutRepository(desktopDatabase.meta),
+      transaction: action => desktopDatabase!.transaction(action), prepare: prepareMenu,
+      publish: state => sendToShell('polyask:command-palette-shortcut-changed', state) });
+    paletteShortcut.restore();
     createMenu();
     await createWindow();
   }, failStartup));
@@ -389,6 +389,7 @@ else {
   });
   app.on("will-quit", () => {
     promptShortcut?.dispose();
+    paletteShortcut?.dispose();
     desktopDatabase?.close();
     desktopDatabase = null;
   });

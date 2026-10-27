@@ -29,6 +29,8 @@ import { shell } from "./shell-api";
 import { SettingsImageSync } from "./settings-image-sync";
 import { useSettingsSectionNavigation } from "./settings-section-navigation";
 import { NotificationSettings } from './notification-settings';
+import { SettingsCommandPaletteShortcut } from './settings-command-palette-shortcut';
+import { isMac } from './platform';
 import { SettingsGlobalPromptShortcut } from './settings-global-prompt-shortcut';
 
 interface SettingsWorkspaceProps {
@@ -252,6 +254,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             busy={busy || closeLocked || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
             preferenceHint={props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}
             onChange={props.onCompletionNotificationsChange} onAnnounce={props.onAnnounce} />
+          <SettingsCommandPaletteShortcut copy={props.copy} isMac={isMac} disabled={busy || closeLocked || !!props.operationBusy}
+            resetKey={localResetRevision} />
           <SettingsGlobalPromptShortcut copy={props.copy} disabled={busy || closeLocked || props.operationBusy}
             resetKey={localResetRevision} />
           {props.confirmations && props.onConfirmationChange ? <SettingsConfirmations copy={props.copy} busy={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}

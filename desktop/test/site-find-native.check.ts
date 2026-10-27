@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -29,8 +29,17 @@ test('production shell searches nine native pages with keyboard, lifecycle and f
   for (const locale of ['en-US','zh-CN','zh-TW']) {
     const binary = require('electron') as string;
     const result = spawnSync(binary, [join(__dirname, 'ui/site-find-native-runtime.cjs'), output, locale, `--lang=${locale}`], {
-      encoding:'utf8', timeout:80000, env:{ ...process.env, ELECTRON_RUN_AS_NODE:'', WAYLAND_DISPLAY:'', WAYLAND_SOCKET:'' }
+      encoding:'utf8', timeout:80000, env:{ ...process.env, ELECTRON_RUN_AS_NODE:'', WAYLAND_DISPLAY:'', WAYLAND_SOCKET:'',
+        ...(process.platform === 'linux' ? { DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` } : {}) }
     });
+    if (process.platform === 'linux' && existsSync(join(output, 'process-boundary.json'))) {
+      const { observed } = JSON.parse(readFileSync(join(output, 'process-boundary.json'), 'utf8')) as { observed: number[] };
+      for (let round = 0; round < 20 && observed.some(pid => existsSync(`/proc/${pid}`)); round++) await new Promise(resolve => setTimeout(resolve, 50));
+      const remaining = observed.filter(pid => existsSync(`/proc/${pid}`));
+      writeFileSync(join(output, 'cleanup-' + locale + '.json'), JSON.stringify({ remainingObservedPids: remaining }));
+      assert.equal(remaining.length, 0, 'observed Electron processes exit');
+    }
+    rmSync(join(output, 'profile-' + locale), { recursive: true, force: true });
     console.log(`Find native evidence (${locale}): ${output}\n${result.stdout}`);
     if (result.error || !result.stdout.includes('SITE_FIND_NATIVE_COMPLETE')) console.log(`${result.stderr}\n${result.error ?? ''}`);
     assert.equal(result.error === undefined, true, String(result.error ?? ''));
