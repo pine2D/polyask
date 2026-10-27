@@ -21,7 +21,7 @@ test('history panel reserves site width without changing the full-width toolbar 
 });
 
 test('stacked toolbar leaves room for page find and feedback in either density', () => {
-  for (const [density, want] of [['compact', 208], ['comfortable', 232]] as const) {
+  for (const [density, want] of [['compact', 168], ['comfortable', 192]] as const) {
     const layout = computeWorkspaceLayout({ width: 480, height: 340, density, composerExpanded: false,
       findOpen: true, drawerOpen: false, requestedMode: 'focus', focused: 'claude',
       overviewOrder: ['claude'], focusOrder: ['claude'] });

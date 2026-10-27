@@ -15,3 +15,5 @@ export { CommandPaletteShortcutRepository } from '../../src/main/command-palette
 export { registerCommandPaletteShortcutIpc } from '../../src/main/command-palette-shortcut-ipc';
 export { DesktopDatabase } from '../../src/main/database';
 export { OperationGate } from '../../src/shared/operation-gate';
+
+export { showSiteFindMenu } from '../../src/main/site-find-menu';

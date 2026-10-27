@@ -173,6 +173,8 @@ test('blocked and failed main-frame navigation restores a search on the retained
   } finally { h.controller.dispose(); }
 });
 
+test('find bar is a single 48px row', () => assert.equal(SITE_FIND_HEIGHT, 48));
+
 test('find bar reserves its shared height in both densities and composer states', () => {
   for (const density of ['compact','comfortable'] as const) for (const composerExpanded of [false,true]) {
     const input = { width:1500, height:900, density, composerExpanded, drawerOpen:false,

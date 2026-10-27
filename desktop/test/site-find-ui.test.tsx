@@ -13,6 +13,8 @@ async function fixture() {
   const requests: SiteFindRequest[] = [], moves: number[] = [], selections: string[] = [];
   let closed = 0, state = initialSiteFindState();
   let delayed = false, release = () => {};
+  let delayedMenu = false, releaseMenu = () => {};
+  const menus: { session: number; revision: number }[] = [];
   const publish = (patch: Partial<SiteFindState>) => {
     const session = patch.open === true && !state.open ? state.session + 1 : state.session;
     state = { ...state, ...patch, session, revision:++revision }; listener(state); return state;
@@ -27,13 +29,17 @@ async function fixture() {
     },
     moveSiteFind: async (direction: -1 | 1) => { moves.push(direction); return state; },
     selectSiteFind: async (site: string) => { selections.push(site); return state; },
+    showSiteFindMenu: async (request: { session: number; revision: number }) => { menus.push(request); const snapshot = state;
+      if (delayedMenu) { delayedMenu = false; return new Promise(resolve => { releaseMenu = () => resolve(snapshot); }); }
+      return snapshot; },
     closeSiteFind: async () => { closed++; return publish({ open:false, sites:[] }); }
   } as any);
   const h = await mountDom(<SiteFind copy={getCopy('en')} sites={SITES} />);
   const emit = async (patch: Partial<SiteFindState>) => { await act(async () => { publish(patch); }); };
   await emit({ open:true, focusRequest:1 });
   const settle = async () => { await act(async () => { await new Promise(resolve => setTimeout(resolve, 160)); }); };
-  return { ...h, emit, settle, requests, moves, selections, closed:() => closed,
+  return { ...h, emit, settle, requests, moves, selections, menus, closed:() => closed,
+    deferMenu:() => { delayedMenu = true; }, releaseMenu:async () => { await act(async () => releaseMenu()); },
     defer:() => { delayed = true; }, release:async () => { await act(async () => release()); },
     stale:async () => { await act(async () => { listener({ ...initialSiteFindState(), open:true, revision:0 }); }); },
     cleanup:async () => { await h.close(); setShellApi(null); } };
@@ -134,5 +140,37 @@ test('scope selection searches the current page and refresh can retry zero-match
     await h.click(h.document.querySelector<HTMLButtonElement>('[name=site-find-refresh]')!);
     assert.equal(h.requests.length, before + 1);
     assert.equal(h.document.querySelector('[data-find-position]')!.textContent, 'No matches');
+  } finally { await h.cleanup(); }
+});
+
+
+test('compact find exposes a native menu, flushes typed text and restores query focus', async () => {
+  const h = await fixture();
+  try {
+    const bar = h.document.querySelector<HTMLElement>('.site-find')!;
+    assert.equal(bar.style.height, '48px');
+    const input = h.document.querySelector<HTMLInputElement>('[name=site-find-query]')!;
+    await h.input(input, 'fresh');
+    const menu = h.document.querySelector<HTMLButtonElement>('[name=site-find-menu]');
+    assert.ok(menu); assert.equal(menu.getAttribute('aria-haspopup'), 'menu');
+    await h.click(menu); assert.equal(h.requests.at(-1)?.query, 'fresh');
+    assert.equal(h.menus.length, 1); assert.equal(h.menus[0].session, 1);
+    assert.equal(h.document.activeElement === input, true);
+  } finally { await h.cleanup(); }
+});
+
+
+test('a pending menu neither opens twice nor steals focus after the query changes', async () => {
+  const h = await fixture();
+  try {
+    const input = h.document.querySelector<HTMLInputElement>('[name=site-find-query]')!;
+    await h.input(input, 'old'); await h.settle(); h.deferMenu();
+    const button = h.document.querySelector<HTMLButtonElement>('[name=site-find-menu]')!;
+    await h.click(button); await h.click(button); assert.equal(h.menus.length, 1);
+    await h.input(input, 'new');
+    const scope = h.document.querySelector<HTMLSelectElement>('[name=site-find-scope]')!;
+    await act(async () => scope.focus()); await h.releaseMenu();
+    assert.equal(input.value, 'new'); assert.equal(h.document.activeElement === scope, true);
+    await h.click(button); assert.equal(h.menus.length, 2);
   } finally { await h.cleanup(); }
 });

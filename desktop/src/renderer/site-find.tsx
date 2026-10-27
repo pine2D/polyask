@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { SiteDefinition, SiteKey } from '../shared/contracts';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { initialSiteFindState, SITE_FIND_HEIGHT, SITE_FIND_MAX_LENGTH,
   type SiteFindRequest, type SiteFindState } from '../shared/site-find';
-import { BackIcon, CloseIcon, InfoIcon, ReloadIcon } from './icons';
+import { BackIcon, CloseIcon, InfoIcon, MoreIcon, ReloadIcon } from './icons';
 import { shell } from './shell-api';
 
 export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly sites: readonly SiteDefinition[] }): React.JSX.Element | null {
   const [state, setState] = useState(initialSiteFindState);
   const [query, setQuery] = useState(''), [scope, setScope] = useState<SiteFindRequest['scope']>('all');
   const [error, setError] = useState(false);
+  const bar = useRef<HTMLElement>(null), menuPending = useRef(false);
   const input = useRef<HTMLInputElement>(null), composing = useRef(false), alive = useRef(true);
   const revision = useRef(-1), timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const epoch = useRef(0), openedSession = useRef<number | null>(null);
@@ -71,6 +72,31 @@ export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly
     accept(value); input.current?.focus();
   }); };
   const close = (): void => { epoch.current++; clearTimeout(timer.current); void act(async () => accept(await shell.closeSiteFind())); };
+  const showMenu = (): void => { void act(async () => {
+    if (menuPending.current || composing.current) return;
+    menuPending.current = true;
+    try {
+      const attempt = token(); await find(); if (!valid(attempt)) return;
+      const { session, revision } = current.current.state;
+      const value = await shell.showSiteFindMenu({ session, revision });
+      if (!valid(attempt)) return;
+      accept(value); input.current?.focus();
+    } finally { menuPending.current = false; }
+  }); };
+  useLayoutEffect(() => {
+    const node = bar.current; if (!node) return;
+    const fit = () => {
+      node.dataset.fit = '';
+      const chips = node.querySelector<HTMLElement>('.site-find-sites');
+      if (chips && chips.scrollWidth > chips.clientWidth) node.dataset.fit = 'sites';
+      if ((input.current?.getBoundingClientRect().width ?? 0) < 240 || node.scrollWidth > node.clientWidth)
+        node.dataset.fit = 'sites extras';
+    };
+    fit();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(fit); observer.observe(node);
+    return () => observer.disconnect();
+  }, [state, query, scope]);
   if (!state.open) return null;
   const fresh = state.query === query && state.scope === scope;
   const results = fresh ? state.sites : [];
@@ -80,8 +106,7 @@ export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly
   const active = activeIndex < 0 ? 0 : results.slice(0, activeIndex).reduce((sum, item) => sum + item.matches, 0) + results[activeIndex].active;
   const summary = error ? copy.findFailed : pending ? copy.findSearching : !query ? '' :
     total ? formatCopy(copy.findCount, { active, total }) : copy.findNoMatches;
-  return <section className="site-find" role="search" aria-label={copy.findPage} style={{ height:SITE_FIND_HEIGHT }}>
-    <div className="site-find-main">
+  return <section ref={bar} className="site-find" role="search" aria-label={copy.findPage} style={{ height:SITE_FIND_HEIGHT }}>
       <input ref={input} type="search" name="site-find-query" aria-label={copy.findPage}
         placeholder={copy.findPlaceholder} maxLength={SITE_FIND_MAX_LENGTH} autoComplete="off" spellCheck={false}
         value={query} onChange={event => changeQuery(event.target.value)}
@@ -95,14 +120,6 @@ export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly
           if (event.key === 'Enter') { event.preventDefault(); move(event.shiftKey ? -1 : 1); }
           if (event.key === 'Escape') { event.preventDefault(); close(); }
         }} />
-      <span className="site-find-position" data-find-position role="status" title={summary}>{summary}</span>
-      <button type="button" name="site-find-previous" aria-label={copy.findPrevious} title={copy.findPrevious}
-        disabled={!query || (fresh && !pending && !total)} onClick={() => move(-1)}><BackIcon /></button>
-      <button type="button" className="site-find-forward" name="site-find-next" aria-label={copy.findNext} title={copy.findNext}
-        disabled={!query || (fresh && !pending && !total)} onClick={() => move(1)}><BackIcon /></button>
-      <button type="button" name="site-find-close" aria-label={copy.findClose} title={copy.findClose} onClick={close}><CloseIcon /></button>
-    </div>
-    <div className="site-find-details">
       <select name="site-find-scope" aria-label={copy.findScope} value={scope}
         onChange={event => changeScope(event.target.value as SiteFindRequest['scope'])}>
         <option value="all">{copy.findAll}</option><option value="current">{copy.findCurrent}</option>
@@ -117,9 +134,16 @@ export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly
             onClick={() => select(result.site)}><span>{label}</span><span>{result.status === 'pending' ? '…' : result.status === 'unavailable' ? '?' : result.matches}</span></button>;
         }) : <span className="site-find-limit">{copy.findLimit}</span>}
       </div>
+      <span className="site-find-position" data-find-position role="status" title={summary}>{summary}</span>
+      <button type="button" name="site-find-previous" aria-label={copy.findPrevious} title={copy.findPrevious}
+        disabled={!query || (fresh && !pending && !total)} onClick={() => move(-1)}><BackIcon /></button>
+      <button type="button" className="site-find-forward" name="site-find-next" aria-label={copy.findNext} title={copy.findNext}
+        disabled={!query || (fresh && !pending && !total)} onClick={() => move(1)}><BackIcon /></button>
       <button type="button" name="site-find-refresh" aria-label={copy.findRefresh} title={copy.findRefresh}
         disabled={!query} onClick={() => { void act(() => find(true)); }}><ReloadIcon /></button>
       <span className="site-find-info" tabIndex={0} aria-label={copy.findLimitHint} title={copy.findLimitHint}><InfoIcon /></span>
-    </div>
+      <button type="button" name="site-find-menu" aria-label={copy.findMenu} title={copy.findMenu}
+        aria-haspopup="menu" onClick={showMenu}><MoreIcon /></button>
+      <button type="button" name="site-find-close" aria-label={copy.findClose} title={copy.findClose} onClick={close}><CloseIcon /></button>
   </section>;
 }

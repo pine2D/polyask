@@ -1,9 +1,10 @@
 import type { SiteKey } from './contracts';
 
-/** 两行搜索条的总高度（CSS px），布局和渲染共用，不随站点缩放变化。 */
-export const SITE_FIND_HEIGHT = 88;
+/** 单行搜索条的总高度（CSS px），布局和渲染共用，不随站点缩放变化。 */
+export const SITE_FIND_HEIGHT = 48;
 export const SITE_FIND_MAX_LENGTH = 512;
 export const SITE_FIND_TIMEOUT_MS = 4000;
+export type SiteFindMenuAction = { readonly kind: 'select'; readonly site: SiteKey } | { readonly kind: 'refresh' } | null;
 export type SiteFindScope = 'all' | 'current';
 export interface SiteFindRequest { readonly query: string; readonly scope: SiteFindScope }
 export interface SiteFindResult {

@@ -5,6 +5,7 @@ import { registerQuestionHistoryIpc } from "./question-history-ipc";
 import { registerBootstrapIpc } from './bootstrap-ipc';
 import { registerWorkspaceSelectionIpc } from './workspace-selection-ipc';
 import { registerSitePageIpc } from './site-page-ipc';
+import { showSiteFindMenu } from './site-find-menu';
 import { registerSiteFindIpc } from './site-find-ipc';
 import { SitePageService } from './site-page-service';
 import { createQuestionCapture, sessionHandoff } from "./question-capture-binding";
@@ -174,7 +175,8 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     closeReason: site => manager.sitePageCloseReason(site)
   }) });
   const publishDrafts = () => { if (!window.isDestroyed()) window.webContents.send('polyask:drafts-changed'); };
-  const disposeSiteFind = registerSiteFindIpc(ipcMain, manager.siteFind, trustedShell, window.webContents);
+  const disposeSiteFind = registerSiteFindIpc(ipcMain, manager.siteFind, trustedShell, window.webContents,
+    state => showSiteFindMenu(window, state, SITES, options.copy));
   const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
   const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, fetchAttachments: id => options.sync.fetchQuestionAttachments(id), trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); options.preferences?.refresh(); publishDrafts(); } });
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });

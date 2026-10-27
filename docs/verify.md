@@ -1474,3 +1474,5 @@ Kimi 真实菜单为 K3.1 Pro / K2.8 / Instant，Thinking effort 为 Standard / 
 包内真实 main/preload 的 `history-images-packaged-smoke.mjs` 离线检查通过：1 个外壳、9 个安全且挂载的站点视图。资源元数据确认应用 1.25.1 / Electron 44.9.3，实际共同资源边界通过，28 个归属进程全部退出、临时档案清理。没有打开既有登录档案、输入或发送真实提问、访问 Drive；升级后的验证不覆盖 Windows/macOS 物理环境、真实系统通知、睡眠唤醒或站点认证。上一节 Kimi 真实菜单与切档证据来自升级前的 44.8.0，不据本次合成检查扩大该结论。
 
 - 新会话入口的原生验收：`test/composer-session-native.check.ts` 在三语/两密度/100–200% 缩放验证按钮几何、确认与取消、仅 2 个参与站点（5 个已打开，另 1 个当前聚焦）、部分失败、重复点击及草稿/附件保留；Electron 使用合成页面与临时 profile。此检查与完整 shell UI 检查均采样实际 Electron PID 的共同 cgroup，并验证退出及清理 profile；Linux 测试进程隔离会话 D-Bus，不代表桌面集成或真实站点验收。
+
+- `test/site-find-native.check.ts` 使用生产 renderer/preload、九个本地合成站点与真实 Electron Menu，记录 48px 单行高度、有效 CSS 宽度 336/480/720/960/1440、100%/200% 缩放与主进程视图边界；三站缩放和 512 字符、零/等待/不可用状态另行覆盖。Linux 原生菜单鼠标选站、键盘打开/选站/刷新/Escape 使用隔离 Xvfb 上的 `xdotool`，`xwininfo` 与 ImageMagick `import` 仅采集该合成窗口的菜单证据；不代表 Windows/macOS 实机验收。

@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import webpack from 'webpack';
 
-test('production shell searches nine native pages with keyboard, lifecycle and full find-bar layout coverage', { timeout:300000 }, async () => {
+test('production shell searches nine native pages with keyboard, lifecycle and full find-bar layout coverage', { timeout:420000 }, async () => {
   const output = mkdtempSync(join(tmpdir(), 'polyask-site-find-native-'));
   writeFileSync(join(output, 'empty-preload.cjs'), '');
   for (const [entry, filename, target] of [
@@ -29,7 +29,7 @@ test('production shell searches nine native pages with keyboard, lifecycle and f
   for (const locale of ['en-US','zh-CN','zh-TW']) {
     const binary = require('electron') as string;
     const result = spawnSync(binary, [join(__dirname, 'ui/site-find-native-runtime.cjs'), output, locale, `--lang=${locale}`], {
-      encoding:'utf8', timeout:80000, env:{ ...process.env, ELECTRON_RUN_AS_NODE:'', WAYLAND_DISPLAY:'', WAYLAND_SOCKET:'',
+      encoding:'utf8', timeout:120000, env:{ ...process.env, ELECTRON_RUN_AS_NODE:'', WAYLAND_DISPLAY:'', WAYLAND_SOCKET:'',
         ...(process.platform === 'linux' ? { DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` } : {}) }
     });
     if (process.platform === 'linux' && existsSync(join(output, 'process-boundary.json'))) {

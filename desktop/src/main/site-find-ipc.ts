@@ -1,5 +1,5 @@
 import { SITE_KEYS, type SiteKey } from '../shared/contracts';
-import { parseSiteFindRequest } from '../shared/site-find';
+import { parseSiteFindRequest, type SiteFindMenuAction, type SiteFindState } from '../shared/site-find';
 import type { SiteFindController } from './site-find';
 
 interface IpcRegistry {
@@ -11,8 +11,29 @@ interface ShellContents {
   off(event: string, listener: (...args: any[]) => void): unknown;
 }
 export function registerSiteFindIpc(ipc: IpcRegistry, controller: SiteFindController,
-  trusted: (event: any) => boolean, contents: ShellContents): () => void {
+  trusted: (event: any) => boolean, contents: ShellContents,
+  menu?: (state: SiteFindState) => Promise<SiteFindMenuAction>): () => void {
+  let active = true, menuPending = false;
+  const showMenu = (value: unknown): Promise<SiteFindState> => {
+    if (!value || typeof value !== 'object') throw Error('invalid_site_find_request');
+    const { session, revision } = value as Record<string, unknown>;
+    if (!Number.isSafeInteger(session) || !Number.isSafeInteger(revision) || (session as number) < 0 || (revision as number) < 0)
+      throw Error('invalid_site_find_request');
+    const snapshot = controller.state;
+    const current = () => active && controller.state.open && controller.state.session === snapshot.session &&
+      controller.state.revision === snapshot.revision && controller.state.query === snapshot.query && controller.state.scope === snapshot.scope;
+    if (!menu || menuPending || !snapshot.open || session !== snapshot.session || revision !== snapshot.revision) return Promise.resolve(controller.state);
+    menuPending = true;
+    return menu(snapshot).then(action => {
+      if (current() && action) {
+        if (action.kind === 'select') return controller.select(action.site);
+        if (action.kind === 'refresh') return controller.find({ query: snapshot.query, scope: snapshot.scope });
+      }
+      return controller.state;
+    }).finally(() => { menuPending = false; });
+  };
   const channels = {
+    'polyask:find-menu': showMenu,
     'polyask:find-open': () => controller.open(),
     'polyask:find-state': () => controller.state,
     'polyask:find-query': (value: unknown) => {
@@ -34,12 +55,13 @@ export function registerSiteFindIpc(ipc: IpcRegistry, controller: SiteFindContro
     }
   };
   for (const [channel, action] of Object.entries(channels)) ipc.handle(channel, (event, value) => {
-    if (!trusted(event)) throw Error('untrusted_sender');
+    if (!active || !trusted(event)) throw Error('untrusted_sender');
     return action(value);
   });
   const onInput = (event: any, input: any) => controller.handleInput(event, input);
   contents.on('before-input-event', onInput);
   return () => {
+    active = false;
     contents.off('before-input-event', onInput);
     for (const channel of Object.keys(channels)) ipc.removeHandler(channel);
     controller.close(false);

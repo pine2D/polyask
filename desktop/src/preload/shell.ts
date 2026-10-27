@@ -65,6 +65,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   globalPromptShortcutState(): Promise<GlobalPromptShortcutState>;
   setGlobalPromptShortcut(accelerator: string | null): Promise<GlobalPromptShortcutState>;
   exportReport(request: ReportExportRequest): Promise<ReportExportResult>;
+  showSiteFindMenu(request: { session: number; revision: number }): Promise<SiteFindState>;
   openSiteFind(): Promise<SiteFindState>;
   getSiteFind(): Promise<SiteFindState>;
   findSites(request: SiteFindRequest): Promise<SiteFindState>;
@@ -215,6 +216,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   testNotification: () => invoke(NOTIFICATION_CHANNELS.test),
   onNotificationStatus: (listener: (status: NotificationStatus) => void) => subscribe(NOTIFICATION_CHANNELS.status, listener),
   onNotificationOpen: (listener: (target: NotificationTarget) => void) => subscribe(NOTIFICATION_CHANNELS.open, listener),
+  showSiteFindMenu: (request: { session: number; revision: number }) => invoke('polyask:find-menu', request),
   openSiteFind: () => invoke('polyask:find-open'),
   getSiteFind: () => invoke('polyask:find-state'),
   findSites: (request: SiteFindRequest) => invoke('polyask:find-query', request),

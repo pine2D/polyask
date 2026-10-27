@@ -25,7 +25,19 @@ app.whenReady().then(async () => {
   manager = new services.ViewManager(win, () => {}, layout => win.webContents.send('polyask:layout', layout), () => {}, { selectedSites:keys });
   step('manager');
   const trusted = event => !win.isDestroyed() && event.sender === win.webContents && event.senderFrame?.parent === null;
-  const dispose = services.registerSiteFindIpc(ipcMain, manager.siteFind, trusted, win.webContents);
+  const menuTrace = { open: false, shown: 0, items: [] };
+  const dispose = services.registerSiteFindIpc(ipcMain, manager.siteFind, trusted, win.webContents, state => {
+    const build = Menu.buildFromTemplate;
+    Menu.buildFromTemplate = template => {
+      const menu = build.call(Menu, template);
+      menuTrace.items = template;
+      menu.on('menu-will-show', () => { menuTrace.open = true; menuTrace.shown++; });
+      menu.on('menu-will-close', () => { menuTrace.open = false; });
+      return menu;
+    };
+    try { return services.showSiteFindMenu(win, state, SITES, services.getCopy(locale)); }
+    finally { Menu.buildFromTemplate = build; }
+  });
   const pages = manager.getDiagnosticSites().map(site => ({ key:site.site,
     view:win.contentView.children.find(view => view.webContents?.id === site.webContentsId) }));
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -142,6 +154,9 @@ app.whenReady().then(async () => {
   assert.deepEqual(manager.siteFind.state.sites.map(site => site.matches), counts, 'all nine native pages counted');
   assert.equal(manager.siteFind.state.sites.every(site => site.status === 'ready'), true);
   report.cases.push('native site shortcut; nine-page counts including background');
+  await require('./site-find-native-menu.cjs')({ win, run, until, paint, click, manager, menuTrace, keys, output, locale });
+  report.cases.push('native popup pointer and keyboard site selection, Escape-only cancellation and query focus restoration');
+  manager.siteFind.find({ query: needle, scope: 'all' }); await settled();
   await key(win.webContents, 'Enter'); await settled();
   assert.equal(manager.siteFind.state.sites[0].active, 2);
   await until(() => pages[0].view.webContents.executeJavaScript('scrollY>1000'), 'native scroll to offscreen second match');
@@ -210,7 +225,8 @@ app.whenReady().then(async () => {
   for (const theme of ['light','dark']) for (const density of ['compact','comfortable']) {
     nativeTheme.themeSource = theme;
     await run('window.polyask.setDisplayPreferences(' + JSON.stringify({ density, siteScale:0.9 }) + ')');
-    for (const width of [420,960,1600]) for (const zoom of [1,1.25]) for (const expanded of [false,true]) {
+    for (const cssWidth of [336,480,720,960,1440]) for (const zoom of [1,2]) for (const expanded of [false,true]) {
+      const width = cssWidth * zoom;
       win.setContentSize(width, 1000); win.webContents.setZoomFactor(zoom); manager.relayout();
       await run(`(()=>{const e=document.querySelector('[data-composer-toggle]');if(e.getAttribute('aria-expanded')!==${JSON.stringify(String(expanded))})e.click()})()`);
       await until(() => run('document.documentElement.dataset.density===' + JSON.stringify(density)), 'density applied');
@@ -222,8 +238,8 @@ app.whenReady().then(async () => {
       await paint();
       const geometry = await run(`(()=>{const bar=document.querySelector('.site-find'),b=bar.getBoundingClientRect();
         return{width:innerWidth,left:b.left,right:b.right,top:b.top,bottom:b.bottom,height:b.height,
-        overflow:[...bar.querySelectorAll('input,select,.site-find-main>button,.site-find-details>button,.site-find-info')].some(e=>{const r=e.getBoundingClientRect();return r.left<b.left-1||r.right>b.right+1||r.top<b.top-1||r.bottom>b.bottom+1})}})()`);
-      assert.equal(geometry.height, SITE_FIND_HEIGHT); assert.equal(geometry.overflow, false);
+        overflow:[...bar.querySelectorAll('input,select,button,.site-find-info')].some(e=>{const r=e.getBoundingClientRect();if(!r.width||!r.height)return false;return r.left<b.left-1||r.right>b.right+1||r.top<b.top-1||r.bottom>b.bottom+1})}})()`);
+      assert.equal(geometry.width, cssWidth); assert.equal(geometry.height, 48); assert.equal(SITE_FIND_HEIGHT, 48); assert.equal(geometry.overflow, false);
       assert.equal(geometry.top, expectedTop);
       assert.equal(geometry.right <= geometry.width + 1, true);
       assert.equal(manager.getLayout().placements.every(placement => placement.bounds.y >= geometry.bottom - 1), true, 'native views must not cover search');
@@ -234,6 +250,7 @@ app.whenReady().then(async () => {
       }
     }
   }
+  await require('./site-find-native-states.cjs')({ win, run, until, paint, manager, keys, needle, SITE_FIND_HEIGHT, report, output, locale });
   manager.siteFind.close(false);
   step('layouts'); boundary();
   await win.loadFile(join(output, 'index.html'));
