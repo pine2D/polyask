@@ -207,6 +207,19 @@ test("a stop flash without a new answer node never upgrades: the previous turn's
   assert.equal(first.S.generationProbe(), "complete_observed", "首轮基线为 null，出现回答即新鲜");
 });
 
+test("a new arm keeps its evidence beyond the previous arm's expiry", () => {
+  const r = latchRun();
+  r.S.armGeneration();
+  r.advance(60_000); r.S.armGeneration();
+  r.show(true); r.mutate(); r.show(false);
+  r.advance(15 * 60_000);
+  assert.equal(r.S.generationProbe(), "complete_observed", "旧观察窗到期不能清掉新轮次证据");
+  r.advance(45_000);
+  assert.equal(r.S.generationProbe(), "complete", "本轮到期后不再确认回答");
+  r.show(true);
+  assert.equal(r.S.generationProbe(), "generating", "到期不影响当前停止键的只读状态");
+});
+
 // D1（2026-10-04 Windows 真机 zh-CN）：ChatGPT 中文界面的停止键是 button[aria-label="停止"]、没有 testid，选择子漏了它，
 // 每次中文群发都报 generation_unconfirmed。用真实选择子在 jsdom 里核对：精确「停止」算停止键，「停止朗读」不算。
 test("ChatGPT Chinese UI: the exact 停止 label is the stop control, look-alike labels are not", () => {

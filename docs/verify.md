@@ -26,6 +26,14 @@ Linux 原生 Electron 专项要求 cgroup，不能降为仅 V8 或每进程限�
 
 Chromium/Electron 主进程可能经会话总线迁入独立 app scope，因此启动器打印的限额不等于浏览器实际共同边界。`test/ui/reading-native-check.ts` 仅对 Linux 合成 Electron 子进程隔离会话总线；阅读无障碍专项在启动、各场景和结束时枚举各线程 children，并以 `app.getAppMetrics()` 补充 PID，核对所有已观测 PID 的共同 cgroup 限额。进程退出竞态可忽略，其它读取错误直接失败。这些专项不覆盖 D-Bus 桌面集成，其它原生入口仍须核对实际进程边界。
 
+## 站点运行时引用回收
+
+离线回归：`npm run test:runtime -- scripts/runtime-retention.test.js scripts/generation-runtime.test.js`。弱引用探针在继承资源边界的独立 Node 子进程内使用小型合成节点，保留 1 GiB V8 上限与断言保护；验证历史导航、到期、异常、交互冻结和锚点冻结，以及 Markdown 成功/异常、ChatGPT/Claude 有无停止键证据时的引用回收。活跃生成基线仍须保留，旧观察窗不能清掉新轮次证据。
+
+Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/runtime-retention-native.mjs`。入口重新打包实际 site preload 的完整注入链，以三块常驻 WebContentsView、沙箱和隔离世界加载本地合成 ChatGPT/Claude 页面；不加载真实站点、不复用用户档案。使用真实 DOM、MutationObserver、可信鼠标冻结和测试专用异步完整 GC，绘制帧与任务检查点之间核对 WeakRef；独立空对象和未挂载节点作 GC 对照。15 分 45 秒到期由虚拟时钟推进，不是等时长的真实使用测试。背景节流保持关闭，验证结束后先断开调试器并销毁视图，再显式退出；启动器校验六项报告齐全，避免最后窗口关闭导致提前退出被误报通过。失败堆快照、原生日志和进程边界记录只写临时目录。
+
+2026-10-27：Electron 44.9.3 / Linux 六项原生场景通过。历史路由终止与手动冻结后，追踪的旧 DOM 引用全部可回收，冻结文字仍可读取；ChatGPT/Claude 各自有无停止键证据的四组中，活跃期各保留 6 个合成节点，到期后均为 0。三块视图销毁、15 个观测进程退出和临时 profile 清理已核对，共同限额为 4 GiB/512 MiB。完整 2,393 项应用测试、527 项运行时测试及独立类型检查通过。该结果证明引用生命周期与既有行为，不代表 Windows 三站长期开启时的内存降幅；未验证真实站点发送、Windows/macOS 或实际发行包。隔离会话总线的 D-Bus 错误及 WSL 图形 Escape 日志不计作页面错误。
+
 ## 提问历史原图的隔离原生验收
 
 在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/history-images-native.mjs`。专项自行使用 Xvfb，生产历史、完整设置页（含备份卡）与真实 SQLite / BackupService 均只接合成数据；与外壳入口对账四份全局样式及加载顺序。三语 × 明暗 × 普通/短窗 150% 缩放共 12 组验证有效 PNG 的实际解码、有序重复图片、原图适应窗口/100% 尺寸与文件名序号（两种密度，另含 200% 长文件名横图）、可信 Tab/Enter/Escape/PageDown 及关闭焦点、带脏草稿的完整再问且零发送、同步等待期间关闭图片同步、八条缺图的备份选择键盘顺序、前往图片同步设置后保留任务，以及取消/模拟导出成功后的可见焦点恢复；另核对下载失败/仍有缺图的重试焦点、等待期间主动转到同步设置时不抢焦点，以及放大查看器四边完整可见；另验编辑/重置/关闭/返回后忽略迟到再问、显式下载刷新及 v4 原图备份往返。输出截图、标量几何、报告、逐线程子进程与 app metrics 的共同 cgroup 证据，退出后核对全部观测 PID 消失并清理自建 profile/数据库。它证明生产组件及服务行为，桥接是合成桩，不代替全 App IPC、全局快捷键或真实账户验收。

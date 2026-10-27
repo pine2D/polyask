@@ -19,6 +19,11 @@
     e.captureCode = code; e.ended = true; e.observer?.disconnect(); if (e.timer) clearTimeout(e.timer); if (e.soft) clearTimeout(e.soft); e.inserted = new WeakSet();
     for (const [target, name, handler] of e.listeners || []) target.removeEventListener?.(name, handler, true);
     e.listeners = [];
+    // 结束后快照只读 finalSnapshot 与标量状态；不再把已脱离页面的整轮 DOM 留到下次提问。
+    e.observer = e.timer = e.soft = null;
+    e.baseline = e.user = e.answer = e.answerRoot = e.onceRoot = null;
+    // stop 也可能发生在定位/观察器回调内，保留 ctx 供当前调用的 finally 收尾。
+    if (e.locate) e.locate.cache = e.locate.batch = null;
   }
   const KIMI_CHAT = /^https:\/\/(?:www\.)?kimi\.com\/chat\/[^/]+$/;
   function checkRoute(e, turn) {

@@ -224,9 +224,12 @@
   S.toMarkdown = function (root) {
     if (!root) return "";
     pendingLang = ""; pad = ""; mdRoot = root;
+    let rendered;
+    // 根只在遍历期间用于引用判定；成功或异常后都不能持有已脱离页面的回答树。
+    try { rendered = block(root); } finally { mdRoot = null; }
     let fence = 0, blanks = 0;
     const lines = [];
-    for (const line of block(root).split("\n")) {
+    for (const line of rendered.split("\n")) {
       const m = /^[ \t]*(`{3,})(.*)$/.exec(line);
       if (fence) {
         lines.push(line);

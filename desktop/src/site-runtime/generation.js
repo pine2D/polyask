@@ -68,16 +68,22 @@
   // baseline：武装时 answer() 指向的节点（上一轮回答，首轮为 null）。锁存只证明「停止键出现过」，证明不了本轮出了新回答——
   // 请求失败、没插入新回答节点时 answer() 仍是上一轮那个，这时不升级，交回主进程原有的「亲眼见过 generating」规则。
   const latch = { selector: null, blocked: false, seen: false, baseline: null, baselineRoot: null, baselineRootKey: null, observer: null, timer: null, until: 0, last: 0, pending: null,
-    disarm() {
+    stopSampling() {
       this.observer?.disconnect(); this.observer = null;
-      if (this.timer) clearTimeout(this.timer);
       if (this.pending) clearTimeout(this.pending);
-      this.timer = this.pending = null;
+      this.pending = null;
+    },
+    disarm() {
+      this.stopSampling();
+      if (this.timer) clearTimeout(this.timer);
+      this.timer = this.selector = this.baseline = this.baselineRoot = this.baselineRootKey = null;
+      this.seen = false;
     },
     note(visible) {
       if (!this.selector || this.seen || Date.now() >= this.until) return;
       if (this.blocked) { if (!visible) this.blocked = false; return; }
-      if (visible) { this.seen = true; this.disarm(); }
+      // 锁存后停止采样，但有效期内的基线仍用于排除旧回答；到期定时器必须留下以释放引用。
+      if (visible) { this.seen = true; this.stopSampling(); }
     },
     sample() {
       if (!this.selector || this.seen || Date.now() >= this.until) return;
