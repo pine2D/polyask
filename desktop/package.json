@@ -12,6 +12,7 @@
   },
   "scripts": {
     "start": "electron-forge start",
+    "prepare:dev-runtime": "node --import tsx prepare-dev-runtime.ts",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "configure-oauth": "node scripts/configure-oauth.mjs",

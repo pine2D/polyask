@@ -1,3 +1,4 @@
+import { ENABLE_COOKIE_ENCRYPTION, prepareDevelopmentStart } from './dev-runtime';
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
@@ -12,6 +13,7 @@ import { rendererConfig } from "./webpack.renderer.config";
 const oauthResource = join(__dirname, "resources", "oauth.json");
 
 const config: ForgeConfig = {
+  hooks: { preStart: async () => { await prepareDevelopmentStart(); } },
   packagerConfig: {
     asar: true,
     appBundleId: "com.pine2d.polyask",
@@ -73,7 +75,7 @@ const config: ForgeConfig = {
     new FusesPlugin({
       version: FuseVersion.V1,
       [FuseV1Options.RunAsNode]: false,
-      [FuseV1Options.EnableCookieEncryption]: true,
+      [FuseV1Options.EnableCookieEncryption]: ENABLE_COOKIE_ENCRYPTION,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
