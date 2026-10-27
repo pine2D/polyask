@@ -248,7 +248,7 @@ test("settings restore confirmations that were turned off with don't ask again",
   );
   const html = render({ sitePageCloseConfirm: false, newSessionConfirm: true });
   assert.match(html, /确认提示/);
-  assert.match(html, /data-settings-section="display"/);
+  assert.match(html, /data-settings-section="interaction"/);
   assert.match(html, /关闭站点页面前确认/);
   assert.match(html, /正在发送、生成或保存回答的页面仍会被拦下/);
   assert.match(html, /新建会话前确认/);

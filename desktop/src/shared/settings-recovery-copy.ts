@@ -1,6 +1,12 @@
 export const SETTINGS_RECOVERY_COPY = {
   en: {
     settingsGroupDisplay: 'Display & controls',
+    settingsCategoryAppearance: 'Appearance & reading',
+    settingsCategoryInteraction: 'Controls & shortcuts',
+    settingsCategorySync: 'Sync',
+    settingsCategoryBackup: 'Backup & recovery',
+    settingsCategoryNetwork: 'Network proxy',
+    settingsCategoryAbout: 'About',
     settingsGroupSync: 'Sync & backup',
     settingsGroupApp: 'Connection & app',
     settingsGroupData: 'Data management',
@@ -47,6 +53,12 @@ export const SETTINGS_RECOVERY_COPY = {
   },
   zhCN: {
     settingsGroupDisplay: '显示与操作',
+    settingsCategoryAppearance: '外观与阅读',
+    settingsCategoryInteraction: '操作与快捷键',
+    settingsCategorySync: '同步',
+    settingsCategoryBackup: '备份与恢复',
+    settingsCategoryNetwork: '网络代理',
+    settingsCategoryAbout: '关于',
     settingsGroupSync: '同步与备份',
     settingsGroupApp: '连接与应用',
     settingsGroupData: '数据管理',
@@ -93,6 +105,12 @@ export const SETTINGS_RECOVERY_COPY = {
   },
   zhTW: {
     settingsGroupDisplay: '顯示與操作',
+    settingsCategoryAppearance: '外觀與閱讀',
+    settingsCategoryInteraction: '操作與快捷鍵',
+    settingsCategorySync: '同步',
+    settingsCategoryBackup: '備份與還原',
+    settingsCategoryNetwork: '網路代理',
+    settingsCategoryAbout: '關於',
     settingsGroupSync: '同步與備份',
     settingsGroupApp: '連線與應用',
     settingsGroupData: '資料管理',

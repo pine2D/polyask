@@ -104,6 +104,7 @@ app.whenReady().then(async () => {
   }
   await require('./settings-interaction-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
+  await require('./desktop-tools-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./workspace-entry-visual.cjs')({ win, output, run, wait, paint, shot });
@@ -171,6 +172,7 @@ app.whenReady().then(async () => {
   check(await run('getComputedStyle(document.activeElement).outlineStyle !== "none" && parseFloat(getComputedStyle(document.activeElement).outlineOffset) < 0'), 'tile action focus must stay inside the clipped header');
   await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale: 'en' } });
   await wait('!!document.querySelector(".settings-workspace")');
+  await run('document.querySelector("[data-settings-section=sync]").click()');
   await run('document.querySelector("#sync-diagnostics-toggle").focus()');
   win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Enter' });
   win.webContents.sendInputEvent({ type: 'char', keyCode: '\r' });

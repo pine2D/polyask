@@ -107,7 +107,7 @@ app.whenReady().then(async()=>{
     }
     await snapshot(`${name}-backup-actions`);
     await key('Enter');
-    const returned = '(()=>{const el=document.activeElement,r=el.getBoundingClientRect(),body=document.querySelector(".settings-body").getBoundingClientRect();return el.textContent===window.nativeImages.copy.backupExport && r.top>=body.top && r.bottom<=body.bottom;})()';
+    const returned = '(()=>{const el=document.activeElement,r=el.getBoundingClientRect(),body=document.querySelector(".settings-grid").getBoundingClientRect();return el.textContent===window.nativeImages.copy.backupExport && r.top>=body.top && r.bottom<=body.bottom;})()';
     await check(returned,'cancel restores visible export entry');
     await snapshot(`${name}-backup-cancelled`);
     await click(await label('backupExport'));await click(await label('backupGoImageSync'));
@@ -161,9 +161,9 @@ app.whenReady().then(async()=>{
     await js('window.nativeImages.sync({state:"idle",connected:true,pending:0,errorCount:0,readOnly:false,oauthConfigured:true,secureTokenStorage:true,imageSyncEnabled:true})');
     await click(await label('backupExport'));await js('window.nativeImages.holdDownload()');
     await click('[data-export-mode=download]');await check('document.querySelector("[data-export-mode=download]").disabled','download pending disables its entry');
-    if(moved)await click('[data-settings-section=overview]');
+    if(moved)await click('[data-settings-section=sync]');
     await js(`window.nativeImages.releaseDownload(${failed})`);await until('!document.querySelector("[data-export-mode=download]").disabled','unfinished download permits retry');
-    await check(moved?'document.activeElement.id==="sync-title"':'document.activeElement===document.querySelector("[data-export-mode=download]")','unfinished download restores lost focus and preserves deliberate navigation');
+    await check(moved?'document.activeElement.id==="settings-category-sync"':'document.activeElement===document.querySelector("[data-export-mode=download]")','unfinished download restores lost focus and preserves deliberate navigation');
     const scenario=`download-${failed?'failed':'incomplete'}-${moved?'moved':'restored'}-focus`;
     if(!moved)await snapshot(scenario);report.push({scenario,ok:true});
   }

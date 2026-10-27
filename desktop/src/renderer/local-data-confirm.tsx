@@ -36,7 +36,7 @@ export function LocalDataConfirm({ copy, state, busy, onCancel, onConfirm, onRet
       }
     };
     window.addEventListener('keydown', keydown, true);
-    return () => { window.removeEventListener('keydown', keydown, true); opener?.focus(); };
+    return () => { window.removeEventListener('keydown', keydown, true); if (opener && !opener.closest("[hidden],[inert]")) opener.focus(); };
   }, []);
   const keys = LOCAL_DATA_COPY[state.action], stats = state.stats;
   const rows: [string, number][] = [];

@@ -79,7 +79,7 @@ test('slow statistics leave the settings page and parent navigation unlocked', a
 
 test('waiting for browser authorization does not hold the parent navigation lock', async () => {
   let blocking = false, closes = 0;
-  const h = await mountSettings({ onBlockingChange: value => { blocking = value; }, onClose: () => { closes++; },
+  const h = await mountSettings({ initialSection: 'sync', onBlockingChange: value => { blocking = value; }, onClose: () => { closes++; },
     status: { ...settingsStatus, connected: false } });
   settingsShell({ connectSync: () => new Promise(() => {}) });
   try {

@@ -27,6 +27,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       nativeTheme.themeSource = theme; win.webContents.setZoomFactor(zoom); win.setContentSize(width, 1000);
       await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, density } });
       await wait('!!document.querySelector("#global-prompt-shortcut-key") && !document.querySelector(".settings-global-shortcut fieldset").disabled');
+      await run('document.querySelector("[data-settings-section=interaction]").click()');
       sample();
       await focus('.settings-global-shortcut input[value="Control"]');
       if (theme === 'dark' && zoom === 1.5) await shot(`desktop-tools-shortcut-default-${locale}`);

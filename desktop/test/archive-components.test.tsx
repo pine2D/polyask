@@ -120,7 +120,11 @@ test("archive workspace renders one loading state without empty-state copy", () 
     detailOverride: <p>Stale detail</p>
   });
 
-  assert.equal(occurrences(html, "Loading results…"), 1);
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM(html);
+  const listText = dom.window.document.querySelector('.archive-list')?.textContent ?? '';
+  dom.window.close();
+  assert.equal(occurrences(listText, "Loading results…"), 1, 'one visible list loading status; the retained organizer stays hidden');
   assert.equal(occurrences(html, "No saved results yet"), 0);
   assert.equal(occurrences(html, "No matching results"), 0);
   assert.equal(occurrences(html, "class=\"archive-empty\""), 1);

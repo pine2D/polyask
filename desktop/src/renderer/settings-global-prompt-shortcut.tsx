@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import type { GlobalPromptShortcutCopy } from '../shared/global-prompt-shortcut-copy';
 import { GLOBAL_PROMPT_SHORTCUT_KEYS, displayGlobalPromptShortcut, parseGlobalPromptShortcut,
@@ -75,6 +76,7 @@ export function SettingsGlobalPromptShortcut(props: SettingsGlobalPromptShortcut
     const target = focusAfter.current; focusAfter.current = null;
     // Native Chromium blurs a button when its fieldset is disabled. Keep any explicit new focus.
     if (document.activeElement !== document.body && document.activeElement !== target) return;
+    if (document.getElementById('global-prompt-shortcut-title')?.closest('[hidden],[inert]')) return;
     const usable = target.isConnected && !target.matches(':disabled');
     (usable ? target as HTMLElement : document.getElementById('global-prompt-shortcut-title'))?.focus();
   }, [saving, state, notice]);
@@ -132,10 +134,10 @@ export function SettingsGlobalPromptShortcut(props: SettingsGlobalPromptShortcut
     <p id="global-prompt-shortcut-status" className="settings-control-hint">{reading ? copy.globalShortcutLoading : readFailed ? copy.globalShortcutReadFailed : status}</p>
     {readFailed ? <button type="button" data-shortcut-retry className="settings-control" onClick={() => void read()}>{copy.globalShortcutRetry}</button> : null}
     {feedback ? <p className="settings-control-hint" role={props.onFeedback ? undefined : 'status'}>{feedback}</p> : null}
-    {leaveOpen && dirty ? <ConfirmDialog copy={copy} title={copy.globalShortcutLeaveTitle} message={copy.globalShortcutLeaveMessage}
+    {leaveOpen && dirty ? createPortal(<ConfirmDialog copy={copy} title={copy.globalShortcutLeaveTitle} message={copy.globalShortcutLeaveMessage}
       cancelLabel={copy.globalShortcutKeepEditing} confirmLabel={copy.globalShortcutDiscard}
       onCancel={() => { pendingNavigation.current = null; setLeaveOpen(false); }} onConfirm={() => {
         const action = pendingNavigation.current; pendingNavigation.current = null; setLeaveOpen(false); discard(); action?.();
-      }} /> : null}
+      }} />, document.body) : null}
   </section>;
 }

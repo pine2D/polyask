@@ -71,7 +71,7 @@ function App(){
       onBlockingChange={noop} onOpen={()=>setOpen(true)} onClose={()=>setOpen(false)}
       onDraft={(text,next)=>{evidence.applied++;revision.current++;setDraft(text);setDraftImages(next);}} />}
     {(screen==='settings'||screen==='backup')&&<SettingsWorkspace copy={copy} locale={locale} runtime={{version:'1.23.1',distribution:'installed'}} status={sync}
-      onStatus={setSync} onAnnounce={noop} onClose={noop}/>}
+      initialSection={screen === 'backup' ? 'backup' : 'sync'} onStatus={setSync} onAnnounce={noop} onClose={noop}/>}
   </main></FeedbackProvider>;
 }
 createRoot(document.getElementById('root')!).render(<App/>);

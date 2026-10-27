@@ -53,7 +53,7 @@ export function NotificationSettings(props: {
     if (testing || props.busy || status.state === 'requested' || !focusAfter.current) return;
     const target = focusAfter.current; focusAfter.current = null;
     // Disabling the native button moves focus to body; an intentional move elsewhere wins.
-    if (target.isConnected && (document.activeElement === document.body || document.activeElement === target)) target.focus();
+    if (target.isConnected && !target.closest('[hidden],[inert]') && (document.activeElement === document.body || document.activeElement === target)) target.focus();
   }, [testing, status.state, props.busy]);
   const testNotification = async (): Promise<void> => {
     if (props.busy || inFlight.current || status.state === 'requested') return;

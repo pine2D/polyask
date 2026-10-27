@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, existsSync, writeFileSync, rmSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -25,8 +25,16 @@ test('large backups preserve visible batch scope, named dependencies and final c
     const binary = require('electron') as string, args = [join(__dirname, 'ui/backup-review-runtime.cjs'), output, artifacts];
     const headless = process.platform === 'linux' && !process.env.DISPLAY;
     const result = spawnSync(headless ? 'xvfb-run' : binary, headless ? ['-a', binary, ...args] : args,
-      { encoding: 'utf8', timeout: 100000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
+      { encoding: 'utf8', timeout: 100000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '', DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` } });
     process.stdout.write(result.stdout);
+    if (process.platform === 'linux' && existsSync(join(output, 'process-boundary.json'))) {
+      const { observed } = JSON.parse(readFileSync(join(output, 'process-boundary.json'), 'utf8')) as { observed: number[] };
+      for (let round = 0; round < 20 && observed.some(pid => existsSync(`/proc/${pid}`)); round++) await new Promise(resolve => setTimeout(resolve, 50));
+      const remaining = observed.filter(pid => existsSync(`/proc/${pid}`));
+      writeFileSync(join(output, 'cleanup.json'), JSON.stringify({ remainingObservedPids: remaining }));
+      assert.equal(remaining.length, 0, 'observed Electron processes exit');
+    }
+    console.log(`Native artifacts: ${output}`);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${result.error ?? ''}`);
-  } finally { rmSync(output, { recursive: true, force: true }); }
+  } finally { rmSync(join(output, 'profile'), { recursive: true, force: true }); }
 });

@@ -1,6 +1,7 @@
 // desktop/src/renderer/settings-proxy.tsx
 // 「网络代理」设置卡（spec §6.2）。只读 proxy-state；写操作全部经主进程 proxy-* 通道，回包只带码，文案在这里翻译。
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useProxyLeaveGuard } from './use-proxy-leave-guard';
 import type { DesktopCopy } from "../shared/copy";
 import { formatCopy } from "../shared/copy";
@@ -46,6 +47,7 @@ export function SettingsProxy(props: {
   // base 只用来判断「是否有未保存修改」与「编辑期间是否被别处改动」。
   const [base, setBase] = useState<ProxyPreference | null>(null);
   const inFlight = useRef(false), previous = useRef<ProxyStateView | null>(null), feedback = useRef(props.onFeedback);
+  const focusOrigin = useRef<Element | null>(null);
   const editingNow = useRef(false), focusAfter = useRef<Element | "title" | null>(null);
   feedback.current = props.onFeedback;
   // 草稿回到编辑起点（改了又改回）不算未保存修改；密码框有内容算。
@@ -77,6 +79,10 @@ export function SettingsProxy(props: {
     const target = focusAfter.current;
     if (action !== null || target === null) return;
     focusAfter.current = null;
+    const origin = focusOrigin.current; focusOrigin.current = null;
+    const title = document.getElementById("settings-proxy-title");
+    if (title?.closest('[hidden],[inert]')) return;
+    if (document.activeElement !== document.body && document.activeElement !== origin) return;
     const usable = target !== "title" && target.isConnected && target !== document.body && !target.matches(":disabled");
     ((usable ? target : document.getElementById("settings-proxy-title")) as HTMLElement | null)?.focus();
   }, [action]);
@@ -117,6 +123,7 @@ export function SettingsProxy(props: {
   const run = async (kind: ProxyAction, task: () => Promise<string>): Promise<void> => {
     if (inFlight.current) return;
     inFlight.current = true;
+    focusOrigin.current = document.activeElement;
     focusAfter.current = document.activeElement;
     setAction(kind);
     let text: string;
@@ -291,6 +298,6 @@ export function SettingsProxy(props: {
         aria-describedby={["settings-proxy-reload-hint", busyHint].filter(Boolean).join(" ")} onClick={reload}>{copy.proxyReload}</button>
     </div> : null}
     {saved ? <p id="settings-proxy-reload-hint" className="settings-control-hint">{copy.proxyReloadHint}</p> : null}
-    {leaveConfirmation}
+    {leaveConfirmation ? createPortal(leaveConfirmation, document.body) : null}
   </section>;
 }

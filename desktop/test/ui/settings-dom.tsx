@@ -13,10 +13,9 @@ export const settingsCopy = { ...getCopy('en'), ...SETTINGS_RECOVERY_COPY.en };
 export const settingsStatus: SyncStatus = { state: 'idle', connected: true, pending: 0, errorCount: 0,
   readOnly: false, oauthConfigured: true, secureTokenStorage: true };
 export const settingsRuntime = { version: '1.14.0', distribution: 'installed' } as const;
-type Props = Omit<ComponentProps<typeof SettingsWorkspace>, 'initialSection'> & {
+type Props = ComponentProps<typeof SettingsWorkspace> & {
   display?: DisplayPreferences;
   onDisplayChange?: (value: DisplayPreferences) => Promise<void>;
-  initialSection?: 'overview' | 'drive-diagnostics' | 'data' | 'display' | 'proxy';
   sectionRequest?: number;
   onBlockingChange?: (blocking: boolean) => void;
 };
@@ -27,7 +26,8 @@ export function settingsElement(patch: Partial<Props> = {}) {
   return <SettingsWorkspace {...props as ComponentProps<typeof SettingsWorkspace>} />;
 }
 export function settingsShell(patch: Record<string, unknown> = {}) {
-  setShellApi({ ...proxyShellStubs(), cancelBackup: async () => {}, syncDiagnostics: async () => createSyncDiagnosticSnapshot(settingsStatus, settingsRuntime),
+  setShellApi({ ...proxyShellStubs(), globalPromptShortcutState: async () => ({ accelerator: null, activeAccelerator: null, status: 'disabled' }),
+    commandPaletteShortcutState: async () => ({ mode: 'standard', revision: 0 }), onCommandPaletteShortcut: () => () => {}, cancelBackup: async () => {}, syncDiagnostics: async () => createSyncDiagnosticSnapshot(settingsStatus, settingsRuntime),
     getLocalDataStats: async () => ({ history: 2, archives: 3, decisions: 4, folders: 5, answers: 7, memberships: 9,
       drafts: 0, reset: { preferences: 0, answers: 8, memberships: 10, templates: 6, groups: 1, workspace: 1 } }), ...patch } as any);
 }

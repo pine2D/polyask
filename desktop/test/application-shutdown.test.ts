@@ -11,8 +11,8 @@ test("a cancelled application quit leaves repositories usable until final shutdo
   const source = readSource("src/main/index.ts");
   const registration = source.match(/app\.on\("(?:before-quit|will-quit)", \(\) => \{[^}]*desktopDatabase\?\.close\(\);\s*desktopDatabase = null;\s*\}\);/);
   assert.ok(registration, "must execute the production database shutdown registration");
-  let disposed = false;
-  const context = { app, desktopDatabase: database as DatabaseSync | null, promptShortcut: { dispose: () => { disposed = true; } } };
+  let disposed = false, paletteDisposed = false;
+  const context = { app, desktopDatabase: database as DatabaseSync | null, promptShortcut: { dispose: () => { disposed = true; } }, paletteShortcut: { dispose: () => { paletteDisposed = true; } } };
   runInNewContext(registration[0], context);
   try {
     // Electron emits before-quit before a dirty renderer may veto beforeunload.
@@ -20,8 +20,10 @@ test("a cancelled application quit leaves repositories usable until final shutdo
     assert.equal(database.prepare("SELECT 1 AS value").get()?.value, 1);
     assert.equal(context.desktopDatabase === database, true);
     assert.equal(disposed, false, 'a vetoed quit keeps the owned global shortcut');
+    assert.equal(paletteDisposed, false, "a vetoed quit keeps the command palette runtime");
     app.emit("will-quit");
     assert.equal(context.desktopDatabase, null);
+    assert.equal(paletteDisposed, true, "final shutdown releases the command palette runtime");
     assert.equal(disposed, true, 'final shutdown releases the owned global shortcut');
     assert.throws(() => database.prepare("SELECT 1"), /database is not open/);
   } finally { if (context.desktopDatabase) database.close(); }

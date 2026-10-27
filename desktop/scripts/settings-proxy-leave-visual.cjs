@@ -25,7 +25,9 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     await escape(); await wait('!document.querySelector(".confirm-dialog")');
     assert.equal(await run('document.activeElement===document.querySelector("#settings-proxy-password")'), true, 'cancel restores input focus');
     assert.equal(await run('document.querySelector("#settings-proxy-host").value==="draft.example"&&document.querySelector("#settings-proxy-password").value==="synthetic-secret"'), true);
+    await run('document.querySelector("[data-settings-section=appearance]").click()');
     await escape(); await wait('!!document.querySelector(".confirm-dialog")');
+    assert.equal(await run('document.querySelector(".confirm-dialog").closest("[hidden],[inert]")===null'), true, 'hidden proxy draft still has a visible leave confirmation');
     await run('document.querySelector(".confirm-actions .primary").click()');
     await wait('!document.querySelector(".settings-workspace")');
     await run('document.querySelector("[data-proxy-reopen]").click()');

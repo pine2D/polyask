@@ -8,7 +8,7 @@ const missing = [{ questionId: 'q-originals', title: 'Missing originals', count:
 const ready = { ...settingsStatus, imageSyncEnabled: true };
 
 for (const result of ['cancel', 'text-only', 'downloaded', 'save-cancelled'] as const) test(`missing-original export returns focus to its entry after ${result}`, async () => {
-  const h = await mountSettings({ status: ready });
+  const h = await mountSettings({ initialSection: 'backup', status: ready });
   settingsShell({ exportBackup: async (mode: BackupExportMode) => mode === 'complete' ? { missing } : result === 'text-only' ? 'text-only' : result === 'downloaded' });
   try {
     const opener = settingsButton(h.document, copy.backupExport);
@@ -22,12 +22,13 @@ for (const result of ['cancel', 'text-only', 'downloaded', 'save-cancelled'] as 
 
 test('late export completion does not reclaim focus after the user moves elsewhere', async () => {
   let finish!: (value: string) => void;
-  const h = await mountSettings({ status: ready });
+  const h = await mountSettings({ initialSection: 'backup', status: ready });
   settingsShell({ exportBackup: async (mode: BackupExportMode) => mode === 'complete' ? { missing } : new Promise(resolve => { finish = resolve; }) });
   try {
     await h.click(settingsButton(h.document, copy.backupExport));
     const action = settingsButton(h.document, copy.backupTextOnly); action.focus(); await h.click(action);
     const elsewhere = h.document.querySelector<HTMLInputElement>('input[name="question-image-sync"]')!;
+    await h.click(h.document.querySelector<HTMLElement>('[data-settings-section=sync]')!);
     elsewhere.focus(); await act(async () => finish('text-only'));
     assert.equal(h.document.querySelector('.backup-missing') === null, true);
     assert.equal(h.document.activeElement === elsewhere, true, 'background completion keeps the new focus');
@@ -40,7 +41,7 @@ for (const state of [
   { name: 'authorization expired', status: { ...ready, state: 'auth' as const }, label: 'Go to Drive connection', target: 'sync-title' },
 ]) test(`missing-original recovery guides ${state.name} without enabling sync or downloading`, async () => {
   const modes: BackupExportMode[] = []; let connections = 0, enables = 0;
-  const h = await mountSettings({ status: state.status });
+  const h = await mountSettings({ initialSection: 'backup', status: state.status });
   settingsShell({ exportBackup: async (mode: BackupExportMode) => { modes.push(mode); return { missing }; },
     connectSync: async () => { connections++; return ready; }, setImageSyncEnabled: async () => { enables++; return ready; } });
   try {
@@ -52,15 +53,16 @@ for (const state of [
     assert.equal(h.document.activeElement?.id, state.target);
     assert.equal(h.document.querySelector('.backup-missing') !== null, true, 'navigation preserves the export task');
     assert.deepEqual(modes, ['complete']); assert.equal(connections, 0); assert.equal(enables, 0);
-    await h.render(settingsElement({ status: ready }));
+    await h.render(settingsElement({ initialSection: 'backup', status: ready }));
     const download = settingsButton(h.document, copy.backupDownloadOriginals);
     assert.equal(download !== undefined && !download.disabled, true, 'the existing task responds to updated sync status');
+    await h.click(h.document.querySelector<HTMLElement>('[data-settings-section=backup]')!);
     await h.click(download); assert.deepEqual(modes, ['complete', 'download']);
   } finally { await h.close(); }
 });
 
 test('a failed download preserves the missing-original choices for retry', async () => {
-  const h = await mountSettings({ status: ready });
+  const h = await mountSettings({ initialSection: 'backup', status: ready });
   settingsShell({ exportBackup: async (mode: BackupExportMode) => { if (mode === 'download') throw new Error('backup_failed'); return { missing }; } });
   try {
     await h.click(settingsButton(h.document, copy.backupExport));
@@ -74,7 +76,7 @@ test('a failed download preserves the missing-original choices for retry', async
 
 test('cancelling an in-flight download returns to the backup heading without late focus theft', async () => {
   let finish!: (value: { missing: typeof missing }) => void;
-  const h = await mountSettings({ status: ready });
+  const h = await mountSettings({ initialSection: 'backup', status: ready });
   settingsShell({ exportBackup: async (mode: BackupExportMode) => mode === 'complete' ? { missing } : new Promise(resolve => { finish = resolve; }) });
   try {
     await h.click(settingsButton(h.document, copy.backupExport));
@@ -83,6 +85,7 @@ test('cancelling an in-flight download returns to the backup heading without lat
     assert.equal(h.document.querySelector('.backup-missing') === null, true);
     assert.equal(h.document.activeElement?.id, 'backup-card-title', 'the stable heading is available while the export entry is disabled');
     const elsewhere = h.document.querySelector<HTMLInputElement>('input[name="question-image-sync"]')!;
+    await h.click(h.document.querySelector<HTMLElement>('[data-settings-section=sync]')!);
     elsewhere.focus(); await act(async () => finish({ missing }));
     assert.equal(h.document.querySelector('.backup-missing') === null, true, 'late response cannot reopen the cancelled task');
     assert.equal(h.document.activeElement === elsewhere, true);
@@ -92,7 +95,7 @@ test('cancelling an in-flight download returns to the backup heading without lat
 for (const outcome of ['failed', 'incomplete'] as const) {
   for (const moved of [false, true]) test(`${outcome} download ${moved ? 'preserves moved' : 'recovers lost'} keyboard focus`, async () => {
     let finish!: () => void;
-    const h = await mountSettings({ status: ready });
+    const h = await mountSettings({ initialSection: 'backup', status: ready });
     settingsShell({ exportBackup: async (mode: BackupExportMode) => mode === 'complete' ? { missing } : new Promise((resolve, reject) => {
       finish = () => outcome === 'failed' ? reject(new Error('backup_failed')) : resolve({ missing });
     }) });
@@ -105,7 +108,7 @@ for (const outcome of ['failed', 'incomplete'] as const) {
       h.document.body.tabIndex = -1; h.document.body.focus();
       assert.equal(h.document.activeElement === h.document.body, true);
       const elsewhere = h.document.querySelector<HTMLInputElement>('input[name="question-image-sync"]')!;
-      if (moved) elsewhere.focus();
+      if (moved) { await h.click(h.document.querySelector<HTMLElement>('[data-settings-section=sync]')!); elsewhere.focus(); }
       await act(async () => finish());
       assert.equal(download.disabled, false);
       assert.equal(h.document.activeElement === (moved ? elsewhere : download), true);

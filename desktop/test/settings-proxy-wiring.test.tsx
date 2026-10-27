@@ -84,10 +84,10 @@ test('grouped settings navigation keeps the proxy heading reachable with its dir
   try {
     await settle();
     const sections = [...h.document.querySelectorAll('[data-settings-section]')].map(node => node.getAttribute('data-settings-section'));
-    assert.deepEqual(sections, ['display', 'overview', 'proxy', 'data']);
-    assert.equal(h.document.getElementById('settings-proxy-title')!.closest('.settings-group') === h.document.getElementById('app-updates-title')!.closest('.settings-group'), true);
-    await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="proxy"]')!);
-    assert.equal(h.document.activeElement === h.document.getElementById('settings-proxy-title'), true);
+    assert.deepEqual(sections, ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about']);
+    assert.equal(h.document.getElementById('settings-proxy-title')!.closest('.settings-group') === h.document.getElementById('app-updates-title')!.closest('.settings-group'), false);
+    await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="network"]')!);
+    assert.equal(h.document.activeElement === h.document.getElementById('settings-category-network'), true);
   } finally { await h.close(); }
   const requested = await mountSettings({ initialSection: 'proxy', sectionRequest: 1 });
   try {
@@ -98,7 +98,7 @@ test('grouped settings navigation keeps the proxy heading reachable with its dir
 
 test('proxy results reach the settings status line and the shell live announcement', async () => {
   const announced: string[] = [];
-  const h = await mountSettings({ onAnnounce: message => { announced.push(message); } });
+  const h = await mountSettings({ initialSection: 'proxy', onAnnounce: message => { announced.push(message); } });
   settingsShell({ saveProxy: async () => ({ ok: true }) });
   try {
     await settle();
@@ -165,7 +165,7 @@ test('the app routes the pending notice to the proxy settings section', () => {
   const app = readSource('src/renderer/index.tsx');
   // 只比较布尔值：失败时不把整份 index.tsx 打进断言消息。
   assert.equal(/useProxyPendingNotice\(copy, \(\) => openSettings\("proxy"\)\);/.test(app), true, 'App must route the notice to the proxy section');
-  assert.equal(/section: "overview" \| "drive-diagnostics" \| "data" \| "display" \| "proxy"/.test(app), true, 'settings sections must accept "proxy"');
+  assert.equal(/section: SettingsTarget/.test(app), true, 'settings sections must accept "proxy"');
   assert.equal(/<SettingsWorkspace [^\n]*operationBusy=\{runState !== "idle" \|\| auxiliaryBusy \|\| participation\.pending\}/.test(app), true,
     'settings must receive the shell busy state so proxy writes are disabled during a send');
 });

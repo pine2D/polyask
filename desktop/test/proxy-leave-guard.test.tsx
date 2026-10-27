@@ -44,8 +44,8 @@ async function fixture(saveGate?: Promise<{ ok: true }>, applyGate?: Promise<{ i
   const confirm = () => h.document.querySelector<HTMLButtonElement>('.confirm-actions .primary')!;
   const button = (text: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === text)!;
   return { ...h, host, password, cancel, confirm, writes, effects, cancelledBackups,
-    openBackup: () => h.click(button(copy.backupImport)),
-    closeBackup: () => h.click(h.document.querySelector('.backup-header button')!),
+    openBackup: async () => { await h.click(h.document.querySelector<HTMLElement>('[data-settings-section=backup]')!); await h.click(button(copy.backupImport)); },
+    closeBackup: async () => { await h.click(h.document.querySelector<HTMLElement>('.backup-header button')!); await h.click(h.document.querySelector<HTMLElement>('[data-settings-section=network]')!); },
     button,
     push: async () => { state = { ...state, formValue: { ...customProxy, host: 'synced.example' } }; await act(async () => push(state)); },
     close: async () => { await h.close(); setShellApi(null); } };

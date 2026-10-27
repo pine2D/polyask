@@ -47,7 +47,7 @@ async function type(win, selector, value) {
 }
 async function navigate(win, section) {
   await read(win, `window.recoveryFixture.navigate(${JSON.stringify(section)})`);
-  const id = section === 'data' ? 'settings-advanced-toggle' : 'settings-display-title';
+  const id = section === 'data' ? 'settings-advanced-toggle' : section === 'interaction' ? 'settings-category-interaction' : 'settings-display-title';
   await wait(win, `document.activeElement?.id===${JSON.stringify(id)}`, 'explicit settings navigation');
   // Focus moves in a microtask; the data disclosure opens on the following React commit.
   if (section === 'data') await wait(win, '!!document.querySelector(".settings-advanced")?.open', 'data disclosure open');
@@ -66,7 +66,8 @@ async function settingsFlow(win, name) {
   await wait(win, '!!window.recoveryFixture && !!document.querySelector(".settings-advanced")', 'settings disclosure');
   check(await read(win, '!document.querySelector(".settings-advanced").open'), 'advanced starts collapsed');
   check(await read(win, 'document.querySelectorAll(".settings-display:not(.settings-global-shortcut) fieldset").length===2'), 'two display groups');
-  await read(win, 'document.querySelector(".settings-advanced > summary").focus()');
+  await navigate(win, 'display');
+  await read(win, 'document.querySelector(".settings-toolbar button").focus()');
   for (let count = 0; count < 16; count++) {
     await key(win, 'Tab');
     check(await read(win, '!document.activeElement?.closest(".settings-advanced > section")'), 'collapsed destructive controls stay outside native Tab order');
@@ -131,12 +132,13 @@ async function settingsFlow(win, name) {
   await wait(win, 'document.querySelector("input[name=settings-density][value=comfortable]").checked', 'density accepted');
   await click(win, `${find('input[name=settings-site-scale][value="1"]')}.closest('label')`);
   await wait(win, `${find('input[name=settings-site-scale][value="1"]')}.checked`, 'site scale accepted');
+  await navigate(win, 'interaction');
   await read(win, 'document.querySelector("#command-palette-shortcut").scrollIntoView({block:"center"});document.querySelector("#command-palette-shortcut").focus()');
   await key(win, 'End');
   await wait(win, 'document.querySelector("#command-palette-shortcut").value==="obsidian"', 'shortcut accepted');
   await read(win, 'window.recoveryFixture.failShortcut()');
   await read(win, 'document.querySelector("#command-palette-shortcut").scrollIntoView({block:"center"});document.querySelector("#command-palette-shortcut").focus()'); await key(win, 'Home');
-  await wait(win, '!!document.querySelector(".settings-command-shortcut [role=status]")', 'shortcut save failure');
+  await wait(win, '!!document.querySelector(".settings-command-shortcut .settings-control-hint:last-child") && document.querySelector(".settings-command-shortcut").textContent.includes(window.recoveryFixture.copy.commandShortcutSaveFailed)', 'shortcut save failure');
   check(await read(win, 'document.querySelector("#command-palette-shortcut").value==="obsidian"'), 'shortcut failure preserves effective option');
   await wait(win, 'document.activeElement?.id==="command-palette-shortcut"', 'shortcut failure restores native focus');
   await read(win, 'document.querySelector("#command-palette-shortcut").scrollIntoView({block:"center"});document.querySelector("#command-palette-shortcut").focus()'); await key(win, 'Home');

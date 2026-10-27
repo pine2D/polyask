@@ -2,6 +2,7 @@ const { app, BrowserWindow, session, nativeTheme } = require('electron');
 const { join } = require('node:path');
 const { writeFileSync } = require('node:fs');
 const output = process.argv[2], artifacts = process.argv[3];
+const boundary = require('./native-process-boundary.cjs').processBoundary(app, output);
 app.setPath('userData', join(output, 'profile'));
 app.whenReady().then(async () => {
   session.defaultSession.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_details, callback) => callback({ cancel: true }));
@@ -29,7 +30,7 @@ app.whenReady().then(async () => {
       nativeTheme.themeSource = theme;
       win.setContentSize(width, 800);
       await win.loadFile(join(output, 'index.html'), { query: { count: String(count), locale, theme } });
-      await run('window.reviewReady'); await click('#opener');
+      boundary(); await run('window.reviewReady'); await click('#opener');
       await check(`document.characterSet==='UTF-8' && !document.body.textContent.includes('Ã') && !document.body.textContent.includes('å')`, 'three-language fixture text is decoded as UTF-8');
       await check(`matchMedia('(prefers-color-scheme: dark)').matches===${theme === 'dark'}`, 'requested native color scheme is active');
       await check(countIs(0), 'unresolved new association is excluded from actual counts');
@@ -74,5 +75,5 @@ app.whenReady().then(async () => {
       console.log(JSON.stringify({ count, locale, theme, width, ok: true }));
     } catch (error) { failed = true; console.log(JSON.stringify({ count, locale, theme, width, ok: false, error: String(error) })); }
   }
-  app.exit(failed ? 1 : 0);
+  boundary(); app.exit(failed ? 1 : 0);
 }).catch(error => { console.error(error); app.exit(1); });

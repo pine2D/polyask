@@ -14,6 +14,7 @@ import { backupSkipCounts, visibleBackupSelection } from './backup-selection';
 import { useBackupSelectionPreview } from './use-backup-selection-preview';
 import type { SyncStatus } from "../shared/sync";
 import { backupItemTitle } from './backup-data';
+import { useSettingsCategoryActive } from './settings-category-panel';
 import { useFailedActionFocus } from './use-failed-action-focus';
 
 export function backupError(copy: DesktopCopy, error: unknown): string {
@@ -28,6 +29,8 @@ export function backupError(copy: DesktopCopy, error: unknown): string {
 export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
   preview: BackupPreview; copy: DesktopCopy; locale: string; onClose: () => void; onApplied: (message: string) => void;
 }): React.JSX.Element {
+  const categoryActive = useSettingsCategoryActive();
+  const categoryActiveRef = useRef(categoryActive); categoryActiveRef.current = categoryActive;
   const [selected, setSelected] = useState(() => initialBackupSelection(preview.items));
   const [activeKey, setActiveKey] = useState(preview.items[0]?.key);
   const [filter, setFilter] = useState("all");
@@ -42,6 +45,7 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
   const onCloseRef = useRef(onClose); onCloseRef.current = onClose;
   const confirmingRef = useRef(confirming); confirmingRef.current = confirming;
   useEffect(() => {
+    if (!categoryActive) return;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancel.current?.focus();
     const keydown = (event: KeyboardEvent) => {
@@ -60,13 +64,15 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
       else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     window.addEventListener("keydown", keydown, true);
-    return () => { window.removeEventListener("keydown", keydown, true); opener?.focus(); };
-  }, []);
-  useEffect(() => registerDecisionNavigationGuard((action) => {
+    return () => { window.removeEventListener("keydown", keydown, true); if (opener && !opener.closest("[hidden],[inert]")) opener.focus(); };
+  }, [categoryActive]);
+  useEffect(() => registerDecisionNavigationGuard((action, intent) => {
+    if (!categoryActiveRef.current) { action(); return; }
     if (locked.current || confirmingRef.current) return;
+    if (intent?.kind === 'command' && ['open-settings', 'open-display-settings', 'open-data-settings', 'open-drive-diagnostics'].includes(intent.id)) { action(); return; }
     onCloseRef.current(); action();
   }), []);
-  useEffect(() => { cancel.current?.focus(); }, [confirming]);
+  useEffect(() => { if (categoryActive) cancel.current?.focus(); }, [confirming, categoryActive]);
   const visible = preview.items.filter((item) => (filter === "all" || item.kind === filter)
     && (statusFilter === 'all' || (statusFilter === 'blocked' ? item.blocked : item.status === statusFilter)));
   const active = visible.find((item) => item.key === activeKey) ?? visible[0];
@@ -92,7 +98,7 @@ export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
     } catch (reason) { setError(backupError(copy, reason)); setConfirming(false); }
     finally { locked.current = false; setApplying(false); }
   };
-  return createPortal(<div className="backup-scrim" onMouseDown={(event) => { if (event.target === event.currentTarget) { event.preventDefault(); panel.current?.focus(); } }}>
+  return createPortal(<div className="backup-scrim" hidden={!categoryActive} inert={!categoryActive} onMouseDown={(event) => { if (event.target === event.currentTarget) { event.preventDefault(); panel.current?.focus(); } }}>
     <div className="backup-workspace" role="dialog" aria-modal="true" aria-labelledby="backup-review-title" tabIndex={-1} ref={panel} aria-busy={applying}>
       <header className="backup-header"><div><h2 id="backup-review-title">{confirming ? copy.backupConfirmTitle : copy.backupReview}</h2>{preview.filename ? <p className="backup-filename">{preview.filename}</p> : null}<p>{formatCopy(copy.backupDate, { date: formatDateTime(preview.exportedAt, locale) })}</p></div><button type="button" disabled={applying} ref={cancel} onClick={() => confirming ? setConfirming(false) : onClose()}>{copy.cancel}</button></header>
       {preview.omissions?.length ? <p role="note">{formatCopy(copy.backupOmissionsNotice, { count: preview.omissions.length })}</p> : null}
@@ -134,7 +140,7 @@ export function BackupCard({ copy, locale, busy, onBusy, onFeedback, syncStatus,
     if (!restoreFocus.current || missing.length) return;
     restoreFocus.current = false;
     // A user who moved to another setting keeps that focus, even after a late result.
-    if (document.activeElement !== document.body) return;
+    if (document.activeElement !== document.body || card.current?.closest("[hidden],[inert]")) return;
     const target = busy ? heading.current : exportButton.current;
     target?.focus({ preventScroll: true }); target?.scrollIntoView({ block: 'nearest' });
   }, [missing.length, busy]);

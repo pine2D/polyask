@@ -119,8 +119,8 @@ test("answer comparison contains long unbroken content", () => {
 test("manual update feedback stays visible on the active surface", () => {
   const settings = renderer("settings-workspace.tsx");
   const app = renderer("index.tsx");
-  assert.match(settings, /setFeedback\(props\.copy\.updatePageOpened\)/);
-  assert.match(settings, /setFeedback\(props\.copy\.updatePageFailed\)/);
+  assert.match(settings, /setFeedback\("about", props\.copy\.updatePageOpened\)/);
+  assert.match(settings, /setFeedback\("about", props\.copy\.updatePageFailed\)/);
   assert.match(app, /const checkForUpdates = \(\): void => \{[\s\S]*changeSurface\("sites"\)/);
   assert.match(app, /"check-updates": checkForUpdates/);
 });

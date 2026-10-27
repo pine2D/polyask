@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import type { SettingsTarget } from '../../src/renderer/settings-categories';
 import { SettingsWorkspace } from '../../src/renderer/settings-workspace';
 import { SiteHealthPanel } from '../../src/renderer/site-health';
 import { setShellApi } from '../../src/renderer/shell-api';
@@ -51,7 +52,7 @@ setShellApi({
   clearRemoteSync: () => new Promise(resolve => { cloudReply = () => resolve(status); })
 } as any);
 function Fixture(): React.JSX.Element {
-  const [section, setSection] = useState<'overview' | 'data' | 'display' | 'drive-diagnostics'>('overview');
+  const [section, setSection] = useState<SettingsTarget>('overview');
   const [request, setRequest] = useState(0);
   const [display, setDisplay] = useState<DisplayPreferences>({ density: 'compact', siteScale: 0.9 });
   const [healthCase, setHealthCase] = useState<string | null>(null);

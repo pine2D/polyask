@@ -67,6 +67,7 @@ import { useBroadcastRetryReview } from "./use-broadcast-retry-review";
 import { inspectBroadcastSite } from "./broadcast-site-inspection";
 import { useFeedback } from "./use-feedback";
 import { SiteFrames } from "./site-frames";
+import type { SettingsTarget } from './settings-categories';
 import { SettingsWorkspace } from "./settings-workspace";
 import { useProxyPendingNotice } from "./use-proxy-state";
 import { nextSiteForStatus } from "./site-navigation";
@@ -162,7 +163,7 @@ function App(): React.JSX.Element {
   const archiveNavigation = useArchiveNavigation();
   const [settingsBlocking, setSettingsBlocking] = useState(false);
   const blockSettings = useCallback((value: boolean) => { if (value) commandActions.current = {}; setSettingsBlocking(value); }, []);
-  const [settingsSection, setSettingsSection] = useState<{ section: "overview" | "drive-diagnostics" | "data" | "display" | "proxy"; request: number }>({ section: "display", request: 0 });
+  const [settingsSection, setSettingsSection] = useState<{ section: SettingsTarget; request: number }>({ section: "appearance", request: 0 });
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(INITIAL_SYNC);
   const [runtime, setRuntime] = useState<RuntimeInfo>(INITIAL_RUNTIME);
@@ -480,7 +481,7 @@ function App(): React.JSX.Element {
     ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
     ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
     ...(participating.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
-    "open-settings": () => openSettings("display"),
+    "open-settings": () => openSettings("appearance"),
     "open-drive-diagnostics": () => openSettings("drive-diagnostics"),
     "open-display-settings": () => openSettings("display"),
     "open-data-settings": () => openSettings("data"),
@@ -506,7 +507,7 @@ function App(): React.JSX.Element {
     return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} synthesisSession={synthesis.session} comparisonDrafts={comparisonDrafts} session={librarySession} navigationRevision={archiveNavigation.revision} onBlockingChange={blockLibrary} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
   }
   if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} operationBusy={runState !== "idle" || auxiliaryBusy || participation.pending} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} preferenceSync={preferences.settings} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} confirmations={preferences.confirmations} onConfirmationChange={(key, enabled) => { void preferences.onConfirmation(key, enabled); }} onCheckUpdates={openLatestReleasePage} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { void preferences.refresh(); workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
+    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} operationBusy={runState !== "idle" || auxiliaryBusy || participation.pending} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} preferenceSync={preferences.settings} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} confirmations={preferences.confirmations} onConfirmationChange={(key, enabled) => { void preferences.onConfirmation(key, enabled); }} onCheckUpdates={openLatestReleasePage} onOpenShortcuts={() => executeCommand("open-shortcuts", commandActions.current)} onOpenGuide={() => executeCommand("open-getting-started", commandActions.current)} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { void preferences.refresh(); workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
   }
   if (surface === "commands") {
     return (

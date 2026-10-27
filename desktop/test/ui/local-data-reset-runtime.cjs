@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session } = require("electron");
 const { join } = require("node:path");
 const output = process.argv[2];
+const boundary = require('./native-process-boundary.cjs').processBoundary(app, output);
 app.setPath("userData", join(output, "profile"));
 const read = (window, expression) => window.webContents.executeJavaScript(expression)
   .catch(error => { throw Error(`${error.message} :: ${String(expression).slice(0, 160)}`); });
@@ -79,10 +80,10 @@ app.whenReady().then(async () => {
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   let failed = false;
   for (const file of ["index.html", "flow.html"]) {
-    await window.loadFile(join(output, file));
+    await window.loadFile(join(output, file)); boundary();
     const result = file === "index.html" ? await resetFlow(window) : await read(window, "window.resetResult");
     console.log(JSON.stringify({ file, ...result }));
     if (!result.ok) failed = true;
   }
-  app.exit(failed ? 1 : 0);
+  boundary(); app.exit(failed ? 1 : 0);
 }).catch(error => { console.error(error); app.exit(1); });

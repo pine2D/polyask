@@ -10,7 +10,7 @@ export function BackupMissingOriginalsNotice({ missing, copy, busy, syncStatus, 
   onExport: (mode: BackupExportMode) => void; onCancel: () => void;
 }): React.JSX.Element {
   const heading = useRef<HTMLHeadingElement>(null);
-  useEffect(() => { heading.current?.focus(); }, []);
+  useEffect(() => { if (!heading.current?.closest('[hidden],[inert]')) heading.current?.focus(); }, []);
   const needsConnection = !syncStatus.connected || syncNeedsReauthorization(syncStatus);
   const needsSettings = needsConnection || !syncStatus.imageSyncEnabled;
   return <section className="backup-missing" aria-labelledby="backup-missing-title">

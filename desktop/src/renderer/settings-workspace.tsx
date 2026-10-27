@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { DesktopCopy } from "../shared/copy";
 import { formatCopy } from "../shared/copy";
@@ -28,6 +28,8 @@ import { syncNeedsReauthorization, syncOverview } from "./sync-overview";
 import { shell } from "./shell-api";
 import { SettingsImageSync } from "./settings-image-sync";
 import { useSettingsSectionNavigation } from "./settings-section-navigation";
+import { SettingsCategoryPanel } from './settings-category-panel';
+import { SETTINGS_CATEGORIES, settingsCategoryLabels, resolveSettingsTarget, type SettingsCategory, type SettingsTarget, type SettingsNavigationTarget } from './settings-categories';
 import { NotificationSettings } from './notification-settings';
 import { SettingsCommandPaletteShortcut } from './settings-command-palette-shortcut';
 import { isMac } from './platform';
@@ -49,7 +51,9 @@ interface SettingsWorkspaceProps {
   readonly display?: DisplayPreferences;
   readonly onDisplayChange?: (preferences: DisplayPreferences) => Promise<void>;
   readonly preferenceSync?: PreferenceSyncSettingsState;
-  readonly initialSection?: "overview" | "drive-diagnostics" | "data" | "display" | "proxy";
+  readonly initialSection?: SettingsTarget;
+  readonly onOpenShortcuts?: () => void;
+  readonly onOpenGuide?: () => void;
   readonly operationBusy?: boolean; // 群发、综合、新会话、站点参与切换进行中：代理写操作须经 OperationGate，此时禁用（spec §3.4、§6.2）
   readonly sectionRequest?: number;
   readonly onLocalReset?: () => void;
@@ -59,11 +63,11 @@ interface SettingsWorkspaceProps {
 type SyncAction = () => Promise<SyncStatus>;
 
 export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Element {
-  const { bodyRef, currentSection, markSection } = useSettingsSectionNavigation();
   const [actionBusy, setActionBusy] = useState(false);
   const [confirmation, setConfirmation] = useState("");
   const [pendingAction, setPendingAction] = useState<"sync" | "connect" | "clear" | "other" | null>(null);
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedbackState] = useState<Partial<Record<SettingsCategory, string>>>({});
+  const setFeedback = (category: SettingsCategory, message: string) => setFeedbackState(before => ({ ...before, [category]: message }));
   const [diagnostics, setDiagnostics] = useState<SyncDiagnosticSnapshot>(() =>
     createSyncDiagnosticSnapshot(props.status, props.runtime)
   );
@@ -75,11 +79,11 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   const [clearingCloud, setClearingCloud] = useState(false);
   const [dataOpen, setDataOpen] = useState(() => props.initialSection === "data");
   const [localWriting, setLocalWriting] = useState(false);
-  const [backupRequest, setBackupRequest] = useState(0);
   const [localResetRevision, setLocalResetRevision] = useState(0);
   // Only a destructive write may hold the page hostage; waiting on browser
   // authorization (up to five minutes) must never lock the exit.
   const closeLocked = clearingCloud || localWriting;
+  const { bodyRef, currentSection, navigate } = useSettingsSectionNavigation(props.initialSection, props.sectionRequest, closeLocked);
   const writes = useRef({ local: false, cloud: false });
   const actionInFlight = useRef(false);
   const pendingFocus = useRef(false);
@@ -106,27 +110,21 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   useEffect(() => {
     setDiagnostics(createSyncDiagnosticSnapshot(props.status, props.runtime));
   }, [props.runtime, props.status]);
-  useEffect(() => {
-    const section = props.initialSection;
-    if (section === "data") setDataOpen(true);
-    if (section === "drive-diagnostics") setDiagnosticsOpen(true);
-    const id = section === "data" ? "settings-advanced-toggle" : section === "display" ? "settings-display-title"
-      : section === "drive-diagnostics" ? "sync-diagnostics-toggle" : section === "proxy" ? "settings-proxy-title" : section === "overview" ? "sync-title" : null;
-    if (id) queueMicrotask(() => { const target = document.getElementById(id); target?.scrollIntoView({ block: "nearest" }); target?.focus();
-      markSection(section === 'drive-diagnostics' ? 'overview' : section!); });
-    else if (section) markSection(section);
+  useLayoutEffect(() => {
+    if (writes.current.local || writes.current.cloud) return;
+    if (props.initialSection === 'data') setDataOpen(true);
+    if (props.initialSection === 'drive-diagnostics') setDiagnosticsOpen(true);
   }, [props.initialSection, props.sectionRequest]);
-  useEffect(() => {
-    if (!backupRequest) return;
-    const target = document.querySelector<HTMLButtonElement>('section[aria-labelledby="backup-card-title"] button');
-    target?.scrollIntoView({ block: "nearest" }); target?.focus();
-  }, [backupRequest]);
+  useEffect(() => { if (currentSection !== 'data') setConfirmation(''); }, [currentSection]);
   useEffect(() => {
     // Background status pushes update the panel; only an explicit action moves focus.
     if (!pendingFocus.current) return;
     pendingFocus.current = false;
     const failed = diagnosticsOpen ? firstFailedSyncStage(diagnostics) : null;
-    if (failed) queueMicrotask(() => document.getElementById(`sync-stage-${failed.id}`)?.focus());
+    if (failed) queueMicrotask(() => {
+      const target = document.getElementById(`sync-stage-${failed.id}`);
+      if (target && !target.closest('[hidden],[inert]')) target.focus();
+    });
   }, [diagnostics, diagnosticsOpen]);
   const lastSuccess = props.status.lastSuccessAt
     ? formatCopy(props.copy.syncLastSuccess, {
@@ -144,10 +142,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
       if (firstFailedSyncStage(createSyncDiagnosticSnapshot(next, props.runtime))) setDiagnosticsOpen(true);
       props.onStatus(next);
       const message = describeSync(props.copy, next);
-      setFeedback(message);
+      setFeedback(kind === "clear" ? "data" : "sync", message);
       props.onAnnounce(message);
     } catch {
-      setFeedback(props.copy.syncActionFailed);
+      setFeedback(kind === "clear" ? "data" : "sync", props.copy.syncActionFailed);
       props.onAnnounce(props.copy.syncActionFailed);
     } finally {
       actionInFlight.current = false;
@@ -165,7 +163,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
       if (firstFailedSyncStage(next)) setDiagnosticsOpen(true);
     } catch {
       if (announceFailure) {
-        setFeedback(props.copy.syncDiagnosticsRefreshFailed);
+        setFeedback("sync", props.copy.syncDiagnosticsRefreshFailed);
         props.onAnnounce(props.copy.syncDiagnosticsRefreshFailed);
       }
     } finally {
@@ -176,10 +174,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   const copyDiagnostics = async (): Promise<void> => {
     try {
       await navigator.clipboard.writeText(buildSyncDiagnosticReport(diagnostics));
-      setFeedback(props.copy.syncDiagnosticsCopied);
+      setFeedback("sync", props.copy.syncDiagnosticsCopied);
       props.onAnnounce(props.copy.syncDiagnosticsCopied);
     } catch {
-      setFeedback(props.copy.syncDiagnosticsCopyFailed);
+      setFeedback("sync", props.copy.syncDiagnosticsCopyFailed);
       props.onAnnounce(props.copy.syncDiagnosticsCopyFailed);
     }
   };
@@ -189,10 +187,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     setActionBusy(true);
     try {
       await props.onCheckUpdates();
-      setFeedback(props.copy.updatePageOpened);
+      setFeedback("about", props.copy.updatePageOpened);
       props.onAnnounce(props.copy.updatePageOpened);
     } catch {
-      setFeedback(props.copy.updatePageFailed);
+      setFeedback("about", props.copy.updatePageFailed);
       props.onAnnounce(props.copy.updatePageFailed);
     } finally {
       actionInFlight.current = false;
@@ -211,22 +209,12 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     : pendingAction === "connect" ? props.copy.syncStateAuthorizing
     : pendingAction === "clear" ? props.copy.syncClearing : props.copy.settingsWorking
     : props.status.state === "syncing" ? statusText : "";
-  const sections = [
-    ["display", "settings-display-title", props.copy.settingsGroupDisplay],
-    ["overview", "sync-title", props.copy.settingsGroupSync],
-    ["proxy", "settings-proxy-title", props.copy.settingsGroupApp],
-    ["data", "settings-advanced-toggle", props.copy.settingsGroupData]
-  ];
-  const navigateSection = (section: string, id: string): void => {
-    if (closeLocked) return;
-    if (section === "data") setDataOpen(true);
-    queueMicrotask(() => {
-      const target = document.getElementById(id);
-      if (!target) return;
-      // 只给本不可聚焦的标题补 tabIndex；<summary> 等原生可聚焦元素保持在 Tab 顺序里。
-      if (!target.matches("summary, button, a[href], input, select, textarea, [tabindex]")) target.tabIndex = -1;
-      target.scrollIntoView({ block: "start" }); target.focus({ preventScroll: true }); markSection(section);
-    });
+  const labels = settingsCategoryLabels(props.copy);
+  const navigateSection = (target: SettingsNavigationTarget): void => {
+    if (writes.current.local || writes.current.cloud) return;
+    if (resolveSettingsTarget(target).category === 'data') setDataOpen(true);
+    if (target === 'drive-diagnostics') setDiagnosticsOpen(true);
+    navigate(target);
   };
 
   return (
@@ -241,27 +229,38 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         </div>
         <button className="panel-close" type="button" title={props.copy.closeSettings} aria-label={props.copy.closeSettings} disabled={closeLocked} onClick={props.onClose}><CloseIcon /></button>
       </header>
-      <div className="settings-body" ref={bodyRef}>
+      <div className="settings-body">
         <nav className="settings-section-navigation" aria-label={props.copy.settingsSectionNavigation}>
-          <div className="settings-section-scroller">{sections.map(([section, id, label]) => <button type="button" key={section} data-settings-section={section}
-            aria-controls={id} aria-current={currentSection === section ? 'location' : undefined}
-            disabled={closeLocked} onClick={() => navigateSection(section, id)}>{label}</button>)}</div>
+          <div className="settings-section-scroller">{SETTINGS_CATEGORIES.map(category => <button type="button" key={category} data-settings-section={category}
+            aria-controls={`settings-category-${category}`} aria-current={currentSection === category ? 'location' : undefined}
+            disabled={closeLocked} onClick={() => navigateSection({ category })}>{labels[category]}</button>)}</div>
+          <select className="settings-category-select" aria-label={props.copy.settingsSectionNavigation} value={currentSection} disabled={closeLocked}
+            onChange={event => navigateSection({ category: event.target.value as typeof currentSection })}>
+            {SETTINGS_CATEGORIES.map(category => <option key={category} value={category}>{labels[category]}</option>)}
+          </select>
         </nav>
-        <div className="settings-group" role="group" aria-label={props.copy.settingsGroupDisplay}>
+        <div className="settings-grid" ref={bodyRef}>
+        <SettingsCategoryPanel category="appearance" active={currentSection === 'appearance'} title={labels.appearance}>
           <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
             following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
+        </SettingsCategoryPanel>
+        <SettingsCategoryPanel category="interaction" active={currentSection === 'interaction'} title={labels.interaction}>
           <NotificationSettings copy={props.copy} enabled={!!props.completionNotifications}
             busy={busy || closeLocked || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
             preferenceHint={props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}
             onChange={props.onCompletionNotificationsChange} onAnnounce={props.onAnnounce} />
           <SettingsCommandPaletteShortcut copy={props.copy} isMac={isMac} disabled={busy || closeLocked || !!props.operationBusy}
-            resetKey={localResetRevision} />
+            resetKey={localResetRevision} onFeedback={props.onAnnounce} />
           <SettingsGlobalPromptShortcut copy={props.copy} disabled={busy || closeLocked || props.operationBusy}
-            resetKey={localResetRevision} />
+            resetKey={localResetRevision} onFeedback={props.onAnnounce} />
           {props.confirmations && props.onConfirmationChange ? <SettingsConfirmations copy={props.copy} busy={busy || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
             confirmations={props.confirmations} onChange={props.onConfirmationChange} /> : null}
-        </div>
-        <div className="settings-group" role="group" aria-label={props.copy.settingsGroupSync}>
+          <div className="settings-card settings-actions">
+            <button type="button" className="settings-control" disabled={closeLocked || !props.onOpenShortcuts} onClick={props.onOpenShortcuts}>{props.copy.keyboardShortcuts}</button>
+            <button type="button" className="settings-control" disabled={closeLocked || !props.onOpenGuide} onClick={props.onOpenGuide}>{props.copy.gettingStarted}</button>
+          </div>
+        </SettingsCategoryPanel>
+        <SettingsCategoryPanel category="sync" active={currentSection === 'sync'} title={labels.sync}>
           <section className="settings-card sync-overview" aria-labelledby="sync-title">
             <div className="settings-description">
               <h1 id="sync-title">{props.copy.syncTitle}</h1>
@@ -288,7 +287,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
               ) : null}
             </div>
             <SettingsImageSync copy={props.copy} status={props.status} blocked={closeLocked} onStatus={props.onStatus}
-              onFeedback={message => { setFeedback(message); props.onAnnounce(message); }} />
+              onFeedback={message => { setFeedback("sync", message); props.onAnnounce(message); }} />
             <SyncDiagnosticsPanel
               copy={props.copy}
               snapshot={diagnostics}
@@ -303,13 +302,17 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             />
             <p className="sync-privacy">{props.copy.syncPrivacy}</p>
           </section>
-          <BackupCard syncStatus={props.status} onOpenSync={target => navigateSection("overview", target === "connection" ? "sync-title" : "question-image-sync-title")}
-            copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }} />
           {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} proxy={proxy} copy={props.copy} busy={busy} /> : null}
-        </div>
-        <div className="settings-group" role="group" aria-label={props.copy.settingsGroupApp}>
-          <SettingsProxy copy={props.copy} proxy={proxy} busy={busy || !!props.operationBusy} onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
-            onOpenSync={props.preferenceSync ? () => navigateSection("preferences", "settings-preference-sync-title") : undefined} />
+        </SettingsCategoryPanel>
+        <SettingsCategoryPanel category="backup" active={currentSection === 'backup'} title={labels.backup}>
+          <BackupCard syncStatus={props.status} onOpenSync={target => navigateSection(target === 'connection' ? 'connection' : 'image-sync')}
+            copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback("backup", message); props.onAnnounce(message); }} />
+        </SettingsCategoryPanel>
+        <SettingsCategoryPanel category="network" active={currentSection === 'network'} title={labels.network}>
+          <SettingsProxy copy={props.copy} proxy={proxy} busy={busy || !!props.operationBusy} onFeedback={(message) => { setFeedback("network", message); props.onAnnounce(message); }}
+            onOpenSync={props.preferenceSync ? () => navigateSection('preference-sync') : undefined} />
+        </SettingsCategoryPanel>
+        <SettingsCategoryPanel category="about" active={currentSection === 'about'} title={labels.about}>
           <section className="settings-card settings-row update-card" aria-labelledby="app-updates-title">
             <div className="settings-description">
               <h2 id="app-updates-title">{props.copy.appUpdates}</h2>
@@ -318,18 +321,19 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             </div>
             <button type="button" className="settings-control" disabled={busy || !props.onCheckUpdates} onClick={() => { void checkUpdates(); }}>{props.copy.checkForUpdates}</button>
           </section>
-        </div>
-        <details className="settings-group settings-data-group settings-advanced" open={dataOpen}>
+        </SettingsCategoryPanel>
+        <SettingsCategoryPanel category="data" active={currentSection === 'data'} title={labels.data}>
+        <details className="settings-data-group settings-advanced" open={dataOpen}>
           <summary id="settings-advanced-toggle" onClick={(event) => { event.preventDefault(); if (!clearingCloud && !localWriting) setDataOpen(value => !value); }}>{props.copy.settingsAdvancedData}</summary>
           <p className="settings-advanced-hint">{props.copy.settingsAdvancedHint}</p>
           <LocalDataCard
             copy={props.copy}
             busy={busy}
             onBusy={(value) => { setWriteBlocking("local", value); setActionBusy(value); }}
-            onFeedback={(message) => { setFeedback(message); props.onAnnounce(message); }}
+            onFeedback={(message) => { setFeedback("data", message); props.onAnnounce(message); }}
             onStatus={props.onStatus}
             onReset={() => { setLocalResetRevision(value => value + 1); props.onLocalReset?.(); }}
-            onBackup={() => setBackupRequest(value => value + 1)}
+            onBackup={() => navigateSection('backup-export')}
           />
           <section className="settings-card settings-row danger-zone cloud-data-row" aria-labelledby="clear-sync-title">
             <div className="settings-description">
@@ -360,8 +364,10 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             </div>
           </section>
         </details>
+        </SettingsCategoryPanel>
+        </div>
       </div>
-      <div className="archive-status" role="status" aria-live="polite">{progress || feedback}</div>
+      <div className="archive-status" role="status" aria-live="polite">{progress || feedback[currentSection]}</div>
     </main>
   );
 }

@@ -93,6 +93,7 @@ let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders
   drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
   cancelBackup: async () => {},
+  commandPaletteShortcutState: async () => ({ mode: 'standard', revision: 1, error: null }), onCommandPaletteShortcut: () => () => {},
   ...desktopToolsShellStubs(),
   ...proxyShellStubs(query.get('surface') === 'proxy-edit' ? proxyStateFixture({ formValue: customProxy, applied: customProxy }) : undefined),
   getLocalDataStats: async () => dataStats,
@@ -137,6 +138,7 @@ function Fixture(): React.JSX.Element {
     }, onOpen: () => setPanel(null), onClose: () => queueMicrotask(() => promptRef.current?.focus()), onWorkspace: state => setSelected(state.selectedSites), onAnnounce: noop });
   if (query.get('surface') === 'settings') return <SettingsWorkspace copy={copy} locale={locale}
     status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={() => { document.body.dataset.settingsClosed = 'true'; }}
+    onOpenShortcuts={noop} onOpenGuide={noop} confirmations={{ sitePageCloseConfirm: true, newSessionConfirm: true }} onConfirmationChange={noop}
     onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications}
     preferenceSync={{ snapshot: preferences,
       onFollowingChange: async (group, enabled) => setPreferences(p => ({ ...p, following: { ...p.following, [group]: enabled } })),

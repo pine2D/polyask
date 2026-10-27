@@ -1,57 +1,71 @@
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
 const { join } = require('node:path');
 const { writeFileSync } = require('node:fs');
 const { nativeTheme } = require('electron');
 const accessibility = require('./ui-accessibility.cjs');
+const categories = ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about'];
 
 module.exports = async ({ win, output, run, wait, paint, shot }) => {
   const reports = [];
-  win.webContents.setZoomFactor(1);
-  for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const width of [640, 960, 1280]) {
-    nativeTheme.themeSource = width === 1280 ? 'light' : 'dark';
-    win.setContentSize(width, width === 960 ? 680 : 900);
-    await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, density: width === 1280 ? 'compact' : 'comfortable' } });
-    await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "display"');
-    for (const section of ['proxy', 'overview']) {
-      const target = await run(`(() => { const e=document.querySelector('[data-settings-section=${section}]'); e.scrollIntoView({block:'nearest',inline:'nearest'}); const r=e.getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}; })()`);
-      for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, ...target, button: 'left', clickCount: 1 });
-      await wait(`document.querySelector('[aria-current=location]')?.dataset.settingsSection === '${section}'`);
-      await paint(); await paint();
-      assert.equal(await run('document.querySelector("[aria-current=location]").dataset.settingsSection'), section, 'a clamped jump keeps its explicit section');
-      assert.equal(await run('document.activeElement.id'), section === 'proxy' ? 'settings-proxy-title' : 'sync-title');
-      if (width === 960 && section === 'proxy') await shot(`settings-proxy-position-${locale}`);
+  const key = async keyCode => { for (const type of ['keyDown', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode }); await paint(); };
+  const navigate = async category => {
+    const zoom = win.webContents.getZoomFactor(); win.focus();
+    const narrow = await run('getComputedStyle(document.querySelector(".settings-category-select")).display !== "none"');
+    if (narrow) {
+      const point = await run('(()=>{const r=document.querySelector(".settings-category-select").getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}})()');
+      for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, x: Math.round(point.x * zoom), y: Math.round(point.y * zoom), button: 'left', clickCount: 1 });
+      await paint();
+      if (process.platform === 'linux') {
+        execFileSync('xdotool', ['key', '--clearmodifiers', 'Home', ...Array(categories.indexOf(category)).fill('Down'), 'Return']);
+      } else {
+        await key('Home');
+        for (let index = 0; index < categories.indexOf(category); index++) await key('Down');
+        await key('Return');
+      }
+    } else {
+      const point = await run(`(() => { const e=document.querySelector('[data-settings-section=${category}]'); e.scrollIntoView({block:'nearest'}); const r=e.getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}; })()`);
+      for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, x: Math.round(point.x * zoom), y: Math.round(point.y * zoom), button: 'left', clickCount: 1 });
     }
-    assert.equal((await accessibility(win)).filter(node => node.role === 'status').length, 1, 'settings feedback remains exposed as a status');
-    const point = await run(`(() => { const e=document.querySelector('[data-settings-section=display]'); e.scrollIntoView({block:'nearest',inline:'nearest'}); const r=e.getBoundingClientRect(); return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)}; })()`);
-    for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, ...point, button: 'left', clickCount: 1 });
-    await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "display"');
-    await wait('document.activeElement.id === "settings-display-title"');
+    try { await wait(`document.querySelector('[data-settings-category]:not([hidden])')?.dataset.settingsCategory === '${category}'`); }
+    catch (error) {
+      console.log('Category input failure', await run('({current:document.querySelector(".settings-category-select").value,focus:document.activeElement?.id,width:innerWidth,zoom:devicePixelRatio})'));
+      await shot('settings-category-input-failure'); throw error;
+    }
     await paint();
-    assert.equal(await run('document.querySelectorAll("[aria-current=location]").length'), 1);
-    if (locale === 'zh-CN') await shot(`settings-current-${width}`);
-    await run(`(() => { document.querySelector('.settings-toolbar button').focus(); const body=document.querySelector('.settings-body');
-      body.scrollTop += document.querySelector('#backup-card-title').getBoundingClientRect().top-body.getBoundingClientRect().top-parseFloat(getComputedStyle(body).scrollPaddingTop); })()`);
-    await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "overview"');
-    assert.equal(await run('document.activeElement === document.querySelector(".settings-toolbar button")'), true, 'manual scrolling never steals keyboard focus');
-    await run('document.querySelector(".settings-body").scrollTop = document.querySelector(".settings-body").scrollHeight');
-    await paint(); await paint();
-    assert.notEqual(await run('document.querySelector("[aria-current=location]").dataset.settingsSection'), 'data', 'the folded last section does not take over the visible content');
-    const result = await run(`(() => { const nav=document.querySelector('.settings-section-scroller').getBoundingClientRect(), active=document.querySelector('[aria-current=location]').getBoundingClientRect();
-      const button=document.querySelector('[aria-current=location]'), section=document.getElementById(button.getAttribute('aria-controls')).closest('.settings-group').getBoundingClientRect(), body=document.querySelector('.settings-body').getBoundingClientRect();
-      return {left:active.left,right:active.right,navLeft:nav.left,navRight:nav.right,current:button.dataset.settingsSection,sectionTop:section.top,sectionBottom:section.bottom,navBottom:nav.bottom,bodyBottom:body.bottom,sectionVisible:section.bottom>nav.bottom&&section.top<body.bottom}; })()`);
-    assert.ok(result.left >= result.navLeft - 1 && result.right <= result.navRight + 1, 'the current section stays visible in the horizontal navigation');
-    assert.equal(result.sectionVisible, true, `passive tracking identifies visible section content: ${JSON.stringify({locale,width,...result})}`);
-    reports.push({ locale, width, ...result });
-    if (width === 1280) {
-      win.setContentSize(640, 900); await paint(); await paint();
-      const resized = await run(`(() => { const nav=document.querySelector('.settings-section-scroller').getBoundingClientRect(), button=document.querySelector('[aria-current=location]'), active=button.getBoundingClientRect();
-        const section=document.getElementById(button.getAttribute('aria-controls')).closest('.settings-group').getBoundingClientRect(), body=document.querySelector('.settings-body').getBoundingClientRect();
-        return {left:active.left,right:active.right,navLeft:nav.left,navRight:nav.right,current:button.dataset.settingsSection,sectionVisible:section.bottom>nav.bottom && section.top<body.bottom}; })()`);
-      // Reflow can change the visible section; the marker must follow it and remain visible.
-      assert.ok(resized.sectionVisible && resized.left >= resized.navLeft - 1 && resized.right <= resized.navRight + 1, 'resizing reveals the current navigation item after reflow');
-      reports[reports.length - 1].resized = resized;
+  };
+  for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const density of ['compact', 'comfortable']) {
+    for (const theme of ['light', 'dark']) for (const width of [480, 960, 1280]) for (const zoom of [1, 1.5]) {
+      nativeTheme.themeSource = theme; win.webContents.setZoomFactor(zoom); win.setContentSize(width, 900);
+      await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, density } });
+      await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "appearance"');
+      const result = { locale, density, theme, width, zoom, categories: [] };
+      for (const category of [...categories.slice(1), 'appearance']) {
+        await navigate(category);
+        assert.equal(await run('document.activeElement.id'), `settings-category-${category}`);
+        const geometry = await run(`(() => { const panel=document.querySelector('[data-settings-category]:not([hidden])');
+          const elements=[...panel.querySelectorAll('.settings-card,button,input,select,textarea,.settings-control-hint')].filter(e=>e.getClientRects().length);
+          return {visible:document.querySelectorAll('[data-settings-category]:not([hidden])').length,
+            hidden:[...document.querySelectorAll('[data-settings-category][hidden]')].every(e=>e.inert && !e.getClientRects().length),
+            fit:elements.every(e=>e.scrollWidth<=e.clientWidth+2&&e.getBoundingClientRect().right<=innerWidth+1&&e.getBoundingClientRect().left>=0),
+            nav:document.querySelector('.settings-category-select').value, width:innerWidth}; })()`);
+        assert.equal(geometry.visible, 1); assert.equal(geometry.hidden, true);
+        assert.equal(geometry.fit, true, `category layout ${JSON.stringify({ ...result, category, geometry })}`);
+        assert.equal(geometry.nav, category);
+        if (locale === 'zh-CN' && density === 'compact' && zoom === 1 && width !== 960 && ['appearance', 'interaction', 'sync'].includes(category)) await shot(`settings-${category}-${theme}-${width}`);
+        await run('document.querySelector(".settings-toolbar button").focus();document.querySelector(".settings-grid").scrollTop+=100');
+        assert.equal(await run('document.activeElement===document.querySelector(".settings-toolbar button")'), true);
+        assert.equal(await run('document.querySelector("[aria-current=location]").dataset.settingsSection'), category, 'scrolling cannot select another category');
+        result.categories.push(category);
+
+      }
+      await key('Tab');
+      assert.equal(await run('!!document.activeElement.closest("[hidden],[inert]")'), false, 'Tab does not enter a hidden category');
+      assert.equal((await accessibility(win)).filter(node => node.role === 'status').length, 1);
+      reports.push(result);
     }
   }
+  win.webContents.setZoomFactor(1);
   for (const locale of ['zh-CN', 'zh-TW', 'en']) {
     win.setContentSize(1280, 900);
     await win.loadFile(join(output, 'index.html'), { query: { locale } });

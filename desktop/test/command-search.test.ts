@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { searchCommands } from "../src/renderer/command-search";
-import { COMMANDS } from "../src/shared/commands";
+import { COMMANDS, resolveCommands } from "../src/shared/commands";
 import { getCopy } from "../src/shared/copy";
 import type { ActiveWorkspaceGroup } from "../src/shared/workspace";
 
@@ -36,14 +36,11 @@ test("saved groups participate as dynamic commands", () => {
   assert.match(result[0]?.label ?? "", /写作搭档/);
 });
 
-test("command search matches accelerators and aliases without reordering", () => {
+test("command search matches the effective accelerator in registry order and excludes removed aliases", () => {
   const copy = getCopy("en");
-  assert.deepEqual(
-    searchCommands("alt+k", COMMANDS, copy).map((item) => item.id),
-    ["open-command-palette"]
-  );
-  assert.deepEqual(
-    searchCommands("f1", COMMANDS, copy).map((item) => item.id),
-    ["open-command-palette"]
-  );
+  assert.deepEqual(searchCommands("ctrl+shift+p", COMMANDS, copy).map(item => item.id),
+    ['open-command-palette', 'next-page', 'previous-page']);
+  for (const old of ['alt+k', 'f1']) assert.deepEqual(searchCommands(old, COMMANDS, copy).map(item => item.id), []);
+  assert.equal(searchCommands('ctrl+p', resolveCommands('obsidian'), copy).some(item => item.id === 'open-command-palette'), true);
+  assert.equal(searchCommands('ctrl+shift+p', resolveCommands('obsidian'), copy).some(item => item.id === 'open-command-palette'), false);
 });

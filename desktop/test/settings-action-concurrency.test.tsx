@@ -7,7 +7,7 @@ for (const action of ['sync', 'connect', 'disconnect', 'update'] as const) {
   test(`${action}: settings ignore same-turn duplicates and recover after rejection`, async () => {
     const pending: { resolve: (value: typeof settingsStatus) => void; reject: () => void }[] = [];
     const perform = () => new Promise<typeof settingsStatus>((resolve, reject) => pending.push({ resolve, reject: () => reject(Error('fixture-failed')) }));
-    const h = await mountSettings({ status: { ...settingsStatus, connected: action !== 'connect' },
+    const h = await mountSettings({ initialSection: action === 'update' ? 'about' : 'sync', status: { ...settingsStatus, connected: action !== 'connect' },
       ...(action === 'update' ? { onCheckUpdates: async () => { await perform(); } } : {}) });
     settingsShell({ syncNow: perform, connectSync: perform, disconnectSync: perform });
     try {
@@ -37,7 +37,7 @@ for (const first of ['sync', 'update'] as const) {
       calls.push(kind);
       return new Promise<typeof settingsStatus>(resolve => finish.push(() => resolve(settingsStatus)));
     };
-    const h = await mountSettings({ onCheckUpdates: async () => { await perform('update'); } });
+    const h = await mountSettings({ initialSection: first === 'sync' ? 'sync' : 'about', onCheckUpdates: async () => { await perform('update'); } });
     settingsShell({ syncNow: () => perform('sync'), disconnectSync: () => perform('disconnect') });
     try {
       const second = first === 'sync' ? 'update' : 'disconnect';
@@ -46,6 +46,7 @@ for (const first of ['sync', 'update'] as const) {
       await act(async () => { primary.click(); secondary.click(); });
       assert.deepEqual(calls, [first]);
       await act(async () => finish[0]());
+      await h.click(h.document.querySelector<HTMLElement>(`[data-settings-section=${second === 'update' ? 'about' : 'sync'}]`)!);
       await h.click(secondary);
       assert.deepEqual(calls, [first, second], 'the next action becomes available after completion');
       await act(async () => finish[1]());
