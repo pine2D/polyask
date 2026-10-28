@@ -68,8 +68,24 @@ test('native input binding suppresses menu accelerators during IME and owns only
   send(); assert.equal(prevented, 1); assert.equal(ignored.at(-1), false);
   send({ shift: false }); assert.equal(prevented, 1);
   mode = 'obsidian'; send({ shift: false }); assert.equal(prevented, 2);
-  send(); send({ type: 'keyUp', shift: false }); assert.equal(prevented, 2);
+  send(); send({ type: 'keyUp', shift: false }); assert.equal(prevented, 3);
   assert.deepEqual(commands, ['open-command-palette', 'open-command-palette']);
   send({ isComposing: true }); cleanup(); assert.equal(ignored.at(-1), false);
   assert.equal(contents.listenerCount('before-input-event'), 0);
+});
+
+test('reserved Alt input consumes the full key sequence and never repeats a toggle', () => {
+  const commands: string[] = []; let prevented = 0;
+  const contents = Object.assign(new EventEmitter(), { setIgnoreMenuShortcuts: () => {}, isDestroyed: () => false });
+  const cleanup = bindApplicationCommandInput(contents as any, () => 'standard', id => commands.push(id));
+  const input = { type: 'keyDown', key: 'q', code: 'KeyQ', control: false, meta: false, alt: true, shift: false };
+  const send = (patch = {}) => contents.emit('before-input-event', { preventDefault: () => prevented++ }, { ...input, ...patch });
+  send(); send({ isAutoRepeat: true }); send({ type: 'keyUp', alt: false });
+  assert.equal(prevented, 3, 'no down, repeat or release leaks into the site');
+  assert.equal(commands.join(','), 'focus-prompt');
+  send(); send({ type: 'keyUp' });
+  assert.equal(commands.join(','), 'focus-prompt,focus-prompt', 'a new physical press toggles again');
+  send({ isComposing: true }); send({ modifiers: ['altGr'], control: true });
+  assert.equal(prevented, 5, 'IME and AltGr remain page input');
+  cleanup(); assert.equal(contents.listenerCount('before-input-event'), 0);
 });

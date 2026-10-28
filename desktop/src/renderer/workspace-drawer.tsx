@@ -45,9 +45,12 @@ interface WorkspaceDrawerProps {
 export function WorkspaceDrawer(props: WorkspaceDrawerProps): React.JSX.Element {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   useEffect(() => {
+    if (props.open) tabRefs.current[props.state.tab === 'sites' ? 0 : 1]?.focus({ preventScroll: true });
+  }, [props.open, props.state.tab]);
+  useEffect(() => {
     const escape = (event: KeyboardEvent) => {
       if (!props.open || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
-      if (event.key === "Escape") props.onStateChange(escapeWorkspacePanel(props.state));
+      if (event.key === "Escape") { event.preventDefault(); props.onStateChange(escapeWorkspacePanel(props.state)); }
     };
     window.addEventListener("keydown", escape);
     return () => window.removeEventListener("keydown", escape);

@@ -9,7 +9,7 @@ import type { ArchiveService } from "./archive-service";
 import { QuestionArchiveService } from "./question-archive-service";
 import { SITES } from "./sites";
 
-const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-panel", "polyask:question-legacy", "polyask:question-archive", 'polyask:question-run-progress'] as const;
+const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-legacy", "polyask:question-archive", 'polyask:question-run-progress'] as const;
 export function registerQuestionHistoryIpc(options: {
   questions: QuestionHistoryService; archives: ArchiveService; manager: ViewManager; workspace: WorkspaceService; gate: OperationGate;
   flush: (sites: readonly import("../shared/contracts").SiteKey[]) => Promise<void>;
@@ -43,12 +43,11 @@ export function registerQuestionHistoryIpc(options: {
   handle(channels[3], value => gate.run(() => restore.restore(id(value?.token), value?.confirmed === true)));
   handle(channels[4], () => restore.cancel());
   handle(channels[5], value => { restore.cancel(); return questions.delete(id(value)); });
-  handle(channels[6], value => { if (typeof value !== "boolean") throw new Error("invalid_question"); manager.historyAccess.setPanelOpen(value); });
-  handle(channels[7], value => {
+  handle(channels[6], value => {
     if (value && ((value.query !== undefined && typeof value.query !== "string") || (value.cursor !== undefined && typeof value.cursor !== "string"))) throw new Error("invalid_question_query");
     return questions.repository.legacy(value ?? {});
   });
-  handle(channels[8], value => archive.create(value));
-  handle(channels[9], value => questions.getRunProgress(id(value)));
+  handle(channels[7], value => archive.create(value));
+  handle(channels[8], value => questions.getRunProgress(id(value)));
   return () => { questions.setFailureHandler(null); questions.setProgressHandler(null); restore.cancel(); for (const channel of channels) ipcMain.removeHandler(channel); };
 }

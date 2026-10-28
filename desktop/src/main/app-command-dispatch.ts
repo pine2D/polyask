@@ -37,7 +37,7 @@ export function dispatchAppCommand(id: CommandId, manager: ViewManager | null, w
   }
   if (!window || window.isDestroyed()) return;
   // DOM focus alone cannot take keyboard input from a native site view.
-  if (["focus-prompt", "edit-prompt", "find-page", "open-command-palette", "open-shortcuts", "open-getting-started"].includes(id)) {
+  if (["focus-prompt", "edit-prompt", "find-page"].includes(id)) {
     window.webContents.focus();
   }
   window.webContents.send("polyask:command", id);

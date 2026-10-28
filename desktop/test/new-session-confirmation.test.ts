@@ -5,6 +5,7 @@ import ts from "typescript";
 import { readSource } from "./fixtures";
 import { confirmAndStartNewSession } from "../src/renderer/new-session-action";
 import { getCopy } from "../src/shared/copy";
+import { NativePanelFocus } from '../src/main/native-panel-focus';
 
 // 执行 App 的真实入口；只替换 Electron/React 边界，覆盖确认前后的原生视图切换时序。
 for (const approved of [false, true]) {
@@ -85,18 +86,19 @@ test("a pending auxiliary operation cannot be covered by a new-session confirmat
 });
 
 test("confirmation surface reaches the manager only through a trusted shell and takes keyboard focus", () => {
-  const source = readSource("src/main/shell-ipc.ts");
-  const body = source.slice(source.indexOf('  ipcMain.on("polyask:set-surface"'), source.indexOf('  ipcMain.on("polyask:set-completion-notifications"'));
+  const source = readSource("src/main/shell-panel-ipc.ts");
+  const body = source.slice(source.indexOf("  ipc.on('polyask:set-surface'"), source.indexOf("  ipc.on('polyask:set-drawer-open'"));
   let handler: (event: { trusted: boolean }, value: unknown) => void;
   const events: string[] = [];
   vm.runInNewContext(ts.transpileModule(body, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, {
-    ipcMain: { on: (_channel: string, callback: typeof handler) => { handler = callback; } },
-    trustedShell: (event: { trusted: boolean }) => event.trusted,
+    ipc: { on: (_channel: string, callback: typeof handler) => { handler = callback; } },
+    trusted: (event: { trusted: boolean }) => event.trusted,
     manager: { setSurface: (surface: string) => events.push(surface) },
-    window: { webContents: { focus: () => events.push("focus-shell") } }
+    focus: new NativePanelFocus({ capture: () => null, activate: () => events.push("focus-shell"), restore: () => false })
   });
   handler!({ trusted: false }, "confirmation");
   handler!({ trusted: true }, "invalid");
+  handler!({ trusted: true }, ["confirmation"]);
   assert.deepEqual(events, []);
   handler!({ trusted: true }, "confirmation");
   assert.deepEqual(events, ["confirmation", "focus-shell"]);

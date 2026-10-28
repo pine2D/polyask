@@ -40,7 +40,7 @@ test("application menu offers a keyboard route back to the prompt", () => {
   // 翻页/换焦点的加速器登记在 COMMANDS 表里（菜单与快捷键速查同源），不再在菜单模板里手写
   assert.match(commands, /CmdOrCtrl\+Shift\+PageDown/);
   assert.match(commands, /CmdOrCtrl\+Shift\+PageUp/);
-  assert.match(commands, /Alt\+W/);
+  assert.doesNotMatch(commands, /Alt\+W/);
   assert.match(main, /pageRelative/);
   assert.match(main, /focusRelative/);
   assert.match(commands, /Alt\+1/);
@@ -79,7 +79,8 @@ test("the shortcut reference reads the real application menu", () => {
   assert.match(preload, /polyask:menu-shortcuts/);
   assert.match(renderer, /useCommandDiscovery\(/);
   assert.match(readSource('src/renderer/use-command-discovery.ts'), /shell\.menuShortcuts\(\)/);
-  assert.match(palette, /menuShortcutItems/);
+  assert.match(palette, /shortcutReference/);
+  assert.match(readSource('src/renderer/shortcut-reference.ts'), /menuShortcutItems/);
 });
 
 test("every menu accelerator comes from the shared command table", () => {
@@ -96,8 +97,8 @@ test("every navigation command a menu exposes is reachable from the renderer", (
   const main = readSource("src/main/index.ts") + readSource("src/main/app-command-dispatch.ts")
     + readSource("src/main/application-command-routing.ts");
 
-  // 命令面板与快捷键速查都按「渲染层是否给了动作」过滤（index.tsx 的 availableCommands），
-  // 所以纯主进程处理的命令必须同时有渲染层入口，否则用户在速查里根本看不到它。
+  // 命令面板按「渲染层是否给了动作」过滤，速查用它标记可用状态；
+  // 所以纯主进程处理的命令必须同时有渲染层入口。
   for (const id of ["next-page", "previous-page", "next-site", "previous-site"]) {
     assert.ok(renderer.includes(`"${id}"`), `${id} 缺少渲染层动作，快捷键速查会漏掉它`);
     assert.ok(main.includes(`"${id}"`), `${id} 缺少主进程分发`);
@@ -396,7 +397,7 @@ test("workspace surfaces detach site views without destroying their web contents
   assert.match(detach, /removeChildView/);
   assert.doesNotMatch(implementation, /webContents\.close/);
   assert.match(readSource("src/shared/protocol.ts"), /"commands"/);
-  assert.match(readSource("src/main/shell-ipc.ts"), /"commands"/);
+  assert.match(readSource("src/main/shell-panel-ipc.ts"), /'commands'/);
 });
 
 test("site health and guarded reload cross the trusted typed bridge", () => {

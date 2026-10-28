@@ -4,14 +4,17 @@ const { join } = require('node:path');
 const assert = require('node:assert/strict');
 
 module.exports = async ({ tools, win, profile }) => {
-  const { run, wait } = tools;
+  const { run, wait, click } = tools;
   // Chromium selects generated PNGs from the isolated temporary profile only.
   const pixel = nativeImage.createFromBitmap(Buffer.from([40, 80, 180, 255]), { width: 1, height: 1 });
   const debug = win.webContents.debugger; debug.attach('1.3');
+  await debug.sendCommand('Page.setInterceptFileChooserDialog', { enabled:true });
   let serial = 0;
   const select = async () => {
     const path = join(profile, `generated-attachment-${++serial}.png`);
     fs.writeFileSync(path, pixel.toPNG());
+    await click('.image-trigger');
+    if (serial > 1) await click('.image-replace');
     const { root } = await debug.sendCommand('DOM.getDocument');
     const { nodeId } = await debug.sendCommand('DOM.querySelector', { nodeId: root.nodeId, selector: 'input[name=images]' });
     await debug.sendCommand('DOM.setFileInputFiles', { nodeId, files: [path] });

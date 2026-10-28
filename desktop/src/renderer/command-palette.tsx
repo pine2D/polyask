@@ -7,7 +7,8 @@ import type { PromptLibraryState } from "../shared/prompt-library";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { shortcutLabel } from "./shortcut-label";
 import { CloseIcon } from "./icons";
-import { commandItems, filterPaletteCommands, menuShortcutItems, paletteGroupLabel, promptShortcutItems, siteZoomShortcutItems, searchCommands, type PaletteCommand } from "./command-search";
+import { filterPaletteCommands, paletteGroupLabel, searchCommands, type PaletteCommand } from "./command-search";
+import { shortcutReference } from './shortcut-reference';
 import { pageTabKeyAction, paletteKeyAction } from "./keyboard";
 import { PromptLibrary } from "./prompt-library";
 import { GettingStarted } from "./getting-started";
@@ -19,6 +20,8 @@ const MODE_LABEL_KEYS = { commands: "commandPalette", library: "promptLibrary", 
 interface CommandPaletteProps {
   readonly copy: DesktopCopy;
   readonly commands: readonly CommandDescriptor[];
+  readonly shortcutCommands?: readonly CommandDescriptor[];
+  readonly pageCount?: number;
   readonly menuShortcuts: readonly MenuShortcut[];
   readonly groups: readonly ActiveWorkspaceGroup[];
   readonly library: PromptLibraryState;
@@ -53,11 +56,9 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   }), [props.commands, props.copy, props.groups, props.isMac, query]);
   // 速查包含应用命令、提问框/站点的上下文键位，以及真实菜单里的其余快捷键。
   // 上下文键位与菜单参考项不带执行 ID，避免在面板内触发实际操作。
-  const shortcuts = useMemo(() => {
-    const listed = [...commandItems(props.commands, props.copy, { isMac: props.isMac })
-      .filter((item) => item.accelerator || item.aliases.length), ...promptShortcutItems(props.copy), ...siteZoomShortcutItems(props.copy)];
-    return [...listed, ...menuShortcutItems(props.menuShortcuts, listed, props.isMac)];
-  }, [props.commands, props.copy, props.isMac, props.menuShortcuts]);
+  const shortcuts = useMemo(() => shortcutReference(props.commands, props.copy, props.menuShortcuts,
+    props.isMac, props.shortcutCommands, props.pageCount),
+  [props.commands, props.copy, props.isMac, props.menuShortcuts, props.shortcutCommands, props.pageCount]);
   const filteredShortcuts = useMemo(() => filterPaletteCommands(shortcutQuery, shortcuts, props.copy, props.isMac),
     [shortcutQuery, shortcuts, props.copy, props.isMac]);
   const visible = props.mode === "commands" ? results : filteredShortcuts;
@@ -82,7 +83,7 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   }, [props.onClose]);
 
   const run = (item: PaletteCommand | undefined): void => {
-    if (!item) return;
+    if (!item || item.unavailable) return;
     if (item.groupId) props.onApplyGroup(item.groupId);
     else if (item.commandId) props.onExecute(item.commandId);
   };
@@ -163,13 +164,14 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
               id={`command-option-${index}`}
               role="option"
               aria-selected={index === activeIndex}
+              aria-disabled={item.unavailable ? true : undefined}
               className={index === activeIndex ? "active" : ""}
               key={item.id}
               onMouseEnter={() => setActiveIndex(index)}
               onFocus={() => setActiveIndex(index)}
               onClick={() => run(item)}
             >
-              <span><strong>{item.label}</strong><small>{paletteGroupLabel(props.copy, item.group)}</small></span>
+              <span><strong>{item.label}</strong><small>{paletteGroupLabel(props.copy, item.group)}{item.unavailable ? ` · ${item.unavailable}` : ''}</small></span>
               {shortcutText(item, props.isMac) ? <kbd>{shortcutText(item, props.isMac)}</kbd> : null}
             </button>
           )) : <p className="command-empty">{shortcutMode ? props.copy.shortcutSearchEmpty : props.copy.commandSearchEmpty}</p>}

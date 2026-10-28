@@ -18,6 +18,8 @@ export { createArchiveRecord } from '../../src/shared/archive';
 export { getCopy } from '../../src/shared/copy';
 export { SITES } from '../../src/main/sites';
 export { applicationMenu } from '../../src/main/application-menu';
+export { bindApplicationCommandInput } from '../../src/main/application-command-routing';
+export { registerShellPanelIpc } from '../../src/main/shell-panel-ipc';
 export { dispatchAppCommand } from '../../src/main/app-command-dispatch';
 export { runViewMenuAction } from '../../src/main/view-menu-actions';
 

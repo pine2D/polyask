@@ -43,10 +43,11 @@ app.whenReady().then(async () => {
   });
   const views = win.contentView.children.filter(view => view.webContents && view.webContents !== win.webContents);
   const nativeCommands = [];
+  const dispatch = id => { nativeCommands.push(id); services.dispatchAppCommand(id, manager, win); };
+  for (const contents of [win.webContents, ...views.map(view => view.webContents)])
+    services.bindApplicationCommandInput(contents, () => 'standard', dispatch);
   Menu.setApplicationMenu(Menu.buildFromTemplate(services.applicationMenu(process.platform, getCopy(locale),
-    manager.getDisplayPreferences(), () => {}, id => {
-      nativeCommands.push(id); services.dispatchAppCommand(id, manager, win);
-    }, 'PolyAsk native fixture', action => {
+    manager.getDisplayPreferences(), () => {}, dispatch, 'PolyAsk native fixture', action => {
       nativeCommands.push(`view:${action}`);
       services.runViewMenuAction(action, manager, win.webContents, require('electron').webContents.getFocusedWebContents());
     })));
@@ -96,12 +97,12 @@ app.whenReady().then(async () => {
     forbidden++; throw Error('native_fixture_disallows_site_send');
   });
   registerWorkspaceSelectionIpc(ipcMain, workspace, trusted, () => workspace.getState());
+  services.registerShellPanelIpc(ipcMain, win, manager, trusted);
   for (const [channel, action] of [
     ['set-composer-expanded', value => manager.setComposerExpanded(value)],
-    ['set-drawer-open', value => manager.setDrawerOpen(value)],
     ['set-completion-notifications', value => preferences.set('completionNotifications', value)],
     ['set-layout', value => { manager.setLayout(value.mode, value.focused); preferences.set('layoutMode', value.mode); }],
-    ['set-surface', value => { surface = value; manager.setSurface(value); if (value === 'confirmation') win.webContents.focus(); }]
+    ['set-surface', value => { surface = value; }]
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (trusted(event)) action(value); });
   await win.loadFile(join(output, 'index.html')); win.focus(); win.webContents.focus();
   await wait('!!document.querySelector("textarea[name=prompt]")');
@@ -113,15 +114,18 @@ app.whenReady().then(async () => {
   const closeSettings = async () => { await click('.settings-toolbar .panel-close'); await wait('!!document.querySelector("textarea[name=prompt]")'); };
   if (phase === 'write') {
     await openSettings();
+    await click('[data-settings-section=sync]');
     for (const group of ['display', 'layout', 'siteZoom']) for (const value of ['shared', 'local', 'shared']) {
       await click(`input[name="settings-follow-${group}"][value="${value}"]`);
       await wait(`document.querySelector('input[name="settings-follow-${group}"][value="${value}"]').checked &&
         !document.querySelector('input[name="settings-follow-${group}"][value="${value}"]').disabled`);
       assert.equal(preferences.snapshot().following[group], value === 'shared');
     }
+    await click('[data-settings-section=interaction]');
     await click('input[name="completion-notifications"]');
     await wait('document.querySelector("input[name=completion-notifications]").checked');
     assert.equal(preferences.snapshot().values.completionNotifications, true);
+    await click('[data-settings-section=sync]');
     await click('input[name="draft-sync"]');
     await wait('document.querySelector("input[name=draft-sync]").checked && !document.querySelector("input[name=draft-sync]").disabled');
     await closeSettings();

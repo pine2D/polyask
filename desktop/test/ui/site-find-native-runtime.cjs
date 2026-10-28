@@ -60,9 +60,9 @@ app.whenReady().then(async () => {
   ipcMain.handle('polyask:set-display', (_event, value) => {
     manager.setDisplayPreferences(value); win.webContents.send('polyask:display-preferences', value); return value;
   });
-  ipcMain.handle('polyask:site-history-state', () => ({}));
-  ipcMain.handle('polyask:menu-shortcuts', () => []);
-  ipcMain.handle('polyask:question-panel', (_event, value) => manager.historyAccess.setPanelOpen(value));
+  const disposePanels = services.registerShellPanelIpc(ipcMain, win, manager, trusted);
+  const disposeNavigation = services.registerWorkbenchNavigationIpc(ipcMain, manager, trusted);
+  ipcMain.handle('polyask:menu-shortcuts', () => services.applicationMenuShortcuts());
   ipcMain.handle('polyask:question-list', () => ({ items:[], cursor:null }));
   ipcMain.handle('polyask:question-legacy', () => ({ items:[], cursor:null }));
   const preferences = () => ({ deviceId:'native', values:services.DEFAULT_PREFERENCE_VALUES,
@@ -71,9 +71,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('polyask:draft-list', () => ({ epoch:0, deviceId:'native', drafts:[] }));
   ipcMain.handle('polyask:proxy-state', () => services.proxyStateFixture());
   for (const [channel, action] of [
-    ['set-composer-expanded', value => manager.setComposerExpanded(value)], ['set-drawer-open', value => manager.setDrawerOpen(value)],
-    ['set-page', value => manager.setPage(value)], ['set-layout', value => manager.setLayout(value.mode, value.focused)],
-    ['set-surface', value => { manager.setSurface(value); if (value === 'confirmation') win.webContents.focus(); }]
+    ['set-composer-expanded', value => manager.setComposerExpanded(value)]
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (trusted(event)) action(value); });
   const database = services.DesktopDatabase.open(join(output, 'palette-' + locale + '.sqlite'));
   database.meta.put('deviceId', 'native-palette');
@@ -245,6 +243,7 @@ app.whenReady().then(async () => {
       const expectedTop = heights[Number(expanded)];
       await until(() => run('document.querySelector(".app-shell").classList.contains("is-composer-expanded")===' + expanded), 'composer reservation settled');
       await until(() => manager.getLayout().placements[0].bounds.y === expectedTop + SITE_FIND_HEIGHT, 'native reservation settled');
+      await until(() => run(`document.querySelector('.site-find').getBoundingClientRect().top===${expectedTop}`), 'DOM reservation settled after resize');
       await paint();
       const geometry = await run(`(()=>{const bar=document.querySelector('.site-find'),b=bar.getBoundingClientRect();
         return{width:innerWidth,left:b.left,right:b.right,top:b.top,bottom:b.bottom,height:b.height,
@@ -264,6 +263,8 @@ app.whenReady().then(async () => {
   nativeTheme.themeSource = 'light';
   await require('./site-find-native-markers.cjs')({ win, run, until, paint, manager, pages, keys, output, locale, report });
   manager.siteFind.close(false);
+  await require('./application-keyboard-scenarios.cjs')({ win, manager, pages, keys, dispatch, run, key, click, pause, until,
+    output, locale, services, ipcMain, sync, boundary });
   step('layouts'); boundary();
   await win.loadFile(join(output, 'index.html'));
   await until(() => run('!!document.querySelector(".app-shell")'), 'shell reload');
@@ -271,5 +272,5 @@ app.whenReady().then(async () => {
   fs.writeFileSync(join(output, 'report-' + locale + '.json'), JSON.stringify(report, null, 2));
   console.log(JSON.stringify({ locale, cases:report.cases, layouts:report.layouts.length, output }));
   console.log('SITE_FIND_NATIVE_COMPLETE');
-  disposePalette(); palette.dispose(); database.close(); dispose(); win.destroy(); app.exit(0);
+  disposePanels(); disposeNavigation(); disposePalette(); palette.dispose(); database.close(); dispose(); win.destroy(); app.exit(0);
 }).catch(error => { console.error(String(error.stack || error)); app.exit(1); });

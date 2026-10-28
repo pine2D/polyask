@@ -87,7 +87,7 @@ test('native menu commands neither dispatch nor move shell focus while confirmat
   } finally { h.window.emit('closed'); }
 });
 
-test('native palette commands transfer keyboard focus to the shell before opening each mode', () => {
+test('native panel commands preserve source focus until the surface transition is accepted', () => {
   const h = harness(), events: string[] = [];
   h.window.webContents.focus = () => { events.push('focus-shell'); };
   h.window.webContents.send = (_channel?: string, id?: string) => { events.push(id!); };
@@ -95,7 +95,7 @@ test('native palette commands transfer keyboard focus to the shell before openin
     for (const id of ['open-command-palette', 'open-shortcuts', 'open-getting-started'] as const) {
       events.length = 0;
       dispatchAppCommand(id, h.manager, h.window as any);
-      assert.deepEqual(events, ['focus-shell', id]);
+      assert.deepEqual(events, [id]);
     }
   } finally { h.window.emit('closed'); }
 });

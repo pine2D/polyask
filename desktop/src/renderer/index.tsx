@@ -1,6 +1,7 @@
 import { useSyncedPreferences } from './use-synced-preferences';
 import { useNotificationNavigation } from './use-notification-navigation';
 import { useCommandDiscovery } from './use-command-discovery';
+import { usePanelFocusReturn } from './use-panel-focus-return';
 import { siteStatusRunId } from '../shared/protocol';
 import { PromptDraftRecovery } from './prompt-draft-recovery';
 import { useDraftConfirmation } from './use-draft-confirmation';
@@ -224,6 +225,7 @@ function App(): React.JSX.Element {
     () => { runProgress.invalidate(); broadcast.invalidate(); changeSurface("sites"); },
     () => { archiveNavigation.clear(); changeSurface("archive"); });
   const { images, open: imageTrayOpen } = imageSelection;
+  usePanelFocusReturn(surface !== 'sites' || drawerOpen || questionHistoryOpen || (imageTrayOpen && images.length > 0));
   const { completionNotifications, onCompletionNotifications: setCompletionNotifications } = preferences;
   const acceptDisplayPreferences = display.accept;
   const acceptBootstrap = (state: BootstrapState): void => {
@@ -473,7 +475,7 @@ function App(): React.JSX.Element {
     "focus-current-site": focusCurrentSite,
     "edit-prompt": activatePrompt,
     "focus-prompt": () => {
-      if (surface === 'sites' && !questionHistoryOpen && composer.expanded) { composer.setExpanded(false); focusCurrentSite(); }
+      if (composer.expanded) { composer.setExpanded(false); focusCurrentSite(); }
       else activatePrompt();
     },
     'find-page': () => {
@@ -526,7 +528,8 @@ function App(): React.JSX.Element {
       <CommandPalette
         copy={copy}
         commands={availableCommands}
-            menuShortcuts={menuShortcuts}
+        shortcutCommands={resolveCommands(paletteShortcut.state?.mode ?? 'standard')} pageCount={layout.pageCount}
+        menuShortcuts={menuShortcuts}
         groups={workspace.groups}
         library={templateDeletion.library}
         draft={text}

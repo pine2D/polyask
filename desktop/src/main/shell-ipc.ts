@@ -1,4 +1,5 @@
 import { registerWorkbenchNavigationIpc } from './workbench-navigation-ipc';
+import { registerShellPanelIpc } from './shell-panel-ipc';
 import { registerQuestionAttachmentIpc } from './question-attachment-ipc';
 import type { PreferenceRuntime } from './preference-runtime';
 import { registerPreferencesDraftsIpc } from './preferences-drafts-ipc';
@@ -37,7 +38,6 @@ import { unsupportedImageSites } from "../shared/images";
 import {
   parseBroadcastRequest,
   parseCollectionRequest,
-  type DesktopSurface,
   type SiteResponseEnvelope
 } from "../shared/protocol";
 import { BroadcastCoordinator } from "./broadcast";
@@ -129,8 +129,6 @@ const HANDLERS = [
 const LISTENERS = [
   "polyask:cancel",
   "polyask:set-composer-expanded",
-  "polyask:set-drawer-open",
-  "polyask:set-surface",
   "polyask:set-completion-notifications",
   "polyask:site-response"
 ] as const;
@@ -170,6 +168,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   }) });
   const publishDrafts = () => { if (!window.isDestroyed()) window.webContents.send('polyask:drafts-changed'); };
   const disposeNavigation = registerWorkbenchNavigationIpc(ipcMain, manager, trustedShell, mode => options.preferences?.set('layoutMode', mode));
+  const disposePanels = registerShellPanelIpc(ipcMain, window, manager, trustedShell);
   const disposeSiteFind = registerSiteFindIpc(ipcMain, manager.siteFind, trustedShell, window.webContents,
     state => showSiteFindMenu(window, state, SITES, options.copy));
   const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
@@ -319,15 +318,6 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!trustedShell(event) || typeof value !== "boolean") return;
     manager.setComposerExpanded(value);
   });
-  ipcMain.on("polyask:set-drawer-open", (event, value: unknown) => {
-    if (!trustedShell(event) || typeof value !== "boolean") return;
-    manager.setDrawerOpen(value);
-  });
-  ipcMain.on("polyask:set-surface", (event, value: unknown) => {
-    if (!trustedShell(event) || !["sites", "archive", "settings", "commands", "confirmation", "question-history"].includes(String(value))) return;
-    manager.setSurface(value as DesktopSurface);
-    if (value === "confirmation") window.webContents.focus();
-  });
   ipcMain.on("polyask:set-completion-notifications", (event, value: unknown) => {
     if (!trustedShell(event) || typeof value !== "boolean") return;
     options.setCompletionNotifications(value);
@@ -340,6 +330,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
 
   return () => {
     disposeNavigation();
+    disposePanels();
     disposeSiteFind();
     disposePreferences();
     disposeSitePageIpc();

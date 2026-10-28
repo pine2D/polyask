@@ -20,7 +20,7 @@ module.exports = async ({ tools, win, manager, views, commands, surface }) => {
   for (const [id, code, modifiers] of [
     ['focus-prompt', 'Q', ['alt']], ['new-session', 'N', ['alt']], ['show-page-2', '2', ['alt']],
     ['collect-answers', 'C', ['alt']], ['set-think', 'T', ['alt']], ['set-fast', 'Y', ['alt']],
-    ['next-site', 'PageDown', ['control']], ['next-page', 'PageDown', ['control', 'shift']],
+    ['next-page', 'PageDown', ['control', 'shift']],
     ['site-back', 'Left', ['alt']], ['open-settings', ',', ['control']],
     // 「视图」菜单的重新加载不再是 role：外壳聚焦时既不重载外壳（确认锁会随旧渲染层失联），也不在确认期间重载站点。
     ['view:reload', 'R', ['control']]
@@ -34,6 +34,9 @@ module.exports = async ({ tools, win, manager, views, commands, surface }) => {
     }
     await pause(40); await covered();
   }
+  const beforeRemoved = commands.length;
+  key('PageDown', ['control']); await pause(80); await covered();
+  assert.equal(commands.length, beforeRemoved, 'removed next-site binding stays inactive');
   // Bypass the native dispatch to prove renderer gating independently.
   for (const id of ['focus-prompt', 'new-session', 'open-settings', 'open-archive', 'collect-compare']) {
     win.webContents.send('polyask:command', id); await pause(40); await covered();
@@ -52,5 +55,5 @@ module.exports = async ({ tools, win, manager, views, commands, surface }) => {
   manager.setPage(original.page); manager.setLayout(original.mode, original.focused, false);
   await click('[data-draft-open]'); await wait('!!document.querySelector(".folder-modal")');
   await covered();
-  return { nativeKeys: 11, rendererCommands: 5, pages: views.length, newSessionConfirmed: false };
+  return { nativeKeys: 10, removedKeys: 1, rendererCommands: 5, pages: views.length, newSessionConfirmed: false };
 };

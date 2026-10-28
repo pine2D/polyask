@@ -15,6 +15,35 @@ function Host({ locale = 'en', isMac = false, effects = [] }: { locale?: string;
     onExecute={id => effects.push(id)} onApplyGroup={id => effects.push(`group:${id}`)} onInsertPrompt={noop} onSaveTemplate={noop}
     onDeleteTemplate={noop} onClose={() => effects.push('close')} />;
 }
+
+for (const locale of ['en', 'zh-CN', 'zh-TW']) test(`${locale}: unavailable shortcuts keep their semantic position and cannot execute`, async () => {
+  const effects: string[] = [], copy = getCopy(locale);
+  const available = COMMANDS.filter(item => !['show-page-3', 'site-forward', 'retry-failed'].includes(item.id));
+  const h = await mountDom(<CommandPalette copy={copy} commands={available} groups={[]} menuShortcuts={[
+    { group: 'View', label: copy.showPageThree, accelerator: 'Alt+3' },
+    { group: 'View', label: copy.siteForwardMenu, accelerator: 'Alt+Right' }
+  ]} library={{ templates: [], history: [] }} draft="" isMac={false} mode="shortcuts" onModeChange={noop}
+    onExecute={id => effects.push(id)} onApplyGroup={noop} onInsertPrompt={noop} onSaveTemplate={noop} onDeleteTemplate={noop} onClose={noop} />);
+  try {
+    const rows = options(h.document), labels = rows.map(row => row.querySelector('strong')?.textContent);
+    const first = labels.indexOf(copy.showPageOne);
+    assert.equal(labels.slice(first, first + 3).join('|'), [copy.showPageOne, copy.showPageTwo, copy.showPageThree].join('|'));
+    assert.equal(labels.indexOf(copy.siteForwardMenu), labels.indexOf(copy.siteBackMenu) + 1);
+    const page3 = rows[first + 2];
+    assert.equal(page3.getAttribute('aria-disabled'), 'true');
+    assert.equal(page3.textContent?.includes(copy.commandGroupNavigate), true);
+    await h.click(page3);
+    const input = h.document.querySelector<HTMLInputElement>('input')!;
+    await h.input(input, 'Alt+3');
+    await act(async () => input.dispatchEvent(new h.window.KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+    assert.equal(effects.length, 0);
+    await h.input(input, 'Alt+W'); assert.equal(options(h.document).length, 0);
+    await h.input(input, '');
+    const groupOrder = options(h.document).map(row => row.querySelector('small')?.textContent?.split(' · ')[0]);
+    const runs = groupOrder.filter((group, index) => index === 0 || group !== groupOrder[index - 1]);
+    assert.equal(new Set(runs).size, runs.length, 'each semantic group has one contiguous block');
+  } finally { await h.close(); }
+});
 const options = (doc: Document) => [...doc.querySelectorAll<HTMLButtonElement>('#command-results [role="option"]')];
 
 for (const [locale, isMac] of [['en', true], ['zh-CN', false], ['zh-TW', false]] as const) {
@@ -82,8 +111,9 @@ for (const locale of ['en', 'zh-CN', 'zh-TW'] as const) for (const isMac of [fal
       const key = isMac ? '⌘↵' : 'Ctrl+Enter';
       for (const query of ['发送', 'send', 'Enter', '↵', 'Ctrl+↵', key, sendLabels[locale]]) {
         await h.input(input(), query);
-        assert.equal(options(h.document).length, 1, `one send reference for ${query}`);
-        const row = options(h.document)[0];
+        if (!['发送', 'send'].includes(query)) assert.equal(options(h.document).length, 1, `one send reference for ${query}`);
+        const row = options(h.document).find(item => item.querySelector('strong')?.textContent === sendLabels[locale])!;
+        assert.equal(row !== undefined, true, `send reference found for ${query}`);
         assert.equal(row.querySelector('strong')?.textContent, sendLabels[locale]);
         assert.equal(row.querySelector('kbd')?.textContent, key, 'search terms are not displayed as extra key bindings');
       }

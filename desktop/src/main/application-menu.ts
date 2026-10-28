@@ -36,7 +36,7 @@ export function applicationMenu(
       submenu: [
         // 不用 reload/zoom role（理由见 shared/view-menu.ts）：自定义项经 ViewManager 执行。
         ...VIEW_MENU_ITEMS.map((item): MenuItemConstructorOptions => item
-          ? { label: copy[item.labelKey], accelerator: item.accelerator, click: () => onViewAction(item.action) }
+          ? { id: `view:${item.action}`, label: copy[item.labelKey], accelerator: item.accelerator, click: () => onViewAction(item.action) }
           : { type: "separator" }),
         { type: "separator" },
         {
@@ -84,10 +84,11 @@ export function applicationMenu(
         { type: "separator" },
         ...resolveCommands(mode).filter((command) => !!commandAccelerator(command.id, platform, mode) && !(platform === "darwin" && command.id === "open-settings"))
           .map((command): MenuItemConstructorOptions => ({
+            id: command.id,
             label: copy[command.labelKey],
             accelerator: commandAccelerator(command.id, platform, mode),
             // before-input-event owns these keys; prevent a second native dispatch on Win/Linux.
-            ...(platform !== 'darwin' && ['find-page', 'open-command-palette'].includes(command.id) ? { registerAccelerator: false } : {}),
+            ...(platform !== 'darwin' ? { registerAccelerator: false } : {}),
             click: () => dispatch(command.id)
           })),
         { type: "separator" }, { role: "togglefullscreen" }

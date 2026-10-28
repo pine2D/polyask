@@ -81,8 +81,9 @@ test('production root blocks commands and direct send, tier and collection while
       await emit('open-question-history');
       assert.equal(document.querySelector('.question-search input') === null, false);
       await emit(id);
-      assert.equal(document.querySelector('[data-composer-toggle]')?.getAttribute('aria-expanded'), 'true');
-      assert.equal(document.activeElement === document.querySelector('[name=prompt]'), true, `${id} owns focus after history closes`);
+      assert.equal(document.querySelector('[data-composer-toggle]')?.getAttribute('aria-expanded'), String(id === 'edit-prompt'));
+      if (id === 'edit-prompt') assert.equal(document.activeElement === document.querySelector('[name=prompt]'), true, 'global activation owns prompt focus');
+      else assert.equal(siteFocus, 1, 'Alt+Q closes the expanded prompt even with history open');
     }
 
     await emit('open-question-history');
@@ -102,12 +103,12 @@ test('production root blocks commands and direct send, tier and collection while
     await emit('focus-prompt');
     assert.equal(expanded(), 'true'); assert.equal(document.activeElement === prompt, true);
     await emit('focus-prompt');
-    assert.equal(expanded(), 'false'); assert.equal(siteFocus, 1);
+    assert.equal(expanded(), 'false'); assert.equal(siteFocus, 2);
     assert.equal(prompt.value, 'Synthetic active question');
     await emit('edit-prompt'); await emit('edit-prompt');
     assert.equal(expanded(), 'true', 'global activation always opens the input');
     await emit('focus-current-site');
-    assert.equal(siteFocus, 2); assert.equal(prompt.value, 'Synthetic active question');
+    assert.equal(siteFocus, 3); assert.equal(prompt.value, 'Synthetic active question');
 
     await act(async () => {
       document.querySelector<HTMLButtonElement>('[data-draft-open]')!.click();

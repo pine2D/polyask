@@ -99,6 +99,15 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     });
   };
   const reading = useLibraryReadingFocus(focused, selected ? contentKey(selected) : null);
+  useEffect(() => { reading.root.current?.focus({ preventScroll: true }); }, []);
+  useEffect(() => {
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
+      event.preventDefault(); navigate(props.onClose);
+    };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  });
   const decisionReturn = useDecisionReturn(reading.root, !!newSource, selected ? contentKey(selected) : null, session);
   const focusDetail = (value: boolean) => navigate(() => { reading.capture(value); setFocused(value); });
   useLayoutEffect(() => {
@@ -220,7 +229,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const hiddenSelection = selectedKeys.filter(key => !visibleKeys.has(key)).length;
   const labels = getLibraryCopy(props.locale);
   return <LibraryRecordToolbar.Provider value={focused && !newSource && selected?.kind === 'archive' ? recordToolbar : null}>
-  <section ref={reading.root} className="folder-workspace library" data-focused={focused} data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
+  <section ref={reading.root} tabIndex={-1} className="folder-workspace library" data-focused={focused} data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
     <header className="folder-toolbar">
       <strong><ArchiveIcon />{copy.archiveTitle}</strong>
       <span className="library-scope" title={folderName}>{folderName}</span>

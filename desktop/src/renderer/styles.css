@@ -120,6 +120,7 @@ button { cursor: default; }
   color: inherit; background: transparent;
 }
 .command-results > button:hover, .command-results > button.active { background: var(--accent-soft); }
+.command-results > button[aria-disabled="true"] { color: var(--muted); cursor: default; }
 .command-results > button > span { min-width: 0; display: grid; gap: 2px; }
 .command-results strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .command-results small { color: var(--muted); font-size: 12px; }

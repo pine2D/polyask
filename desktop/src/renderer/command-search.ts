@@ -10,7 +10,7 @@ import type { ActiveWorkspaceGroup } from "../shared/workspace";
 import { SITE_ZOOM_SHORTCUTS } from "../shared/site-zoom";
 import { shortcutLabel } from './shortcut-label';
 
-export type PaletteGroup = CommandGroup | "saved" | "menu";
+export type PaletteGroup = CommandGroup | "saved" | "menu" | 'view' | 'edit';
 
 export interface PaletteCommand {
   readonly id: string;
@@ -21,6 +21,7 @@ export interface PaletteCommand {
   readonly searchTerms?: readonly string[];
   readonly commandId?: CommandId;
   readonly groupId?: string;
+  readonly unavailable?: string;
 }
 
 interface SearchOptions {
@@ -34,7 +35,7 @@ function normalized(value: string): string {
 
 const GROUP_LABEL_KEYS = {
   navigate: 'commandGroupNavigate', compose: 'commandGroupCompose', results: 'commandGroupResults',
-  app: 'commandGroupApp', saved: 'commandGroupSaved', menu: 'commandGroupMenu'
+  app: 'commandGroupApp', saved: 'commandGroupSaved', menu: 'commandGroupMenu', view: 'commandGroupView', edit: 'commandGroupEdit'
 } as const;
 
 export function paletteGroupLabel(copy: DesktopCopy, group: PaletteGroup): string {

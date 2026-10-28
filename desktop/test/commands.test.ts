@@ -70,8 +70,27 @@ for (const platform of ['win32', 'linux', 'darwin'] as const) for (const mode of
 }
 
 
-test('current-site focus replaces the two relative site accelerators', () => {
-  assert.equal(commandById('focus-current-site')?.accelerator, 'Alt+W');
+test('returning to the current site does not reserve a redundant Alt+W binding', () => {
+  assert.equal(commandById('focus-current-site')?.accelerator, undefined);
   assert.equal(commandById('next-site')?.accelerator, undefined);
   assert.equal(commandById('previous-site')?.accelerator, undefined);
 });
+
+for (const platform of ['win32', 'linux', 'darwin']) {
+  test(`${platform}: app bindings are intercepted before printable site handlers`, () => {
+    const plain = { type: 'keyDown', key: 'q', alt: true, control: false, meta: false, shift: false };
+    for (const [key, id] of [['q', 'focus-prompt'], ['s', 'open-sites'], ['h', 'open-site-health'],
+      ['1', 'show-page-1'], ['2', 'show-page-2'], ['3', 'show-page-3'], ['t', 'set-think'], ['y', 'set-fast'],
+      ['c', 'collect-answers'], ['r', 'retry-failed'], ['n', 'new-session'], ['ArrowLeft', 'site-back'], ['ArrowRight', 'site-forward']]) {
+      assert.equal(commandAliasForInput({ ...plain, key }, platform), id);
+    }
+    for (const patch of [{ key: 'w' }, { shift: true }, { control: true }, { meta: true }, { alt: false },
+      { isComposing: true }, { modifiers: ['altGr'] }, { type: 'keyUp' }]) {
+      assert.equal(commandAliasForInput({ ...plain, ...patch }, platform), undefined);
+    }
+    const primary = { ...plain, alt: false, control: platform !== 'darwin', meta: platform === 'darwin' };
+    assert.equal(commandAliasForInput({ ...primary, key: ',' }, platform), 'open-settings');
+    assert.equal(commandAliasForInput({ ...primary, shift: true, key: 'PageUp' }, platform), 'previous-page');
+    assert.equal(commandAliasForInput({ ...primary, shift: true, key: 'PageDown' }, platform), 'next-page');
+  });
+}

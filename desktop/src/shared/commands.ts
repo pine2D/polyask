@@ -1,5 +1,6 @@
 import type { CommandPaletteShortcutMode } from './command-palette-shortcut';
 import type { DesktopCopy } from "./copy";
+import { normalizeAccelerator } from './accelerators';
 
 export type CommandId =
   | "open-command-palette"
@@ -56,6 +57,8 @@ export interface CommandInput {
   readonly meta: boolean;
   readonly shift: boolean;
   readonly isComposing?: boolean;
+  readonly code?: string;
+  readonly modifiers?: readonly string[];
 }
 
 export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
@@ -74,7 +77,7 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   // 「新会话」——那会丢掉当前对话。Alt+方向键避开浏览器/站点自己的 Alt+Left。
   { id: "site-back", labelKey: "siteBackMenu", group: "navigate", accelerator: "Alt+Left" },
   { id: "site-forward", labelKey: "siteForwardMenu", group: "navigate", accelerator: "Alt+Right" },
-  { id: "focus-current-site", labelKey: "focusCurrentSiteMenu", group: "navigate", accelerator: "Alt+W" },
+  { id: "focus-current-site", labelKey: "focusCurrentSiteMenu", group: "navigate" },
   { id: "focus-prompt", labelKey: "focusPromptMenu", group: "compose", accelerator: "Alt+Q" },
   { id: 'find-page', labelKey: 'findPage', group: 'navigate', accelerator: 'CmdOrCtrl+F' },
   { id: "set-think", labelKey: "chooseThinkMode", group: "compose", accelerator: "Alt+T" },
@@ -110,9 +113,15 @@ export function commandAccelerator(id: CommandId, platform: NodeJS.Platform, mod
   return platform === 'darwin' ? command?.macAccelerator ?? command?.accelerator : command?.accelerator;
 }
 export function commandAliasForInput(input: CommandInput, platform = 'linux', mode: CommandPaletteShortcutMode = 'standard'): CommandId | undefined {
-  if (input.type !== 'keyDown' || input.isComposing || input.alt ||
-    !(platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta)) return undefined;
-  if (input.key.toLowerCase() === 'f' && !input.shift) return 'find-page';
-  if (input.key.toLowerCase() === 'p' && input.shift === (mode === 'standard')) return 'open-command-palette';
-  return undefined;
+  if (input.type !== 'keyDown' || input.isComposing || input.modifiers?.some(value => value.toLowerCase() === 'altgr')) return undefined;
+  // Option may produce a symbol on macOS; the registered letter still identifies the shortcut.
+  const key = platform === 'darwin' && input.alt && /^Key[A-Z]$/.test(input.code ?? '')
+    ? input.code!.slice(3).toLowerCase() : input.key.toLowerCase().replace(/^arrow/, '');
+  return resolveCommands(mode).find(command => {
+    const accelerator = platform === 'darwin' ? command.macAccelerator ?? command.accelerator : command.accelerator;
+    if (!accelerator) return false;
+    const parts = normalizeAccelerator(accelerator, platform === 'darwin').split('+');
+    return parts.at(-1) === key && parts.includes('alt') === input.alt && parts.includes('ctrl') === input.control &&
+      parts.includes('cmd') === input.meta && parts.includes('shift') === input.shift;
+  })?.id;
 }

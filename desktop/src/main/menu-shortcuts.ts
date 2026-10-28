@@ -14,6 +14,8 @@ interface MenuLike {
 }
 
 interface MenuItemLike {
+  readonly id?: string;
+  readonly role?: string;
   readonly label?: string;
   readonly type?: string;
   readonly visible?: boolean;
@@ -31,7 +33,7 @@ export function collectMenuShortcuts(menu: MenuLike | null): MenuShortcut[] {
       const label = (item.label || "").trim();
       const accelerator = (item.accelerator || "").trim();
       if (!group || !label || !accelerator) continue;
-      shortcuts.push({ group, label, accelerator });
+      shortcuts.push({ group, label, accelerator, ...(item.id ? { id: item.id } : {}), ...(item.role ? { role: item.role } : {}) });
     }
   }
   return shortcuts;

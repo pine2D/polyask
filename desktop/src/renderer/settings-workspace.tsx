@@ -101,8 +101,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
   };
   useEffect(() => {
     const close = (event: KeyboardEvent) => {
-      if (event.isComposing || event.keyCode === 229) return;
-      if (event.key === "Escape" && !closeLocked) props.onClose();
+      if (event.defaultPrevented || event.isComposing || event.keyCode === 229) return;
+      if (event.key === "Escape" && !closeLocked) { event.preventDefault(); props.onClose(); }
     };
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);

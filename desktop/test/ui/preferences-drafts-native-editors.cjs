@@ -73,8 +73,9 @@ module.exports = async ({ tools, locale, phase, copy, drafts, remoteDrafts, engi
   await openArchive();
   await clickText('.library-view-switch button', copy.libraryCompare);
   await wait('!!document.querySelector(".manual-comparison")');
-  if (!(await run('document.querySelector(".manual-comparison").open'))) await click('.manual-comparison > summary');
+  if (!(await run('document.querySelector(".manual-comparison").open'))) await click('.comparison-manual-entry');
   await exercise('comparison', '.manual-comparison', 'textarea[name="comparison-judgment"]', 'judgment');
+  await click('.library-view-switch button:first-child');
   await clickText('.library-record-actions button', copy.synthesisAction);
   await wait('!!document.querySelector(".synthesis-workspace")');
   await exercise('synthesis', '.synthesis-workspace', 'textarea[name="synthesis-instruction"]', 'instruction');

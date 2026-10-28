@@ -8,7 +8,7 @@ app.whenReady().then(async()=>{
   for(const s of [session.defaultSession,session.fromPartition('persist:polyask-sites')])s.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_d,cb)=>{blocked++;cb({cancel:true})});
   const win=new BrowserWindow({show:true,width:1600,height:1000,webPreferences:{preload:join(output,'preload.cjs'),sandbox:true,contextIsolation:true}});
   win.setMenuBarVisibility(false);
-  const {ViewManager,registerWorkbenchNavigationIpc,dispatchAppCommand,applicationMenu,getCopy,DEFAULT_DISPLAY_PREFERENCES}=require(join(output,'manager.cjs'));
+  const {ViewManager,registerWorkbenchNavigationIpc,registerShellPanelIpc,bindApplicationCommandInput,dispatchAppCommand,applicationMenu,getCopy,DEFAULT_DISPLAY_PREFERENCES}=require(join(output,'manager.cjs'));
   const boundary=require('./native-process-boundary.cjs').processBoundary(app,output);boundary();
   const boundaryTimer=setInterval(boundary,50);
   const manager=new ViewManager(win,()=>{},layout=>win.webContents.send('polyask:layout',layout),()=>{},{selectedSites:keys});
@@ -24,6 +24,8 @@ app.whenReady().then(async()=>{
     promptLibrary:{templates:[{id:'local-template',name:'Local template',text:'Local template draft',updatedAt:1,deviceId:'fixture'}],history:[]},pendingSynthesis:null,sync}));
   ipcMain.handle('polyask:set-display',(_e,v)=>{manager.setDisplayPreferences(v);return v});
   registerWorkbenchNavigationIpc(ipcMain,manager,trusted);
+  registerShellPanelIpc(ipcMain,win,manager,trusted);
+  for(const contents of [win.webContents,...views.map(view=>view.webContents)])bindApplicationCommandInput(contents,()=> 'standard',id=>dispatchAppCommand(id,manager,win));
   Menu.setApplicationMenu(Menu.buildFromTemplate(applicationMenu(process.platform,getCopy('en'),DEFAULT_DISPLAY_PREFERENCES,()=>{},id=>dispatchAppCommand(id,manager,win),'PolyAsk',()=>{})));ipcMain.handle('polyask:menu-shortcuts',()=>[]);
   ipcMain.handle('polyask:set-tier',()=>workspace());
   let pendingSend=null;
@@ -34,11 +36,8 @@ app.whenReady().then(async()=>{
   ipcMain.handle('polyask:question-get',()=>({question,answers:[]}));
   ipcMain.handle('polyask:question-reask',()=>({questionId:question.id,text:question.text,images:[]}));
   ipcMain.handle('polyask:question-legacy',()=>({items:[],cursor:null}));
-  ipcMain.handle('polyask:question-panel',(_e,v)=>manager.historyAccess.setPanelOpen(v));
   ipcMain.handle('polyask:preview-site-page-close',(_e,site)=>({site,contentsId:views[0].webContents.id,reason:null}));
-  for(const [channel,action] of [['set-composer-expanded',v=>manager.setComposerExpanded(v)],['set-drawer-open',v=>manager.setDrawerOpen(v)],
-    ['set-surface',v=>{manager.setSurface(v);if(v==='confirmation')win.webContents.focus()}]])
-    ipcMain.on('polyask:'+channel,(e,v)=>{if(trusted(e))action(v)});
+  ipcMain.on('polyask:set-composer-expanded',(e,v)=>{if(trusted(e))manager.setComposerExpanded(v)});
   const run=s=>win.webContents.executeJavaScript(s),pause=ms=>new Promise(r=>setTimeout(r,ms));
   const wait=async s=>{const end=Date.now()+5000;while(!(await run(s))){if(Date.now()>end)throw Error('Timeout '+s);await pause(15)}};
   const pasteImage=async()=>{
@@ -107,7 +106,9 @@ app.whenReady().then(async()=>{
   assert.equal(currentView.webContents.isFocused(),true);
   await shortcut(currentView.webContents,'Q');await check('Alt+Q opens from the native site',true);
   assert.equal((await state()).focused,true);assert.equal(win.webContents.isFocused(),true);
-  await shortcut(win.webContents,'W');await check('Alt+W leaves the composer state intact',true);
+  await shortcut(win.webContents,'W');await check('Alt+W no longer moves focus or changes composer state',true);
+  assert.equal(win.webContents.isFocused(),true);
+  dispatchAppCommand('focus-current-site',manager,win);await pause(100);
   assert.equal(currentView.webContents.isFocused(),true);
   assert.equal(manager.getUiState().layoutMode,'overview');
   assert.equal((await state()).value,draftBefore.value);assert.equal(await imageCount(),imagesBefore);
@@ -115,13 +116,15 @@ app.whenReady().then(async()=>{
   await check('global activation always opens the prompt',true);
   assert.equal((await state()).focused,true);
   for(const reader of [false,true])for(const id of ['focus-prompt','edit-prompt','focus-current-site']){
-    win.webContents.focus();dispatchAppCommand('open-question-history',manager,win);
+    win.webContents.focus();dispatchAppCommand('edit-prompt',manager,win);await pause(100);
+    dispatchAppCommand('open-question-history',manager,win);
     await wait('!!document.querySelector(".question-main")');
     if(reader){await click('.question-main');await pause(220);}
-    if(id==='edit-prompt')dispatchAppCommand(id,manager,win);
-    else await shortcut(win.webContents,id==='focus-prompt'?'Q':'W');
+    if(id==='focus-prompt')await shortcut(win.webContents,'Q');
+    else dispatchAppCommand(id,manager,win);
     await pause(350);
-    if(id==='focus-current-site')assert.equal(currentView.webContents.isFocused(),true,'history closes before returning native focus');
+    if(id==='focus-prompt'){await check('history '+(reader?'reader':'list')+' preserves Alt+Q collapse',false);assert.equal(currentView.webContents.isFocused(),true);}
+    else if(id==='focus-current-site')assert.equal(currentView.webContents.isFocused(),true,'history closes before returning native focus');
     else{await check('history '+(reader?'reader':'list')+' to '+id,true);assert.equal((await state()).focused,true);assert.equal(win.webContents.isFocused(),true);}
     assert.equal((await state()).value,draftBefore.value);assert.equal(await imageCount(),imagesBefore);
   }
