@@ -98,3 +98,24 @@ test('archive export preserves the original question when its saved title is dif
     assert.equal(new MarkdownIt().render(h.saved().text).includes('Original question with context and separate instructions.'), true);
   } finally { h.db.close(); }
 });
+
+
+for (const [label, title] of [['Chinese', '中'.repeat(100)], ['emoji', '🙂'.repeat(100)], ['ASCII', 'long-title-'.repeat(20)]] as const)
+  test(`the default ${label} filename writes successfully and keeps the selected site`, async () => {
+    const { mkdtemp, readFile, rm } = await import('node:fs/promises');
+    const { tmpdir } = await import('node:os'); const { join } = await import('node:path');
+    const dir = await mkdtemp(join(tmpdir(), 'polyask-md-name-'));
+    const db = DesktopDatabase.open(':memory:'); db.questions.put({ ...questionFixture(), text: title }); db.questions.putAnswer(questionAnswerFixture());
+    let filename = '';
+    const service = new MarkdownExportService({ questions: db.questions, archives: { get: () => null }, decisions: { get: () => null },
+      epoch: () => 0, isCurrent: () => true, now: () => Date.UTC(2026, 9, 28),
+      choosePath: async name => { filename = name; return join(dir, name); } });
+    try {
+      const result = await service.export({ selections: [{ target: { kind: 'history', id: 'q-a' }, revision: '', entryIds: [questionAnswerFixture().id] }] });
+      assert.equal(result.status, 'saved');
+      assert.equal(Buffer.byteLength(filename, 'utf8') <= 255, true);
+      assert.match(filename, /-Claude-2026-10-28\.md$/);
+      assert.equal(filename.includes('\ufffd'), false);
+      assert.match(await readFile(join(dir, filename), 'utf8'), /Saved answer/);
+    } finally { db.close(); await rm(dir, { recursive: true, force: true }); }
+  });

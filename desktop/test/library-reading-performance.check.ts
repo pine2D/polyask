@@ -10,7 +10,7 @@ import webpack from 'webpack';
 const sources = ['renderer/folder-workspace.tsx', 'renderer/library-content-list.tsx', 'renderer/library-list-model.ts',
   'renderer/archive-surface.tsx', 'renderer/archive-detail.tsx', 'renderer/archive-compare.tsx',
   'renderer/archive-reader-session.ts', 'renderer/markdown-preview.tsx', 'renderer/markdown-parser.ts',
-  'renderer/markdown-math-tokens.ts', 'shared/archive.ts', 'shared/decision.ts', 'shared/archive-compare.ts'];
+  'shared/markdown-math-tokens.ts', 'shared/archive.ts', 'shared/decision.ts', 'shared/archive-compare.ts'];
 const manifest = () => Object.fromEntries(sources.map(path => [path,
   createHash('sha256').update(readFileSync(join(__dirname, '../src', path))).digest('hex')]));
 

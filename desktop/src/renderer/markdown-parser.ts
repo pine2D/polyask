@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it';
-import { addMathTokens } from './markdown-math-tokens';
+import { addMathTokens } from '../shared/markdown-math-tokens';
 
 /** Only tokenize: React owns rendering, so raw HTML never enters the shell DOM. */
 const parser = new MarkdownIt({ html: false, linkify: true, typographer: false, maxNesting: 32 });

@@ -1,5 +1,6 @@
 export const MARKDOWN_EXPORT_COPY = {
   en: {
+    markdownRemoved: '{count} unavailable records removed. Your remaining selections were kept; review before exporting.',
     markdownRefreshed: 'Selection refreshed. Review the answers before exporting.', markdownTitle: 'Export Markdown', markdownSingle: 'Export .md', markdownWhole: 'Export this record…', markdownMerge: 'Merge into .md',
     markdownSaved: 'Markdown file saved', markdownSaving: 'Saving Markdown…', markdownCancelled: 'Export cancelled',
     markdownNotFound: 'A selected record is no longer available. Refresh the selection.',
@@ -20,6 +21,7 @@ export const MARKDOWN_EXPORT_COPY = {
     markdownGroupCount: '{selected}/{total} selected', markdownChoose: 'Choose the answers to include', markdownSynthesis: 'Saved synthesis'
   },
   zhCN: {
+    markdownRemoved: '已移除 {count} 条失效记录，其余选择已保留，请核对后导出。',
     markdownRefreshed: '选择已刷新，请核对回答后导出。', markdownTitle: '导出 Markdown', markdownSingle: '导出 .md', markdownWhole: '导出本条记录…', markdownMerge: '合并导出 .md',
     markdownSaved: 'Markdown 文件已保存', markdownSaving: '正在保存 Markdown…', markdownCancelled: '已取消导出',
     markdownNotFound: '所选记录已不可用，请刷新选择。', markdownSourceChanged: '所选来源已失效，或本机数据已重置。请刷新后导出。',
@@ -39,6 +41,7 @@ export const MARKDOWN_EXPORT_COPY = {
     markdownGroupCount: '已选 {selected}/{total}', markdownChoose: '选择要放进文件的回答', markdownSynthesis: '已保存的综合'
   },
   zhTW: {
+    markdownRemoved: '已移除 {count} 筆失效記錄，其餘選擇已保留，請核對後匯出。',
     markdownRefreshed: '選擇已重新整理，請核對回答後匯出。', markdownTitle: '匯出 Markdown', markdownSingle: '匯出 .md', markdownWhole: '匯出這筆記錄…', markdownMerge: '合併匯出 .md',
     markdownSaved: 'Markdown 檔案已儲存', markdownSaving: '正在儲存 Markdown…', markdownCancelled: '已取消匯出',
     markdownNotFound: '所選記錄已無法使用，請重新整理選擇。', markdownSourceChanged: '所選來源已失效，或本機資料已重設。請重新整理後匯出。',

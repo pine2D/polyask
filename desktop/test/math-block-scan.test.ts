@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import MarkdownIt from 'markdown-it';
-import { addMathTokens } from '../src/renderer/markdown-math-tokens';
+import { addMathTokens } from '../src/shared/markdown-math-tokens';
 
 function measuredParser() {
   const parser = new MarkdownIt({ html: false, maxNesting: 32 }); addMathTokens(parser);

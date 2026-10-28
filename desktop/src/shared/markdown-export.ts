@@ -19,7 +19,7 @@ export interface MarkdownDocument {
   readonly entries: readonly MarkdownEntry[];
 }
 export interface MarkdownSelection { readonly target: MarkdownTarget; readonly revision: string; readonly entryIds: readonly string[] }
-export interface MarkdownPreviewRequest { readonly targets: readonly MarkdownTarget[]; readonly locale?: DesktopLocale }
+export interface MarkdownPreviewRequest { readonly targets: readonly MarkdownTarget[]; readonly allowMissing?: boolean; readonly locale?: DesktopLocale }
 export interface MarkdownExportRequest { readonly selections: readonly MarkdownSelection[]; readonly locale?: DesktopLocale }
 export const markdownTargetKey = (target: MarkdownTarget): string => `${target.kind}:${target.id}`;
 const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
@@ -45,8 +45,9 @@ function bounded(v: unknown): unknown[] {
   return v;
 }
 export function parseMarkdownPreview(value: unknown): MarkdownPreviewRequest {
-  const v = fields(value, ['targets', 'locale']), targets = bounded(v.targets).map(target);
-  return { targets: [...new Map(targets.map(t => [markdownTargetKey(t), t])).values()], locale: locale(v.locale) };
+  const v = fields(value, ['targets', 'locale', 'allowMissing']), targets = bounded(v.targets).map(target);
+  if (v.allowMissing !== undefined && typeof v.allowMissing !== 'boolean') return invalid();
+  return { targets: [...new Map(targets.map(t => [markdownTargetKey(t), t])).values()], locale: locale(v.locale), allowMissing: v.allowMissing as boolean | undefined };
 }
 export function parseMarkdownExport(value: unknown): MarkdownExportRequest {
   const v = fields(value, ['selections', 'locale']), seen = new Set<string>();

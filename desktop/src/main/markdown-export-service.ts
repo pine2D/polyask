@@ -17,7 +17,8 @@ export class MarkdownExportService {
     if (this.disposed || !this.options.isCurrent()) throw new Error('markdown_source_changed');
     const request = parseMarkdownPreview(input), copy = COPY[request.locale ?? 'en'], docs: MarkdownDocument[] = [];
     for (const target of request.targets) {
-      docs.push(this.sources.preview(target, copy));
+      try { docs.push(this.sources.preview(target, copy)); }
+      catch (error) { if (!request.allowMissing || !(error instanceof Error) || error.message !== 'markdown_not_found') throw error; }
       assertMarkdownSize(JSON.stringify(docs));
     }
     return docs;
@@ -46,8 +47,7 @@ export class MarkdownExportService {
       const name = request.selections.length === 1 ? first!.title : `${request.selections.length}-${copy.markdownFileTitle}`;
       const suffix = request.selections.length === 1 && request.selections[0].entryIds.length === 1
         ? first!.entries.find(e => e.id === request.selections[0].entryIds[0])?.label ?? '' : '';
-      const safe = [...`${name}${suffix ? '-' + suffix : ''}`.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').trim()].slice(0, 80).join('').replace(/[. ]+$/g, '') || 'answers';
-      const path = await this.options.choosePath(`PolyAsk-${safe}-${time.slice(0, 10)}.md`);
+      const path = await this.options.choosePath(markdownFilename(name, suffix, time.slice(0, 10)));
       if (!path) return { status: 'cancelled' };
       guard(); await (this.options.writeFile ?? writeReportFile)(path, content, guard);
       return { status: 'saved' };
@@ -58,4 +58,17 @@ export class MarkdownExportService {
     } finally { this.busy = false; }
   }
   dispose(): void { this.disposed = true; }
+}
+
+/** Bound the whole filename in UTF-8 bytes, keeping the site/date suffix and full codepoints. */
+function markdownFilename(title: string, site: string, date: string): string {
+  const clean = (value: string) => value.replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/g, '-').trim().replace(/[. ]+$/g, '');
+  const truncate = (value: string, max: number) => {
+    let result = '', bytes = 0;
+    for (const point of value) { const size = Buffer.byteLength(point, 'utf8'); if (bytes + size > max) break; result += point; bytes += size; }
+    return result;
+  };
+  const label = truncate(clean(site), 48), suffix = `${label ? '-' + label : ''}-${date}.md`;
+  const name = clean(truncate(clean(title), 240 - Buffer.byteLength(`PolyAsk-${suffix}`, 'utf8'))) || 'answers';
+  return `PolyAsk-${name}${suffix}`;
 }

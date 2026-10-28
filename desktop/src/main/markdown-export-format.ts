@@ -1,11 +1,14 @@
 import MarkdownIt from 'markdown-it';
 import { safeExternalUrl } from './security';
+import { addMathTokens, mathTokenValue } from '../shared/markdown-math-tokens';
 type Token = MarkdownIt.Token;
 
-const parser = new MarkdownIt({ html: true, linkify: false, typographer: false, maxNesting: 64 });
+const options = { html: true, linkify: false, typographer: false, maxNesting: 64 };
+const parser = new MarkdownIt(options), literalParser = new MarkdownIt(options);
+addMathTokens(parser);
 // 接受输入链接后由输出白名单决定是否保留，避免危险目标被原样作为 Markdown 文本吐回。
-parser.validateLink = () => true;
-export const markdownText = (text: string): string => text.replace(/&/g, '&amp;').replace(/[\\`*_[\]{}<>#!+.=~-]/g, c => `\\${c}`);
+parser.validateLink = literalParser.validateLink = () => true;
+export const markdownText = (text: string): string => text.replace(/&/g, '&amp;').replace(/[\\`*_[\]{}<>#!$+.=~-]/g, c => `\\${c}`);
 const htmlText = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function url(value: unknown): string | null {
   if (typeof value !== 'string' || !value || /[\u0000-\u0020\u007f]/.test(value)) return null;
@@ -27,6 +30,7 @@ function inline(tokens: Token[]): string {
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (t.type === 'text') out += markdownText(t.content);
+    else if (t.type === 'math_inline') out += math(t, 0);
     else if (t.type === 'code_inline') {
       const fence = '`'.repeat(Math.max(0, ...[...t.content.matchAll(/`+/g)].map(m => m[0].length)) + 1);
       out += `${fence} ${t.content} ${fence}`;
@@ -75,21 +79,24 @@ function block(tokens: Token[], offset: number): string {
         if (tokens[j].type === 'tr_close') { rows.push(`| ${cells.join(' | ')} |`); if (rows.length === 1) rows.push(`| ${cells.map(() => '---').join(' | ')} |`); }
       }
       chunks.push(rows.join('\n')); i = end;
-    } else if (t.type === 'html_block') chunks.push(htmlText(t.content).trimEnd());
+    } else if (t.type === 'math_block') chunks.push(math(t, offset));
+    else if (t.type === 'html_block') chunks.push(htmlText(t.content).trimEnd());
     else if (t.type === 'hr') chunks.push('---');
     else if (t.type === 'inline') chunks.push(inline(t.children ?? []));
     else if (t.content) chunks.push(markdownText(t.content));
   }
   return chunks.join('\n\n');
 }
+function math(token: Token, offset: number): string {
+  const literal = mathTokenValue(token).literal, env: MarkdownIt.Env = {};
+  const tokens = literalParser.parse(literal, env);
+  const needsConversion = (items: Token[]): boolean => items.some(t =>
+    ['html_inline', 'html_block', 'link_open', 'image', 'code_inline', 'fence', 'code_block'].includes(t.type)
+    || !!t.children && needsConversion(t.children));
+  // Formula delimiters do not exempt HTML, links or reference definitions from safety rules.
+  // Reparse only this token without math rules; code tokens never pass through this path.
+  return needsConversion(tokens) || env.references ? block(tokens, offset) : literal;
+}
 export function safeExportMarkdown(source: string, headingOffset = 3): string {
-  // 数学源文本不交给普通 Markdown 的强调/转义规则改写；可执行 HTML/链接仍走普通解析。
-  let marker = 'POLYASKMATH'; while (source.includes(marker)) marker += 'X';
-  const math: string[] = [];
-  const protectedSource = source.replace(/\$\$[\s\S]*?\$\$|\$(?!\$)[^\n$]+\$|\\\[[\s\S]*?\\\]|\\\([^\n]*?\\\)/g, value => {
-    if (/<[a-z!/]|\]\(/i.test(value)) return value;
-    const key = `${marker}${math.length}END`; math.push(value); return key;
-  });
-  const result = block(parser.parse(protectedSource, {}), headingOffset);
-  return result.replace(new RegExp(`${marker}(\\d+)END`, 'g'), (_all, n: string) => math[Number(n)]);
+  return block(parser.parse(source, {}), headingOffset);
 }

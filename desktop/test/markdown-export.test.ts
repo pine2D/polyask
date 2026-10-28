@@ -13,3 +13,10 @@ test('export requests accept bounded identities, never renderer bodies or paths'
   assert.throws(() => parseMarkdownExport({ selections: [{ ...selection, entryIds: [] }] }), /invalid_request/);
   assert.throws(() => parseMarkdownExport({ selections: [selection, { ...selection, revision: 'different' }] }), /invalid_request/);
 });
+
+
+test('only explicit refresh requests may omit unavailable targets', () => {
+  const targets = [{ kind: 'history', id: 'q1' }];
+  assert.equal(parseMarkdownPreview({ targets, allowMissing: true }).allowMissing, true);
+  for (const allowMissing of ['true', 1, null, []]) assert.throws(() => parseMarkdownPreview({ targets, allowMissing }), /invalid_request/);
+});

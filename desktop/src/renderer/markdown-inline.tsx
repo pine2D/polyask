@@ -2,7 +2,7 @@ import { createElement, type ReactNode } from 'react';
 import { parseMarkdownInline, type MarkdownToken } from './markdown-parser';
 import { MarkdownLink } from './markdown-link';
 import { MarkdownMath } from './markdown-math';
-import { mathTokenValue } from './markdown-math-tokens';
+import { mathTokenValue } from '../shared/markdown-math-tokens';
 
 export function safeMarkdownUrl(value: string): string | null {
   try {

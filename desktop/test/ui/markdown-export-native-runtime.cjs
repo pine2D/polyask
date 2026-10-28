@@ -5,7 +5,7 @@ app.setPath('userData', join(output, 'profile')); app.setPath('sessionData', joi
 const boundary = require('./native-process-boundary.cjs').processBoundary(app, output);
 let activeWindow;
 const renderSaved = path => new (require('markdown-it'))().render(fs.readFileSync(path, 'utf8'));
-const report = { clicks: [], cases: [], files: [], cancelled: 0, network: 0, errors: [] };
+const report = { clicks: [], cases: [], files: [], cancelled: 0, refreshed: 0, network: 0, errors: [] };
 app.whenReady().then(async () => {
   const { prepareMarkdownNativeData, registerMarkdownExportIpc } = require(join(output, 'services.cjs'));
   const fixture = prepareMarkdownNativeData(); let cancelNext = false, chosen;
@@ -88,6 +88,18 @@ app.whenReady().then(async () => {
   await open('en', 'light', 1, 'bulk'); await click("q('[data-action=library-multi-select]')"); await click("q('[data-action=library-select-page]')"); await click("q('[data-action=library-bulk-export]')");
   await until("document.querySelectorAll('.markdown-export-record').length===3", 'mixed library selection');
   const merged = await save(); assert.match(merged, /ARCHIVE_CLAUDE_0/); assert.match(merged, /ARCHIVE_CHATGPT_1/); assert.match(merged, /DECISION_CONCLUSION/);
+  await open('en', 'dark', 2);
+  await click('byLabel(f.copy.markdownSelect)'); await click("q('.question-selection input')"); await click('byLabel(f.copy.markdownMerge)');
+  await until("document.querySelectorAll('.markdown-export-record').length===3", 'refresh source selection');
+  fixture.db.questions.delete('q-0', 9999, 'synthetic');
+  await click('byLabel(f.copy.markdownSaveOne)'); await until("!!q('.markdown-export-error')", 'deleted-source error');
+  await click('byLabel(f.copy.markdownRefresh)');
+  await until("document.querySelectorAll('.markdown-export-record').length===2&&!byLabel(f.copy.markdownSaveOne).disabled", 'refresh recovered');
+  assert.equal(await run("q('.markdown-export-footer').textContent.includes(f.copy.markdownRemoved.replace('{count}', '1'))"), true);
+  await run('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+  assert.equal(await run("q('.markdown-export-footer').getBoundingClientRect().bottom<=innerHeight+1&&q('.markdown-export-scroll').clientHeight>40"), true);
+  fs.writeFileSync(join(output, 'en-dark-2-refreshed.png'), (await win.capturePage()).toPNG());
+  const refreshed = await save(); assert.match(refreshed, /CLAUDE_q-1_2/); assert.equal(refreshed.includes('CLAUDE_q-0'), false); report.refreshed++;
   assert.equal(report.network, 0); boundary(); unregister(); fixture.db.close();
   fs.writeFileSync(join(output, 'report.json'), JSON.stringify(report, null, 2)); console.log(`MARKDOWN_NATIVE_COMPLETE ${report.cases.length} layouts, ${report.files.length} files`);
   win.destroy(); app.quit();

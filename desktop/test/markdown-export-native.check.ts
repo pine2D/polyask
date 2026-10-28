@@ -33,5 +33,5 @@ test('native Markdown selection, production preload and IPC write one bounded fi
   assert.equal(result.live.length, 0); assert.equal(result.errors.length, 0);
   const report = JSON.parse(readFileSync(join(output, 'report.json'), 'utf8'));
   assert.equal(report.cases.length, 18); assert.equal(report.network, 0); assert.equal(report.cancelled, 18);
-  assert.equal(report.files.length, 21); assert.equal(report.errors.length, 0);
+  assert.equal(report.files.length, 22); assert.equal(report.errors.length, 0); assert.equal(report.refreshed, 1);
 });

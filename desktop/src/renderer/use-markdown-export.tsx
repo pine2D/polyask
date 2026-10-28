@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import type { DesktopCopy } from '../shared/copy';
+import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { resolveLocale } from '../shared/locale';
 import { ipcErrorCode } from '../shared/ipc-error';
 import { MAX_MARKDOWN_RECORDS, type MarkdownDocument, type MarkdownExportResult, type MarkdownTarget } from '../shared/markdown-export';
@@ -39,11 +39,15 @@ export function useMarkdownExport(options: { copy: DesktopCopy; locale: string; 
     pending.current = true; const ticket = ++epoch.current;
     setLoading(true); setError(''); setNotice('');
     try {
-      const next = await shell.previewMarkdown({ targets: targets.current, locale: locale() });
+      const next = targets.current.length ? await shell.previewMarkdown({ targets: targets.current, locale: locale(), allowMissing: refresh }) : [];
       if (!valid(ticket)) return;
       setSelection(previous => refresh ? refreshMarkdownSelection(documents, next, previous) : initialMarkdownSelection(next));
       setDocuments(next); setStale(false);
-      if (refresh) setNotice(current.current.copy.markdownRefreshed);
+      if (refresh) {
+        const removed = targets.current.length - next.length;
+        targets.current = next.map(doc => doc.target);
+        setNotice(removed ? formatCopy(current.current.copy.markdownRemoved, { count: removed }) : current.current.copy.markdownRefreshed);
+      }
     } catch (cause) { if (valid(ticket)) { setError(markdownExportMessage(current.current.copy, ipcErrorCode(cause))); setStale(true); } }
     finally { if (valid(ticket)) { pending.current = false; setLoading(false); } }
   };

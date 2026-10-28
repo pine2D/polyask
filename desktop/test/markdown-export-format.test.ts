@@ -48,3 +48,32 @@ test('an image without alt text becomes a visible source link', () => {
   assert.equal(html.includes('<img'), false);
   assert.match(html, />https:\/\/example\.com\/image\.png<\/a>/);
 });
+
+
+test('math-like text inside fenced and inline code cannot expose raw HTML', () => {
+  const parser = new MarkdownIt({ html: true }); parser.validateLink = () => true;
+  const body = '$$\n```\n$$\n<script>alert(1)</script>\n';
+  const source = '````text\n' + body + '````';
+  const output = safeExportMarkdown(source, 0), tokens = parser.parse(output, {});
+  assert.equal(tokens.length, 1, 'the original code block stays one code block');
+  assert.equal(tokens[0].type, 'fence'); assert.equal(tokens[0].content, body);
+  assert.equal(parser.render(output).includes('<script>'), false);
+});
+
+test('math-like text cannot shorten inline-code delimiters', () => {
+  const parser = new MarkdownIt({ html: true });
+  const inlineSource = '`` \\(a`b\\) <img src=x> ``';
+  assert.equal(parser.render(safeExportMarkdown(inlineSource, 0)), parser.render(inlineSource));
+});
+
+for (const [name, source] of [
+  ['image', '$$\n![x][a]\n\n[a]: https://example.com/a.png\n$$'],
+  ['unsafe link', '$$\n[x][a]\n\n[a]: javascript:alert(1)\n$$'],
+  ['cross-formula image', '$$\n![x][a]\n$$\n\n$$\n[a]: https://example.com/a.png\n$$'],
+  ['inline reference image', '$![x][a]$\n\n[a]: https://example.com/a.png'],
+] as const) test(`math delimiters never bypass ${name} sanitization`, () => {
+  const parser = new MarkdownIt({ html: true }); parser.validateLink = () => true;
+  const html = parser.render(safeExportMarkdown(source, 0));
+  assert.equal(/<img|<script|href="javascript:/i.test(html), false);
+  assert.equal(html.includes('x'), true);
+});

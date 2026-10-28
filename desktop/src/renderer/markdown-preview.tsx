@@ -4,7 +4,7 @@ import { parseMarkdown, type MarkdownToken } from './markdown-parser';
 import { MermaidPreview } from './mermaid-preview';
 import { MarkdownCode } from './markdown-code';
 import { MarkdownMath } from './markdown-math';
-import { mathTokenValue } from './markdown-math-tokens';
+import { mathTokenValue } from '../shared/markdown-math-tokens';
 import { formatCopy, getCopy } from '../shared/copy';
 
 type LinkHandler = ((url: string) => void) | undefined;
