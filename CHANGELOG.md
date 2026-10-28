@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.28.0] - 2026-10-28
+
+验收范围：Linux/WSL 下通过 2,543 项应用/UI 测试、538 项运行时测试、类型检查、Linux 打包及包内九站检查；Markdown 导出原生专项覆盖三语、明暗、100%／150%／200% 缩放共 18 组布局及 22 份实际文件。
+
+验收限制：未核验 Windows/macOS 物理键盘与系统保存框操作、五种发行包的实际安装及真实 Drive 双设备同步。
+
 ### 新增
 
 - 提问历史与结果库支持将单份回答下载为 `.md`，也可在各自页面选择多条记录、多个 AI 站点，合并导出一个 Markdown 文件。站点按钮独立切换，支持回答版本与记录排序；取消和失败保留选择；刷新可移除已删除记录，并保留其余站点和版本选择。
@@ -1568,7 +1574,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.27.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.28.0...HEAD
+[1.28.0]: https://github.com/pine2D/polyask/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/pine2D/polyask/compare/v1.26.0...v1.27.0
 [1.26.0]: https://github.com/pine2D/polyask/compare/v1.25.1...v1.26.0
 [1.25.1]: https://github.com/pine2D/polyask/compare/v1.25.0...v1.25.1
