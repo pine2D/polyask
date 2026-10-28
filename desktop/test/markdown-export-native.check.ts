@@ -23,7 +23,8 @@ test('native Markdown selection, production preload and IPC write one bounded fi
   writeFileSync(join(output, 'index.html'), '<!doctype html><meta charset="utf-8"><div id="root"></div><script src="bundle.js"></script>');
   const { runOwnedNative } = require('../scripts/lib/owned-native-process.mjs');
   const binary = require('electron') as string, args = [join(__dirname, 'ui/markdown-export-native-runtime.cjs'), output];
-  const headless = process.platform === 'linux' && !process.env.DISPLAY;
+  // Linux always gets a private display; a shared WSLg desktop can take focus mid-case.
+  const headless = process.platform === 'linux';
   const result = await runOwnedNative({ command: headless ? 'xvfb-run' : binary, args: headless ? ['-a', '-s', '-screen 0 1920x1200x24', binary, ...args] : args,
     cwd: join(__dirname, '..'), output, timeout: 120000, onStdout: (chunk: string) => process.stdout.write(chunk),
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '', WAYLAND_DISPLAY: '', WAYLAND_SOCKET: '',
