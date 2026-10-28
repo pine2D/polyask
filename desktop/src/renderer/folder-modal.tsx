@@ -2,10 +2,10 @@ import { useEffect, useRef } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import { focusableControls } from './focusable-controls';
 
-export function FolderModal({ copy, title, busy, onCancel, children, closeLabel }: {
+export function FolderModal({ copy, title, busy, onCancel, children, closeLabel, className }: {
   copy: DesktopCopy; title: string; busy: boolean; onCancel: () => void; children: React.ReactNode;
   /** 只读/浏览类弹窗不是事务，头部按钮写「关闭」而不是「取消」。 */
-  closeLabel?: string;
+  closeLabel?: string; className?: string;
 }): React.JSX.Element {
   const panel = useRef<HTMLDivElement>(null);
   const cancel = useRef<HTMLButtonElement>(null);
@@ -28,7 +28,7 @@ export function FolderModal({ copy, title, busy, onCancel, children, closeLabel 
     window.addEventListener('keydown', keydown, true);
     return () => { window.removeEventListener('keydown', keydown, true); opener?.focus(); };
   }, []);
-  return <div className="confirm-scrim"><div className="confirm-dialog folder-modal" ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="folder-modal-title" aria-busy={busy}>
+  return <div className="confirm-scrim"><div className={`confirm-dialog folder-modal ${className ?? ''}`} ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="folder-modal-title" aria-busy={busy}>
     <header><h2 id="folder-modal-title">{title}</h2><button ref={cancel} disabled={busy} onClick={onCancel}>{closeLabel ?? copy.cancel}</button></header>{children}
   </div></div>;
 }

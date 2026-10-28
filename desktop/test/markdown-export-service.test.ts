@@ -79,3 +79,10 @@ test('real atomic writer preserves an existing file when the selected history is
     assert.equal(await readFile(file, 'utf8'), 'Original'); assert.deepEqual(await readdir(dir), ['saved.md']);
   } finally { db.close(); await rm(dir, { recursive: true, force: true }); }
 });
+
+test('normalized export locales retain Simplified and Traditional Chinese file labels', async () => {
+  const h = harness(); try {
+    await h.service.export({ ...h.request(), locale: 'zhCN' }); assert.match(h.saved().text, /导出时间/);
+    await h.service.export({ ...h.request(), locale: 'zhTW' }); assert.match(h.saved().text, /匯出時間/);
+  } finally { h.db.close(); }
+});

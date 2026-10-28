@@ -1,0 +1,45 @@
+.confirm-dialog.folder-modal.markdown-export-panel {
+  width: min(720px, calc(100vw - 48px)); max-width: none; max-height: calc(100dvh - 48px);
+  display: grid; grid-template-rows: auto minmax(0, 1fr) auto; overflow: hidden; padding: 20px; gap: 16px;
+  color: var(--text); font-size: var(--font-control); text-align: start;
+}
+.markdown-export-panel > header h2 { font-size: var(--font-reading); }
+.markdown-export-scroll { overflow-y: auto; overscroll-behavior: contain; min-height: 0; scrollbar-gutter: stable; }
+.markdown-export-sites { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 16px; }
+.markdown-export-panel button { cursor: pointer; }
+.markdown-export-panel button:disabled { cursor: default; opacity: .5; }
+.markdown-export-sites button[aria-pressed=true] { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.markdown-export-sites button[aria-pressed=mixed] { color: var(--accent); border: 1px dashed var(--accent); background: var(--accent-soft); }
+.markdown-export-sites button[aria-pressed=mixed]::before { content: ''; display: inline-block; width: 8px; border-top: 2px solid currentColor; margin-inline-end: 6px; vertical-align: middle; }
+.markdown-export-options { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin-bottom: 12px; }
+.markdown-export-options > div { display: flex; gap: 8px; }
+.markdown-export-panel select { min-width: 0; max-width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 6px; color: var(--text); background: var(--field); font: inherit; }
+.markdown-export-record { border-top: 1px solid var(--border); padding: 12px 0; }
+.markdown-export-record-heading { display: flex; align-items: start; gap: 8px; }
+.markdown-export-record-heading > input { flex: 0 0 auto; margin: 10px 0 0; }
+.markdown-export-record-heading .markdown-export-expand { display: flex; align-items: start; flex: 1; min-width: 0; gap: 6px; text-align: start; border: 0; padding: 6px 0; font-weight: 600; background: transparent; }
+.markdown-export-expand span { overflow-wrap: anywhere; }
+.markdown-export-expand svg { flex: 0 0 auto; margin-top: 2px; }
+.markdown-export-group-count { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; padding-top: 7px; }
+.markdown-export-entries { padding-inline-start: 24px; }
+.markdown-export-entry { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 6px 0; }
+.markdown-export-entry > label { min-width: 112px; flex: 0 1 auto; overflow-wrap: anywhere; }
+.markdown-export-entry-note { font-size: var(--font-meta); color: var(--muted); }
+.markdown-export-panel input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; flex: 0 0 auto; }
+.markdown-export-panel .markdown-export-warning { color: var(--warning-ink); margin: 8px 0; }
+.markdown-export-panel .markdown-export-scope { font-size: var(--font-meta); margin-top: 16px; }
+.markdown-export-footer { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid var(--border); }
+.markdown-export-footer p { font-size: var(--font-meta); }
+.markdown-export-panel .markdown-export-error { color: var(--danger-ink); }
+.markdown-export-panel :is(button,input,select):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 520px), (max-height: 480px) {
+  .confirm-scrim:has(> .markdown-export-panel) { padding: 8px; }
+  .confirm-dialog.folder-modal.markdown-export-panel { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); padding: 12px; gap: 10px; }
+  .markdown-export-record-heading { flex-wrap: wrap; }
+  .markdown-export-group-count { width: 100%; padding: 0 0 0 24px; }
+  .markdown-export-entry-note { flex-basis: 100%; }
+  .markdown-export-panel .confirm-actions { flex-wrap: wrap; }
+}
+@media (forced-colors: active) {
+  .markdown-export-sites button[aria-pressed=true], .markdown-export-sites button[aria-pressed=mixed] { border-color: Highlight; color: Highlight; }
+}

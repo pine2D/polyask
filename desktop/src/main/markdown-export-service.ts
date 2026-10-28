@@ -1,4 +1,4 @@
-import { getCopy } from '../shared/copy';
+import { COPY } from '../shared/copy';
 import { MARKDOWN_EXPORT_CODES, parseMarkdownExport, parseMarkdownPreview, type MarkdownExportCode, type MarkdownExportRequest,
   type MarkdownExportResult, type MarkdownPreviewRequest, type MarkdownDocument } from '../shared/markdown-export';
 import { MarkdownSources, assertMarkdownSize, type MarkdownRepositories } from './markdown-export-source';
@@ -15,7 +15,7 @@ export class MarkdownExportService {
   constructor(private readonly options: Options) { this.sources = new MarkdownSources(options); }
   preview(input: MarkdownPreviewRequest): MarkdownDocument[] {
     if (this.disposed || !this.options.isCurrent()) throw new Error('markdown_source_changed');
-    const request = parseMarkdownPreview(input), copy = getCopy(request.locale ?? 'en'), docs: MarkdownDocument[] = [];
+    const request = parseMarkdownPreview(input), copy = COPY[request.locale ?? 'en'], docs: MarkdownDocument[] = [];
     for (const target of request.targets) {
       docs.push(this.sources.preview(target, copy));
       assertMarkdownSize(JSON.stringify(docs));
@@ -28,7 +28,7 @@ export class MarkdownExportService {
     this.busy = true;
     const epoch = this.options.epoch();
     try {
-      const request = parseMarkdownExport(input), copy = getCopy(request.locale ?? 'en');
+      const request = parseMarkdownExport(input), copy = COPY[request.locale ?? 'en'];
       const guard = () => {
         if (this.disposed || !this.options.isCurrent() || epoch !== this.options.epoch() ||
           request.selections.some(selection => !this.sources.alive(selection))) throw new Error('markdown_source_changed');
