@@ -1,3 +1,5 @@
+import { useMarkdownExport } from './use-markdown-export';
+import { useQuestionHistorySelection, QuestionHistorySelection } from './question-history-selection';
 import { useQuestionReask } from './use-question-reask';
 import type { DesktopImage } from '../shared/images';
 import { questionHistorySurface, type QuestionDetailView } from "./question-history-model";
@@ -37,6 +39,8 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   onReadingCancelled?: (request: number) => void;
 }): React.JSX.Element | null {
   const { announce, setUndoAction } = useGlobalFeedback();
+  const markdown = useMarkdownExport({ copy, locale, onStatus: announce, enabled: open && active });
+  const selection = useQuestionHistorySelection(open, copy, announce);
   const present = usePresence(open, PANEL_EXIT_MS, active);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState<QuestionPage>({ items: [], cursor: null });
@@ -70,12 +74,12 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     if (node) scroll.current.scrollTop += node.getBoundingClientRect().top - saved.top;
   }, [page]);
   const panel = useRef<HTMLElement>(null), opener = useRef<HTMLElement | null>(null);
-  const full = narrow || !!detailView || !!confirmation || restoring || reaskFlow.blocking;
+  const full = markdown.active || markdown.busy || narrow || !!detailView || !!confirmation || restoring || reaskFlow.blocking;
   const lastFull = useRef(full); if (open) lastFull.current = full;
   const renderedFull = open ? full : lastFull.current;
   const covered = useRef(false);
-  const disabled = busy || restoring;
-  useEffect(() => { onBlockingChange(open && (!!confirmation || restoring || !!organizing || reaskFlow.blocking)); return () => onBlockingChange(false); }, [open, confirmation, restoring, organizing, reaskFlow.blocking, onBlockingChange]);
+  const disabled = busy || restoring || markdown.active || markdown.busy;
+  useEffect(() => { onBlockingChange(open && (!!confirmation || restoring || !!organizing || reaskFlow.blocking || markdown.active || markdown.busy)); return () => onBlockingChange(false); }, [open, confirmation, restoring, organizing, reaskFlow.blocking, markdown.active, markdown.busy, onBlockingChange]);
   useEffect(() => { if (busy || !open || !active) { archiveEpoch.current++; setOrganizing(null); } }, [busy, open, active]);
   const closeRef = useRef(onClose); closeRef.current = onClose;
   useEffect(() => shell.onQuestionAttachmentSaveFailed?.(() => announce(copy.questionOriginalSaveFailed)), [copy, announce]);
@@ -109,7 +113,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     return () => { void shell.setQuestionPanel(false).catch(() => {}); };
   }, [present, renderedFull, active, copy, announce]);
   useEffect(() => {
-    if (!open || confirmation || organizing || reaskFlow.confirming) return;
+    if (!open || confirmation || organizing || reaskFlow.confirming || markdown.active) return;
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && (e.isComposing || e.keyCode === 229)) { e.stopImmediatePropagation(); return; }
       if (panel.current?.querySelector('.question-image-dialog')) return;
@@ -132,7 +136,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
       }
     };
     window.addEventListener('keydown', key, true); return () => window.removeEventListener('keydown', key, true);
-  }, [open, detailView, confirmation, organizing, full, openRequest, onReadingCancelled, reaskFlow.confirming]);
+  }, [open, detailView, confirmation, organizing, full, openRequest, onReadingCancelled, reaskFlow.confirming, markdown.active]);
   const load = useCallback(async (cursor?: string, refresh = false) => {
     if (refresh && listPending.current) return;
     const request = ++sequence.current;
@@ -203,13 +207,13 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     finally { if (detailPending.current === request) detailPending.current = 0; }
   };
   useEffect(() => {
-    if (!open || confirmation || restoring || organizing) return;
+    if (!open || confirmation || restoring || organizing || markdown.active) return;
     const timer = setInterval(() => {
       if (detailView) { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined, true); }
       else void load(undefined, true);
     }, 5_000);
     return () => clearInterval(timer);
-  }, [open, detail?.question.id, detail?.loadedAnswerId, detailView?.state, confirmation, restoring, organizing, load, page.items.length]);
+  }, [open, detail?.question.id, detail?.loadedAnswerId, detailView?.state, confirmation, restoring, organizing, markdown.active, load, page.items.length]);
   useEffect(() => {
     if (open && openRequest) void read(openRequest.questionId, openRequest.answerId, false, openRequest.request);
   }, [open, openRequest?.request, openRequest?.questionId, openRequest?.answerId, openRequest?.source]);
@@ -241,6 +245,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     deleting.current.add(id);
     reaskFlow.invalidate(); const request = ++detailSequence.current; detailPending.current = 0;
     void shell.deleteQuestion(id).then(() => {
+      selection.remove(id);
       if (request === detailSequence.current && detail?.question.id === id) leaveDetail();
       sequence.current++; listPending.current = 0;
       void latestLoad.current(undefined, true); announce(copy.questionDeleted);
@@ -279,18 +284,19 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   return <aside ref={panel} tabIndex={-1} className={`question-history${renderedFull ? ' is-full' : ''}`} style={{ width: renderedFull ? undefined : QUESTION_PANEL_WIDTH }}
     data-state={open ? 'open' : 'closed'} inert={!open} aria-hidden={open ? undefined : true} aria-label={copy.questionHistory}>
     <header className="question-header"><h1>{detailView ? copy.questionCopies : copy.questionHistory}</h1>
-      {detailView && <button type="button" onClick={back}>{copy.questionBack}</button>}
-      <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} onClick={close}><CloseIcon /></button>
+      {!detailView && <button type="button" disabled={disabled} aria-pressed={selection.selecting} onClick={selection.selecting ? selection.finish : selection.start}>{selection.selecting ? copy.markdownFinish : copy.markdownSelect}</button>}
+      {detailView && <button type="button" disabled={markdown.active || markdown.busy} onClick={back}>{copy.questionBack}</button>}
+      <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} disabled={markdown.active || markdown.busy} onClick={close}><CloseIcon /></button>
     </header>
     {restoring && <div role="status" className="question-notice">{copy.questionBusy} <button type="button" onClick={() => { void shell.cancelQuestionRestore(); }}>{copy.cancel}</button></div>}
     {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(undefined, true); }}>{copy.questionRetry}</button></div>}
-    {detail ? <QuestionHistoryReader key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} copy={copy} sites={sites} busy={disabled} imageSyncEnabled={imageSyncEnabled} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.id, detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { reaskFlow.invalidate(); archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
+    {detail ? <QuestionHistoryReader key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} copy={copy} sites={sites} busy={disabled} imageSyncEnabled={imageSyncEnabled} onExportAnswer={answerId => { void markdown.single({ kind: 'history', id: detail.question.id }, answerId); }} onExportWhole={() => markdown.open([{ kind: 'history', id: detail.question.id }])} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.id, detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { reaskFlow.invalidate(); archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
       <p data-state={detailView.state} role={detailView.state === 'failed' ? 'alert' : 'status'}>{detailView.state === 'loading' ? copy.questionDetailLoading : detailView.state === 'missing' ? copy.questionRecordMissing : copy.questionDetailFailed}</p>
       {detailView.state !== 'loading' && <button type="button" onClick={() => { void read(detailView.questionId, detailView.answerId); }}>{copy.questionRetry}</button>}
     </div> : <>
       <div className="question-search"><input ref={input} type="search" value={query} onChange={e => { leaveDetail(); sequence.current++; listPending.current = 0; setQuery(e.target.value); }}
         onKeyDown={event => {
-          if (!active || confirmation || organizing || reaskFlow.blocking || event.nativeEvent.isComposing || event.keyCode === 229 ||
+          if (!active || confirmation || organizing || reaskFlow.blocking || markdown.active || event.nativeEvent.isComposing || event.keyCode === 229 ||
             event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['PageUp', 'PageDown'].includes(event.key)) return;
           const target = scroll.current;
           if (!target) return;
@@ -298,13 +304,16 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
           target.scrollTop = Math.max(0, Math.min(Math.max(0, target.scrollHeight - target.clientHeight),
             target.scrollTop + target.clientHeight * 0.875 * (event.key === 'PageDown' ? 1 : -1)));
         }} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
+      {selection.selecting && <QuestionHistorySelection copy={copy} items={page.items} ids={selection.ids} disabled={disabled || loading}
+        onLoaded={() => selection.loaded(page.items)} onClear={selection.clear} onExport={() => markdown.open(selection.ids.map(id => ({ kind: 'history', id })))} />}
       <div ref={scroll} className="question-scroll" tabIndex={0} role="region" aria-label={copy.questionHistory} aria-busy={loading}>
         {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}
-        <QuestionHistoryList items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
+        <QuestionHistoryList selecting={selection.selecting} selectedIds={selection.ids} onToggle={selection.toggle} onExport={id => markdown.open([{ kind: 'history', id }])} items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
         {page.cursor && <button type="button" className="question-load-more" disabled={loading} onClick={() => { void load(page.cursor!); }}>{copy.questionMore}</button>}
         <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={text => reaskFlow.start({ text, imageCount: 0 })} />
       </div>
     </>}
+    {markdown.panel}
     {reaskFlow.feedback}
     {confirmation && <ConfirmDialog copy={copy} title={confirmation.title} message={confirmation.message} confirmLabel={confirmation.label} cancelLabel={copy.cancel} tone={confirmation.danger ? "danger" : undefined} onConfirm={confirmation.run} onCancel={() => setConfirmation(null)} />}
     {organizing && detail && <QuestionArchivePicker key={`picker:${detail.question.id}:${archiveEpoch.current}`} detail={detail} answerId={organizing} initialAnswerIds={guideChoices}

@@ -1,3 +1,6 @@
+import { MAX_MARKDOWN_RECORDS } from '../shared/markdown-export';
+import { formatCopy } from '../shared/copy';
+import { useMarkdownExport } from './use-markdown-export';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { ArchiveRecord } from '../shared/archive';
 import type { DecisionInput, DecisionRecord } from '../shared/decision';
@@ -83,6 +86,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const loadedRevision = useRef(-1);
   const listScroll = useRef(initial.listScroll);
   const refresh = () => setRevision(value => value + 1);
+  const [exportStatus, setExportStatus] = useState('');
+  const markdown = useMarkdownExport({ copy, locale: props.locale, onStatus: setExportStatus, onBlocking: value => blocking('markdown', value) });
   const bulk = useLibraryBulk(value => blocking('bulk', value), refresh);
   const navigate = (action: () => void) => {
     if (busyRef.current) return;
@@ -211,6 +216,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     if (loading || loadFailed || !targets.length) return;
     setBulkFolders(false); bulk.start({ action, favorite, folderIds, targets, locale: props.locale });
   });
+  const visibleKeys = new Set(items.map(item => `${item.kind}:${item.record.id}`));
+  const hiddenSelection = selectedKeys.filter(key => !visibleKeys.has(key)).length;
   const labels = getLibraryCopy(props.locale);
   return <LibraryRecordToolbar.Provider value={focused && !newSource && selected?.kind === 'archive' ? recordToolbar : null}>
   <section ref={reading.root} className="folder-workspace library" data-focused={focused} data-pane={pane} aria-label={copy.archiveTitle} aria-busy={busy}>
@@ -227,8 +234,9 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       </div>
     </header>
     <LibraryBulkActions labels={labels} count={selectedKeys.length} mixed={targets.some(target => target.kind === 'decision')}
+      exportDisabled={targets.length > MAX_MARKDOWN_RECORDS} exportHint={`${copy.markdownLimit}${hiddenSelection ? ' · ' + formatCopy(copy.markdownHidden, { count: hiddenSelection }) : ''}`}
       disabled={unavailable} running={bulk.running} done={bulk.done} result={bulk.result} onFavorite={value => startBulk('favorite', value)}
-      onAdd={() => navigate(() => setBulkFolders(true))} onExport={() => startBulk('export')} onStop={bulk.stop}
+      onAdd={() => navigate(() => setBulkFolders(true))} onExport={() => navigate(() => { if (!unavailable) markdown.open(targets); })} onStop={bulk.stop}
       onRetry={() => navigate(() => {
         if (loading || loadFailed || !bulk.result) return;
         const retryIntent = intent.current;
@@ -266,6 +274,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
           : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft, origin) => { if (selecting.current === null) navigate(() => { decisionReturn.capture(origin); setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{welcomeTitle}</h1>{welcomeHint ? <p>{welcomeHint}</p> : null}</div>}
       </div>
     </div>
+    {markdown.panel}
+    {exportStatus && <div className="archive-status" role="status">{exportStatus}</div>}
     {message ? <div className="archive-status" role="status">{message}<button disabled={busy} onClick={failure === 'capture' ? capture : refresh}>{copy.retryShellLoad}</button></div> : null}
     {membership ? <FolderMembershipDialog key={`${membership.kind}:${membership.id}`} copy={copy} target={{ kind: membership.kind, id: membership.id }} targetTitle={membership.title} folders={folders} onCreated={createdFolder} onCancel={() => setMembership(null)} onSaved={() => { membership.afterSaved?.(); setMembership(null); refresh(); }} /> : null}
     {bulkFolders && <LibraryBulkFolderDialog copy={copy} labels={labels} folders={folders} count={targets.length}

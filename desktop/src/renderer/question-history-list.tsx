@@ -2,8 +2,9 @@ import { formatCopy, type DesktopCopy } from '../shared/copy';
 import type { SiteDefinition } from '../shared/contracts';
 import type { QuestionSummary } from '../shared/question-history';
 import { answerState, questionDay } from './question-history-model';
-export function QuestionHistoryList({ items, sites, copy, busy, onRestore, onRead, onReask, onDelete }: {
+export function QuestionHistoryList({ items, sites, copy, busy, selecting, selectedIds, onToggle, onExport, onRestore, onRead, onReask, onDelete }: {
   items: readonly QuestionSummary[]; sites: readonly SiteDefinition[]; copy: DesktopCopy; busy: boolean;
+  selecting?: boolean; selectedIds?: readonly string[]; onToggle?: (id: string) => void; onExport?: (id: string) => void;
   onRestore: (id: string) => void; onRead: (id: string) => void; onReask: (id: string, text: string, imageCount: number) => void; onDelete: (id: string) => void;
 }): React.JSX.Element {
   const now = Date.now();
@@ -18,11 +19,13 @@ export function QuestionHistoryList({ items, sites, copy, busy, onRestore, onRea
     return <li key={q.id} data-question-id={q.id}>
       {(index === 0 || questionDay(items[index - 1].createdAt, now, copy) !== group) && <h2 className="question-day">{group}</h2>}
       <article className="question-card">
+        <div className="question-card-heading">
+        {selecting && <input className="question-card-select" type="checkbox" aria-label={q.text} checked={selectedIds?.includes(q.id) ?? false} disabled={busy} onChange={() => onToggle?.(q.id)} />}
         <button type="button" className="question-main" data-hint={`${copy.questionCopies} · ${siteNames}`}
           aria-label={`${copy.questionCopies}: ${q.text}. ${siteNames}`} onClick={() => onRead(q.id)}>
           <span className="question-title">{q.text}</span>
           <span className="question-meta"><time>{new Date(q.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time><span aria-hidden="true"> · </span><span aria-hidden="true">{siteSummary}</span><span className="sr-only">{siteNames}</span></span>
-        </button>
+        </button></div>
         <div className="question-card-status">
           {q.inputImageCount > 0 && <span className="question-saved" data-hint={formatCopy(copy.questionImages, { count: q.inputImageCount })}>{formatCopy(copy.questionImageCount, { count: q.inputImageCount })}</span>}
           <span className="question-saved">{formatCopy(copy.questionSaved, { saved: q.savedSites, total: q.sites.length })}</span>
@@ -31,6 +34,7 @@ export function QuestionHistoryList({ items, sites, copy, busy, onRestore, onRea
         <div className="question-card-actions">
           <button type="button" className="question-restore" aria-disabled={busy || !canRestore} data-hint={restoreHint} onClick={busy || !canRestore ? undefined : () => onRestore(q.id)}>{copy.questionRestore}</button>
           <details className="question-menu"><summary aria-label={`${copy.questionMenu}: ${q.text}`}>···</summary><div>
+            <button type="button" disabled={busy || !q.savedSites} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onExport?.(q.id); }}>{copy.markdownWhole}</button>
             <button type="button" disabled={busy} onClick={() => onReask(q.id, q.text, q.inputImageCount)}>{copy.questionReask}</button>
             <button type="button" disabled={busy} onClick={() => onDelete(q.id)}>{copy.questionDelete}</button>
           </div></details>

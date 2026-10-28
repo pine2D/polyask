@@ -97,3 +97,12 @@
 .question-image-dialog img { display: block; flex-shrink: 0; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
 .question-image-dialog[data-size="actual"] .question-image-canvas { width: max-content; height: max-content; }
 .question-image-dialog[data-size="actual"] img { max-width: none; max-height: none; }
+
+.question-card-heading { display: flex; align-items: start; gap: 4px; }
+.question-card-heading .question-main { min-width: 0; flex: 1; }
+.question-card-select { flex: 0 0 auto; margin: 14px 0 0 12px; width: 16px; height: 16px; accent-color: var(--accent); }
+.question-selection { padding: 0 16px 12px; border-bottom: 1px solid var(--border); font-size: var(--font-meta); }
+.question-selection-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.question-selection label { display: flex; align-items: center; gap: 6px; }
+.question-selection input { accent-color: var(--accent); }
+.question-selection p { color: var(--muted); margin: 6px 0 0; }

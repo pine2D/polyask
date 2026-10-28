@@ -13,10 +13,11 @@ for (const locale of ['en', 'zh-CN', 'zh-TW']) {
     const copy = getCopy(locale), record = { ...archiveFixture(), results: [
       { host: 'claude.ai', label: 'Claude', text: '[Source](https://example.com/source)' }
     ] };
-    let exports = 0, links = 0, clipboardWrites = 0;
+    let exports = 0, previews = 0, links = 0, clipboardWrites = 0;
     setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [],
       searchFolderContents: async () => [{ kind: 'archive', record }], getArchive: async () => record,
       archiveMarkdown: async () => { exports++; throw Error('fixture_export_failed'); },
+      previewMarkdown: async () => { previews++; throw Error('markdown_not_found'); },
       openExternal: async () => { links++; throw Error('fixture_open_failed'); }
     }) as any);
     const h = await mountLibrary(<ArchiveSurface copy={copy} locale={locale} preferredId={record.id}
@@ -27,16 +28,19 @@ for (const locale of ['en', 'zh-CN', 'zh-TW']) {
       Object.defineProperty(h.window.navigator, 'clipboard', { configurable: true,
         value: { writeText: async () => { clipboardWrites++; } } });
       await waitForInitial();
-      for (const [label, expected] of [[copy.copyArchive, copy.archiveCopyFailed], [copy.exportArchive, copy.archiveExportFailed]]) {
+      for (const [label, expected] of [[copy.copyArchive, copy.archiveCopyFailed]]) {
         await h.click(h.document.querySelector<HTMLButtonElement>('.archive-actions .library-menu-trigger')!);
         const action = [...h.document.querySelectorAll<HTMLButtonElement>('[role=menuitem]')].find(node => node.textContent === label)!;
         await h.click(action);
         assert.equal(h.document.querySelector('.archive-workspace .archive-status')?.textContent, expected);
         assert.equal(h.document.querySelector('.archive-detail h1')?.textContent, record.task);
       }
+      await h.click(h.document.querySelector<HTMLButtonElement>('[data-action=archive-markdown-export]')!);
+      assert.equal(h.document.querySelector('[role=dialog] [role=alert]')?.textContent, copy.markdownNotFound);
+      await h.click(h.document.querySelector<HTMLButtonElement>('[role=dialog] header button')!);
       await h.click(h.document.querySelector<HTMLAnchorElement>('.markdown-preview a')!);
       assert.equal(h.document.querySelector('.archive-workspace .archive-status')?.textContent, copy.archiveSourceOpenFailed);
-      assert.equal(exports, 2); assert.equal(links, 1); assert.equal(clipboardWrites, 0);
+      assert.equal(exports, 1); assert.equal(previews, 1); assert.equal(links, 1); assert.equal(clipboardWrites, 0);
     } finally { await h.close(); setShellApi(null); }
   });
 }

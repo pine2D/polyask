@@ -13,12 +13,12 @@ import { QuestionPrompt } from './question-prompt';
 import { answerSourceId } from '../shared/answer-source';
 
 export function QuestionHistoryReader({ detail, view, session: suppliedSession, copy, sites, busy, onLoadAnswer,
-  onRestore, onReask, onDelete, onAnnounce, onOrganize, imageSyncEnabled }: {
+  onRestore, onReask, onDelete, onAnnounce, onOrganize, onExportAnswer, onExportWhole, imageSyncEnabled }: {
   detail: QuestionDetail; view?: QuestionDetailView; session?: QuestionReaderSession;
   copy: DesktopCopy; sites: readonly SiteDefinition[]; busy: boolean; onLoadAnswer?: (id: string) => void;
   onRestore: (answerId?: string) => void; onReask: () => void; onDelete: () => void; onAnnounce: (text: string) => void;
   imageSyncEnabled?: boolean;
-  onOrganize?: (answerId: string) => void;
+  onOrganize?: (answerId: string) => void; onExportAnswer?: (answerId: string) => void; onExportWhole?: () => void;
 }): React.JSX.Element {
   const fallback = useRef(new QuestionReaderSession()), scroller = useRef<HTMLDivElement>(null);
   const session = suppliedSession ?? fallback.current;
@@ -66,7 +66,7 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
       {answer?.truncated && <p role="note">{copy.questionTruncated}</p>}
       <QuestionHistoryActions questionId={detail.question.id} prompt={detail.question.text} answer={answer} site={site} conversationUrl={conversationUrl}
         canRestoreAll={canRestoreAll} ready={ready} copy={copy} busy={busy} onRestore={onRestore} onReask={onReask}
-        onDelete={onDelete} onAnnounce={onAnnounce} onOrganize={onOrganize && answer ? () => onOrganize(answer.id) : undefined} />
+        onDelete={onDelete} onAnnounce={onAnnounce} onExportAnswer={answer && onExportAnswer ? () => onExportAnswer(answer.id) : undefined} onExportWhole={onExportWhole} onOrganize={onOrganize && answer ? () => onOrganize(answer.id) : undefined} />
       {!answer?.conversationUrl && <p className="question-note">{copy.questionMissing}</p>}
       {!ready ? <div className="question-empty" data-state={view?.state} role={view?.state === 'failed' ? 'alert' : 'status'}>
         {view?.state === 'failed' ? copy.questionAnswerFailed : view?.state === 'missing' ? copy.questionCopyChanged : copy.questionAnswerLoading}

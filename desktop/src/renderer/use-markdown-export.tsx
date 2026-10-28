@@ -13,7 +13,7 @@ export function markdownExportMessage(copy: DesktopCopy, code: string): string {
     markdown_empty: copy.markdownEmpty, markdown_failed: copy.markdownFailed };
   return messages[code] ?? copy.markdownFailed;
 }
-export function useMarkdownExport(options: { copy: DesktopCopy; locale: string; onBlocking?: (busy: boolean) => void; onStatus?: (message: string) => void }) {
+export function useMarkdownExport(options: { copy: DesktopCopy; locale: string; enabled?: boolean; onBlocking?: (busy: boolean) => void; onStatus?: (message: string) => void }) {
   const current = useRef(options); current.current = options;
   const mounted = useRef(false), epoch = useRef(0), pending = useRef(false), visible = useRef(false), savingRef = useRef(false);
   const targets = useRef<readonly MarkdownTarget[]>([]);
@@ -24,6 +24,11 @@ export function useMarkdownExport(options: { copy: DesktopCopy; locale: string; 
   const locale = () => { const raw = current.current.locale; return raw === 'zhCN' || raw === 'zhTW' ? raw : resolveLocale(raw); };
   useLayoutEffect(() => { mounted.current = true; return () => { mounted.current = false; epoch.current++; current.current.onBlocking?.(false); }; }, []);
   useLayoutEffect(() => { current.current.onBlocking?.(active || saving); }, [active, saving]);
+  useLayoutEffect(() => {
+    if (options.enabled !== false) return;
+    epoch.current++; pending.current = visible.current = savingRef.current = false;
+    setActive(false); setLoading(false); setSaving(false);
+  }, [options.enabled]);
   const valid = (ticket: number) => mounted.current && ticket === epoch.current;
   const close = () => {
     if (savingRef.current) return;

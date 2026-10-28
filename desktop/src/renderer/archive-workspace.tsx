@@ -53,6 +53,7 @@ interface ArchiveWorkspaceProps {
   readonly onCapture: () => void;
   readonly onCopy: () => void;
   readonly onExport: () => void;
+  readonly onExportAnswer?: (index: number) => void;
   readonly onExportReport?: (format: ReportFormat) => void;
   readonly onDelete: (id: string) => void;
   readonly onSaveMetadata?: (patch: ArchivePatch) => Promise<boolean>;
@@ -115,13 +116,13 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const actions = [
     { label: copy.copyArchive, run: props.onCopy },
-    { label: copy.exportArchive, run: props.onExport },
     ...(props.onExportReport ? reportExportActions(copy, props.onExportReport) : []),
     { label: copy.deleteArchive, run: () => setConfirmDelete(selected?.id ?? null), danger: true }
   ];
   const recordActions = <div className="archive-actions">
     {!props.embedded ? <button type="button" title={copy.captureArchive} aria-label={copy.captureArchive} disabled={props.busy} onClick={props.onCapture}><ArchiveIcon /></button> : null}
     {selected ? <button className="library-organize" type="button" disabled={props.busy} aria-expanded={organizing} data-dirty={organizationDirty || undefined} onClick={() => setOrganizing(value => !value)}>{copy.libraryOrganize}{organizationDirty ? <span className="sr-only"> · {copy.decisionUnsaved}</span> : null}</button> : null}
+    <button type="button" data-action="archive-markdown-export" disabled={!selected || props.busy} onClick={props.onExport}>{copy.markdownSingle}</button>
     <LibraryMenu label={copy.libraryMore} disabled={!selected || props.busy} actions={actions} />
     {!props.embedded ? <button className="panel-close" type="button" title={copy.closeArchive} aria-label={copy.closeArchive} disabled={props.busy} onClick={props.onClose}><CloseIcon /></button> : null}
   </div>;
@@ -158,7 +159,7 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
           )}
         </aside> : null}
         <Detail ref={node => { pane.current = node; }} className="archive-detail-pane" onScroll={event => { if (event.target === event.currentTarget) reader.change(capture()); }}>
-          {props.detailOverride ?? (selected ? <ArchiveDetail metadata={null} recordActions={inlineActions ? recordActions : undefined} reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
+          {props.detailOverride ?? (selected ? <ArchiveDetail onExportAnswer={props.onExportAnswer} metadata={null} recordActions={inlineActions ? recordActions : undefined} reader={{ ...reader, change }} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} synthesisSession={props.synthesisSession} readingFocus={props.readingFocus} onSaveMetadata={props.onSaveMetadata} onCreateDecision={props.onCreateDecision} initialComparisonOpen={selected.id === props.comparisonId} copy={copy} locale={props.locale} record={selected} onPatch={props.onPatch} onOpenSource={props.onOpenSource} pendingSynthesis={props.pendingSynthesis} synthesisCandidate={props.synthesisCandidate} busy={props.busy}
             onSynthesize={() => { rememberEditorScroll(); props.onSynthesize(); }}
             onFollowUp={props.onFollowUp ? (host, excerpt) => { rememberEditorScroll(); props.onFollowUp?.(host, excerpt); } : undefined}
             onCollectSynthesis={props.onCollectSynthesis} onSaveSynthesis={props.onSaveSynthesis} /> : null)}

@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import type { ArchivePatch, ArchiveRecord } from "../shared/archive";
 import type { SiteDefinition } from "../shared/contracts";
 import type { DesktopCopy } from "../shared/copy";
-import { dateTimeAttribute } from "../shared/format";
 import type { Tier } from "../shared/protocol";
 import type { DraftReceipt } from './draft-receipt';
 import { describeSynthesisSendCode, errorCode } from "../shared/status-copy";
@@ -23,6 +22,7 @@ import type { SynthesisSession } from './synthesis-session';
 import { createComparisonDraftStore, type ComparisonDraftStore } from './comparison-draft-store';
 import { createLibrarySessionStore, type LibrarySessionStore } from './library-session';
 import { useArchiveReader, type ArchiveDetailView } from './archive-reader-session';
+import { useMarkdownExport } from './use-markdown-export';
 import { useReportExport } from './use-report-export';
 export type { ArchiveDetailView } from './archive-reader-session';
 
@@ -50,15 +50,6 @@ export interface ArchiveSurfaceProps {
   readonly synthesisDrafts?: SynthesisDraftStore;
   readonly synthesisEditorRequest?: SynthesisEditorRequest | null;
   readonly onSynthesisEditorOpened?: () => void;
-}
-
-function downloadMarkdown(markdown: string, createdAt: number): void {
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(new Blob([markdown], { type: "text/markdown" }));
-  const stamp = dateTimeAttribute(createdAt)?.slice(0, 16).replace(/[T:]/g, "-") ?? 'undated';
-  link.download = `polyask-${stamp}.md`;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 5_000);
 }
 
 interface ArchiveRequestEpoch {
@@ -155,6 +146,8 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
     props.session?.read().reader, value => props.session?.update({ reader: value }));
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
+  const markdownExport = useMarkdownExport({ copy: props.copy, locale: props.locale, onStatus: setStatus });
+  const blocked = busy || markdownExport.active || markdownExport.busy;
   const exportReport = useReportExport({ kind: 'archive', id: selected.id, copy: props.copy, locale: props.locale, onStatus: setStatus });
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
@@ -181,7 +174,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
   useEffect(() => { sourceMounted.current = true; return () => { sourceMounted.current = false; sourceReadEpoch.current++; }; }, []);
   if (!actionQueue.current) actionQueue.current = new SerialActions(setBusy, setStatus);
   useEffect(() => setSelected(props.embeddedRecord), [props.embeddedRecord]);
-  useEffect(() => { props.onBusy(busy); return () => props.onBusy(false); }, [busy, props.onBusy]);
+  useEffect(() => { props.onBusy(blocked); return () => props.onBusy(false); }, [blocked, props.onBusy]);
   const run = (action: () => Promise<void>, failure: ActionFailure): Promise<void> => actionQueue.current!.run(action, failure);
   const markdown = () => shell.archiveMarkdown(selected.id, props.locale);
   const savePatch = async (value: ArchivePatch): Promise<boolean> => {
@@ -222,7 +215,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       favoriteOnly={false}
       selectedTag=""
       loading={false}
-      busy={busy}
+      busy={blocked}
       status={status}
       onClose={props.onClose}
       onQueryChange={() => undefined}
@@ -238,11 +231,8 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
         await navigator.clipboard.writeText(await markdown());
         setStatus(props.copy.archiveCopied);
       }, props.copy.archiveCopyFailed); }}
-      onExport={() => { void run(async () => {
-        if (!selected) return;
-        downloadMarkdown(await markdown(), selected.ts);
-        setStatus(props.copy.archiveExported);
-      }, props.copy.archiveExportFailed); }}
+      onExport={() => markdownExport.open([{ kind: 'archive', id: selected.id }])}
+      onExportAnswer={index => { void markdownExport.single({ kind: 'archive', id: selected.id }, `result:${index}`, selected.updatedAt); }}
       onExportReport={format => { void run(() => exportReport(format), props.copy.reportFailed); }}
       onDelete={(id) => { void run(async () => {
         await shell.deleteArchive(id);
@@ -255,7 +245,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
       synthesisCandidate={props.synthesisCandidate}
       synthesisSession={props.synthesisSession}
       editorFocusOrigin={editorFocusOrigin}
-      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={busy} initialDraft={synthesisSeed ?? props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onReloadSource={reloadSource} onSourceReviewed={() => props.synthesisDrafts?.review(selected, followUpHost)} onCancel={() => { if (busy) shell.cancelSynthesis(); else setSynthesisId(null); }} onSend={(request, receipt) => { return run(() => props.onSendSynthesis(request, receipt), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
+      detailOverride={synthesisId && selected?.id === synthesisId ? <SynthesisWorkspace key={`${selected.id}:${followUpHost ?? "synthesis"}`} followUpHost={followUpHost} copy={props.copy} record={selected} sites={props.synthesisSites} defaultTier={props.defaultTier} busy={blocked} initialDraft={synthesisSeed ?? props.synthesisDrafts?.restore(selected, followUpHost)} onDraftChange={draft => props.synthesisDrafts?.save(selected, draft, followUpHost)} onReloadSource={reloadSource} onSourceReviewed={() => props.synthesisDrafts?.review(selected, followUpHost)} onCancel={() => { if (busy) shell.cancelSynthesis(); else setSynthesisId(null); }} onSend={(request, receipt) => { return run(() => props.onSendSynthesis(request, receipt), (error) => describeSynthesisSendCode(props.copy, errorCode(error))); }} /> : undefined}
       onSynthesize={() => requestDecisionNavigation(() => { setEditorFocusOrigin('synthesis'); setSynthesisSeed(null); setFollowUpHost(undefined); setSynthesisId(selected.id); })}
       onFollowUp={(host, value) => value ? excerpts.followUp(value) : requestDecisionNavigation(() => { setEditorFocusOrigin(`follow-up:${host}`); setSynthesisSeed(null); setFollowUpHost(host); setSynthesisId(selected.id); })}
       onCollectSynthesis={() => { void run(props.onCollectSynthesis, props.copy.synthesisCollectFailed); }}
@@ -264,6 +254,6 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
         props.onSavedArchive(record);
         setStatus(props.copy.synthesisSavedDone);
       }, props.copy.archiveSaveFailed); }}
-    />{excerpts.dialog}</>
+    />{excerpts.dialog}{markdownExport.panel}</>
   );
 }

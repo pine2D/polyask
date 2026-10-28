@@ -35,6 +35,7 @@ interface ArchiveDetailProps {
   readonly record: ArchiveRecord;
   readonly onSaveMetadata?: (patch: ArchivePatch) => Promise<boolean>;
   readonly onPatch: (patch: ArchivePatch) => void;
+  readonly onExportAnswer?: (index: number) => void;
   readonly onOpenSource: (url: string) => void;
   readonly pendingSynthesis: PendingSynthesis | null;
   readonly synthesisCandidate: SynthesisCandidate | null;
@@ -152,6 +153,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
               <header>
                 <h2>{answerSourceId(index)} {result.label}{tier}</h2>
                 {successful ? <div className="archive-answer-actions">
+                  {props.onExportAnswer && <button type="button" data-action="archive-answer-export" disabled={props.busy} onClick={() => props.onExportAnswer?.(index)}>{copy.markdownSingle}</button>}
                   <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} disabled={props.busy} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button>
                   {props.onFollowUp ? <button type="button" data-archive-editor={`follow-up:${result.host}`} disabled={props.busy} onClick={() => props.onFollowUp?.(result.host)}>{copy.followUpAction}</button> : null}
                 </div> : null}

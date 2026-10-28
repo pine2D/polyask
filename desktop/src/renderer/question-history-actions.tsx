@@ -5,11 +5,11 @@ import { ChevronDownIcon, CopyIcon, ExternalLinkIcon, LinkIcon } from './icons';
 import { LibraryMenu } from './library-menu';
 
 export function QuestionHistoryActions({ questionId, prompt, answer, site, conversationUrl, canRestoreAll, ready, copy, busy,
-  onRestore, onReask, onDelete, onAnnounce, onOrganize }: {
+  onRestore, onReask, onDelete, onAnnounce, onOrganize, onExportAnswer, onExportWhole }: {
   questionId: string; prompt: string; answer?: QuestionAnswerRecord; site: string; conversationUrl: string | null;
   canRestoreAll: boolean; ready: boolean; copy: DesktopCopy; busy: boolean;
   onRestore: (id?: string) => void; onReask: () => void; onDelete: () => void;
-  onAnnounce: (text: string) => void; onOrganize?: () => void;
+  onAnnounce: (text: string) => void; onOrganize?: () => void; onExportAnswer?: () => void; onExportWhole?: () => void;
 }): React.JSX.Element {
   return <div className="question-actions question-reader-actions" role="group" aria-label={copy.questionActions}>
     <div className="question-answer-actions">
@@ -27,6 +27,7 @@ export function QuestionHistoryActions({ questionId, prompt, answer, site, conve
       <span className="question-copy-action"><span aria-hidden="true">{copy.questionCopy}</span><button type="button" className="question-icon-action" aria-label={copy.questionCopy} data-hint={copy.questionCopy} disabled={!ready || !answer?.answerMarkdown} onClick={() => {
         void navigator.clipboard.writeText(answer?.answerMarkdown ?? '').then(() => onAnnounce(copy.questionCopied)).catch(() => onAnnounce(copy.questionFailed));
       }}><CopyIcon /></button></span>
+      {onExportAnswer && <button type="button" disabled={busy || !ready || !answer?.answerMarkdown} onClick={onExportAnswer}>{copy.markdownSingle}</button>}
     </div>
     <div className="question-prompt-actions">
       <span className="question-copy-action"><span aria-hidden="true">{copy.questionCopyPrompt}</span><button type="button" className="question-icon-action" data-action="copy-question" aria-label={copy.questionCopyPrompt} data-hint={copy.questionCopyPrompt} onClick={() => {
@@ -35,7 +36,7 @@ export function QuestionHistoryActions({ questionId, prompt, answer, site, conve
       {onOrganize && <button type="button" data-action="organize-saved-answer" disabled={busy || !ready || !answer?.answerMarkdown} onClick={onOrganize}>{copy.questionOrganize}</button>}
       <button type="button" data-action="reask-question" disabled={busy} onClick={onReask}>{copy.questionReask}</button>
       <LibraryMenu key={questionId} label={copy.questionMenu} disabled={busy}
-        actions={[{ label: copy.questionDeleteRecord, danger: true, run: onDelete }]} />
+        actions={[...(onExportWhole ? [{ label: copy.markdownWhole, run: onExportWhole }] : []), { label: copy.questionDeleteRecord, danger: true, run: onDelete }]} />
     </div>
   </div>;
 }

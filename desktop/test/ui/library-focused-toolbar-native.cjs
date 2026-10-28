@@ -46,11 +46,13 @@ module.exports = async ({ app, win, state, output, js, check, until, click, key,
     state.step = 'keyboard-menu';
     await js('document.querySelector(".folder-toolbar .library-organize").focus()');
     await key('Tab');
+    check(await js('document.activeElement===document.querySelector(".folder-toolbar [data-action=archive-markdown-export]")'), `${name}: Markdown has a visible keyboard entry`);
+    await key('Tab');
     check(await js('document.activeElement===document.querySelector(".folder-toolbar .library-menu-trigger")'), `${name}: visual and Tab order agree`);
     await key('Down'); await until('!!document.querySelector("[role=menu]")', 'record menu');
     check(await js(`(() => {
       const copy=window.readingFixture.labels, labels=[...document.querySelectorAll('[role=menuitem]')].map(node=>node.textContent);
-      return labels.length===5&&[copy.copyArchive,copy.exportArchive,copy.reportExportHtml,copy.reportExportPdf,copy.deleteArchive].every(label=>labels.includes(label));
+      return labels.length===4&&[copy.copyArchive,copy.reportExportHtml,copy.reportExportPdf,copy.deleteArchive].every(label=>labels.includes(label));
     })()`), 'copy, all three export formats and delete remain available');
     await key('Escape');
     check(await js('!document.querySelector("[role=menu]")&&document.activeElement===document.querySelector(".folder-toolbar .library-menu-trigger")'), 'Escape returns to the merged trigger');

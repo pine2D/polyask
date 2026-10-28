@@ -16,7 +16,7 @@ test('focused saved results share the main toolbar and return without remounting
     assert.equal(column.scrollTop, 160);
     const menu = h.document.querySelector<HTMLButtonElement>('.folder-toolbar .library-menu-trigger')!;
     await h.click(menu);
-    assert.equal(h.button(copy.exportArchive) !== undefined, true);
+    assert.equal(h.button(copy.markdownSingle) !== undefined, true);
     await h.click(h.button(copy.deleteArchive)!);
     assert.equal(h.document.querySelector('.confirm-dialog') !== null, true);
     await h.click(h.button(copy.cancel)!);

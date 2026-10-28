@@ -79,3 +79,14 @@ test('one saving task blocks duplicate clicks and unmount ignores its late resul
     assert.equal(status, copy.markdownSaving, 'late completion cannot change a different view');
   } finally { await h.close(); setShellApi(null); }
 });
+
+test('single archive export refuses a newer record rather than following its reused answer index', async () => {
+  let saves = 0, status = '';
+  setShellApi({ previewMarkdown: async () => [{ ...exportDocuments()[0], updatedAt: 2000 }],
+    exportMarkdown: async () => { saves++; return { status: 'saved' }; } } as any);
+  function Single() { const flow = useMarkdownExport({ copy, locale: 'en', onStatus: text => { status = text; } });
+    return <button onClick={() => { void flow.single({ kind: 'archive', id: 'a' }, 'old', 1000); }}>Single</button>; }
+  const h = await mountDom(<Single />);
+  try { await h.click(h.document.querySelector('button')!); assert.equal(saves, 0); assert.equal(status, copy.markdownSourceChanged); }
+  finally { await h.close(); setShellApi(null); }
+});

@@ -17,16 +17,6 @@ async function selectPage(h: Awaited<ReturnType<typeof mountDom>>) {
   await waitForInitial(); assert.equal(h.document.querySelector('[data-action="library-select-page"]') !== null, true);
   await h.click(button(h.document, '[data-action="library-select-page"]'));
 }
-function downloads(h: Awaited<ReturnType<typeof mountDom>>) {
-  const create = URL.createObjectURL, revoke = URL.revokeObjectURL;
-  const click = h.window.HTMLAnchorElement.prototype.click;
-  const blobs: Blob[] = []; let clicks = 0;
-  URL.createObjectURL = blob => { blobs.push(blob as Blob); return `blob:fixture-${blobs.length}`; };
-  URL.revokeObjectURL = () => {};
-  h.window.HTMLAnchorElement.prototype.click = () => { clicks++; };
-  return { blobs, clicked: () => clicks, close: () => { URL.createObjectURL = create; URL.revokeObjectURL = revoke; h.window.HTMLAnchorElement.prototype.click = click; } };
-}
-
 test('bulk favorite reports blocking synchronously, suppresses repeats and releases after settlement', async () => {
   const writes: string[] = [], blocking: boolean[] = []; let finish: (() => void) | undefined;
   api(two, { updateArchive: (id: string, patch: ArchivePatch) => {
@@ -107,35 +97,35 @@ test('stop lets the current write settle and prevents all later snapshot targets
   } finally { await h.close(); setShellApi(null); }
 });
 
-test('mixed export keeps canonical Markdown and never downloads a partial failed result', async () => {
-  const calls: string[] = []; let fail = true;
+test('mixed Markdown export keeps selection on failure and refreshes before saving one file', async () => {
+  let fail = true, saves = 0;
   api([{ kind: 'archive', record }, { kind: 'decision', record: decision }], {
-    archiveMarkdown: async (id: string, locale: string) => { calls.push(`archive:${id}:${locale}`); return '# Canonical archive\n\tExact source\n'; },
-    decisionMarkdown: async (id: string, locale: string) => { calls.push(`decision:${id}:${locale}`); if (fail) throw new Error('fixture_export_failure'); return '# Canonical decision\nExact evidence\n'; },
+    previewMarkdown: async ({ targets }: any) => { if (fail) throw new Error('markdown_not_found');
+      return targets.map((target: any) => ({ target, revision: 'r1', title: target.kind, createdAt: 1, updatedAt: 1,
+        entries: [{ id: 'one', site: target.kind, label: target.kind, kind: target.kind === 'decision' ? 'decision' : 'answer', available: true, capturedAt: 1, state: 'complete', truncated: false }] })); },
+    exportMarkdown: async () => { saves++; return { status: 'saved' }; }
   });
-  const h = await mountDom(workspace({ preferredId: null })); const files = downloads(h);
+  const h = await mountDom(workspace({ preferredId: null }));
+  const byLabel = (label: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === label)!;
   try {
     await selectPage(h); await h.click(button(h.document, '[data-action="library-bulk-export"]'));
-    assert.equal(files.clicked(), 0); assert.equal(files.blobs.length, 0);
-    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('1 failed'), true);
+    assert.equal(saves, 0); assert.equal(h.document.querySelector('[role=dialog] [role=alert]')?.textContent, copy.markdownNotFound);
     assert.equal(h.document.querySelectorAll('.library-content-row input:checked').length, 2);
-    fail = false; await h.click(button(h.document, '[data-action="library-bulk-retry-failed"]'));
-    assert.equal(calls.join(','), `archive:${record.id}:en,decision:${decision.id}:en,decision:${decision.id}:en`);
-    assert.equal(files.clicked(), 1); assert.equal(files.blobs.length, 1);
-    const markdown = await files.blobs[0].text();
-    assert.equal(markdown.includes('# Canonical archive\n\tExact source\n'), true);
-    assert.equal(markdown.includes('# Canonical decision\nExact evidence\n'), true);
-    assert.equal(markdown.indexOf('# Canonical archive') < markdown.indexOf('# Canonical decision'), true);
-  } finally { files.close(); await h.close(); setShellApi(null); }
+    fail = false; await h.click(byLabel(copy.markdownRefresh));
+    await h.click(byLabel(copy.markdownAll)); await h.click(byLabel(copy.markdownSaveOne));
+    assert.equal(saves, 1); assert.equal(h.document.querySelector('[role=dialog]') === null, true);
+    assert.equal(h.document.querySelectorAll('.library-content-row input:checked').length, 2);
+  } finally { await h.close(); setShellApi(null); }
 });
 
-test('unmounting while export is pending cannot start another read or download late output', async () => {
-  const calls: string[] = []; let finish: ((value: string) => void) | undefined;
-  api(two, { archiveMarkdown: (id: string) => { calls.push(id); return new Promise<string>(resolve => { finish = resolve; }); } });
-  const h = await mountDom(workspace({ preferredId: null })); const files = downloads(h);
+test('unmounting while Markdown preview is pending cannot save a late result', async () => {
+  let calls = 0, saves = 0, finish!: (value: unknown[]) => void;
+  api(two, { previewMarkdown: () => { calls++; return new Promise(resolve => { finish = resolve; }); },
+    exportMarkdown: async () => { saves++; return { status: 'saved' }; } });
+  const h = await mountDom(workspace({ preferredId: null }));
   try {
     await selectPage(h); await h.click(button(h.document, '[data-action="library-bulk-export"]'));
-    await h.render(<div>Another surface</div>); await act(async () => finish!('# Late source\n'));
-    assert.equal(calls.join(','), 'result-0000'); assert.equal(files.clicked(), 0);
-  } finally { files.close(); await h.close(); setShellApi(null); }
+    await h.render(<div>Another surface</div>); await act(async () => finish([]));
+    assert.equal(calls, 1); assert.equal(saves, 0);
+  } finally { await h.close(); setShellApi(null); }
 });
