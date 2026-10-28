@@ -1,3 +1,4 @@
+import { MARKDOWN_EXPORT_COPY } from './markdown-export-copy';
 import { COMMAND_PALETTE_SHORTCUT_COPY } from './command-palette-shortcut-copy';
 import { QUESTION_ATTACHMENT_COPY } from './question-attachment-copy';
 import { PREFERENCE_SYNC_COPY } from './preference-sync-copy';
@@ -37,6 +38,7 @@ export const COPY = {
     ...COMMAND_PALETTE_SHORTCUT_COPY.en,
     ...NOTIFICATION_COPY.en,
     ...REPORT_EXPORT_COPY.en,
+    ...MARKDOWN_EXPORT_COPY.en,
     ...SITE_FIND_COPY.en,
     ...PREFERENCE_SYNC_COPY.en,
     ...PROXY_COPY.en,
@@ -219,6 +221,7 @@ export const COPY = {
     ...COMMAND_PALETTE_SHORTCUT_COPY.zhCN,
     ...NOTIFICATION_COPY.zhCN,
     ...REPORT_EXPORT_COPY.zhCN,
+    ...MARKDOWN_EXPORT_COPY.zhCN,
     ...SITE_FIND_COPY.zhCN,
     ...PREFERENCE_SYNC_COPY.zhCN,
     ...PROXY_COPY.zhCN,
@@ -401,6 +404,7 @@ export const COPY = {
     ...COMMAND_PALETTE_SHORTCUT_COPY.zhTW,
     ...NOTIFICATION_COPY.zhTW,
     ...REPORT_EXPORT_COPY.zhTW,
+    ...MARKDOWN_EXPORT_COPY.zhTW,
     ...SITE_FIND_COPY.zhTW,
     ...PREFERENCE_SYNC_COPY.zhTW,
     ...PROXY_COPY.zhTW,

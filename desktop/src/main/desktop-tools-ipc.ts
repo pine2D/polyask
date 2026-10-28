@@ -1,3 +1,4 @@
+import { registerMarkdownExportIpc } from './markdown-export-ipc';
 import { ipcMain, type WebContents, type WebFrameMain } from 'electron';
 import type { ShellIpcOptions } from './shell-ipc';
 import type { OperationGate } from '../shared/operation-gate';
@@ -28,6 +29,9 @@ export function registerDesktopToolsIpc(options: ShellIpcOptions, bindings: {
     }
   }), registerReportExportIpc({ window: options.window, archives: options.archives, decisions: options.decisions, trusted,
     epoch: () => options.questions.repository.lifecycle,
+    isCurrent: () => !options.dataAdmin.isResetting && !options.window.isDestroyed()
+  }), registerMarkdownExportIpc({ window: options.window, archives: options.archives, decisions: options.decisions,
+    questions: options.questions.repository, trusted, epoch: () => options.questions.repository.lifecycle,
     isCurrent: () => !options.dataAdmin.isResetting && !options.window.isDestroyed()
   })];
   if (options.completionNotifications) cleanup.push(registerNotificationIpc({ notifications: options.completionNotifications, trusted }));

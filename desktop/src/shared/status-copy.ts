@@ -4,6 +4,14 @@ import type { SiteCode, SitePhase, SiteStatus } from "./protocol";
 import { normalizeSelectionMetadata } from "./selection";
 
 const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
+  markdown_not_found: 'markdownNotFound',
+  markdown_source_changed: 'markdownSourceChanged',
+  markdown_busy: 'markdownBusy',
+  markdown_too_many: 'markdownTooMany',
+  markdown_too_large: 'markdownTooLarge',
+  markdown_empty: 'markdownEmpty',
+  markdown_failed: 'markdownFailed',
+
   command_shortcut_read_failed: "commandShortcutReadFailed",
   command_shortcut_save_failed: "commandShortcutSaveFailed",
   command_shortcut_apply_failed: "commandShortcutApplyFailed",

@@ -1,3 +1,4 @@
+import type { MarkdownPreviewRequest, MarkdownExportRequest, MarkdownExportResult, MarkdownDocument } from '../shared/markdown-export';
 import type { QuestionAttachmentsManifest, QuestionReask } from '../shared/question-attachments';
 import type { DesktopImage } from '../shared/images';
 import type { GeneralPreferenceGroup, PreferenceKey, PreferenceSnapshot, PreferenceValues } from '../shared/preferences';
@@ -64,6 +65,8 @@ export interface PolyAskDesktopApi extends NotificationApi {
   onCommandPaletteShortcut(listener: (state: CommandPaletteShortcutState) => void): () => void;
   globalPromptShortcutState(): Promise<GlobalPromptShortcutState>;
   setGlobalPromptShortcut(accelerator: string | null): Promise<GlobalPromptShortcutState>;
+  previewMarkdown(request: MarkdownPreviewRequest): Promise<MarkdownDocument[]>;
+  exportMarkdown(request: MarkdownExportRequest): Promise<MarkdownExportResult>;
   exportReport(request: ReportExportRequest): Promise<ReportExportResult>;
   showSiteFindMenu(request: { session: number; revision: number }): Promise<SiteFindState>;
   openSiteFind(): Promise<SiteFindState>;
@@ -212,6 +215,8 @@ const api: PolyAskDesktopApi = Object.freeze({
   onCommandPaletteShortcut: (listener: (state: CommandPaletteShortcutState) => void) => subscribe('polyask:command-palette-shortcut-changed', listener),
   globalPromptShortcutState: () => invoke('polyask:global-prompt-shortcut-state'),
   setGlobalPromptShortcut: (accelerator: string | null) => invoke('polyask:global-prompt-shortcut-set', accelerator),
+  previewMarkdown: (request: MarkdownPreviewRequest) => invoke('polyask:markdown-preview', request),
+  exportMarkdown: (request: MarkdownExportRequest) => invoke('polyask:markdown-export', request),
   exportReport: (request: ReportExportRequest) => invoke('polyask:report-export', request),
   getNotificationStatus: () => invoke(NOTIFICATION_CHANNELS.get),
   testNotification: () => invoke(NOTIFICATION_CHANNELS.test),

@@ -20,7 +20,7 @@ function producerFiles(): string[] {
   for (const known of ["view-manager.ts", "broadcast.ts", "workspace-service.ts", "site-command-channel.ts", "submission-upgrade.ts"]) {
     assert.ok(main.includes(`src/main/${known}`), `主进程目录扫描失效：缺 ${known}`);
   }
-  return [...requires, preload, ...main];
+  return [...requires, preload, ...main, "src/shared/markdown-export.ts"];
 }
 
 function producedCodes(): Map<string, string> {
@@ -32,6 +32,10 @@ function producedCodes(): Map<string, string> {
     }
     // 本机快捷键 runtime 通过有限 error 状态返回，未经过站点 code 属性。
     for (const m of source.matchAll(/["'](command_shortcut_(?:read|save|apply)_failed)["']/g)) {
+      if (!produced.has(m[1])) produced.set(m[1], file);
+    }
+    // Markdown 文件导出使用有限结果和共享请求校验；三语映射仍参与双向对账。
+    for (const m of source.matchAll(/["'](markdown_(?:not_found|source_changed|busy|too_many|too_large|empty|failed))["']/g)) {
       if (!produced.has(m[1])) produced.set(m[1], file);
     }
     // IPC 前置验证以 Error 传码；仅将已登记站点码纳入这条附加产出通道。

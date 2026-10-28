@@ -121,6 +121,16 @@ export class QuestionRepository {
     if (!parent || "deletedAt" in parent) return [];
     return this.allAnswers(questionId).filter((item): item is QuestionAnswerRecord => !("deletedAt" in item) && parent.sites.includes(item.site));
   }
+  exportAnswers(questionId: string): (Omit<QuestionAnswerRecord, 'answerMarkdown'> & { hasText: boolean })[] {
+    const rows = this.db.prepare(`SELECT json_remove(body, '$.answerMarkdown') AS body,
+      length(trim(json_extract(body, '$.answerMarkdown'))) > 0 AS has_text
+      FROM question_answers WHERE question_id = ? AND deleted_at IS NULL ORDER BY attempt,site LIMIT 10001`).all(questionId);
+    if (rows.length > 10000) throw new Error('markdown_too_large');
+    return rows.flatMap(row => {
+      const value = readJson<Omit<QuestionAnswerRecord, 'answerMarkdown'>>(row);
+      return value ? [{ ...value, hasText: row.has_text === 1 }] : [];
+    });
+  }
   runAnswerProgress(questionId: string): QuestionRunAnswerProgress[] | null {
     const parent = this.db.prepare("SELECT json_extract(body, '$.sites') AS sites FROM questions WHERE id = ? AND deleted_at IS NULL").get(questionId);
     if (!parent || typeof parent.sites !== 'string') return null;
