@@ -34,6 +34,10 @@ Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command n
 
 2026-10-27：Electron 44.9.3 / Linux 六项原生场景通过。历史路由终止与手动冻结后，追踪的旧 DOM 引用全部可回收，冻结文字仍可读取；ChatGPT/Claude 各自有无停止键证据的四组中，活跃期各保留 6 个合成节点，到期后均为 0。三块视图销毁、15 个观测进程退出和临时 profile 清理已核对，共同限额为 4 GiB/512 MiB。完整 2,393 项应用测试、527 项运行时测试及独立类型检查通过。该结果证明引用生命周期与既有行为，不代表 Windows 三站长期开启时的内存降幅；未验证真实站点发送、Windows/macOS 或实际发行包。隔离会话总线的 D-Bus 错误及 WSL 图形 Escape 日志不计作页面错误。
 
+## 查找位置条与历史翻页的隔离原生验收
+
+查找位置条与历史翻页专项（2026-10-28）：在 `desktop/` 运行 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:unit -- test/site-find-native.check.ts`，使用生产外壳/preload/ViewManager 和九个本地页面，另验可见根滚动条不重复、内部滚动与隐藏根条的实际橙色像素、100/150/200% 外壳几何、站点缩放重排、后台覆盖与换词/关闭清理。`node scripts/test-safe.mjs command node scripts/question-paging-native.mjs` 使用生产历史组件和合成长列表/正文，以可信 PgUp/PgDn、Tab、鼠标验证搜索→列表、打开正文、控件内翻页及返回搜索；三个缩放档位均验实际 scrollTop。两者只用临时空白档案，继承 4 GiB/512 MiB cgroup，阻断网络并核对退出进程；历史启动器在成功或异常路径均清理自建档案。不访问九站登录档案，不替代 Windows/macOS 物理按键、IME/读屏或真实网站布局验收。单位回归入口为 `test/site-find-position-script.test.ts`、`site-find-positions.test.ts`、`site-find-ui.test.tsx` 与 `question-history-keyboard.test.tsx`，覆盖计数不符/扫描预算/字面转义、旧回包/并发/超时及修饰键/组合输入。
+
 ## 提问历史原图的隔离原生验收
 
 在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/history-images-native.mjs`。专项自行使用 Xvfb，生产历史、完整设置页（含备份卡）与真实 SQLite / BackupService 均只接合成数据；与外壳入口对账四份全局样式及加载顺序。三语 × 明暗 × 普通/短窗 150% 缩放共 12 组验证有效 PNG 的实际解码、有序重复图片、原图适应窗口/100% 尺寸与文件名序号（两种密度，另含 200% 长文件名横图）、可信 Tab/Enter/Escape/PageDown 及关闭焦点、带脏草稿的完整再问且零发送、同步等待期间关闭图片同步、八条缺图的备份选择键盘顺序、前往图片同步设置后保留任务，以及取消/模拟导出成功后的可见焦点恢复；另核对下载失败/仍有缺图的重试焦点、等待期间主动转到同步设置时不抢焦点，以及放大查看器四边完整可见；另验编辑/重置/关闭/返回后忽略迟到再问、显式下载刷新及 v4 原图备份往返。输出截图、标量几何、报告、逐线程子进程与 app metrics 的共同 cgroup 证据，退出后核对全部观测 PID 消失并清理自建 profile/数据库。它证明生产组件及服务行为，桥接是合成桩，不代替全 App IPC、全局快捷键或真实账户验收。

@@ -675,7 +675,7 @@ function App(): React.JSX.Element {
         history={siteHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
-      <SiteFind copy={copy} sites={sites} />
+      <SiteFind copy={copy} sites={sites} layout={layout} />
       <QuestionHistory imageSyncEnabled={syncStatus.imageSyncEnabled ?? false} active={surface === 'sites'} openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftIntent={() => `${draftRevision.current}:${imageSelection.intent()}`} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={(value, images) => { imageSelection.replace(images); setText(value); focusPromptForEditing(promptRef, composer.setExpanded); }} />
       {retryReview.review}
       {pageClose.dialog}

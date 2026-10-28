@@ -91,7 +91,7 @@ interface ViewManagerOptions {
 }
 
 export class ViewManager {
-  readonly siteZoom = new SiteZoomController(() => this.options.onUiStateChange?.(this.getUiState()));
+  readonly siteZoom = new SiteZoomController(() => { this.siteFind.sync(); this.options.onUiStateChange?.(this.getUiState()); });
   private readonly views = new Map<SiteKey, WebContentsView>();
   private readonly attached = new Set<SiteKey>();
   private readonly pageStatus = new Map<SiteKey, SiteStatus>();
@@ -622,7 +622,7 @@ export class ViewManager {
       siteZoom: this.siteZoom,
       mode: this.renderedMode,
       focused: this.focused
-    });
+    }, this.siteFind.state.open);
     const layout = this.getLayout();
     this.onLayout(layout);
     this.siteFind.sync();

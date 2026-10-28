@@ -251,6 +251,8 @@ app.whenReady().then(async () => {
     }
   }
   await require('./site-find-native-states.cjs')({ win, run, until, paint, manager, keys, needle, SITE_FIND_HEIGHT, report, output, locale });
+  nativeTheme.themeSource = 'light';
+  await require('./site-find-native-markers.cjs')({ win, run, until, paint, manager, pages, keys, output, locale, report });
   manager.siteFind.close(false);
   step('layouts'); boundary();
   await win.loadFile(join(output, 'index.html'));

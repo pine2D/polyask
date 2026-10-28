@@ -1,8 +1,9 @@
 import type { SiteKey } from '../shared/contracts';
+import { SiteFindPositions, type PositionContents } from './site-find-positions';
 import { initialSiteFindState, SITE_FIND_TIMEOUT_MS, type SiteFindRequest,
   type SiteFindResult, type SiteFindState } from '../shared/site-find';
 
-interface FindContents {
+interface FindContents extends PositionContents {
   readonly id: number;
   isDestroyed(): boolean;
   findInPage(text: string, options: { findNext: boolean; forward: boolean }): number;
@@ -25,11 +26,12 @@ interface Binding {
   readonly contents: FindContents;
   readonly listeners: Readonly<Record<string, (...args: any[]) => void>>;
   requestId: number | null;
+  positions: SiteFindPositions;
   timer?: ReturnType<typeof setTimeout>;
 }
 type PendingMove = { direction: -1 | 1 } | { site: SiteKey };
 
-/** 只使用 Chromium 查找，不经 __AMS，也不触碰网页输入、发送或会话数据。 */
+/** Chromium 决定匹配与导航；位置摘要只读，不经 __AMS，不触碰网页输入或会话数据。 */
 export class SiteFindController {
   private value = initialSiteFindState();
   private bindings = new Map<SiteKey, Binding>();
@@ -66,6 +68,8 @@ export class SiteFindController {
     if (!this.value.open) return;
     if (!this.hooks.allowed()) { this.close(false); return; }
     if (this.targetSignature() !== this.signature) { this.restart(); this.publish(); }
+    for (const result of this.value.sites) if (result.status === 'ready')
+      this.bindings.get(result.site)?.positions.refresh(this.value.query, result.matches);
   }
   move(direction: -1 | 1): SiteFindState {
     if (!this.value.open || !this.hooks.allowed()) return this.value;
@@ -122,7 +126,14 @@ export class SiteFindController {
     }
   }
   private bind(site: SiteKey, contents: FindContents): Binding {
-    const binding: Binding = { site, contents, requestId:null, listeners:{
+    const positions = new SiteFindPositions(contents, value => {
+      if (this.bindings.get(site)?.contents !== contents || !this.value.open) return;
+      const previous = this.value.sites.find(item => item.site === site)?.positions;
+      if (previous?.length === value?.length && previous?.every((n, index) => n === value?.[index])) return;
+      if (previous === undefined && value === undefined) return;
+      this.update(site, { positions: value }); this.publish();
+    });
+    const binding: Binding = { site, contents, positions, requestId:null, listeners:{
       'found-in-page': (_event, result) => this.receive(binding, result),
       'did-start-navigation': details => {
         if (!this.value.query || !details?.isMainFrame || details.isSameDocument) return;
@@ -146,6 +157,7 @@ export class SiteFindController {
     return binding;
   }
   private invalidate(binding: Binding): void {
+    binding.positions.cancel();
     binding.requestId = null; clearTimeout(binding.timer);
     this.update(binding.site, { matches:0, active:0, status:'pending' });
     if (this.value.activeSite === binding.site) this.value = { ...this.value, activeSite:null };
@@ -156,7 +168,7 @@ export class SiteFindController {
     if (this.bindings.get(binding.site) !== binding || !this.value.open || !this.value.query) return;
     binding.requestId = null; clearTimeout(binding.timer);
     this.update(binding.site, { status:'pending' });
-    if (initial) this.stop(binding);
+    if (initial) { binding.positions.cancel(); this.stop(binding); }
     binding.timer = setTimeout(() => this.unavailable(binding), SITE_FIND_TIMEOUT_MS);
     try {
       if (binding.contents.isDestroyed()) throw Error('site_find_unavailable');
@@ -174,6 +186,7 @@ export class SiteFindController {
     }
     clearTimeout(binding.timer);
     this.update(binding.site, { matches, active, status:'ready' });
+    binding.positions.refresh(this.value.query, matches);
     if (this.value.activeSite === null && binding.site === this.hooks.focused() && matches > 0) {
       this.value = { ...this.value, activeSite:binding.site };
     }
@@ -181,6 +194,7 @@ export class SiteFindController {
   }
   private unavailable(binding: Binding): void {
     if (this.bindings.get(binding.site) !== binding) return;
+    binding.positions.cancel();
     clearTimeout(binding.timer); binding.requestId = null;
     this.stop(binding);
     this.update(binding.site, { matches:0, active:0, status:'unavailable' });
@@ -209,6 +223,7 @@ export class SiteFindController {
   }
   private clearBindings(): void {
     for (const binding of this.bindings.values()) {
+      binding.positions.dispose();
       binding.requestId = null; clearTimeout(binding.timer);
       for (const [event, listener] of Object.entries(binding.listeners)) binding.contents.off(event, listener);
       this.stop(binding);

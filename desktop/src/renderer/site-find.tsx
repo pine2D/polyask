@@ -5,8 +5,10 @@ import { initialSiteFindState, SITE_FIND_HEIGHT, SITE_FIND_MAX_LENGTH,
   type SiteFindRequest, type SiteFindState } from '../shared/site-find';
 import { BackIcon, CloseIcon, InfoIcon, MoreIcon, ReloadIcon } from './icons';
 import { shell } from './shell-api';
+import type { LayoutState } from '../shared/protocol';
+import { SiteFindMarkers } from './site-find-markers';
 
-export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly sites: readonly SiteDefinition[] }): React.JSX.Element | null {
+export function SiteFind({ copy, sites, layout }: { readonly copy: DesktopCopy; readonly sites: readonly SiteDefinition[]; readonly layout?: LayoutState }): React.JSX.Element | null {
   const [state, setState] = useState(initialSiteFindState);
   const [query, setQuery] = useState(''), [scope, setScope] = useState<SiteFindRequest['scope']>('all');
   const [error, setError] = useState(false);
@@ -106,7 +108,7 @@ export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly
   const active = activeIndex < 0 ? 0 : results.slice(0, activeIndex).reduce((sum, item) => sum + item.matches, 0) + results[activeIndex].active;
   const summary = error ? copy.findFailed : pending ? copy.findSearching : !query ? '' :
     total ? formatCopy(copy.findCount, { active, total }) : copy.findNoMatches;
-  return <section ref={bar} className="site-find" role="search" aria-label={copy.findPage} style={{ height:SITE_FIND_HEIGHT }}>
+  return <><section ref={bar} className="site-find" role="search" aria-label={copy.findPage} style={{ height:SITE_FIND_HEIGHT }}>
       <input ref={input} type="search" name="site-find-query" aria-label={copy.findPage}
         placeholder={copy.findPlaceholder} maxLength={SITE_FIND_MAX_LENGTH} autoComplete="off" spellCheck={false}
         value={query} onChange={event => changeQuery(event.target.value)}
@@ -145,5 +147,5 @@ export function SiteFind({ copy, sites }: { readonly copy: DesktopCopy; readonly
       <button type="button" name="site-find-menu" aria-label={copy.findMenu} title={copy.findMenu}
         aria-haspopup="menu" onClick={showMenu}><MoreIcon /></button>
       <button type="button" name="site-find-close" aria-label={copy.findClose} title={copy.findClose} onClick={close}><CloseIcon /></button>
-  </section>;
+  </section>{fresh && <SiteFindMarkers state={state} layout={layout} />}</>;
 }

@@ -2,6 +2,8 @@ import type { SiteKey } from './contracts';
 
 /** 单行搜索条的总高度（CSS px），布局和渲染共用，不随站点缩放变化。 */
 export const SITE_FIND_HEIGHT = 48;
+/** 查找期间所有站点视图共同预留，避免后台页在前景位置条下露出。 */
+export const SITE_FIND_MARKER_WIDTH = 6;
 export const SITE_FIND_MAX_LENGTH = 512;
 export const SITE_FIND_TIMEOUT_MS = 4000;
 export type SiteFindMenuAction = { readonly kind: 'select'; readonly site: SiteKey } | { readonly kind: 'refresh' } | null;
@@ -12,6 +14,7 @@ export interface SiteFindResult {
   readonly matches: number;
   readonly active: number;
   readonly status: 'pending' | 'ready' | 'unavailable';
+  readonly positions?: readonly number[];
 }
 export interface SiteFindState extends SiteFindRequest {
   readonly open: boolean;

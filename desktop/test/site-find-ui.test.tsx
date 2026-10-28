@@ -7,6 +7,7 @@ import { getCopy } from '../src/shared/copy';
 import { initialSiteFindState, type SiteFindState, type SiteFindRequest } from '../src/shared/site-find';
 import { SITES } from '../src/main/sites';
 import { mountDom } from './ui/dom-harness';
+import type { LayoutState } from '../src/shared/protocol';
 
 async function fixture() {
   let listener = (_state: SiteFindState) => {}, revision = 0;
@@ -34,7 +35,9 @@ async function fixture() {
       return snapshot; },
     closeSiteFind: async () => { closed++; return publish({ open:false, sites:[] }); }
   } as any);
-  const h = await mountDom(<SiteFind copy={getCopy('en')} sites={SITES} />);
+  const layout: LayoutState = { mode:'overview', focused:'claude', page:0, pageCount:1,
+    placements:[{ key:'claude', bounds:{ x:0, y:100, width:600, height:400 } }] };
+  const h = await mountDom(<SiteFind copy={getCopy('en')} sites={SITES} layout={layout} />);
   const emit = async (patch: Partial<SiteFindState>) => { await act(async () => { publish(patch); }); };
   await emit({ open:true, focusRequest:1 });
   const settle = async () => { await act(async () => { await new Promise(resolve => setTimeout(resolve, 160)); }); };
@@ -57,6 +60,18 @@ test('find input focuses and sends bounded queries; repeated opening selects the
     assert.equal(input.selectionStart, 0); assert.equal(input.selectionEnd, 9);
     await h.emit({ open:false }); await h.stale();
     assert.equal(h.document.querySelector('[role=search]') === null, true, 'old read response must not reopen search');
+  } finally { await h.cleanup(); }
+});
+
+test('typing a new query immediately hides positions from the previous query', async () => {
+  const h = await fixture();
+  try {
+    const input = h.document.querySelector<HTMLInputElement>('[name=site-find-query]')!;
+    await h.input(input, 'old'); await h.settle();
+    await h.emit({ query:'old', sites:[{ site:'claude', matches:2, active:1, status:'ready', positions:[0.1,0.8] }] });
+    assert.equal(h.document.querySelectorAll('[data-find-markers] i').length, 2);
+    await h.input(input, 'new');
+    assert.equal(h.document.querySelectorAll('[data-find-markers] i').length, 0);
   } finally { await h.cleanup(); }
 });
 

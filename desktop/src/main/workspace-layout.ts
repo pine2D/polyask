@@ -13,7 +13,7 @@ import {
 } from "../shared/display";
 import { computeViewLayout, resolveLayoutMode, scaleBounds } from "./layout";
 import type { SiteZoomController } from "./site-zoom";
-import { SITE_FIND_HEIGHT } from '../shared/site-find';
+import { SITE_FIND_HEIGHT, SITE_FIND_MARKER_WIDTH } from '../shared/site-find';
 
 interface WorkspaceLayoutInput {
   readonly width: number;
@@ -88,14 +88,14 @@ export function computeWorkspaceLayout(input: WorkspaceLayoutInput): WorkspaceLa
   };
 }
 
-export function applyWorkspaceLayout(input: ApplyWorkspaceLayoutInput): void {
+export function applyWorkspaceLayout(input: ApplyWorkspaceLayoutInput, findOpen = false): void {
   for (const placement of input.placements) {
     const view = input.views.get(placement.key);
     if (!view) continue;
     view.setBounds(scaleBounds({
       x: placement.bounds.x + 1,
       y: placement.bounds.y + input.metrics.tileHeaderHeight,
-      width: Math.max(1, placement.bounds.width - 2),
+      width: Math.max(1, placement.bounds.width - 2 - (findOpen ? SITE_FIND_MARKER_WIDTH : 0)),
       height: Math.max(1, placement.bounds.height - input.metrics.tileHeaderHeight - 1)
     }, input.zoom));
     const siteZoom = zoomForSite(
