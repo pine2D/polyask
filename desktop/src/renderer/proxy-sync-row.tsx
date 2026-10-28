@@ -7,6 +7,7 @@ import { describeProxyResult, proxyModeLabel } from "../shared/proxy-copy";
 import { proxyErrorCode, proxyOutcome } from "./proxy-form";
 import { shell } from "./shell-api";
 import type { ProxyStateHandle } from "./use-proxy-state";
+import { SettingsPreferenceValue } from './settings-preference-value';
 
 export function ProxySyncRow(props: {
   readonly copy: DesktopCopy;
@@ -36,11 +37,8 @@ export function ProxySyncRow(props: {
   return <fieldset disabled={props.disabled || pending || !state || broken} data-preference-group="proxy"
     aria-describedby="settings-follow-proxy-facts settings-follow-proxy-hint settings-follow-hint">
     <legend>{copy.proxySyncTitle}</legend>
-    <dl id="settings-follow-proxy-facts" className="settings-preference-facts">
-      <div><dt>{copy.preferenceSyncSource}</dt><dd data-preference-source>{!state ? loading : state.following ? copy.preferenceSyncSourceShared : copy.preferenceSyncSourceLocal}</dd></div>
-      <div><dt>{copy.preferenceSyncCurrent}</dt><dd data-preference-current>{!state ? loading : proxyModeLabel(copy, state.formValue.mode)}</dd></div>
-      <div><dt>{copy.preferenceSyncScope}</dt><dd data-preference-scope>{!state ? loading : state.following ? copy.preferenceSyncScopeShared : copy.preferenceSyncScopeLocal}</dd></div>
-    </dl>
+    <SettingsPreferenceValue copy={copy} id="settings-follow-proxy-facts" value={!state ? loading : proxyModeLabel(copy, state.formValue.mode)}
+      scope={!state ? loading : state.following ? copy.preferenceSyncScopeShared : copy.preferenceSyncScopeLocal} />
     <p id="settings-follow-proxy-hint">{broken ? copy.proxySyncFixFirst : copy.proxySyncHint}</p>
     <div className="settings-display-options">{(["local", "shared"] as const).map(value => <label key={value}>
       <input type="radio" name="settings-follow-proxy" value={value} checked={(state?.following ?? false) === (value === "shared")}

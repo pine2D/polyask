@@ -5,7 +5,8 @@ import { SETTINGS_CATEGORIES, resolveSettingsTarget, type SettingsNavigationTarg
 test('seven categories and all existing deep links resolve to explicit destinations', () => {
   assert.deepEqual(SETTINGS_CATEGORIES, ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about']);
   const expected = {
-    display: ['appearance', 'settings-display-title'], overview: ['sync', 'sync-title'], connection: ['sync', 'sync-title'],
+    display: ['appearance', 'settings-display-title'], layout: ['appearance', 'settings-layout-title'],
+    overview: ['sync', 'sync-title'], connection: ['sync', 'sync-title'],
     'drive-diagnostics': ['sync', 'sync-diagnostics-toggle'], 'image-sync': ['sync', 'question-image-sync-title'],
     'preference-sync': ['sync', 'settings-preference-sync-title'], proxy: ['network', 'settings-proxy-title'],
     data: ['data', 'settings-advanced-toggle'], 'backup-export': ['backup', 'backup-card-title']

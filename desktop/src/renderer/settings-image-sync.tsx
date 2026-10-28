@@ -22,7 +22,7 @@ export function SettingsImageSync(props: {
     finally { inFlight.current = false; setBusy(false); }
   };
   return <>
-    <label className="preference-card">
+    <label className="preference-card settings-image-sync">
       <span className="preference-copy"><strong id="question-image-sync-title" className="preference-title">{props.copy.imageSyncTitle}</strong>
         <p id="question-image-sync-description">{props.copy.imageSyncDescription}</p></span>
       <span className="preference-switch"><input type="checkbox" name="question-image-sync"

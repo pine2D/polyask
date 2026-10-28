@@ -50,8 +50,9 @@ app.whenReady().then(async () => {
     await require('./desktop-tools-visual.cjs')({ win, output, run, wait, paint, shot });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
   }
-  if (process.argv.includes('--settings-section-only')) {
-    await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
+  if (process.argv.includes('--settings-section-only') || process.argv.includes('--settings-polish-only')) {
+    await require('./settings-polish-visual.cjs')({ win, output, run, wait, paint, shot });
+    if (process.argv.includes('--settings-section-only')) await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
   }
   if (process.argv.includes('--toolbar-resize-only')) {
@@ -104,6 +105,7 @@ app.whenReady().then(async () => {
   }
   await require('./settings-interaction-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
+  await require('./settings-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./desktop-tools-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });

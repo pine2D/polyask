@@ -138,6 +138,9 @@ function Fixture(): React.JSX.Element {
     }, onOpen: () => setPanel(null), onClose: () => queueMicrotask(() => promptRef.current?.focus()), onWorkspace: state => setSelected(state.selectedSites), onAnnounce: noop });
   if (query.get('surface') === 'settings') return <SettingsWorkspace copy={copy} locale={locale}
     status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={() => { document.body.dataset.settingsClosed = 'true'; }}
+    display={{ ...preferences.values.display, density: document.documentElement.dataset.density as 'compact' | 'comfortable' }}
+    onDisplayChange={async display => { document.documentElement.dataset.density = display.density;
+      setPreferences(p => ({ ...p, values: { ...p.values, display } })); }}
     onOpenShortcuts={noop} onOpenGuide={noop} confirmations={{ sitePageCloseConfirm: true, newSessionConfirm: true }} onConfirmationChange={noop}
     onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications}
     preferenceSync={{ snapshot: preferences,

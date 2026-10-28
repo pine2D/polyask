@@ -1,6 +1,8 @@
 export const PREFERENCE_SYNC_COPY = {
   en: {
     preferenceSyncTitle: 'Preferences across devices',
+    preferenceSyncDetails: 'Preference sources',
+    preferenceSyncEditLayout: 'Change default layout',
     preferenceSyncDescription: 'Choose which shared preferences this device follows. Notifications and guide progress always sync when Google Drive is connected.',
     preferenceSyncDisplay: 'Display and reading',
     preferenceSyncLayout: 'Default layout',
@@ -26,6 +28,8 @@ export const PREFERENCE_SYNC_COPY = {
   },
   zhCN: {
     preferenceSyncTitle: '跨设备偏好',
+    preferenceSyncDetails: '设置来源详情',
+    preferenceSyncEditLayout: '调整默认布局',
     preferenceSyncDescription: '选择本机要跟随的共享设置。通知偏好和引导进度会在连接 Google Drive 后同步。',
     preferenceSyncDisplay: '显示与阅读',
     preferenceSyncLayout: '默认布局',
@@ -51,6 +55,8 @@ export const PREFERENCE_SYNC_COPY = {
   },
   zhTW: {
     preferenceSyncTitle: '跨裝置偏好',
+    preferenceSyncDetails: '設定來源詳情',
+    preferenceSyncEditLayout: '調整預設版面',
     preferenceSyncDescription: '選擇本機要跟隨的共用設定。通知偏好和引導進度會在連線 Google Drive 後同步。',
     preferenceSyncDisplay: '顯示與閱讀',
     preferenceSyncLayout: '預設版面',

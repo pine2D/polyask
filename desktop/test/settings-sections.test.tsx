@@ -93,7 +93,7 @@ test('cloud deletion keeps advanced data open and prevents exit until its write 
 });
 
 for (const [target, category, id] of [
-  ['display', 'appearance', 'settings-display-title'], ['overview', 'sync', 'sync-title'],
+  ['display', 'appearance', 'settings-display-title'], ['layout', 'appearance', 'settings-layout-title'], ['overview', 'sync', 'sync-title'],
   ['drive-diagnostics', 'sync', 'sync-diagnostics-toggle'], ['proxy', 'network', 'settings-proxy-title'],
   ['image-sync', 'sync', 'question-image-sync-title'], ['preference-sync', 'sync', 'settings-preference-sync-title']
 ] as const) test(`deep link ${target} selects its category and repeated requests still focus the exact target`, async () => {

@@ -17,6 +17,7 @@ import { CloseIcon } from "./icons";
 import { BackupCard } from "./backup-workspace";
 import { LocalDataCard } from "./local-data-card";
 import { SettingsDisplay } from "./settings-display";
+import { SettingsLayout } from './settings-layout';
 import { PreferenceSyncSettings } from "./preference-sync-settings";
 import { SettingsConfirmations } from "./settings-confirmations";
 import { SettingsProxy } from "./settings-proxy";
@@ -243,6 +244,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         <SettingsCategoryPanel category="appearance" active={currentSection === 'appearance'} title={labels.appearance}>
           <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
             following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
+          {props.preferenceSync ? <SettingsLayout {...props.preferenceSync} copy={props.copy} busy={busy} /> : null}
         </SettingsCategoryPanel>
         <SettingsCategoryPanel category="interaction" active={currentSection === 'interaction'} title={labels.interaction}>
           <NotificationSettings copy={props.copy} enabled={!!props.completionNotifications}
@@ -263,7 +265,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         <SettingsCategoryPanel category="sync" active={currentSection === 'sync'} title={labels.sync}>
           <section className="settings-card sync-overview" aria-labelledby="sync-title">
             <div className="settings-description">
-              <h1 id="sync-title">{props.copy.syncTitle}</h1>
+              <h2 id="sync-title">{props.copy.syncTitle}</h2>
               <p>{props.copy.syncDescription}</p>
             </div>
             <div className="sync-state" data-state={props.status.state} data-connected={props.status.connected} data-tone={overview.tone}>
@@ -302,7 +304,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             />
             <p className="sync-privacy">{props.copy.syncPrivacy}</p>
           </section>
-          {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} proxy={proxy} copy={props.copy} busy={busy} /> : null}
+          {props.preferenceSync ? <PreferenceSyncSettings {...props.preferenceSync} proxy={proxy} copy={props.copy} busy={busy}
+            onOpenLayout={() => navigateSection('layout')} /> : null}
         </SettingsCategoryPanel>
         <SettingsCategoryPanel category="backup" active={currentSection === 'backup'} title={labels.backup}>
           <BackupCard syncStatus={props.status} onOpenSync={target => navigateSection(target === 'connection' ? 'connection' : 'image-sync')}

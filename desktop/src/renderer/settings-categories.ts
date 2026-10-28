@@ -3,10 +3,11 @@ import type { DesktopCopy } from '../shared/copy';
 export const SETTINGS_CATEGORIES = ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about'] as const;
 export type SettingsCategory = typeof SETTINGS_CATEGORIES[number];
 export type LegacySettingsSection = 'overview' | 'drive-diagnostics' | 'data' | 'display' | 'proxy';
-export type SettingsTarget = SettingsCategory | LegacySettingsSection | 'connection' | 'image-sync' | 'preference-sync' | 'backup-export';
+export type SettingsTarget = SettingsCategory | LegacySettingsSection | 'layout' | 'connection' | 'image-sync' | 'preference-sync' | 'backup-export';
 export type SettingsNavigationTarget = SettingsTarget | { category: SettingsCategory };
 const TARGETS: Partial<Record<SettingsTarget, { category: SettingsCategory; id: string }>> = {
   display: { category: 'appearance', id: 'settings-display-title' },
+  layout: { category: 'appearance', id: 'settings-layout-title' },
   overview: { category: 'sync', id: 'sync-title' }, connection: { category: 'sync', id: 'sync-title' },
   'drive-diagnostics': { category: 'sync', id: 'sync-diagnostics-toggle' },
   'image-sync': { category: 'sync', id: 'question-image-sync-title' },

@@ -83,11 +83,13 @@ export function NotificationSettings(props: {
         <span aria-hidden="true" />
       </span>
     </label>
-    <div className="settings-actions">
-      <button ref={testButton} type="button" className="settings-control" disabled={props.busy || testing || status.state === 'requested'}
-        aria-describedby="notification-test-status notification-test-hint" onClick={() => { void testNotification(); }}>{props.copy.notificationTest}</button>
+    <div className="settings-notification-test">
+      <div className="settings-actions">
+        <button ref={testButton} type="button" className="settings-control" disabled={props.busy || testing || status.state === 'requested'}
+          aria-describedby="notification-test-status notification-test-hint" onClick={() => { void testNotification(); }}>{props.copy.notificationTest}</button>
+      </div>
+      <p id="notification-test-status" className="settings-control-hint">{notificationStatusText(props.copy, status)}</p>
+      <p id="notification-test-hint" className="settings-meta">{props.copy.notificationTestHint}</p>
     </div>
-    <p id="notification-test-status" className="settings-control-hint">{notificationStatusText(props.copy, status)}</p>
-    <small id="notification-test-hint">{props.copy.notificationTestHint}</small>
   </section>;
 }

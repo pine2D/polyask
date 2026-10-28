@@ -40,7 +40,7 @@ test('the sync settings proxy row follows through proxy-follow and shows only th
   try {
     assert.equal(h.row() === null, false, 'the proxy group must be listed with the other follow groups');
     assert.equal(h.row()!.querySelector('[data-preference-current]')!.textContent, copy.proxyModeCustom);
-    assert.equal(h.row()!.querySelector('[data-preference-source]')!.textContent, copy.preferenceSyncSourceLocal);
+    assert.equal(h.document.querySelector('[data-preference-source="proxy"]')!.textContent, copy.preferenceSyncSourceLocal);
     assert.equal(h.document.body.textContent!.includes('proxy.example'), false, 'the host is never shown in sync settings');
     assert.equal(h.row()!.querySelector('legend')!.textContent, copy.proxySyncTitle);
     await h.click(h.row()!.querySelector<HTMLInputElement>('input[value="shared"]')!);

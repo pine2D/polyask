@@ -7,11 +7,13 @@ import type { PreferenceSyncSettingsState } from './use-synced-preferences';
 import { formatBackupValue } from './backup-data';
 import { ProxySyncRow } from './proxy-sync-row';
 import type { ProxyStateHandle } from './use-proxy-state';
+import { SettingsPreferenceValue } from './settings-preference-value';
 
 export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
   readonly copy: DesktopCopy & PreferenceSyncCopy; readonly busy: boolean;
   /** 代理组不走通用跟随通道（主进程拒收），由 ProxySyncRow 调 proxy-follow。 */
   readonly proxy?: ProxyStateHandle;
+  readonly onOpenLayout?: () => void;
 }): React.JSX.Element {
   const [pending, setPending] = useState(false), [failed, setFailed] = useState(false);
   const mounted = useRef(true), inFlight = useRef(false), latest = useRef(props); latest.current = props;
@@ -38,19 +40,26 @@ export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
       .map(([site, zoom]) => `${formatBackupValue(site, 'site', copy, '')} ${Math.round(zoom * 100)}%`).join(' · ')
       : copy.preferenceSyncZoomDefault
   };
-  return <section className="settings-card settings-display" aria-labelledby="settings-preference-sync-title" aria-busy={pending}>
+  const groups = ['display', 'layout', 'siteZoom'] as const;
+  const source = (following: boolean | undefined) => following === undefined ? copy.preferenceSyncLoading
+    : following ? copy.preferenceSyncSourceShared : copy.preferenceSyncSourceLocal;
+  return <section className="settings-card settings-display settings-preference-sync" aria-labelledby="settings-preference-sync-title" aria-busy={pending}>
     <h2 id="settings-preference-sync-title" tabIndex={-1}>{copy.preferenceSyncTitle}</h2>
     <p>{copy.preferenceSyncDescription}</p>
-    {/* 「跟随共享设置」的含义只说一次；各分组只列事实，站点缩放另有专属说明。 */}
     <p id="settings-follow-hint" className="settings-control-hint">{copy.preferenceSyncFollowHint}</p>
-    {(['display', 'layout', 'siteZoom'] as const).map(group => <fieldset key={group} disabled={disabled} data-preference-group={group}
+    <details className="settings-preference-details">
+      <summary>{copy.preferenceSyncDetails}</summary>
+      <dl className="settings-preference-facts">
+        {groups.map(group => <div key={group}><dt>{titles[group]}</dt>
+          <dd data-preference-source={group}>{source(snapshot?.following[group])}</dd></div>)}
+        {props.proxy ? <div><dt>{copy.proxySyncTitle}</dt><dd data-preference-source="proxy">{source(props.proxy.state?.following)}</dd></div> : null}
+      </dl>
+    </details>
+    {groups.map(group => <fieldset key={group} disabled={disabled} data-preference-group={group}
       aria-describedby={`settings-follow-${group}-facts ${group === 'siteZoom' ? 'settings-follow-siteZoom-hint ' : ''}settings-follow-hint`}>
       <legend>{titles[group]}</legend>
-      <dl id={`settings-follow-${group}-facts`} className="settings-preference-facts">
-        <div><dt>{copy.preferenceSyncSource}</dt><dd data-preference-source>{!snapshot ? copy.preferenceSyncLoading : snapshot.following[group] ? copy.preferenceSyncSourceShared : copy.preferenceSyncSourceLocal}</dd></div>
-        <div><dt>{copy.preferenceSyncCurrent}</dt><dd data-preference-current>{values[group]}</dd></div>
-        <div><dt>{copy.preferenceSyncScope}</dt><dd data-preference-scope>{!snapshot ? copy.preferenceSyncLoading : snapshot.following[group] ? copy.preferenceSyncScopeShared : copy.preferenceSyncScopeLocal}</dd></div>
-      </dl>
+      <SettingsPreferenceValue copy={copy} id={`settings-follow-${group}-facts`} value={values[group]}
+        scope={!snapshot ? copy.preferenceSyncLoading : snapshot.following[group] ? copy.preferenceSyncScopeShared : copy.preferenceSyncScopeLocal} />
       {group === 'siteZoom' ? <p id="settings-follow-siteZoom-hint">{copy.preferenceSyncZoomHint}</p> : null}
       <div className="settings-display-options">{(['local', 'shared'] as const).map(value => <label key={value}>
         <input type="radio" name={`settings-follow-${group}`} value={value} disabled={disabled}
@@ -58,19 +67,10 @@ export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
           onChange={() => { void change(() => latest.current.onFollowingChange(group, value === 'shared')); }} />
         <span>{value === 'shared' ? copy.preferenceSyncFollow : copy.preferenceSyncLocal}</span>
       </label>)}</div>
+      {group === 'layout' && props.onOpenLayout ? <button type="button" className="settings-inline-action" disabled={disabled}
+        onClick={props.onOpenLayout}>{copy.preferenceSyncEditLayout}</button> : null}
     </fieldset>)}
     {props.proxy ? <ProxySyncRow copy={copy} proxy={props.proxy} disabled={pending || props.busy} /> : null}
-    {/* 作用范围已在上方「默认布局」分组列出，这里不再重复。 */}
-    <fieldset disabled={disabled} aria-describedby="settings-layout-mode-hint settings-follow-layout-facts">
-      <legend>{copy.preferenceSyncLayoutValue}</legend>
-      <p id="settings-layout-mode-hint">{copy.preferenceSyncLayoutHint}</p>
-      <div className="settings-display-options">{(['overview', 'focus'] as const).map(mode => <label key={mode}>
-        <input type="radio" name="settings-layout-mode" value={mode} disabled={disabled}
-          checked={(snapshot?.values.layoutMode ?? 'overview') === mode}
-          onChange={() => { void change(() => latest.current.onLayoutModeChange(mode)); }} />
-        <span>{mode === 'overview' ? copy.overview : copy.focus}</span>
-      </label>)}</div>
-    </fieldset>
     <label className="preference-card">
       <span className="preference-copy"><strong id="draft-sync-title" className="preference-title">{copy.draftSyncTitle}</strong>
         <p id="draft-sync-description" data-draft-sync-description>{copy.draftSyncDescription}</p></span>

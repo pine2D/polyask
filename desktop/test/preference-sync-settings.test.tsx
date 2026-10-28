@@ -22,12 +22,14 @@ test('each preference group names the accepted value, current source and edit sc
     assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-current]')!.textContent!, /Compact.*90%/);
     assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-scope]')!.textContent!, /this device/i);
     assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-current]')!.textContent!, /Focus/);
-    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-source]')!.textContent!, /shared/i);
+    assert.match(h.document.querySelector('[data-preference-source="layout"]')!.textContent!, /shared/i);
     assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-scope]')!.textContent!, /other devices following/i);
     // The follow explanation is stated once for the section, not repeated per group; value cells carry no sentence period.
     const text = h.document.body.textContent!;
     assert.equal(text.split(getCopy('en').preferenceSyncFollowHint).length - 1, 1);
     assert.equal(text.split(getCopy('en').preferenceSyncScopeShared).length - 1, 1, 'layout scope is not repeated under the layout value');
+    assert.equal(h.document.querySelector<HTMLDetailsElement>('.settings-preference-details')!.open, false, 'repeated sources start collapsed');
+    assert.equal(h.document.querySelector('[data-preference-group="layout"] [data-preference-scope]')!.closest('details') === null, true, 'edit scope stays visible before following shared values');
     for (const scope of h.document.querySelectorAll('[data-preference-scope]')) assert.doesNotMatch(scope.textContent!, /[.。]$/);
     const legends = [...h.document.querySelectorAll('legend')].map(node => node.textContent);
     assert.equal(new Set(legends).size, legends.length, 'follow-source and layout-value controls need distinct legends');
@@ -45,7 +47,7 @@ test('preferences do not present defaults as accepted values while their snapsho
   } finally { await h.close(); }
 });
 
-test('preference settings expose device-follow choices layout mode and opt-in draft sync', async () => {
+test('sync preferences expose follow choices and opt-in drafts while layout editing belongs to appearance', async () => {
   const { PreferenceSyncSettings } = await import('../src/renderer/preference-sync-settings');
   const { PREFERENCE_SYNC_COPY } = await import('../src/shared/preference-sync-copy');
   const actions: unknown[] = [];
@@ -58,9 +60,9 @@ test('preference settings expose device-follow choices layout mode and opt-in dr
     }
     assert.equal(h.document.querySelector<HTMLInputElement>('input[name="settings-follow-layout"][value="shared"]')!.checked, true);
     await h.click(h.document.querySelector<HTMLInputElement>('input[name="settings-follow-display"][value="shared"]')!);
-    await h.click(h.document.querySelector<HTMLInputElement>('input[name="settings-layout-mode"][value="overview"]')!);
+    assert.equal(h.document.querySelector('input[name="settings-layout-mode"]') === null, true);
     await h.click(h.document.querySelector<HTMLInputElement>('input[name="draft-sync"]')!);
-    assert.deepEqual(actions, [['display', true], 'overview', true]);
+    assert.deepEqual(actions, [['display', true], true]);
     assert.match(h.document.querySelector('[data-draft-sync-description]')!.textContent!, /restor|cop/i);
   } finally { await h.close(); }
 });

@@ -295,6 +295,10 @@ components:
 
 设置采用左侧（208px）分类导航与右侧独立滚动正文。正文最大宽（920px），外围（24px 32px），卡片内边距（20px 24px）。不超过（760px）时导航改为顶部完整标签的分类选择，外围和卡片改为（16px），行内操作移到说明下方；不超过（560px）时事实列表等进一步堆叠。
 
+设置文字按角色区分：分类标题 20px（窄窗 18px），区块标题 16px / 600，设置项 14px / 600，说明正文 13px / 1.6，辅助信息 12px / 1.5。间距采用标题到说明 8px、说明到控件 12px、同级设置组 24px；通知测试与开关说明之间留 16px。图片同步开关占满卡片内容宽度，与其它开关共用右侧对齐线。
+
+默认布局在“外观与阅读”编辑，同步页只展示当前值、跟随方式与修改作用范围，并提供直达编辑入口。重复来源集中在默认折叠的“设置来源详情”；共享值采用规则与跨设备影响保持可见。折叠不改变偏好，不新增持久化键。
+
 命令面板默认使用 Ctrl+Shift+P（macOS 为 Cmd+Shift+P），设置可选本机 Ctrl+P / Cmd+P；仅展示当前有效键位及必要覆盖提示，不在操作界面解释选型。命令面板最大宽（720px），确认框最大宽（440px），均受当前窗口约束。页面根区域固定到窗口，滚动归各内容区域负责。
 
 来源：`desktop/src/shared/display.ts`、`desktop/src/main/layout.ts`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/toolbar-fit.ts`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`、`desktop/src/renderer/settings.css`。
