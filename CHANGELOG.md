@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.27.0] - 2026-10-28
+
+验收范围：Linux/WSL 下通过 2,499 项应用测试、538 项运行时测试、类型检查、依赖审计、Linux 打包及包内九站检查；三语原生查找位置标记、历史翻页和 100%／150%／200% 缩放通过专项验收。
+
+验收限制：无法可靠定位的页面保留原生查找；九站线上页面逐站验收、Windows/macOS 物理键盘操作、五种发行包的实际安装及真实 Drive 双设备同步未在本轮核验。
+
 ### 优化
 
 - Ctrl+F 在网页内部滚动区或隐藏滚动条的页面右缘补充橙色匹配位置标记；已有原生标记的页面保持原生显示，无法可靠定位时保留计数、高亮和前后跳转。
@@ -1557,7 +1563,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.26.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.27.0...HEAD
+[1.27.0]: https://github.com/pine2D/polyask/compare/v1.26.0...v1.27.0
 [1.26.0]: https://github.com/pine2D/polyask/compare/v1.25.1...v1.26.0
 [1.25.1]: https://github.com/pine2D/polyask/compare/v1.25.0...v1.25.1
 [1.25.0]: https://github.com/pine2D/polyask/compare/v1.24.3...v1.25.0
