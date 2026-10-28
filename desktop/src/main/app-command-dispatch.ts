@@ -36,6 +36,9 @@ export function dispatchAppCommand(id: CommandId, manager: ViewManager | null, w
     return;
   }
   if (!window || window.isDestroyed()) return;
-  if (id === "focus-prompt" || id === "edit-prompt" || id === 'find-page') window.webContents.focus();
+  // DOM focus alone cannot take keyboard input from a native site view.
+  if (["focus-prompt", "edit-prompt", "find-page", "open-command-palette", "open-shortcuts", "open-getting-started"].includes(id)) {
+    window.webContents.focus();
+  }
   window.webContents.send("polyask:command", id);
 }

@@ -530,6 +530,8 @@ Mermaid 仅在需要预览时加载本地依赖，串行绘制、最多缓存 12
 
 默认 `CmdOrCtrl+Shift+P`，可在设置中切换为 `CmdOrCtrl+P`；仅一组生效，F1 和 Alt+K 不再绑定。`CommandPaletteShortcutRuntime` 在可交互前恢复，菜单、外壳和站点输入共享同一有效 mode；组合输入期间暂时抑制原生菜单快捷键，非组合输入或清理时恢复。Windows/Linux 的菜单还关闭这两项的自动加速器注册；macOS 不依赖该平台限定字段，物理键仍需实机核验。
 
+原生命令打开面板、快捷键速查或使用指南时先将键盘焦点交给外壳，再由面板聚焦搜索框或内容区。四个模式均可点击面板外空白处关闭；Escape 在窗口冒泡阶段处理，焦点落到 body 仍可退出，组合态、229 键码、已被处理的事件及嵌套确认框优先，不会一次关闭两层。
+
 `meta.commandPaletteShortcut` 由专用仓储读写，不进 outbox、Drive 或业务备份，恢复备份不改变该选择；重置清除此键并保留 deviceId。冻结样本为 `desktop/test/fixtures/command-palette-shortcut-local-meta-v1.json`。非法存储值回退默认，非法 IPC 值拒绝；读、写、菜单应用失败分别返回 `command_shortcut_read_failed/save_failed/apply_failed`。候选菜单预先构建，写入和菜单切换在同步事务中完成，失败回滚；重置失败后重新读实际库，不盲目清除仍保存的选择。单调 revision 防止迟到读写回包覆盖较新事件。
 
 ### 全局提问快捷键

@@ -46,6 +46,8 @@ Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command n
 
 异常清理对拍（需先有当前平台的打包产物）：`node scripts/test-safe.mjs command node scripts/history-images-cleanup.check.mjs`。两个启动器共用按 PID 与启动时间确认归属的清理器，外层 finally 补采后代并有界 TERM→KILL，只清理本次生成的 profile/data，始终输出原错误及 cleanup 结果；失败截图仅作尽力采集。专项注入运行中 Electron 短超时（带忽略 TERM 的合成后代）、截图拒绝、打包监控失败及启动器 SIGTERM，检查非零/原信号退出、原错误保留、进程退出和档案删除；不重复正常视觉矩阵。
 
+命令面板关闭回归：`npm run test:unit -- test/command-palette-dismiss.test.tsx test/confirmation-navigation.test.ts test/shortcut-reference.test.tsx` 覆盖四种面板模式的内外点击、焦点落到 body 后的 Escape、组合态/229 键码、已处理事件、嵌套确认与监听释放。`test/site-find-native.check.ts` 同时覆盖三语、两种命令快捷键、外壳/站点两种初始焦点：打开后不补点击或手动聚焦，直接检查原生焦点和 Escape，再验证内部点击保留、外部点击关闭；仅使用合成页面与临时档案，不代表 Windows/macOS 物理键盘验收。
+
 ## 结果库视觉与交互回归
 
 专注阅读合栏专项：在 `desktop/` 运行 `npm run test:unit -- test/library-focused-toolbar-interaction.check.ts`。18 组覆盖三语、明暗主题、两种密度与 200% 缩放；960×720 下检查顶部保持一行、移除独立记录栏并为正文回收空间，窄窗检查按钮尺寸、换行与无重叠。三语实际 Tab/方向键/Escape 核验文件夹→更多的顺序、菜单退出焦点，以及展开/返回后两栏节点和阅读位置；配合 `library-focused-toolbar.test.tsx` 检查删除确认取消与新建决策返回。临时 Electron 使用合成数据、阻断外网，并核对实际进程共同 4GiB/512MiB cgroup；不替代物理设备与读屏验收。

@@ -76,13 +76,27 @@ test('native menu commands neither dispatch nor move shell focus while confirmat
   h.window.webContents.send = () => { commandEvents++; };
   try {
     h.manager.setSurface('confirmation');
-    for (const id of ['show-page-2', 'next-page', 'next-site', 'site-back', 'focus-prompt', 'edit-prompt', 'focus-current-site', 'open-settings', 'new-session'] as const) {
+    for (const id of ['show-page-2', 'next-page', 'next-site', 'site-back', 'focus-prompt', 'edit-prompt', 'focus-current-site', 'open-settings', 'new-session',
+      'open-command-palette', 'open-shortcuts', 'open-getting-started'] as const) {
       dispatchAppCommand(id, h.manager, h.window as any);
     }
     assert.equal(shellFocus, 0); assert.equal(commandEvents, 0);
     assert.equal(h.manager.getLayout().page, 0); assert.equal(h.manager.getLayout().focused, 'claude');
     h.manager.setSurface('sites'); dispatchAppCommand('focus-prompt', h.manager, h.window as any);
     assert.equal(shellFocus, 1); assert.equal(commandEvents, 1);
+  } finally { h.window.emit('closed'); }
+});
+
+test('native palette commands transfer keyboard focus to the shell before opening each mode', () => {
+  const h = harness(), events: string[] = [];
+  h.window.webContents.focus = () => { events.push('focus-shell'); };
+  h.window.webContents.send = (_channel?: string, id?: string) => { events.push(id!); };
+  try {
+    for (const id of ['open-command-palette', 'open-shortcuts', 'open-getting-started'] as const) {
+      events.length = 0;
+      dispatchAppCommand(id, h.manager, h.window as any);
+      assert.deepEqual(events, ['focus-shell', id]);
+    }
   } finally { h.window.emit('closed'); }
 });
 

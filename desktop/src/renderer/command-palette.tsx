@@ -70,6 +70,16 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   useEffect(() => {
     document.getElementById(`command-option-${activeIndex}`)?.scrollIntoView({ block: "nearest" });
   }, [activeIndex, searchQuery, props.mode]);
+  useEffect(() => {
+    // 焦点落到 body 后仍可退出；冒泡阶段让输入法和嵌套确认框先处理 Escape。
+    const onEscape = (event: KeyboardEvent): void => {
+      if (event.defaultPrevented || paletteKeyAction(event.key, event.isComposing, false, event.keyCode) !== "close") return;
+      event.preventDefault();
+      props.onClose();
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => window.removeEventListener("keydown", onEscape);
+  }, [props.onClose]);
 
   const run = (item: PaletteCommand | undefined): void => {
     if (!item) return;
@@ -79,10 +89,9 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   const onKeyDown = (event: React.KeyboardEvent): void => {
     const action = paletteKeyAction(event.key, event.nativeEvent.isComposing,
       searchable && event.target === inputRef.current, event.nativeEvent.keyCode);
-    if (!action) return;
+    if (!action || action === "close" || event.defaultPrevented) return;
     event.preventDefault();
-    if (action === "close") props.onClose();
-    else if (action === "execute") run(visible[activeIndex]);
+    if (action === "execute") run(visible[activeIndex]);
     else if (visible.length) setActiveIndex((activeIndex + (action === "next" ? 1 : -1) + visible.length) % visible.length);
   };
   const onTabKeyDown = (event: React.KeyboardEvent, index: number): void => {
@@ -96,7 +105,8 @@ export function CommandPalette(props: CommandPaletteProps): React.JSX.Element {
   };
 
   return (
-    <main className="command-surface" aria-label={props.copy[MODE_LABEL_KEYS[props.mode]]} aria-keyshortcuts="Escape" onKeyDown={onKeyDown}>
+    <main className="command-surface" aria-label={props.copy[MODE_LABEL_KEYS[props.mode]]} aria-keyshortcuts="Escape" onKeyDown={onKeyDown}
+      onClick={(event) => { if (event.target === event.currentTarget) props.onClose(); }}>
       <section className="command-palette" ref={panelRef} tabIndex={-1}>
         <header>
           <div className="command-view-tabs" role="tablist">

@@ -120,7 +120,16 @@ app.whenReady().then(async () => {
       await key(contents, 'P', mode === 'standard' ? ['control','shift'] : ['control']);
       await until(() => run('!!document.querySelector(".command-surface")'), 'palette from native key');
       assert.equal(dispatched.filter(id => id === 'open-command-palette').length - before, 1);
-      dispatch('focus-prompt'); await until(() => run('!document.querySelector(".command-surface")'), 'close palette');
+      assert.equal(win.webContents.isFocused(), true, 'palette takes native keyboard focus without a click');
+      assert.equal(await run('document.hasFocus() && document.activeElement?.matches(".command-search input")'), true);
+      await key(win.webContents, 'Escape');
+      await until(() => run('!document.querySelector(".command-surface")'), 'native Escape closes palette');
+      contents.focus(); await key(contents, 'P', mode === 'standard' ? ['control','shift'] : ['control']);
+      await until(() => run('!!document.querySelector(".command-surface")'), 'reopen palette for pointer dismissal');
+      await click('.command-search input');
+      assert.equal(await run('!!document.querySelector(".command-palette")'), true, 'inside click keeps palette open');
+      for (const type of ['mouseDown','mouseUp']) win.webContents.sendInputEvent({ type, button:'left', clickCount:1, x:4, y:4 });
+      await until(() => run('!document.querySelector(".command-surface")'), 'outside click closes palette');
       contents.focus(); const after = dispatched.length;
       await contents.executeJavaScript('window.palettePassthrough=[];window.addEventListener("keydown",e=>{if(e.key.toLowerCase()==="p")window.palettePassthrough.push({prevented:e.defaultPrevented,shift:e.shiftKey})},{once:true})');
       await key(contents, 'P', mode === 'standard' ? ['control'] : ['control','shift']);
@@ -144,7 +153,7 @@ app.whenReady().then(async () => {
   assert.equal(palette.refreshAfterReset().mode, 'obsidian', 'failed wipe retains actual saved mode');
   database.resetLocalData(); assert.equal(palette.refreshAfterReset().mode, 'standard');
   assert.equal(database.meta.get('deviceId'), 'native-palette');
-  report.cases.push('palette: both modes in shell/site, one dispatch, removed/inactive keys zero, menu/save rollback/restart/reset');
+  report.cases.push('palette: both modes in shell/site, native focus, Escape/outside dismissal, inside click retained, one dispatch, removed/inactive keys zero, menu/save rollback/restart/reset');
   const originalY = manager.getLayout().placements[0].bounds.y;
   pages[0].view.webContents.focus(); await key(pages[0].view.webContents, 'F', ['control']);
   await until(() => run('document.activeElement?.name==="site-find-query"'), 'native site Ctrl+F opens shell search');
