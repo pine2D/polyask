@@ -15,13 +15,15 @@ export function SiteFind({ copy, sites, layout }: { readonly copy: DesktopCopy; 
   const bar = useRef<HTMLElement>(null), menuPending = useRef(false);
   const input = useRef<HTMLInputElement>(null), composing = useRef(false), alive = useRef(true);
   const revision = useRef(-1), timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const positionRevision = useRef(-1);
   const epoch = useRef(0), openedSession = useRef<number | null>(null);
   const current = useRef({ state, query, scope }); current.current = { state, query, scope };
   const accept = useCallback((value: SiteFindState): void => {
-    if (!alive.current || value.revision < revision.current) return;
+    if (!alive.current || value.revision < revision.current ||
+      (value.revision === revision.current && value.positionRevision < positionRevision.current)) return;
     if (value.session !== current.current.state.session || (!value.open && current.current.state.open)) epoch.current++;
     current.current = { ...current.current, state:value };
-    revision.current = value.revision; setState(value);
+    revision.current = value.revision; positionRevision.current = value.positionRevision; setState(value);
   }, []);
   const changeQuery = (value: string): void => { current.current.query = value; setQuery(value); };
   const changeScope = (value: SiteFindRequest['scope']): void => { current.current.scope = value; setScope(value); };

@@ -131,7 +131,7 @@ export class SiteFindController {
       const previous = this.value.sites.find(item => item.site === site)?.positions;
       if (previous?.length === value?.length && previous?.every((n, index) => n === value?.[index])) return;
       if (previous === undefined && value === undefined) return;
-      this.update(site, { positions: value }); this.publish();
+      this.update(site, { positions: value }); this.publish(true);
     });
     const binding: Binding = { site, contents, positions, requestId:null, listeners:{
       'found-in-page': (_event, result) => this.receive(binding, result),
@@ -214,8 +214,9 @@ export class SiteFindController {
   private update(site: SiteKey, patch: Partial<SiteFindResult>): void {
     this.value = { ...this.value, sites:this.value.sites.map(item => item.site === site ? { ...item, ...patch } : item) };
   }
-  private publish(): SiteFindState {
-    this.value = { ...this.value, revision:this.value.revision + 1 };
+  private publish(positionsOnly = false): SiteFindState {
+    this.value = { ...this.value, revision:this.value.revision + (positionsOnly ? 0 : 1),
+      positionRevision:this.value.positionRevision + (positionsOnly ? 1 : 0) };
     this.hooks.publish(this.value); return this.value;
   }
   private stop(binding: Binding): void {

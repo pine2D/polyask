@@ -42,6 +42,9 @@ async function fixture() {
   await emit({ open:true, focusRequest:1 });
   const settle = async () => { await act(async () => { await new Promise(resolve => setTimeout(resolve, 160)); }); };
   return { ...h, emit, settle, requests, moves, selections, menus, closed:() => closed,
+    locations: async (positions: readonly number[], positionRevision: number) => { await act(async () => {
+      listener({ ...state, positionRevision, sites:[{ site:'claude', matches:2, active:1, status:'ready', positions }] });
+    }); },
     deferMenu:() => { delayedMenu = true; }, releaseMenu:async () => { await act(async () => releaseMenu()); },
     defer:() => { delayed = true; }, release:async () => { await act(async () => release()); },
     stale:async () => { await act(async () => { listener({ ...initialSiteFindState(), open:true, revision:0 }); }); },
@@ -72,6 +75,17 @@ test('typing a new query immediately hides positions from the previous query', a
     assert.equal(h.document.querySelectorAll('[data-find-markers] i').length, 2);
     await h.input(input, 'new');
     assert.equal(h.document.querySelectorAll('[data-find-markers] i').length, 0);
+  } finally { await h.cleanup(); }
+});
+
+test('an older position packet cannot replace newer locations at the same search revision', async () => {
+  const h = await fixture();
+  try {
+    await h.input(h.document.querySelector<HTMLInputElement>('[name=site-find-query]')!, 'needle'); await h.settle();
+    await h.locations([0.1, 0.8], 2);
+    assert.equal(h.document.querySelectorAll('[data-find-markers] i').length, 2);
+    await h.locations([0.2], 1);
+    assert.equal(h.document.querySelectorAll('[data-find-markers] i').length, 2, 'late packet must not remove a marker');
   } finally { await h.cleanup(); }
 });
 

@@ -2,21 +2,22 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EventEmitter } from 'node:events';
 import { SiteFindController } from '../src/main/site-find';
+import { registerSiteFindIpc } from '../src/main/site-find-ipc';
 
 const pause = (ms = 180) => new Promise(resolve => setTimeout(resolve, ms));
 function harness() {
-  let request = 0;
+  let request = 0, focused = 0;
   const pending: { code: string; resolve(value: unknown): void; reject(error: Error): void }[] = [];
   const contents = Object.assign(new EventEmitter(), { id: 17, isDestroyed: () => false,
     findInPage: () => ++request, stopFindInPage() {},
     executeJavaScriptInIsolatedWorld: (_world: number, scripts: { code: string }[]) =>
       new Promise((resolve, reject) => pending.push({ code: scripts[0].code, resolve, reject })) });
   const controller = new SiteFindController({ targets: () => [{ site: 'claude', contents }], focused: () => 'claude', allowed: () => true,
-    focus() {}, reserve() {}, restoreFocus() {}, publish() {} });
+    focus() { focused++; }, reserve() {}, restoreFocus() {}, publish() {} });
   const result = () => contents.emit('found-in-page', {}, { requestId: request, matches: 2, activeMatchOrdinal: 1, finalUpdate: true });
   controller.open(); controller.find({ query: 'needle', scope: 'all' }); result();
   const positions = () => (controller.state.sites[0] as { positions?: readonly number[] })?.positions;
-  return { controller, contents, pending, positions, result };
+  return { controller, contents, pending, positions, result, requests: () => request, focused: () => focused };
 }
 
 test('native find results gain optional positions without changing counts or active selection', async () => {
@@ -105,4 +106,35 @@ test('a later layout refresh still clears stale positions when an earlier read h
     h.pending[1].resolve([0.2, 0.9]); await pause(150);
     assert.equal(h.positions(), undefined);
   } finally { h.controller.dispose(); }
+});
+
+test('position-only replies never cancel valid native menu selection or refresh', async () => {
+  for (const kind of ['select', 'refresh'] as const) {
+    const h = harness(), handlers = new Map<string, (event: unknown, value: unknown) => any>();
+    let finish!: (value: any) => void;
+    const dispose = registerSiteFindIpc({ handle: (channel, action) => handlers.set(channel, action), removeHandler: channel => { handlers.delete(channel); } },
+      h.controller, sender => sender === 'shell', new EventEmitter(), () => new Promise(resolve => { finish = resolve; }));
+    try {
+      const { session, revision } = h.controller.state, requests = h.requests();
+      const action = handlers.get('polyask:find-menu')!('shell', { session, revision });
+      await pause(); h.pending[0].resolve([0.1, 0.8]); await pause(0);
+      assert.deepEqual(h.positions(), [0.1, 0.8]);
+      finish(kind === 'select' ? { kind, site: 'claude' } : { kind }); await action;
+      assert.equal(kind === 'select' ? h.focused() : h.requests() - requests, 1, kind + ' still executes exactly once');
+    } finally { dispose(); h.controller.dispose(); }
+  }
+});
+
+test('repeating the same native search still invalidates an older menu', async () => {
+  const h = harness(), handlers = new Map<string, (event: unknown, value: unknown) => any>();
+  let finish!: (value: any) => void;
+  const dispose = registerSiteFindIpc({ handle: (channel, action) => handlers.set(channel, action), removeHandler: channel => { handlers.delete(channel); } },
+    h.controller, () => true, new EventEmitter(), () => new Promise(resolve => { finish = resolve; }));
+  try {
+    const { session, revision } = h.controller.state;
+    const action = handlers.get('polyask:find-menu')!('shell', { session, revision });
+    h.controller.find({ query: 'needle', scope: 'all' }); h.result();
+    finish({ kind: 'select', site: 'claude' }); await action;
+    assert.equal(h.focused(), 0, 'same query and counts do not make an old menu current again');
+  } finally { dispose(); h.controller.dispose(); }
 });

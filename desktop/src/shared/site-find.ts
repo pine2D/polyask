@@ -19,13 +19,15 @@ export interface SiteFindResult {
 export interface SiteFindState extends SiteFindRequest {
   readonly open: boolean;
   readonly session: number;
+  /** 查找/菜单语义版本；位置摘要不使已打开的菜单失效。 */
   readonly revision: number;
+  readonly positionRevision: number;
   readonly focusRequest: number;
   readonly activeSite: SiteKey | null;
   readonly sites: readonly SiteFindResult[];
 }
 export function initialSiteFindState(): SiteFindState {
-  return { open:false, session:0, query:'', scope:'all', revision:0, focusRequest:0, activeSite:null, sites:[] };
+  return { open:false, session:0, query:'', scope:'all', revision:0, positionRevision:0, focusRequest:0, activeSite:null, sites:[] };
 }
 export function parseSiteFindRequest(value: unknown): SiteFindRequest | null {
   if (!value || typeof value !== 'object') return null;

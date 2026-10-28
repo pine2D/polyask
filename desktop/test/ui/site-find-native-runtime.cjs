@@ -186,7 +186,8 @@ app.whenReady().then(async () => {
   await run('window.polyask.findSites({query:' + JSON.stringify(needle) + ',scope:"all"})'); await settled();
   assert.equal(manager.siteFind.state.sites[8].matches, 2);
   await last.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(html(3))); await settled();
-  assert.equal(manager.siteFind.state.sites[8].matches, 3);
+  await until(() => manager.siteFind.state.sites[8]?.matches === 3, 'navigation reaches expected count: ' + JSON.stringify(manager.siteFind.state.sites[8]));
+  assert.equal(manager.siteFind.state.sites[8].matches, 3, 'navigation recount: ' + JSON.stringify(manager.siteFind.state.sites[8]));
   manager.setLayout('overview', keys[0], false);
   manager.siteFind.find({ query:needle, scope:'all' }); await settled();
   await run('Promise.all([window.polyask.moveSiteFind(1),window.polyask.moveSiteFind(1),window.polyask.moveSiteFind(1)])');
