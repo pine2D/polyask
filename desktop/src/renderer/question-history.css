@@ -61,6 +61,7 @@
 .question-status.is-partial, .question-status.is-interrupted { color: var(--warning-ink); }
 .question-notice { padding: 10px 16px; color: var(--warning-ink); background: var(--panel); border-bottom: 1px solid var(--border); }
 .question-history :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.question-scroll:focus-visible, .question-reader:focus-visible { outline-offset: -2px; }
 .question-archive-picker .folder-modal { width: min(640px, calc(100vw - 24px)); max-width: calc(100vw - 24px); }
 .question-archive-choices { display: flex; flex-direction: column; gap: 12px; }
 .question-archive-choices label { display: grid; grid-template-columns: minmax(64px, 100px) minmax(0, 1fr); align-items: center; gap: 8px; }

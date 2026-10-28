@@ -231,7 +231,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   }, [open, openRequest, readerNavigation, detail, detailView, busy, restoring, onReadAccepted, onReadingCancelled]);
   useEffect(() => {
     if (!open) return;
-    if (detail) panel.current?.querySelector<HTMLButtonElement>('.question-header button')?.focus();
+    if (detail) panel.current?.querySelector<HTMLElement>('.question-reader')?.focus({ preventScroll: true });
     else input.current?.focus();
   }, [open, detail?.question.id]);
   const reask = (id: string, text: string, imageCount: number) => reaskFlow.start({ id, text, imageCount });
@@ -288,8 +288,17 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
       <p data-state={detailView.state} role={detailView.state === 'failed' ? 'alert' : 'status'}>{detailView.state === 'loading' ? copy.questionDetailLoading : detailView.state === 'missing' ? copy.questionRecordMissing : copy.questionDetailFailed}</p>
       {detailView.state !== 'loading' && <button type="button" onClick={() => { void read(detailView.questionId, detailView.answerId); }}>{copy.questionRetry}</button>}
     </div> : <>
-      <div className="question-search"><input ref={input} type="search" value={query} onChange={e => { leaveDetail(); sequence.current++; listPending.current = 0; setQuery(e.target.value); }} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
-      <div ref={scroll} className="question-scroll" aria-busy={loading}>
+      <div className="question-search"><input ref={input} type="search" value={query} onChange={e => { leaveDetail(); sequence.current++; listPending.current = 0; setQuery(e.target.value); }}
+        onKeyDown={event => {
+          if (!active || confirmation || organizing || reaskFlow.blocking || event.nativeEvent.isComposing || event.keyCode === 229 ||
+            event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['PageUp', 'PageDown'].includes(event.key)) return;
+          const target = scroll.current;
+          if (!target) return;
+          event.preventDefault(); target.focus({ preventScroll: true });
+          target.scrollTop = Math.max(0, Math.min(Math.max(0, target.scrollHeight - target.clientHeight),
+            target.scrollTop + target.clientHeight * 0.875 * (event.key === 'PageDown' ? 1 : -1)));
+        }} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
+      <div ref={scroll} className="question-scroll" tabIndex={0} role="region" aria-label={copy.questionHistory} aria-busy={loading}>
         {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}
         <QuestionHistoryList items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
         {page.cursor && <button type="button" className="question-load-more" disabled={loading} onClick={() => { void load(page.cursor!); }}>{copy.questionMore}</button>}

@@ -43,7 +43,7 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
     const latest = detail.answers.filter(a => a.site === key).at(-1);
     return !!(latest?.conversationUrl && safeMarkdownUrl(latest.conversationUrl));
   });
-  return <div className="question-reader" ref={scroller} onScroll={remember}>
+  return <div className="question-reader" ref={scroller} onScroll={remember} tabIndex={0} role="region" aria-label={copy.questionCopies}>
     <header className="question-reader-intro">
       <time>{new Date(detail.question.createdAt).toLocaleString()}</time>
       <QuestionPrompt text={detail.question.text} copy={copy} />
