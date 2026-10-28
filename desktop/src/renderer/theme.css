@@ -7,6 +7,7 @@
   --panel: #ffffff;
   --panel-muted: #edeef3;
   --field: #fafafd;
+  --field-border: #818394;
   --border: #d8dae2;
   --muted: #626575;
   --accent: #4f46e5;
@@ -43,6 +44,7 @@
     --panel: #222228;
     --panel-muted: #2c2c35;
     --field: #1b1b22;
+    --field-border: #79798c;
     --border: #3e3e4a;
     --muted: #b0b0c0;
     --accent: #a5a0ff;

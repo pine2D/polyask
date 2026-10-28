@@ -38,7 +38,7 @@ export function ArchiveAnswerReading(props: {
   };
   const canUseEvidence = !!selected && [...selected.excerpt].length <= 4000;
   return <div className="archive-answer-reading">
-    <div className="archive-answer-reading-body" ref={body} onPointerUp={readSelection}>{props.children}</div>
+    <div className="archive-answer-reading-body" data-defer-layout={source.sourceText.length >= 16_000 || undefined} ref={body} onPointerUp={readSelection}>{props.children}</div>
     <button className="answer-excerpt-open" data-decision-origin={`excerpt:${source.resultIndex}`} data-archive-editor={`follow-up:${source.host}`} type="button" onClick={() => openRaw()}>{props.copy.excerptSelectOriginal}</button>
     {selected ? <div className="answer-excerpt-actions" onPointerDown={event => event.preventDefault()}>
       <strong>{answerSourceId(source.resultIndex)} {source.label}</strong>

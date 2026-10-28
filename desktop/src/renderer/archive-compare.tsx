@@ -14,6 +14,7 @@ import { useComparisonViewport } from './comparison-viewport';
 import type { ComparisonDraftStore } from './comparison-draft-store';
 import type { DecisionInput } from '../shared/decision';
 import type { ArchiveReaderBinding } from './archive-reader-session';
+import { useReadingLayout, type ReadingLayoutMemory } from './reading-layout';
 
 interface ArchiveCompareProps {
   readonly reader?: ArchiveReaderBinding;
@@ -47,8 +48,12 @@ function ComparisonColumn(props: {
   readonly nodeRef?: React.RefObject<HTMLElement | null>;
   readonly onUserScroll?: (node: HTMLElement) => void;
   readonly hidden?: boolean;
+  readonly layout?: ReadingLayoutMemory;
+  readonly layoutKey: string;
+  readonly layoutRevision: number;
 }): React.JSX.Element {
   const ownNode = useRef<HTMLElement>(null), node = props.nodeRef ?? ownNode;
+  useReadingLayout(node, '.archive-compare-paragraph', props.layoutKey, props.layoutRevision, props.layout, props.paragraphs.length > 40);
   const positions = useRef(new Map<string, { text: string; top: number }>());
   useLayoutEffect(() => {
     const saved = positions.current.get(props.host);
@@ -76,7 +81,7 @@ function ComparisonColumn(props: {
         </div>
       ))}</>;
   return (
-    <article ref={node} className="archive-compare-column" tabIndex={0} aria-label={context} onScroll={event => {
+    <article ref={node} className="archive-compare-column" data-defer-layout={props.paragraphs.length > 40 || undefined} tabIndex={0} aria-label={context} onScroll={event => {
       if (props.hidden) return;
       const top = event.currentTarget.scrollTop;
       positions.current.set(props.host, { text: props.text, top }); props.onPosition?.(top);
@@ -191,13 +196,13 @@ export function ArchiveCompare(props: ArchiveCompareProps): React.JSX.Element {
           <label className="archive-compare-picker">{props.copy.leftAnswer}
             <LibrarySelect label={props.copy.leftAnswer} value={left?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === right?.host }))} onChange={setLeftHost} />
           </label>
-          <ComparisonColumn hidden={worksheet.open} nodeRef={leftNode} onUserScroll={follow} initialScroll={props.reader?.state.leftScroll} onPosition={top => props.reader?.change({ leftScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={leftSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={left?.host ?? ''} text={left?.text ?? ''} label={left?.label ?? ''} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
+          <ComparisonColumn layout={props.reader?.state.layout} layoutKey={`left:${left?.host}:${right?.host}:${differencesOnly}`} layoutRevision={props.record?.updatedAt ?? 0} hidden={worksheet.open} nodeRef={leftNode} onUserScroll={follow} initialScroll={props.reader?.state.leftScroll} onPosition={top => props.reader?.change({ leftScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={leftSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={left?.host ?? ''} text={left?.text ?? ''} label={left?.label ?? ''} code={left?.code} paragraphs={comparisonParagraphs(comparison.left, differencesOnly)} />
         </section>
         <section className="archive-compare-side">
           <label className="archive-compare-picker">{props.copy.rightAnswer}
             <LibrarySelect label={props.copy.rightAnswer} value={right?.host ?? ''} options={results.map(result => ({ value: result.host, label: result.label, disabled: result.host === left?.host }))} onChange={setRightHost} />
           </label>
-          <ComparisonColumn hidden={worksheet.open} nodeRef={rightNode} onUserScroll={follow} initialScroll={props.reader?.state.rightScroll} onPosition={top => props.reader?.change({ rightScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={rightSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={right?.host ?? ''} text={right?.text ?? ''} label={right?.label ?? ''} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
+          <ComparisonColumn layout={props.reader?.state.layout} layoutKey={`right:${left?.host}:${right?.host}:${differencesOnly}`} layoutRevision={props.record?.updatedAt ?? 0} hidden={worksheet.open} nodeRef={rightNode} onUserScroll={follow} initialScroll={props.reader?.state.rightScroll} onPosition={top => props.reader?.change({ rightScroll: top })} onOpenLink={props.onOpenLink} copy={props.copy} source={rightSource} busy={props.busy} onEvidence={props.onEvidence} onCompare={worksheet.add} onFollowUp={props.onFollowUp} host={right?.host ?? ''} text={right?.text ?? ''} label={right?.label ?? ''} code={right?.code} paragraphs={comparisonParagraphs(comparison.right, differencesOnly)} />
         </section>
       </div>
       {props.record ? <ManualComparison workspace detailsRef={manual} copy={props.copy} record={props.record} worksheet={worksheet} sources={[leftSource, rightSource].filter((value): value is ExcerptSource => !!value)} busy={props.busy ?? false} onCreate={props.onCreateDecisionDraft} /> : null}

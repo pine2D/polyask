@@ -44,9 +44,12 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     for (const query of ['发送', 'send', 'Enter', '↵', 'Ctrl+↵', sendKey]) {
       await native.type(search, query);
       const result = await run(`(() => {const rows=[...document.querySelectorAll('#command-results [role=option]')];
-        return {count:rows.length,label:rows[0]?.querySelector('strong')?.textContent,key:rows[0]?.querySelector('kbd')?.textContent};})()`);
-      assert.equal(result.count, 1, `${locale}/${platform}: send reference matches ${query}`);
-      assert.equal(result.label, sendLabels[locale]); assert.equal(result.key, sendKey);
+        const send=rows.filter(row=>row.querySelector('strong')?.textContent===${JSON.stringify(sendLabels[locale])});
+        return {count:rows.length,matches:send.length,key:send[0]?.querySelector('kbd')?.textContent};})()`);
+      assert.equal(result.matches, 1, `${locale}/${platform}: send reference is present for ${query}`);
+      assert.equal(result.key, sendKey);
+      if (['Ctrl+↵', sendKey].includes(query)) assert.equal(result.count, 1, `${locale}/${platform}: explicit send key is unique`);
+      if (locale === 'en' && query === 'send') assert.equal(result.count > 1, true, 'send also matches the Compose and send category');
     }
     await native.click('#command-results [role=option]');
     await native.key('Return');
@@ -64,6 +67,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     win.webContents.setZoomFactor(1); win.setContentSize(960, 680);
     await wait('innerWidth===960'); await paint();
     await native.type(search, sample.category);
+    assert.equal(await run("document.querySelectorAll('#command-results [role=option]').length>1"), true, 'category search preserves multiple shortcut references');
     assert.equal(await run(`[...document.querySelectorAll('#command-results [role=option]')].every(node=>node.querySelector('small').textContent===${JSON.stringify(sample.category)})`), true);
     await native.type(search, sample.key);
     assert.equal(await run(`document.querySelector('#command-results [role=option] strong')?.textContent===${JSON.stringify(sample.label)}`), true);

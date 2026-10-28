@@ -11,12 +11,14 @@ import { getCopy } from '../../src/shared/copy';
 import { libraryReadingPerformanceData } from './library-reading-performance-data';
 import '../../src/renderer/styles.css';
 
-document.documentElement.lang = 'zh-CN';
-const data = libraryReadingPerformanceData(), copy = getCopy('zh-CN'), session = createLibrarySessionStore();
+const query = new URLSearchParams(location.search), locale = query.get('locale') || 'zh-CN';
+document.documentElement.lang = locale;
+document.documentElement.dataset.density = query.get('density') || 'compact';
+const data = libraryReadingPerformanceData(), copy = getCopy(locale), session = createLibrarySessionStore();
 const longSources = new Set(data.longSources);
 const state = { workload: data.workload, query: '', total: 0, readySequence: 0,
   parseCalls: 0, longParses: 0, parseMs: 0, start: 0, parentRevision: 0,
-  mount: (_value: boolean) => {}, redraw: () => {}, completeRead: () => false };
+  mount: (_value: boolean) => {}, reopen: () => {}, redraw: () => {}, completeRead: () => false };
 state.completeRead = () => {
   const title = document.querySelector('.archive-detail-heading h1')?.textContent;
   const record = data.archives.slice(0, 2).find(item => item.task === title);
@@ -45,9 +47,10 @@ setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: asyn
 function Fixture() {
   const [opened, setOpened] = useState(true), [revision, setRevision] = useState(0);
   state.mount = value => { if (value) session.clear(); state.start = performance.now(); setOpened(value); };
+  state.reopen = () => setOpened(true);
   state.redraw = () => { state.start = performance.now(); setRevision(value => value + 1); };
   state.parentRevision = revision;
-  return <main data-parent-revision={revision}>{opened ? <ArchiveSurface copy={copy} locale="zh-CN" session={session}
+  return <main data-parent-revision={revision}>{opened ? <ArchiveSurface copy={copy} locale={locale} session={session}
     preferredId={null} onClose={() => setOpened(false)} onCapture={async () => data.archives[0]} sites={[]}
     synthesisSites={[]} defaultTier={null} pendingSynthesis={null} synthesisCandidate={null}
     onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => data.archives[0]} /> : null}</main>;

@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { ArchiveRecord } from '../shared/archive';
+import type { ReadingLayoutMemory } from './reading-layout';
 
 export interface ArchiveReaderState {
   readonly archiveId: string;
@@ -19,6 +20,7 @@ export interface ArchiveReaderState {
   readonly leftScroll: number;
   readonly rightScroll: number;
   readonly synthesisScroll: number;
+  readonly layout?: ReadingLayoutMemory;
 }
 export type ArchiveDetailView = ArchiveReaderState['view'];
 
@@ -33,7 +35,8 @@ export function initialArchiveReader(record: Pick<ArchiveRecord, 'id' | 'results
   const sources = record.results.filter(result => !!result.text?.trim());
   return { archiveId: record.id, view: compare && sources.length >= 2 ? 'compare' : 'read', questionExpanded: false, comparisonContextExpanded: false, manualComparisonOpen: false, questionOverflow: null,
     leftHost: sources[0]?.host ?? '', rightHost: sources[1]?.host ?? '', differencesOnly: false,
-    readScroll: 0, comparisonScroll: 0, pendingSynthesisKey: null, leftScroll: 0, rightScroll: 0, synthesisScroll: 0 };
+    readScroll: 0, comparisonScroll: 0, pendingSynthesisKey: null, leftScroll: 0, rightScroll: 0, synthesisScroll: 0,
+    layout: { surfaces: {} } };
 }
 
 // 只保留当前记录的选择与位置；正文和危险确认仍由各自组件管理。

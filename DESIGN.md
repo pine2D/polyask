@@ -9,6 +9,7 @@ colors:
   panel: '#ffffff'
   panel-muted: '#edeef3'
   field: '#fafafd'
+  field-border: '#818394'
   border: '#d8dae2'
   text: '#20212b'
   muted: '#626575'
@@ -27,6 +28,7 @@ colors:
   panel-dark: '#222228'
   panel-muted-dark: '#2c2c35'
   field-dark: '#1b1b22'
+  field-border-dark: '#79798c'
   border-dark: '#3e3e4a'
   text-dark: '#f0f0f5'
   muted-dark: '#b0b0c0'
@@ -192,6 +194,7 @@ components:
 | 阅读面板 | `panel` | 工具栏、侧栏、设置分组、记录正文 |
 | 次级表面 | `panel-muted` | 只读内容、次级状态和层级区分 |
 | 输入底色 | `field` | 搜索框、表单、统一提问框 |
+| 输入边界 | `field-border` | 文本输入与统一提问框容器的常态细边界 |
 | 细边界 | `border` | 分隔线、轮廓、表格与面板边缘 |
 | 主文字 | `text` | 标题、正文、当前操作 |
 | 次级文字 | `muted` | 来源、时间、说明和未选中动作 |
@@ -301,6 +304,8 @@ components:
 
 命令面板默认使用 Ctrl+Shift+P（macOS 为 Cmd+Shift+P），设置可选本机 Ctrl+P / Cmd+P；仅展示当前有效键位及必要覆盖提示，不在操作界面解释选型。命令面板最大宽（720px），确认框最大宽（440px），均受当前窗口约束。页面根区域固定到窗口，滚动归各内容区域负责。
 
+重试核对弹窗保留固定标题、取消与底部确认，站点列表独立滚动。常规上下至少留（24px），逻辑高度不超过（480px）时收为（8px）；九站与200%缩放的短窗仍可逐项勾选和查看。
+
 来源：`desktop/src/shared/display.ts`、`desktop/src/main/layout.ts`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/toolbar-fit.ts`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`、`desktop/src/renderer/settings.css`。
 
 ## Elevation & Depth
@@ -353,9 +358,9 @@ components:
 
 ### Inputs / Fields
 
-输入底色、控件圆角和紧阴影构成常态；聚焦后底色混入少量强调色，内侧底线（2px）与聚焦阴影共同提供反馈。错误态用危险文字色的边界和底线，只读使用次级表面，禁用降低不透明度并去影。
+输入底色、独立的（1px）细边界、控件圆角和紧阴影构成常态；输入边界在明暗主题下均与相邻表面保持至少3:1的对比度，不改变通用分隔线颜色。聚焦后底色混入少量强调色，内侧底线（2px）与聚焦阴影共同提供反馈。错误态用危险文字色的边界和底线，只读使用次级表面，禁用降低不透明度并去影。
 
-统一提问框由容器承载这套反馈，内部 textarea 不再叠加第二个焦点框；右侧为展开按钮保留独立空间。强制配色下回到系统边界与焦点轮廓。
+统一提问框由容器承载这套反馈，内部 textarea 不再叠加第二个边界或焦点框；右侧为展开按钮保留独立空间。高对比度时输入边界使用次级文字色，强制配色下回到系统 CanvasText 边界与焦点轮廓。
 
 来源：`desktop/src/renderer/fields.css`、`desktop/src/renderer/composer.css`。
 
@@ -394,6 +399,10 @@ components:
 键盘打开工作台不播放位移过渡。减少动态效果时取消面板、提问框与控件过渡；加载指示保留静态可见状态。精确曲线和时长位于 sidecar 扩展。
 
 来源：`desktop/src/renderer/panel-motion.css`、`desktop/src/renderer/composer.css`、`desktop/src/renderer/library-motion.css`、`desktop/src/renderer/native-feel.css`、`desktop/src/renderer/site-frames.css`、`desktop/src/renderer/styles.css`。
+
+### Long Reading Layout
+
+超过16000字符的回答正文、超过40段的比较列按需排版屏幕外内容，完整DOM、链接和文字仍然保留。阅读会话仅记住数值尺寸，往返视图或重开结果库时先恢复占位尺寸再恢复滚动；不建立全局正文缓存。明确跳转来源时先排版目标与前方正文，防止锚点随占位展开而偏移。
 
 ### Markdown Export Selection
 

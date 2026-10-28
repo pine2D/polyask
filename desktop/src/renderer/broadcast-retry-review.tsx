@@ -7,7 +7,7 @@ export function BroadcastRetryReview(props: {
   onToggle: (site: SiteKey) => void; onInspect: (site: SiteKey) => void;
   onConfirm: () => void; onCancel: () => void;
 }): React.JSX.Element {
-  return <FolderModal copy={props.copy} title={props.copy.retryReviewTitle} busy={props.busy} onCancel={props.onCancel}>
+  return <FolderModal copy={props.copy} title={props.copy.retryReviewTitle} busy={props.busy} onCancel={props.onCancel} className="broadcast-retry-modal">
     <div className="broadcast-retry-review">
       <p>{props.copy.retryReviewDescription}</p>
       {props.inspecting && <p role="status">{props.copy.retryInspectionPending}</p>}

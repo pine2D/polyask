@@ -21,6 +21,7 @@ import type { DecisionInput } from '../shared/decision';
 import { useArchiveReader, type ArchiveReaderBinding } from './archive-reader-session';
 import { useArchiveSourceLocation } from './archive-source-location';
 import { ArchiveQuestionPrompt } from './archive-question-prompt';
+import { useReadingLayout } from './reading-layout';
 
 interface ArchiveDetailProps {
   readonly recordActions?: React.ReactNode;
@@ -53,6 +54,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const localReader = useArchiveReader(record, props.initialComparisonOpen);
   const reader = props.reader ?? localReader, view = reader.state.view;
   const article = useRef<HTMLElement>(null);
+  useReadingLayout(article, '.archive-answer-reading-body[data-defer-layout=true]', 'read', record.updatedAt, reader.state.layout, view === 'read');
   const contextOpen = reader.state.comparisonContextExpanded;
   const navigation = useRef<HTMLDivElement>(null);
   const currentSource = useArchiveSourceLocation(article, navigation, record.id, view === 'read');
@@ -95,6 +97,15 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const favoriteLabel = record.favorite ? copy.unfavoriteArchive : copy.favoriteArchive;
   const successfulResults = record.results.filter((result) => !!result.text?.trim());
   const canSynthesize = successfulResults.length >= 2;
+  const revealSource = (event: React.MouseEvent<HTMLAnchorElement>, index: number) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const sections = [...(article.current?.querySelectorAll<HTMLElement>('.archive-answer') ?? [])];
+    const bodies = sections.slice(0, index + 1).flatMap(section =>
+      [...section.querySelectorAll<HTMLElement>('.archive-answer-reading-body[data-defer-layout=true]')]);
+    if (!bodies.length) return;
+    // 明确跳转前展开目标及前方正文，避免邻近区块从占位切回排版时把锚点推走。
+    bodies.forEach(body => { body.style.contentVisibility = 'visible'; });
+  };
   return (
     <article ref={article} className="archive-detail" data-view={view}>
       <details className="archive-record-context" data-library-return="context" open={view !== 'compare' || contextOpen}
@@ -135,6 +146,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           const best = record.winnerHost === result.host;
           const label = `${answerSourceId(index)} ${result.label}`;
           return <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`} data-best={best || undefined}
+            onClick={event => revealSource(event, index)}
             aria-current={currentSource === index ? 'location' : undefined}
             aria-label={best ? `${label} · ${copy.archiveBestAnswer}` : undefined}>{label}
             <span className="archive-answer-best" aria-hidden="true">{best ? <StarIcon /> : null}</span></a>;

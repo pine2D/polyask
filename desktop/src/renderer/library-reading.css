@@ -51,6 +51,8 @@
 .archive-answer-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; max-width: 100%; }
 .library .archive-answer > header button { min-height: 30px; height: auto; padding: 4px 8px; font-size: 12px; line-height: 1.5; }
 .library .archive-answer > .answer-capture-warning { margin: 0; }
+/* 正文仍完整挂载，屏幕外的排版/绘制交给浏览器按需执行；跳转、查找与辅助技术可展开它。 */
+.library .archive-answer-reading-body[data-defer-layout=true] { content-visibility: auto; contain-intrinsic-size: auto 3000px; }
 .library .answer-excerpt-open, .library .answer-excerpt-actions button { min-height: 34px; margin: 8px 8px 0 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: inherit; }
 .answer-excerpt-actions { padding: 12px; margin: 12px 0; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; }
 .answer-excerpt-actions blockquote, .excerpt-confirm-preview, .excerpt-rendered-hint { margin: 12px 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30vh; overflow: auto; }
@@ -92,6 +94,7 @@
 .library .archive-compare-column { max-height: var(--comparison-reading-height, 70vh); overflow: auto; overscroll-behavior: contain; padding: 2px 8px 16px 2px; }
 .library .archive-compare-column > h3 { position: sticky; top: 0; margin: 0; padding: 10px 0; background: var(--panel); font-size: 14px; z-index: 1; }
 .library .archive-compare-paragraph { padding: 14px 0; margin: 0; border: 0; border-radius: 0; }
+.library .archive-compare-column[data-defer-layout=true] .archive-compare-paragraph { content-visibility: auto; contain-intrinsic-size: auto 180px; }
 .library .archive-compare-paragraph.shared { background: color-mix(in srgb, var(--panel) 65%, var(--accent-soft)); padding: 12px 12px 12px 14px; border-radius: 0 6px 6px 0; box-shadow: inset 3px 0 0 color-mix(in srgb, var(--accent) 55%, var(--border)); }
 .library .comparison-options { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px; margin: 16px 0 4px; }
 .library .comparison-options .comparison-filter { margin: 0; }

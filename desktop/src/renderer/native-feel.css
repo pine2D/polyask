@@ -17,13 +17,13 @@ input, textarea, [contenteditable="true"] { user-select: text; }
 /* 高频工具动作只给静态反馈；aria-disabled 仍可聚焦读原因，但不能像已接受点击。 */
 button:not(:disabled, [aria-disabled="true"]):active { filter: brightness(.92); }
 @media (prefers-contrast: more) {
-  :root { --border: var(--muted); }
+  :root { --border: var(--muted); --field-border: var(--muted); }
 }
 @media (forced-colors: active) {
   :root {
     --text: CanvasText; --muted: CanvasText;
     --canvas: Canvas; --panel: Canvas; --panel-muted: Canvas; --field: Canvas;
-    --border: ButtonText; --accent: Highlight; --on-accent: HighlightText;
+    --border: ButtonText; --field-border: CanvasText; --accent: Highlight; --on-accent: HighlightText;
     --accent-soft: Canvas; --selection-soft: Canvas; --hover-soft: Canvas;
     --success-ink: CanvasText; --warning-ink: CanvasText; --danger-ink: CanvasText;
   }

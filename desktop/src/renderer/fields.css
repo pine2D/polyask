@@ -1,8 +1,8 @@
-/* 仅外壳文字输入：浅底、紧阴影和内底线；提问框由容器承载，避免双重焦点。 */
+/* 外壳文字输入用独立细边界；提问框由容器承载，避免双重焦点。 */
 :is(#root, .library-popover) :is(textarea:not([name="prompt"]), input:where(:not([type]),
   [type="text"], [type="search"], [type="email"], [type="password"],
   [type="url"], [type="tel"], [type="number"])) {
-  border: 1px solid transparent; border-radius: var(--radius-control);
+  border: 1px solid var(--field-border); border-radius: var(--radius-control);
   background: var(--field); color: var(--text); outline: none;
   box-shadow: var(--field-shadow);
   transition: background-color 120ms ease, box-shadow 120ms ease;
@@ -20,7 +20,7 @@
   &:disabled { opacity: .55; box-shadow: none; }
   @media (prefers-reduced-motion: reduce) { transition: none; }
 }
-#root .prompt-composer { background: var(--field); box-shadow: var(--field-shadow); }
+#root .prompt-composer { border: 1px solid var(--field-border); background: var(--field); box-shadow: var(--field-shadow); }
 #root .prompt-composer:has(> textarea:focus) {
   outline: none;
   background: color-mix(in srgb, var(--accent) 2%, var(--field));
@@ -36,6 +36,8 @@
     &:disabled { opacity: 1; border-color: GrayText; color: GrayText; }
   }
   #root .prompt-composer { border: 1px solid CanvasText; background: Canvas; box-shadow: none; }
+  /* 透明边框会被系统强制着色；容器已承担边界和焦点，内层不再重复。 */
+  #root .prompt-composer > textarea { border: 0; }
   #root .prompt-composer:has(> textarea:focus) {
     background: Canvas; box-shadow: none; outline: 2px solid Highlight; outline-offset: -2px;
   }
