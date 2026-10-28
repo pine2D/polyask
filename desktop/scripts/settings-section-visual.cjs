@@ -33,16 +33,19 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       await shot('settings-category-input-failure'); throw error;
     }
     await paint();
+    assert.equal(await run(narrow ? 'document.activeElement.matches(".settings-category-select")' : `document.activeElement.id === 'settings-category-${category}'`), true);
   };
   for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const density of ['compact', 'comfortable']) {
     for (const theme of ['light', 'dark']) for (const width of [480, 960, 1280]) for (const zoom of [1, 1.5]) {
-      nativeTheme.themeSource = theme; win.webContents.setZoomFactor(zoom); win.setContentSize(width, 900);
+      nativeTheme.themeSource = theme; win.setContentSize(width, 900);
       await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, density } });
+      win.webContents.setZoomFactor(zoom);
       await wait('document.querySelector("[aria-current=location]")?.dataset.settingsSection === "appearance"');
+      await paint();
+      assert.equal(Math.abs(await run('innerWidth') * zoom - width) <= 2, true, 'actual category viewport matches requested zoom');
       const result = { locale, density, theme, width, zoom, categories: [] };
       for (const category of [...categories.slice(1), 'appearance']) {
         await navigate(category);
-        assert.equal(await run('document.activeElement.id'), `settings-category-${category}`);
         const geometry = await run(`(() => { const panel=document.querySelector('[data-settings-category]:not([hidden])');
           const elements=[...panel.querySelectorAll('.settings-card,button,input,select,textarea,.settings-control-hint')].filter(e=>e.getClientRects().length);
           return {visible:document.querySelectorAll('[data-settings-category]:not([hidden])').length,

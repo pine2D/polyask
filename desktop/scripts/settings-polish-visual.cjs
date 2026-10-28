@@ -28,11 +28,34 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   };
   for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const theme of ['light', 'dark']) for (const zoom of [1, 2]) {
     nativeTheme.themeSource = theme;
-    win.setContentSize(1440, 1000); win.webContents.setZoomFactor(zoom);
-    await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, platform: 'win32' } });
+    win.setContentSize(1440, 1000);
+    await win.loadFile(join(output, 'index.html'), { query: { surface: 'settings', locale, platform: 'win32', backupError: '1' } });
+    // loadFile may reset zoom for the next query; verify the rendered viewport, not just configuration.
+    win.webContents.setZoomFactor(zoom);
     await wait('!!document.querySelector(".settings-layout")');
     await paint();
-    const frame = { locale, theme, zoom };
+    const viewport = await run('({width:innerWidth,height:innerHeight,dpr:devicePixelRatio})');
+    assert.equal(Math.abs(viewport.width * zoom - 1440) <= 2, true, 'the requested zoom is actually applied');
+    const frame = { locale, theme, zoom, viewport };
+    win.focus(); win.webContents.focus();
+    for (const [group, next, original] of [['settings-density', 'comfortable', 'compact'], ['settings-site-scale', '1', '0.9']]) {
+      await run(`document.querySelector('input[name=${group}]:checked').focus()`);
+      for (const [arrow, value] of [['Right', next], ['Left', original]]) {
+        await key(arrow);
+        await wait(`document.querySelector('input[name=${group}]:checked')?.value === '${value}' && !document.querySelector('input[name=${group}]:checked').disabled`);
+        assert.equal(await run(`document.activeElement === document.querySelector('input[name=${group}]:checked')`), true, 'radio save retains consecutive arrow navigation');
+      }
+    }
+    if (zoom === 2) {
+      await run('document.querySelector(".settings-category-select").focus()');
+      for (const value of ['interaction', 'sync']) {
+        await key('Down');
+        assert.equal(await run('document.querySelector(".settings-category-select").value'), value);
+        assert.equal(await run('document.activeElement.matches(".settings-category-select")'), true, 'closed select accepts consecutive arrows');
+      }
+      await key('Tab');
+      assert.equal(await run('!!document.activeElement.closest("[data-settings-category=sync]")'), true, 'Tab enters the newly selected category');
+    }
     await category('interaction');
     const type = await run(`(() => { const size = s => parseFloat(getComputedStyle(document.querySelector(s)).fontSize);
       return {page:size('#settings-category-interaction'),section:size('#settings-confirmations-title'),
@@ -78,9 +101,18 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
         fits:[...p.querySelectorAll('button,input,select,p,h2,fieldset')].filter(e=>e.getClientRects().length)
           .every(e=>e.getBoundingClientRect().left>=0&&e.getBoundingClientRect().right<=innerWidth+1&&e.scrollWidth<=e.clientWidth+2)}; })()`);
     assert.equal(geometry.body <= geometry.viewport && geometry.fits, true, `relocated layout fits ${JSON.stringify({ ...frame, geometry })}`);
+    await category('backup');
+    for (const [index, pattern] of [[0, 'export|导出|匯出'], [1, 'restore|恢复|還原']]) {
+      await click(`[aria-labelledby=backup-card-title]>.settings-actions>button:nth-child(${index + 1})`);
+      const feedback = await run('document.querySelector(".archive-status").textContent');
+      assert.match(feedback, new RegExp(pattern), 'failure guidance follows the requested operation');
+      assert.equal(await run('document.activeElement.matches("[aria-labelledby=backup-card-title] button")'), true, 'failed action remains available for retry');
+      assert.equal(await run('document.querySelector(".archive-status").scrollWidth <= document.querySelector(".archive-status").clientWidth + 2'), true);
+      if (index === 0 && zoom === 2) await shot(`settings-export-error-${locale}-${theme}`);
+    }
     reports.push({ ...frame, type, sync, geometry });
   }
   win.webContents.setZoomFactor(1);
   writeFileSync(join(output, 'settings-polish-report.json'), JSON.stringify(reports, null, 2));
-  console.log('Settings polish passed: 12 locale/theme/zoom cases with hierarchy, switch alignment, keyboard disclosure and layout navigation.');
+  console.log('Settings polish passed: 12 actual locale/theme/zoom cases with hierarchy, continuous radio/select keys, navigation and backup error recovery.');
 };

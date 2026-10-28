@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import { DEFAULT_DISPLAY_PREFERENCES, type DisplayPreferences } from '../shared/display';
+import { useActionFocus } from './use-action-focus';
 
 /** 显示值始终来自外壳已接受的偏好，保存失败不显示未经接受的新值。 */
 export function SettingsDisplay({ copy, display = DEFAULT_DISPLAY_PREFERENCES, busy, following = false, onChange }: {
@@ -13,16 +14,18 @@ export function SettingsDisplay({ copy, display = DEFAULT_DISPLAY_PREFERENCES, b
   const [pending, setPending] = useState(false), [failed, setFailed] = useState(false);
   const inFlight = useRef(false), mounted = useRef(true);
   const latest = useRef({ display, busy, onChange }); latest.current = { display, busy, onChange };
+  const disabled = pending || busy || !onChange;
+  const rememberFocus = useActionFocus(disabled, target => target.closest('fieldset')?.querySelector<HTMLInputElement>('input:checked') ?? null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const change = async (patch: Partial<DisplayPreferences>) => {
     const current = latest.current;
     if (inFlight.current || current.busy || !current.onChange) return;
+    const finishFocus = rememberFocus();
     inFlight.current = true; setPending(true); setFailed(false);
     try { await current.onChange({ ...current.display, ...patch }); }
     catch { if (mounted.current) setFailed(true); }
-    finally { inFlight.current = false; if (mounted.current) setPending(false); }
+    finally { finishFocus(true); inFlight.current = false; if (mounted.current) setPending(false); }
   };
-  const disabled = pending || busy || !onChange;
   return <section className="settings-card settings-display" aria-labelledby="settings-display-title" aria-busy={pending}>
     <h2 id="settings-display-title" tabIndex={-1}>{copy.settingsDisplayTitle}</h2>
     <p className="settings-control-hint">{following ? copy.preferenceSyncScopeShared : copy.preferenceSyncScopeLocal}</p>

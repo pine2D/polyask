@@ -17,13 +17,13 @@ import { backupItemTitle } from './backup-data';
 import { useSettingsCategoryActive } from './settings-category-panel';
 import { useFailedActionFocus } from './use-failed-action-focus';
 
-export function backupError(copy: DesktopCopy, error: unknown): string {
+export function backupError(copy: DesktopCopy, error: unknown, action: 'export' | 'import' = 'import'): string {
   const code = ipcErrorCode(error);
   if (code === "backup_stale" || code === "backup_missing") return copy.backupStale;
   if (code === "backup_invalid" || code === "backup_version") return copy.backupInvalid;
   if (code === "backup_images_missing") return copy.backupMissingOriginals;
   if (code === "backup_too_large") return copy.backupTooLarge;
-  return copy.backupFailed;
+  return action === 'export' ? copy.backupExportFailed : copy.backupFailed;
 }
 
 export function BackupWorkspace({ preview, copy, locale, onClose, onApplied }: {
@@ -164,7 +164,7 @@ export function BackupCard({ copy, locale, busy, onBusy, onFeedback, syncStatus,
         else { dismissMissing(); if (result) onFeedback(result === 'text-only' ? copy.backupTextOnlyExported : copy.backupExported); }
       }
       else { setMissing([]); const next = await shell.previewBackup(); if (!mounted.current || request !== intent.current) { if (next) await shell.cancelBackup(next.token); return; } tokenRef.current = next?.token ?? null; setPreview(next); }
-    } catch (error) { if (mounted.current && request === intent.current) { incomplete = true; onFeedback(backupError(copy, error)); } }
+    } catch (error) { if (mounted.current && request === intent.current) { incomplete = true; onFeedback(backupError(copy, error, action)); } }
     finally { finishFocus(incomplete); pending.current = false; if (mounted.current) onBusy(false); }
   };
   return <section ref={card} className="settings-card settings-row" aria-labelledby="backup-card-title">

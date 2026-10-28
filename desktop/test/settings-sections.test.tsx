@@ -6,6 +6,21 @@ import { mountSettings, settingsButton, settingsCopy, settingsElement, settingsS
 
 const advanced = (doc: Document) => doc.querySelector<HTMLDetailsElement>('.settings-advanced')!;
 
+test('category selector keeps focus for consecutive changes while buttons still focus content', async () => {
+  const h = await mountSettings();
+  try {
+    const select = h.document.querySelector<HTMLSelectElement>('.settings-category-select')!;
+    select.focus();
+    for (const category of ['interaction', 'sync', 'backup']) {
+      await act(async () => { select.value = category; select.dispatchEvent(new h.window.Event('change', { bubbles: true })); });
+      assert.equal(h.document.activeElement === select, true, 'select must keep receiving arrow keys');
+      assert.equal(h.document.querySelector('[data-settings-category]:not([hidden])')?.getAttribute('data-settings-category'), category);
+    }
+    await h.click(h.document.querySelector<HTMLElement>('[data-settings-section=appearance]')!);
+    assert.equal(h.document.activeElement?.id, 'settings-category-appearance');
+  } finally { await h.close(); }
+});
+
 test('category scrolling restores each position without changing the current category or focus', async () => {
   const h = await mountSettings();
   try {

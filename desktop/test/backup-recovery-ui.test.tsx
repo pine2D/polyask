@@ -3,9 +3,25 @@ import test from 'node:test';
 import { act } from 'react';
 import { mountSettings, settingsButton, settingsCopy as copy, settingsShell, settingsStatus, settingsElement } from './ui/settings-dom';
 import type { BackupExportMode } from '../src/shared/backup';
+import { getCopy } from '../src/shared/copy';
 
 const missing = [{ questionId: 'q-originals', title: 'Missing originals', count: 2, images: [] }];
 const ready = { ...settingsStatus, imageSyncEnabled: true };
+
+for (const [locale, message] of [
+  ['en', 'Could not export the backup. Try again. If saving fails, choose another save location.'],
+  ['zh-CN', '备份未能导出。请重试；若无法保存文件，可选择其他保存位置。'],
+  ['zh-TW', '備份未能匯出。請重試；若無法儲存檔案，可選擇其他儲存位置。'],
+] as const) for (const action of ['export', 'import']) test(`${locale} ${action} failure gives an operation-specific recovery`, async () => {
+  const localized = getCopy(locale);
+  const h = await mountSettings({ initialSection: 'backup', copy: localized, locale });
+  settingsShell({ exportBackup: async () => { throw Error('backup_failed'); }, previewBackup: async () => { throw Error('backup_failed'); } });
+  try {
+    await h.click(settingsButton(h.document, action === 'export' ? localized.backupExport : localized.backupImport));
+    assert.equal(h.document.querySelector('.archive-status')?.textContent, action === 'export' ? message : localized.backupFailed);
+    assert.equal(settingsButton(h.document, localized.backupExport).disabled, false, 'retry remains available');
+  } finally { await h.close(); }
+});
 
 for (const result of ['cancel', 'text-only', 'downloaded', 'save-cancelled'] as const) test(`missing-original export returns focus to its entry after ${result}`, async () => {
   const h = await mountSettings({ initialSection: 'backup', status: ready });
@@ -69,7 +85,7 @@ test('a failed download preserves the missing-original choices for retry', async
     await h.click(settingsButton(h.document, copy.backupDownloadOriginals));
     assert.equal(h.document.querySelector('.backup-missing') !== null, true);
     assert.equal(settingsButton(h.document, copy.backupDownloadOriginals).disabled, false);
-    assert.equal(h.document.querySelector('.archive-status')?.textContent, copy.backupFailed);
+    assert.equal(h.document.querySelector('.archive-status')?.textContent, copy.backupExportFailed);
   } finally { await h.close(); }
 });
 

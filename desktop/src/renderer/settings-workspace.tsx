@@ -211,11 +211,11 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
     : pendingAction === "clear" ? props.copy.syncClearing : props.copy.settingsWorking
     : props.status.state === "syncing" ? statusText : "";
   const labels = settingsCategoryLabels(props.copy);
-  const navigateSection = (target: SettingsNavigationTarget): void => {
+  const navigateSection = (target: SettingsNavigationTarget, focus: 'content' | 'navigation' = 'content'): void => {
     if (writes.current.local || writes.current.cloud) return;
     if (resolveSettingsTarget(target).category === 'data') setDataOpen(true);
     if (target === 'drive-diagnostics') setDiagnosticsOpen(true);
-    navigate(target);
+    navigate(target, focus);
   };
 
   return (
@@ -236,7 +236,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
             aria-controls={`settings-category-${category}`} aria-current={currentSection === category ? 'location' : undefined}
             disabled={closeLocked} onClick={() => navigateSection({ category })}>{labels[category]}</button>)}</div>
           <select className="settings-category-select" aria-label={props.copy.settingsSectionNavigation} value={currentSection} disabled={closeLocked}
-            onChange={event => navigateSection({ category: event.target.value as typeof currentSection })}>
+            onChange={event => navigateSection({ category: event.target.value as typeof currentSection }, 'navigation')}>
             {SETTINGS_CATEGORIES.map(category => <option key={category} value={category}>{labels[category]}</option>)}
           </select>
         </nav>

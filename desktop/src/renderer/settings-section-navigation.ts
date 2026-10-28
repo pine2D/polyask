@@ -9,13 +9,13 @@ export function useSettingsSectionNavigation(initialSection: SettingsTarget | un
   const positions = useRef<Partial<Record<SettingsCategory, number>>>({});
   const current = useRef(currentSection), locked = useRef(closeLocked);
   locked.current = closeLocked;
-  const pending = useRef<{ category: SettingsCategory; id: string; restore: boolean } | null>(null);
-  const navigate = (target: SettingsNavigationTarget) => {
+  const pending = useRef<{ category: SettingsCategory; id: string; restore: boolean; focus: 'content' | 'navigation' } | null>(null);
+  const navigate = (target: SettingsNavigationTarget, focus: 'content' | 'navigation' = 'content') => {
     if (locked.current) return;
     const next = resolveSettingsTarget(target);
     if (bodyRef.current) positions.current[current.current] = bodyRef.current.scrollTop;
     current.current = next.category;
-    pending.current = { ...next, restore: next.id === `settings-category-${next.category}` };
+    pending.current = { ...next, restore: next.id === `settings-category-${next.category}`, focus };
     setCurrentSection(next.category); setRevision(value => value + 1);
   };
   useLayoutEffect(() => {
@@ -32,7 +32,7 @@ export function useSettingsSectionNavigation(initialSection: SettingsTarget | un
     if (!target || target.closest('[hidden],[inert]')) return;
     if (!target.matches('summary,button,a[href],input,select,textarea,[tabindex]')) target.tabIndex = -1;
     if (!request.restore) target.scrollIntoView({ block: 'start' });
-    target.focus({ preventScroll: true });
+    if (request.focus === 'content') target.focus({ preventScroll: true });
   }, [currentSection, revision]);
   return { bodyRef, currentSection, navigate };
 }

@@ -93,6 +93,7 @@ let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders
   drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
 setShellApi({
   cancelBackup: async () => {},
+  ...(query.has('backupError') ? { exportBackup: async () => { throw Error('backup_failed'); }, previewBackup: async () => { throw Error('backup_failed'); } } : {}),
   commandPaletteShortcutState: async () => ({ mode: 'standard', revision: 1, error: null }), onCommandPaletteShortcut: () => () => {},
   ...desktopToolsShellStubs(),
   ...proxyShellStubs(query.get('surface') === 'proxy-edit' ? proxyStateFixture({ formValue: customProxy, applied: customProxy }) : undefined),
