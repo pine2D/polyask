@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-15T12:16:54.691744Z",
+  "generatedAt": "2026-10-28T06:03:53.118801Z",
   "title": "Design System: PolyAsk · AI 众答",
   "extensions": {
     "colorMeta": {
@@ -544,6 +544,16 @@
         "name": "site-loading",
         "value": "1.2s linear infinite",
         "purpose": "页面加载进度条；reduced motion时静态显示。"
+      },
+      {
+        "name": "library-menu-enter",
+        "value": "160ms",
+        "purpose": "指针打开结果库菜单时透明度与 0.97→1 缩放；键盘与关闭立即生效。"
+      },
+      {
+        "name": "library-menu-arrow",
+        "value": "140ms",
+        "purpose": "选择器箭头旋转；减少动态效果时停用。"
       }
     ],
     "breakpoints": [
@@ -565,6 +575,14 @@
       },
       {
         "name": "reading-source-scroll",
+        "value": "480px"
+      },
+      {
+        "name": "markdown-export-compact-width",
+        "value": "520px"
+      },
+      {
+        "name": "markdown-export-compact-height",
         "value": "480px"
       }
     ]
@@ -646,9 +664,9 @@
       "name": "回答阅读节",
       "kind": "custom",
       "refersTo": "answer-section",
-      "description": "平整分节，用来源标题、段落和分隔线组织保存的回答。示例文案为合成内容。",
-      "html": "<section class=\"ds-answer\"><header><h2>[S1] Claude · 深度思考</h2><button class=\"ds-answer-action\" type=\"button\">追问这份回答</button></header><div class=\"ds-reading\"><p>先比较各份回答的依据、条件与差异，再记录自己的判断。</p><p><a href=\"#ds-answer-source\">回到来源核对</a></p></div></section>",
-      "css": ".ds-answer{padding:16px 0 24px;border:0;border-bottom:1px solid var(--border,#d8dae2);border-radius:0;background:var(--panel,#ffffff);color:var(--text,#20212b);font-family:var(--font-ui,system-ui,sans-serif);}.ds-answer header{display:flex;align-items:flex-start;flex-wrap:wrap;justify-content:space-between;gap:12px;}.ds-answer h2{margin:0;font-size:16px;line-height:1.6;}.ds-answer-action{min-height:30px;padding:4px 8px;border:1px solid var(--border,#d8dae2);border-radius:6px;background:transparent;color:var(--muted,#626575);font:12px/1.5 var(--font-ui,system-ui,sans-serif);}.ds-answer-action:hover:not(:disabled){color:var(--accent,#4f46e5);background:var(--accent-soft,#eeedff);}.ds-answer-action:active:not(:disabled){filter:brightness(.92);}.ds-answer-action:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}.ds-reading{font-size:var(--font-reading,16px);line-height:1.8;overflow-wrap:anywhere;}.ds-reading p{max-inline-size:75ch;margin:12px 0;}.ds-reading a{color:var(--accent,#4f46e5);text-decoration:underline;text-underline-offset:3px;}.ds-reading a:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}@media(forced-colors:active){.ds-answer{border-color:CanvasText;}.ds-answer-action:focus-visible,.ds-reading a:focus-visible{outline-color:Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
+      "description": "平整分节，来源标题旁提供单份 Markdown 导出和追问；示例文案为合成内容。",
+      "html": "<section class=\"ds-answer\"><header><h2>[S1] Claude · 深度思考</h2><div class=\"ds-answer-actions\"><button class=\"ds-answer-action\" type=\"button\">导出 .md</button><button class=\"ds-answer-action\" type=\"button\">追问这份回答</button></div></header><div class=\"ds-reading\"><p>先比较各份回答的依据、条件与差异，再记录自己的判断。</p><p><a href=\"#ds-answer-source\">回到来源核对</a></p></div></section>",
+      "css": ".ds-answer{padding:16px 0 24px;border:0;border-bottom:1px solid var(--border,#d8dae2);border-radius:0;background:var(--panel,#ffffff);color:var(--text,#20212b);font-family:var(--font-ui,system-ui,sans-serif);}.ds-answer header{display:flex;align-items:flex-start;flex-wrap:wrap;justify-content:space-between;gap:12px;}.ds-answer h2{margin:0;font-size:16px;line-height:1.6;}.ds-answer-action{min-height:30px;padding:4px 8px;border:1px solid var(--border,#d8dae2);border-radius:6px;background:transparent;color:var(--muted,#626575);font:12px/1.5 var(--font-ui,system-ui,sans-serif);}.ds-answer-action:hover:not(:disabled){color:var(--accent,#4f46e5);background:var(--accent-soft,#eeedff);}.ds-answer-action:active:not(:disabled){filter:brightness(.92);}.ds-answer-action:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}.ds-reading{font-size:var(--font-reading,16px);line-height:1.8;overflow-wrap:anywhere;}.ds-reading p{max-inline-size:75ch;margin:12px 0;}.ds-reading a{color:var(--accent,#4f46e5);text-decoration:underline;text-underline-offset:3px;}.ds-reading a:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}@media(forced-colors:active){.ds-answer{border-color:CanvasText;}.ds-answer-action:focus-visible,.ds-reading a:focus-visible{outline-color:Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}.ds-answer-actions{display:flex;flex-wrap:wrap;gap:8px;}"
     }
   ],
   "narrative": {
@@ -664,12 +682,12 @@
     "rules": [
       {
         "name": "The Paired Contrast Rule",
-        "body": "强调底色与其文字色成对使用；状态圆点色与状态文字色分别取值。决策状态在列表和阅读详情共用灰色草稿、琥珀色待验证和绿色定稿；颜色不替代状态文字或人工核实。",
+        "body": "强调底色与其文字色成对使用；状态圆点色与状态文字色分别取值。",
         "section": "colors"
       },
       {
         "name": "The Flat Reading Rule",
-        "body": "回答、摘录和比较段落主要用间距与分隔线组织，延续结果库已有的平整阅读面。",
+        "body": "回答、摘录和比较段落主要用间距组织。比较块不逐块添加横线；保留原文分隔线、表格边界与共同段落标记，延续结果库已有的平整阅读面。",
         "section": "elevation"
       }
     ],

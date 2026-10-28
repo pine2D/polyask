@@ -22,18 +22,22 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, fill, shot
     win.webContents.setZoomFactor(zoom);
     await wait('!!document.querySelector(".archive-detail h1")');
     const labels = await run(`(() => { const c = window.libraryTest.copy;
-      return { copy: c.archiveCopyFailed, export: c.archiveExportFailed, source: c.archiveSourceOpenFailed,
+      return { copy: c.archiveCopyFailed, export: c.markdownNotFound, source: c.archiveSourceOpenFailed,
         capture: c.libraryEmptyHint, decision: c.libraryDecisionEmptyHint, folder: c.libraryFolderEmptyHint, search: c.libraryNoMatchesHint,
         emptyTitle: c.libraryEmptyTitle, viewTitle: c.libraryViewEmptyTitle, noMatchesTitle: c.libraryNoMatchesTitle };
     })()`);
     await run('window.libraryTest.failMarkdown=true; window.libraryTest.failExternal=true');
     const failures = [];
-    for (const [index, expected] of [[1, labels.copy], [2, labels.export]]) {
+    for (const [index, expected] of [[1, labels.copy]]) {
       await click('.archive-actions .library-menu-trigger');
       await click(`[role=menuitem]:nth-child(${index})`);
       await wait(`document.querySelector('.archive-workspace .archive-status')?.textContent === ${JSON.stringify(expected)}`);
       const box = await measure('.archive-workspace .archive-status'); contained(box); failures.push(box);
     }
+    await click('[data-action=archive-markdown-export]');
+    await wait(`document.querySelector('.markdown-export-panel [role=alert]')?.textContent === ${JSON.stringify(labels.export)}`);
+    const exportError = await measure('.markdown-export-panel [role=alert]'); contained(exportError); failures.push(exportError);
+    await click('.markdown-export-panel header button');
     await click('.archive-answer .markdown-preview a');
     await wait(`document.querySelector('.archive-workspace .archive-status')?.textContent === ${JSON.stringify(labels.source)}`);
     const source = await measure('.archive-workspace .archive-status'); contained(source); failures.push(source);

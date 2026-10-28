@@ -19,6 +19,7 @@
 .markdown-export-record-heading > input { flex: 0 0 auto; margin: 10px 0 0; }
 .markdown-export-record-heading .markdown-export-expand { display: flex; align-items: start; flex: 1; min-width: 0; gap: 6px; text-align: start; border: 0; padding: 6px 0; font-weight: 600; background: transparent; }
 .markdown-export-expand span { overflow-wrap: anywhere; }
+.markdown-export-expand time { display: block; color: var(--muted); font-size: var(--font-meta); font-weight: 400; font-variant-numeric: tabular-nums; }
 .markdown-export-expand svg { flex: 0 0 auto; margin-top: 2px; }
 .markdown-export-group-count { color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; padding-top: 7px; }
 .markdown-export-entries { padding-inline-start: 24px; }

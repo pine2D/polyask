@@ -33,7 +33,7 @@ export class MarkdownSources {
         label: SITES.find(s => s.key === a.site)?.label ?? a.site, available: a.hasText,
         attempt: a.attempt, latestAttempt: latest.get(a.site),
         capturedAt: a.capturedAt, state: a.capture, truncated: a.truncated }));
-      return { target, revision: '', title: title(q.text), createdAt: q.createdAt, updatedAt: q.updatedAt, entries };
+      return { target, revision: '', title: title(q.text), createdAt: q.createdAt, updatedAt: q.updatedAt, deviceId: q.deviceId, entries };
     }
     if (target.kind === 'archive') {
       const r = found(this.repos.archives.get(target.id));
@@ -42,10 +42,10 @@ export class MarkdownSources {
         state: 'unknown', truncated: a.code === 'answer_truncated', best: r.winnerHost === a.host }));
       if (r.synthesis) entries.push({ id: 'synthesis', site: '__synthesis', label: copy.markdownSynthesis, kind: 'synthesis',
         available: !!r.synthesis.text.trim(), capturedAt: r.synthesis.createdAt, state: 'unknown', truncated: false });
-      return { target, revision: revision(r), title: title(r.task || r.text), createdAt: r.ts, updatedAt: r.updatedAt, entries };
+      return { target, revision: revision(r), title: title(r.task || r.text), createdAt: r.ts, updatedAt: r.updatedAt, deviceId: r.deviceId, entries };
     }
     const r = found(this.repos.decisions.get(target.id));
-    return { target, revision: revision(r), title: title(r.title), createdAt: r.createdAt, updatedAt: r.updatedAt, entries: [
+    return { target, revision: revision(r), title: title(r.title), createdAt: r.createdAt, updatedAt: r.updatedAt, deviceId: r.deviceId, entries: [
       { id: 'decision', site: '__decision', label: copy.decisionTitle, kind: 'decision', available: true,
         capturedAt: r.createdAt, state: 'unknown', truncated: false }] };
   }
@@ -87,7 +87,7 @@ export class MarkdownSources {
       }
     } else if (selection.target.kind === 'archive') {
       const r = found(this.repos.archives.get(selection.target.id));
-      if ((r.task || r.text) !== document.title) lines.push(markdownText(r.task || r.text));
+      for (const text of new Set([r.task, r.text])) if (text && text !== document.title) lines.push(markdownText(text));
       if (r.tags.length) lines.push(`${copy.archiveTags}: ${r.tags.map(markdownText).join(', ')}`);
       if (r.note) lines.push(`### ${copy.reportHumanNotes}`, markdownText(r.note));
       const link = r.source && safeExternalUrl(r.source.url);

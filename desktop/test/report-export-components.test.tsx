@@ -13,7 +13,7 @@ import { withFolderPages } from './ui/library-page-api';
 import { mountDom } from './ui/dom-harness';
 
 for (const [locale, language] of [['en', 'en'], ['zh-CN', 'zhCN'], ['zh-TW', 'zhTW']]) {
-  test(`${locale}: saved-answer menu retains Markdown and sends only finite HTML/PDF intent`, async () => {
+  test(`${locale}: saved-answer toolbar retains Markdown and menu sends only finite HTML/PDF intent`, async () => {
     const copy = getCopy(locale), record = archiveFixture(), calls: ReportExportRequest[] = [];
     let markdown = 0;
     setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [],
@@ -30,7 +30,7 @@ for (const [locale, language] of [['en', 'en'], ['zh-CN', 'zhCN'], ['zh-TW', 'zh
       for (const [label, status] of [[copy.reportExportHtml, copy.reportExported], [copy.reportExportPdf, copy.reportCancelled]]) {
         await h.click(h.document.querySelector<HTMLButtonElement>('.archive-actions .library-menu-trigger')!);
         const items = [...h.document.querySelectorAll<HTMLButtonElement>('[role=menuitem]')];
-        assert.equal(items.some(item => item.textContent === copy.exportArchive), true);
+        assert.equal(h.document.querySelector('[data-action=archive-markdown-export]')?.textContent, copy.markdownSingle);
         const action = items.find(item => item.textContent === label)!;
         assert.equal(action.disabled, false);
         await h.click(action);

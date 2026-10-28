@@ -21,3 +21,30 @@ test('nested block math keeps one quote prefix and escaped currency stays litera
   assert.match(result, /^> a_b < c$/m); assert.equal(result.includes('> >'), false);
   assert.match(result, /\\\$x\\\$/); assert.match(result, /` \$\$code\$\$ `/);
 });
+
+
+test('escaped block markers and image punctuation stay literal after exporting', () => {
+  const source = String.raw`\- literal dash
+
+\+ literal plus
+
+1\. literal number
+
+\~\~literal tildes\~\~
+
+plain text
+\=\=\=
+
+\![text link](https://example.com/image.png)`;
+  const parser = new MarkdownIt({ html: true });
+  const rendered = parser.render(safeExportMarkdown(source, 0));
+  assert.equal(rendered.includes('<img'), false, 'a literal exclamation mark must never turn the next link into an image');
+  assert.equal(rendered, parser.render(source));
+});
+
+
+test('an image without alt text becomes a visible source link', () => {
+  const html = new MarkdownIt().render(safeExportMarkdown('![](https://example.com/image.png)', 0));
+  assert.equal(html.includes('<img'), false);
+  assert.match(html, />https:\/\/example\.com\/image\.png<\/a>/);
+});

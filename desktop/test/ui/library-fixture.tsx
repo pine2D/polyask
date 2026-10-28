@@ -52,6 +52,7 @@ setShellApi(withFolderPages({
   folderMemberships: async () => memberships,
   patchFolderMemberships: async (_: any, changes: any[]) => {for (const c of changes) memberships=c.present?[...memberships,c.folderId]:memberships.filter(id=>id!==c.folderId);},
   updateDecision: async (id: string, value: any) => { if (state.failSave) throw new Error('fixture_save_failed'); state.writes++; cards=cards.map(c=>c.id===id?{...c,...value}:c);return cards.find(c=>c.id===id);},
+  previewMarkdown: async () => { throw Error('markdown_not_found'); },
   archiveMarkdown: async () => { if (state.failMarkdown) throw Error('fixture_markdown_failed'); return '# Exported result'; },
   openExternal: async (url: string) => { if (state.failExternal) throw Error('fixture_open_failed'); state.links.push(url); }
 }) as any);

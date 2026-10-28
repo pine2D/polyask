@@ -28,7 +28,7 @@ module.exports = async ({win,nativeTheme,output,run,wait,click,key,shot}) => {
     assert.equal(await run('document.activeElement?.getAttribute("href")'), focused, 'passive reading does not move focus');
     await click('.archive-answer-nav a[href="#archive-answer-8"]');
     await wait('document.querySelector(".archive-answer-nav [aria-current=location]")?.getAttribute("href") === "#archive-answer-8"');
-    await click('#archive-answer-8 .archive-answer-actions button:first-child');
+    await click('#archive-answer-8 .archive-answer-actions button[aria-pressed]');
     await click('.archive-answer-nav a[href="#archive-answer-8"]');
     await wait('!!document.querySelector(".archive-answer-nav a[data-best=true][aria-current=location]")');
     const marked = await read(function() {
@@ -42,7 +42,7 @@ module.exports = async ({win,nativeTheme,output,run,wait,click,key,shot}) => {
     await read(function() { document.querySelector('.archive-answer-nav a[href="#archive-answer-8"]').focus(); });
     await key('Return'); await paint();
     assert.equal(await run('document.querySelectorAll(".archive-answer-nav [aria-current=location]").length'),1);
-    await click('#archive-answer-8 .archive-answer-actions button:first-child');
+    await click('#archive-answer-8 .archive-answer-actions button[aria-pressed]');
     await click('.archive-answer-nav a[href="#archive-answer-8"]'); await paint();
     assert.equal(await run('document.querySelectorAll(".archive-answer-nav [data-best=true]").length'),0);
     assert.equal(await run('document.querySelector(".archive-answer-nav [aria-current=location]")?.getAttribute("href")'),'#archive-answer-8');

@@ -1,14 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import MarkdownIt from 'markdown-it';
 import { DesktopDatabase } from '../src/main/database';
 import { MarkdownExportService } from '../src/main/markdown-export-service';
 import { archiveFixture } from './fixtures';
 import { questionFixture, questionAnswerFixture } from './question-fixtures';
-function harness() {
+function harness(archive = archiveFixture()) {
   const db = DesktopDatabase.open(':memory:'); db.questions.put(questionFixture()); db.questions.putAnswer(questionAnswerFixture());
   db.questions.putAnswer({ ...questionAnswerFixture('q-a', 2), answerMarkdown: null, capturedAt: null, capture: 'waiting', sealedAt: null });
   let path: () => Promise<string | null> = async () => '/tmp/synthetic-export.md'; let text = '', writes = 0;
-  const service = new MarkdownExportService({ questions: db.questions, archives: { get: (id: string) => id === 'archive-a' ? archiveFixture() : null }, decisions: { get: () => null },
+  const service = new MarkdownExportService({ questions: db.questions, archives: { get: (id: string) => id === 'archive-a' ? archive : null }, decisions: { get: () => null },
     epoch: () => db.questions.lifecycle, isCurrent: () => true, choosePath: () => path(),
     writeFile: async (_path, data, guard) => { guard(); writes++; text = String(data); } });
   const target = { kind: 'history', id: 'q-a' } as const;
@@ -84,5 +85,16 @@ test('normalized export locales retain Simplified and Traditional Chinese file l
   const h = harness(); try {
     await h.service.export({ ...h.request(), locale: 'zhCN' }); assert.match(h.saved().text, /导出时间/);
     await h.service.export({ ...h.request(), locale: 'zhTW' }); assert.match(h.saved().text, /匯出時間/);
+  } finally { h.db.close(); }
+});
+
+
+test('archive export preserves the original question when its saved title is different', async () => {
+  const h = harness({ ...archiveFixture(), task: 'Short saved title', text: 'Original question with context and separate instructions.' });
+  try {
+    const [doc] = h.service.preview({ targets: [{ kind: 'archive', id: 'archive-a' }] });
+    assert.equal((await h.service.export({ selections: [{ target: doc.target, revision: doc.revision, entryIds: ['result:0'] }] })).status, 'saved');
+    assert.equal(h.saved().text.includes('Short saved title'), true);
+    assert.equal(new MarkdownIt().render(h.saved().text).includes('Original question with context and separate instructions.'), true);
   } finally { h.db.close(); }
 });

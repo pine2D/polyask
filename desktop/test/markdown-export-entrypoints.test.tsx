@@ -55,9 +55,10 @@ test('history keeps hidden selections through search, excludes later loaded item
 
 test('library exports the displayed answer and the whole record through distinct visible controls', async () => {
   const saved: MarkdownExportRequest[] = [], previews: MarkdownPreviewRequest[] = [];
+  let previewDevice = record.deviceId;
   const doc = documentFixture(record.id, [entry('result:0', 'claude')], { target: { kind: 'archive', id: record.id }, revision: 'v1', updatedAt: record.updatedAt });
   setShellApi(withFolderPages({ listFolders: async () => [], listArchiveTags: async () => [], searchFolderContents: async () => [{ kind: 'archive', record }], getArchive: async () => record,
-    previewMarkdown: async (r: MarkdownPreviewRequest) => { previews.push(r); return [doc]; }, exportMarkdown: async (r: MarkdownExportRequest) => { saved.push(r); return { status: 'saved' }; }
+    previewMarkdown: async (r: MarkdownPreviewRequest) => { previews.push(r); return [{ ...doc, deviceId: previewDevice }]; }, exportMarkdown: async (r: MarkdownExportRequest) => { saved.push(r); return { status: 'saved' }; }
   }) as any);
   const h = await mountLibrary(<ArchiveSurface copy={copy} locale="en" preferredId={record.id} onClose={() => {}} onCapture={async () => record} sites={[]} synthesisSites={[]} defaultTier={null}
     pendingSynthesis={null} synthesisCandidate={null} onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => record} />);
@@ -66,6 +67,9 @@ test('library exports the displayed answer and the whole record through distinct
     const one = h.document.querySelector<HTMLButtonElement>('[data-action="archive-answer-export"]');
     assert.equal(one !== null, true); await h.click(one!);
     assert.deepEqual(saved[0].selections[0].entryIds, ['result:0']);
+    previewDevice = 'another-device'; await h.click(one!);
+    assert.equal(saved.length, 1, 'equal timestamp from another sync device cannot retarget the displayed answer');
+    previewDevice = record.deviceId;
     const pane = h.document.querySelector<HTMLElement>('.archive-detail-pane')!; pane.scrollTop = 88;
     const whole = h.document.querySelector<HTMLButtonElement>('[data-action="archive-markdown-export"]')!;
     await act(async () => whole.focus()); await h.click(whole);

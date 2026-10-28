@@ -4,7 +4,7 @@ export const entry = (id: string, site: string, extra: Partial<MarkdownEntry> = 
   capturedAt: 1000, state: 'complete', truncated: false, ...extra
 });
 export const documentFixture = (id: string, entries: MarkdownEntry[], extra: Partial<MarkdownDocument> = {}): MarkdownDocument => ({
-  target: { kind: 'history', id }, revision: '', title: `Question ${id}`, createdAt: 1000, updatedAt: 1000, entries, ...extra
+  target: { kind: 'history', id }, revision: '', title: `Question ${id}`, createdAt: 1000, updatedAt: 1000, deviceId: 'device-a', entries, ...extra
 });
 export const exportDocuments = () => [
   documentFixture('q1', [entry('old', 'claude', { attempt: 1, latestAttempt: 3 }), entry('new', 'claude', { attempt: 2, latestAttempt: 3 }),

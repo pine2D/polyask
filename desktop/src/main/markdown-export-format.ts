@@ -5,7 +5,7 @@ type Token = MarkdownIt.Token;
 const parser = new MarkdownIt({ html: true, linkify: false, typographer: false, maxNesting: 64 });
 // 接受输入链接后由输出白名单决定是否保留，避免危险目标被原样作为 Markdown 文本吐回。
 parser.validateLink = () => true;
-export const markdownText = (text: string): string => text.replace(/&/g, '&amp;').replace(/[\\`*_[\]{}<>#]/g, c => `\\${c}`);
+export const markdownText = (text: string): string => text.replace(/&/g, '&amp;').replace(/[\\`*_[\]{}<>#!+.=~-]/g, c => `\\${c}`);
 const htmlText = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 function url(value: unknown): string | null {
   if (typeof value !== 'string' || !value || /[\u0000-\u0020\u007f]/.test(value)) return null;
@@ -38,7 +38,7 @@ function inline(tokens: Token[]): string {
       out += href ? `[${label}](<${href}>)` : label; i = end;
     } else if (t.type === 'image') {
       const label = inline(t.children ?? []) || markdownText(t.content), href = url(t.attrGet('src'));
-      out += href ? `[${label}](<${href}>)` : label;
+      out += href ? `[${label || markdownText(href)}](<${href}>)` : label;
     } else if (t.type.startsWith('strong_')) out += '**';
     else if (t.type.startsWith('em_')) out += '*';
     else if (t.type.startsWith('s_')) out += '~~';

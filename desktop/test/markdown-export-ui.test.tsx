@@ -8,7 +8,7 @@ import { useMarkdownExport } from '../src/renderer/use-markdown-export';
 import { exportDocuments } from './markdown-export-fixtures';
 import type { MarkdownExportRequest } from '../src/shared/markdown-export';
 const copy = getCopy('en');
-function Harness() { const flow = useMarkdownExport({ copy, locale: 'en' }); return <><button onClick={() => flow.open(exportDocuments().map(d => d.target))}>Open export</button>{flow.panel}</>; }
+function Harness({ documents = exportDocuments() }: { documents?: ReturnType<typeof exportDocuments> }) { const flow = useMarkdownExport({ copy, locale: 'en' }); return <><button onClick={() => flow.open(documents.map(d => d.target))}>Open export</button>{flow.panel}</>; }
 
 test('site buttons toggle independently; cancelled native save retains choices and Escape restores focus', async () => {
   const saved: MarkdownExportRequest[] = [];
@@ -85,8 +85,26 @@ test('single archive export refuses a newer record rather than following its reu
   setShellApi({ previewMarkdown: async () => [{ ...exportDocuments()[0], updatedAt: 2000 }],
     exportMarkdown: async () => { saves++; return { status: 'saved' }; } } as any);
   function Single() { const flow = useMarkdownExport({ copy, locale: 'en', onStatus: text => { status = text; } });
-    return <button onClick={() => { void flow.single({ kind: 'archive', id: 'a' }, 'old', 1000); }}>Single</button>; }
+    return <button onClick={() => { void flow.single({ kind: 'archive', id: 'a' }, 'old', { updatedAt: 1000, deviceId: 'device-a' }); }}>Single</button>; }
   const h = await mountDom(<Single />);
   try { await h.click(h.document.querySelector('button')!); assert.equal(saves, 0); assert.equal(status, copy.markdownSourceChanged); }
   finally { await h.close(); setShellApi(null); }
+});
+
+
+test('larger export batches start collapsed and distinguish equal titles by saved dates', async () => {
+  const documents = Array.from({ length: 4 }, (_, i) => ({ ...exportDocuments()[0], target: { kind: 'history' as const, id: `q-${i}` },
+    title: 'Same question', createdAt: Date.UTC(2026, 0, i + 1) }));
+  setShellApi({ previewMarkdown: async () => documents } as any);
+  const h = await mountDom(<Harness documents={documents} />);
+  try {
+    await h.click(h.document.querySelector('button')!);
+    const sections = [...h.document.querySelectorAll('.markdown-export-record')];
+    assert.equal(sections.length, 4);
+    assert.equal(sections.every(s => s.querySelector('.markdown-export-expand')?.getAttribute('aria-expanded') === 'false'), true);
+    assert.deepEqual(sections.map(s => s.querySelector('time')?.getAttribute('datetime')), documents.map(d => new Date(d.createdAt).toISOString()));
+    await h.click(sections[0].querySelector<HTMLButtonElement>('.markdown-export-expand')!);
+    assert.equal(sections[0].querySelector('.markdown-export-expand')?.getAttribute('aria-expanded'), 'true');
+    assert.equal(sections[1].querySelector('.markdown-export-expand')?.getAttribute('aria-expanded'), 'false');
+  } finally { await h.close(); setShellApi(null); }
 });

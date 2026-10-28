@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
+import { dateTimeAttribute, formatDateTime } from '../shared/format';
 import { markdownTargetKey, type MarkdownDocument, type MarkdownEntry } from '../shared/markdown-export';
 import { markdownGroups, markdownChosen, markdownSelectionState, type MarkdownChoices, type CheckState } from './markdown-export-model';
 export function MarkdownCheckbox({ state, label, disabled, onChange }: { state: CheckState; label: string; disabled: boolean; onChange: () => void }) {
@@ -15,11 +16,11 @@ function stateLabel(entry: MarkdownEntry, copy: DesktopCopy): string {
   if (entry.state === 'interrupted') return copy.questionStateInterrupted;
   return copy.reportUnverified;
 }
-export function MarkdownExportRecord({ document: doc, selection, copy, disabled, onToggle, onVersion, onAll }: {
-  document: MarkdownDocument; selection: MarkdownChoices; copy: DesktopCopy; disabled: boolean;
+export function MarkdownExportRecord({ document: doc, selection, copy, locale, initiallyExpanded, disabled, onToggle, onVersion, onAll }: {
+  document: MarkdownDocument; selection: MarkdownChoices; copy: DesktopCopy; locale: string; initiallyExpanded: boolean; disabled: boolean;
   onToggle: (key: string, id: string) => void; onVersion: (key: string, id: string) => void; onAll: (doc: MarkdownDocument, checked: boolean) => void;
 }) {
-  const [expanded, setExpanded] = useState(true), id = useId(), key = markdownTargetKey(doc.target), choice = selection[key];
+  const [expanded, setExpanded] = useState(initiallyExpanded), id = useId(), key = markdownTargetKey(doc.target), choice = selection[key];
   const groups = markdownGroups(doc), total = groups.filter(g => g.entries.some(e => e.available)).length;
   const count = groups.filter(g => g.entries.some(e => choice?.selected.includes(e.id))).length;
   const state = markdownSelectionState([doc], selection);
@@ -30,7 +31,7 @@ export function MarkdownExportRecord({ document: doc, selection, copy, disabled,
       <MarkdownCheckbox state={state} label={doc.title} disabled={disabled || !total} onChange={() => onAll(doc, state !== true)} />
       <button type="button" className="markdown-export-expand" aria-expanded={expanded} aria-controls={id} onClick={() => setExpanded(!expanded)}>
         <svg aria-hidden="true" width="16" height="16" viewBox="0 0 16 16"><path d={expanded ? 'm4 6 4 4 4-4' : 'm6 4 4 4-4 4'} fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
-        <span>{doc.title}</span>
+        <span>{doc.title}<time dateTime={dateTimeAttribute(doc.createdAt)}>{formatDateTime(doc.createdAt, locale)}</time></span>
       </button>
       <span className="markdown-export-group-count">{formatCopy(copy.markdownGroupCount, { selected: count, total })}</span>
     </div>

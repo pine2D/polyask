@@ -19,7 +19,7 @@ module.exports = async ({ win, run, wait, click, key, shot, locale, theme, zoom 
         expected:source.querySelector('h2').textContent.split(' · ')[0]+' · '+window.libraryTest.copy.archiveBestAnswer,
         icon:link.querySelector('svg')?.getAttribute('aria-hidden'), current:link.getAttribute('aria-current'),
         contrast:(Math.max(...colors)+.05)/(Math.min(...colors)+.05),
-        focused:active === source.querySelector('.archive-answer-actions button'),
+        focused:active === source.querySelector('.archive-answer-actions button[aria-pressed]'),
         top:box.top, bottom:box.bottom, navBottom:nav.bottom, paneBottom:pane.bottom,
         saved:window.libraryTest.writes };
     })()`);
@@ -32,10 +32,13 @@ module.exports = async ({ win, run, wait, click, key, shot, locale, theme, zoom 
   };
   const navigate = async index => {
     await click(`.archive-answer-nav a[href="#archive-answer-${index}"]`); await key('Tab');
-    assert.equal(await run(`document.activeElement === document.querySelector('#archive-answer-${index} .archive-answer-actions button')`), true);
+    assert.equal(await run('document.activeElement?.dataset.action'), 'archive-answer-export');
+    await key('Tab');
+    assert.equal(await run(`document.activeElement === document.querySelector('#archive-answer-${index} .archive-answer-actions button[aria-pressed]')`), true);
   };
   win.focus(); win.webContents.focus();
-  // 上游锚点用例已通过原生 Tab 聚焦第九份回答的“标为最佳”。
+  // 上游锚点用例已聚焦首个回答动作（导出）；下一次 Tab 到达“标为最佳”。
+  await key('Tab');
   await key('Return');
   await wait(`!!document.querySelector('${marked}[href="#archive-answer-8"]') && !document.querySelector('#archive-answer-8 button').disabled`);
   const last = await check(8);

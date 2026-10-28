@@ -15,7 +15,7 @@ export interface MarkdownEntry {
   readonly state: string; readonly truncated: boolean; readonly best?: boolean;
 }
 export interface MarkdownDocument {
-  readonly target: MarkdownTarget; readonly revision: string; readonly title: string; readonly createdAt: number; readonly updatedAt: number;
+  readonly target: MarkdownTarget; readonly revision: string; readonly title: string; readonly createdAt: number; readonly updatedAt: number; readonly deviceId: string;
   readonly entries: readonly MarkdownEntry[];
 }
 export interface MarkdownSelection { readonly target: MarkdownTarget; readonly revision: string; readonly entryIds: readonly string[] }

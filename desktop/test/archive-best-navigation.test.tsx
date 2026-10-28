@@ -53,13 +53,13 @@ for (const locale of ['en', 'zh-CN', 'zh-TW']) {
       await waitForInitial(); bookmark(null);
       let previous: number | null = null;
       for (const [index, expected] of [[0, 0], [1, 1], [1, null], [0, 0]] as const) {
-        await h.click(h.document.querySelector<HTMLButtonElement>(`#archive-answer-${index} .archive-answer-actions button`)!);
+        await h.click(h.document.querySelector<HTMLButtonElement>(`#archive-answer-${index} .archive-answer-actions button[aria-pressed]`)!);
         bookmark(previous);
         assert.equal([...h.document.querySelectorAll<HTMLButtonElement>('.archive-answer-actions button')].every(button => button.disabled), true);
         await act(async () => settle(true)); await waitForInitial();
         bookmark(expected); previous = expected;
       }
-      await h.click(h.document.querySelector<HTMLButtonElement>('#archive-answer-1 .archive-answer-actions button')!);
+      await h.click(h.document.querySelector<HTMLButtonElement>('#archive-answer-1 .archive-answer-actions button[aria-pressed]')!);
       bookmark(0);
       await act(async () => settle(false)); await waitForInitial();
       bookmark(0);

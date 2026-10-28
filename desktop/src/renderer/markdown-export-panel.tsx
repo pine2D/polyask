@@ -1,10 +1,11 @@
+import { createPortal } from 'react-dom';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { markdownTargetKey, type MarkdownDocument } from '../shared/markdown-export';
 import { FolderModal } from './folder-modal';
 import { MarkdownExportRecord } from './markdown-export-record';
 import { markdownSelectionRequest, markdownSelectionState, orderMarkdownDocuments, type MarkdownChoices, type MarkdownOrder } from './markdown-export-model';
-export function MarkdownExportPanel({ documents, selection, copy, order, loading, saving, stale, error, notice, onCancel, onSave, onRefresh, onSite, onAll, onToggle, onVersion, onOrder }: {
-  documents: readonly MarkdownDocument[]; selection: MarkdownChoices; copy: DesktopCopy; order: MarkdownOrder;
+export function MarkdownExportPanel({ documents, selection, copy, locale, order, loading, saving, stale, error, notice, onCancel, onSave, onRefresh, onSite, onAll, onToggle, onVersion, onOrder }: {
+  documents: readonly MarkdownDocument[]; selection: MarkdownChoices; copy: DesktopCopy; locale: string; order: MarkdownOrder;
   loading: boolean; saving: boolean; stale: boolean; error: string; notice: string; onCancel: () => void; onSave: () => void; onRefresh: () => void;
   onSite: (site: string) => void; onAll: (documents: readonly MarkdownDocument[], checked: boolean) => void;
   onToggle: (key: string, id: string) => void; onVersion: (key: string, id: string) => void; onOrder: (order: MarkdownOrder) => void;
@@ -14,7 +15,7 @@ export function MarkdownExportPanel({ documents, selection, copy, order, loading
   const answers = entries.filter(e => e.kind === 'answer'), decisions = entries.filter(e => e.kind === 'decision');
   const incomplete = answers.filter(e => ['partial', 'interrupted', 'waiting'].includes(e.state) || e.truncated).length;
   const sites = [...new Map(documents.flatMap(d => d.entries.filter(e => e.kind === 'answer' && e.available).map(e => [e.site, e.label] as const))).entries()];
-  return <FolderModal copy={copy} title={copy.markdownTitle} busy={saving} onCancel={onCancel} className="markdown-export-panel">
+  return createPortal(<FolderModal copy={copy} title={copy.markdownTitle} busy={saving} onCancel={onCancel} className="markdown-export-panel">
     <div className="markdown-export-scroll" aria-busy={loading}>
       <p>{copy.markdownChoose}</p>
       <div className="markdown-export-sites" role="group" aria-label={copy.sitesCompact}>
@@ -28,7 +29,7 @@ export function MarkdownExportPanel({ documents, selection, copy, order, loading
         </select></label>
       </div>
       {loading ? <p role="status">{copy.markdownLoading}</p> : orderMarkdownDocuments(documents, order).map(doc => <MarkdownExportRecord key={markdownTargetKey(doc.target)} document={doc} selection={selection}
-        copy={copy} disabled={saving} onToggle={onToggle} onVersion={onVersion} onAll={(d, checked) => onAll([d], checked)} />)}
+        copy={copy} locale={locale} initiallyExpanded={documents.length <= 3} disabled={saving} onToggle={onToggle} onVersion={onVersion} onAll={(d, checked) => onAll([d], checked)} />)}
       {incomplete > 0 && <p className="markdown-export-warning" role="note">{formatCopy(copy.markdownIncomplete, { count: incomplete })}</p>}
       <p className="markdown-export-scope">{copy.markdownScope}</p>
     </div>
@@ -42,5 +43,5 @@ export function MarkdownExportPanel({ documents, selection, copy, order, loading
       <div className="confirm-actions"><button type="button" disabled={disabled} onClick={onRefresh}>{copy.markdownRefresh}</button>
         <button type="button" className="primary" disabled={disabled || stale || !selected.length} onClick={onSave}>{saving ? copy.markdownSaving : copy.markdownSaveOne}</button></div>
     </footer>
-  </FolderModal>;
+  </FolderModal>, document.body);
 }

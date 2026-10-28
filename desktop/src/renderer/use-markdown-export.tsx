@@ -74,21 +74,21 @@ export function useMarkdownExport(options: { copy: DesktopCopy; locale: string; 
     catch { if (valid(ticket)) finish({ status: 'failed', code: 'markdown_failed' }); }
     finally { if (valid(ticket)) { pending.current = savingRef.current = false; setSaving(false); } }
   };
-  const single = async (target: MarkdownTarget, entryId: string, expectedUpdatedAt?: number) => {
+  const single = async (target: MarkdownTarget, entryId: string, expectedVersion?: Pick<MarkdownDocument, 'updatedAt' | 'deviceId'>) => {
     if (pending.current || visible.current || !mounted.current) return;
     pending.current = savingRef.current = true; const ticket = ++epoch.current; setSaving(true);
     current.current.onStatus?.(current.current.copy.markdownSaving);
     try {
       const [doc] = await shell.previewMarkdown({ targets: [target], locale: locale() });
       if (!valid(ticket)) return;
-      if (expectedUpdatedAt !== undefined && doc.updatedAt !== expectedUpdatedAt) throw new Error('markdown_source_changed');
+      if (expectedVersion && (doc.updatedAt !== expectedVersion.updatedAt || doc.deviceId !== expectedVersion.deviceId)) throw new Error('markdown_source_changed');
       if (!doc.entries.some(e => e.id === entryId && e.available)) throw new Error('markdown_not_found');
       const result = await shell.exportMarkdown({ selections: [{ target, revision: doc.revision, entryIds: [entryId] }], locale: locale() });
       if (valid(ticket)) finish(result);
     } catch (cause) { if (valid(ticket)) current.current.onStatus?.(markdownExportMessage(current.current.copy, ipcErrorCode(cause))); }
     finally { if (valid(ticket)) { pending.current = savingRef.current = false; setSaving(false); } }
   };
-  return { open, single, active, busy: loading || saving, panel: active ? <MarkdownExportPanel documents={documents} selection={selection} copy={options.copy}
+  return { open, single, active, busy: loading || saving, panel: active ? <MarkdownExportPanel documents={documents} selection={selection} copy={options.copy} locale={locale() === 'zhCN' ? 'zh-CN' : locale() === 'zhTW' ? 'zh-TW' : 'en'}
     order={order} loading={loading} saving={saving} stale={stale} error={error} notice={notice} onCancel={close} onSave={() => { void save(); }} onRefresh={() => { void load(true); }}
     onSite={site => setSelection(s => toggleMarkdownSite(documents, s, site))} onAll={(docs, checked) => setSelection(s => selectMarkdownDocuments(docs, s, checked))}
     onToggle={(key, id) => setSelection(s => toggleMarkdownEntry(documents, s, key, id))} onVersion={(key, id) => setSelection(s => chooseMarkdownVersion(documents, s, key, id))} onOrder={setOrder} /> : null };

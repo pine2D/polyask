@@ -23,6 +23,7 @@ module.exports = async ({ app, win, state, output, js, check, until, click, key,
     await js('document.fonts.ready.then(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))))');
     if (await js('document.querySelector(".folder-workspace").dataset.focused!=="true"')) await click('.comparison-focus');
     await until('document.querySelector(".folder-workspace").dataset.focused==="true"', 'focused reading');
+    await js('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
     const measure = await js(`(() => {
       const toolbar=document.querySelector('.folder-toolbar'),pane=document.querySelector('.archive-detail-pane'),column=document.querySelector('.archive-compare-column');
       const rect=toolbar.getBoundingClientRect(),p=pane.getBoundingClientRect(),c=column.getBoundingClientRect();
@@ -37,7 +38,7 @@ module.exports = async ({ app, win, state, output, js, check, until, click, key,
     check(Math.abs(measure.paneTop - measure.toolbarBottom) <= 1, `${name}: no empty management row`);
     check(measure.controlsFit && !measure.overlap, `${name}: toolbar controls are visible and distinct`);
     if (zoom === 1) check(measure.toolbarHeight <= 60 && measure.columnTop < 360 && measure.columnHeight >= 350,
-      `${name}: short window recovers a toolbar row for reading`);
+      `${name}: short window recovers a toolbar row for reading ${JSON.stringify(measure)}`);
     layouts.push({ ...await geometry(name), ...measure });
     writeFileSync(join(output, 'geometry.json'), JSON.stringify(layouts, null, 2));
     writeFileSync(join(output, `${name}.png`), (await win.webContents.capturePage()).toPNG());

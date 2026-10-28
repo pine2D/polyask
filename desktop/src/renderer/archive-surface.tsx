@@ -232,7 +232,7 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
         setStatus(props.copy.archiveCopied);
       }, props.copy.archiveCopyFailed); }}
       onExport={() => markdownExport.open([{ kind: 'archive', id: selected.id }])}
-      onExportAnswer={index => { void markdownExport.single({ kind: 'archive', id: selected.id }, `result:${index}`, selected.updatedAt); }}
+      onExportAnswer={index => { void markdownExport.single({ kind: 'archive', id: selected.id }, `result:${index}`, selected); }}
       onExportReport={format => { void run(() => exportReport(format), props.copy.reportFailed); }}
       onDelete={(id) => { void run(async () => {
         await shell.deleteArchive(id);
