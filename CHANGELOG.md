@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.28.2] - 2026-10-29
+
+验收范围：Linux/WSL 下通过 2,600 项应用/UI 测试、538 项运行时测试、类型检查和仓库门禁；真实 Electron 回归覆盖正常关闭、强制销毁及连续建窗后的清理。
+
+验收限制：Windows portable 报错已通过同一生产代码在 Linux/WSL 复现并验证修复；尚未完成五种发行包的实际安装及 Windows/macOS 实机关窗验证。
+
 ### 修复
 
 - 修复关闭应用窗口时可能弹出“Object has been destroyed”主进程错误的问题，确保面板监听和 IPC 完成清理。
@@ -1602,7 +1608,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.28.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.28.2...HEAD
+[1.28.2]: https://github.com/pine2D/polyask/compare/v1.28.1...v1.28.2
 [1.28.1]: https://github.com/pine2D/polyask/compare/v1.28.0...v1.28.1
 [1.28.0]: https://github.com/pine2D/polyask/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/pine2D/polyask/compare/v1.26.0...v1.27.0
