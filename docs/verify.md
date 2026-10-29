@@ -19,6 +19,8 @@
 
 ## 测试材料与收尾
 
+- 窗口关闭清理：`npm run test:unit -- test/shell-panel-ipc.test.ts test/shell-panel-lifecycle.check.ts`。生产面板 IPC 在真实 Electron 的 `closed` 回调中清理，覆盖正常关闭、强制销毁和提前清理对照，并连续建窗确认 IPC 可重新注册、后续关闭回调不中断；单位回归另验待恢复焦点被取消、无关监听保留。修复前两种回归均复现 `Object has been destroyed`，修复后通过。原生入口使用离线页面、新建临时档案与共同 4GiB/512MiB cgroup，核对观察到的进程退出后清理档案；当前只验证 Linux/WSL，Windows portable 实机仍待复验。
+
 - 包内冒烟与 soak 共用 `scripts/runtime-runner.mjs`。2026-10-29 发版复验两次在九站断言通过后，清理临时档案时返回 `ENOTEMPTY`；`removeRuntimeDirectory` 现使用 Node 递归删除的有限重试（最多5次，100ms线性退避），容忍退出阶段的短暂文件系统竞态，持续错误仍抛出。修复后相同离线冒烟完整退出成功；不得只看到 `smoke passed` 就忽略最终退出码。
 - 仓库保留可复用的测试/测量源码和人工合成夹具；原始资源 JSONL、标准输出/错误日志、截图、DOM/网络抓包、CPU/堆转储、临时运行时与解包目录不入库。使用系统临时目录，或已忽略的仓库根/desktop 下 `test-artifacts/`；不得用强制添加绕过忽略。
 - 公开验证记录只写必要的汇总指标、合成问题说明与局限；路径使用环境变量或通用占位符，不保留机器用户名、账号/历史条目计数、真实会话链接及正文。测试源码中的假 token、示例域名和合成回答不等同于真实凭据或抓取记录。

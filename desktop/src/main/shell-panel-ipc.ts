@@ -49,12 +49,14 @@ export function registerShellPanelIpc(ipc: PanelIpc, window: BrowserWindow, mana
     if (value.type === 'keyDown' || value.type === 'mouseDown' || value.type === 'touchStart') focus.cancelPending();
   };
   const reset = () => focus.reset();
-  window.webContents.on('input-event', input);
-  window.webContents.on('did-navigate', reset);
+  // Retain the emitter: accessing window.webContents throws after the window's closed event.
+  const shellContents = window.webContents;
+  shellContents.on('input-event', input);
+  shellContents.on('did-navigate', reset);
   return () => {
     focus.reset();
-    window.webContents.removeListener('input-event', input);
-    window.webContents.removeListener('did-navigate', reset);
+    shellContents.removeListener('input-event', input);
+    shellContents.removeListener('did-navigate', reset);
     for (const name of ['set-surface', 'set-drawer-open']) ipc.removeAllListeners(`polyask:${name}`);
     for (const name of ['question-panel', 'restore-panel-focus']) ipc.removeHandler(`polyask:${name}`);
   };
