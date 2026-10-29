@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.28.1] - 2026-10-29
+
+验收范围：Linux/WSL 下通过 2,597 项应用/UI 测试、538 项运行时测试、类型检查、依赖审计、Linux 打包及包内九站检查；本版修复另完成三语外壳、设置键盘操作、短窗重试、输入边界和长回答阅读专项。
+
+验收限制：本版原生界面检查使用 Linux/WSL、生产组件与合成数据；未核验 Windows/macOS 物理键盘、输入法和读屏、五种发行包的实际安装、九站真实发送及 Drive 双设备同步。
+
 ### 优化
 
 - 增强文本输入框与统一提问框的常态边界，覆盖明暗、高对比度和系统强制配色，并保留清晰的焦点与错误提示。
@@ -1592,7 +1598,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.28.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.28.1...HEAD
+[1.28.1]: https://github.com/pine2D/polyask/compare/v1.28.0...v1.28.1
 [1.28.0]: https://github.com/pine2D/polyask/compare/v1.27.0...v1.28.0
 [1.27.0]: https://github.com/pine2D/polyask/compare/v1.26.0...v1.27.0
 [1.26.0]: https://github.com/pine2D/polyask/compare/v1.25.1...v1.26.0
