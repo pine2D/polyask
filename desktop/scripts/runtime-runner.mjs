@@ -91,5 +91,6 @@ export async function stopRuntime(runtime) {
 }
 
 export async function removeRuntimeDirectory(directory) {
-  await rm(directory, { recursive: true, force: true });
+  // Chromium can finish profile writes just after its main process exits.
+  await rm(directory, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 }
