@@ -51,11 +51,13 @@ function chatGptCase(options) {
     click() { clicked.push("select-model"); } }, attr({ "aria-label": "Select model" }));
   // 菜单开着时 pill 显示控件名而不是档名——旧 _anchor 的文本前置校验就是栽在这里
   const pill = { className: "__composer-pill",
-    get innerText() { return state.open ? (opts.openLabel || "Thinking effort") : (opts.pill || TIERS[state.value]); },
+    get innerText() { return state.open ? (opts.openLabel || "Thinking effort")
+      : (opts.pill || (opts.navigation ? "Thinking effort\n6 " : "") + TIERS[state.value]); },
     get textContent() { return (opts.measurement || "") + this.innerText; },
     set textContent(value) { opts.pill = value; },
     getAttribute: (name) => name === "aria-haspopup" ? "menu"
-      : name === "aria-expanded" ? String(state.open) : null };
+      : name === "aria-expanded" ? String(state.open)
+        : name === "data-selected-reasoning-effort" ? "medium" : null };
 
   const menuItems = opts.dropPower ? [selectModel] : [selectModel, power];
   const root = { querySelectorAll: selector => selector === '[role="menuitemradio"]' && state.open ? models : [] };
@@ -63,9 +65,10 @@ function chatGptCase(options) {
   const document = {
     getElementById: (id) => (id === "_r_desc_" ? desc : null),
     querySelector: (selector) => {
-      if (selector === 'button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') return opts.modern && !opts.missing ? pill : null;
-      if (selector === 'button.__composer-pill[aria-haspopup="menu"]') return !opts.modern && !opts.missing ? pill : null;
-      if (selector.includes("composer-intelligence-picker-content")) return state.open && !opts.modern ? root : null;
+      if (selector === 'button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"]') return opts.navigation && !opts.missing ? pill : null;
+      if (selector === 'button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') return opts.modern && !opts.navigation && !opts.missing ? pill : null;
+      if (selector === 'button.__composer-pill[aria-haspopup="menu"]') return !opts.modern && !opts.navigation && !opts.missing ? pill : null;
+      if (selector.includes("composer-intelligence-picker-content")) return state.open && !opts.modern && !opts.navigation ? root : null;
       return null;
     },
     querySelectorAll: (selector) => {

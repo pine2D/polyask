@@ -128,7 +128,7 @@
       _menuState: function (btn) {
         const menu = this._modeMenu(btn);
         const selected = menu ? [...menu.querySelectorAll('[role="menuitem"]')].filter(item =>
-          this._visible(item) && /^豆包\s+.*(?:快速|专家)$/.test((item.textContent || "").trim()) && item.querySelector(":scope > svg")) : [];
+          this._visible(item) && /^(?:豆包\s+.*)?(?:快速|专家)$/.test((item.textContent || "").trim()) && item.querySelector(":scope > svg")) : [];
         if (selected.length !== 1) return null;
         return /专家$/.test(selected[0].textContent.trim()) ? "think" : "fast";
       },
@@ -142,10 +142,12 @@
         if (!deadline || Date.now() < deadline) await sleep(Math.min(250, Math.max(0, (deadline || Infinity) - Date.now())));
       },
       _select: async function (re, expected, deadline) {
+        // 只传回本次动作里实际复读的证据；finally 收菜单后 state() 仍只读当前 DOM，不缓存档位。
+        const confirmed = { outcome: "mode_only", observed: expected };
         try {
           checkDeadline(deadline);
           for (let i = 0; i < 3; i++) {
-            if (this.state() === expected) return;
+            if (this.state() === expected) return confirmed;
             const btn = this._modeBtn();
             if (!btn) throw new Error("豆包: 模式按钮未找到"); // 静默 return 会让 runMode 误报"已切到"
             const modern = btn.getAttribute?.("data-testid") === "chat_input_action_model";
@@ -159,12 +161,12 @@
               }) : [];
               return items.length === 1 ? items[0] : null;
             }, 1500, 120, deadline);
-            if (modern && item && this.state() === expected) return;
+            if (modern && item && this.state() === expected) return confirmed;
             if (item) { tierAction(deadline, () => item.click()); await sleep(500, deadline); } // 选项 onclick，用原生 click
             await this._closeModeMenu(deadline); await sleep(200, deadline);
             if (modern && item) {
               tierAction(deadline, () => openMenu(this._modeBtn())); // React 重绘后重取入口
-              if (await waitFor(() => this.state() === expected, 1500, 120, deadline)) return;
+              if (await waitFor(() => this.state() === expected, 1500, 120, deadline)) return confirmed;
               await this._closeModeMenu(deadline);
             }
           }
@@ -184,9 +186,9 @@
         return (/专家$/.test(t) || /^豆包\s+[\d.]/.test(t)) ? "think" : /快速$/.test(t) ? "fast" : null;
       },
       think: async function (deadline) {
-        checkDeadline(deadline); await this._select(/专家$/, "think", deadline); },
+        checkDeadline(deadline); return this._select(/专家$/, "think", deadline); },
       fast: async function (deadline) {
-        checkDeadline(deadline); await this._select(/快速$/, "fast", deadline); },
+        checkDeadline(deadline); return this._select(/快速$/, "fast", deadline); },
       attach: function (files, el, deadline) {
         return S.setInputFiles(document.querySelector('input[type="file"][accept*="png"]'), files, el, deadline);
       },

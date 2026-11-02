@@ -25,7 +25,8 @@
       // 2026-09-28：新版去掉 __composer-pill，改用专属 data 属性；旧版选择子保留兜底。
       // 不按档位文本定位，菜单展开时按钮显示的是控件名。
       _anchor: function () {
-        return document.querySelector('button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') ||
+        return document.querySelector('button[data-composer-navigation-target="reasoning"][aria-haspopup="menu"]') ||
+          document.querySelector('button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') ||
           document.querySelector('button.__composer-pill[aria-haspopup="menu"]');
       },
       // 打开 pill 菜单（2026-08 改版：Radix popper `composer-intelligence-picker-content`，
@@ -152,7 +153,8 @@
         const a = this._anchor();
         if (!a || a.getAttribute("aria-expanded") === "true") return null;
         // 新版含 visibility:hidden 的测量副本（Thinking effort），只读可见标签。
-        const raw = (a.innerText != null ? a.innerText : a.textContent || "").trim();
+        const lines = (a.innerText != null ? a.innerText : a.textContent || "").trim().split(/\n/).map(line => line.trim());
+        const raw = (this._OPEN_PILL.test(lines[0]) ? lines.slice(1) : lines).join(" ").trim();
         if (!raw || this._OPEN_PILL.test(raw)) return null; // 菜单开着：pill 是控件名，非终态
         if (/^(?:gpt-?)?6[\d.]|^(?:gpt-?)?6\s+(?:sol|astra)/i.test(raw)) return null;
         const t = this._tier(raw);

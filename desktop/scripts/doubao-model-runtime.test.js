@@ -3,19 +3,24 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const vm = require("node:vm");
-const { source, helpers } = require("./lib/site-send-harness");
+const { source } = require("./lib/site-send-harness");
 
 function fixture({ ignoreClick = false, disabled = false, hidden = false, unrelated = false, ambiguous = false,
-  ignoreEscape = false } = {}) {
-  let selected = "fast", open = false, version = 0;
+  ignoreEscape = false, prefix = "豆包 " } = {}) {
+  let selected = "fast", open = false, version = 0, now = 1000;
   const events = [];
   const rect = () => ({ x: 380, y: 800, width: 32, height: 32 });
   const trigger = () => ({ id: "model-" + version });
   const button = () => ({ textContent: "", getBoundingClientRect: rect,
     getAttribute: name => name === "data-testid" ? "chat_input_action_model" : null,
-    closest: () => trigger() });
+    closest: () => trigger(),
+    dispatchEvent(event) {
+      if (event.type !== "click") return;
+      assert.equal(this === currentButton, true, "每次开关菜单必须使用重绘后的当前按钮");
+      open = !open; events.push(open ? "open" : "retrigger-close");
+    } });
   let currentButton = button();
-  const makeItem = mode => ({ textContent: "豆包 " + (mode === "fast" ? "快速" : "专家"),
+  const makeItem = mode => ({ textContent: prefix + (mode === "fast" ? "快速" : "专家"),
     getBoundingClientRect: () => ({ width: hidden && mode === "think" ? 0 : 200, height: 40 }),
     getAttribute: name => name === "data-disabled" && disabled && mode === "think" ? "" : null,
     querySelector: selector => selector === ":scope > svg" && (selected === mode || ambiguous) ? {} : null,
@@ -27,18 +32,21 @@ function fixture({ ignoreClick = false, disabled = false, hidden = false, unrela
       : name === "data-state" ? (open ? "open" : "closed") : null,
     querySelectorAll: selector => selector === '[role="menuitem"]' ? items : [] };
   const document = {
+    body: { dispatchEvent(event) { if (event.key === "Escape") {
+      if (!ignoreEscape) open = false; events.push("close");
+    } } },
+    dispatchEvent() {},
     querySelector: selector => selector === 'button[data-testid="chat_input_action_model"]' ? currentButton : null,
     querySelectorAll: selector => selector === "button" ? [currentButton]
       : selector === '[role="menu"]' ? [menu] : selector === '[role="menuitem"]' && open ? items : []
   };
-  const context = helpers(document, {
-    findComposer: () => ({ getBoundingClientRect: rect }),
-    openMenu(node) { assert.equal(node === currentButton, true, "每次开菜单必须使用重绘后的当前按钮"); open = true; events.push("open"); },
-    escMenus() { if (!ignoreEscape) open = false; events.push("close"); },
-    clickEl(node) { assert.equal(node === currentButton, true); open = false; events.push("retrigger-close"); }
-  });
-  vm.runInNewContext(source("adapters-cn.js"), context);
-  return { adapter: context.window.__AMS.adapters["doubao.com"], events,
+  class Event { constructor(type, init) { this.type = type; Object.assign(this, init); } }
+  const context = vm.createContext({ window: {}, document, location: { hostname: "www.doubao.com" },
+    t: key => key, console: { debug() {} }, MouseEvent: Event, KeyboardEvent: Event, CustomEvent: Event,
+    Date: { now: () => now }, setTimeout(fn, ms) { now += ms; queueMicrotask(fn); } });
+  for (const file of ["core.js", "tier.js", "adapters-cn.js"]) vm.runInContext(source(file), context);
+  const S = context.window.__AMS;
+  return { adapter: S.adapters["doubao.com"], S, events, now: () => now,
     selected: () => selected, isOpen: () => open, button: () => currentButton,
     open() { open = true; } };
 }
@@ -49,6 +57,32 @@ test("豆包新版图标入口按 testid 识别，关闭菜单时不猜档位", 
   assert.equal(f.adapter.state(), null);
   assert.equal(f.adapter.diagnose()[0].ok, true);
   assert.equal(f.events.length, 0, "只读状态和诊断不打开菜单");
+});
+
+test("豆包有无品牌前缀都能确认本次切档，收菜单后不缓存状态", async () => {
+  for (const prefix of ["", "豆包 ", "豆包 2.1 Turbo"]) {
+    const f = fixture({ prefix });
+    for (const mode of ["think", "fast", "fast"]) {
+      const start = f.now();
+      const result = await f.S.resolveTier(mode, start + 10000);
+      assert.equal(result.outcome, "mode_only", prefix + mode);
+      assert.equal(result.observed, mode);
+      assert.equal(f.selected(), mode);
+      assert.equal(f.adapter.state(), null);
+      assert.equal(f.isOpen(), false);
+      assert.ok(f.now() - start < 4000, "已确认的单次切档不应反复操作到预算耗尽");
+    }
+    assert.deepEqual(f.events.filter(event => ["think", "fast"].includes(event)), ["think", "fast"]);
+  }
+});
+
+test("豆包本次确认不得由无关菜单、歧义勾或未生效点击提供", async () => {
+  for (const options of [{ unrelated: true }, { ambiguous: true }, { ignoreClick: true }]) {
+    const f = fixture({ prefix: "", ...options });
+    const result = await f.S.resolveTier("think", f.now() + 10000);
+    assert.equal(result.outcome, "unconfirmed");
+    assert.equal(f.isOpen(), false);
+  }
 });
 
 test("豆包菜单选中态只读可判，动作结束不缓存已关闭菜单的状态", async () => {

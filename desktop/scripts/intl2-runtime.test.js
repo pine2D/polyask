@@ -73,6 +73,25 @@ async function modernTriggerMustSwitchBothTiers() {
   assert.equal(c.state.value, 0);
 }
 
+// 2026-11-02：入口仅余 navigation-target；标题与档名均可见，data-selected-reasoning-effort 仍滞留 medium。
+async function navigationTriggerMustUseSliderAndVisibleTier() {
+  const c = chatGptCase({ navigation: true, value: 4, models: [{ text: "6", checked: true }] });
+  assert.equal(c.adapter.diagnose()[0].ok, true);
+  assert.equal(c.adapter.state(), "think", "不能把滞后的 medium 属性当成当前档位");
+  await c.adapter.fast();
+  assert.equal(c.state.value, 0);
+  assert.equal(c.adapter.state(), "fast");
+  await c.adapter.think();
+  assert.equal(c.state.value, 4);
+  assert.equal(c.adapter.state(), "think");
+  assert.equal(c.state.open, false);
+  for (const label of ["Thinking effort\n6.1 Sol Pro", "思考强度\n6 Astra Pro", "Thinking effort"]) {
+    const unknown = chatGptCase({ navigation: true, pill: label });
+    assert.equal(unknown.adapter.state(), null, label);
+  }
+  await assert.rejects(() => chatGptCase({ navigation: true, missing: true }).adapter.think(), /Intelligence/);
+}
+
 function modernStateMustIgnoreMeasurementAndOpenMenu() {
   for (const [pill, expected] of [["GPT-6 Pro", "think"], ["GPT-6 Instant", "fast"], ["GPT-6.1 Sol Pro", null], ["最新 - 中", "fast"], ["5.6 Sol Pro", "think"], ["5.5Pro", null], ["未知", null]]) {
     const c = chatGptCase({ modern: true, pill, measurement: "Medium", openLabel: "Pro" });
@@ -204,7 +223,7 @@ async function availableSliderRangeMustDefineBothEdges() {
 
 let failed = 0;
 (async () => {
-  const tests = [gpt6MustWinAndLegacyMustRemainAnAlternative, availableSliderRangeMustDefineBothEdges, sliderMustBeDrivenToBothEdges, sliderMustBeIdempotentAtEdge, missingSliderMustThrow,
+  const tests = [navigationTriggerMustUseSliderAndVisibleTier, gpt6MustWinAndLegacyMustRemainAnAlternative, availableSliderRangeMustDefineBothEdges, sliderMustBeDrivenToBothEdges, sliderMustBeIdempotentAtEdge, missingSliderMustThrow,
     openMenuPillMustNotBeReadAsTier, entryCheckMustSurviveLabelDrift, modelSelectionMustBeIdempotent,
     newTurnMustBeCollected, modernTriggerMustSwitchBothTiers,
     modernStateMustIgnoreMeasurementAndOpenMenu, missingTriggerMustRemainFailure,

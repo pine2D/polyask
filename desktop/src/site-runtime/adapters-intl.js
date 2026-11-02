@@ -37,7 +37,7 @@
       // effort 档位标签，由低到高（真机 2026-08-31：Low / MediumDefault / High / Extra / Max）。
       // think 取本表里在场的最高档，站点加减档自适应：撤掉 Max 就自动退到 Extra，再撤退到 High。
       _EFFORT: [/^(low|低)/i, /^(medium|中)/i, /^(high|高)/i, /^(extra|超)/i, /^(max|极致|最大|最高)/i],
-      _THINK: /adaptive|high|extra|max|高|最大|极致|超/i, // state() 与 _setEffort() 的复读共用；必须盖住 _EFFORT 最高两档会点到的每个词（中文 UI 是「极致」「超」）
+      _THINK: /adaptive|high|extra|max|高|最大|极致|超/i, // 仅供粗档位；动作确认必须与实际目标 rank 一致
       // 2026-08 改版：effort-menu-trigger / effort-option-* 两个 testid 已消失（Base UI 菜单只剩
       // 自动生成 id），入口退化成「文本 Effort+当前档」的 role=menuitem 子菜单项。
       _effortTrigger: function () {
@@ -70,7 +70,7 @@
       // 控件仍在，只是选择子变了，静默会让 runMode 误报「已切到」并弹假成功 toast）。
       // pick = "top"（think：在场最高档）| "default"（fast：Medium，即站点默认档；_EFFORT 里 rank 1，不在场就抛错，不退到 Low/Max）。
       // effort 是站点级记忆、换模型不重置：think 过一次再只选 Sonnet 5 会带着 Max 发出去（用户真机 2026-09-16），
-      // 所以 fast 也必须显式回到默认档。默认档复读按点中那一项的首词（Medium / 中），think 仍复读 _THINK（state 同源）。
+      // 所以 fast 也必须显式回到默认档；两档都复读实际选中的强度，不能用粗 think 冒充最高档。
       _setEffort: async function (pick, deadline) {
         try {
           checkDeadline(deadline);
@@ -87,10 +87,13 @@
           const want = dflt ? items.find((x) => x.rank === 1) : items.reduce((a, b) => (b.rank > a.rank ? b : a));
           if (!want) { escMenus(); throw new Error("Claude: 默认档 effort 未找到"); }
           if (want.el.getAttribute("aria-checked") !== "true") { tierAction(deadline, () => clickEl(want.el)); await sleep(450, deadline); }
-          // 真机 2026-10-08：MediumRecommended 连写；只取已知档名，说明文字不参与复读。
-          const head = this._EFFORT[want.rank].exec((want.el.textContent || "").trim())[0];
-          const re = dflt ? new RegExp(head.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") : this._THINK;
-          const ok = await waitFor(() => re.test(this._label()), 1200, 120, deadline); // 点击被吞时不许静默成功
+          // 闭合标签先剥模型，再读 effort 的有序档名；High 与 Extra High 不能冒充 Max。
+          // 保留 MediumRecommended、Max 用量说明和零宽字符的兼容，说明文字不参与比较。
+          const ok = await waitFor(() => {
+            const label = this._label().replace(/[\u200b-\u200d\u2060\ufeff]/g, "");
+            const effort = /(?:fable|opus|sonnet|haiku)\s*\d+(?:\.\d+)*[\s·]+(.+)$/i.exec(label)?.[1];
+            return !!effort && this._EFFORT.findIndex(re => re.test(effort)) === want.rank;
+          }, 1200, 120, deadline);
           escMenus();
           if (!ok) throw new Error("Claude: 目标 effort 未生效");
         } finally { escMenus(); }

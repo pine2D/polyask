@@ -163,11 +163,20 @@ Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command n
 - **启动保护离线验收**：`npm run test:unit -- test/dev-start-guard.test.ts test/dev-runtime.test.ts` 使用合成 fuse 文件，检查错误配置拦截、原安装不变、缓存复用/完整性和目录链接拒绝；Linux 在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/dev-start-native.mjs`，通过真实 `npm start` 启动空白临时档案，阻断站点网络，核对实际运行时、打开的 SQLite 路径、九站挂载、共同资源边界、进程退出和临时档案清理。它不验证真实账户认证或 Windows/macOS 实测。
 - **真机 = 开发态 Electron**：`cd desktop && npm start`。**改动要重启进程才生效**（主进程、preload、站点运行时都在启动时加载），别在跑着的实例上等热更新，那是最常见的「改了没反应」。
 - 复现只认**目标站点视图里的生产 `__AMS`**：站点运行时挂在站点视图的隔离上下文，`__AMS.getState()` / `_isOn()` 是唯一可信断言源。**不要在临时片段里重写正则**——转义会把 `\s` 变成 `\\s`，产生「幽灵失败」（实战吃过亏）。
-- **直接在真实页面上跑真实适配器（CDP，2026-09-16 起首选）**：`cd desktop && npm start -- -- --remote-debugging-port=9223`（`main/index.ts` 只在打包后移除这个开关，开发态可用；同一 userData，站点登录态照用）。`curl -s http://127.0.0.1:9223/json` 拿站点视图的 `webSocketDebuggerUrl`，用 `desktop/node_modules/ws` 发 `Runtime.enable`，从 `Runtime.executionContextCreated` 里取名为 **`Electron Isolated Context`** 的上下文（`auxData.isDefault === false`），在该 `contextId` 上 `Runtime.evaluate`（`awaitPromise`）就能直接调 `window.__AMS.adapters["<host>"].think()` / `.fast()` / `.state()`，返回值带按钮文本与 `[role=menu]` 残留数即是证据。主世界（默认上下文）看不到 `__AMS`，但能 dump DOM、试各种合成事件——元宝模型子菜单「只认 mousemove」就是这样定的。
+- **直接在真实页面上跑真实适配器（CDP，2026-09-16 起首选）**：`cd desktop && npm start -- -- --remote-debugging-port=9223`（`main/index.ts` 只在打包后移除这个开关，开发态可用；同一 userData，站点登录态照用）。`curl -s http://127.0.0.1:9223/json` 拿站点视图的 `webSocketDebuggerUrl`，用 `desktop/node_modules/ws` 发 `Runtime.enable`，从 `Runtime.executionContextCreated` 里取名为 **`Electron Isolated Context`** 的上下文（`auxData.isDefault === false`，且 `auxData.frameId` 等于 `Page.getFrameTree` 的主 frame id，不能误取子 frame），在该 `contextId` 上 `Runtime.evaluate`（`awaitPromise`）就能直接调 `window.__AMS.adapters["<host>"].think()` / `.fast()` / `.state()`，返回值带按钮文本与 `[role=menu]` 残留数即是证据。主世界（默认上下文）看不到 `__AMS`，但能 dump DOM、试各种合成事件——元宝模型子菜单「只认 mousemove」就是这样定的。
 - **未挂进视图树的站点视图视口恒 0×0**，`findComposer` 恒返回 null。当前实现把所有已勾选站点都挂载并保持正尺寸，后台页可以正常探测；取证前先确认目标仍被选择、已挂载且视口非零，不能仅凭“当前是否显示”判断探测有效性。
 - **判「掉登录」要用强证据**：可见头像 / 会话历史列表非空、**没有可见的**「登录/Sign in」按钮文本；弱类名匹配（`[class*=login]`）只能当线索——登录弹窗容器常驻 DOM，在水合窗口里探测必误判（曾据此错判 Kimi 掉登录）。另：Kimi 停在非预设档（如 Instant）时 `state()` 按既有语义返回 null，属正常态不是故障。
 - **开发机与用户机不等价**：开发机是 WSL2 + Linux Electron（实测 `devicePixelRatio=1.5`，**不是无缩放**——缩放类量级问题本机可复现；界面英文），用户机是 Windows（缩放比例可能不同、界面可能非英文），layout 数值不同。本机跑通不构成「已修复」的证据。
 - **本机复现不出时先要现象、再猜层次**，四问按序问，答案直接落到四层：① 界面语言与显示缩放各是多少？（→ 词表 / 阈值余量）② 点了什么、屏幕上出现了什么？（→ 入口是否被点到）③ 输入框里有没有出现要发的文字？（→ composer / inject 的分界）④ `Alt+H` 站点状态怎么说、把诊断报告贴一份？（→ submit / state）。**没拿到①②就直接猜第三、四层，是返工的标准起手式。**
+
+## 2026-11-02 九站档位排查与修复验收
+
+- 修复前在生产 `__AMS` 复现：ChatGPT 新 reasoning 入口失配，两档均未确认；豆包菜单已改为“快速／专家”，切到目标后仍各耗满 10 秒并返回未确认。Claude 的 High / Extra High 未升到所选 Max 却报成功，在原生产适配器的离线负向用例中复现。
+- 补丁先通过 RED/GREEN 回归，再重启 Linux/WSL Electron 44.9.3 开发态；启动前核对发行与开发运行时 Cookie 加密一致。使用既有授权的 Linux 档案，目标站点视口约 467/468×1012、缩放 0.9；仅切档，不发送提问、不上传图片。
+- 九站各执行两档往返和一次同档重复，27 次目标操作均由生产 `resolveTier` 确认为 `mode_only`。ChatGPT 复读 GPT-6 滑块 4/4 → 0/4 → 0/4，恢复原 Pro；豆包专家／快速约 2.0 秒、重复快速约 0.7 秒，菜单勾与请求一致，关闭后 `state()` 仍为 null，恢复原快速。Claude 确认为 Fable 5.1 Max（含用量说明）和 Opus 5.5 Medium，恢复原 Medium。
+- Gemini、DeepSeek、Kimi、千问、元宝、智谱均通过兼容复验；Gemini 另复读 3.8 Flash / Low 选中态，Kimi 恢复原 K3.1 Pro / High，智谱保持 GLM-5.3-Flash 并恢复极致。所有站点输入框内容保持不变，菜单退场后无残留。豆包闭合图标、Kimi 非预设 High、千问无模型入口的 `tier` 提示仍保留，不误报站点不可用。
+- 新回归覆盖新版入口与双行标签、滞后属性、旧标签兼容、实际 effort rank、无关菜单／歧义勾／点击被吞，以及动作确认不跨调用缓存、畸形回包、收尾异常和到期拒绝。完整门禁通过 2,600 项应用测试、543 项运行时测试、独立类型检查与仓库检查；未新增自动重发。
+- 原生进程及所有线程核对共同 4 GiB 内存／512 MiB swap 临时 cgroup。桌面会话把两个本任务进程迁出后，核实归属并迁回原限制；结束时 19 个观测进程全部退出，调试端口关闭。未核验真实发送、Windows/macOS 原生环境或物理输入法。
 
 ## 2026-10-27 Gemini 图片与切档复验
 

@@ -61,6 +61,44 @@ test("旧站只证明模式，不凭 state 声称精确模型", async () => {
   assert.equal(result.code, undefined);
 });
 
+test("本次动作的模式证据在菜单收起后可确认，但不留给下一次调用", async () => {
+  let calls = 0;
+  const r = runtime({ think: async () => ++calls === 1 ? { outcome: "mode_only", observed: "think" } : undefined,
+    state: () => null });
+  const first = await r.dispatch();
+  assert.equal(first.selection.outcome, "mode_only");
+  assert.equal(first.code, undefined);
+  const second = await r.dispatch();
+  assert.equal(second.selection.outcome, "unconfirmed");
+  assert.equal(second.code, "tier_unconfirmed");
+  assert.equal(r.submissions(), 2, "每次独立请求只提交一次");
+});
+
+test("动作证据也须校验形状、目标模式与收尾后的相反状态", async () => {
+  for (const receipt of [null, true, false, [], "think", { outcome: "mode_only", observed: "fast" },
+    { outcome: "mode_only", observed: "think", model: "unexpected" },
+    { outcome: "preferred", observed: "think", model: "unsafe\u202emodel" }]) {
+    const r = runtime({ think: async () => receipt, state: () => "think" });
+    assert.equal((await r.dispatch()).selection.outcome, "unconfirmed", JSON.stringify(receipt));
+  }
+  const changed = runtime({ think: async () => ({ outcome: "mode_only", observed: "think" }), state: () => "fast" });
+  assert.equal((await changed.dispatch()).selection.outcome, "unconfirmed");
+});
+
+test("切档收尾失败或已过截止时间时不能采用动作证据", async () => {
+  let r;
+  r = runtime({ think: async deadline => {
+    await r.S.sleep(20000, deadline);
+    return { outcome: "mode_only", observed: "think" };
+  }, state: () => null });
+  assert.equal((await r.dispatch({ deadline: 1400 })).selection.outcome, "unconfirmed");
+  const failed = runtime({ think: async () => {
+    try { return { outcome: "mode_only", observed: "think" }; }
+    finally { throw Error("cleanup failed"); }
+  }, state: () => "think" });
+  assert.equal((await failed.dispatch()).selection.outcome, "unconfirmed");
+});
+
 test("试点当前页面的精确选择证据可透传", async () => {
   const r = runtime({ think: async () => {}, state: () => "think",
     selection: () => ({ outcome: "preferred", observed: "think", model: "Fixture Model" }) });

@@ -129,6 +129,22 @@ async function claudeRecommendedCopyMustNotBecomeTheEffortLabel() {
   assert.ok(!c.clicked.some(el => el.textContent === "Max Preview"));
 }
 
+// 同属 think 不是目标已到位：High/Extra 保持不变时，Max 点击被吞必须失败。
+async function claudeMustConfirmTheSelectedEffortRank() {
+  for (const effort of ["High", "Extra High", "高", "超"]) {
+    const c = claudeEffortCase({ ignoreEffort: true });
+    c.state.effort = effort;
+    c.state.label = "Model: Fable 5.1 · " + effort;
+    await assert.rejects(() => c.adapter.think(), /目标 effort 未生效/, effort);
+    assert.equal(c.state.effort, effort);
+    assert.ok(c.S.escCount > 0);
+  }
+  const fallback = claudeEffortCase({ tiers: ["Low", "MediumDefault", "High"], ignoreEffort: true });
+  fallback.state.effort = "Extra High";
+  fallback.state.label = "Model: Fable 5.1 · Extra High";
+  await assert.rejects(() => fallback.adapter.think(), /目标 effort 未生效/, "Extra High 不得冒充所选 High");
+}
+
 // 档位项与模型项同为 menuitemradio：容器不对的「Max Preview」绝不能被当成最高档点下去
 async function claudeEffortMustIgnoreModelRadios() {
   const c = claudeEffortCase({ tiers: [] }); // 子菜单展开了但一个档位都没有
@@ -153,7 +169,7 @@ async function claudeMissingEffortMustThrow() {
 
 let failed = 0;
 (async () => {
-  const tests = [claudeRecommendedCopyMustNotBecomeTheEffortLabel, claudeInlineEffortGroup, claudeFastMustSelectOpusAndResetEffort, claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
+  const tests = [claudeMustConfirmTheSelectedEffortRank, claudeRecommendedCopyMustNotBecomeTheEffortLabel, claudeInlineEffortGroup, claudeFastMustSelectOpusAndResetEffort, claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
     claudeEffortWithoutTriggerIdMustThrow, claudeMissingEffortMustThrow];
   for (const test of tests) {
     try { await test(); }

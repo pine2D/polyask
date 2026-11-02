@@ -195,7 +195,7 @@
     return key ? adapters[key] : null;
   }
 
-  // 动作层只报告是否抛错；真实结果由 tier.js 只读复核。
+  // 动作可携带本次收菜单前的确认；未提供时由 tier.js 只读复核，失败仍只返回 false。
   async function runModeNow(mode, silent, image, deadline) {
     const a = pickAdapter(), action = image && a && a[mode + "Image"] ? mode + "Image" : mode;
     if (!a || !a[action]) return false;
@@ -205,12 +205,12 @@
         checkDeadline(deadline);
         escMenus(); // 清掉可能残留的菜单，保证从干净态开始
         await sleep(attempt ? 600 : 150, deadline);
-        await a[action](deadline);
+        const selection = await a[action](deadline);
         checkDeadline(deadline);
         if (!silent) toast(t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast"), true);
         focusComposer();
         try { document.dispatchEvent(new CustomEvent("ams:switched")); } catch (e) {}
-        return true;
+        return { selection };
       } catch (e) {
         escMenus(); try { console.debug("[PolyAsk] switch:", (e && e.message) || e); } catch (e2) {} if (attempt && !silent) toast(t("cs_switchFailGeneric"), false); // 最后一次失败后也必须收尾，残留菜单会罩住输入框让随后的注入点空；适配器抛的是硬编码中文，只降级进控制台，不进用户可见文案
       }
