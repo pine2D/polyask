@@ -62,7 +62,7 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
   }, [items, loading, failed, keys, page, current.page, setKeys, setPage, serverPage]);
   const filtered = !!(filters.query || filters.tag || filters.favorite || filters.status);
   const emptyHint = libraryEmptyHint(copy, filters);
-  return <section className="folder-content-list" aria-label={copy.folderAll}>
+  return <section className="folder-content-list" data-selecting={selecting} aria-label={copy.folderAll}>
     <div className="folder-filters">
       <input type="search" name="library-search" autoComplete="off" aria-label={copy.folderSearch} placeholder={`${copy.folderSearch}…`}
         disabled={disabled} value={filters.query ?? ''} onChange={event => onChange({ query: event.target.value })} />

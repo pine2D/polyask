@@ -15,7 +15,7 @@ test('initial loading, missing and failure have distinct detail surfaces and tar
     await h.click(h.button(copy.questionRetry)); assert.equal(calls, 2);
     await act(async () => reads[1].resolve(null));
     assert.ok(h.document.querySelector('.question-detail-state [data-state="missing"]'), 'deleted/unavailable record differs from request failure');
-    assert.equal((h.document.querySelector('.question-search')) === (null), true);
+    assert.equal(h.document.querySelector('.question-search') !== null, true, 'the record list stays mounted so another record can be selected');
   } finally { await h.close(); }
 });
 

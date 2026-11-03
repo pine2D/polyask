@@ -8,7 +8,6 @@ import { getCopy } from '../../src/shared/copy';
 import { setShellApi } from '../../src/renderer/shell-api';
 import { readingDetail, diagramSource, longSourceUrl, readingUrlCases, readingLinksMarkdown } from './reading-data';
 import '../../src/renderer/styles.css';
-import '../../src/renderer/question-history.css';
 const locale = new URLSearchParams(location.search).get('locale') ?? 'zh-CN';
 document.documentElement.lang = locale;
 const copy = getCopy(locale), clipboard: string[] = [], opened: string[] = [], notices: string[] = [];
@@ -61,10 +60,11 @@ async function checkLinks(selector: string, skip: number) {
 function toolbarLayout() {
   const toolbar = document.querySelector<HTMLElement>('.question-reader-actions')!;
   const answer = toolbar.querySelector<HTMLElement>('.question-answer-actions')!.getBoundingClientRect();
-  const question = toolbar.querySelector<HTMLElement>('.question-prompt-actions')!.getBoundingClientRect();
-  check(!document.querySelector('.question-reader-intro button'), 'no duplicate heading actions');
+  const questionActions = document.querySelector<HTMLElement>('.question-reader-intro .question-prompt-actions')!;
+  const question = questionActions.getBoundingClientRect();
+  check(!toolbar.querySelector('.question-prompt-actions'), 'record actions are separate from answer actions');
   for (const name of [copy.questionCopy, copy.questionCopyPrompt]) {
-    const button = toolbar.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
+    const button = document.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`)!;
     const label = button.parentElement!.querySelector<HTMLElement>('[aria-hidden="true"]');
     check(!!label && label.textContent === name && label.getClientRects().length > 0, 'copy object label is visible beside its icon');
     if (label) {
@@ -72,15 +72,14 @@ function toolbarLayout() {
       check(l.left >= 0 && l.right <= b.left && Math.abs(l.top + l.height / 2 - b.top - b.height / 2) <= 1, 'copy label stays paired with its button');
     }
   }
-  if (window.innerWidth >= 900) check(Math.abs(answer.top - question.top) <= 1, 'wide toolbar stays on one row');
-  check(answer.right <= question.left + 1 || question.top >= answer.bottom, 'action groups never overlap');
-  for (const node of toolbar.querySelectorAll<HTMLElement>('button')) {
+  check(question.bottom <= answer.top, 'record actions precede source selection and answer actions');
+  for (const node of [...toolbar.querySelectorAll<HTMLElement>('button'), ...questionActions.querySelectorAll<HTMLElement>('button')]) {
     const rect = node.getBoundingClientRect();
     check(rect.height >= 32 && rect.width >= 32, 'toolbar controls keep their click targets');
     check(rect.left >= 0 && rect.right <= window.innerWidth, 'toolbar control stays within the viewport');
   }
   check(document.querySelector('.question-reader')!.scrollWidth <= document.querySelector('.question-reader')!.clientWidth + 1, 'toolbar does not cause horizontal overflow');
-  return { ok: true, width: window.innerWidth, wrapped: question.top > answer.top + 1 };
+  return { ok: true, width: window.innerWidth, recordBeforeAnswer: question.bottom <= answer.top };
 }
 (window as any).historyToolbarLayout = toolbarLayout;
 async function run() {

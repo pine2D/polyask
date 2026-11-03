@@ -35,3 +35,14 @@
 .mermaid-canvas { overflow: auto; max-height: 640px; padding: 20px; text-align: center; background: var(--panel); }
 .mermaid-canvas img { display: block; height: auto; margin: 0 auto; }
 .markdown-preview .mermaid-notice { margin: 0; padding: 12px 16px; color: var(--muted); font-size: 12px; }
+
+.markdown-preview > :first-child { margin-top: 0; }
+.markdown-preview > :last-child { margin-bottom: 0; }
+.markdown-preview a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.markdown-preview :not(pre) > code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--panel) 90%, var(--muted)); font-size: .88em; }
+.markdown-table { max-width: 100%; overflow-x: auto; margin: 16px 0; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; }
+.markdown-table table { width: 100%; border-collapse: collapse; font-size: .9em; }
+.markdown-table th, .markdown-table td { min-width: 100px; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.markdown-table th { font-weight: 600; background: color-mix(in srgb, var(--panel) 94%, var(--muted)); }
+.markdown-table tr:last-child td { border-bottom: 0; }
+.markdown-preview hr { margin: 24px 0; border: 0; border-top: 1px solid var(--border); }

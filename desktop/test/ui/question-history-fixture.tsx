@@ -18,7 +18,7 @@ const pause = () => new Promise(resolve => setTimeout(resolve, 30));
 function check(ok: unknown, message: string): asserts ok { if (!ok) throw new Error(message); }
 const tick = async () => { for (const run of [...ticks.values()]) run(); await pause(); };
 let rows: QuestionSummary[] = Array.from({ length: 120 }, (_, i) => ({ schema: 4, id: `q${i}`, updatedAt: 2000, deviceId: 'fixture', sites: ['claude'], requestedTier: null, inputImageCount: 0, text: `Question ${i}`, createdAt: 1000 - i, savedSites: 0, answers: [] }));
-let pending: (() => void)[] = [], delay = false;
+let pending: (() => void)[] = [], delay = false, delayedDetailReads = 0;
 setShellApi({
   setQuestionPanel: async () => {}, setSurface: async () => {}, onQuestionSaveFailed: () => () => {},
   listLegacyQuestions: async () => ({ items: [], cursor: null }),
@@ -31,6 +31,7 @@ setShellApi({
   },
   deleteQuestion: async (id: string) => { rows = rows.filter(q => q.id !== id); },
   getQuestion: async (id: string): Promise<QuestionDetail> => {
+    if (delay) delayedDetailReads++;
     const value: QuestionDetail = { question: rows.find(q => q.id === id)!, answers: scenario === 'source-links' ? [{
       schema: 4, id: 'a0', questionId: id, site: 'claude', attempt: 1, createdAt: 1000, updatedAt: 2000, deviceId: 'fixture',
       submission: 'submitted', submissionCode: null, conversationUrl: null, capture: 'complete', captureCode: null,
@@ -111,7 +112,7 @@ async function run() {
       (window as any).historyTabReady = true;
       while (document.querySelector('[role="menu"]')) await pause();
       await pause();
-      const expected = scenario === 'menu-shift-tab' ? Array.from(document.querySelectorAll('.question-prompt-actions > button')).find(node => node.textContent === copy.questionReask) : document.querySelector('.question-header button');
+      const expected = scenario === 'menu-shift-tab' ? Array.from(document.querySelectorAll('.question-prompt-actions > button')).find(node => node.textContent === copy.questionReask) : document.querySelector('.question-site-tabs button');
       check(document.activeElement === expected, 'Tab closes the menu and stays within history in the expected order');
     }
     else if (scenario === 'close') await click('.panel-close');
@@ -120,7 +121,7 @@ async function run() {
       await click('[data-question-id="q1"] .question-main');
     } else if (scenario === 'delete') {
       await click(`button[aria-label="${copy.questionMenu}"]`);
-      await click('[role="menu"] button');
+      await click('[role="menu"] button.danger');
       delay = false; await click('.confirm-actions .primary');
     }
     else if (scenario === 'slow-detail') { await tick(); await tick(); }
@@ -134,7 +135,7 @@ async function run() {
     }
     else if (scenario === 'switch') check(document.querySelector('.question-reader h2')?.textContent === 'Question 1', 'old detail must not replace the new selection');
     else if (scenario === 'delete') check(!document.querySelector('.question-reader') && !document.querySelector('[data-question-id="q0"]'), 'late detail must not restore a deleted question');
-    else if (scenario === 'slow-detail') check(pending.length === 0, 'detail polling must not replace an in-flight read');
+    else if (scenario === 'slow-detail') check(delayedDetailReads === 1, 'detail polling must not replace an in-flight read while the list refreshes independently');
     else if (scenario?.startsWith('menu-')) check(document.querySelector('.question-reader'), 'Tab keeps the history detail open');
     else check(cards().length === 50, 'late detail cannot reopen after returning to list');
   }

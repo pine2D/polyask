@@ -35,6 +35,7 @@ test('new decision editing removes saved-result toolbar actions and restores the
   try {
     await h.click(h.document.querySelector<HTMLButtonElement>('.comparison-focus')!);
     await h.click(h.document.querySelector<HTMLElement>('.archive-record-context > summary')!);
+    await comparisonWait(() => h.button(copy.decisionCreate));
     await h.click(h.button(copy.decisionCreate)!);
     await comparisonWait(() => h.document.querySelector('[name=decision-title]'));
     assert.equal(h.document.querySelector('.folder-toolbar .archive-actions') === null, true);

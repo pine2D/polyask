@@ -1,0 +1,64 @@
+/* 真实历史与结果库共用列表/正文的节奏，保留各自的数据和导航状态。 */
+.question-reading-workspace { display: flex; flex: 1; min-width: 0; min-height: 0; }
+.question-browser { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; background: var(--panel); }
+.question-browser[hidden] { display: none; }
+.question-history.has-detail .question-browser { width: 280px; flex: 0 0 280px; border-right: 1px solid var(--border); background: color-mix(in srgb, var(--panel) 96%, var(--muted)); }
+.question-reading-workspace > .question-reader, .question-reading-workspace > .question-detail-state { flex: 1; min-width: 0; min-height: 0; }
+.question-history .question-header { padding: 12px 20px; min-height: 58px; }
+.question-history .question-header h1 { font-size: 16px; }
+.question-history .question-header .question-focus { display: grid; place-items: center; padding: 4px; width: 32px; }
+.question-history .question-header button { border-color: transparent; }
+.question-history .question-header .question-focus[aria-pressed=true] { color: var(--accent); background: var(--accent-soft); }
+.question-history .question-browser .question-search { padding: 16px 16px 8px; }
+.question-history .question-scroll { min-height: 0; padding: 0 10px 20px; }
+.question-history .question-day { padding: 0 8px; margin: 18px 0 6px; }
+.question-history .question-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; border: 1px solid transparent; border-radius: 6px; background: transparent; margin: 3px 0; }
+.question-history .question-card:hover { background: var(--hover-soft); }
+.question-history .question-card[data-current=true] { background: var(--accent-soft); }
+.question-history .question-card-heading { grid-column: 1 / -1; }
+.question-history .question-card .question-main { padding: 10px 10px 5px; background: transparent; }
+.question-history .question-title { font-size: 14px; line-height: 1.5; font-weight: 550; }
+.question-history .question-card-status { padding: 0 10px 8px; align-content: center; gap: 3px 6px; }
+.question-history .question-card-actions { padding: 0 5px 5px 0; gap: 0; }
+.question-history .question-card-actions > button { padding: 3px 5px; color: var(--muted); background: transparent; }
+.question-history .question-card-actions summary { font-weight: 500; }
+.question-history .question-state-summary { max-width: 150px; }
+.question-history .question-reader-intro { margin-bottom: 14px; }
+.question-record-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; margin-top: 10px; }
+.question-record-actions { min-width: 0; }
+.question-record-actions :is(.library-menu-trigger,.question-icon-action) { display: grid; place-items: center; width: 32px; }
+.question-record-actions .question-prompt-actions { margin: 0; gap: 4px; }
+.question-history .question-record-actions button { min-height: 32px; min-width: 32px; border-color: transparent; padding: 4px 7px; }
+.question-history .question-record-actions [data-action=organize-saved-answer] { color: var(--accent); }
+.question-history .question-reader-actions { margin-bottom: 16px; gap: 8px; }
+.question-history .question-reader-actions button { border-color: transparent; background: transparent; }
+.question-history .question-reader-actions .primary { color: var(--text); background: var(--panel-muted); border-color: transparent; }
+.question-history .question-answer-actions { gap: 4px; }
+.question-history .question-answer-info { margin-bottom: 6px; }
+.question-history .question-answer { padding-top: 10px; }
+.question-history .question-reader :is(.question-answer-actions,.question-record-actions) svg { width: 16px; height: 16px; }
+.library .folder-content-list[data-selecting=false] .library-row-check { display: none; }
+.library .folder-content-list[data-selecting=false] .library-content-row > button { padding-left: 12px; }
+.library .library-content-row { border-color: transparent; border-radius: 6px; }
+.library .library-content-row:has([aria-current=true]) { border-color: transparent; }
+.library .archive-list .library-content-row > button { gap: 4px; padding-top: 10px; padding-bottom: 10px; }
+.library .archive-list .library-content-row .library-item-title { order: -1; font-weight: 550; }
+.library .archive-list .library-content-row .library-item-type { gap: 6px; font-size: 11px; }
+.library .archive-list .library-content-row .library-item-tags i { padding: 1px 4px; background: transparent; }
+.library .archive-list .library-content-row .library-item-sources { gap: 6px; }
+.library .library-list-summary :is(.library-filter-toggle,.library-multi-toggle) { border-color: transparent; background: transparent; }
+.library .archive-detail .archive-metadata { border: 0; margin: 8px 0 0; padding: 4px 0; }
+.library .library-reading-navigation { margin-top: 10px; }
+.library .library-record-actions button, .library .library-record-actions button:first-child, .library .archive-detail-actions button { border-color: transparent; background: transparent; font-size: 12px; min-height: 30px; padding: 4px 8px; }
+.library .archive-answer > header button { border-color: transparent; background: transparent; color: var(--muted); }
+.library .archive-answer > header button[aria-pressed=true] { color: var(--accent); background: var(--accent-soft); }
+.library .archive-answer > header button:hover, .question-history .question-reader-actions button:hover { color: var(--accent); background: var(--hover-soft); }
+@media (max-width: 960px) {
+  .question-record-meta { gap: 6px; }
+  .question-record-actions { flex-basis: 100%; }
+  .question-history .question-header { padding: 10px 16px; }
+}
+@media (forced-colors: active) {
+  .question-history .question-card[data-current=true], .library .library-content-row:has([aria-current=true]) { border-color: Highlight; }
+  .question-history .question-card[data-current=true] .question-main { color: LinkText; }
+}

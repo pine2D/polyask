@@ -22,6 +22,7 @@ import { useArchiveReader, type ArchiveReaderBinding } from './archive-reader-se
 import { useArchiveSourceLocation } from './archive-source-location';
 import { ArchiveQuestionPrompt } from './archive-question-prompt';
 import { useReadingLayout } from './reading-layout';
+import { ReadingNavigation } from './reading-controls';
 
 interface ArchiveDetailProps {
   readonly recordActions?: React.ReactNode;
@@ -58,24 +59,9 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
   const contextOpen = reader.state.comparisonContextExpanded;
   const navigation = useRef<HTMLDivElement>(null);
   const currentSource = useArchiveSourceLocation(article, navigation, record.id, view === 'read');
-  useLayoutEffect(() => {
-    const node = navigation.current, pane = article.current?.closest<HTMLElement>('.archive-detail-pane');
-    if (!node || !pane) return;
-    const property = '--library-reading-navigation-height', previous = pane.style.getPropertyValue(property);
-    // 让锚点和键盘滚动共同避让实际导航高度；换行、缩放和语言变化均由布局决定。
-    const update = () => pane.style.setProperty(property, `${Math.ceil(node.getBoundingClientRect().height)}px`);
-    update();
-    const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(update) : null;
-    observer?.observe(node);
-    return () => {
-      observer?.disconnect();
-      if (previous) pane.style.setProperty(property, previous);
-      else pane.style.removeProperty(property);
-    };
-  }, [view]);
   const focusComparison = () => {
     const width = article.current?.closest<HTMLElement>('.folder-detail')?.getBoundingClientRect().width ?? 0;
-    if (width > 0 && width <= 760 && !props.readingFocus?.focused) props.readingFocus?.onFocus(true);
+    if (width > 0 && width <= 1100 && !props.readingFocus?.focused) props.readingFocus?.onFocus(true);
   };
   const setView = (value: typeof view) => requestDecisionNavigation(() => {
     if (value === 'compare') focusComparison();
@@ -107,7 +93,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
     bodies.forEach(body => { body.style.contentVisibility = 'visible'; });
   };
   return (
-    <article ref={article} className="archive-detail" data-view={view}>
+    <article ref={article} className="archive-detail reading-page" data-view={view}>
       <details className="archive-record-context" data-library-return="context" open={view !== 'compare' || contextOpen}
         onToggle={event => { if (view === 'compare') reader.change({ comparisonContextExpanded: event.currentTarget.open }); }}>
       <summary hidden={view !== 'compare'}>
@@ -129,19 +115,21 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           {props.recordActions}
         </div>
       </header>
-      <div className="library-record-actions">
-        {canSynthesize ? <button type="button" data-archive-editor="synthesis" disabled={props.busy} onClick={props.onSynthesize}><SparklesIcon />{copy.synthesisAction}</button> : null}
-        {props.onCreateDecision ? <button type="button" data-decision-origin="record" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
-      </div>
       {props.metadata !== undefined ? props.metadata : <ArchiveMetadata record={record} copy={copy} busy={props.busy} onSave={props.onSaveMetadata ?? (async patch => { props.onPatch(patch); return true; })} />}
       </details>
-      <div ref={navigation} className="library-reading-navigation">
+      <ReadingNavigation navigationRef={navigation} activeSource={view === 'read' ? currentSource ?? 0 : view} className="library-reading-navigation">
+      <div className="reading-modebar">
       <nav className="library-view-switch" aria-label={copy.libraryAnswers}>
         <button type="button" aria-pressed={view === 'read'} onClick={() => setView('read')}>{copy.libraryRead}<span>{record.results.length}</span></button>
         {canSynthesize ? <button type="button" aria-pressed={view === 'compare'} onClick={() => setView('compare')}><CompareIcon />{copy.libraryCompare}</button> : null}
         <button type="button" aria-pressed={view === 'synthesis'} onClick={() => setView('synthesis')}>{copy.librarySynthesis}{record.synthesis ? <span aria-hidden="true">✓</span> : null}</button>
       </nav>
-      {view === 'read' ? <nav className="archive-answer-nav" aria-label={copy.siteViews}>
+      {(view !== 'compare' || contextOpen) && <div className="library-record-actions">
+        {canSynthesize ? <button type="button" data-archive-editor="synthesis" disabled={props.busy} onClick={props.onSynthesize}><SparklesIcon />{copy.synthesisAction}</button> : null}
+        {props.onCreateDecision ? <button type="button" data-decision-origin="record" disabled={props.busy} onClick={() => props.onCreateDecision?.()}>{copy.decisionCreate}</button> : null}
+      </div>}
+      </div>
+      {view === 'read' ? <nav className="archive-answer-nav reading-source-list" aria-label={copy.siteViews}>
         {record.results.map((result, index) => {
           const best = record.winnerHost === result.host;
           const label = `${answerSourceId(index)} ${result.label}`;
@@ -152,7 +140,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
             <span className="archive-answer-best" aria-hidden="true">{best ? <StarIcon /> : null}</span></a>;
         })}
       </nav> : null}
-      </div>
+      </ReadingNavigation>
       {view === 'compare' ? <ArchiveCompare reader={reader} comparisonDrafts={props.comparisonDrafts} onCreateDecisionDraft={props.onCreateDecisionDraft} record={record} onEvidence={props.onCreateDecision} onFollowUp={props.onFollowUp} readingFocus={props.readingFocus} busy={props.busy} copy={copy} results={successfulResults} onOpenLink={props.onOpenSource} /> : null}
       {view === 'read' ? <div>
       <div className="archive-answers">

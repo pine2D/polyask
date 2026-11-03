@@ -17,7 +17,7 @@ test('history exports the displayed attempt and returning from a whole-record pa
   try {
     await waitFor(() => h.document.querySelector('.question-main'));
     await h.click(h.document.querySelector<HTMLElement>('.question-main')!);
-    await h.select(h.document.querySelector<HTMLSelectElement>('.question-answer-meta select')!, a1.id);
+    await h.select(h.document.querySelector<HTMLSelectElement>('.question-attempt-selector select')!, a1.id);
     const reader = h.document.querySelector<HTMLElement>('.question-reader')!; reader.scrollTop = 133;
     const one = h.button(copy.markdownSingle); assert.equal(one !== undefined, true, 'displayed answer offers .md download');
     await h.click(one); assert.deepEqual(saved[0].selections[0].entryIds, [a1.id]);
@@ -25,7 +25,7 @@ test('history exports the displayed attempt and returning from a whole-record pa
     assert.deepEqual(previews.at(-1)?.targets, [{ kind: 'history', id: q.id }]);
     await h.click(h.button(copy.cancel));
     assert.equal(h.document.querySelector('.question-reader') === reader, true);
-    assert.equal(reader.scrollTop, 133); assert.equal(h.document.querySelector<HTMLSelectElement>('.question-answer-meta select')!.value, a1.id);
+    assert.equal(reader.scrollTop, 133); assert.equal(h.document.querySelector<HTMLSelectElement>('.question-attempt-selector select')!.value, a1.id);
   } finally { await h.close(); }
 });
 

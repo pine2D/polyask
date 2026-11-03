@@ -13,7 +13,8 @@ export function useArchiveSourceLocation(article: RefObject<HTMLElement | null>,
       if (pane.clientHeight <= 0) return;
       const sections = [...node.querySelectorAll<HTMLElement>('.archive-answer')];
       let index = 0;
-      const boundary = nav.getBoundingClientRect().bottom + 1;
+      // 展开阅读后宽度和字形舍入可能留下几像素空隙；紧邻导航的下一标题仍是当前来源。
+      const boundary = nav.getBoundingClientRect().bottom + 8;
       sections.forEach((section, current) => { if (section.getBoundingClientRect().top <= boundary) index = current; });
       const scrollRange = pane.scrollHeight - pane.clientHeight;
       // 短末条标题可能到不了导航线；滚动到底时仍应归末来源，容忍1px舍入。

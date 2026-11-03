@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { getCopy } from '../shared/copy';
 import { CODE_HIGHLIGHT_LIMIT, highlightCode, supportsCodeHighlight, type CodePart } from './code-highlight';
+import { ReadingAction } from './reading-controls';
 
 export function MarkdownCode({ source, language }: { readonly source: string; readonly language: string }): React.JSX.Element {
   const copy = getCopy(typeof document === 'undefined' ? 'en' : document.documentElement.lang);
@@ -31,11 +32,11 @@ export function MarkdownCode({ source, language }: { readonly source: string; re
   const message = currentNotice?.kind === 'copied' ? copy.readingCodeCopied : currentNotice?.kind === 'failed' ? copy.readingCopyFailed : '';
   return <figure className="markdown-code">
     <figcaption><span className="markdown-code-language">{language || copy.readingCode}</span><div className="markdown-code-actions">
-      <button type="button" disabled={copying} onClick={() => void copyCode()}>{copy.readingCopyCode}</button>
-      <button type="button" disabled={!supported || overLimit || limited} aria-pressed={highlight !== null} onClick={() => {
+      <ReadingAction disabled={copying} onClick={() => void copyCode()}>{copy.readingCopyCode}</ReadingAction>
+      <ReadingAction disabled={!supported || overLimit || limited} aria-pressed={highlight !== null} onClick={() => {
         if (highlight) { setHighlight(null); return; }
         const parts = highlightCode(display, language); setHighlight(parts); setLimited(parts === null);
-      }}>{highlight ? copy.readingPlainCode : copy.readingHighlight}</button>
+      }}>{highlight ? copy.readingPlainCode : copy.readingHighlight}</ReadingAction>
     </div></figcaption>
     <pre><code>{highlight ? highlight.map((part, index) => <span key={index} className={`code-${part.kind}`}>{part.text}</span>) : display}</code></pre>
     {(!supported || overLimit || limited) && <p className="markdown-code-notice">{!supported ? copy.readingHighlightUnsupported : copy.readingHighlightLimit}</p>}

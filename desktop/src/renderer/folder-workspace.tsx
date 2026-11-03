@@ -234,8 +234,8 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       <strong><ArchiveIcon />{copy.archiveTitle}</strong>
       <span className="library-scope" title={folderName}>{folderName}</span>
       <div className="library-toolbar-actions">
-        <button className="folder-back-navigation" onClick={() => navigate(() => { setFocused(false); setPane('navigation'); })}>{copy.folderTitle}</button>
-        <button className="folder-back-list" onClick={() => navigate(() => { setNewSource(null); setPane('list'); })}><BackIcon />{copy.folderBackList}</button>
+        <button className="folder-back-navigation" onClick={() => navigate(() => { reading.capture(false); setFocused(false); setPane('navigation'); })}>{copy.folderTitle}</button>
+        <button className="folder-back-list" onClick={() => navigate(() => { reading.capture(false); setFocused(false); setNewSource(null); setPane('list'); })}><BackIcon />{copy.folderBackList}</button>
         <div className="library-record-toolbar" ref={setRecordToolbar} />
         <button className="library-focus" aria-pressed={focused} disabled={busy || (!focused && !selected && !newSource)} title={focused ? copy.libraryBrowse : copy.libraryFocus} aria-label={focused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => focusDetail(!focused)}><FocusIcon /></button>
         <button aria-label={copy.captureArchive} title={copy.captureArchive} disabled={busy} onClick={capture}><ArchiveIcon /><span>{copy.captureArchive}</span></button>

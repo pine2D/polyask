@@ -118,13 +118,14 @@ app.whenReady().then(async () => {
       const measure = await js(`(()=>{const r=document.querySelector('.question-reader'),h=document.querySelector('.question-prompt h2');
         return {viewport:innerWidth,reader:r.clientWidth,overflow:r.scrollWidth-r.clientWidth,summary:h.classList.contains('is-summary'),
           height:h.getBoundingClientRect().height,line:parseFloat(getComputedStyle(h).lineHeight),dark:matchMedia('(prefers-color-scheme: dark)').matches};})()`);
-      const icons = await js(`Array.from(document.querySelectorAll('.question-reader-actions .library-menu-trigger')).map(n=>{
+      const icons = await js(`Array.from(document.querySelectorAll('.question-reader .library-menu-trigger')).map(n=>{
         const b=n.getBoundingClientRect(),s=n.querySelector('svg').getBoundingClientRect();
         return {dx:s.x+s.width/2-b.x-b.width/2,dy:s.y+s.height/2-b.y-b.height/2};})`);
       check(icons.length === 2 && icons.every(p=>Math.abs(p.dx)<.5&&Math.abs(p.dy)<.5), `${name}: menu icons are centered`);
       await click('.question-prompt-actions .library-menu-trigger');
       const danger = await js(`(()=>{const s=getComputedStyle(document.querySelector('.library-action-menu button.danger'));return {border:s.borderTopWidth,margin:s.marginTop};})()`);
-      check(danger.border === '0px' && danger.margin === '0px', `${name}: single deletion has no separator`);
+      check(parseFloat(danger.border) > 0 && parseFloat(danger.margin) >= 3,
+        `${name}: deletion stays separated from whole-record export (${JSON.stringify(danger)})`);
       await key('Escape');
       const evidence = { name, ...measure, icons, danger }; geometry.push(evidence);
       writeFileSync(join(output, 'geometry.json'), JSON.stringify(geometry, null, 2));
@@ -155,8 +156,8 @@ app.whenReady().then(async () => {
   await open();
   scenario = 'saved-reader-and-results-flow';
   lastStep = 'reader-scroll';
-  await select('.question-answer-meta select', 0);
-  await until('document.querySelector(".question-answer-meta select").value === "a1" && !!document.querySelector(".markdown-preview")', 'older attempt');
+  await select('.question-attempt-selector select', 0);
+  await until('document.querySelector(".question-attempt-selector select").value === "a1" && !!document.querySelector(".markdown-preview")', 'older attempt');
   await js('document.querySelector(".question-reader").scrollTop=650'); await pause();
   const oldScroll = await js('document.querySelector(".question-reader").scrollTop');
   const tabsVisible = await js(`(()=>{const r=document.querySelector('.question-site-tabs').getBoundingClientRect(),
@@ -164,17 +165,17 @@ app.whenReady().then(async () => {
   // 页内滚动本身会更新阅读位置；此段只隔离切站恢复，物理 select/Tab/鼠标另行覆盖。
   await js('document.querySelector(".question-site-tabs button:last-child").click()'); await pause();
   await js('document.querySelector(".question-site-tabs button:first-child").click()'); await pause();
-  check(await js('document.querySelector(".question-answer-meta select").value === "a1"'), 'returning to a site keeps its older attempt');
+  check(await js('document.querySelector(".question-attempt-selector select").value === "a1"'), 'returning to a site keeps its older attempt');
   check(Math.abs(await js('document.querySelector(".question-reader").scrollTop') - oldScroll) < 2, 'returning to a site restores answer scroll');
   await click('.question-header button:not(.panel-close)'); await click('.question-main');
   await until('!!document.querySelector(".markdown-preview")', 'reopened answer');
-  check(await js('document.querySelector(".question-answer-meta select").value === "a1"'), 'back and reopen preserves the selected attempt');
+  check(await js('document.querySelector(".question-attempt-selector select").value === "a1"'), 'back and reopen preserves the selected attempt');
   check(Math.abs(await js('document.querySelector(".question-reader").scrollTop') - oldScroll) < 2, 'back and reopen restores answer scroll');
   console.log(JSON.stringify({ scenario: 'reader-scroll-evidence', tabsVisibleAtSavedPosition: tabsVisible,
     siteSwitching: 'programmatic-state-only', leavingAndReopening: 'native-mouse', scroll: oldScroll, ok: true }));
   lastStep = 'reader-mermaid-and-links';
   await until('!!document.querySelector(".mermaid-canvas img")', 'saved Mermaid preview');
-  await js('document.querySelector(".question-prompt-actions button[aria-haspopup=menu]").focus()');
+  await js('document.querySelector(".question-answer-actions > button:last-child").focus()');
   for (const selector of ['.markdown-preview a[href="https://example.com/first"]',
     '.markdown-preview a[href="https://example.com/second"]', '.mermaid-tabs button:first-child']) {
     await key('Tab');
@@ -189,10 +190,10 @@ app.whenReady().then(async () => {
   check(await js('document.querySelector(".question-empty[data-state=loading]")?.textContent.includes(window.historyFixture.labels.loading) && !document.querySelector(".markdown-preview")'), 'slow site switches show loading without old body');
   check(await js('[...document.querySelectorAll("button[aria-label]")].find(button=>button.getAttribute("aria-label")===window.historyFixture.labels.answerCopy)?.disabled===true'), 'loading copy action is disabled');
   await click('.question-site-tabs button:first-child');
-  await select('.question-answer-meta select', 1);
+  await select('.question-attempt-selector select', 1);
   await js('window.historyFixture.resolveRead("a2")'); await pause();
   await js('window.historyFixture.resolveRead("b1");window.historyFixture.resolveRead("a1")'); await pause();
-  check(await js('document.querySelector(".question-answer-meta select").value === "a2" && document.querySelector(".markdown-preview").textContent.includes("a2 paragraph")'), 'out-of-order responses retain the latest selected body');
+  check(await js('document.querySelector(".question-attempt-selector select").value === "a2" && document.querySelector(".markdown-preview").textContent.includes("a2 paragraph")'), 'out-of-order responses retain the latest selected body');
   lastStep = 'deferred-body-retry';
   await click('.question-site-tabs button:last-child');
   await js('window.historyFixture.rejectRead("b1")'); await pause();
@@ -200,7 +201,7 @@ app.whenReady().then(async () => {
   await click('.question-empty button');
   await js('window.historyFixture.resolveRead("b1");window.historyFixture.readDelay(false)'); await pause();
   check(await js('document.querySelector(".markdown-preview").textContent.includes("b1 paragraph")'), 'retry reads the failed selected answer');
-  await click('.question-site-tabs button:first-child'); await select('.question-answer-meta select', 0);
+  await click('.question-site-tabs button:first-child'); await select('.question-attempt-selector select', 0);
 
   lastStep = 'picker-cancel';
   await js('document.querySelector(".question-reader").scrollTop=0'); await pause();

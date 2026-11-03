@@ -17,8 +17,8 @@ export function QuestionPrompt({ text, copy }: {
     <h2 id={id} className={long && !expanded ? 'is-summary' : undefined}>{long && !expanded ? `${summary}${[...text].length > 180 ? '…' : ''}` : text}</h2>
     {long && <button type="button" aria-expanded={expanded} aria-controls={id} onClick={() => {
       const reader = root.current?.closest<HTMLElement>('.question-reader');
-      const node = reader?.querySelector('.question-site-tabs');
-      if (reader && node && node.getBoundingClientRect().top < reader.getBoundingClientRect().top)
+      const node = reader?.querySelector('.question-answer');
+      if (reader && node && root.current && root.current.getBoundingClientRect().bottom < reader.getBoundingClientRect().top)
         anchor.current = { reader, node, top: node.getBoundingClientRect().top };
       setExpanded(value => !value);
     }}>{expanded ? copy.questionCollapse : copy.questionExpand}</button>}

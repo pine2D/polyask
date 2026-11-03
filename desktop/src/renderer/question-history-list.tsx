@@ -2,9 +2,9 @@ import { formatCopy, type DesktopCopy } from '../shared/copy';
 import type { SiteDefinition } from '../shared/contracts';
 import type { QuestionSummary } from '../shared/question-history';
 import { answerState, questionDay } from './question-history-model';
-export function QuestionHistoryList({ items, sites, copy, busy, selecting, selectedIds, onToggle, onExport, onRestore, onRead, onReask, onDelete }: {
+export function QuestionHistoryList({ items, sites, copy, busy, currentId, selecting, selectedIds, onToggle, onExport, onRestore, onRead, onReask, onDelete }: {
   items: readonly QuestionSummary[]; sites: readonly SiteDefinition[]; copy: DesktopCopy; busy: boolean;
-  selecting?: boolean; selectedIds?: readonly string[]; onToggle?: (id: string) => void; onExport?: (id: string) => void;
+  currentId?: string; selecting?: boolean; selectedIds?: readonly string[]; onToggle?: (id: string) => void; onExport?: (id: string) => void;
   onRestore: (id: string) => void; onRead: (id: string) => void; onReask: (id: string, text: string, imageCount: number) => void; onDelete: (id: string) => void;
 }): React.JSX.Element {
   const now = Date.now();
@@ -18,10 +18,10 @@ export function QuestionHistoryList({ items, sites, copy, busy, selecting, selec
     const states = [...new Set(q.answers.filter(a => a.capture !== 'complete').map(a => answerState(a, copy)))];
     return <li key={q.id} data-question-id={q.id}>
       {(index === 0 || questionDay(items[index - 1].createdAt, now, copy) !== group) && <h2 className="question-day">{group}</h2>}
-      <article className="question-card">
+      <article className="question-card" data-current={currentId === q.id || undefined}>
         <div className="question-card-heading">
         {selecting && <input className="question-card-select" type="checkbox" aria-label={q.text} checked={selectedIds?.includes(q.id) ?? false} disabled={busy} onChange={() => onToggle?.(q.id)} />}
-        <button type="button" className="question-main" data-hint={`${copy.questionCopies} · ${siteNames}`}
+        <button type="button" className="question-main" aria-current={currentId === q.id ? "true" : undefined} data-hint={`${copy.questionCopies} · ${siteNames}`}
           aria-label={`${copy.questionCopies}: ${q.text}. ${siteNames}`} onClick={() => onRead(q.id)}>
           <span className="question-title">{q.text}</span>
           <span className="question-meta"><time>{new Date(q.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</time><span aria-hidden="true"> · </span><span aria-hidden="true">{siteSummary}</span><span className="sr-only">{siteNames}</span></span>

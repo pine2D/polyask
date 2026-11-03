@@ -22,7 +22,7 @@ app.whenReady().then(async () => {
       await win.webContents.executeJavaScript('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
       const narrow = await win.webContents.executeJavaScript('window.historyToolbarLayout()');
       console.log(JSON.stringify({ locale, zoom, ...narrow }));
-      if (width === 420 && !narrow.wrapped) throw Error('compact toolbar must wrap by action group');
+      if (!narrow.recordBeforeAnswer) throw Error('record and answer controls must retain their separate scopes');
       if (locale === 'zh-TW' && width === 420) writeFileSync('/tmp/polyask-history-toolbar-narrow.png', (await win.webContents.capturePage()).toPNG());
       if (locale === 'en' && zoom === 2) writeFileSync('/tmp/polyask-history-toolbar-en-200.png', (await win.webContents.capturePage()).toPNG());
     }

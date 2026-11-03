@@ -15,12 +15,11 @@ import type { SiteDefinition } from '../shared/contracts';
 import type { QuestionDetail, QuestionPage } from '../shared/question-history';
 import { QUESTION_PANEL_BREAKPOINT, QUESTION_PANEL_WIDTH } from '../shared/question-layout';
 import { ConfirmDialog } from './confirm-dialog';
-import { CloseIcon } from './icons';
+import { CloseIcon, FocusIcon } from './icons';
 import { useGlobalFeedback } from './feedback-provider';
 import { QuestionHistoryList } from './question-history-list';
 import { QuestionHistoryReader } from './question-history-reader';
 import { shell } from './shell-api';
-import './question-history.css';
 import { refreshQuestionPages } from './question-history-refresh';
 import { focusableControls } from './focusable-controls';
 import { guideComparisonChoices, type QuestionReadingRequest } from './question-reading-request';
@@ -48,6 +47,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   const [error, setError] = useState('');
   const [detail, setDetail] = useState<QuestionDetail | null>(null);
   const [detailView, setDetailView] = useState<QuestionDetailView | null>(null);
+  const detailViewRef = useRef(detailView); detailViewRef.current = detailView;
   const [readerNavigation, setReaderNavigation] = useState(0);
   const readerSession = useRef(new QuestionReaderSession());
   const [organizing, setOrganizing] = useState<string | null>(null);
@@ -56,17 +56,19 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   const [guideChoices, setGuideChoices] = useState<readonly string[]>([]);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [restoring, setRestoring] = useState(false);
+  const [readingFocused, setReadingFocused] = useState(false);
+  const [splitReading, setSplitReading] = useState(() => window.innerWidth >= 960);
   const [narrow, setNarrow] = useState(() => window.innerWidth < QUESTION_PANEL_BREAKPOINT);
-  const sequence = useRef(0), detailSequence = useRef(0), input = useRef<HTMLInputElement>(null);
+  const sequence = useRef(0), detailSequence = useRef(0), restoreSequence = useRef(0), input = useRef<HTMLInputElement>(null);
   const listPending = useRef(0), detailPending = useRef(0);
   const deleting = useRef(new Set<string>());
   const pageRef = useRef(page); pageRef.current = page;
   const scroll = useRef<HTMLDivElement>(null);
   const anchor = useRef<{ id: string; top: number } | null>(null);
   const reaskFlow = useQuestionReask({ open, active, busy, draft, draftImageCount, draftIntent, imageSyncEnabled, copy, onDraft, onDone: () => close() });
-  const leaveDetail = useCallback(() => { reaskFlow.invalidate(); detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; setOrganizing(null); setGuideChoices([]); setDetail(null); setDetailView(null); }, []);
+  const leaveDetail = useCallback(() => { setReadingFocused(false); reaskFlow.invalidate(); restoreSequence.current++; detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; setOrganizing(null); setGuideChoices([]); setDetail(null); setDetailView(null); }, []);
   const back = () => { if (openRequest?.source === 'guide') onReadingCancelled?.(openRequest.request); leaveDetail(); };
-  const close = () => { reaskFlow.invalidate(); sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; closeRef.current(); };
+  const close = () => { reaskFlow.invalidate(); restoreSequence.current++; sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0; archiveEpoch.current++; closeRef.current(); };
   useLayoutEffect(() => {
     const saved = anchor.current; anchor.current = null;
     if (!saved || !scroll.current) return;
@@ -74,6 +76,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     if (node) scroll.current.scrollTop += node.getBoundingClientRect().top - saved.top;
   }, [page]);
   const panel = useRef<HTMLElement>(null), opener = useRef<HTMLElement | null>(null);
+  const closeListMenus = () => panel.current?.querySelectorAll<HTMLDetailsElement>('.question-browser details[open]').forEach(menu => { menu.open = false; });
   const full = markdown.active || markdown.busy || narrow || !!detailView || !!confirmation || restoring || reaskFlow.blocking;
   const lastFull = useRef(full); if (open) lastFull.current = full;
   const renderedFull = open ? full : lastFull.current;
@@ -85,7 +88,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   useEffect(() => shell.onQuestionAttachmentSaveFailed?.(() => announce(copy.questionOriginalSaveFailed)), [copy, announce]);
   useEffect(() => shell.onQuestionSaveFailed(() => announce(copy.questionSaveFailed)), [copy, announce]);
   useEffect(() => {
-    const resize = () => setNarrow(window.innerWidth < QUESTION_PANEL_BREAKPOINT);
+    const resize = () => { setNarrow(window.innerWidth < QUESTION_PANEL_BREAKPOINT); setSplitReading(window.innerWidth >= 960); };
     window.addEventListener('resize', resize); return () => window.removeEventListener('resize', resize);
   }, []);
   useEffect(() => {
@@ -93,7 +96,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     input.current?.focus();
     return () => {
-      sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0;
+      restoreSequence.current++; sequence.current++; listPending.current = 0; detailSequence.current++; detailPending.current = 0;
       // 显式转向提问框或原生站点后，关闭历史不能再抢回焦点。
       const focused = document.activeElement;
       if (document.hasFocus() && (focused === document.body || panel.current?.contains(focused)))
@@ -120,7 +123,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
       // Portaled action menus handle Escape and Tab before the history surface.
       if (panel.current?.querySelector('[aria-haspopup="menu"][aria-expanded="true"]')) return;
       if (e.key === 'Escape') {
-        const menu = panel.current?.querySelector<HTMLDetailsElement>('details[open]');
+        const menu = [...(panel.current?.querySelectorAll<HTMLDetailsElement>('details[open]') ?? [])].find(node => !node.closest('[hidden]'));
         e.preventDefault(); e.stopImmediatePropagation();
         if (menu) { menu.open = false; menu.querySelector('summary')?.focus(); }
         else if (detailView) back();
@@ -166,7 +169,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   const read = async (id: string, answerId?: string, refresh = false, navigation?: number) => {
     if (refresh && detailPending.current) return;
     if (refresh && detailView?.state !== 'ready') return;
-    if (!refresh) reaskFlow.invalidate();
+    if (!refresh) { reaskFlow.invalidate(); restoreSequence.current++; closeListMenus(); }
     const rememberedId = !answerId && !refresh ? readerSession.current.preferredAnswer(id) : undefined;
     answerId ??= rememberedId;
     const request = ++detailSequence.current;
@@ -210,7 +213,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     if (!open || confirmation || restoring || organizing || markdown.active) return;
     const timer = setInterval(() => {
       if (detailView) { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined, true); }
-      else void load(undefined, true);
+      void load(undefined, true);
     }, 5_000);
     return () => clearInterval(timer);
   }, [open, detail?.question.id, detail?.loadedAnswerId, detailView?.state, confirmation, restoring, organizing, markdown.active, load, page.items.length]);
@@ -243,58 +246,56 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     setConfirmation(null);
     if (deleting.current.has(id)) return;
     deleting.current.add(id);
-    reaskFlow.invalidate(); const request = ++detailSequence.current; detailPending.current = 0;
+    reaskFlow.invalidate();
     void shell.deleteQuestion(id).then(() => {
       selection.remove(id);
-      if (request === detailSequence.current && detail?.question.id === id) leaveDetail();
+      if (detailViewRef.current?.questionId === id) leaveDetail();
       sequence.current++; listPending.current = 0;
       void latestLoad.current(undefined, true); announce(copy.questionDeleted);
-    }).catch(() => { if (request === detailSequence.current) setError(copy.questionFailed); else announce(copy.questionFailed); })
+    }).catch(() => announce(copy.questionFailed))
       .finally(() => deleting.current.delete(id));
   } }); };
   const restore = async (id: string, answerId?: string) => {
     if (disabled) return;
-    reaskFlow.invalidate(); const request = ++detailSequence.current; detailPending.current = request;
+    reaskFlow.invalidate(); const request = ++restoreSequence.current;
     setError('');
     try {
       const preview = await shell.previewQuestion(id, answerId);
-      if (request !== detailSequence.current) return;
+      if (request !== restoreSequence.current) return;
       const execute = async () => {
-        if (request !== detailSequence.current) return;
+        if (request !== restoreSequence.current) return;
         setConfirmation(null); setRestoring(true); announce(copy.questionBusy);
         setUndoAction({ label: copy.cancel, run: () => { void shell.cancelQuestionRestore(); } });
         try {
           const result = await shell.restoreQuestion(preview.token, true);
-          if (request !== detailSequence.current) return;
+          if (request !== restoreSequence.current) return;
           const labels = { opened: copy.questionOpened, already_open: copy.questionAlreadyOpen, missing_url: copy.questionNoUrl,
             failed: copy.questionOpenFailed, timeout: copy.questionTimeout, cancelled: copy.questionCancelled };
           announce(result.map(r => `${sites.find(s => s.key === r.site)?.label ?? r.site}: ${labels[r.state]}`).join(' · '));
           setUndoAction({ label: copy.questionCopies, run: () => { onOpen(); void read(id); } });
           if (result.every(r => r.state === 'opened' || r.state === 'already_open')) { close(); }
           else { onOpen(); await read(id); }
-        } catch { if (request === detailSequence.current) { setUndoAction(null); setError(copy.questionFailed); announce(copy.questionFailed); } }
+        } catch { if (request === restoreSequence.current) { setUndoAction(null); setError(copy.questionFailed); announce(copy.questionFailed); } }
         finally { setRestoring(false); }
       };
       if (preview.needsConfirmation) setConfirmation({ title: copy.questionRestoreTitle, message: `${copy.questionRestoreWarning}\n${preview.affected.map(key => sites.find(s => s.key === key)?.label ?? key).join(' / ')}`, label: copy.questionRestore, run: () => { void execute(); } });
       else await execute();
-    } catch { if (request === detailSequence.current) setError(copy.questionFailed); }
-    finally { if (detailPending.current === request) detailPending.current = 0; }
+    } catch { if (request === restoreSequence.current) setError(copy.questionFailed); }
   };
   if (!present) return null;
-  return <aside ref={panel} tabIndex={-1} className={`question-history${renderedFull ? ' is-full' : ''}`} style={{ width: renderedFull ? undefined : QUESTION_PANEL_WIDTH }}
+  return <aside ref={panel} tabIndex={-1} className={`question-history${renderedFull ? ' is-full' : ''}${detailView ? ' has-detail' : ''}`} style={{ width: renderedFull ? undefined : QUESTION_PANEL_WIDTH }}
     data-state={open ? 'open' : 'closed'} inert={!open} aria-hidden={open ? undefined : true} aria-label={copy.questionHistory}>
-    <header className="question-header"><h1>{detailView ? copy.questionCopies : copy.questionHistory}</h1>
+    <header className="question-header"><h1>{copy.questionHistory}</h1>
       {!detailView && <button type="button" disabled={disabled} aria-pressed={selection.selecting} onClick={selection.selecting ? selection.finish : selection.start}>{selection.selecting ? copy.markdownFinish : copy.markdownSelect}</button>}
-      {detailView && <button type="button" disabled={markdown.active || markdown.busy} onClick={back}>{copy.questionBack}</button>}
+      {detailView && <button className="question-back" type="button" disabled={markdown.active || markdown.busy} onClick={back}>{copy.questionBack}</button>}
+      {detailView && splitReading && <button type="button" className="question-focus" aria-pressed={readingFocused} aria-label={readingFocused ? copy.libraryBrowse : copy.libraryFocus} data-hint={readingFocused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => { closeListMenus(); setReadingFocused(value => !value); }}><FocusIcon /></button>}
       <button className="panel-close" type="button" aria-label={copy.questionClose} data-hint={copy.questionClose} disabled={markdown.active || markdown.busy} onClick={close}><CloseIcon /></button>
     </header>
     {restoring && <div role="status" className="question-notice">{copy.questionBusy} <button type="button" onClick={() => { void shell.cancelQuestionRestore(); }}>{copy.cancel}</button></div>}
     {error && <div role="alert" className="question-notice">{error} <button type="button" onClick={() => { if (detail) void read(detail.question.id, detail.loadedAnswerId ?? undefined); else void load(undefined, true); }}>{copy.questionRetry}</button></div>}
-    {detail ? <QuestionHistoryReader key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} copy={copy} sites={sites} busy={disabled} imageSyncEnabled={imageSyncEnabled} onExportAnswer={answerId => { void markdown.single({ kind: 'history', id: detail.question.id }, answerId); }} onExportWhole={() => markdown.open([{ kind: 'history', id: detail.question.id }])} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.id, detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { reaskFlow.invalidate(); archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
-      <p data-state={detailView.state} role={detailView.state === 'failed' ? 'alert' : 'status'}>{detailView.state === 'loading' ? copy.questionDetailLoading : detailView.state === 'missing' ? copy.questionRecordMissing : copy.questionDetailFailed}</p>
-      {detailView.state !== 'loading' && <button type="button" onClick={() => { void read(detailView.questionId, detailView.answerId); }}>{copy.questionRetry}</button>}
-    </div> : <>
-      <div className="question-search"><input ref={input} type="search" value={query} onChange={e => { leaveDetail(); sequence.current++; listPending.current = 0; setQuery(e.target.value); }}
+    <div className="question-reading-workspace">
+    <section className="question-browser" hidden={!!detailView && (!splitReading || readingFocused)}>
+      <div className="question-search"><input ref={input} type="search" value={query} onChange={e => { sequence.current++; listPending.current = 0; setQuery(e.target.value); }}
         onKeyDown={event => {
           if (!active || confirmation || organizing || reaskFlow.blocking || markdown.active || event.nativeEvent.isComposing || event.keyCode === 229 ||
             event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !['PageUp', 'PageDown'].includes(event.key)) return;
@@ -308,11 +309,16 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
         onLoaded={() => selection.loaded(page.items)} onClear={selection.clear} onExport={() => markdown.open(selection.ids.map(id => ({ kind: 'history', id })))} />}
       <div ref={scroll} className="question-scroll" tabIndex={0} role="region" aria-label={copy.questionHistory} aria-busy={loading}>
         {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}
-        <QuestionHistoryList selecting={selection.selecting} selectedIds={selection.ids} onToggle={selection.toggle} onExport={id => markdown.open([{ kind: 'history', id }])} items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
+        <QuestionHistoryList currentId={detailView?.questionId} selecting={selection.selecting} selectedIds={selection.ids} onToggle={selection.toggle} onExport={id => markdown.open([{ kind: 'history', id }])} items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
         {page.cursor && <button type="button" className="question-load-more" disabled={loading} onClick={() => { void load(page.cursor!); }}>{copy.questionMore}</button>}
         <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={text => reaskFlow.start({ text, imageCount: 0 })} />
       </div>
-    </>}
+    </section>
+    {detail ? <QuestionHistoryReader key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} locale={locale} copy={copy} sites={sites} busy={disabled} imageSyncEnabled={imageSyncEnabled} onExportAnswer={answerId => { void markdown.single({ kind: 'history', id: detail.question.id }, answerId); }} onExportWhole={() => markdown.open([{ kind: 'history', id: detail.question.id }])} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.id, detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { reaskFlow.invalidate(); archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
+      <p data-state={detailView.state} role={detailView.state === 'failed' ? 'alert' : 'status'}>{detailView.state === 'loading' ? copy.questionDetailLoading : detailView.state === 'missing' ? copy.questionRecordMissing : copy.questionDetailFailed}</p>
+      {detailView.state !== 'loading' && <button type="button" onClick={() => { void read(detailView.questionId, detailView.answerId); }}>{copy.questionRetry}</button>}
+    </div> : null}
+    </div>
     {markdown.panel}
     {reaskFlow.feedback}
     {confirmation && <ConfirmDialog copy={copy} title={confirmation.title} message={confirmation.message} confirmLabel={confirmation.label} cancelLabel={copy.cancel} tone={confirmation.danger ? "danger" : undefined} onConfirm={confirmation.run} onCancel={() => setConfirmation(null)} />}

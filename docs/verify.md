@@ -1578,3 +1578,16 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 已目视核对英文浅色及中文深色 200% 导出失败、480px 深色外观截图；源码 detector 未报告问题（仅正则扫描，不代表完整无障碍审计）。7 个观测 Electron 进程在同一 4 GiB/512 MiB 临时 cgroup，退出后均已消失，临时 profile 已清理。本轮未访问真实账户、执行真实磁盘故障或恢复，也未验证 Windows/macOS 物理键盘、系统保存框及读屏。
 
 完整 `npm test` 通过 2,595 项应用/UI 测试和 538 项运行时测试，零失败、取消或跳过；独立 `npm run typecheck` 与仓库 `scripts/verify.sh` 通过。
+
+
+## 2026-11-03 持续阅读工作区验证
+
+`cd desktop && node scripts/test-safe.mjs command node scripts/reading-experience-native.mjs` 构建生产 `QuestionHistory` / `ArchiveSurface`，使用合成的八条记录、九来源及复杂 Markdown，隔离 Electron 档案并阻断网络。原生进程使用共同 4GiB 内存 / 512MiB swap cgroup，核对实际进程并清理所拥有的进程与临时档案。`--workspace-only` 仅运行工作区流程，`--flows-only` 跳过 48 组布局矩阵。
+
+48 组覆盖简中/繁中/英文、明暗主题、1600/1280/960px 及 150% 缩放；断言首段正文可见、阅读控件主题样式、无横向溢出及滚动时来源导航可用。另测历史跨记录返回、迟到读取、专注与窄窗返回、结果库文件夹入口与多选显示、代码复制失败重试、高亮、公式、比较往返的来源/焦点、空态、长问题和读取失败恢复。截图、标量 `report.json` 留在临时证据目录，不入库。
+
+本轮已观察旧历史实现的列表保留断言失败；实现中另捕获题头操作经 portal 搬移导致返回偏移 28px，改为题头直接渲染后 420px 原位恢复。48 组布局与上述流程通过，零页面错误和联网请求；这证明本次隔离 Linux Electron 检查范围，不代替用户视觉认可、Windows/macOS 实机或真实站点/Drive 验收。
+
+`question-history-workspace-races.test.tsx` 覆盖初次读取 A 时删除 A/B、恢复 B 后取消/预览失败/执行失败，以及隐藏列表菜单的 Escape。审查快照六项均按行为失败，修复后六项及相邻四项通过；恢复意图与读取序号独立，删除成功仅退出被删除记录的当前阅读，不能让其它记录等待失去收尾。
+
+最终门禁：完整 `npm test` 的 2,615 项应用测试与 545 项运行时测试通过，独立 typecheck、verify 通过。审查修复后再次通过 24 组历史转结果库及历史键盘/IME/迟到请求专项；生产 index + preload + ViewManager 的三语写入、重启回读集成通过。独立审查复核关闭异步交叉操作与隐藏菜单问题。单文件同源预览已验证两页及英文切换，零页面错误/网络请求；以上均不宣称 Windows/macOS 实机验收。

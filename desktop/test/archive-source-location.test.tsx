@@ -53,6 +53,15 @@ test('leaving reading cancels its scheduled position work', async () => {
   assert.equal(geometry.observed, 0);
 });
 
+test('a source header just below the sticky edge remains current after layout rounding', async () => {
+  const geometry = readingGeometry(), h = await comparisonMount({ startInRead: true, configure: geometry.configure });
+  try {
+    await h.scroll(h.document.querySelector<HTMLElement>('.archive-detail-pane')!, 657.5); await geometry.flush();
+    assert.equal(current(h.document), '#archive-answer-1');
+    assert.equal(h.writes, 0);
+  } finally { await h.close(); }
+});
+
 test('a short final answer becomes current at the scroll end despite staying below the sticky boundary', async () => {
   const geometry = readingGeometry();
   geometry.metrics.starts[2] = 2000; geometry.metrics.answerHeights[2] = 90;
@@ -82,6 +91,20 @@ test('a page without a scroll range starts at the first source', async () => {
     assert.equal(current(h.document), '#archive-answer-0');
     geometry.metrics.scrollHeight += 1; geometry.resize(); await geometry.flush();
     assert.equal(current(h.document), '#archive-answer-0', 'a one-pixel overflow does not change the initial source');
+    assert.equal(h.writes, 0);
+  } finally { await h.close(); }
+});
+
+// 模式切换替换正文，但导航按钮必须保留原节点和键盘上下文。
+test('reading mode switches preserve the focused navigation control', async () => {
+  const h = await comparisonMount({ startInRead: true });
+  try {
+    for (const index of [1, 2, 0]) {
+      const button = h.document.querySelectorAll<HTMLButtonElement>('.library-view-switch button')[index];
+      button.focus(); await h.click(button);
+      assert.equal(h.document.activeElement === button, true);
+      assert.equal(button.isConnected, true);
+    }
     assert.equal(h.writes, 0);
   } finally { await h.close(); }
 });

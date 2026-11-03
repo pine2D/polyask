@@ -15,7 +15,7 @@ app.whenReady().then(async () => {
     assert.equal(headings[0]?.level, 1);
     assert.equal(headings.length > 1 && headings.slice(1).every(node => node.level === 2), true);
     const style = await win.webContents.executeJavaScript('(()=>{const style=getComputedStyle(document.querySelector(".question-day"));return {size:style.fontSize,weight:style.fontWeight,margin:style.margin}})()');
-    assert.equal(style.size, '12px'); assert.equal(style.weight, '500'); assert.equal(style.margin, '16px 0px 8px');
+    assert.equal(style.size, '12px'); assert.equal(style.weight, '500'); assert.equal(style.margin, '18px 0px 6px');
     await win.webContents.executeJavaScript('window.historyListDone=true; window.historyResult');
     console.log(JSON.stringify({ scenario: 'list-semantics', locale, headings, style, ok: true }));
   }
@@ -26,7 +26,7 @@ app.whenReady().then(async () => {
       await win.webContents.executeJavaScript('(async()=>{while(!window.historyNativeReady) await new Promise(resolve=>setTimeout(resolve,20))})()');
       const before = await win.webContents.executeJavaScript('({opacity:getComputedStyle(document.querySelector(".question-history")).opacity,visible:document.querySelector(".markdown-preview a").checkVisibility({checkOpacity:true}),focused:document.hasFocus()})');
       win.show(); win.focus(); win.webContents.focus();
-      await win.webContents.executeJavaScript('(async()=>{while(getComputedStyle(document.querySelector(".question-history")).opacity!=="1") await new Promise(resolve=>requestAnimationFrame(resolve)); document.querySelector(".question-prompt-actions button[aria-haspopup=menu]").focus();})()');
+      await win.webContents.executeJavaScript('(async()=>{while(getComputedStyle(document.querySelector(".question-history")).opacity!=="1") await new Promise(resolve=>requestAnimationFrame(resolve)); document.querySelector(".question-answer-actions > button:last-child").focus();})()');
       console.log(JSON.stringify({ scenario: 'source-links-ready', before, painted: true }));
       let error = '';
       for (const [shift, selector, description] of [
@@ -35,7 +35,7 @@ app.whenReady().then(async () => {
         [false, '.question-header button', 'last source Tab wraps to the header'],
         [true, '.markdown-preview a[href="https://example.com/second"]', 'header Shift+Tab reaches the last source'],
         [true, '.markdown-preview a[href="https://example.com/first"]', 'source Shift+Tab follows native reverse order'],
-        [true, '.question-prompt-actions button[aria-haspopup="menu"]', 'first source Shift+Tab returns to the toolbar']
+        [true, '.question-answer-actions > button:last-child', 'first source Shift+Tab returns to the answer toolbar']
       ]) {
         const modifiers = shift ? ['shift'] : [];
         win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Tab', modifiers });

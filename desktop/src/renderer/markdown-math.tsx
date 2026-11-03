@@ -3,6 +3,7 @@ import { getCopy } from '../shared/copy';
 import { mathSourceIssue, type MathFailure } from './math-source';
 import { renderMath } from './math-renderer';
 import { mathmlNodes, type MathNode } from './mathml-nodes';
+import { ReadingAction } from './reading-controls';
 
 function elements(nodes: readonly (MathNode | string)[]): ReactNode[] {
   return nodes.map((node, key) => typeof node === 'string' ? node : createElement(node.name, { ...node.attributes, key }, elements(node.children)));
@@ -40,8 +41,8 @@ export function MarkdownMath({ source, literal, display, block = false }: {
   const code = <code className="markdown-math-source">{literal}</code>;
   return createElement(block ? 'figure' : 'span', { className: `markdown-math${block ? ' markdown-math-block' : ''}`, 'aria-label': copy.readingFormula },
     <span className="markdown-math-actions">
-      <button type="button" disabled={!!issue || status === 'pending'} onClick={() => void requestPreview()}>{copy.readingFormulaPreview}</button>
-      {current && <button type="button" aria-pressed={showSource} onClick={() => setShowSource(value => !value)}>{copy.readingFormulaSource}</button>}
+      <ReadingAction disabled={!!issue || status === 'pending'} onClick={() => void requestPreview()}>{copy.readingFormulaPreview}</ReadingAction>
+      {current && <ReadingAction aria-pressed={showSource} onClick={() => setShowSource(value => !value)}>{copy.readingFormulaSource}</ReadingAction>}
     </span>,
     current && <span className="markdown-math-preview">{elements(current.nodes)}</span>,
     block ? <pre hidden={!!current && !showSource}>{code}</pre> : <span hidden={!!current && !showSource}>{code}</span>,

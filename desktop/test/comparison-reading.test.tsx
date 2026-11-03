@@ -18,8 +18,8 @@ test('reopening a comparison respects the browsing layout saved after returning 
   } finally { await restored.close(); }
 });
 
-test('entering comparison at the stacking breakpoint expands once and returning does not reopen it', async () => {
-  for (const [detailWidth, expected] of [[760, 'true'], [760.5, 'false'], [761, 'false']] as const) {
+test('entering comparison below the reading-width threshold expands once and returning does not reopen it', async () => {
+  for (const [detailWidth, expected] of [[760, 'true'], [816, 'true'], [1100, 'true'], [1100.5, 'false'], [1101, 'false']] as const) {
     const h = await comparisonMount({ detailWidth });
     try {
       assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), expected);
@@ -38,6 +38,8 @@ test('leaving supplementary analysis restores a comparison without expanding a s
   const h = await comparisonMount({ detailWidth: 700 });
   try {
     await h.click(h.button('Return to browsing')!);
+    await h.click(h.document.querySelector<HTMLElement>('.archive-record-context > summary')!);
+    await comparisonWait(() => h.button(copy.synthesisAction));
     await h.click(h.button(copy.synthesisAction)!);
     await comparisonWait(() => h.document.querySelector('.synthesis-workspace'));
     await h.click(h.button(copy.synthesisCancel)!);

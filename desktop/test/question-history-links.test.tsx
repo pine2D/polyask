@@ -30,8 +30,10 @@ test('history toolbar separates current-copy actions from question actions and k
   const click = async (node: HTMLButtonElement) => act(async () => node.click());
   try {
     await render(true);
-    assert.equal(dom.window.document.querySelectorAll('.question-reader-intro button').length, 0,
-      'the heading has no duplicate conversation or question actions');
+    assert.equal(dom.window.document.querySelectorAll('.question-reader-intro .question-prompt-actions').length, 1,
+      'question actions are rendered once in the record heading');
+    assert.equal(dom.window.document.querySelectorAll('.question-answer .question-prompt-actions').length, 0,
+      'answer actions do not repeat question actions');
     assert.equal(button('Copy original question').textContent, '', 'original-copy action uses an accessible icon');
     assert.equal(button('Copy original question').disabled, false);
     assert.equal(dom.window.document.querySelectorAll('.question-reader-actions').length, 1);
