@@ -15,7 +15,7 @@ async function until(win, expression) {
     await pause(30);
   }
 }
-const button = text => `[...document.querySelectorAll('button')].find(n=>n.textContent===${JSON.stringify(text)})`;
+const button = text => `[...document.querySelectorAll('button')].find(n=>(n.getAttribute('aria-label')||n.textContent)===${JSON.stringify(text)})`;
 async function click(win, expression) {
   win.focus(); win.webContents.focus(); await until(win, 'document.hasFocus()');
   const box = await win.webContents.executeJavaScript(`(()=>{const n=${expression}; if(!n)return null;
@@ -60,15 +60,14 @@ async function run(win, locale, width) {
   await until(win, `document.querySelector('.markdown-code [role="status"]').textContent===${JSON.stringify(labels.copied)}`);
   check(await clipboard.readText() === '\tconst x = "<script>";\n', 'system clipboard keeps tabs and trailing LF');
   const firstCopy = { input: lastInput, clipboard: await win.webContents.executeJavaScript('window.technicalClipboard') };
-  check(await win.webContents.executeJavaScript("!document.querySelector('script:not([src]),pre code span')"), 'source is plain and inert initially');
-  win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Tab' });
-  win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Tab' });
-  await until(win, `document.activeElement?.textContent===${JSON.stringify(labels.highlight)}`);
+  check(await win.webContents.executeJavaScript("!document.querySelector('script:not([src])') && !!document.querySelector('pre code .code-keyword')"), 'code is automatically highlighted and remains inert');
+  check(await win.webContents.executeJavaScript('document.querySelector("pre code").textContent===\'\\tconst x = "<script>";\''), 'highlight does not alter code');
+  await clipboard.writeText('before keyboard copy');
+  await until(win, `document.activeElement?.getAttribute('aria-label')===${JSON.stringify(labels.copy)}`);
   win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Space' });
   win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Space' });
-  await until(win, "document.querySelectorAll('pre code span').length>0");
-  check(await win.webContents.executeJavaScript('document.querySelector("pre code").textContent===\'\\tconst x = "<script>";\''), 'highlight does not alter code');
-  await click(win, button(labels.plain));
+  await until(win, `document.querySelector('.markdown-code [role="status"]').textContent===${JSON.stringify(labels.copied)}`);
+  check(await clipboard.readText() === '\tconst x = "<script>";\n', 'copy icon supports native keyboard activation');
   await value(win, '$$\n\\frac{1}{2}\n$$');
   check(await win.webContents.executeJavaScript("!document.querySelector('math')"), 'formula begins as source');
   await click(win, button(labels.preview));
@@ -94,7 +93,7 @@ async function run(win, locale, width) {
   await value(win, 'Price $5 and $10. Escaped \\$x\\$. Inline `$x$`.');
   check(await win.webContents.executeJavaScript("!document.querySelector('.markdown-math') && document.querySelector('p').textContent==='Price $5 and $10. Escaped $x$. Inline $x$.'"), 'currency and literal code are not formulas');
   await value(win, '```js\nconst x = 1;\n```\n\n$$\n\\frac{1}{2}\n$$');
-  await click(win, button(labels.highlight)); await click(win, button(labels.preview));
+  await click(win, button(labels.preview));
   await until(win, "document.querySelector('math mfrac')");
   check(await win.webContents.executeJavaScript('document.documentElement.scrollWidth<=innerWidth+1'), 'reading does not widen the window');
   writeFileSync(join(output, `${locale}-${width}.png`), (await win.webContents.capturePage()).toPNG());
@@ -124,7 +123,7 @@ app.whenReady().then(async () => {
       await observeClipboard(win);
       report.push(await run(win, locale, width));
     } catch (error) {
-      const diagnostics = await win.webContents.executeJavaScript("({codeNotice:document.querySelector('.markdown-code [role=\"status\"]')?.textContent??'',copyDisabled:document.querySelector('.markdown-code-actions button')?.disabled??null,clipboard:window.technicalClipboard??null,documentFocus:document.hasFocus(),notice:document.querySelector('.markdown-math [role=\"status\"]')?.textContent??'',sourceLength:document.querySelector('.markdown-math-source')?.textContent?.length??0,innerWidth,scrollWidth:document.documentElement.scrollWidth})").catch(() => ({}));
+      const diagnostics = await win.webContents.executeJavaScript("({codeNotice:document.querySelector('.markdown-code [role=\"status\"]')?.textContent??'',copyDisabled:document.querySelector('.markdown-code-actions button')?.getAttribute('aria-disabled')??null,clipboard:window.technicalClipboard??null,documentFocus:document.hasFocus(),notice:document.querySelector('.markdown-math [role=\"status\"]')?.textContent??'',sourceLength:document.querySelector('.markdown-math-source')?.textContent?.length??0,innerWidth,scrollWidth:document.documentElement.scrollWidth})").catch(() => ({}));
       diagnostics.lastInput = lastInput; diagnostics.windowFocus = win.isFocused(); diagnostics.webFocus = win.webContents.isFocused();
       writeFileSync(join(output, `${locale}-${width}-failed.png`), (await win.webContents.capturePage()).toPNG());
       report.push({ locale, width, ok: false, error: String(error), diagnostics });

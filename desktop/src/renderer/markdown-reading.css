@@ -1,5 +1,4 @@
 .markdown-preview { font-size: var(--font-reading, 15px); line-height: 1.8; overflow-wrap: anywhere; }
-.markdown-preview > :where(p, ul, ol, blockquote) { max-inline-size: 75ch; }
 .markdown-preview p { margin: 12px 0; white-space: pre-wrap; }
 .markdown-preview h3 { margin: 24px 0 10px; font-size: 20px; line-height: 1.5; }
 .markdown-preview h4 { margin: 20px 0 8px; font-size: 17px; line-height: 1.6; }

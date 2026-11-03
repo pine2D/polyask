@@ -1,5 +1,9 @@
 exports.checkReadingWorkspace = async ({ open, run, click, wait, shot, check, flows }) => {
   await open('history', 'zh-CN', 'light', 1280, 800);
+  const content = await run(`(() => { const p=document.querySelector('.markdown-preview > p').getBoundingClientRect(), table=document.querySelector('.markdown-table').getBoundingClientRect(), code=document.querySelector('.markdown-code').getBoundingClientRect();
+    return {paragraph:p.width,table:table.width,code:code.width,highlight:!!document.querySelector('.code-keyword'),copyIcon:!!document.querySelector('.markdown-code-actions button svg'),actions:document.querySelectorAll('.markdown-code-actions button').length}; })()`);
+  check(Math.abs(content.paragraph-content.table)<=1 && Math.abs(content.paragraph-content.code)<=1, 'reading: prose, tables and code share the same column width');
+  check(content.highlight && content.copyIcon && content.actions===1, 'reading: code highlights by default and uses one copy icon');
   const present = await run('!!document.querySelector(".question-browser") && document.querySelectorAll(".question-main").length > 1');
   check(present, 'history: reading keeps the real record list mounted');
   if (!present) return;
@@ -33,6 +37,9 @@ exports.checkReadingWorkspace = async ({ open, run, click, wait, shot, check, fl
   await click('.question-back');
   check(await run('!document.querySelector(".question-browser").hidden && !document.querySelector(".question-reader")'), 'history: narrow back returns to the real list');
   await open('library', 'zh-CN', 'light', 1280, 800);
+  const segment = await run(`(() => { const group=document.querySelector('.library-segments'), button=group.querySelector('button'); return {height:group.getBoundingClientRect().height,button:button.getBoundingClientRect().height,line:getComputedStyle(button).lineHeight}; })()`);
+  check(segment.height<=32 && segment.button>=28, 'library: kind tabs stay compact with usable pointer targets');
+  flows.push({readingPolish:{content,segment}});
   const library = await run(`(() => { const sidebar=document.querySelector('.folder-sidebar').getBoundingClientRect(), list=document.querySelector('.folder-content-list').getBoundingClientRect(), detail=document.querySelector('.folder-detail').getBoundingClientRect();
     return {sidebar:sidebar.width,list:list.width,detail:detail.width,folderButton:document.querySelector('.folder-back-navigation').getBoundingClientRect().width}; })()`);
   check(library.sidebar === 0 && library.list >= 240 && library.detail >= 900 && library.folderButton > 0, 'library: normal reading reserves space for the list and body, with folders still reachable');

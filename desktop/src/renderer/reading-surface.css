@@ -30,10 +30,10 @@
   padding: 3px 8px; border: 1px solid var(--border); border-radius: var(--radius-control);
   color: var(--text); background: var(--panel); font: 12px/1.5 var(--font-ui);
 }
-.reading-action:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--hover-soft); }
+.reading-action:hover:not(:disabled, [aria-disabled=true]) { color: var(--accent); border-color: var(--accent); background: var(--hover-soft); }
 .reading-action[aria-pressed=true] { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .reading-action:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.reading-action:disabled { color: var(--muted); opacity: .55; }
+.reading-action:is(:disabled, [aria-disabled=true]) { color: var(--muted); opacity: .55; }
 .reading-action svg { width: 16px; height: 16px; flex-shrink: 0; }
 .question-reader > .reading-page { min-height: 100%; }
 .question-reader-intro { margin-bottom: 16px; }
@@ -56,6 +56,6 @@
 }
 @media (forced-colors: active) {
   .reading-action { border-color: ButtonText; color: ButtonText; background: ButtonFace; }
-  .reading-action:disabled { color: GrayText; opacity: 1; }
+  .reading-action:is(:disabled, [aria-disabled=true]) { color: GrayText; opacity: 1; }
   .reading-action[aria-pressed=true], .reading-page .reading-source-list > :is([aria-current=location], [aria-pressed=true]) { border-color: Highlight; color: LinkText; background: Canvas; }
 }

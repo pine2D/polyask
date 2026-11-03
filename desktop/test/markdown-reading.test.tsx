@@ -82,7 +82,7 @@ test('long URL labels compact when capture encoded parentheses only in the desti
   assert.ok(html.includes(`href="${target}"`));
 });
 
-test('Mermaid fences expose preview controls and preserve source; ordinary code stays plain', () => {
+test('Mermaid fences expose preview controls and preserve source; ordinary code is not a diagram', () => {
   const source = 'flowchart LR\n  A --> B\n\n\n  B --> C';
   const html = render('```mermaid\n' + source + '\n```');
   assert.match(html, /class="mermaid-preview"/);

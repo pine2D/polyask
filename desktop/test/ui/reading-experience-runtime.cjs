@@ -36,7 +36,8 @@ app.whenReady().then(async () => {
       await paint(); return;
     }
     await wait(surface === 'library' ? '!!document.querySelector(".archive-detail h1")' : '!!document.querySelector(".question-main")');
-    if (surface === 'history') { await click('.question-main'); if (state !== 'failure') await wait('!!document.querySelector(".markdown-preview")'); }
+    if (surface === 'history') await click('.question-main');
+    if (state !== 'failure') await wait('!!document.querySelector(".markdown-preview .markdown-code")');
     await pause(100); boundary();
   };
   try {
@@ -51,11 +52,16 @@ app.whenReady().then(async () => {
           const page=document.querySelector('.reading-page'), scroller=page.closest('.question-reader,.archive-detail-pane');
           return { height:innerHeight, paragraphBottom:p.getBoundingClientRect().bottom, bodyTop:document.querySelector('.markdown-preview').getBoundingClientRect().top,
             columnWidth:page.clientWidth, overflow:scroller.scrollWidth-scroller.clientWidth,
+            paragraphWidth:p.getBoundingClientRect().width, tableWidth:document.querySelector('.markdown-table').getBoundingClientRect().width,
+            codeWidth:document.querySelector('.markdown-code').getBoundingClientRect().width,
+            segmentHeight:document.querySelector('.library-segments')?.getBoundingClientRect().height || 0,
             controls:buttons.slice(0,3).map(b=>{const s=getComputedStyle(b);return {border:s.borderTopStyle,radius:parseFloat(s.borderRadius),font:s.fontSize};}) };
         })()`);
         check(layout.paragraphBottom <= layout.height - 20, `${name}: first answer paragraph is pushed out of the first viewport`);
         check(layout.controls.every(b => b.border === 'solid' && b.radius >= 4 && b.font === '12px'), `${name}: reading controls fall back to browser styling`);
         check(layout.overflow <= 1, `${name}: reading page overflows horizontally`);
+        check(Math.abs(layout.paragraphWidth-layout.tableWidth)<=1 && Math.abs(layout.paragraphWidth-layout.codeWidth)<=1, `${name}: content column widths diverge`);
+        check(layout.segmentHeight <= 32, `${name}: kind tabs grow beyond compact height`);
         await shot(name + '-top');
         await run('document.querySelector(".markdown-code").scrollIntoView({block:"center"})'); await pause(60);
         const navigation = await run(`(() => {const r=document.querySelector('.reading-navigation').getBoundingClientRect();return {top:r.top,bottom:r.bottom,height:innerHeight};})()`);
@@ -67,14 +73,15 @@ app.whenReady().then(async () => {
     }
     for (const surface of ['library', 'history']) {
       await open(surface, 'zh-CN', 'light', 1280, 800);
-      await click('.markdown-code-actions button:first-child');
+      const codeHeight = await run('document.querySelector(".markdown-code").getBoundingClientRect().height');
+      await click('.markdown-code-actions button');
       check(await run('window.review.clipboard.at(-1)?.startsWith("const records")'), surface + ': code copy preserves source');
-      await run('window.review.failCopy=true'); await click('.markdown-code-actions button:first-child');
+      await run('window.review.failCopy=true'); await click('.markdown-code-actions button');
       check(await run('document.querySelector(".markdown-code [role=status]").textContent === window.review.copy.readingCopyFailed'), surface + ': failed copy remains retryable');
-      await run('window.review.failCopy=false'); await click('.markdown-code-actions button:first-child');
+      await run('window.review.failCopy=false'); await click('.markdown-code-actions button');
       check(await run('window.review.clipboard.length === 2'), surface + ': copy retry succeeds');
-      await click('.markdown-code-actions button:nth-child(2)');
-      check(await run('!!document.querySelector(".markdown-code .code-keyword")'), surface + ': code highlighting works');
+      check(Math.abs(await run('document.querySelector(".markdown-code").getBoundingClientRect().height')-codeHeight)<=1, surface + ': copy feedback does not shift the reading content');
+      check(await run('!!document.querySelector(".markdown-code .code-keyword")'), surface + ': code is highlighted without a separate action');
       await click('.markdown-math-actions button'); await wait('!!document.querySelector(".markdown-math math")');
       await shot(surface + '-reading-interactions');
       if (surface === 'history') {
@@ -84,7 +91,7 @@ app.whenReady().then(async () => {
         await click('.question-site-tabs button:first-child'); await wait('document.querySelector(".question-site-tabs button:first-child").ariaPressed === "true" && !!document.querySelector(".markdown-preview")');
         const restored = await run('document.querySelector(".question-reader").scrollTop');
         check(Math.abs(restored-position) <= 2, 'history: source return restores its independent reading position');
-        await run('document.querySelector(".markdown-code-actions button:first-child").focus()'); await key('Tab');
+        await run('document.querySelector(".markdown-code-actions button").focus()'); await key('Tab');
         check(await run('(() => {const a=document.activeElement.getBoundingClientRect(),n=document.querySelector(".reading-navigation").getBoundingClientRect();return a.top >= n.bottom-1 && a.bottom <= innerHeight;})()'), 'history: keyboard target stays below sticky navigation');
         flows.push({surface, position, restored});
       } else {
@@ -102,6 +109,7 @@ app.whenReady().then(async () => {
         check(await run('document.querySelector(".archive-answer-nav a:last-child").ariaCurrent === "location"'), 'library: returning from comparison restores the source');
         check(await run('document.activeElement === document.querySelector(".library-view-switch button:first-child")'), 'library: returning to reading retains mode-control focus');
         const readingAfter = await run('({scroll:document.querySelector(".archive-detail-pane").scrollTop,current:document.querySelector(".archive-answer-nav [aria-current]")?.getAttribute("href"),targetTop:document.querySelector("#archive-answer-8").getBoundingClientRect().top,navBottom:document.querySelector(".reading-navigation").getBoundingClientRect().bottom})');
+        check(Math.abs((readingAfter.targetTop-readingAfter.navBottom)-(readingBefore.targetTop-readingBefore.navBottom))<=3, 'library: returning restores the source position after transient content reflows');
         await shot('library-return-from-comparison'); flows.push({surface, widths, readingBefore, readingAfter});
       }
     }

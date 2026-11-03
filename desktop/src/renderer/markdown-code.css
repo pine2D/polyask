@@ -1,11 +1,12 @@
 .markdown-preview .markdown-code { margin: 1em 0; min-width: 0; }
-.markdown-code figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--panel); }
+.markdown-code figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--panel); }
 .markdown-code-language { font: 600 12px/1.5 var(--font-mono, monospace); overflow-wrap: anywhere; }
-.markdown-code-actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.markdown-code-actions button { min-height: 28px; min-width: 28px; padding: 3px 8px; font-size: 12px; }
+.markdown-code-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.markdown-code-actions button { width: 28px; height: 28px; min-height: 28px; min-width: 28px; padding: 0; font-size: 12px; }
 .markdown-preview .markdown-code pre { margin: 0; border-radius: 0 0 8px 8px; }
-.markdown-code-notice, .markdown-code > [role="status"] { display: block; margin: 5px 0 0; font-size: 12px; line-height: 1.5; }
-.markdown-code > [role="status"]:empty { display: none; }
+.markdown-code-notice { display: block; margin: 5px 0 0; font-size: 12px; line-height: 1.5; }
+.markdown-code-actions > [role="status"] { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.markdown-code-actions > [role="status"]:empty { display: none; }
 .markdown-code .code-keyword { color: #6946ae; font-weight: 600; }
 .markdown-code .code-string { color: #176544; }
 .markdown-code .code-number { color: #98400f; }

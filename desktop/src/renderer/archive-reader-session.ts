@@ -15,6 +15,8 @@ export interface ArchiveReaderState {
   readonly rightHost: string;
   readonly differencesOnly: boolean;
   readonly readScroll: number;
+  /** 阅读/对比往返时按回答定位，允许公式等临时排版改变前方高度。 */
+  readonly readAnchor?: { readonly id: string; readonly offset: number } | null;
   readonly comparisonScroll: number;
   readonly pendingSynthesisKey: string | null;
   readonly leftScroll: number;

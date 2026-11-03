@@ -13,8 +13,8 @@ function setValue(value: string) {
   </main></StrictMode>);
 }
 (window as any).technicalReading = {
-  setValue, labels: { copy: copy.readingCopyCode, copied: copy.readingCodeCopied, highlight: copy.readingHighlight,
-    plain: copy.readingPlainCode, preview: copy.readingFormulaPreview, source: copy.readingFormulaSource,
+  setValue, labels: { copy: copy.readingCopyCode, copied: copy.readingCodeCopied,
+    preview: copy.readingFormulaPreview, source: copy.readingFormulaSource,
     failed: copy.readingFormulaFailed, limit: copy.readingFormulaLimit, unsupported: copy.readingFormulaUnsupported }
 };
 setValue('```js\n\tconst x = "<script>";\n```');

@@ -1,20 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getCopy } from '../shared/copy';
-import { CODE_HIGHLIGHT_LIMIT, highlightCode, supportsCodeHighlight, type CodePart } from './code-highlight';
+import { highlightCode, supportsCodeHighlight } from './code-highlight';
+import { CopyIcon } from './icons';
 import { ReadingAction } from './reading-controls';
 
 export function MarkdownCode({ source, language }: { readonly source: string; readonly language: string }): React.JSX.Element {
   const copy = getCopy(typeof document === 'undefined' ? 'en' : document.documentElement.lang);
-  const [highlight, setHighlight] = useState<readonly CodePart[] | null>(null);
-  const [limited, setLimited] = useState(false);
   const [copying, setCopying] = useState(false);
   const [notice, setNotice] = useState<{ source: string; language: string; kind: 'pending' | 'copied' | 'failed' } | null>(null);
   const alive = useRef(true), pending = useRef(false), revision = useRef(0), current = useRef({ source, language });
   current.current = { source, language };
   useEffect(() => { alive.current = true; return () => { alive.current = false; revision.current++; }; }, []);
-  useEffect(() => { setHighlight(null); setLimited(false); }, [source, language]);
   const display = source.replace(/\n$/, '');
-  const supported = supportsCodeHighlight(language), overLimit = source.length > CODE_HIGHLIGHT_LIMIT;
+  const highlight = useMemo(() => highlightCode(display, language), [display, language]);
+  const supported = supportsCodeHighlight(language);
   const currentNotice = notice?.source === source && notice.language === language ? notice : null;
   const copyCode = async () => {
     if (pending.current) return;
@@ -32,14 +31,10 @@ export function MarkdownCode({ source, language }: { readonly source: string; re
   const message = currentNotice?.kind === 'copied' ? copy.readingCodeCopied : currentNotice?.kind === 'failed' ? copy.readingCopyFailed : '';
   return <figure className="markdown-code">
     <figcaption><span className="markdown-code-language">{language || copy.readingCode}</span><div className="markdown-code-actions">
-      <ReadingAction disabled={copying} onClick={() => void copyCode()}>{copy.readingCopyCode}</ReadingAction>
-      <ReadingAction disabled={!supported || overLimit || limited} aria-pressed={highlight !== null} onClick={() => {
-        if (highlight) { setHighlight(null); return; }
-        const parts = highlightCode(display, language); setHighlight(parts); setLimited(parts === null);
-      }}>{highlight ? copy.readingPlainCode : copy.readingHighlight}</ReadingAction>
+      <span role="status" aria-live="polite">{message}</span>
+      <ReadingAction aria-disabled={copying} aria-busy={copying} aria-label={copy.readingCopyCode} title={copy.readingCopyCode} onClick={() => void copyCode()}><CopyIcon /></ReadingAction>
     </div></figcaption>
     <pre><code>{highlight ? highlight.map((part, index) => <span key={index} className={`code-${part.kind}`}>{part.text}</span>) : display}</code></pre>
-    {(!supported || overLimit || limited) && <p className="markdown-code-notice">{!supported ? copy.readingHighlightUnsupported : copy.readingHighlightLimit}</p>}
-    <span role="status" aria-live="polite">{message}</span>
+    {(highlight === null) && <p className="markdown-code-notice">{!supported ? copy.readingHighlightUnsupported : copy.readingHighlightLimit}</p>}
   </figure>;
 }

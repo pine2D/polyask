@@ -31,11 +31,14 @@ test('copy is single-flight and a failure offers an explicit retry', async () =>
   } });
   try {
     const copy = technicalButton(h.document, 'Copy code');
+    copy.focus();
     await h.click(copy); await h.click(copy);
     assert.equal(attempts, 1);
-    assert.equal(copy.disabled, true);
+    assert.equal(copy.getAttribute('aria-disabled'), 'true');
+    assert.equal(h.document.activeElement === copy, true, 'pending copy retains keyboard focus');
     await act(async () => reject(Error('denied')));
-    assert.equal(copy.disabled, false);
+    assert.equal(copy.getAttribute('aria-disabled'), 'false');
+    assert.equal(h.document.activeElement === copy, true, 'a failure retains the retry target');
     assert.equal(h.document.querySelector('[role="status"]')?.textContent?.includes('Could not copy') === true, true);
     await h.click(copy);
     assert.equal(attempts, 2);
@@ -43,16 +46,16 @@ test('copy is single-flight and a failure offers an explicit retry', async () =>
   } finally { await h.close(); }
 });
 
-test('syntax coloring begins only on request and leaves code text unchanged', async () => {
+test('syntax coloring is automatic, inert and offers only an accessible copy icon', async () => {
   const h = await mountTechnical('```js\nconst x = "<b>"; // note\n```');
   try {
-    assert.equal(h.document.querySelectorAll('pre code span').length, 0);
-    await h.click(technicalButton(h.document, 'Highlight syntax'));
+    assert.equal(h.document.querySelectorAll('.markdown-code-actions button').length, 1);
+    const copy = technicalButton(h.document, 'Copy code');
+    assert.equal(copy.querySelector('svg') !== null, true);
+    assert.equal(copy.textContent, '');
     assert.equal(h.document.querySelectorAll('pre code span').length > 0, true);
     assert.equal(h.document.querySelector('pre code')?.textContent, 'const x = "<b>"; // note');
     assert.equal(h.document.querySelector('pre b') === null, true);
-    await h.click(technicalButton(h.document, 'Plain code'));
-    assert.equal(h.document.querySelectorAll('pre code span').length, 0);
   } finally { await h.close(); }
 });
 
@@ -61,7 +64,7 @@ test('unknown language keeps plain code and still copies the complete source', a
   const h = await mountTechnical('```future-language\nkeep **literal**\n```', { clipboard: async text => { copied.push(text); } });
   try {
     assert.equal(h.document.querySelector('.markdown-code-language')?.textContent, 'future-language');
-    assert.equal([...h.document.querySelectorAll('button')].some(node => node.textContent === 'Highlight syntax' && !node.disabled), false);
+    assert.equal(h.document.querySelectorAll('pre code span').length, 0);
     await h.click(technicalButton(h.document, 'Copy code'));
     assert.deepEqual(copied, ['keep **literal**\n']);
     assert.equal(h.document.querySelector('pre strong') === null, true);
@@ -72,10 +75,9 @@ test('new code replaces highlighted text and copying uses the latest source', as
   const copied: string[] = [];
   const h = await mountTechnical('```js\nconst old = 1;\n```', { clipboard: async text => { copied.push(text); } });
   try {
-    await h.click(technicalButton(h.document, 'Highlight syntax'));
     await h.render(<MarkdownPreview value={'```js\nconst current = 2;\n```'} />);
     assert.equal(h.document.querySelector('pre code')?.textContent, 'const current = 2;');
-    assert.equal(h.document.querySelectorAll('pre code span').length, 0);
+    assert.equal(h.document.querySelector('.code-keyword')?.textContent, 'const');
     await h.click(technicalButton(h.document, 'Copy code'));
     assert.deepEqual(copied, ['const current = 2;\n']);
   } finally { await h.close(); }
@@ -90,10 +92,23 @@ test('a late clipboard settlement cannot show copied feedback for replacement co
   try {
     await h.click(technicalButton(h.document, 'Copy code'));
     await h.render(<MarkdownPreview value={'```js\nconst next = 2;\n```'} />);
-    assert.equal(technicalButton(h.document, 'Copy code').disabled, true);
+    assert.equal(technicalButton(h.document, 'Copy code').getAttribute('aria-disabled'), 'true');
     await act(async () => finish());
     assert.equal(h.document.querySelector('[role="status"]')?.textContent, '');
     await h.click(technicalButton(h.document, 'Copy code'));
     assert.deepEqual(copied, ['const old = 1;\n', 'const next = 2;\n']);
   } finally { await h.close(); }
 });
+
+for (const source of ['x'.repeat(32_769), 'const x=1;\n'.repeat(501)]) {
+  test('automatic highlighting keeps oversized code plain and completely copyable: ' + source.length, async () => {
+    const copied: string[] = [];
+    const h = await mountTechnical('```js\n' + source + '\n```', { clipboard: async text => { copied.push(text); } });
+    try {
+      assert.equal(h.document.querySelectorAll('pre code span').length, 0);
+      assert.equal(h.document.querySelector('pre code')?.textContent, source);
+      await h.click(technicalButton(h.document, 'Copy code'));
+      assert.equal(copied[0], source + '\n');
+    } finally { await h.close(); }
+  });
+}

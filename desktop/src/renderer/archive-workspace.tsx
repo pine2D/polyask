@@ -84,15 +84,29 @@ export function ArchiveWorkspace(props: ArchiveWorkspaceProps): React.JSX.Elemen
   const pane = useRef<HTMLElement>(null);
   const editorReturnScroll = useRef<number | null>(null);
   const rememberEditorScroll = () => { editorReturnScroll.current = pane.current?.scrollTop ?? null; };
-  const capture = () => {
-    if (!pane.current) return {};
-    return props.detailOverride || reader.state.view === 'synthesis' ? { synthesisScroll: pane.current.scrollTop }
-      : reader.state.view === 'read' ? { readScroll: pane.current.scrollTop } : { comparisonScroll: pane.current.scrollTop };
+  const capture = (withAnchor = false) => {
+    const node = pane.current;
+    if (!node) return {};
+    if (props.detailOverride || reader.state.view === 'synthesis') return { synthesisScroll: node.scrollTop };
+    if (reader.state.view !== 'read') return { comparisonScroll: node.scrollTop };
+    if (!withAnchor) return { readScroll: node.scrollTop };
+    const nav = node.querySelector<HTMLElement>('.reading-navigation');
+    const boundary = nav?.getBoundingClientRect().bottom;
+    const source = node.clientHeight > 0 && node.scrollTop > 0 && boundary !== undefined
+      ? [...node.querySelectorAll<HTMLElement>('.archive-answer')].filter(answer => answer.getBoundingClientRect().top <= boundary + 8).at(-1) : null;
+    return { readScroll: node.scrollTop, readAnchor: source && boundary !== undefined
+      ? { id: source.id, offset: source.getBoundingClientRect().top - boundary } : null };
   };
-  const change: ArchiveReaderBinding['change'] = patch => reader.change({ ...('view' in patch ? capture() : {}), ...patch });
+  const change: ArchiveReaderBinding['change'] = patch => reader.change({ ...('view' in patch ? capture(true) : {}), ...patch });
   useLayoutEffect(() => {
-    if (pane.current) pane.current.scrollTop = props.detailOverride || reader.state.view === 'synthesis' ? reader.state.synthesisScroll
+    const node = pane.current;
+    if (!node) return;
+    node.scrollTop = props.detailOverride || reader.state.view === 'synthesis' ? reader.state.synthesisScroll
       : reader.state.view === 'read' ? reader.state.readScroll : reader.state.comparisonScroll;
+    if (props.detailOverride || reader.state.view !== 'read' || !reader.state.readAnchor || node.clientHeight <= 0) return;
+    const anchor = reader.state.readAnchor, nav = node.querySelector<HTMLElement>('.reading-navigation');
+    const source = [...node.querySelectorAll<HTMLElement>('.archive-answer')].find(answer => answer.id === anchor.id);
+    if (source && nav) node.scrollTop += source.getBoundingClientRect().top - nav.getBoundingClientRect().bottom - anchor.offset;
   }, [reader.state.archiveId, reader.state.view, !!props.detailOverride]);
   const editorWasOpen = useRef(false);
   useLayoutEffect(() => {

@@ -1,7 +1,7 @@
 export const READING_COPY = {
   en: {
     readingTable: 'Table {count}', readingContextTable: '{context}, table {count}', readingContextParagraph: '{context}, paragraph {count}',
-    readingCode: 'Code', readingCopyCode: 'Copy code', readingCodeCopied: 'Code copied.', readingHighlight: 'Highlight syntax', readingPlainCode: 'Plain code',
+    readingCode: 'Code', readingCopyCode: 'Copy code', readingCodeCopied: 'Code copied.',
     readingHighlightLimit: 'This code exceeds the highlighting limit. Plain code is shown.', readingHighlightUnsupported: 'Syntax highlighting is unavailable for this language.',
     readingFormula: 'Formula', readingFormulaPreview: 'Preview formula', readingFormulaSource: 'Formula source', readingFormulaLoading: 'Previewing formula…',
     readingFormulaFailed: 'Could not render this formula. Its original source is shown.', readingFormulaLimit: 'This formula exceeds the preview limit. Its original source is shown.',
@@ -17,7 +17,7 @@ export const READING_COPY = {
   },
   zhCN: {
     readingTable: '表格 {count}', readingContextTable: '{context}，表格 {count}', readingContextParagraph: '{context}，段落 {count}',
-    readingCode: '代码', readingCopyCode: '复制代码', readingCodeCopied: '代码已复制。', readingHighlight: '语法高亮', readingPlainCode: '普通代码',
+    readingCode: '代码', readingCopyCode: '复制代码', readingCodeCopied: '代码已复制。',
     readingHighlightLimit: '代码超过高亮限额，已显示普通代码。', readingHighlightUnsupported: '此语言暂不支持语法高亮。',
     readingFormula: '公式', readingFormulaPreview: '预览公式', readingFormulaSource: '公式源码', readingFormulaLoading: '正在预览公式…',
     readingFormulaFailed: '公式无法预览，已显示原始源码。', readingFormulaLimit: '公式超过预览限额，已显示原始源码。',
@@ -32,7 +32,7 @@ export const READING_COPY = {
   },
   zhTW: {
     readingTable: '表格 {count}', readingContextTable: '{context}，表格 {count}', readingContextParagraph: '{context}，段落 {count}',
-    readingCode: '程式碼', readingCopyCode: '複製程式碼', readingCodeCopied: '程式碼已複製。', readingHighlight: '語法醒目提示', readingPlainCode: '一般程式碼',
+    readingCode: '程式碼', readingCopyCode: '複製程式碼', readingCodeCopied: '程式碼已複製。',
     readingHighlightLimit: '程式碼超過醒目提示限額，已顯示一般程式碼。', readingHighlightUnsupported: '此語言暫不支援語法醒目提示。',
     readingFormula: '公式', readingFormulaPreview: '預覽公式', readingFormulaSource: '公式原始碼', readingFormulaLoading: '正在預覽公式…',
     readingFormulaFailed: '公式無法預覽，已顯示原始碼。', readingFormulaLimit: '公式超過預覽限額，已顯示原始碼。',

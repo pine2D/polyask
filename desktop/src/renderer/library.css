@@ -21,8 +21,8 @@
 .library .folder-content-list { min-width: 0; background: color-mix(in srgb, var(--panel) 95%, var(--muted)); }
 .library .folder-filters { display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 8px; flex: 0 0 auto; }
 .library .folder-filters > input { min-height: 36px; font-size: 14px; background: var(--panel); }
-.library-segments { display: flex; padding: 3px; gap: 2px; border-radius: 8px; background: color-mix(in srgb, var(--panel) 89%, var(--muted)); }
-.library .library-segments button { flex: 1; min-width: 0; min-height: var(--library-control); padding: 6px 4px; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 13px; }
+.library-segments { display: flex; padding: 2px; gap: 2px; border-radius: 6px; background: color-mix(in srgb, var(--panel) 89%, var(--muted)); }
+.library .library-segments button { flex: 1; min-width: 0; height: 28px; min-height: 28px; padding: 4px; line-height: 20px; white-space: nowrap; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 13px; }
 .library .library-segments button[aria-pressed=true] { color: var(--accent); background: var(--panel); box-shadow: 0 1px 3px #00000012; font-weight: 600; }
 .library-filter-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .library .library-filter-row > .library-select { flex: 1 1 180px; min-width: 0; }
