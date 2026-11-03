@@ -84,6 +84,7 @@ async function run() {
     check(hostEscapes === 0, 'IME Escape must not propagate to host cancellation');
   } else if (scenario === 'pages') {
     await click('.question-load-more'); check(cards().length === 100, 'second page loads');
+    check(document.querySelector('[data-question-id="q75"] .question-saved') !== null, 'incomplete answer is visible past page one');
     const scroller = document.querySelector<HTMLElement>('.question-scroll')!;
     scroller.scrollTop = 900; const scroll = scroller.scrollTop;
     rows = [{ ...rows[0], id: 'new', text: 'New question', createdAt: 2000 }, ...rows.filter(q => q.id !== 'q60').map(q => q.id === 'q75' ? { ...q, savedSites: 1 } : q)];
@@ -91,7 +92,7 @@ async function run() {
     check(document.querySelector('.question-title')?.textContent === 'New question', 'loaded pages must keep receiving new questions');
     check(!document.querySelector('[data-question-id="q60"]'), 'deleted records disappear from loaded pages');
     check(document.querySelector('[data-question-id="q99"]'), 'refresh must retain the loaded tail');
-    check(document.querySelector('[data-question-id="q75"] .question-saved')?.textContent?.includes('1'), 'saved answer progress refreshes past page one');
+    check(document.querySelector('[data-question-id="q75"]') !== null && !document.querySelector('[data-question-id="q75"] .question-saved'), 'completed answer clears the attention state past page one');
     check(scroller.scrollTop >= scroll, 'refresh must not reset scroll to top');
   } else if (scenario === 'slow-list') {
     delay = true; await tick(); await tick(); await tick();

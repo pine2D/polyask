@@ -309,7 +309,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
         onLoaded={() => selection.loaded(page.items)} onClear={selection.clear} onExport={() => markdown.open(selection.ids.map(id => ({ kind: 'history', id })))} />}
       <div ref={scroll} className="question-scroll" tabIndex={0} role="region" aria-label={copy.questionHistory} aria-busy={loading}>
         {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}
-        <QuestionHistoryList currentId={detailView?.questionId} selecting={selection.selecting} selectedIds={selection.ids} onToggle={selection.toggle} onExport={id => markdown.open([{ kind: 'history', id }])} items={page.items} sites={sites} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
+        <QuestionHistoryList currentId={detailView?.questionId} selecting={selection.selecting} selectedIds={selection.ids} onToggle={selection.toggle} onExport={id => markdown.open([{ kind: 'history', id }])} items={page.items} locale={locale} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
         {page.cursor && <button type="button" className="question-load-more" disabled={loading} onClick={() => { void load(page.cursor!); }}>{copy.questionMore}</button>}
         <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={text => reaskFlow.start({ text, imageCount: 0 })} />
       </div>

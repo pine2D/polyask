@@ -34,7 +34,7 @@ test('a shrinking last page is clamped without dropping the remaining result', a
     assert.equal(h.document.querySelector('.library-item-title')?.textContent, 'Result 0100');
     await h.render(<ContentListHost items={archiveItems(100)} page={9} />);
     assert.equal(h.document.querySelectorAll('.library-item-title').length, 100);
-    assert.equal(h.document.querySelector('[name="library-page"]')?.textContent?.includes('1 / 1'), true);
+    assert.equal(h.document.querySelector('.library-pagination') === null, true, 'a single page needs no pager');
   } finally { await h.close(); }
 });
 

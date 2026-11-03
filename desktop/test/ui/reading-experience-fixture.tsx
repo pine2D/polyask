@@ -6,6 +6,7 @@ import { FeedbackProvider } from '../../src/renderer/feedback-provider';
 import { setShellApi } from '../../src/renderer/shell-api';
 import { getCopy } from '../../src/shared/copy';
 import { createArchiveRecord } from '../../src/shared/archive';
+import type { FolderFilters } from '../../src/shared/task-folder';
 import { SITES } from '../../src/main/sites';
 import { withFolderPages } from './library-page-api';
 import '../../src/renderer/styles.css';
@@ -42,7 +43,7 @@ const body = [
 ].join('\n\n');
 const now = 1793538000000;
 let archives = Array.from({length: 8}, (_, i) => createArchiveRecord({task: i ? ['团队文档的分类与命名约定', '比较本地与云端检索方案', '知识库更新与责任分工'][i % 3] : prompt,
-  text: prompt, results: SITES.map((s, n) => ({host: s.host, label: s.label, text: body + (n ? '\n\n本来源补充：关注迁移与导出能力。' : ''), state: 'think'})), tags: ['知识管理'], note: '', favorite: i === 0}, {id: `r${i}`, now: now - i * 86400000, deviceId: 'synthetic-review'}));
+  text: prompt, results: SITES.map((s, n) => ({host: s.host, label: s.label, text: body + (n ? '\n\n本来源补充：关注迁移与导出能力。' : ''), state: 'think'})), tags: ['知识管理'], note: '', favorite: i === 0}, {id: `r${i}`, now: now - i * 86400000, deviceId: 'synthetic-review'})).map((record, i) => ({...record, favorite: i === 0, tags: ['知识管理']}));
 const rows = archives.map((record, i) => ({schema: 4, id: `q${i}`, text: record.task, sites: SITES.map(s => s.key), requestedTier: null,
   inputImageCount: 0, createdAt: now - i * 86400000, updatedAt: now, deviceId: 'synthetic-review', savedSites: 9, answers: []}));
 function detail(id: string, selected?: string) {
@@ -55,12 +56,14 @@ function detail(id: string, selected?: string) {
 }
 setShellApi(withFolderPages({
   setQuestionPanel: async () => {}, setSurface: async () => {}, onQuestionSaveFailed: () => () => {},
-  listLegacyQuestions: async () => ({items: [], cursor: null}), listQuestions: async () => ({items: query.get('state') === 'empty' ? [] : rows, cursor: null}),
+  listLegacyQuestions: async () => ({items: [], cursor: null}), listQuestions: async ({query: text = ''}: {query?: string}) => ({items: query.get('state') === 'empty' ? [] : rows.filter(q => q.text.includes(text)), cursor: null}),
   getQuestion: async (id: string, selected?: string) => {
     if (id === review.holdRead) await new Promise<void>(resolve => { review.releaseRead = resolve; });
     if (review.failRead) throw Error('synthetic_read_failure'); return detail(id, selected); },
   listFolders: async () => [{schema: 3, id: 'work', name: '团队研究', createdAt: now, updatedAt: now, deviceId: 'synthetic-review'}],
-  listArchiveTags: async () => ['知识管理'], searchFolderContents: async () => query.get('state') === 'empty' ? [] : archives.map(record => ({kind: 'archive', record})),
+  listArchiveTags: async () => ['知识管理'], searchFolderContents: async (filters: FolderFilters) => query.get('state') === 'empty' || filters.kind === 'decision' || filters.status || filters.folderId === 'work' ? []
+    : archives.filter(record => (!filters.query || record.task.toLocaleLowerCase().includes(filters.query.toLocaleLowerCase()))
+      && (!filters.favorite || record.favorite) && (!filters.tag || record.tags.includes(filters.tag))).map(record => ({kind: 'archive', record})),
   getArchive: async (id: string) => archives.find(r => r.id === id), folderMemberships: async () => [],
   updateArchive: async (id: string, patch: any) => { archives = archives.map(r => r.id === id ? {...r, ...patch} : r); return archives.find(r => r.id === id); },
   openExternal: async () => {}, previewMarkdown: async () => { throw Error('synthetic_export_unavailable'); }

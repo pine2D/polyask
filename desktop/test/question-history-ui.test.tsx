@@ -23,7 +23,7 @@ test('the two history copy actions show their object names without opening a too
 });
 test('history separates restore, copies and menu buttons and never renders raw markup', () => {
   const q = questionFixture();
-  const html = renderToStaticMarkup(<QuestionHistoryList copy={copy} sites={[]} busy={false}
+  const html = renderToStaticMarkup(<QuestionHistoryList copy={copy} locale="zh-CN" busy={false}
     items={[{ ...q, text: '<script>test</script>', savedSites: 1, answers: [answerFixture(q.id)] }]}
     onRestore={noop} onRead={noop} onReask={noop} onDelete={noop} />);
   assert.ok(html.includes('&lt;script&gt;'));
@@ -62,8 +62,25 @@ test('reusing history warns about replacing attachments even when draft text is 
   assert.match(questionReaskWarning('same', 1, 'same', 0, copy), /移除当前草稿中的附件/);
   assert.match(questionReaskWarning('', 0, 'image question', 4, copy), /4 张图片.*原图是否可用/);
   const q = { ...questionFixture(), inputImageCount: 4, savedSites: 0, answers: [] };
-  const html = renderToStaticMarkup(<QuestionHistoryList copy={copy} sites={[]} busy={false} items={[q]}
+  const html = renderToStaticMarkup(<QuestionHistoryList copy={copy} locale="zh-CN" busy={false} items={[q]}
     onRestore={noop} onRead={noop} onReask={noop} onDelete={noop} />);
   assert.match(html, /4 张图片/);
   assert.equal(html.includes('不保存或同步原图'), false);
+});
+
+test('history prioritizes titles and dates while surfacing incomplete captures and image requests', async () => {
+  const base = questionFixture(), answer = { ...questionAnswerFixture(base.id), capture: 'complete' as const };
+  const row = { ...base, createdAt: new Date(1970, 9, 1).getTime(), savedSites: base.sites.length, answers: [answer] };
+  const render = (item = row) => <QuestionHistoryList copy={copy} locale="zh-CN" busy={false} items={[item]}
+    onRestore={noop} onRead={noop} onReask={noop} onDelete={noop} />;
+  const h = await mountDom(render());
+  try {
+    assert.equal(h.document.querySelector('.question-saved') === null, true, 'complete captures do not repeat a saved fraction');
+    assert.equal(h.document.querySelector('.question-meta time')?.textContent, '1970年10月1日');
+    assert.equal(h.document.querySelector('.question-restore')?.closest('details') !== null, true, 'restore remains explicitly reachable in the menu');
+    await h.render(render({ ...row, savedSites: 0, inputImageCount: 2 }));
+    assert.equal(h.document.querySelector('.question-saved')?.textContent?.includes('0/'), true);
+    assert.equal(h.document.querySelector('.question-images')?.textContent?.includes('2'), true);
+    assert.equal(h.document.querySelector('.question-main')?.getAttribute('aria-describedby'), `question-meta-${row.id}`);
+  } finally { await h.close(); }
 });

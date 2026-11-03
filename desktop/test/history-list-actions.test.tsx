@@ -18,7 +18,7 @@ for (const busy of [false, true]) {
     test(`history card reads a copy without navigation: busy=${busy}, address=${hasUrl}`, () => {
       const question = questionFixture();
       const actions: string[] = [];
-      const tree = QuestionHistoryList({ copy: getCopy('zh-CN'), sites: [], busy,
+      const tree = QuestionHistoryList({ copy: getCopy('zh-CN'), locale: 'zh-CN', busy,
         items: [{ ...question, savedSites: 1, answers: [{ ...questionAnswerFixture(question.id), conversationUrl: hasUrl ? 'https://claude.ai/chat/test' : null }] }],
         onRead: () => actions.push('read'), onRestore: () => actions.push('restore'), onReask: () => actions.push('reask'), onDelete: () => actions.push('delete') });
       const nodes = elements(tree);

@@ -109,16 +109,16 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
         : current.items.map(item => {
           const key = `${item.kind}:${item.record.id}`;
           return <LibraryContentRow key={key} item={item} copy={copy} labels={labels} locale={locale}
-            current={selectedKey === key} checked={checkedKeys.has(key)} disabled={unavailable}
+            showKind={!filters.kind} sort={sort} current={selectedKey === key} checked={checkedKeys.has(key)} disabled={unavailable}
             onCheck={() => setKeys(toggleLibrarySelection(keys, key))} onOpen={() => onSelect(item)} />;
         })}
     </div>
-    <nav className="library-pagination" aria-label={labels.page}>
+    {current.pageCount > 1 && <nav className="library-pagination" aria-label={labels.page}>
       <span>{formatCopy(labels.range, { start: current.start, end: current.end, total: current.total })}</span>
       <div><button type="button" data-action="library-previous-page" aria-label={labels.previous} disabled={unavailable || !items.length || current.page === 0} onClick={() => setPage(current.page - 1)}>‹</button>
         <LibrarySelect name="library-page" label={labels.page} value={String(current.page)} disabled={unavailable || !items.length}
           options={Array.from({ length: current.pageCount }, (_, index) => ({ value: String(index), label: `${index + 1} / ${current.pageCount}` }))} onChange={value => setPage(Number(value))} />
         <button type="button" data-action="library-next-page" aria-label={labels.next} disabled={unavailable || !items.length || current.page + 1 >= current.pageCount} onClick={() => setPage(current.page + 1)}>›</button></div>
-    </nav>
+    </nav>}
   </section>;
 }

@@ -7,6 +7,9 @@ exports.checkReadingWorkspace = async ({ open, run, click, wait, shot, check, fl
   const present = await run('!!document.querySelector(".question-browser") && document.querySelectorAll(".question-main").length > 1');
   check(present, 'history: reading keeps the real record list mounted');
   if (!present) return;
+  await click('[data-question-id="q0"] .question-menu summary');
+  check(await run('document.querySelector("[data-question-id=q0] .question-menu").open && document.querySelector("[data-question-id=q0] .question-restore").getAttribute("aria-disabled") === "true"'), 'history: restore stays reachable in the row menu and explains missing conversation links');
+  await click('[data-question-id="q0"] .question-menu summary');
   const geometry = await run(`(() => { const list=document.querySelector('.question-browser').getBoundingClientRect(), reader=document.querySelector('.question-reader').getBoundingClientRect();
     return {width:list.width, right:list.right, readerLeft:reader.left, current:document.querySelector('.question-main[aria-current=true]')?.closest('[data-question-id]').dataset.questionId}; })()`);
   check(geometry.width >= 240 && geometry.width <= 320 && geometry.readerLeft >= geometry.right - 1 && geometry.current === 'q0', 'history: selected record and reader form a usable split view');
@@ -47,5 +50,9 @@ exports.checkReadingWorkspace = async ({ open, run, click, wait, shot, check, fl
   await click('.library-multi-toggle');
   check(await run('document.querySelector(".library-row-check").getBoundingClientRect().width >= 24'), 'library: multi-select exposes the existing checkboxes');
   await click('.library-multi-toggle');
+  const rows = await run(`(() => { const list=document.querySelector('.archive-list'), box=list.getBoundingClientRect(), items=[...list.querySelectorAll('.library-content-row')];
+    return {viewport:box.height,heights:items.map(item=>item.getBoundingClientRect().height),visible:items.filter(item=>{const r=item.getBoundingClientRect();return r.top>=box.top && r.bottom<=box.bottom+1}).length,sources:!!list.querySelector('.library-item-sources'),pagination:!!document.querySelector('.library-pagination')}; })()`);
+  flows.push({listDensity:rows});
+  check(rows.visible >= 8 && rows.heights.every(height => height <= 82) && !rows.sources && !rows.pagination, 'library: eight records fit without redundant sources or single-page navigation');
   await shot('workspace-library'); flows.push({ workspace: true, geometry, library });
 };
