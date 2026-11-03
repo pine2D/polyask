@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.29.0] - 2026-11-03
+
+验收范围：Linux/WSL 下通过 2,606 项应用测试、545 项运行时测试、类型检查、依赖审计、仓库门禁、Linux 打包及包内九站检查；顶部即时切档在 8 个已就绪站点通过实测，Gemini 另完成 Argon Low/High 四轮切换及菜单选中态复读，输入框内容保持不变。
+
+验收限制：本轮智谱页面未就绪，其即时切档实测未完成；未验证真实发送与生成链路、五种发行包的实际安装及 Windows/macOS 实机操作。
+
 ### 改进
 
 - 点击顶部“快速／思考”会立即切换参与提问的 AI 站点，并提示未确认的站点；发送问题前仍逐站检查档位。“跟随站点”保留各站当前设置。
@@ -1625,7 +1631,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.28.3...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.29.0...HEAD
+[1.29.0]: https://github.com/pine2D/polyask/compare/v1.28.3...v1.29.0
 [1.28.3]: https://github.com/pine2D/polyask/compare/v1.28.2...v1.28.3
 [1.28.2]: https://github.com/pine2D/polyask/compare/v1.28.1...v1.28.2
 [1.28.1]: https://github.com/pine2D/polyask/compare/v1.28.0...v1.28.1
