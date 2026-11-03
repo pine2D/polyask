@@ -34,7 +34,7 @@ export class SiteCommandChannel {
     const remaining = Math.max(0, command.deadline - Date.now());
     if (remaining === 0) return Promise.resolve(options.timeoutResult);
     if (options.signal?.aborted) return Promise.resolve({ ok: false, code: "cancelled" });
-    if (command.cmd === "submitPrompt") beforeSiteSubmit(contents.id);
+    if (command.cmd === "submitPrompt" || command.cmd === "setTier") beforeSiteSubmit(contents.id);
     const requestId = randomUUID();
     return new Promise((resolve) => {
       const finish = (result: SiteCommandResponse) => {

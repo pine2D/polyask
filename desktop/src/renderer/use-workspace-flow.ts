@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 
 import type { SiteDefinition, SiteKey } from "../shared/contracts";
-import type { Tier } from "../shared/protocol";
+import type { SiteRunResult, Tier } from "../shared/protocol";
 import type { WorkspaceState } from "../shared/workspace";
 import { compareSyncVersion } from '../shared/sync';
 import { shell } from "./shell-api";
@@ -88,9 +88,13 @@ export function useWorkspaceFlow(
       if (next.has(site)) next.delete(site); else next.add(site);
       changeSelection([...next]);
     },
-    changeTier: (tier: Tier) => {
+    changeTier: async (tier: Tier): Promise<readonly SiteRunResult[] | null> => {
       setWorkspace((current) => ({ ...current, tier }));
-      void shell.setTier(tier).then(accept).catch(recover);
+      try {
+        const result = await shell.applyTier(tier);
+        accept(result.workspace);
+        return result.results;
+      } catch { recover(); return null; }
     },
     saveGroup: async (name: string, participating: readonly SiteKey[] = selectionRef.current): Promise<boolean> => {
       try {

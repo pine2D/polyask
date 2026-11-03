@@ -40,6 +40,38 @@ test("无异常但状态不可读不能报告切档成功，也不能重复点�
   assert.equal(actions, 1);
 });
 
+test("立即切档只操作档位，发送时仍重新确认且只提交一次", async () => {
+  let mode = "fast", actions = 0;
+  const r = runtime({ think: async () => { actions++; mode = "think"; }, state: () => mode });
+  const switched = await Promise.race([r.dispatch({ cmd: "setTier", text: undefined }),
+    new Promise(resolve => setTimeout(() => resolve({ ok: false, code: "missing_tier_response" }), 100))]);
+  assert.equal(switched.ok, true, switched.code);
+  assert.equal(switched.selection.observed, "think");
+  assert.equal(actions, 1);
+  assert.equal(r.submissions(), 0);
+  mode = "fast"; // 用户随后在站点内改档，发送不能相信上次确认。
+  const sent = await r.dispatch();
+  assert.equal(sent.ok, true);
+  assert.equal(sent.selection.observed, "think");
+  assert.equal(actions, 2);
+  assert.equal(r.submissions(), 1);
+});
+
+test("立即切档证据未知或已过截止时间时不假报成功、不发送", async () => {
+  let actions = 0;
+  const r = runtime({ think: async () => { actions++; }, state: () => null });
+  const result = await Promise.race([r.dispatch({ cmd: "setTier" }),
+    new Promise(resolve => setTimeout(() => resolve({ ok: true }), 100))]);
+  assert.equal(result.ok, false);
+  assert.equal(result.code, "tier_unconfirmed");
+  assert.equal(actions, 1);
+  const expired = await r.dispatch({ cmd: "setTier", deadline: 1 });
+  assert.equal(expired.ok, false);
+  assert.equal(expired.code, "timeout");
+  assert.equal(actions, 1);
+  assert.equal(r.submissions(), 0);
+});
+
 test("状态未知仍发送一次，返回未确认选择而非假绿", async () => {
   let actions = 0;
   const r = runtime({ think: async () => { actions++; }, state: () => null });

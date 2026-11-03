@@ -62,6 +62,9 @@ i18n → core → read-commands → tier → selection-match → send → upload
 
 ## 4. 群发链路与超时预算
 
+- 顶部快速/思考按钮、窄栏选择框和档位快捷键共用 `polyask:apply-tier`（`tier-ipc.ts`）：先保存期望档位，再向当次已打开且参与提问的页面并发发送 `setTier`，共用绝对 10s 截止时间。与发送/新会话共用主进程 OperationGate 和外壳动作锁；切档期间按钮禁用、发送不可执行，不改上一轮提交/生成/采集状态。`null`（跟随站点）只保存偏好，不操作页面。仅保存用的 `polyask:set-tier` 不产生站点动作，启动/同步/草稿恢复也不触发即时切档。
+- 站点 `setTier` 与 `submitPrompt` 共用运行时串行队列，复用生产 `resolveTier` 和本次动作确认；未知/超时/页面变化均不报成功，失败仅在外壳反馈未确认的站点。立即切档不带文字或图片，不发送问题；发送前仍独立执行原有档位解析和带图适配，不复用上次成功作跳过依据。
+
 - 普通群发、辅助综合发送、新建会话共享主进程 `OperationGate`；上一个操作未结算时拒绝新操作（IPC `operation_busy`），取消后也须等旧请求结算才能释放。渲染层辅助综合同时占用外壳操作锁并显示取消状态。取消分两条通道：群发取消 `polyask:cancel`（`shell-ipc.ts`）同时停综合派发，并作废「提交未确认」站的迟到确认；辅助综合取消 `polyask:synthesis-cancel`（`synthesis-ipc.ts`）只停综合协调器与综合导航，不碰群发状态与上一轮的迟到确认。
 
 `renderer` → `polyask:broadcast`（`shell-ipc.ts`）→ `BroadcastCoordinator.send`（`broadcast.ts`）→ `ViewManager.sendCommand` → `SiteCommandChannel` → site preload → 站点运行时。

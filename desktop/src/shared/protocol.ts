@@ -89,7 +89,14 @@ export interface WasSubmittedSiteCommand {
   readonly deadline: number;
 }
 
-export type SiteCommand = HistorySnapshotCommand | SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand;
+export interface TierSiteCommand {
+  readonly source: "AMS";
+  readonly cmd: "setTier";
+  readonly tier: Exclude<Tier, null>;
+  readonly deadline: number;
+}
+
+export type SiteCommand = TierSiteCommand | HistorySnapshotCommand | SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand;
 
 export interface SiteSubmittedResponse {
   readonly supported: boolean;

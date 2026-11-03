@@ -1,3 +1,4 @@
+import type { TierChangeResult } from '../shared/tier-switch';
 import type { MarkdownPreviewRequest, MarkdownExportRequest, MarkdownExportResult, MarkdownDocument } from '../shared/markdown-export';
 import type { QuestionAttachmentsManifest, QuestionReask } from '../shared/question-attachments';
 import type { DesktopImage } from '../shared/images';
@@ -160,6 +161,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   setSurface(value: DesktopSurface): void;
   setSelection(sites: readonly SiteKey[]): Promise<WorkspaceState>;
   setParticipation(sites: readonly SiteKey[]): Promise<WorkspaceState>;
+  applyTier(value: BroadcastRequest["tier"]): Promise<TierChangeResult>;
   setTier(value: BroadcastRequest["tier"]): Promise<WorkspaceState>;
   saveGroup(input: { readonly name: string; readonly sites: readonly SiteKey[] }): Promise<WorkspaceState>;
   deleteGroup(id: string): Promise<WorkspaceState>;
@@ -317,6 +319,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   setSurface: (value: DesktopSurface) => ipcRenderer.send("polyask:set-surface", value),
   setSelection: (sites: readonly SiteKey[]) => invoke("polyask:set-selection", sites),
   setParticipation: (sites: readonly SiteKey[]) => invoke('polyask:set-participation', sites),
+  applyTier: (value: BroadcastRequest["tier"]) => invoke("polyask:apply-tier", value),
   setTier: (value: BroadcastRequest["tier"]) => invoke("polyask:set-tier", value),
   saveGroup: (input: { readonly name: string; readonly sites: readonly SiteKey[] }) =>
     invoke("polyask:save-group", input),

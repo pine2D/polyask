@@ -58,3 +58,14 @@ test('read-only generation probes do not wake the experimental window', async ()
   const pending = channel.send(contents, { source: 'AMS', cmd: 'generation', runId: 'fixture', deadline: Date.now() + 1000 }, { timeoutResult: { state: null } });
   assert.equal(wakes, 0); channel.dispose(); await pending; stop();
 });
+
+test('immediate tier mutations wake experimental background views too', async () => {
+  const { observeSiteCommands } = await import('../src/main/site-command-activity');
+  let wakes = 0;
+  const stop = observeSiteCommands(id => { if (id === 73) wakes++; });
+  const channel = new SiteCommandChannel();
+  const contents = { id: 73, send() {} } as unknown as WebContents;
+  const pending = channel.send(contents, { source: 'AMS', cmd: 'setTier', tier: 'think', deadline: Date.now() + 1000 },
+    { timeoutResult: { ok: false, code: 'timeout' } });
+  assert.equal(wakes, 1); channel.dispose(); await pending; stop();
+});

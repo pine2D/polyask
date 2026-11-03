@@ -1,3 +1,4 @@
+import { registerTierIpc } from './tier-ipc';
 import { registerWorkbenchNavigationIpc } from './workbench-navigation-ipc';
 import { registerShellPanelIpc } from './shell-panel-ipc';
 import { registerQuestionAttachmentIpc } from './question-attachment-ipc';
@@ -154,6 +155,9 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (!window.isDestroyed()) window.webContents.send("polyask:workspace-state", state);
     return state;
   };
+  const disposeTier = registerTierIpc({ ipc: ipcMain, workspace, gate: operationGate, trusted: trustedShell,
+    blocked: () => options.dataAdmin.isResetting || manager.isConfirmationActive(),
+    publish: publishWorkspace, switchTier: (site, tier, deadline) => manager.switchTier(site, tier, deadline) });
   const publishPromptLibrary = () => {
     const state = promptLibrary.getState();
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
@@ -330,6 +334,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
 
   return () => {
     disposeNavigation();
+    disposeTier();
     disposePanels();
     disposeSiteFind();
     disposePreferences();

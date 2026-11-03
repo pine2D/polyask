@@ -36,6 +36,7 @@ test('production root blocks commands and direct send, tier and collection while
   const runtime = { version: 'audit', distribution: 'installed' };
   const draft = { format: 1, id: 'audit-remote', kind: 'prompt', context: 'composer',
     deviceId: 'remote', updatedAt: 100, title: 'Synthetic draft', content: { text: 'Synthetic saved text' } };
+  let finishTier: (() => void) | undefined;
   const api = new Proxy({
     bootstrap: async () => ({ runtime, sites: SITES, statuses: [],
       layout: { mode: 'overview', focused: 'claude', page: 0, pageCount: 1, placements: [] },
@@ -54,7 +55,12 @@ test('production root blocks commands and direct send, tier and collection while
     syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
     newSession: async () => { newSessions++; return [{ site: 'claude', ok: true }]; },
     broadcast: async () => { broadcasts++; return []; },
-    setTier: async () => { tierChanges++; return { selectedSites: ['claude'], groups: [], tier: 'think' }; },
+    applyTier: async (tier: string | null) => {
+      tierChanges++;
+      await new Promise<void>(resolve => { finishTier = resolve; });
+      return { workspace: { selectedSites: ['claude'], groups: [], tier },
+        results: tier ? [{ site: 'claude', ok: true, selection: { requested: tier, outcome: 'mode_only', observed: tier } }] : [] };
+    },
     collect: async () => { collections++; return []; },
     getPreferences: undefined, seedPreferences: undefined, onPreferences: undefined
   }, { get(target, key) {
@@ -99,6 +105,18 @@ test('production root blocks commands and direct send, tier and collection while
       prompt.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
     });
     assert.equal(document.querySelector<HTMLButtonElement>('.send')?.disabled, false, 'the baseline prompt is sendable');
+    await click('.tier-switch button[data-tier-icon=think]');
+    assert.equal(tierChanges, 1, 'toolbar dispatches immediate tier intent before any send');
+    assert.equal(document.querySelector<HTMLButtonElement>('.send')?.disabled, true);
+    await emit('set-fast'); await emit('new-session');
+    await click('.send');
+    assert.equal(tierChanges, 1, 'mode shortcuts share the in-flight lock');
+    assert.equal(newSessions, 0); assert.equal(broadcasts, 0);
+    await act(async () => { finishTier!(); });
+    assert.equal(document.querySelector<HTMLButtonElement>('.send')?.disabled, false);
+    assert.equal(document.querySelector('[data-tier-icon=think]')?.getAttribute('aria-pressed'), 'true');
+    assert.equal(prompt.value, 'Synthetic active question');
+    tierChanges = 0;
     const expanded = () => document.querySelector('[data-composer-toggle]')?.getAttribute('aria-expanded');
     await emit('focus-prompt');
     assert.equal(expanded(), 'true'); assert.equal(document.activeElement === prompt, true);

@@ -300,7 +300,8 @@ test("command bar renders one compact command surface with stateful controls", (
     assert.match(html, new RegExp(`data-hint="${label}[^"]*"`));
   }
   assert.match(html, /data-current-tier[^>]*>Site<\/span>/);
-  assert.match(html, /Response mode for the next send: Use site setting/);
+  assert.match(html, /Response mode: Use site setting/);
+  assert.match(html, /checked again before sending/);
   assert.doesNotMatch(html, /<small>AI Answers<\/small>/);
   assert.match(html, /aria-controls="workspace-panel"/);
   assert.match(html, /aria-label="Custom · 9"/);

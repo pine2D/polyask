@@ -155,7 +155,7 @@ function dispatch(command: SiteCommand): Promise<SiteCommandResponse> {
     const timer = setTimeout(
       () => finish(command.cmd === "submitPrompt"
         ? { ok: false, code: "submit_unconfirmed" }
-        : probing ? unsupported : { code: "not_ready" }),
+        : command.cmd === "setTier" ? { ok: false, code: "timeout" } : probing ? unsupported : { code: "not_ready" }),
       remaining
     );
     try {

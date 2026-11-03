@@ -1,3 +1,4 @@
+import { switchSiteTier } from './site-tier';
 import { bindSiteFocus } from './site-focus';
 import { reclaimUnselectedViews } from "./view-reclamation";
 import { coverSitesForHistory } from "./question-layout";
@@ -355,7 +356,7 @@ export class ViewManager {
   }
 
   checkHealth(sites: readonly SiteKey[]): Promise<SiteHealth[]> {
-    return Promise.all(sites.map((site) => this.checkSiteHealth(site)));
+    return Promise.all(sites.map((site) => checkSiteHealth(site, this.views.get(site), this.pageStatus.get(site), this.runStatus.get(site), this.commands)));
   }
 
   readonly historyAccess = new SiteHistoryAccess(site => this.views.get(site), this.commands, (site, abandoned) => {
@@ -484,9 +485,8 @@ export class ViewManager {
       "ok" in result ? { code: "not_ready" } : result as SiteCollectionResult);
   }
 
-  private checkSiteHealth(site: SiteKey): Promise<SiteHealth> {
-    return checkSiteHealth(site, this.views.get(site), this.pageStatus.get(site), this.runStatus.get(site), this.commands);
-  }
+  readonly switchTier = (site: SiteKey, tier: "think" | "fast", deadline: number): Promise<SiteResult> =>
+    switchSiteTier(site, this.views.get(site), this.pageFailureCode(site), this.historyAccess.navigating(site) || this.historyAccess.reloads.watching(site), this.commands, tier, deadline);
 
   receiveResponse(sender: WebContents, envelope: SiteResponseEnvelope): void {
     this.commands.receive(sender, envelope);

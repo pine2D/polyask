@@ -3,8 +3,9 @@ import type { Tier } from "../shared/protocol";
 import { DeepThinkIcon, FastIcon, SiteSettingIcon } from "./icons";
 import { commandHint } from "./command-hint";
 
-export function TierControls({ copy, tier, isMac, onChange }: {
+export function TierControls({ copy, tier, isMac, onChange, disabled = false }: {
   readonly copy: DesktopCopy; readonly tier: Tier; readonly isMac: boolean;
+  readonly disabled?: boolean;
   readonly onChange: (value: Tier) => void;
 }): React.JSX.Element {
   const options = [
@@ -18,10 +19,10 @@ export function TierControls({ copy, tier, isMac, onChange }: {
     <span data-current-tier data-hint={description}>{short}</span>
     {options.map(({ value, label, icon, glyph }) => <button type="button" key={icon}
       data-hint={value === null ? label : commandHint(label, value === "think" ? "set-think" : "set-fast", isMac)}
-      aria-label={label} aria-pressed={tier === value} data-tier-icon={icon}
+      disabled={disabled} aria-label={label} aria-pressed={tier === value} data-tier-icon={icon}
       className={tier === value ? "active" : ""} onClick={() => onChange(value)}>{glyph}</button>)}
     {/* 窄栏只显示这个下拉：原生弹出层盖得住站点视图，键盘方向键可直接换档。 */}
-    <select className="tier-select" name="tier" aria-label={description} data-hint={description} value={tier ?? "site"}
+    <select disabled={disabled} className="tier-select" name="tier" aria-label={description} data-hint={description} value={tier ?? "site"}
       onChange={event => onChange(event.target.value === "site" ? null : event.target.value as Exclude<Tier, null>)}>
       {options.map(({ value, icon }) => <option key={icon} value={value ?? "site"}>
         {value === "think" ? copy.composerModeThink : value === "fast" ? copy.composerModeFast : copy.composerModeSite}

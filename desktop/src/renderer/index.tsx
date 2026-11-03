@@ -1,3 +1,4 @@
+import { tierChangeAction } from './tier-change-action';
 import { useSyncedPreferences } from './use-synced-preferences';
 import { useNotificationNavigation } from './use-notification-navigation';
 import { useCommandDiscovery } from './use-command-discovery';
@@ -364,6 +365,7 @@ function App(): React.JSX.Element {
       }
     });
   };
+  const changeTier = tierChangeAction({ copy, sites, run: runAuxiliary, change: workspaceFlow.changeTier, announce: setAnnouncement });
   const {collectAndCopy, collectSynthesis, collectAndCompare} = archiveCollectionActions({copy,
     capture: archiveCapture, synthesis, runAuxiliary, announce: setAnnouncement,
     openArchive: (id, mode) => { if (id && mode === 'read') archiveNavigation.history(id, 'read'); else archiveNavigation.collection(id); changeSurface("archive"); }});
@@ -482,8 +484,8 @@ function App(): React.JSX.Element {
       changeSurface('sites'); closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false);
       void shell.setQuestionPanel(false).then(() => shell.openSiteFind()).catch(() => setAnnouncement(copy.findFailed));
     },
-    "set-think": () => { changeSurface("sites"); void workspaceFlow.changeTier("think"); },
-    "set-fast": () => { changeSurface("sites"); void workspaceFlow.changeTier("fast"); },
+    "set-think": () => { changeSurface("sites"); changeTier("think"); },
+    "set-fast": () => { changeSurface("sites"); changeTier("fast"); },
     ...(participating.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
     "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
     "open-question-history": () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionReadRequest(null); setQuestionHistoryOpen(true); },
@@ -614,7 +616,7 @@ function App(): React.JSX.Element {
         onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
         onSubmit={() => void submit()}
         onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}
-        onTierChange={tier => { if (!draftConfirmation.isBlocking()) workspaceFlow.changeTier(tier); }}
+        onTierChange={changeTier}
         onLayoutChange={setMode}
         onExpandedChange={composer.setExpanded}
         onPanelChange={(tab) => tab ? openPanel(tab, "pointer") : changePanelState(null)}

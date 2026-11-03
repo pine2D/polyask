@@ -259,6 +259,7 @@
       if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode, false, Number(msg.deadline) || undefined);
       // 只读命令（getState / wasSubmitted / collectAnswer / diagnose）在 read-commands.js；返回 true = 异步回包。
       if (window.__AMS.readCommand?.(msg, sendResponse)) return true;
+      if (window.__AMS.tierCommand?.(msg, sendResponse, serializeInteraction)) return true;
       if (msg.cmd === "submitPrompt") {
         serializeInteraction(async () => {
           try {

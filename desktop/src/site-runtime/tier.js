@@ -22,6 +22,21 @@
     try { return normalize(current(mode), mode); }
     catch (_) { return { requested: mode, outcome: "unconfirmed" }; }
   }
+  S.tierCommand = function (msg, respond, serialize) {
+    if (msg.cmd !== "setTier") return false;
+    serialize(async () => {
+      const deadline = Number(msg.deadline) || 0;
+      if (Date.now() >= deadline) return { ok: false, code: "timeout" };
+      if (!["think", "fast"].includes(msg.tier)) return { ok: false, code: "invalid_response" };
+      const waitMs = Math.min(4000, Math.max(0, deadline - Date.now()));
+      if (!(await S.waitFor(() => S.findComposer(), waitMs, 120, deadline))) return { ok: false, code: "composer_not_found" };
+      if (Date.now() >= deadline) return { ok: false, code: "timeout" };
+      const selection = await S.resolveTier(msg.tier, deadline);
+      const ok = selection.outcome !== "unconfirmed" && Date.now() < deadline;
+      return { ok, selection, ...(!ok ? { code: Date.now() >= deadline ? "timeout" : "tier_unconfirmed" } : {}) };
+    }).then(respond, () => respond({ ok: false, code: Date.now() >= Number(msg.deadline) ? "timeout" : "error" }));
+    return true;
+  };
   S.resolveTier = async function (mode, deadline = Date.now() + 10000, image) {
     const unconfirmed = { requested: mode, outcome: "unconfirmed" };
     if (!["think", "fast"].includes(mode) || Date.now() >= deadline) return unconfirmed;

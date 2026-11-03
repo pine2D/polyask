@@ -106,7 +106,7 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
         </button>
         {props.draftRecovery}
       </div>
-      <TierControls copy={props.copy} tier={props.tier} isMac={props.isMac} onChange={props.onTierChange} />
+      <TierControls disabled={busy} copy={props.copy} tier={props.tier} isMac={props.isMac} onChange={props.onTierChange} />
       {props.imageControl}
       {props.runState !== "idle" ? (
         <button type="button" className="cancel primary-action priority-p0" data-hint={cancelLabel} aria-label={cancelLabel} disabled={props.runState === "cancelling"} onClick={props.onCancel}><StopIcon /><span>{props.copy.cancel}</span></button>
