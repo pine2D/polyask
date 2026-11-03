@@ -6,7 +6,7 @@ const { source, fakeRuntime } = require("./intl-harness");
 function geminiRuntime({ models = ["3.1 Pro", "4 Argon Complex tasksNew", "3.8 Flash"],
   levels = ["Low Quick and efficient", "Medium Balanced depth", "High Extra thorough"],
   thinkingEntry = true, ignoredLevel = false, disabled = [], hidden = [], decoys = [], initialLevel = "Low",
-  expandedDecoys = [], detachedLevels = false } = {}) {
+  expandedDecoys = [], detachedLevels = false, omitLowLabel = false, ignoredModel = false } = {}) {
   let open = false, expanded = false, model = "3.8 Flash", level = initialLevel;
   const clicked = [];
   const item = (text, type) => ({ textContent: text, type,
@@ -23,7 +23,7 @@ function geminiRuntime({ models = ["3.1 Pro", "4 Argon Complex tasksNew", "3.8 F
     contains: node => !detachedLevels && tiers.includes(node) };
   for (const tier of tiers) tier.closest = () => ({ getAttribute: name => name === "aria-labelledby" ? trigger.id : null });
   const button = { getAttribute: name => name === "aria-label"
-    ? "Open mode picker, currently " + (/Argon/.test(model) ? "Argon " + level : model)
+    ? "Open mode picker, currently " + (/Argon/.test(model) ? "Argon" + (omitLowLabel && level === "Low" ? "" : " " + level) : model)
     : name === "aria-expanded" ? String(open) : null };
   const document = {
     querySelector: selector => selector.includes("input-area-swi") ? button : null,
@@ -38,13 +38,13 @@ function geminiRuntime({ models = ["3.1 Pro", "4 Argon Complex tasksNew", "3.8 F
   S.clickEl = node => {
     clicked.push(node);
     if (node === button) { open = false; expanded = false; }
-    if (node.type === "model") { model = node.textContent.split(/\s+(?:Complex|Advanced|All-around)/)[0]; open = false; }
+    if (node.type === "model" && !ignoredModel) { model = node.textContent.split(/\s+(?:Complex|Advanced|All-around)/)[0]; open = false; }
     if (node.type === "level" && !ignoredLevel) { level = node.textContent.split(" ")[0]; open = false; expanded = false; }
     return true;
   };
   vm.runInNewContext(source("adapters-intl3.js"), { window: { __AMS: S }, document,
     t: key => key, console, KeyboardEvent: class { constructor(type) { this.type = type; } } });
-  return { adapter: S.adapters["gemini.google.com"], clicked, options, tiers, unrelated,
+  return { adapter: S.adapters["gemini.google.com"], S, clicked, options, tiers, unrelated,
     isOpen: () => open, current: () => ({ model, level }) };
 }
 

@@ -165,10 +165,16 @@
           { name: t("diag_tierReadable"), ok: this.state() != null, kind: "tier" },
         ];
       },
-      // aria-label 只报模式名（"…currently Pro/Flash"），不含 Extended thinking 状态，故按粗档位判；
-      // think() 仍会幂等地把 Extended thinking 一并打开（真机 2026-08-14 改版）。
-      state: function () { const b = this._modelBtn(), t = b ? b.getAttribute("aria-label") || "" : "";
-        return /flash/i.test(t) ? "fast" : (/\bpro\b|\bargon(?:\s|$)|extended|扩展/i.test(t) ? "think" : null); },
+      // Argon 两档共用模型；闭合标签省略 Low 时返回 null，不靠模型名猜成 think。
+      // 实际等级确认由本次动作复读子菜单并回传，state 始终只读、不开菜单。
+      state: function () {
+        const t = this._modelBtn()?.getAttribute("aria-label") || "";
+        if (/\bargon(?:\s|$)/i.test(t)) {
+          const low = /\blow\b|低/i.test(t), high = /\bhigh\b|高/i.test(t);
+          return low !== high ? (low ? "fast" : "think") : null;
+        }
+        return /flash/i.test(t) ? "fast" : (/\bpro\b|extended|扩展/i.test(t) ? "think" : null);
+      },
       // 最后一条回答（真机审计锚点 2026-07：每条回答一个 <message-content>，正文在 .markdown）
       answer: function () {
         const els = document.querySelectorAll("message-content");
@@ -182,14 +188,16 @@
         const model = await this._selectModel([/^4\s+argon(?:\s|$)/i, /\b\d+(?:\.\d+)?\s*pro\b/i], deadline);
         const argon = /^4\s+argon(?:\s|$)/i.test(model);
         await this._setThinking(argon ? /^(high\b|高)/i : [/^(extended|扩展)/i, /^(high\b|高)/i], true, deadline, argon);
+        if (argon) return { outcome: "mode_only", observed: "think" };
       },
-      // 快档模型正则**版本无关**：写死 3.6 在站点升到 3.7 Flash 当天就整站抛「未找到模型」（真机
-      // 2026-08-31 事故）。取「任意版本号 + Flash、且不是 Flash-Lite」——Lite 是更弱的另一档，
-      // 后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法。
+      // 两档都优先 Argon：fast = Low；未上线 Argon 的旧菜单保留非 Lite Flash 回退。
+      // 旧 Flash 正则仍须版本无关，同时排除 Flash-Lite / Flash Lite。
       fast: async function (deadline) {
         checkDeadline(deadline);
-        await this._selectModel(/\b\d+(?:\.\d+)?\s*flash\b(?!\s*-?\s*lite)/i, deadline);
-        await this._setThinking(/^(extended|扩展)/i, false, deadline);
+        const model = await this._selectModel([/^4\s+argon(?:\s|$)/i, /\b\d+(?:\.\d+)?\s*flash\b(?!\s*-?\s*lite)/i], deadline);
+        const argon = /^4\s+argon(?:\s|$)/i.test(model);
+        await this._setThinking(argon ? /^(low\b|低)/i : /^(extended|扩展)/i, argon, deadline, argon);
+        if (argon) return { outcome: "mode_only", observed: "fast" };
       },
     },
 

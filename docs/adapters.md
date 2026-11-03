@@ -97,7 +97,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 1. **DeepSeek `_selectMode`** 找不到模式 radio → 静默跳过。radio 仅空对话首屏存在，聊天中缺失属正常态，档位真值由 DeepThink 开关兜底。
 2. **Gemini `_setThinking`** 没有直达开关、没有等级入口且 `on === false` → 静默 return（旧布局没有开关可关）；已展开并在入口后代或 `aria-labelledby` 明确关联的等级菜单读到旧 Extended、且没有 Low/Medium/High 时也保留此旧快档分支。其它菜单的 Extended 不算旧布局证据。新版有等级入口时必须选 Low 并复读，不再跳过。
-3. **Gemini `_setThinking`** Pro 旧布局找不到「thinking level / 思考等级」子菜单入口 → 静默 return（窄屏或该模型无此项，属合法缺席）。Argon 的 High 必需，入口缺失也 throw；**子菜单在但目标等级缺失必须 throw**，静默会漏设等级。
+3. **Gemini `_setThinking`** Pro 旧布局找不到「thinking level / 思考等级」子菜单入口 → 静默 return（窄屏或该模型无此项，属合法缺席）。Argon 的 Low/High 均必需，入口缺失也 throw；**子菜单在但目标等级缺失必须 throw**，静默会漏设等级。
 4. **千问 `_selectModel`** 无模型入口，且可见的已选中日常标签、输入框、快速/思考研究菜单按钮同时存在 → 跳过选模型，继续 `_setThink` 并复读。只承诺模式、不承诺底层模型；工作页、未就绪页、模式按钮缺失仍抛错，目标选项缺失或点击未生效也仍抛错。
 
 **已撤销的例外**：原第 2 条「Claude `_setThinking` 连裸 Thinking 开关也缺失 → 静默结束」于 2026-08-31 删除。当时的理由是「思考控件整个缺席在旧布局属合法态」，但真机复核发现控件一直在、只是 `effort-menu-trigger` / `effort-option-*` 两个 testid 改没了；静默让 `think()` 一路假成功、上报绿而档位纹丝不动（本次事故里最难发现的一站）。现在 Claude 的 effort 入口缺失、档位为空一律 throw。**加新例外前先想清楚：它是「站点本就没有这个能力」，还是「我们的选择子过期了」——后者永远不该静默。**
@@ -215,14 +215,15 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 - 2026-10-27 真机：上传菜单媒体输入为 `accept="image/*,video/*"`；按逗号分隔的 MIME 项识别 `image/*`，排除 capture、disabled 和文档输入。上传菜单的 Escape 不可靠，结束时仅在触发器仍 `aria-expanded=true` 时再点击收尾；到期不得设置文件。等待入口时遇到明确到期的 `timeout` 返回 false，由上传总入口保留 `attachment_timeout`；其它异常继续抛出并按上传失败处理。
 
-- 档位：think 优先实际菜单 `4 Argon` + High；菜单没有 Argon 时继续匹配任意版本 Pro + Extended（新版等级菜单则 High）。Argon 在场但禁用或同优先项重复时直接报错，不偷偷改选 Pro；`4.1 Argon` / `4 Argon-Lite` 不当已确认模型。fast 仍匹配任意版本 Flash，排除 Flash-Lite；旧版关闭 Extended，新版选择 Low。Argon 与新版 Low/High 必须复读子菜单的 `.selected` / `aria-checked`，不靠粗档位判断冒充等级确认。
+- 档位：两档均优先实际菜单 `4 Argon`，think = High、fast = Low。菜单没有 Argon 时，think 保留任意版本 Pro + Extended（新版等级菜单则 High），fast 保留非 Lite 的任意版本 Flash（旧版关闭 Extended，新版 Low）。Argon 在场但禁用或同优先项重复时直接报错，不退选 Pro/Flash；`4.1 Argon` / `4 Argon-Lite` 不当已确认模型。Argon 与新版 Low/High 必须复读子菜单的 `.selected` / `aria-checked`，不靠粗档位判断冒充等级确认；Argon 本次切档复读成功后回传 `mode_only`，不缓存上轮成功。
+- **2026-11-03 英文菜单复验**：两档均选中 `4 Argon Complex tasks`，快速为 Low、思考为 High。Low 的闭合标签实际为 `Open mode picker, currently Gemini Argon`，没有等级，`state()` 返回 null；High 标签为 `Open mode picker, currently Argon High`。本次动作回传确认可区分两档，不能用省略等级的标签推断 High。
 - **2026-10-14 英文菜单实测**：`3.5 Flash-Lite` / `3.8 Flash` / `3.1 Pro` / `4 Argon Complex tasksNew`，Thinking level 展开后 Low / Medium / High 是入口节点的后代（`gem-menu-item` / `role=menuitem`）。等级跨模型保留，Argon High 后仅切 Flash 会变成 `currently Flash High`；选 Low 后标签省略等级、显示 `currently Gemini Flash`，所以必须重开子菜单复读选中态。High/Low 只认该入口的后代，排除同 role 的其它同名项。Gemini 拆入独立分卷为完整等级流程留出行数余量。
-- **快档模型正则必须版本无关**（2026-08-31 事故）：菜单从 `3.6 Flash` 换成 `3.7 Flash`，写死版本号的旧正则当天让整站 `fast()` 抛「未找到模型」。现按「任意版本号 + Flash、且不是 Flash-Lite」匹配，后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法——**Lite 是更弱的另一档，绝不能被当成快档选中**。think 的 Pro 备用同样版本无关，Argon 使用实测明确版本。
+- **旧菜单 Flash 回退正则必须版本无关**（2026-08-31 事故）：菜单从 `3.6 Flash` 换成 `3.7 Flash`，写死版本号的旧正则当天让整站 `fast()` 抛「未找到模型」。现按「任意版本号 + Flash、且不是 Flash-Lite」匹配，后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法——**Lite 是更弱的另一档，绝不能被当成快档选中**。think 的 Pro 备用同样版本无关，Argon 使用实测明确版本。
 - 菜单项实测（2026-08-31）：`3.5 Flash-Lite Fastest answers` / `3.7 Flash All-around helpNew` / `3.1 Pro Advanced reasoning`(selected) / `Extended thinking Complex problem solving`。当前选中项带 `.selected` 类，鼠标高亮项带 `.active` 类——**判选中只能看 `.selected`**。
 - **`escMenus()` 对本站无效**（2026-08-31 真机：Escape 与点 `.cdk-overlay-backdrop` 都关不掉，`aria-expanded` 一直是 `true`），**只有再点一次触发器才收**。所有收尾一律走 `_close()`：先 `escMenus()`，仍开着就 `clickEl(_modelBtn())`。菜单不关会罩住输入框、让随后的注入点空。`_selectModel` / `_setThinking` 的每条出口（含 throw 前）都已改走它。
 - 模型按钮 `_modelBtn()`：先找 aria-label 含 `mode picker` 的 button，回退 `button[class*="input-area-swi"]`（窄屏模型按钮无 `aria-haspopup`）。菜单项选择子常量 `_MI = "button.mat-mdc-menu-item, [role=menuitem]"`；菜单可能要 `openMenu` 两次。
 - **`_MI` 必须过 `_items()` 只取可见项**（2026-08-14 真机）：页面常驻一个隐藏的导出菜单（`gv-pm-saved-export-menu gv-hidden`，含 JSON / Markdown 两个 `[role=menuitem]`）。老写法 `if (!document.querySelector(this._MI)) openMenu(btn)` 因此恒判「菜单已展开」，**模型按钮从来没被点开过**，随后在 `[JSON, Markdown]` 里找 Flash 自然抛「未找到模型」。开菜单改用 `aria-expanded !== "true" || !this._items().length` 判定，找项一律走 `this._find(re)`。
-- **`state()` 按模式名判粗档位，不是复合条件**：aria-label 为 `Open mode picker, currently <Mode>`。Flash 判 fast，Pro / Argon / Extended 判 think，其余 null；它不证明模型版本或等级。实际 Argon High 的标签已确认，Low 标签会省略等级；等级确认由动作流程单独复读，读状态不会开菜单。
+- **`state()` 只读粗档位**：aria-label 为 `Open mode picker, currently <Mode>`。Argon 有明确 Low 标签才判 fast、High 判 think，Medium、等级省略或冲突均为 null，不因模型名直接判 think；Flash 判 fast，Pro / Extended 判 think。`state()` 不证明模型版本；Argon Low 的闭合标签可能省略等级，因此本次动作确认来自子菜单复读，读状态不会开菜单。
 - `_setThinking` 兼容直达 Extended 开关与嵌套等级菜单，按 `.selected` / `aria-checked` 幂等操作。子菜单最多重开并重取 6 轮，沿用 `openMenu(trig)` 指针序列与 `focus()` + Enter keydown + `clickEl`；High/Low 点击后重开复读，所有等待透传 deadline。子菜单在但目标缺失、禁用或未生效必须 throw；Argon 不允许缺少等级入口，Pro 旧布局缺整个入口才保留合法静默分支。
 - `attach` 先展开 Upload & tools，再取无 capture 的 `image/*` 输入并等待附件确认，finally 关菜单。`answer()` 取末个 `message-content` → `.markdown`，回退整块。
 - 中文界面报「切不动」时，先真机核对「扩展」这个标签再改正则——英文 Extended 已真机确认，中文是直译候选。真机探测坑（同 URL 双 page target；**批量重载站点视图可能触发 Google「unusual traffic」验证码插页**）见 `docs/verify.md`「探测坑」。
