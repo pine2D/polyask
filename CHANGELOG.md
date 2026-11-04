@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.31.0] - 2026-11-04
+
+验收范围：Linux/WSL 下通过 2,626 项应用测试、546 项运行时测试、类型检查、依赖审计、仓库门禁、Linux 打包及离线包内九站加载检查。
+
+验收限制：ChatGPT Default 新菜单已完成脱敏结构回放，真实点击、方向键与组合切换仍待用户环境验收；旧菜单已通过 Linux/WSL 真机切档回归。未完成 Windows/macOS 实机安装与交互、真实站点发送及 Drive 同步验收；本轮未核验 Google Cloud 控制台指标及公众账号 OAuth 授权。
+
 ### 新增
 
 - 结果库与历史页新增页面缩放控件，显示当前比例，支持放大、缩小、点击比例恢复 100%，以及 Ctrl/Command 快捷键和 Ctrl＋滚轮；AI 站点缩放保持独立。
@@ -1666,7 +1672,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.30.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.31.0...HEAD
+[1.31.0]: https://github.com/pine2D/polyask/compare/v1.30.0...v1.31.0
 [1.30.0]: https://github.com/pine2D/polyask/compare/v1.29.0...v1.30.0
 [1.29.0]: https://github.com/pine2D/polyask/compare/v1.28.3...v1.29.0
 [1.28.3]: https://github.com/pine2D/polyask/compare/v1.28.2...v1.28.3
