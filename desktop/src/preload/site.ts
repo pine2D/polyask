@@ -55,6 +55,7 @@ require("../site-runtime/md.js");
 require("../site-runtime/prompt-markup.js");
 require("../site-runtime/adapters-intl.js");
 require("../site-runtime/adapters-intl2.js");
+require("../site-runtime/chatgpt-default.js");
 require("../site-runtime/adapters-intl3.js");
 require("../site-runtime/adapters-cn.js");
 require("../site-runtime/adapters-cn2.js");

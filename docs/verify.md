@@ -175,6 +175,14 @@ Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command n
 - **开发机与用户机不等价**：开发机是 WSL2 + Linux Electron（实测 `devicePixelRatio=1.5`，**不是无缩放**——缩放类量级问题本机可复现；界面英文），用户机是 Windows（缩放比例可能不同、界面可能非英文），layout 数值不同。本机跑通不构成「已修复」的证据。
 - **本机复现不出时先要现象、再猜层次**，四问按序问，答案直接落到四层：① 界面语言与显示缩放各是多少？（→ 词表 / 阈值余量）② 点了什么、屏幕上出现了什么？（→ 入口是否被点到）③ 输入框里有没有出现要发的文字？（→ composer / inject 的分界）④ `Alt+H` 站点状态怎么说、把诊断报告贴一份？（→ submit / state）。**没拿到①②就直接猜第三、四层，是返工的标准起手式。**
 
+## 2026-11-03 ChatGPT Default 六档兼容
+
+- 用户提供的两份脱敏真实 DOM 分别覆盖 model/simple 激活态：关联菜单采用 aria-controls / aria-labelledby；两 pane 常驻且 inactive 有几何尺寸；simple 的 Power 声明 ArrowLeft / ArrowRight，slider 为 0..5。用户实测六组合，并明确 fast 采用第二格 GPT-6.1 Sol Light，think 采用最右 GPT-6 Astra Extra High。
+- 离线回放为 `scripts/chatgpt-default-runtime.test.js`，加载生产 core、tier、适配器及新 Default 分卷；仅 React 站点的点击、重绘边界使用小型合成状态机，不代表真实 ChatGPT 事件行为。覆盖第二格、从第一格向右、重复、打开菜单时不凭端点证明模型、Default 缺失/重复/禁用/隐藏、隐藏未知项、组件标记缺失、错误关联、未知范围、吞点击/按键、错误组合、到期停止与收菜单，保留旧 `intl2-runtime` 与注入顺序检查。旧回退仅由全部常驻项的明确旧菜单身份授权，可操作候选另行过滤。
+- 最终本机门禁：2,606 项应用测试、546 项运行时测试、独立 typecheck、仓库门禁、Linux package、离线包内冒烟（shell=1/sites=9/attached=9）通过。独立代码审查指出的隐藏项/标记缺失导致旧回退问题已修正并加入回归。
+- 核对发行与开发运行时 Cookie 加密均启用后，重启 Linux/WSL 开发态，仅目标 ChatGPT 视图执行生产 `__AMS.resolveTier`。本机为旧两模型菜单，约 466×1012；fast → think → fast 均 `mode_only`，滑块依次 0/4/0，约 1.2/2.0/2.0 秒，输入框内容保持不变、恢复原快速档、最终无菜单。19 个观测进程及末次 251 个线程核对共同 4 GiB/512 MiB cgroup，启动期间迁出的 2 个本任务进程已迁回；结束 19 个进程全部退出、调试端口关闭，原档案保留。
+- 图二本机未出现，真实 Default 点击、方向键及组合切换仍待用户环境验收；结构回放和 aria-keyshortcuts 声明不等于新菜单合成事件已经生效。已准备使用生产辅助函数与适配器、独立命名空间的浏览器验证脚本：只接受当前 Default 的 1/5 或 5/5，验证快/思考并恢复原预设，不发送问题、不读对话或输入内容；脚本已在合成页面验证成功/恢复和中间档拒绝路径。未验证真实发送、Windows/macOS 或图二 Electron 集成。
+
 ## 2026-11-03 Gemini Argon Low/High 映射验收
 
 - 先运行失败回归，复现旧 fast 选 Flash、Argon Low 被 `state()` 误判 think；修正后专项覆盖 Argon 两档往返及幂等、Low 标签省略、缺失/禁用/歧义模型、点击未生效、旧 Pro/Flash 回退和当次确认不缓存。完整 2,606 项应用测试、545 项运行时测试、独立类型检查与仓库门禁通过。

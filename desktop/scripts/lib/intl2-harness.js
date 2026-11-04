@@ -80,7 +80,7 @@ function chatGptCase(options) {
   const S = fakeRuntime(document, clicked, () => { state.open = true; }, () => { state.open = false; });
   class FakeKeyboardEvent { constructor(type, init) { this.type = type; Object.assign(this, init); } }
   const context = { window: { __AMS: S }, t: (key) => key, document, console, KeyboardEvent: FakeKeyboardEvent };
-  for (const file of ["selection-match.js", "adapters-intl2.js"]) vm.runInNewContext(source(file), context);
+  for (const file of ["selection-match.js", "adapters-intl2.js", "chatgpt-default.js"]) vm.runInNewContext(source(file), context);
   return { adapter: S.adapters["chatgpt.com"], S, clicked, keys, state, models, pill };
 }
 

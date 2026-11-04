@@ -29,22 +29,35 @@
           document.querySelector('button[data-codex-intelligence-trigger="true"][aria-haspopup="menu"]') ||
           document.querySelector('button.__composer-pill[aria-haspopup="menu"]');
       },
+      // 新版两块 pane 常驻，Power 禁用时也必须能从入口找到当前菜单。
+      _controlledMenu: function () {
+        const a = this._anchor(), ids = (a?.getAttribute("aria-controls") || "").trim().split(/\s+/);
+        if (a?.getAttribute("aria-expanded") !== "true" || ids.length !== 1 || !ids[0]) return null;
+        const root = document.getElementById(ids[0]);
+        return root?.getAttribute("role") === "menu" && a.id &&
+          (root.getAttribute("aria-labelledby") || "").split(/\s+/).includes(a.id) &&
+          this._modelInfo(root).visible ? root : null;
+      },
+      _root: function () {
+        return this._controlledMenu() || document.querySelector('[data-testid="composer-intelligence-picker-content"]') ||
+          this._power()?.closest('[role="menu"]');
+      },
       // 打开 pill 菜单（2026-08 改版：Radix popper `composer-intelligence-picker-content`，
       // 里面是 Power 滑块 + 常驻的模型 radio，**没有任何 aria-haspopup 子菜单入口**）
       _openRoot: async function (deadline) {
         checkDeadline(deadline);
         const anchor = this._anchor();
         if (!anchor) throw new Error("ChatGPT: Intelligence 按钮未找到");
-        const open = () => document.querySelector('[data-testid="composer-intelligence-picker-content"]') || this._power();
+        const open = () => this._root();
         for (let i = 0; i < 2; i++) { if (open()) return; tierAction(deadline, () => openMenu(anchor)); if (await waitFor(open, 1500, 120, deadline)) return; }
         escMenus(); throw new Error("ChatGPT: 档位菜单未展开");
       },
       // 档位控件：role=menuitem[aria-label=Power]，内含 [data-model-reasoning-effort-slider]；
       // 两条锚点取并集，任一在就认（aria-label 会随界面语言变，data-* 属性不会）。
       _power: function () {
-        return [...document.querySelectorAll('[role="menuitem"]')].find((x) => {
+        return [...(this._controlledMenu() || document).querySelectorAll('[role="menuitem"]')].find((x) => {
           if (!/^(power|强度|力度)$/i.test(x.getAttribute("aria-label") || "") &&
-              !x.querySelector("[data-model-reasoning-effort-slider]")) return false;
+              !x.querySelector("[data-model-reasoning-effort-slider],[data-model-picker-power-slider]")) return false;
           const info = this._modelInfo(x);
           return info.visible && !info.disabled;
         }) || null;
@@ -76,7 +89,7 @@
       _pickEdge: async function (top, deadline) {
         try {
           checkDeadline(deadline);
-          await this._openRoot(deadline);
+          await this._showPower(deadline);
           let lv = this._level();
           if (!lv) { escMenus(); throw new Error("ChatGPT: 档位滑块未找到"); }
           const key = top ? "ArrowRight" : "ArrowLeft", goal = top ? lv.max : lv.min;
@@ -100,15 +113,39 @@
       _MODELS: [{ model: "GPT-6", aliases: ["GPT-6", "6"] },
         { model: "GPT-5.6 Sol", aliases: ["GPT-5.6 Sol"] }],
       _modelItems: function () {
-        const root = document.querySelector('[data-testid="composer-intelligence-picker-content"]') ||
-          this._power()?.closest('[role="menu"]');
+        const root = this._root();
         return root ? [...root.querySelectorAll('[role="menuitemradio"]')] : [];
+      },
+      _showModels: async function (deadline, strict = false) {
+        await this._openRoot(deadline);
+        const root = () => strict ? this._controlledMenu() : this._root();
+        const items = () => [...(root()?.querySelectorAll('[role="menuitemradio"]') || [])].filter(node => this._modelInfo(node).visible);
+        if (items().length) return items();
+        const entries = [...(root()?.querySelectorAll('[role="menuitem"]') || [])].filter(node => {
+          const info = this._modelInfo(node);
+          return info.visible && !info.disabled && /^(select model|选择模型)$/i.test(node.getAttribute("aria-label") || "");
+        });
+        if (entries.length !== 1) throw new Error("ChatGPT: 未找到模型");
+        tierAction(deadline, () => entries[0].click());
+        const found = await waitFor(() => items().length ? items() : null, 1500, 120, deadline);
+        if (!found) throw new Error("ChatGPT: 模型菜单未展开");
+        return found;
+      },
+      _showPower: async function (deadline) {
+        await this._openRoot(deadline);
+        if (this._power()) return;
+        const match = this._selectedModel();
+        if (!this._controlledMenu() || !match) throw new Error("ChatGPT: 档位滑块未找到");
+        tierAction(deadline, () => match.candidate.click()); await sleep(220, deadline);
+        await this._openRoot(deadline);
+        if (!(await waitFor(() => this._power(), 1500, 120, deadline))) throw new Error("ChatGPT: 档位滑块未找到");
       },
       _modelInfo: function (node) {
         const r = node.getBoundingClientRect();
         const style = typeof getComputedStyle === "function" ? getComputedStyle(node) : null;
         return { text: node.innerText != null ? node.innerText : node.textContent,
           visible: r.width > 0 && r.height > 0 && !node.hidden && node.isConnected !== false &&
+            !node.closest?.('[aria-hidden="true"],[data-active="false"]') &&
             (!style || !/hidden|collapse/.test(style.visibility) && style.display !== "none"),
           disabled: !!node.disabled || node.getAttribute("aria-disabled") === "true" ||
             node.getAttribute("data-disabled") != null };
@@ -124,21 +161,12 @@
       _selectModel: async function (deadline) {
         try {
           checkDeadline(deadline);
-          await this._openRoot(deadline);
-          let match = this._matchModel(this._modelItems());
-          if (!match) {
-            const entry = [...document.querySelectorAll('[role="menuitem"]')]
-              .find((x) => /^(select model|选择模型)$/i.test(x.getAttribute("aria-label") || ""));
-            if (entry) {
-              tierAction(deadline, () => entry.click());
-              match = await waitFor(() => this._matchModel(this._modelItems()), 1500, 120, deadline);
-            }
-          }
+          const match = this._matchModel(await this._showModels(deadline));
           if (!match) throw new Error("ChatGPT: 未找到模型");
           if (this._selectedModel()?.model === match.model) return;
           tierAction(deadline, () => match.candidate.click()); await sleep(700, deadline);
           // 模型点击可能关闭菜单；动作路径可重开复读，selection 本身永远只读。
-          await this._openRoot(deadline);
+          await this._showModels(deadline);
           const applied = await waitFor(() => this._selectedModel()?.model === match.model, 1500, 120, deadline);
           if (!applied) throw new Error("ChatGPT: 模型未生效");
         } finally { escMenus(); }
@@ -152,11 +180,13 @@
       state: function () {
         const a = this._anchor();
         if (!a || a.getAttribute("aria-expanded") === "true") return null;
+        const preset = S.chatGptDefault?.current(this);
+        if (preset) return preset.observed;
         // 新版含 visibility:hidden 的测量副本（Thinking effort），只读可见标签。
         const lines = (a.innerText != null ? a.innerText : a.textContent || "").trim().split(/\n/).map(line => line.trim());
         const raw = (this._OPEN_PILL.test(lines[0]) ? lines.slice(1) : lines).join(" ").trim();
         if (!raw || this._OPEN_PILL.test(raw)) return null; // 菜单开着：pill 是控件名，非终态
-        if (/^(?:gpt-?)?6[\d.]|^(?:gpt-?)?6\s+(?:sol|astra)/i.test(raw)) return null;
+        if (/^(?:gpt-?)?6[\d.]|^(?:gpt-?)?6\s+(?:sol|astra|luna|terra)/i.test(raw)) return null;
         const t = this._tier(raw);
         if (/instant|medium|极速|即时|均衡|中/i.test(t)) return "fast"; // Instant/Medium
         if (/(?:gpt-?)?5\.[345](?!\d)|\bo3\b/i.test(raw)) return null; // 旧模型高档不能冒充 5.6 think
@@ -164,6 +194,10 @@
         return null;
       },
       selection: function (mode) {
+        const preset = S.chatGptDefault?.current(this);
+        if (preset) return preset.observed === mode ? { outcome: "preferred", ...preset }
+          : preset.observed ? { outcome: "unconfirmed", observed: preset.observed } : { outcome: "unconfirmed" };
+        if (this._controlledMenu() && S.chatGptDefault?.hasPresets(this)) return { outcome: "unconfirmed" };
         const level = this._level();
         const observed = level ? (level.now === level.max ? "think" : level.now === level.min ? "fast" : null) : this.state();
         if (observed !== mode) return observed ? { outcome: "unconfirmed", observed } : { outcome: "unconfirmed" };
@@ -183,10 +217,16 @@
         const el = els[els.length - 1];
         return el.querySelector(".markdown") || el;
       },
-      think: async function (deadline) {
-        checkDeadline(deadline); await this._selectModel(deadline); await this._pickEdge(true, deadline); },
-      fast: async function (deadline) {
-        checkDeadline(deadline); await this._selectModel(deadline); await this._pickEdge(false, deadline); },
+      _setMode: async function (mode, deadline) {
+        try {
+          checkDeadline(deadline); await this._openRoot(deadline);
+          const preset = await S.chatGptDefault?.apply(this, mode, deadline);
+          if (preset) return preset;
+          await this._selectModel(deadline); await this._pickEdge(mode === "think", deadline);
+        } finally { escMenus(); }
+      },
+      think: function (deadline) { return this._setMode("think", deadline); },
+      fast: function (deadline) { return this._setMode("fast", deadline); },
       attach: function (files, el, deadline) {
         if (deadline && Date.now() >= deadline) return false;
         const form = el?.closest("form");
