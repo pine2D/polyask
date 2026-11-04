@@ -55,6 +55,9 @@ function detail(id: string, selected?: string) {
   return {question, answers, ...(selected ? {loadedAnswerId: selected} : {})};
 }
 setShellApi(withFolderPages({
+  getPageZoom: window.polyask?.getPageZoom,
+  changePageZoom: window.polyask?.changePageZoom,
+  onPageZoom: window.polyask?.onPageZoom,
   setQuestionPanel: async () => {}, setSurface: async () => {}, onQuestionSaveFailed: () => () => {},
   listLegacyQuestions: async () => ({items: [], cursor: null}), listQuestions: async ({query: text = ''}: {query?: string}) => ({items: query.get('state') === 'empty' ? [] : rows.filter(q => q.text.includes(text)), cursor: null}),
   getQuestion: async (id: string, selected?: string) => {

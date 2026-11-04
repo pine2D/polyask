@@ -47,8 +47,9 @@ function target(overrides: Partial<ViewMenuTarget> = {}) {
     siteZoom: { step: (site, action) => calls.push(`site-zoom:${site}:${action}`) },
     ...overrides
   };
-  let level = 0;
-  const shell = { id: 1, isDestroyed: () => false, getZoomLevel: () => level, setZoomLevel: (value: number) => { level = value; calls.push(`shell-zoom:${value}`); } };
+  let factor = 1;
+  const shell = { id: 1, isDestroyed: () => false, send: () => {}, getZoomFactor: () => factor,
+    setZoomFactor: (value: number) => { factor = value; calls.push(`shell-zoom:${value}`); } };
   return { manager, shell, calls };
 }
 
@@ -75,7 +76,7 @@ test("zoom steps the focused site through its controller, otherwise zooms the sh
   runViewMenuAction("zoom-reset", t.manager, t.shell, null);
   assert.deepEqual(t.calls, [
     "site-zoom:chatgpt:in",
-    "shell-zoom:0.5", "relayout", "shell-zoom:0", "relayout", "shell-zoom:-0.5", "relayout", "shell-zoom:0", "relayout"
+    "shell-zoom:1.1", "relayout", "shell-zoom:1", "relayout", "shell-zoom:0.9", "relayout", "shell-zoom:1", "relayout"
   ]);
 });
 

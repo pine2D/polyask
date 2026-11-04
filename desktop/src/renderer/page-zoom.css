@@ -1,0 +1,23 @@
+.page-zoom { position: relative; display: inline-flex; flex: 0 0 auto; align-items: center; gap: 0; }
+:is(.library .folder-toolbar, .question-history .question-header) .page-zoom button {
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 4px;
+  border: 1px solid transparent; border-radius: var(--radius-control); background: transparent;
+  color: var(--muted); font: inherit; font-size: 12px; line-height: 1; cursor: pointer;
+}
+:is(.library .folder-toolbar, .question-history .question-header) .page-zoom .page-zoom-reset { width: 48px; font-variant-numeric: tabular-nums; }
+.page-zoom button svg { width: 16px; height: 16px; }
+:is(.library .folder-toolbar, .question-history .question-header) .page-zoom button:hover:not(:disabled) { color: var(--text); background: var(--hover-soft); }
+.page-zoom button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.page-zoom button:disabled { opacity: .5; cursor: default; }
+.page-zoom-error { position: absolute; right: 0; top: 100%; z-index: 20; width: max-content; max-width: 240px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--panel); color: var(--danger-ink); font-size: 12px; line-height: 1.5; }
+.question-history .question-header { flex-wrap: wrap; }
+@media (max-width: 600px) {
+  .library .folder-toolbar, .library .library-toolbar-actions { flex-wrap: wrap; }
+  .library .library-toolbar-actions { min-width: 0; flex-shrink: 1; gap: 4px; }
+}
+@media (forced-colors: active) {
+  :is(.library .folder-toolbar, .question-history .question-header) .page-zoom button { color: ButtonText; }
+  .page-zoom button:disabled { color: GrayText; opacity: 1; }
+  .page-zoom button:focus-visible { outline-color: Highlight; }
+}

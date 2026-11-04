@@ -25,6 +25,7 @@ import { LibraryBulkActions } from './library-bulk-actions';
 import { LibraryBulkFolderDialog } from './library-bulk-folder-dialog';
 import type { BulkRequest } from './library-bulk-runner';
 import { useDecisionReturn } from './use-decision-return';
+import { PageZoomControls } from './page-zoom-controls';
 import { LibraryRecordToolbar } from './library-record-toolbar';
 
 type LibraryFailure = 'capture' | 'load';
@@ -237,6 +238,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         <button className="folder-back-navigation" onClick={() => navigate(() => { reading.capture(false); setFocused(false); setPane('navigation'); })}>{copy.folderTitle}</button>
         <button className="folder-back-list" onClick={() => navigate(() => { reading.capture(false); setFocused(false); setNewSource(null); setPane('list'); })}><BackIcon />{copy.folderBackList}</button>
         <div className="library-record-toolbar" ref={setRecordToolbar} />
+        <PageZoomControls copy={copy} />
         <button className="library-focus" aria-pressed={focused} disabled={busy || (!focused && !selected && !newSource)} title={focused ? copy.libraryBrowse : copy.libraryFocus} aria-label={focused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => focusDetail(!focused)}><FocusIcon /></button>
         <button aria-label={copy.captureArchive} title={copy.captureArchive} disabled={busy} onClick={capture}><ArchiveIcon /><span>{copy.captureArchive}</span></button>
         <button className="panel-close library-close" aria-label={copy.closeArchive} title={copy.closeArchive} disabled={busy} onClick={() => navigate(props.onClose)}><CloseIcon /></button>

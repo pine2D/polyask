@@ -7,6 +7,7 @@ import { registerNotificationIpc } from './notification-ipc';
 import { registerCommandPaletteShortcutIpc } from './command-palette-shortcut-ipc';
 import { registerGlobalPromptShortcutIpc } from './global-prompt-shortcut-ipc';
 import { registerReportExportIpc } from './report-export-ipc';
+import { registerPageZoomIpc } from './page-zoom';
 
 /** Window-owned IPC handlers; the shortcut registration itself belongs to the app. */
 export function registerDesktopToolsIpc(options: ShellIpcOptions, bindings: {
@@ -17,7 +18,8 @@ export function registerDesktopToolsIpc(options: ShellIpcOptions, bindings: {
   readonly publishDrafts: () => void;
 }): () => void {
   const { trusted, gate, publishWorkspace, publishPromptLibrary, publishDrafts } = bindings;
-  const cleanup = [registerDataAdminIpc({ admin: options.dataAdmin, trusted,
+  const cleanup = [registerPageZoomIpc(ipcMain, options.window.webContents, trusted, () => options.manager.relayout()),
+    registerDataAdminIpc({ admin: options.dataAdmin, trusted,
     afterHistoryChange: () => { options.questions.publishRunProgress(); publishPromptLibrary(); },
     afterDraftsChange: () => { options.preferences?.drafts.invalidate(); publishDrafts(); },
     afterReset: () => {

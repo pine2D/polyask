@@ -25,7 +25,8 @@ export function viewManagerHarness({ sites = ["claude", "chatgpt"], committed = 
   const shell = Object.assign(new EventEmitter(), {
     id: 999, isDestroyed: () => false, focus() {},
     getZoomLevel: () => shellZoom, setZoomLevel: (level: number) => { shellZoom = level; },
-    getZoomFactor: () => Math.pow(1.2, shellZoom)
+    getZoomFactor: () => Math.pow(1.2, shellZoom),
+    setZoomFactor: (value: number) => { shellZoom = Math.log(value) / Math.log(1.2); }, send() {}
   });
   const window = Object.assign(new EventEmitter(), {
     isDestroyed: () => false, isMinimized: () => false, getContentSize: () => [2560, 1378],

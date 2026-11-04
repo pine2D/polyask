@@ -66,6 +66,8 @@ Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command n
 
 ## 结果库视觉与交互回归
 
+页面缩放专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/page-zoom-native.mjs`。加载生产 preload、主进程缩放处理、原生菜单及两页真实组件，使用隔离合成资料和断网 profile。验证按钮、Ctrl+=/+/−/0、XTest Ctrl＋滚轮、菜单同步，实际视口随比例变化、缩放不重挂正文且不改变独立 AI 视图倍率；覆盖三语×明暗×960/1280px 的 200% 布局，25%/500% 边界与恢复。单元回归 `page-zoom.test.ts` / `page-zoom-controls.test.tsx` 覆盖 IPC 白名单、IME、迟到回包、失败重试和销毁清理。Linux 必须有共同 4GiB/512MiB cgroup；不代表 Windows/macOS 物理输入验收。
+
 专注阅读合栏专项：在 `desktop/` 运行 `npm run test:unit -- test/library-focused-toolbar-interaction.check.ts`。18 组覆盖三语、明暗主题、两种密度与 200% 缩放；960×720 下检查顶部保持一行、移除独立记录栏并为正文回收空间，窄窗检查按钮尺寸、换行与无重叠。三语实际 Tab/方向键/Escape 核验文件夹→更多的顺序、菜单退出焦点，以及展开/返回后两栏节点和阅读位置；配合 `library-focused-toolbar.test.tsx` 检查删除确认取消与新建决策返回。临时 Electron 使用合成数据、阻断外网，并核对实际进程共同 4GiB/512MiB cgroup；不替代物理设备与读屏验收。
 
 取消新卡与失败重试专项：在 `desktop/` 运行 `npm run test:unit -- test/library-recovery-interaction.check.ts`。使用生产组件和完整全局样式，三语、明暗主题、1440/960px 下检查原阅读/比较返回、笔记及各滚动位置、四类失败后的真实键盘重试、内外取消名称和等待期间不抢焦点；人工对照创建后取消须保留工作表滚动与可见按钮焦点，返回回答再核对两栏位置。开发构建的 StrictMode 重挂也不得临时撤销阅读高度，造成浏览器夹取滚动位置。临时 Electron profile 阻断外网；Linux 隔离子进程会话总线，按实际各线程 children 与 app metrics 核对共同 4GiB/512MiB cgroup，退出后确认观测 PID 消失并移除 profile，截图/报告留在临时目录。不替代 Windows/macOS 和物理读屏验收。

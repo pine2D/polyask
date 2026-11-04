@@ -1,4 +1,5 @@
 import type { TierChangeResult } from '../shared/tier-switch';
+import type { SiteZoomAction } from '../shared/site-zoom';
 import type { MarkdownPreviewRequest, MarkdownExportRequest, MarkdownExportResult, MarkdownDocument } from '../shared/markdown-export';
 import type { QuestionAttachmentsManifest, QuestionReask } from '../shared/question-attachments';
 import type { DesktopImage } from '../shared/images';
@@ -61,6 +62,9 @@ import type {
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 
 export interface PolyAskDesktopApi extends NotificationApi {
+  getPageZoom(): Promise<number>;
+  changePageZoom(action: SiteZoomAction): Promise<number>;
+  onPageZoom(listener: (zoom: number) => void): () => void;
   commandPaletteShortcutState(): Promise<CommandPaletteShortcutState>;
   setCommandPaletteShortcut(mode: CommandPaletteShortcutMode): Promise<CommandPaletteShortcutState>;
   onCommandPaletteShortcut(listener: (state: CommandPaletteShortcutState) => void): () => void;
@@ -213,6 +217,9 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  getPageZoom: () => invoke('polyask:page-zoom-get'),
+  changePageZoom: (action: SiteZoomAction) => invoke('polyask:page-zoom-change', action),
+  onPageZoom: (listener: (zoom: number) => void) => subscribe('polyask:page-zoom-changed', listener),
   commandPaletteShortcutState: () => invoke('polyask:command-palette-shortcut-state'),
   setCommandPaletteShortcut: (mode: CommandPaletteShortcutMode) => invoke('polyask:command-palette-shortcut-set', mode),
   onCommandPaletteShortcut: (listener: (state: CommandPaletteShortcutState) => void) => subscribe('polyask:command-palette-shortcut-changed', listener),

@@ -1,16 +1,14 @@
 import type { SiteKey } from "../shared/contracts";
 import type { SiteZoomAction } from "../shared/site-zoom";
 import type { ViewMenuAction } from "../shared/view-menu";
+import { changePageZoom, type PageZoomContents } from './page-zoom';
 
 interface MenuContents {
   readonly id: number;
   isDestroyed(): boolean;
 }
 
-interface ShellZoomContents extends MenuContents {
-  getZoomLevel(): number;
-  setZoomLevel(level: number): void;
-}
+type ShellZoomContents = MenuContents & PageZoomContents;
 
 export interface ViewMenuTarget {
   isConfirmationActive(): boolean;
@@ -20,9 +18,6 @@ export interface ViewMenuTarget {
   relayout(): void;
   readonly siteZoom: { step(site: SiteKey, action: SiteZoomAction): void };
 }
-
-// Electron role 的外壳缩放步长（zoomLevel ±0.5、复位为 0）。
-const SHELL_ZOOM_STEP = 0.5;
 
 /**
  * 「视图」菜单的重新加载与缩放（加速器见 shared/view-menu.ts）。焦点在站点视图 → 作用于该站；
@@ -44,7 +39,6 @@ export function runViewMenuAction(action: ViewMenuAction, manager: ViewMenuTarge
     return true;
   }
   if (!shell || shell.isDestroyed()) return false;
-  shell.setZoomLevel(zoom === "reset" ? 0 : shell.getZoomLevel() + (zoom === "in" ? SHELL_ZOOM_STEP : -SHELL_ZOOM_STEP));
-  manager.relayout();
+  changePageZoom(shell, zoom, () => manager.relayout());
   return true;
 }

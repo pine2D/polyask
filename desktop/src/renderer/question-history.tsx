@@ -1,4 +1,5 @@
 import { useMarkdownExport } from './use-markdown-export';
+import { PageZoomControls } from './page-zoom-controls';
 import { useQuestionHistorySelection, QuestionHistorySelection } from './question-history-selection';
 import { useQuestionReask } from './use-question-reask';
 import type { DesktopImage } from '../shared/images';
@@ -286,6 +287,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   return <aside ref={panel} tabIndex={-1} className={`question-history${renderedFull ? ' is-full' : ''}${detailView ? ' has-detail' : ''}`} style={{ width: renderedFull ? undefined : QUESTION_PANEL_WIDTH }}
     data-state={open ? 'open' : 'closed'} inert={!open} aria-hidden={open ? undefined : true} aria-label={copy.questionHistory}>
     <header className="question-header"><h1>{copy.questionHistory}</h1>
+      <PageZoomControls copy={copy} />
       {!detailView && <button type="button" disabled={disabled} aria-pressed={selection.selecting} onClick={selection.selecting ? selection.finish : selection.start}>{selection.selecting ? copy.markdownFinish : copy.markdownSelect}</button>}
       {detailView && <button className="question-back" type="button" disabled={markdown.active || markdown.busy} onClick={back}>{copy.questionBack}</button>}
       {detailView && splitReading && <button type="button" className="question-focus" aria-pressed={readingFocused} aria-label={readingFocused ? copy.libraryBrowse : copy.libraryFocus} data-hint={readingFocused ? copy.libraryBrowse : copy.libraryFocus} onClick={() => { closeListMenus(); setReadingFocused(value => !value); }}><FocusIcon /></button>}
