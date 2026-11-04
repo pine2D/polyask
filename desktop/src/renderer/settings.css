@@ -1,7 +1,7 @@
 .settings-workspace {
-  --settings-group-gap: 24px;
-  --settings-control-gap: 12px;
-  --settings-copy-gap: 8px;
+  --settings-group-gap: var(--space-6);
+  --settings-control-gap: var(--space-3);
+  --settings-copy-gap: var(--space-2);
   --settings-control-border: color-mix(in srgb, var(--border) 45%, var(--panel));
   --settings-control-fill: color-mix(in srgb, var(--muted) 7%, var(--panel));
   --settings-control-hover: color-mix(in srgb, var(--muted) 12%, var(--panel));

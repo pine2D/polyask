@@ -12,7 +12,7 @@
 .page-zoom button:disabled { opacity: .5; cursor: default; }
 .page-zoom-error { position: absolute; right: 0; top: 100%; z-index: 20; width: max-content; max-width: 240px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--panel); color: var(--danger-ink); font-size: 12px; line-height: 1.5; }
 .question-history .question-header { flex-wrap: wrap; }
-@media (max-width: 600px) {
+@container library-workspace (max-width: 600px) {
   .library .folder-toolbar, .library .library-toolbar-actions { flex-wrap: wrap; }
   .library .library-toolbar-actions { min-width: 0; flex-shrink: 1; gap: 4px; }
 }

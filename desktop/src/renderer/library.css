@@ -1,5 +1,5 @@
 /* Result library: the record is the primary reading surface. */
-.library.folder-workspace { --library-control: 34px; font-size: var(--font-body); font-family: var(--font-ui); background: var(--panel); }
+.library.folder-workspace { --library-control: 34px; --library-folder-width: 184px; container: library-workspace / inline-size; font-size: var(--font-body); font-family: var(--font-ui); background: var(--panel); }
 .library .folder-toolbar { min-height: 58px; flex: 0 0 auto; padding: 10px 20px; gap: 20px; flex-wrap: nowrap; }
 .library .folder-toolbar > strong { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 16px; white-space: nowrap; }
 .library-scope { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -11,15 +11,15 @@
 :where(.library) button { font: inherit; }
 .library .folder-toolbar button, .library .archive-actions button, .library .decision-detail-actions button { min-height: var(--library-control); height: auto; width: auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; }
 .library .folder-toolbar .library-close, .library .folder-toolbar .library-focus { width: var(--library-control); padding: 0; }
-.library .folder-columns { grid-template-columns: 184px 280px minmax(0, 1fr); }
-.library .folder-sidebar { padding: 20px 12px; gap: 20px; }
-.library .folder-sidebar strong { font-size: 12px; font-weight: 600; color: var(--muted); }
+.library .folder-columns { grid-template-columns: var(--library-folder-width) var(--reading-list-width) minmax(0, 1fr); }
+.library .folder-sidebar { padding: var(--space-5) var(--space-3); gap: var(--space-5); }
+.library .folder-sidebar strong { padding-inline: calc(var(--space-2) + 1px); font-size: 12px; font-weight: 600; color: var(--muted); }
 .library .folder-sidebar nav { gap: 4px; }
-.library .folder-sidebar nav button { min-height: 38px; padding: 9px 12px; border-radius: 7px; line-height: 1.45; }
+.library .folder-sidebar nav button { min-height: 38px; padding: 9px var(--space-2); border-radius: 7px; line-height: 1.45; }
 .library .folder-sidebar > button { margin: 0 8px; }
 .library .folder-manage { padding: 0 8px; }
 .library .folder-content-list { min-width: 0; background: color-mix(in srgb, var(--panel) 95%, var(--muted)); }
-.library .folder-filters { display: flex; flex-direction: column; gap: 8px; padding: 16px 16px 8px; flex: 0 0 auto; }
+.library .folder-filters { display: flex; flex-direction: column; gap: var(--space-2); padding: var(--reading-list-inset) var(--reading-list-inset) var(--reading-list-edge); flex: 0 0 auto; }
 .library .folder-filters > input { min-height: 36px; font-size: 14px; background: var(--panel); }
 .library-segments { display: flex; padding: 2px; gap: 2px; border-radius: 6px; background: color-mix(in srgb, var(--panel) 89%, var(--muted)); }
 .library .library-segments button { flex: 1; min-width: 0; height: 28px; min-height: 28px; padding: 4px; line-height: 20px; white-space: nowrap; border: 0; border-radius: 5px; background: transparent; color: var(--muted); font-size: 13px; }
@@ -44,7 +44,7 @@
 .library-filter-panel:not([hidden]) { display: grid; gap: 8px; }
 .library-selection:not([hidden]) { display: grid; gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .library .library-list-summary .library-filter-toggle svg { transition: none; } }
-.library .archive-list { padding: 8px; background: transparent; }
+.library .archive-list { padding: var(--reading-list-edge); background: transparent; }
 .library .archive-list > button { padding: 12px; gap: 6px; margin-bottom: 4px; border: 1px solid transparent; border-radius: 8px; contain-intrinsic-size: 130px; }
 .library .archive-list > button[aria-current=true] { border-color: var(--accent); background: var(--accent-soft); }
 .library .archive-list > button:hover:not([aria-current=true]) { background: color-mix(in srgb, var(--panel) 88%, var(--muted)); }
@@ -98,15 +98,16 @@
 .library-action-menu button:hover, .library-action-menu button:focus-visible { background: var(--accent-soft); }
 .library-action-menu button.danger { color: var(--danger-ink); }
 .library-popover :focus-visible, .library :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-@media (max-width: 1440px) {
-  .library .folder-columns { grid-template-columns: 280px minmax(0, 1fr); }
+/* 184px 文件夹 + 280px 列表 + 820px 阅读页 + 36px 滚动条与边界余量。 */
+@container library-workspace (width < 1320px) {
+  .library .folder-columns { grid-template-columns: var(--reading-list-width) minmax(0, 1fr); }
   .library .folder-sidebar { display: none; }
   .library .folder-toolbar .folder-back-navigation { display: inline-flex; }
   .library[data-pane=navigation] .folder-columns { grid-template-columns: 220px minmax(0, 1fr); }
   .library[data-pane=navigation] .folder-sidebar, .library[data-pane=navigation] .folder-content-list { display: flex; }
   .library[data-pane=navigation] .folder-detail { display: none; }
 }
-@media (max-width: 900px) {
+@container library-workspace (max-width: 900px) {
   .library .folder-columns { grid-template-columns: minmax(0, 1fr); }
   .library .folder-toolbar { padding: 8px 12px; gap: 8px; }
   .library .library-scope, .library .library-focus, .library .folder-toolbar button > span { display: none; }

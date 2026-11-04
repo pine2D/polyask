@@ -17,6 +17,10 @@
 
 **顺序不能反：先离线（`bash scripts/verify.sh` + `cd desktop && npm test && npm run typecheck`），再真机。** 反过来会得到「真机试通了但 CI 红」的返工。
 
+## 2026-11-04 阅读网格与对齐
+
+在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/reading-experience-native.mjs --grid-only`。生产历史与结果库组件使用合成数据、临时档案、阻断外网及共同 4GiB/512MiB cgroup；45组覆盖三语/明暗/两密度的1319、1320、1366px边界、125/150/200%缩放及历史文字对齐。另验证宽窗口内缩窄库容器、列表/详情返回、文件夹浏览跨断点、阅读节点和滚动/搜索焦点保持、多选可用。完整阅读入口也运行该专项，再执行原有48组阅读布局和复制/来源/比较流程；原生结束后核对归属进程退出及档案清理，不外推到Windows/macOS、物理IME或读屏验收。
+
 ## 测试材料与收尾
 
 - 窗口关闭清理：`npm run test:unit -- test/shell-panel-ipc.test.ts test/shell-panel-lifecycle.check.ts`。生产面板 IPC 在真实 Electron 的 `closed` 回调中清理，覆盖正常关闭、强制销毁和提前清理对照，并连续建窗确认 IPC 可重新注册、后续关闭回调不中断；单位回归另验待恢复焦点被取消、无关监听保留。修复前两种回归均复现 `Object has been destroyed`，修复后通过。原生入口使用离线页面、新建临时档案与共同 4GiB/512MiB cgroup，核对观察到的进程退出后清理档案；当前只验证 Linux/WSL，Windows portable 实机仍待复验。

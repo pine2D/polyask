@@ -30,7 +30,23 @@
   --font-reading: 16px;
   --radius-control: 6px;
   --radius-panel: 8px;
+  /* 空间尺度按 4px 递增；文字基线、边框和图标校正仍由局部样式负责。 */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --reading-page-width: 820px;
+  --reading-page-inset: var(--space-6);
+  --reading-list-width: 280px;
+  --reading-list-inset: var(--space-4);
+  --reading-list-edge: var(--space-2);
+  --reading-block-gap: var(--space-4);
+  --reading-section-gap: var(--space-6);
   --shadow-control: 0 1px 2px #11182714;
   --field-shadow: 0 1px 2px rgb(32 33 43 / .08), 0 0 1px rgb(32 33 43 / .04);
   --field-focus-shadow: 0 1px 4px rgb(32 33 43 / .15), 0 0 2px rgb(32 33 43 / .07);

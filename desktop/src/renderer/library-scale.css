@@ -17,7 +17,7 @@
 .library .library-content-row:hover:not(:has([aria-current=true])) { background: color-mix(in srgb, var(--panel) 88%, var(--muted)); }
 .library-row-check { display: flex; align-items: center; justify-content: center; width: 30px; min-width: 30px; min-height: 34px; padding-top: 8px; cursor: pointer; }
 .library-row-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
-.library .archive-list .library-content-row > button { flex: 1; min-width: 0; min-height: 60px; display: grid; text-align: left; color: inherit; border: 0; background: transparent; padding: 8px 10px 8px 4px; gap: 3px; border-radius: 5px; contain-intrinsic-size: 60px; }
+.library .archive-list .library-content-row > button { flex: 1; min-width: 0; min-height: 60px; display: grid; text-align: left; color: inherit; border: 0; background: transparent; padding: var(--space-2) 10px var(--space-2) var(--reading-list-inset); gap: 3px; border-radius: 5px; contain-intrinsic-size: 60px; }
 .library .archive-list .library-content-row > button[aria-current=true] { background: transparent; }
 .library-pagination { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px; padding: 8px 12px; border-top: 1px solid var(--border); color: var(--muted); }
 .library-pagination > div { display: flex; align-items: center; gap: 4px; }

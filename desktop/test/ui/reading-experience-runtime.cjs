@@ -26,9 +26,9 @@ app.whenReady().then(async () => {
     win.webContents.sendInputEvent({ type: 'mouseDown', ...p }); win.webContents.sendInputEvent({ type: 'mouseUp', ...p }); await pause(70);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
-  const open = async (surface, locale, theme, width, height, zoom = 1, state = '') => {
+  const open = async (surface, locale, theme, width, height, zoom = 1, state = '', density = 'compact') => {
     nativeTheme.themeSource = theme; win.webContents.setZoomFactor(1); win.setContentSize(width, height);
-    await win.loadFile(join(output, 'index.html'), { query: { surface, locale, state } }); win.webContents.setZoomFactor(zoom);
+    await win.loadFile(join(output, 'index.html'), { query: { surface, locale, state, density } }); win.webContents.setZoomFactor(zoom);
     await wait(surface === 'library' ? '!!document.querySelector(".folder-workspace")' : '!!document.querySelector(".question-history")');
     if (state === 'empty') {
       await wait(surface === 'history' ? 'document.querySelector(".question-empty")?.textContent === window.review.copy.questionEmpty'
@@ -41,6 +41,8 @@ app.whenReady().then(async () => {
     await pause(100); boundary();
   };
   try {
+    await require('./reading-grid-check.cjs').checkReadingGrid({open,run,click,wait,shot,paint,check,flows,win});
+    if (!process.argv.includes('--grid-only')) {
     await require('./reading-workspace-check.cjs').checkReadingWorkspace({open,run,click,wait,shot,check,flows});
     if (!process.argv.includes('--workspace-only')) {
     if (!process.argv.includes('--flows-only')) for (const locale of ['zh-CN', 'zh-TW', 'en']) for (const surface of ['library', 'history']) for (const theme of ['light', 'dark']) {
@@ -132,6 +134,7 @@ app.whenReady().then(async () => {
     await wait('!!document.querySelector(".question-detail-state button")'); await shot('history-load-failure');
     await run('window.review.failRead=false'); await click('.question-detail-state button'); await wait('!!document.querySelector(".markdown-preview")');
     check(await run('!!document.querySelector(".reading-navigation")'), 'history: failed read can recover into the complete reading page');
+    }
     }
     console.log(JSON.stringify({cases:cases.length, flows, failures, errors, network})); boundary();
   } catch (error) { failures.push(error.stack); console.error(error.stack); }
