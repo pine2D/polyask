@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-28T06:03:53.118801Z",
+  "generatedAt": "2026-11-04T07:50:50.328132Z",
   "title": "Design System: PolyAsk · AI 众答",
   "extensions": {
     "colorMeta": {
@@ -100,6 +100,20 @@
           "oklch(72.14% 0.00396 286.33)",
           "oklch(83.57% 0.00396 286.33)",
           "oklch(95.00% 0.00396 286.33)"
+        ]
+      },
+      "field-border": {
+        "role": "neutral",
+        "displayName": "输入细边界",
+        "tonalRamp": [
+          "oklch(15.00% 0.02565 280.29)",
+          "oklch(26.43% 0.02565 280.29)",
+          "oklch(37.86% 0.02565 280.29)",
+          "oklch(49.29% 0.02565 280.29)",
+          "oklch(60.71% 0.02565 280.29)",
+          "oklch(72.14% 0.02565 280.29)",
+          "oklch(83.57% 0.02565 280.29)",
+          "oklch(95.00% 0.02565 280.29)"
         ]
       },
       "border": {
@@ -326,6 +340,20 @@
           "oklch(95.00% 0.01350 285.27)"
         ]
       },
+      "field-border-dark": {
+        "role": "neutral",
+        "displayName": "输入细边界 · 暗色",
+        "tonalRamp": [
+          "oklch(15.00% 0.02887 285.47)",
+          "oklch(26.43% 0.02887 285.47)",
+          "oklch(37.86% 0.02887 285.47)",
+          "oklch(49.29% 0.02887 285.47)",
+          "oklch(60.71% 0.02887 285.47)",
+          "oklch(72.14% 0.02887 285.47)",
+          "oklch(83.57% 0.02887 285.47)",
+          "oklch(95.00% 0.02887 285.47)"
+        ]
+      },
       "border-dark": {
         "role": "neutral",
         "displayName": "细边界 · 暗色",
@@ -442,15 +470,15 @@
       },
       "reading": {
         "displayName": "阅读正文",
-        "purpose": "保存回答的长文阅读。"
+        "purpose": "结果库与历史回答的共用长文阅读。"
       },
       "title": {
         "displayName": "区块标题",
-        "purpose": "设置卡标题；其他区块局部权重以实现为准。"
+        "purpose": "区块标题；设置卡使用 600 字重，其他局部权重以实现为准。"
       },
       "record-title": {
         "displayName": "记录标题",
-        "purpose": "保存结果主标题。"
+        "purpose": "结果库记录与历史问题主标题。"
       },
       "code": {
         "displayName": "代码",
@@ -558,31 +586,59 @@
     ],
     "breakpoints": [
       {
-        "name": "library-navigation",
-        "value": "1200px"
+        "name": "library-workspace-three-pane-min",
+        "value": "1320px"
       },
       {
-        "name": "reading-tight",
+        "name": "library-workspace-single-pane-max",
+        "value": "900px"
+      },
+      {
+        "name": "library-workspace-toolbar-wrap-max",
+        "value": "600px"
+      },
+      {
+        "name": "history-split-reading-viewport-min",
+        "value": "960px"
+      },
+      {
+        "name": "library-detail-comparison-auto-focus-max",
+        "value": "1100px"
+      },
+      {
+        "name": "library-detail-comparison-tight-gap-max",
         "value": "820px"
       },
       {
-        "name": "single-pane",
+        "name": "library-detail-comparison-single-column-max",
         "value": "760px"
       },
       {
-        "name": "settings-facts",
-        "value": "560px"
+        "name": "library-detail-heading-stack-max",
+        "value": "600px"
       },
       {
-        "name": "reading-source-scroll",
+        "name": "library-detail-comparison-header-stack-max",
         "value": "480px"
       },
       {
-        "name": "markdown-export-compact-width",
+        "name": "reading-page-compact-viewport-max",
+        "value": "600px"
+      },
+      {
+        "name": "settings-navigation-viewport-max",
+        "value": "760px"
+      },
+      {
+        "name": "settings-facts-viewport-max",
+        "value": "560px"
+      },
+      {
+        "name": "markdown-export-compact-viewport-width-max",
         "value": "520px"
       },
       {
-        "name": "markdown-export-compact-height",
+        "name": "markdown-export-compact-viewport-height-max",
         "value": "480px"
       }
     ]
@@ -616,9 +672,9 @@
       "name": "文字输入框",
       "kind": "input",
       "refersTo": "field",
-      "description": "搜索框的当前风格；焦点、错误、只读和禁用遵循共享字段规则。",
+      "description": "文件夹查找、结果库与历史搜索共用边界和内边距；焦点、错误、只读和禁用遵循共享字段规则。",
       "html": "<input class=\"ds-field\" type=\"search\" aria-label=\"搜索当前范围\" placeholder=\"搜索当前范围…\">",
-      "css": ".ds-field{width:min(280px,100%);min-height:36px;padding:6px 9px;border:1px solid transparent;border-radius:var(--radius-control,6px);background:var(--field,#fafafd);color:var(--text,#20212b);box-shadow:var(--field-shadow,0 1px 2px rgb(32 33 43 / .08),0 0 1px rgb(32 33 43 / .04));transition:background-color 120ms ease,box-shadow 120ms ease;font:var(--font-body,14px) var(--font-ui,system-ui,sans-serif);caret-color:var(--accent,#4f46e5);}.ds-field::placeholder{color:var(--muted,#626575);opacity:1;}.ds-field:focus{outline:none;background:color-mix(in srgb,var(--accent,#4f46e5) 2%,var(--field,#fafafd));box-shadow:inset 0 -2px var(--field-focus-line,color-mix(in srgb,#4f46e5 58%,#626575)),var(--field-focus-shadow,0 1px 4px rgb(32 33 43 / .15),0 0 2px rgb(32 33 43 / .07));}.ds-field[readonly]{background:var(--panel-muted,#edeef3);}.ds-field[aria-invalid=true]{border-color:var(--danger-ink,#b91c1c);box-shadow:inset 0 -2px var(--danger-ink,#b91c1c),var(--field-shadow,0 1px 2px rgb(32 33 43 / .08));}.ds-field[aria-invalid=true]:focus{box-shadow:inset 0 -2px var(--danger-ink,#b91c1c),var(--field-focus-shadow,0 1px 4px rgb(32 33 43 / .15));}.ds-field:disabled{opacity:.55;box-shadow:none;}@media(forced-colors:active){.ds-field{border:1px solid CanvasText;background:Canvas;color:CanvasText;box-shadow:none;}.ds-field:focus{background:Canvas;box-shadow:none;outline:2px solid Highlight;outline-offset:-2px;}.ds-field[aria-invalid=true]{border-color:LinkText;}.ds-field:disabled{opacity:1;border-color:GrayText;color:GrayText;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
+      "css": ".ds-field{width:min(280px,100%);min-height:36px;padding:7px var(--reading-list-edge,8px);border:1px solid var(--field-border,#818394);border-radius:var(--radius-control,6px);background:var(--field,#fafafd);color:var(--text,#20212b);box-shadow:var(--field-shadow,0 1px 2px rgb(32 33 43 / .08),0 0 1px rgb(32 33 43 / .04));transition:background-color 120ms ease,box-shadow 120ms ease;font:var(--font-body,14px) var(--font-ui,system-ui,sans-serif);caret-color:var(--accent,#4f46e5);}.ds-field::placeholder{color:var(--muted,#626575);opacity:1;}.ds-field:focus{outline:none;background:color-mix(in srgb,var(--accent,#4f46e5) 2%,var(--field,#fafafd));box-shadow:inset 0 -2px var(--field-focus-line,color-mix(in srgb,#4f46e5 58%,#626575)),var(--field-focus-shadow,0 1px 4px rgb(32 33 43 / .15),0 0 2px rgb(32 33 43 / .07));}.ds-field[readonly]{background:var(--panel-muted,#edeef3);}.ds-field[aria-invalid=true]{border-color:var(--danger-ink,#b91c1c);box-shadow:inset 0 -2px var(--danger-ink,#b91c1c),var(--field-shadow,0 1px 2px rgb(32 33 43 / .08));}.ds-field[aria-invalid=true]:focus{box-shadow:inset 0 -2px var(--danger-ink,#b91c1c),var(--field-focus-shadow,0 1px 4px rgb(32 33 43 / .15));}.ds-field:disabled{opacity:.55;box-shadow:none;}@media(forced-colors:active){.ds-field{border:1px solid CanvasText;background:Canvas;color:CanvasText;box-shadow:none;}.ds-field:focus{background:Canvas;box-shadow:none;outline:2px solid Highlight;outline-offset:-2px;}.ds-field[aria-invalid=true]{border-color:LinkText;}.ds-field:disabled{opacity:1;border-color:GrayText;color:GrayText;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
     },
     {
       "name": "工作台分段导航",
@@ -626,7 +682,7 @@
       "refersTo": "nav-segment",
       "description": "仅表达页签外观；示例不接业务事件。",
       "html": "<div class=\"ds-tabs\" role=\"tablist\" aria-label=\"工作台\"><button class=\"ds-tab\" type=\"button\" role=\"tab\" aria-selected=\"true\">站点与分组</button><button class=\"ds-tab\" type=\"button\" role=\"tab\" aria-selected=\"false\" tabindex=\"-1\">站点状态</button></div>",
-      "css": ".ds-tabs{display:grid;grid-template-columns:1fr 1fr;gap:2px;min-height:32px;padding:2px;border:1px solid var(--border,#d8dae2);border-radius:8px;background:color-mix(in srgb,var(--muted,#626575) 6%,var(--panel,#ffffff));}.ds-tab{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:0;padding:4px;border:0;border-radius:5px;color:var(--muted,#626575);background:transparent;font:12px/1.35 var(--font-ui,system-ui,sans-serif);}.ds-tab[aria-selected=true]{color:var(--accent,#4f46e5);background:var(--panel,#ffffff);box-shadow:0 1px 2px #11182714;}.ds-tab:hover:not(:disabled){filter:none;}.ds-tab:active:not(:disabled){filter:brightness(.92);}.ds-tab:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}.ds-tab:disabled{opacity:.45;}@media(forced-colors:active){.ds-tabs{border-color:CanvasText;background:Canvas;}.ds-tab[aria-selected=true]{outline:1px solid Highlight;}.ds-tab:focus-visible{outline-color:Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
+      "css": ".ds-tabs{display:grid;grid-template-columns:1fr 1fr;gap:2px;min-height:32px;padding:2px;border:1px solid var(--border,#d8dae2);border-radius:8px;background:color-mix(in srgb,var(--muted,#626575) 6%,var(--panel,#ffffff));}.ds-tab{display:inline-flex;align-items:center;justify-content:center;gap:4px;min-width:0;padding:4px;border:0;border-radius:5px;color:var(--muted,#626575);background:transparent;font:12px/1.35 var(--font-ui,system-ui,sans-serif);}.ds-tab[aria-selected=true]{color:var(--accent,#4f46e5);background:var(--panel,#ffffff);box-shadow:var(--shadow-control,0 1px 2px #11182714);}.ds-tab:hover:not(:disabled){filter:none;}.ds-tab:active:not(:disabled){filter:brightness(.92);}.ds-tab:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}.ds-tab:disabled{opacity:.45;}@media(forced-colors:active){.ds-tabs{border-color:CanvasText;background:Canvas;}.ds-tab[aria-selected=true]{outline:1px solid Highlight;}.ds-tab:focus-visible{outline-color:Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
     },
     {
       "name": "结果状态标记",
@@ -642,7 +698,7 @@
       "refersTo": "settings-card",
       "description": "细边界平整分组；组内卡片复用当前标题和说明层级。",
       "html": "<section class=\"ds-settings-group\" aria-labelledby=\"ds-settings-title\"><div class=\"ds-settings-card\"><h2 id=\"ds-settings-title\">应用更新</h2><p>查看最新版本和发布说明。</p><button class=\"ds-card-action\" type=\"button\">查看最新版本</button></div></section>",
-      "css": ".ds-settings-group{min-width:0;border:1px solid var(--border,#d8dae2);border-radius:var(--radius-panel,8px);background:var(--panel,#ffffff);color:var(--text,#20212b);font-family:var(--font-ui,system-ui,sans-serif);}.ds-settings-card{padding:20px 24px;}.ds-settings-card h2{margin:0;font-size:16px;}.ds-settings-card p{margin:8px 0 16px;color:var(--muted,#626575);font-size:var(--font-control,13px);line-height:1.65;overflow-wrap:anywhere;}.ds-card-action{min-height:max(34px,var(--control-height,32px));padding:6px 12px;border:1px solid transparent;border-radius:var(--radius-control,6px);color:var(--text,#20212b);background:color-mix(in srgb,var(--muted,#626575) 7%,var(--panel,#ffffff));font:var(--font-control, 13px) var(--font-ui, system-ui, sans-serif);}.ds-card-action:hover:not(:disabled){background:color-mix(in srgb,var(--muted,#626575) 12%,var(--panel,#ffffff));}.ds-card-action:active:not(:disabled){filter:brightness(.92);}.ds-card-action:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}.ds-card-action:disabled{color:var(--muted,#626575);}@media(max-width:760px){.ds-settings-card{padding:16px;}}@media(forced-colors:active){.ds-settings-group{border-color:CanvasText;}.ds-card-action{border-color:ButtonText;background:Canvas;color:CanvasText;}.ds-card-action:focus-visible{outline-color:Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
+      "css": ".ds-settings-group{min-width:0;border:1px solid var(--border,#d8dae2);border-radius:var(--radius-panel,8px);background:var(--panel,#ffffff);color:var(--text,#20212b);font-family:var(--font-ui,system-ui,sans-serif);}.ds-settings-card{padding:20px 24px;}.ds-settings-card h2{margin:0;font-size:var(--font-reading,16px);font-weight:600;line-height:1.4;}.ds-settings-card p{margin:var(--space-2,8px) 0 var(--space-4,16px);max-inline-size:78ch;color:var(--muted,#626575);font-size:var(--font-control,13px);line-height:1.6;overflow-wrap:anywhere;}.ds-card-action{min-height:max(34px,var(--control-height,32px));padding:6px 12px;border:1px solid transparent;border-radius:var(--radius-control,6px);color:var(--text,#20212b);background:color-mix(in srgb,var(--muted,#626575) 7%,var(--panel,#ffffff));font:var(--font-control, 13px) var(--font-ui, system-ui, sans-serif);}.ds-card-action:hover:not(:disabled){background:color-mix(in srgb,var(--muted,#626575) 12%,var(--panel,#ffffff));}.ds-card-action:active:not(:disabled){filter:brightness(.92);}.ds-card-action:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}.ds-card-action:disabled{color:var(--muted,#626575);}@media(max-width:760px){.ds-settings-card{padding:16px;}}@media(forced-colors:active){.ds-settings-group{border-color:CanvasText;}.ds-card-action{border-color:ButtonText;background:Canvas;color:CanvasText;}.ds-card-action:focus-visible{outline-color:Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
     },
     {
       "name": "统一提问框",
@@ -650,7 +706,7 @@
       "refersTo": "prompt-composer",
       "description": "容器承担聚焦反馈，textarea 与展开按钮各自保留空间；示例为收起态。",
       "html": "<div class=\"ds-composer\"><textarea class=\"ds-prompt\" aria-label=\"提问内容\" rows=\"1\" placeholder=\"输入问题，向所选 AI 提问\"></textarea><button class=\"ds-expand\" type=\"button\" aria-label=\"展开提问框\" aria-expanded=\"false\"><svg aria-hidden=\"true\" focusable=\"false\" viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m7 9 5 5 5-5\"/></svg></button></div>",
-      "css": ".ds-composer{position:relative;height:var(--control-height,32px);overflow:hidden;border-radius:var(--radius-control,6px);background:var(--field,#fafafd);box-shadow:var(--field-shadow,0 1px 2px rgb(32 33 43 / .08),0 0 1px rgb(32 33 43 / .04));transition:height 140ms cubic-bezier(.2,.8,.2,1),background-color 120ms ease,box-shadow 120ms ease;}.ds-composer:has(.ds-prompt:focus){outline:none;background:color-mix(in srgb,var(--accent,#4f46e5) 2%,var(--field,#fafafd));box-shadow:inset 0 -2px var(--field-focus-line,color-mix(in srgb,#4f46e5 58%,#626575)),var(--field-focus-shadow,0 1px 4px rgb(32 33 43 / .15),0 0 2px rgb(32 33 43 / .07));}.ds-prompt{display:block;width:calc(100% - var(--target-size,24px) - 6px);height:calc((var(--control-height,32px) + 22px)/2);padding:calc((var(--control-height,32px) - 22px)/2) 6px 0 10px;resize:none;overflow:hidden;border:1px solid transparent;border-radius:inherit;background:transparent;color:var(--text,#20212b);font:var(--font-body,14px)/20px var(--font-ui,system-ui,sans-serif);caret-color:var(--accent,#4f46e5);}.ds-prompt::placeholder{color:var(--muted,#626575);opacity:1;}.ds-prompt:focus-visible{outline:none;box-shadow:none;}.ds-expand{position:absolute;right:3px;top:3px;width:var(--target-size,24px);height:var(--target-size,24px);display:grid;place-items:center;padding:0;border:0;border-radius:5px;color:var(--muted,#626575);background:transparent;}.ds-expand:hover:not(:disabled){color:var(--text,#20212b);background:var(--hover-soft,color-mix(in srgb,#626575 7%,#ffffff));}.ds-expand:active:not(:disabled){filter:brightness(.92);}.ds-expand:focus-visible{outline:2px solid var(--accent,#4f46e5);outline-offset:-2px;}@media(forced-colors:active){.ds-composer{border:1px solid CanvasText;background:Canvas;box-shadow:none;}.ds-composer:has(.ds-prompt:focus){background:Canvas;box-shadow:none;outline:2px solid Highlight;outline-offset:-2px;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
+      "css": ".ds-composer{position:relative;height:var(--control-height,32px);overflow:hidden;border:1px solid var(--field-border,#818394);border-radius:var(--radius-control,6px);background:var(--field,#fafafd);box-shadow:var(--field-shadow,0 1px 2px rgb(32 33 43 / .08),0 0 1px rgb(32 33 43 / .04));transition:height 140ms cubic-bezier(.2,.8,.2,1),background-color 120ms ease,box-shadow 120ms ease;}.ds-composer:has(.ds-prompt:focus){outline:none;background:color-mix(in srgb,var(--accent,#4f46e5) 2%,var(--field,#fafafd));box-shadow:inset 0 -2px var(--field-focus-line,color-mix(in srgb,#4f46e5 58%,#626575)),var(--field-focus-shadow,0 1px 4px rgb(32 33 43 / .15),0 0 2px rgb(32 33 43 / .07));}.ds-prompt{display:block;width:calc(100% - var(--target-size,24px) - 6px);height:calc((var(--control-height,32px) + 22px)/2);padding:calc((var(--control-height,32px) - 22px)/2) 6px 0 10px;resize:none;overflow:hidden;border:1px solid transparent;border-radius:inherit;background:transparent;color:var(--text,#20212b);font:var(--font-body,14px)/20px var(--font-ui,system-ui,sans-serif);caret-color:var(--accent,#4f46e5);}.ds-prompt::placeholder{color:var(--muted,#626575);opacity:1;}.ds-prompt:focus-visible{outline:none;box-shadow:none;}.ds-expand{position:absolute;right:3px;top:3px;width:var(--target-size,24px);height:var(--target-size,24px);display:grid;place-items:center;padding:0;border:0;border-radius:5px;color:var(--muted,#626575);background:transparent;}.ds-expand:hover:not(:disabled){color:var(--text,#20212b);background:var(--hover-soft,color-mix(in srgb,#626575 7%,#ffffff));}.ds-expand:active:not(:disabled){filter:brightness(.92);}.ds-expand:focus-visible{outline:2px solid var(--accent,#4f46e5);outline-offset:-2px;}@media(forced-colors:active){.ds-composer{border:1px solid CanvasText;background:Canvas;box-shadow:none;}.ds-composer:has(.ds-prompt:focus){background:Canvas;box-shadow:none;outline:2px solid Highlight;outline-offset:-2px;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
     },
     {
       "name": "站点视图边框",
@@ -664,9 +720,9 @@
       "name": "回答阅读节",
       "kind": "custom",
       "refersTo": "answer-section",
-      "description": "平整分节，来源标题旁提供单份 Markdown 导出和追问；示例文案为合成内容。",
-      "html": "<section class=\"ds-answer\"><header><h2>[S1] Claude · 深度思考</h2><div class=\"ds-answer-actions\"><button class=\"ds-answer-action\" type=\"button\">导出 .md</button><button class=\"ds-answer-action\" type=\"button\">追问这份回答</button></div></header><div class=\"ds-reading\"><p>先比较各份回答的依据、条件与差异，再记录自己的判断。</p><p><a href=\"#ds-answer-source\">回到来源核对</a></p></div></section>",
-      "css": ".ds-answer{padding:16px 0 24px;border:0;border-bottom:1px solid var(--border,#d8dae2);border-radius:0;background:var(--panel,#ffffff);color:var(--text,#20212b);font-family:var(--font-ui,system-ui,sans-serif);}.ds-answer header{display:flex;align-items:flex-start;flex-wrap:wrap;justify-content:space-between;gap:12px;}.ds-answer h2{margin:0;font-size:16px;line-height:1.6;}.ds-answer-action{min-height:30px;padding:4px 8px;border:1px solid var(--border,#d8dae2);border-radius:6px;background:transparent;color:var(--muted,#626575);font:12px/1.5 var(--font-ui,system-ui,sans-serif);}.ds-answer-action:hover:not(:disabled){color:var(--accent,#4f46e5);background:var(--accent-soft,#eeedff);}.ds-answer-action:active:not(:disabled){filter:brightness(.92);}.ds-answer-action:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}.ds-reading{font-size:var(--font-reading,16px);line-height:1.8;overflow-wrap:anywhere;}.ds-reading p{max-inline-size:75ch;margin:12px 0;}.ds-reading a{color:var(--accent,#4f46e5);text-decoration:underline;text-underline-offset:3px;}.ds-reading a:focus-visible{outline:2px solid var(--accent, #4f46e5);outline-offset:2px;}@media(forced-colors:active){.ds-answer{border-color:CanvasText;}.ds-answer-action:focus-visible,.ds-reading a:focus-visible{outline-color:Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}.ds-answer-actions{display:flex;flex-wrap:wrap;gap:8px;}"
+      "description": "平整分节，来源标题旁提供导出、标为最佳和追问；动作间距 8px，与正文间距 16px，正文首尾不叠加外边距。示例文案为合成内容。",
+      "html": "<section class=\"ds-answer\" aria-labelledby=\"ds-answer-source\"><header><h2 id=\"ds-answer-source\">[S1] Claude · 深度思考</h2><div class=\"ds-answer-actions\"><button class=\"ds-answer-action\" type=\"button\">导出 .md</button><button class=\"ds-answer-action\" type=\"button\" aria-pressed=\"false\">标为最佳</button><button class=\"ds-answer-action\" type=\"button\">追问这份回答</button></div></header><div class=\"ds-reading\"><p>先比较各份回答的依据、条件与差异，再记录自己的判断。</p><p><a href=\"#ds-answer-source\">回到来源核对</a></p></div></section>",
+      "css": ".ds-answer{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--reading-block-gap,16px);padding:var(--reading-block-gap,16px) 0 var(--reading-section-gap,24px);border:0;border-bottom:1px solid var(--border,#d8dae2);border-radius:0;background:var(--panel,#ffffff);color:var(--text,#20212b);font-family:var(--font-ui,system-ui,sans-serif);}.ds-answer header{display:flex;align-items:flex-start;flex-wrap:wrap;justify-content:space-between;gap:12px;}.ds-answer h2{flex:1 1 12rem;min-width:0;margin:0;overflow-wrap:anywhere;font-size:16px;line-height:1.6;}.ds-answer-actions{display:flex;align-items:flex-start;flex-wrap:wrap;gap:var(--space-2,8px);max-width:100%;}.ds-answer-action{min-height:30px;height:auto;padding:4px 8px;border:1px solid transparent;border-radius:var(--radius-control,6px);background:transparent;color:var(--muted,#626575);font:12px/1.5 var(--font-ui,system-ui,sans-serif);}.ds-answer-action:hover:not(:disabled){color:var(--accent,#4f46e5);background:var(--hover-soft,color-mix(in srgb,#626575 7%,#ffffff));}.ds-answer-action[aria-pressed=true]{color:var(--accent,#4f46e5);background:var(--accent-soft,#eeedff);}.ds-answer-action:active:not(:disabled){filter:brightness(.92);}.ds-answer-action:focus-visible{outline:2px solid var(--accent,#4f46e5);outline-offset:2px;}.ds-answer-action:disabled{opacity:.55;}.ds-reading{font-size:var(--font-reading,16px);line-height:1.8;overflow-wrap:anywhere;}.ds-reading p{margin:var(--space-3,12px) 0;white-space:pre-wrap;}.ds-reading > :first-child{margin-top:0;}.ds-reading > :last-child{margin-bottom:0;}.ds-reading a{color:var(--accent,#4f46e5);text-decoration:underline;text-underline-offset:3px;}.ds-reading a:focus-visible{outline:2px solid var(--accent,#4f46e5);outline-offset:2px;}@media(forced-colors:active){.ds-answer{border-color:CanvasText;}.ds-answer-action:focus-visible,.ds-reading a:focus-visible{outline-color:Highlight;}.ds-answer-action[aria-pressed=true]{color:Highlight;outline:1px solid Highlight;}}@media(prefers-reduced-motion:reduce){:host *{transition:none!important;animation:none!important;}}"
     }
   ],
   "narrative": {
