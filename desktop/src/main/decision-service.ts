@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { markdownText, safeExportMarkdown } from './markdown-export-format';
 import { isDecisionInput, sameEvidence, type DecisionEvidence, type DecisionFilters, type DecisionInput, type DecisionRecord } from "../shared/decision";
 import { getCopy } from "../shared/copy";
 import type { ArchiveService } from "./archive-service";
@@ -57,12 +58,12 @@ export class DecisionService {
     if (!r) throw new Error("not_found");
     const c = getCopy(locale);
     const status = r.status === "draft" ? c.decisionDraft : r.status === "verify" ? c.decisionVerify : c.decisionFinal;
-    const lines = [`# ${r.title}`,status];
+    const lines = [`# ${markdownText(r.title)}`,status];
     for (const [label,text] of [[c.decisionConclusion,r.conclusion],[c.decisionRationale,r.rationale],[c.decisionUncertainties,r.uncertainties],[c.decisionNextStep,r.nextStep]])
-      lines.push(`## ${label}`,text);
-    lines.push(`## ${c.decisionEvidence}`,r.sourceTitle);
+      lines.push(`## ${label}`,safeExportMarkdown(text, 2));
+    lines.push(`## ${c.decisionEvidence}`,markdownText(r.sourceTitle));
     if (!this.archives.get(r.archiveId)) lines.push(c.decisionSourceMissing);
-    for (const e of r.evidence) lines.push(`### ${e.topic ? e.topic + " · " : ""}[S${e.resultIndex+1}] ${e.label}`,e.excerpt);
+    for (const e of r.evidence) lines.push(`### ${e.topic ? markdownText(e.topic) + " · " : ""}[S${e.resultIndex+1}] ${markdownText(e.label)}`,safeExportMarkdown(e.excerpt, 3));
     return lines.join("\n\n");
   }
 

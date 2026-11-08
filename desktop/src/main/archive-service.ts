@@ -14,15 +14,15 @@ import { getCopy } from "../shared/copy";
 import { describeCollectionCode } from "../shared/status-copy";
 import { SITES } from "./sites";
 import { answerSourceId } from "../shared/answer-source";
+import { observationDescription, observationTime } from '../shared/question-observation-display';
+import { markdownText, safeExportMarkdown } from './markdown-export-format';
+import { safeExternalUrl } from './security';
 
 interface ArchiveServiceOptions {
   readonly deviceId: () => string;
   readonly now?: () => number;
   readonly createId?: () => string;
 }
-
-const markdownText = (value: string) => value.replace(/[\r\n]+/g, " ").replace(/[\[\]\\]/g, "\\$&");
-const markdownUrl = (value: string) => value.replace(/[()]/g, (character) => character === "(" ? "%28" : "%29").replace(/\s/g, encodeURIComponent);
 
 export class ArchiveService {
   private readonly now: () => number;
@@ -75,27 +75,30 @@ export class ArchiveService {
     const record = this.get(id);
     if (!record) throw new Error("not_found");
     const copy = getCopy(locale);
-    const markdown = [`# ${copy.archiveQuestion}`, `\n${record.task || record.text}`];
+    const markdown = [`# ${copy.archiveQuestion}`, ...[...new Set([record.task, record.text])].filter(Boolean).map(markdownText)];
     if (record.source) {
-      markdown.push(`\n**${copy.archiveSource}**: [${markdownText(record.source.title || record.source.url)}](${markdownUrl(record.source.url)})`);
+      const url = safeExternalUrl(record.source.url), label = markdownText(record.source.title || url || copy.archiveSource);
+      markdown.push(`**${copy.archiveSource}**: ${url ? `[${label}](<${url}>)` : label}`);
     }
     for (const [index, result] of record.results.entries()) {
       const tier = result.state === "think" ? ` · ${copy.think}` : result.state === "fast" ? ` · ${copy.fast}` : "";
-      markdown.push(`\n## ${result.label}${tier}`);
-      markdown.push(`\n${answerSourceId(index)}`);
-      if (record.winnerHost === result.host && result.text?.trim()) markdown.push(`\n**${copy.archiveBestAnswer}**`);
-      markdown.push(`\n${result.text?.trim() || `> ${describeCollectionCode(copy, result.code)}`}`);
-      if (result.code === "answer_truncated") markdown.push(`\n> ${copy.answerTruncated}`);
+      markdown.push(`## ${markdownText(result.label)}${tier}`);
+      markdown.push(answerSourceId(index));
+      markdown.push(markdownText(observationDescription(result.observation, copy)));
+      if (result.observation) markdown.push(markdownText(observationTime(result.observation, copy, locale)), markdownText(copy.observationNote));
+      if (record.winnerHost === result.host && result.text?.trim()) markdown.push(`**${copy.archiveBestAnswer}**`);
+      markdown.push(result.text?.trim() ? safeExportMarkdown(result.text, 2) : `> ${describeCollectionCode(copy, result.code)}`);
+      if (result.code === "answer_truncated") markdown.push(`> ${copy.answerTruncated}`);
     }
     const synthesis = record.synthesis;
     if (synthesis) {
       const tier = synthesis.state === "think" ? copy.think : synthesis.state === "fast" ? copy.fast : "";
       const site = SITES.find((candidate) => candidate.host === synthesis.host);
-      markdown.push(`\n## ${copy.synthesisSaved}`);
-      markdown.push(`\n> ${copy.citationReportNotice}`);
-      markdown.push(`\n**${copy.synthesisTarget}**: ${site?.label ?? synthesis.host}${tier ? ` · ${tier}` : ""}`);
-      markdown.push(`\n${synthesis.text}`);
+      markdown.push(`## ${copy.synthesisSaved}`);
+      markdown.push(`> ${copy.citationReportNotice}`);
+      markdown.push(`**${copy.synthesisTarget}**: ${markdownText(site?.label ?? synthesis.host)}${tier ? ` · ${tier}` : ""}`);
+      markdown.push(safeExportMarkdown(synthesis.text, 2));
     }
-    return markdown.join("\n");
+    return markdown.join("\n\n");
   }
 }

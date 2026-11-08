@@ -57,6 +57,7 @@ test('native reports preserve three languages, tables and pagination without net
         'A4 dimensions allow Chromium sub-point rounding');
       const text = execFileSync('pdftotext', ['-layout', pdf, '-'], { encoding: 'utf8' });
       assert.equal(text.replace(/\s/g, '').includes(question.replace(/\s/g, '')), true, `${locale}: question retained`);
+      assert.match(text, /FULL_PROMPT_CONTEXT_MARKER/, `${locale}: distinct full prompt survives PDF export`);
       for (const [start, end, marker] of [['BLOCKSTART','BLOCKEND','ENDLONGFORMULA'],['INLINESTART','INLINEEND','ENDINLINEFORMULA']]) {
         const formula = text.split(start)[1]?.split(end)[0] ?? '';
         assert.equal((formula.match(/x/g) ?? []).length, 150, `${locale}: complete ${start} formula`);

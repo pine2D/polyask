@@ -92,7 +92,8 @@ export function renderReportHtml(source: ReportSource, locale: DesktopLocale = '
   }
   const archive = source.archive;
   if (archive) {
-    chunks.push(section(copy.archiveQuestion, `<p class="question">${escape(archive.task || archive.text)}</p>` +
+    const questions = [...new Set([archive.task, archive.text])].filter(Boolean);
+    chunks.push(section(copy.archiveQuestion, questions.map(text => `<p class="question">${escape(text)}</p>`).join('') +
       `<p class="metadata">${escape(formatCopy(copy.archiveCapturedAt, { time: date(archive.ts) }))}</p>`));
     if (archive.source) {
       const url = safeExternalUrl(archive.source.url), label = archive.source.title || archive.source.url;

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import MarkdownIt from 'markdown-it';
+const { JSDOM } = require('jsdom');
 
 import { ArchiveService } from "../src/main/archive-service";
 import { DesktopDatabase } from "../src/main/database";
@@ -71,10 +73,20 @@ test("citation report uses the existing collect/save path and exports with origi
     assert.equal(saved.synthesis?.instruction, instruction);
     assert.deepEqual(saved.results, record.results);
     const markdown = archives.exportMarkdown(record.id,"en");
-    assert.match(markdown,/## Claude\n\n\[S1\]\n\nOne/);
-    assert.match(markdown,/## ChatGPT\n\n\[S2\]\n\nTwo/);
-    assert.ok(markdown.includes(report));
-    assert.ok(markdown.includes(getCopy("en").citationReportNotice));
+    const dom = new JSDOM(new MarkdownIt({ html: true }).render(markdown));
+    try {
+      const headings = [...dom.window.document.querySelectorAll('h2')] as Element[];
+      for (const [label, id, answer] of [['Claude', '[S1]', 'One'], ['ChatGPT', '[S2]', 'Two']]) {
+        const heading = headings.find(node => node.textContent === label);
+        assert.equal(heading?.nextElementSibling?.textContent, id);
+        const body: string[] = [];
+        for (let node: Element | null | undefined = heading?.nextElementSibling; node && node.tagName !== 'H2'; node = node.nextElementSibling) body.push(node.textContent ?? '');
+        assert.ok(body.includes(answer));
+      }
+      const paragraphs = [...dom.window.document.querySelectorAll('p')] as Element[];
+      assert.ok(paragraphs.some(node => node.textContent === report));
+      assert.ok(dom.window.document.body.textContent.includes(getCopy("en").citationReportNotice));
+    } finally { dom.window.close(); }
   } finally { database.close(); }
 });
 

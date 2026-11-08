@@ -45,7 +45,7 @@ app.whenReady().then(async () => {
     for (const [locale, question] of [['en', 'Saved question example'], ['zhCN', '示例问题'], ['zhTW', '範例問題']]) {
       const table = '| SOURCE_KEY | Saved content | Final column |\n| --- | --- | --- |\n' +
         Array.from({ length: 90 }, (_, index) => `| ROW_${String(index).padStart(3, '0')} | ${question} · saved text with enough context to wrap across lines | VALUE_${String(index).padStart(3, '0')} |`).join('\n');
-      const archive = createArchiveRecord({ text: question, task: question, results: [
+      const archive = createArchiveRecord({ text: `${question}\nFULL_PROMPT_CONTEXT_MARKER`, task: question, results: [
         { host: 'claude.ai', label: 'Claude', observation: { questionId: 'synthetic-question', site: 'claude', attempt: 2, observedAt: 1700000000000,
           selection: { requested: 'think', observed: 'think', outcome: 'preferred', model: 'Example Pro OBSERVATION_MARKER' } }, text: `Saved answer start\n\nBLOCKSTART\n\n$$${longFormula}=\\mathrm{ENDLONGFORMULA}$$\n\nBLOCKEND\n\nINLINESTART $${longFormula}=\\mathrm{ENDINLINEFORMULA}$ INLINEEND\n\n| Formula | Value |\n| --- | --- |\n| $${wideTableFormula}=\\mathrm{ENDTABLEFORMULA}$ | narrow cell |\n\nTALLSTART\n\n$$${tallFormula}$$\n\nTALLEND\n\n$x^2+y^2=z^2$\n\n$$\\frac{a}{b}$$\n\n\`\`\`mermaid\ngraph TD; A[问题]-->B[Decision]\n\`\`\`\n\n${table}\n\nFINAL_MARKER\n\n` +
           `[Readable source](${probe})\n\n![image description](${probe})\n\n<img src="${probe}">\n\n<script src="${probe}"></script>` },

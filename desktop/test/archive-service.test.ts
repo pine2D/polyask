@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import MarkdownIt from 'markdown-it';
 
 import { ArchiveService } from "../src/main/archive-service";
 import { DesktopDatabase } from "../src/main/database";
@@ -105,11 +106,11 @@ test("archive markdown preserves missing-answer placeholders", () => {
     const markdown = service.exportMarkdown(record.id, "zh-CN");
 
     assert.match(markdown, /^# 问题\n\nQuestion/);
-    assert.match(markdown, /\*\*来源\*\*: \[Reference\]\(https:\/\/example\.com\/article\)/);
+    assert.match(new MarkdownIt().render(markdown), /<a href="https:\/\/example\.com\/article">Reference<\/a>/);
     assert.match(markdown, /## Claude · 深度思考/);
     assert.match(markdown, /\*\*最佳回答\*\*\n\nAnswer/);
     assert.match(markdown, /## Claude · 深度思考\n\n\[S1\]/);
-    assert.match(markdown, /## Kimi\n\n\[S2\]\n\n> 暂无回答/);
+    assert.match(new MarkdownIt().render(markdown), /<h2>Kimi<\/h2>[\s\S]*?<blockquote>\s*<p>暂无回答<\/p>/);
     assert.match(markdown, /## 综合结果\n\n> AI 生成的分析与引文尚未核实/);
     assert.match(markdown, /\*\*目标 AI\*\*: ChatGPT · 快速\n\nCombined answer/);
   } finally {
