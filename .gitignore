@@ -8,6 +8,7 @@
 
 # 开发契约与发布历史
 !/docs/README.md
+!/docs/acceptance.md
 !/docs/adapters.md
 !/docs/audit-2026-07.md
 !/docs/desktop.md
