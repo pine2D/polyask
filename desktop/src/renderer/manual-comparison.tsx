@@ -39,9 +39,9 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
   const [draft, setDraft] = useState<ComparisonDraft | null>(() => record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null);
   const [localOpen, setLocalOpen] = useState(false), [addError, setAddError] = useState<'duplicate' | 'limit' | null>(null);
   const open = visibility?.open ?? localOpen, setOpen = visibility?.change ?? setLocalOpen;
-  const epoch = useRef(0), mounted = useRef(false);
+  const epoch = useRef(0), mounted = useRef(false), excerptFocus = useRef<string | null>(null);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; epoch.current++; }; }, []);
-  useLayoutEffect(() => { setDraft(record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null); setAddError(null); setLocalOpen(false); epoch.current++; }, [record?.id, store]);
+  useLayoutEffect(() => { setDraft(record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null); setAddError(null); setLocalOpen(false); excerptFocus.current = null; epoch.current++; }, [record?.id, store]);
   const change = (next: ComparisonDraft) => { if (record?.id !== next.archiveId) return; epoch.current++; store.save(record, next); setDraft(next); };
   const persistent = usePersistentDraft({ kind: 'comparison', context: record?.id ?? '',
     title: [...(record?.task || record?.text || '')].slice(0, 160).join(''), content: draft,
@@ -51,13 +51,17 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
     onRestore: value => { const restored = record && parseComparisonContent(value, record.id);
       if (!restored) return false; change(restored); setOpen(true); return true; } });
   const add = (value: ExactExcerpt) => {
+    excerptFocus.current = null;
     if (!record || !draft || !validateExcerpt(record, value) || [...value.excerpt].length > 4000) return;
     if (draft.quotes.some(old => evidenceTuple(old) === evidenceTuple(value))) { setAddError('duplicate'); return; }
     if (draft.quotes.length >= 36) { setAddError('limit'); return; }
     setAddError(null);
-    change({ ...draft, sourceUpdatedAt: record.updatedAt, quotes: [...draft.quotes, { ...value, id: crypto.randomUUID() }] }); setOpen(true);
+    const id = crypto.randomUUID();
+    excerptFocus.current = id;
+    change({ ...draft, sourceUpdatedAt: record.updatedAt, quotes: [...draft.quotes, { ...value, id }] }); setOpen(true);
+    return id;
   };
-  return { draft, change, open, setOpen, add, addError, epoch, mounted, recovery: persistent.recovery };
+  return { draft, change, open, setOpen, add, addError, epoch, mounted, excerptFocus, recovery: persistent.recovery };
 }
 
 export function ManualComparison(props: {
@@ -72,12 +76,15 @@ export function ManualComparison(props: {
 }): React.JSX.Element | null {
   const { copy, worksheet, record } = props, draft = worksheet.draft;
   const [message, setMessage] = useState(''), [checking, setChecking] = useState(false);
-  const excerptFocus = useRef<number | null>(null);
+  const localDetailsRef = useRef<HTMLDetailsElement>(null), detailsRef = props.detailsRef ?? localDetailsRef;
+  const excerptFocus = worksheet.excerptFocus;
   useLayoutEffect(() => {
-    const index = excerptFocus.current;
-    if (index === null) return;
-    const field = props.detailsRef?.current?.querySelector<HTMLTextAreaElement>(`[name=comparison-excerpt-${index}]`);
-    if (field) { excerptFocus.current = null; field.focus({ preventScroll: true }); field.scrollIntoView({ block: 'nearest' }); }
+    const id = excerptFocus.current;
+    excerptFocus.current = null;
+    if (id === null) return;
+    const field = [...(detailsRef.current?.querySelectorAll<HTMLTextAreaElement>('[data-comparison-evidence]') ?? [])]
+      .find(node => node.dataset.comparisonEvidence === id);
+    if (field) { field.focus({ preventScroll: true }); field.scrollIntoView({ block: 'nearest' }); }
   }, [draft?.quotes]);
   const latest = useRef(props); latest.current = props;
   if (!draft) return null;
@@ -103,7 +110,7 @@ export function ManualComparison(props: {
     });
   };
   return <>
-    <details ref={props.detailsRef} id={props.workspace ? 'comparison-worksheet' : undefined} hidden={props.workspace && !worksheet.open}
+    <details ref={detailsRef} id={props.workspace ? 'comparison-worksheet' : undefined} hidden={props.workspace && !worksheet.open}
       className="manual-comparison" data-library-return="manual" open={worksheet.open} onToggle={event => worksheet.setOpen(event.currentTarget.open)}>
       <summary>{copy.manualTitle}</summary><p>{copy.manualHint}</p>
       <DraftRecovery {...worksheet.recovery} copy={copy} sourceUpdatedAt={record.updatedAt} busy={props.busy || checking} />
@@ -123,12 +130,12 @@ export function ManualComparison(props: {
             <label>{copy.evidenceTopic}<input name={`comparison-topic-${index}-${quoteIndex}`} value={quote.topic ?? ''} onChange={event => change({ ...draft,
               quotes: draft.quotes.map(old => evidenceKey(old) === evidenceKey(quote) ? {...old, id: old.id ?? `legacy:${old.resultIndex}`, topic:event.target.value} : old) })} /></label>
             {[...(quote.topic ?? '')].length > 120 ? <p role="status">{copy.evidenceTopicTooLong}</p> : null}
-            <label>{copy.manualExcerpt}<textarea name={`comparison-excerpt-${index}${quoteIndex ? `-${quoteIndex}` : ''}`} readOnly value={quote.excerpt} /></label>
+            <label>{copy.manualExcerpt}<textarea data-comparison-evidence={evidenceKey(quote)} name={`comparison-excerpt-${index}${quoteIndex ? `-${quoteIndex}` : ''}`} readOnly value={quote.excerpt} /></label>
             <button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => evidenceKey(old) !== evidenceKey(quote)) })}>{copy.manualRemoveExcerpt}</button>
           </div>)}
           {!quotes.length ? <p>{copy.manualEmpty}</p> : null}
           {worksheet.open ? <ArchiveAnswerReading copy={copy} source={source} busy={props.busy}
-            onCompare={value => { excerptFocus.current = index; worksheet.add(value); }}>{null}</ArchiveAnswerReading> : null}
+            onCompare={worksheet.add}>{null}</ArchiveAnswerReading> : null}
           {COMPARISON_CATEGORIES.map(category => <ManualNote key={`${source.host}:${category}`} copy={copy} source={source} category={category}
             selected={draft.categories[source.host]?.includes(category) ?? false} value={draft.notes[category][source.host] ?? ''}
             onSelect={selected => change({ ...draft, categories: { ...draft.categories, [source.host]: selected

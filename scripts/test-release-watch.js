@@ -197,3 +197,24 @@ test("命令行 --dry-run 在有模拟凭据时仍禁止写入", async () => {
     github: async (method) => { if (method !== "GET") writes++; return []; }, log() {} });
   assert.strictEqual(writes, 0);
 });
+
+for (const date of ["2026-2-31", "February 31, 2026", "2026-13-1", "2026-2-29"]) {
+  test(`invalid calendar date ${date} falls back to observation time`, async () => {
+    const numeric = date[0] === '2', h = harness(source(numeric ? "zhipu" : "claude"));
+    await h.run([], { read: async () => numeric
+      ? `<div data-component-part="update-label">${date}</div><div data-component-part="update-description">API update</div>`
+      : `<h3>${date}</h3><p>Changed model picker</p>` });
+    assert.match(h.rows[0].body, /观察：2026-11-08T12:00:00.000Z（发布日期未知）/);
+    if (numeric) assert.strictEqual(h.rows[0].title, "[release-watch] zhipu/weekly: 2026-11-02");
+  });
+}
+for (const date of ["2024-2-29", "February 29, 2024"]) {
+  test(`valid leap date ${date} is kept as publication date`, async () => {
+    const numeric = date[0] === '2', h = harness(source(numeric ? "zhipu" : "claude"));
+    await h.run([], { read: async () => numeric
+      ? `<div data-component-part="update-label">${date}</div><div data-component-part="update-description">API update</div>`
+      : `<h3>${date}</h3><p>Changed model picker</p>` });
+    assert.match(h.rows[0].body, /发布：2024-02-29T00:00:00.000Z/);
+    if (numeric) assert.strictEqual(h.rows[0].title, "[release-watch] zhipu/weekly: 2024-02-26");
+  });
+}

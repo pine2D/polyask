@@ -5,6 +5,7 @@ import { DesktopDatabase } from '../src/main/database';
 import { DraftRepository } from '../src/main/draft-repository';
 import { usePromptDraft } from '../src/renderer/use-prompt-draft';
 import { useComparisonWorksheet } from '../src/renderer/manual-comparison';
+import { exactExcerpt, excerptSource } from '../src/renderer/answer-excerpt';
 import { emptyComparisonDraft } from '../src/renderer/comparison-draft';
 import { setShellApi } from '../src/renderer/shell-api';
 import { getCopy } from '../src/shared/copy';
@@ -97,4 +98,34 @@ test('leaving a comparison before debounce still persists its latest manual work
     assert.equal(d.drafts.list('comparison', comparisonRecord.id).length, 1);
     assert.equal((d.drafts.list('comparison', comparisonRecord.id)[0].content as { judgment: string }).judgment, 'fast navigation work');
   } finally { d.close(); }
+});
+
+test('comparison add returns only the stable identity actually accepted by the production hook', async () => {
+  const d = database(); let flow!: ReturnType<typeof useComparisonWorksheet>;
+  function Fixture() { flow = useComparisonWorksheet(comparisonRecord); return <span>{flow.draft?.quotes.length}</span>; }
+  const h = await mountDom(<Fixture />);
+  try {
+    const excerpt = exactExcerpt(excerptSource(comparisonRecord, 0)!, 0, 6)!;
+    let accepted: string | undefined;
+    await act(async () => { accepted = flow.add(excerpt); });
+    assert.equal(typeof accepted, 'string');
+    assert.equal(flow.draft?.quotes[0].id, accepted);
+    assert.equal(flow.excerptFocus.current, accepted);
+    await act(async () => { assert.equal(flow.add(excerpt), undefined); });
+    assert.equal(flow.addError, 'duplicate');
+    assert.equal(flow.excerptFocus.current, null);
+    const quotes = Array.from({length: 36}, (_, i) => ({...excerpt, id: `fixture-${i}`, topic: `Topic ${i}`}));
+    await act(async () => flow.change({...flow.draft!, quotes}));
+    await act(async () => { assert.equal(flow.add(excerpt), undefined); });
+    assert.equal(flow.addError, 'limit');
+    assert.equal(flow.excerptFocus.current, null);
+    assert.equal(flow.draft?.quotes.length, 36);
+    await act(async () => flow.change({...flow.draft!, quotes: []}));
+    let replaced: string | undefined;
+    await act(async () => { replaced = flow.add(excerpt); });
+    assert.equal(typeof replaced, 'string');
+    assert.equal(replaced === accepted, false, 're-adding deleted text gets a fresh stable identity');
+    assert.equal(flow.draft?.quotes[0].id, replaced);
+    assert.equal(flow.addError, null);
+  } finally { await h.close(); d.close(); }
 });

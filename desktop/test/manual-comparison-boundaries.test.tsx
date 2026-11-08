@@ -18,6 +18,11 @@ test('adding an existing source/excerpt/topic twice rejects duplication without 
     const fields = [...h.document.querySelectorAll<HTMLTextAreaElement>('.manual-quote textarea')];
     assert.deepEqual(fields.map(field => field.value), ['Claude paragraph 2.', 'Claude paragraph 3.']);
     assert.equal(h.document.querySelector('.manual-comparison')?.textContent?.includes(copy.decisionEvidenceDuplicate),true);
+    assert.equal(h.document.activeElement === fields[0], false, 'duplicate rejection must not focus an old excerpt');
+    const judgment = h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')!;
+    await act(async () => judgment.focus());
+    await h.click(h.document.querySelector<HTMLButtonElement>('.manual-quote button')!);
+    assert.equal(h.document.activeElement === judgment, true, 'deletion must not consume a stale focus intent');
     assert.equal(h.writes + h.decisionWrites, 0);
   } finally { await h.close(); }
 });

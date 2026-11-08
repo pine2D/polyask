@@ -38,14 +38,18 @@ function seenTitles(issues) {
   }
   return seen;
 }
+function calendarTime(year, month, day) {
+  const timestamp = Date.UTC(year, month, day), date = new Date(timestamp);
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month && date.getUTCDate() === day ? timestamp : NaN;
+}
 function entryTime(entry, now) {
   const raw = entry.publishedAt || entry.date || entry.title.match(/^(?:Date:\s*)?(20\d\d-\d{1,2}-\d{1,2})\b/)?.[1];
   const numeric = raw?.match(/^(?:Date:\s*)?(20\d\d)[.\-/](\d{1,2})[.\-/](\d{1,2})$/i);
   const english = raw?.match(/^([a-z]+)\s+(\d{1,2}),\s*(20\d\d)$/i);
   const month = english ? ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"].indexOf(english[1].slice(0, 3).toLowerCase()) : -1;
-  const timestamp = entry.publishedAt ? Date.parse(entry.publishedAt)
-    : numeric ? Date.UTC(+numeric[1], +numeric[2] - 1, +numeric[3])
-    : english && month >= 0 ? Date.UTC(+english[3], month, +english[2]) : NaN;
+  const timestamp = numeric ? calendarTime(+numeric[1], +numeric[2] - 1, +numeric[3])
+    : english ? (month >= 0 ? calendarTime(+english[3], month, +english[2]) : NaN)
+    : entry.publishedAt ? Date.parse(entry.publishedAt) : NaN;
   const published = Number.isFinite(timestamp);
   const date = published ? new Date(timestamp) : now;
   const monday = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));

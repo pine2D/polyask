@@ -7,11 +7,20 @@ import { confirmAndStartNewSession } from "../src/renderer/new-session-action";
 import { getCopy } from "../src/shared/copy";
 import { NativePanelFocus } from '../src/main/native-panel-focus';
 
+function startNewSessionSource(): string {
+  const app = readSource("src/renderer/index.tsx");
+  const start = app.indexOf("  const startNewSession =");
+  const end = app.indexOf("  const {showGroupMenu, showMoreMenu} =", start);
+  assert.equal(start >= 0, true, "startNewSession declaration must exist");
+  assert.equal(end >= 0, true, "workspace menu boundary must exist");
+  assert.equal(end > start, true, "workspace menu boundary must follow startNewSession");
+  return app.slice(start, end);
+}
+
 // 执行 App 的真实入口；只替换 Electron/React 边界，覆盖确认前后的原生视图切换时序。
 for (const approved of [false, true]) {
   test(`new session exposes confirmation and restores sites on ${approved ? "accept" : "cancel"}`, async () => {
-    const app = readSource("src/renderer/index.tsx");
-    const body = app.slice(app.indexOf("  const startNewSession ="), app.indexOf("  const showGroupMenu ="));
+    const body = startNewSessionSource();
     const events: string[] = [];
     let pending: { count: number; decide: (ok: boolean) => void } | null = null;
     const context = vm.createContext({
@@ -46,8 +55,7 @@ for (const approved of [false, true]) {
 }
 
 test("new session skips the dialog after don't ask again without bypassing busy guards", async () => {
-  const app = readSource("src/renderer/index.tsx");
-  const body = app.slice(app.indexOf("  const startNewSession ="), app.indexOf("  const showGroupMenu ="));
+  const body = startNewSessionSource();
   const events: string[] = [];
   const context = vm.createContext({
     selected: new Set(["claude", "kimi", "chatgpt", "deepseek", "gemini"]),
@@ -71,8 +79,7 @@ test("new session skips the dialog after don't ask again without bypassing busy 
 });
 
 test("a pending auxiliary operation cannot be covered by a new-session confirmation", async () => {
-  const app = readSource("src/renderer/index.tsx");
-  const body = app.slice(app.indexOf("  const startNewSession ="), app.indexOf("  const showGroupMenu ="));
+  const body = startNewSessionSource();
   let opened = false;
   const script = ts.transpileModule(`${body}\nstartNewSession();`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
   await vm.runInNewContext(script, {

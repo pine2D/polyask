@@ -57,6 +57,7 @@ test('two excerpts from one source coexist, group by judgment topic and remove i
     await addQuote(h, 'Claude paragraph 3.');
     const quotes = () => [...h.document.querySelectorAll<HTMLTextAreaElement>('.manual-comparison-source [name^=comparison-excerpt-]')];
     assert.equal(quotes().length, 2);
+    assert.equal(h.document.activeElement === quotes()[1], true, 'new second excerpt receives focus');
     const topics = [...h.document.querySelectorAll<HTMLInputElement>('.manual-comparison-source [name^=comparison-topic-]')];
     await h.input(topics[0], 'Cost'); await h.input(topics[1], 'Cost');
     assert.equal(h.document.querySelector('[data-evidence-topic="Cost"]')?.querySelectorAll('blockquote').length, 2);
@@ -64,6 +65,11 @@ test('two excerpts from one source coexist, group by judgment topic and remove i
     await h.click(h.document.querySelector<HTMLButtonElement>('.manual-quote button')!);
     assert.equal(quotes().length, 1); assert.equal(quotes()[0] === second, true);
     assert.equal(quotes()[0].value, 'Claude paragraph 3.');
+    await addQuote(h, 'Claude paragraph 4.');
+    assert.equal(quotes().length, 2);
+    assert.equal(quotes()[0] === second, true, 'surviving stable identity is retained');
+    assert.equal(h.document.activeElement === quotes()[1], true, 'new excerpt receives focus after earlier deletion');
+    assert.equal(quotes()[1].value, 'Claude paragraph 4.');
     assert.equal(field(h, 'comparison-note-evidence-0').value, 'Keep this manual evidence note.');
   } finally { await h.close(); }
 });

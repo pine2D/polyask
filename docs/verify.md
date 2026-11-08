@@ -1643,6 +1643,8 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 
 输出目录由测试打印，保留六张 PNG、report.json、runtime.log、process-boundary.json；断网临时 profile、共同 4GiB/512MiB cgroup、全部观测 PID 退出及 profile 清理均核对。Linux/WSL 合成流程不替代真实站点/Drive 双设备、Windows/macOS、物理 IME 或读屏验收；执行耗时只反映自动化检查，不是用户效率研究。
 
+新增摘录焦点专项可运行 `POLYASK_EVIDENCE_FOCUS_NATIVE=1 npm run test:unit -- test/multi-evidence-native.check.ts`，仅执行简中 640px，核对同来源第一/第二段按成功加入的稳定 ID 聚焦、重复拒绝和删除不留下焦点意图，以及删前段后新添摘录的焦点。
+
 来源版本冲突专项可运行 `POLYASK_EVIDENCE_CONFLICT_NATIVE=1 npm run test:unit -- test/multi-evidence-native.check.ts`，仅执行简中 640px：后台来源 100→101、保存被拒且保留编辑、显式采用已核对版本、再次保存为 101；保留冲突提示和采用按钮两张额外截图，使用相同资源与隔离边界。
 
 ## 会话内任务准备专项
@@ -1660,7 +1662,7 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 
 原生部分复用生产 ViewManager、绘制恢复与销毁，测 1/3/9 个实际挂载页面的可见空闲、隐藏生成模拟、最小化及恢复；仅本地 data 页面以 20Hz 更新有界文本，初始 AI URL 请求在发出前拦截。站点 preload 为空，不代表站点适配器或真实生成。`--pages-only --host-display` 仅在已有 DISPLAY 后端检查本任务合成窗口；默认独立 Xvfb。最小化必须读到 `isMinimized()`，否则明确标为未确认，不将隐藏窗口替代最小化。记录实际页数、挂载、加载、焦点、可见性、生成 tick 与节流状态。
 
-CPU 首次读取只建立基线，随后每状态五次约 300ms 区间样本；工作集/CPU 按 PID 及类别列出，不相加宣称独占内存。操作延迟为生产 setPage 加首个页面 DOM 确认，主进程时钟测量。整项截止 420 秒（构建最多45秒，每数据档最多95秒、原生最多90秒），慢查询在外层终止进程树并记录删失，不填造 P95。输出临时目录含 report.json、各档原始样本、in-flight.json、进程边界与 cleanup.json；结束核对归属进程退出，删除合成数据库、临时 profile，保留库外证据。所有 Electron 进程必须处于共同 4GiB/512MiB cgroup，不允许无界 fallback。
+CPU 首次读取只建立基线，随后每状态五次约 300ms 区间样本；工作集/CPU 按 PID 及类别列出，不相加宣称独占内存。操作延迟为生产 setPage 加固定首个 WebContents 的 JavaScript DOM ACK，主进程时钟测量；ACK 不是新可见页面的绘制。1/3 页面每状态五次全为 setPage(0) no-op；9 页面前台首次 no-op、后四次实际切页，其余状态各五次实际切页。原结果不能用于跨页数直接比较真实翻页成本。整项截止 420 秒（构建最多45秒，每数据档最多95秒、原生最多90秒），慢查询在外层终止进程树并记录删失，不填造 P95。输出临时目录含 report.json、各档原始样本、in-flight.json、进程边界与 cleanup.json；结束核对归属进程退出，删除合成数据库、临时 profile，保留库外证据。所有 Electron 进程必须处于共同 4GiB/512MiB cgroup，不允许无界 fallback。
 
 
 ### 2026-11-08 · 静态报告导出专项
