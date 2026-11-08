@@ -7,7 +7,7 @@
 // 「研究动态」页同样是 SPA，只是内容主题是模型不是元宝产品本身，权衡后未纳入），它们的 UI 变化仍靠
 // 巡检 diagnose 与真实群发失败信号兜底，不在本脚本覆盖面内。Kimi 已由 kind:"snapshot" 补上（见下）。
 // 运行环境：GitHub Actions（.github/workflows/release-watch.yml 注入 GITHUB_TOKEN/GITHUB_REPOSITORY）；
-// 本地无 token 时 dry-run 只打印。命名不得改成 test- 前缀——verify.sh 会强制把 test-*.js 登记进无网络的 CI。
+// --dry-run 或本地无 token 时只打印计划、不写远端（有凭据仍可只读历史）。命名不得改成 test- 前缀——verify.sh 会强制把 test-*.js 登记进无网络的 CI。
 
 const {
   dedupe,
@@ -18,29 +18,24 @@ const {
   parseSnapshot,
   parseBailian,
   NEVER_HIGH_SIGNAL,
-  issueTitle,
-  issueBody,
-  freshEntries,
 } = require("./lib/release-feed.js");
+
+const { planUpdates } = require("./lib/release-watch-plan.js");
 
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 const LABEL = "release-watch";
 // filter 只放行真正的 changelog 条目（各页混有导航/页脚标题，2026-08 实测逐源定形）；页面改版导致
 // 全部过滤不中时按「解析到 0 条」报错升红，不会静默失明。
-// kind: "datedSections" 的四源（claude/gemini/deepseek + 下面新增的 gemini-blog 不算，它是 rss）标题
+// kind: "datedSections" 的三源（claude/gemini/deepseek）标题
 // 本身只是日期，filter 就是识别日期标题的 dateRe，作用于 entry.date（见下方主循环），不是拼接摘要后
 // 的 entry.title。claude 源额外传 groupHeaderRe（datedSections 第四参）剔除「月份大标题」，见
 // release-feed.js 里 datedSections 的注释——不剔除会把下月月份名回收成上月最后一条的摘要。
 // kind: "bailian" 的 entry 同样有 date 字段，filter 用法与 datedSections 一致。
 // kind: "snapshot"（kimi）没有 date 字段，filter 退化成"非空即放行"的哨兵——真正的失败信号是
-// parseSnapshot 找不到 <article> 容器时返回空数组，走下面「解析到 0 条」那条报错路径。
-// highSignal 是精细分级（可选字段，不设时不标记，见 release-feed.js issueTitle 注释）：openai 官方
-// RSS 里模型发布公告和运营/案例通稿混在一起、都能过 filter，highSignal 进一步识别「像真发布」的标题
-// 词表，不匹配的仍开 issue，只是标题标 /low 供快速人工甄别（2026-08 实测样本：Bringing ChatGPT for
-// Teachers…、Introducing the Admin plugin…、Stampli cuts…、ChatGPT Ads expands…、Introducing AI Futures 等
-// 大量非模型公告命中宽 filter）。gemini-blog 复用同一机制：官方博客混着模型发布和客户案例/月度回顾，
-// highSignal 抓 Google 模型发布稿的标准开头「Introducing …」。bailian 反过来用 NEVER_HIGH_SIGNAL
-// 让整源强制落 /low（API 侧上线不代表网页已变，见下方注释与 lowSignalNote）。
+// parseSnapshot 正文为空返回空数组，走下面「解析到 0 条」那条报错路径。
+// 新分类与按周聚合由 release-watch-plan.js 决定：消费端 /web、模型公告 /model 独立开单，
+// API 与低信号按来源 + UTC 周一聚合。highSignal/lowSignalNote 只保留作旧标题/正文兼容，
+// 不再决定新 issue 的信号等级；分类依据与每条来源链接写入正文。旧 label 不可移除。
 const SOURCES = [
   { key: "openai", name: "OpenAI / ChatGPT", url: "https://openai.com/news/rss.xml", kind: "rss",
     filter: /gpt|chatgpt|model|\bo[0-9]\b|release|introducing/i,
@@ -51,20 +46,20 @@ const SOURCES = [
   // 文章页，服务端渲染，实测可直接 GET）。日期是「月份大标题（H2）+ 日期小标题（H3）」两级结构，
   // groupHeaderRe 剔除月份大标题（理由见 datedSections 注释）。key 不变，仍是 "claude"——URL 切换后
   // 首轮会因为新旧页面内容不重叠而登记 1 条新基线 issue，这是预期行为，不是漏检。
-  { key: "claude", name: "Anthropic / Claude（消费端）", url: "https://support.claude.com/en/articles/12138966-release-notes", kind: "datedSections",
+  { key: "claude", name: "Anthropic / Claude（消费端）", url: "https://support.claude.com/en/articles/12138966-release-notes", kind: "datedSections", surface: "web",
     filter: /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},\s*20\d\d$/i,
     groupHeaderRe: /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d\d$/i,
     adapter: "desktop/src/site-runtime/adapters-intl.js" },
-  { key: "gemini", name: "Google / Gemini", url: "https://gemini.google/release-notes/", kind: "datedSections",
+  { key: "gemini", name: "Google / Gemini", url: "https://gemini.google/release-notes/", kind: "datedSections", surface: "web",
     filter: /^20\d\d[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/, adapter: "desktop/src/site-runtime/adapters-intl3.js" },
   // gemini 官方 release notes（上面那条）2026-08 被实证漏记 3.7 Flash 换档这类选择器级变化——真正
   // 发模型公告的是 blog.google 的 Gemini Models 专栏，且该栏目自带 /rss/（各 blog.google 栏目通用
   // 惯例，实测可直接 GET）。key 用 "gemini-blog" 而非复用 "gemini"，两源独立去重、互不影响。
   { key: "gemini-blog", name: "Google / Gemini 官方博客", url: "https://blog.google/innovation-and-ai/models-and-research/gemini-models/rss/", kind: "rss",
     filter: /gemini|flash|pro|model/i, highSignal: /\bintroducing\b/i, adapter: "desktop/src/site-runtime/adapters-intl3.js" },
-  { key: "deepseek", name: "DeepSeek", url: "https://api-docs.deepseek.com/updates/", kind: "datedSections",
+  { key: "deepseek", name: "DeepSeek", url: "https://api-docs.deepseek.com/updates/", kind: "datedSections", surface: "api",
     filter: /20\d\d-\d{1,2}-\d{1,2}/, adapter: "desktop/src/site-runtime/adapters-cn.js" },
-  { key: "zhipu", name: "智谱 / chatglm", url: "https://docs.bigmodel.cn/cn/update/new-releases", kind: "zhipu",
+  { key: "zhipu", name: "智谱 / chatglm", url: "https://docs.bigmodel.cn/cn/update/new-releases", kind: "zhipu", surface: "api",
     filter: /^20\d\d-\d{1,2}-\d{1,2}/, adapter: "desktop/src/site-runtime/adapters-cn2.js" },
   // kimi.com 本身没有面向 C 端网页的官方 changelog（2026-08 复核维持原判），但帮助中心这篇「模型与
   // 模式怎么选」是当前 UI 状态的一手快照（服务端渲染，实测可直接 GET）：K2.6/K3/K3 集群三档模型、
@@ -75,10 +70,10 @@ const SOURCES = [
     filter: /./, anchor: /模型\s*思考强度|三档模型/, adapter: "desktop/src/site-runtime/adapters-cn2.js" },
   // 阿里云百炼「模型上线表」是跨厂商 API 上线信号（Qwen/GLM/Kimi 等经百炼平台上线的型号，不是任何
   // 单一网页产品的 changelog），表格服务端渲染、按日期倒序，实测可直接 GET。用 NEVER_HIGH_SIGNAL 让
-  // 整源强制标 /low：API 侧上线不代表对应网页选择器已同步，lowSignalNote 把这句话钉进 issue 正文，
+  // 旧版整源标 /low；新版 surface:"api" 按周聚合：API 侧上线不代表网页选择器已同步，
   // 不能沿用 openai 那句「多半是营销/案例文」（这源里没有营销文，只是信号层级不同）。adapter 字段在
   // 这里没有单一文件可指——不同型号分属不同厂商适配器，写清楚怎么按行内 Model type 去对应。
-  { key: "bailian", name: "阿里云百炼·模型上线表（跨厂商）", url: "https://help.aliyun.com/en/model-studio/newly-released-models", kind: "bailian",
+  { key: "bailian", name: "阿里云百炼·模型上线表（跨厂商）", url: "https://help.aliyun.com/en/model-studio/newly-released-models", kind: "bailian", surface: "api",
     filter: /^20\d\d-\d{1,2}-\d{1,2}$/, highSignal: NEVER_HIGH_SIGNAL,
     lowSignalNote: "低信号条目：阿里云百炼是跨厂商 API 上线表（Qwen/GLM/Kimi 等厂商模型经百炼平台上线），只代表 API 侧已可调用，不代表对应网页产品（qianwen.com / chatglm.cn / kimi.com 等）的模型选择器已同步这个模型——需要按条目里的厂商真机核对具体站点才能确认 UI 是否变化。",
     adapter: "按行内 Model type 对应厂商站点定，例如 Qwen 系→desktop/src/site-runtime/adapters-cn4.js，GLM/Kimi 系→desktop/src/site-runtime/adapters-cn2.js" },
@@ -116,48 +111,53 @@ async function gh(method, path, body, allow422) {
   if (!r.ok) throw new Error(`GitHub API ${method} ${path}: HTTP ${r.status}`);
   return r.json();
 }
-async function existingTitles() {
-  const titles = new Set();
-  for (let page = 1; page <= 3; page++) {
-    const rows = await gh("GET", `/repos/${REPO}/issues?labels=${LABEL}&state=all&per_page=100&page=${page}`);
-    (rows || []).forEach((row) => titles.add(row.title));
-    if (!rows || rows.length < 100) break;
+// 拉取所有历史标题和周报条目身份；有界扫描到顶必须红灯，不能假装历史已读完。
+async function existingIssues(github) {
+  const issues = [];
+  for (let page = 1; page <= 20; page++) {
+    const rows = await github("GET", `/repos/${REPO}/issues?labels=${LABEL}&state=all&per_page=100&page=${page}`);
+    if (!Array.isArray(rows)) throw new Error("GitHub issue 列表格式异常");
+    issues.push(...rows.filter((row) => !row.pull_request));
+    if (rows.length < 100) return issues;
   }
-  return titles;
+  throw new Error("历史 issue 扫描超过 2000 条上限，未进行写入");
 }
 
-(async () => {
-  const dryRun = !TOKEN || !REPO;
-  const seen = dryRun ? new Set() : await existingTitles();
-  if (!dryRun) await gh("POST", `/repos/${REPO}/labels`, { name: LABEL, color: "d9b93b", description: "模型发布情报（watch-releases.js 自动创建）" }, true);
+async function runWatch(options) {
+  const { sources = SOURCES, read = fetchText, github = gh,
+    dryRun = process.argv.includes("--dry-run") || !TOKEN || !REPO,
+    now = new Date(), log = console.log, warn = console.warn } = options || {};
+  const canReadIssues = !!options?.github || !!(TOKEN && REPO);
+  const issues = options?.issues ? structuredClone(options.issues) : canReadIssues ? await existingIssues(github) : [];
+  if (!dryRun) await github("POST", `/repos/${REPO}/labels`, { name: LABEL, color: "d9b93b", description: "模型发布情报（watch-releases.js 自动创建）" }, true);
   const failures = [];
-  for (const src of SOURCES) {
-    let entries = [];
+  for (const src of sources) {
     try {
-      const text = await fetchText(src.url);
-      entries = src.kind === "rss" ? parseRss(text)
+      const text = await read(src.url);
+      let entries = src.kind === "rss" ? parseRss(text)
         : src.kind === "zhipu" ? parseZhipu(text, src.url)
         : src.kind === "datedSections" ? datedSections(text, src.url, src.filter, src.groupHeaderRe)
         : src.kind === "snapshot" ? parseSnapshot(text, src.url, src.anchor)
         : src.kind === "bailian" ? parseBailian(text, src.url)
         : parseHeadings(text, src.url);
-      // entry.date（datedSections/bailian 独有：日期部分原文）优先于 entry.title（拼了摘要，或 snapshot
-      // 的正文摘要）：filter 只该判日期，snapshot 没有 date 字段则回退判 title（非空即放行，见上方注释）。
+      // RSS publishedAt 不作 filter 输入；日期型来源仍用原始 date 校验，保留旧解析契约。
       entries = dedupe(entries.filter((entry) => src.filter.test(entry.date ?? entry.title))).slice(0, 10);
-    } catch (e) { failures.push(`${src.key}: ${e.message}`); continue; }
-    if (!entries.length) { failures.push(`${src.key}: 解析到 0 条（页面结构可能已变，去 ${src.url} 人工看一眼）`); continue; }
-    const picked = freshEntries(src, entries, seen);
-    for (const entry of picked) {
-      const title = issueTitle(src, entry);
-      if (dryRun) { console.log(`[dry-run] would open: ${title}`); continue; }
-      const created = await gh("POST", `/repos/${REPO}/issues`, { title, body: issueBody(src, entry), labels: [LABEL] });
-      if (!created || !created.number) { failures.push(`${src.key}: issue 创建失败 ${title}`); continue; }
-      console.log(`opened: #${created.number} ${title}`);
-    }
-    if (!picked.length) console.log(`${src.key}: 无新条目`);
+      if (!entries.length) throw new Error(`解析到 0 条（页面结构可能已变，去 ${src.url} 人工看一眼）`);
+      const updates = planUpdates(src, entries, issues, now, warn);
+      for (const update of updates) {
+        const { number, ...body } = update;
+        if (dryRun) { log(`[dry-run] would ${number ? "update" : "open"}: ${body.title}`); continue; }
+        const saved = await github(number ? "PATCH" : "POST", `/repos/${REPO}/issues${number ? `/${number}` : ""}`, { ...body, ...(!number ? { labels: [LABEL] } : {}) });
+        if (!saved?.number) throw new Error(`issue ${number ? "更新" : "创建"}失败 ${body.title}`);
+        if (number) Object.assign(issues.find((row) => row.number === number), saved, body);
+        else issues.push({ ...saved, ...body });
+        log(`${number ? "updated" : "opened"}: #${saved.number} ${body.title}`);
+      }
+      if (!updates.length) log(`${src.key}: 无新条目`);
+    } catch (e) { failures.push(`${src.key}: ${e.message}`); }
   }
-  if (failures.length) { // 情报源自身失效也要可见：workflow 变红触发 GitHub 失败邮件，不静默失明
-    console.error("情报源异常：\n" + failures.join("\n"));
-    process.exit(1);
-  }
-})().catch((e) => { console.error(e); process.exit(1); });
+  if (failures.length) throw new Error("情报源异常：\n" + failures.join("\n"));
+}
+
+module.exports = { SOURCES, runWatch };
+if (require.main === module) runWatch().catch((e) => { console.error(e); process.exitCode = 1; });

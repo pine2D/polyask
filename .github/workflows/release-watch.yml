@@ -1,6 +1,6 @@
 name: Release watch
 
-# 模型发布情报哨兵：定时轮询五家官方 changelog/RSS，有新条目自动开 issue（脚本见 scripts/watch-releases.js）。
+# 模型发布情报哨兵：定时轮询官方 changelog/RSS/快照页，高信号独立提醒，API/低信号按周聚合（脚本见 scripts/watch-releases.js）。
 # 注意：仓库 60 天无 push 时 GitHub 会自动停用 scheduled workflow（Actions 页会有启用横幅，重新点一下即可）。
 # 定时任务失败会触发 GitHub 的 workflow 失败邮件——情报源断链因此自暴露，不会静默失明。
 on:
@@ -11,6 +11,11 @@ on:
 permissions:
   contents: read
   issues: write # 开情报 issue 需要
+
+# 周报是读-改-写；同仓定时/手动运行使用同组，跨 ref 也不得同时写。
+concurrency:
+  group: release-watch
+  cancel-in-progress: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true

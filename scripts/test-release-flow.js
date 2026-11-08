@@ -4,6 +4,7 @@ const fs = require("fs");
 const desktopPackage = JSON.parse(fs.readFileSync("desktop/package.json", "utf8"));
 const workflow = fs.readFileSync(".github/workflows/release.yml", "utf8");
 const ciWorkflow = fs.readFileSync(".github/workflows/ci.yml", "utf8");
+const releaseWatch = fs.readFileSync(".github/workflows/release-watch.yml", "utf8");
 const portableArchive = fs.readFileSync("desktop/scripts/archive-portable.ps1", "utf8");
 const prepareRelease = fs.readFileSync("scripts/prepare-release.sh", "utf8");
 const releaseScript = fs.readFileSync("scripts/release.sh", "utf8");
@@ -87,6 +88,13 @@ function sliceBetween(text, startMarker, endMarker) {
 
   const desktopCross = sliceBetween(ciWorkflow, "\n  desktop-cross-platform:\n", null);
   assert.match(desktopCross, /timeout-minutes:\s*\d+/, "desktop-cross-platform 作业缺少 timeout-minutes");
+}
+
+// 周报读-改-写必须跨手动 ref 串行，禁止取消已开始的写入。
+{
+  const concurrency = sliceBetween(releaseWatch, "\nconcurrency:\n", "\nenv:\n");
+  assert.match(concurrency, /^\s+group: release-watch\s*$/m, "release-watch 必须使用跨 ref 的固定并发组");
+  assert.match(concurrency, /^\s+cancel-in-progress: false\s*$/m, "周报增量不得被较新运行半途取消");
 }
 
 assert.ok(ciWorkflow.includes("archive-portable.ps1"), "Windows CI 必须构建并解包校验真实 portable ZIP");

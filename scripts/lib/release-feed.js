@@ -1,6 +1,6 @@
 // scripts/lib/release-feed.js — scripts/watch-releases.js 的纯解析/去重逻辑，抽出来是为了
-// scripts/test-release-feed.js 能离线 require 到（watch-releases.js 顶层是一个立即执行的
-// async IIFE，直接 fetch 五个真实站点、有 token 时还会向 GitHub POST issue，不能被测试 require）。
+// scripts/test-release-feed.js 能离线 require 到；分类与周报计划在 release-watch-plan.js，
+// watch-releases.js 仅在命令行入口运行网络请求，离线测试注入 HTTP 边界。
 "use strict";
 
 const PER_SOURCE_CAP = 3; // 单源单次最多开 3 条，防解析异常/长间隔积压时刷屏
@@ -37,7 +37,9 @@ function parseRss(xml) {
   for (let m; (m = re.exec(xml)) && out.length < 20; ) {
     const title = stripTags((m[1].match(/<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/) || [])[1] || "");
     const link = ((m[1].match(/<link>([\s\S]*?)<\/link>/) || [])[1] || "").trim();
-    if (title) out.push({ title, url: link });
+    const published = ((m[1].match(/<pubDate>([\s\S]*?)<\/pubDate>/) || [])[1] || "").trim();
+    const stamp = Date.parse(published);
+    if (title) out.push({ title, url: link, ...(Number.isFinite(stamp) ? { publishedAt: new Date(stamp).toISOString() } : {}) });
   }
   return out;
 }
@@ -64,7 +66,8 @@ function parseZhipu(html, pageUrl) {
   });
 }
 
-// src.highSignal 是可选的精细分级：不设时（claude/gemini/deepseek/zhipu）一律不标记，行为与改造前完全一致。
+// 以下 issueTitle/issueBody 保留旧格式兼容；生产新分类由 release-watch-plan.js 决定。
+// src.highSignal 是旧版可选的精细分级：不设时（claude/gemini/deepseek/zhipu）一律不标记，行为与改造前完全一致。
 // openai 的宽 filter 只挡掉非常明显的噪音，混进大量营销/案例稿（Bringing ChatGPT for Teachers…、Introducing
 // the Admin plugin…）；highSignal 不匹配不等于丢弃——营销稿也可能夹带真发布，只降噪省人力，仍然开 issue。
 function isLowSignal(src, entry) {

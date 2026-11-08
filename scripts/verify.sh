@@ -120,6 +120,7 @@ done
 echo "[test] 发布链与用户可见文案"
 node scripts/test-release-flow.js
 node scripts/test-release-feed.js
+node scripts/test-release-watch.js
 node scripts/test-oauth-secret-hygiene.js
 
 echo "[test] 站点登记与跨端契约"
