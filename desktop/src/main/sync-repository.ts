@@ -1,7 +1,8 @@
 import { SyncImageStore } from "./sync-image-store";
 import { isStoredQuestionAttachments } from "../shared/question-attachments";
 import { projectPreferences, applyPreferences } from './sync-preferences';
-import { projectDrafts, applyDrafts, carriedSettings } from './sync-drafts';
+import { projectDrafts, applyDrafts, carriedSettings, draftFromSetting } from './sync-drafts';
+import { draftFormat } from '../shared/drafts';
 import { purgeDraftTombstones } from './draft-retention';
 import { projectGroups } from './sync-groups';
 import { terminalDraftSettings } from './sync-draft-merge';
@@ -146,7 +147,13 @@ export class SyncRepository {
         groups: {}
       }
     ]).materialized.templates;
-    return { schema: Object.entries(settings).some(([key, setting]) => key.startsWith("polyask.draft.") && (setting.value as {format?: number})?.format === 2) ? 6 : SYNC_SCHEMA, deviceId, settings, templates, groups };
+    const extendedDrafts = Object.entries(settings).some(([key, setting]) => {
+      if (!key.startsWith("polyask.draft.")) return false;
+      if ((setting.value as { format?: number })?.format === 2) return true;
+      const draft = draftFromSetting(setting);
+      return draft !== null && draftFormat(draft) === 2;
+    });
+    return { schema: extendedDrafts ? 6 : SYNC_SCHEMA, deviceId, settings, templates, groups };
   }
 
   applyStateFragments(remoteStates: Readonly<Record<string, StateFragment>>): { readonly changed: boolean; readonly readOnly: boolean; readonly corrupt: number } {

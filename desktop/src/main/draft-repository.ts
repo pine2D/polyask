@@ -46,12 +46,13 @@ export class DraftRepository {
     if (!input) throw new Error('invalid_draft');
     const deviceId = this.currentDeviceId();
     const current = this.list(input.kind, input.context).find(d => d.deviceId === deviceId);
-    // Remounting an editor re-saves the same form: keep the version, write nothing, upload nothing.
-    if (current && sameContents(current, input)) return current;
+    const format = current?.format === 2 ? 2 : draftFormat(input);
+    // Unchanged labor is a no-op unless its old wire format would lose source-version metadata.
+    if (current && current.format === format && sameContents(current, input)) return current;
     if (!current) purgeDraftTombstones(this.state, this.meta.get<Record<string, StateFragment>>('remoteStates') ?? {}, this.now());
     const id = current?.id ?? this.createId();
     if (!current && this.state.get(`${DRAFT_STATE_PREFIX}${id}`) !== null) throw new Error('invalid_draft');
-    const draft = parseStoredDraft({ ...input, format: current?.format === 2 ? 2 : draftFormat(input), id, deviceId,
+    const draft = parseStoredDraft({ ...input, format, id, deviceId,
       updatedAt: nextSyncTime(this.now(), ...(current ? [current.updatedAt] : [])) });
     if (!draft) throw new Error('invalid_draft');
     this.checkEpoch(expectedEpoch);

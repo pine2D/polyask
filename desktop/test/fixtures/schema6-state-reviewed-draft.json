@@ -1,0 +1,36 @@
+{
+  "file": {
+    "id": "state-reviewed",
+    "appProperties": { "app": "polyask", "kind": "state", "schema": "6", "id": "source" }
+  },
+  "body": {
+    "schema": 6,
+    "deviceId": "source",
+    "settings": {
+      "polyask.draft.reviewed-draft": {
+        "updatedAt": 200,
+        "deviceId": "source",
+        "value": {
+          "format": 2,
+          "id": "reviewed-draft",
+          "kind": "decision",
+          "context": "archive:source",
+          "title": "Reviewed judgment",
+          "content": {
+            "archiveId": "source",
+            "sourceUpdatedAt": 100,
+            "title": "Reviewed judgment",
+            "conclusion": "Retain this reasoning without excerpts",
+            "rationale": "",
+            "uncertainties": "",
+            "nextStep": "",
+            "status": "draft",
+            "evidence": []
+          }
+        }
+      }
+    },
+    "groups": {},
+    "templates": {}
+  }
+}

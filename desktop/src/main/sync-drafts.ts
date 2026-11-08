@@ -1,4 +1,4 @@
-import { DRAFT_SETTING_PREFIX, DRAFT_STATE_PREFIX, DRAFT_SYNC_META_KEY, parseStoredDraft } from '../shared/drafts';
+import { draftFormat, DRAFT_SETTING_PREFIX, DRAFT_STATE_PREFIX, DRAFT_SYNC_META_KEY, parseStoredDraft } from '../shared/drafts';
 import { compareSyncVersion, type StateFragment, type VersionedSyncValue } from '../shared/sync';
 import { expiredDraftTombstone } from './draft-retention';
 import type { MetaRepository } from './meta-repository';
@@ -13,6 +13,7 @@ export function projectDrafts(state: StateRepository, meta: MetaRepository): Rec
     if (!draft || key !== `${DRAFT_STATE_PREFIX}${draft.id}` || (draft.deletedAt === undefined &&
       draft.deviceId !== self && draft.deviceId !== `backup:${draft.id}`)) return [];
     const { updatedAt, deviceId, deletedAt, ...payload } = draft;
+    payload.format = draft.format === 2 ? 2 : draftFormat(draft);
     return [[`${DRAFT_SETTING_PREFIX}${draft.id}`, { value: payload, updatedAt, deviceId,
       ...(deletedAt === undefined ? {} : { deletedAt }) }]];
   }));

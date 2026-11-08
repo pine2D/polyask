@@ -103,7 +103,9 @@ export function parseStoredDraft(value: unknown): StoredDraft | null {
       typeof item.deviceId !== 'string' || !item.deviceId || item.deviceId.length > 256 ||
       (Object.hasOwn(item, 'deletedAt') && (!validSyncTime(item.deletedAt) || item.deletedAt !== item.updatedAt))) return null;
     if (item.format === 2 && item.kind !== 'comparison' && item.kind !== 'decision') return null;
-    if (item.format === 1 && draftFormat(item as unknown as DraftInput) === 2) return null;
+    // Earlier builds wrote version-only decision drafts as format1; keep that labor readable.
+    // Extended evidence was never valid under format1. All new projections use draftFormat.
+    if (item.format === 1 && hasExtendedEvidence(item as unknown as DraftInput)) return null;
     // Tombstones contain identity only; deleted editing labor must not survive ingestion.
     if (Object.hasOwn(item, 'deletedAt') &&
       (item.title !== '' || item.content !== null || Object.hasOwn(item, 'sourceUpdatedAt'))) return null;
@@ -111,11 +113,17 @@ export function parseStoredDraft(value: unknown): StoredDraft | null {
   } catch { return null; }
 }
 
-/** Only extended evidence labor needs a new wire boundary; ordinary drafts remain format 1. */
-export function draftFormat(input: DraftInput): 1 | 2 {
-  if (input.kind !== 'comparison' && input.kind !== 'decision') return 1;
+function hasExtendedEvidence(input: DraftInput): boolean {
+  if (input.kind !== 'comparison' && input.kind !== 'decision') return false;
   const content = input.content as { evidence?: unknown[]; quotes?: unknown[]; sourceUpdatedAt?: unknown } | null;
   const items = content?.evidence ?? content?.quotes;
   return Array.isArray(items) && (items.length > 9 || items.some(item => !!item && typeof item === 'object' &&
-    ('id' in item || 'topic' in item))) ? 2 : 1;
+    ('id' in item || 'topic' in item)));
+}
+
+/** Old decision editors also drop sourceUpdatedAt when there are no excerpts. */
+export function draftFormat(input: DraftInput): 1 | 2 {
+  const content = input.content;
+  return hasExtendedEvidence(input) || (input.kind === 'decision' && !!content && typeof content === 'object' &&
+    Object.hasOwn(content, 'sourceUpdatedAt')) ? 2 : 1;
 }

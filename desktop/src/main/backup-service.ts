@@ -1,4 +1,5 @@
 import { BACKUP_PREVIEW_TTL_MS, type BackupMissingOriginals } from '../shared/backup';
+import { draftFormat, parseStoredDraft } from '../shared/drafts';
 import { BackupStaging, readBackupContainer, writeBackupContainer, type BackupGuard } from './backup-container';
 import { backupContainerDocument, missingBackupOriginals } from './backup-export';
 import { attachmentBody, validateContainerManifest } from './backup-container-manifest';
@@ -56,7 +57,9 @@ export class BackupService {
         continue;
       const split = key.indexOf(":"), kind = key.slice(0, split) as BackupKind, id = key.slice(split + 1);
       if (kind === "questionAnswer" && !active(this.database.questions.get(body.questionId))) continue;
-      entries.push({ kind, id, body: projectBody(kind, body, id) });
+      const draft = kind === 'draft' ? parseStoredDraft(body) : null;
+      const exported = draft ? { ...draft, format: draft.format === 2 ? 2 : draftFormat(draft) } : body;
+      entries.push({ kind, id, body: projectBody(kind, exported, id) });
     }
     const extended = entries.some(e => e.body.schema === 6 || (e.kind === "draft" && e.body.format === 2));
     const document = validateBackup({ format: "polyask-backup", version: extended ? 5 : 3, exportedAt: this.now(), entries });

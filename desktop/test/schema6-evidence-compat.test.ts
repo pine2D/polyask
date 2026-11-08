@@ -18,7 +18,7 @@ function frozen(name: string, require: (name: string) => any): any {
     { module, exports: module.exports, require, Buffer, TextEncoder });
   return module.exports;
 }
-for (const name of ['schema6-decision.json', 'schema6-state-evidence-draft.json']) {
+for (const name of ['schema6-decision.json', 'schema6-state-evidence-draft.json', 'schema6-state-reviewed-draft.json']) {
   test(`frozen ${name} imports through the new reader`, async () => {
     const fixture = JSON.parse(readSource(`test/fixtures/${name}`));
     const db = DesktopDatabase.open(':memory:'), repo = new SyncRepository(db); db.meta.put('deviceId', 'fixture');
