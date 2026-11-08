@@ -45,7 +45,7 @@
 ## 原图附件 schema 5（可选同步）
 
 - `schema5-question-attachments.json` / `schema5-question-attachments-tombstone.json`：独立原图集及删除标记；正文保留 questionId，活记录携带有序 metadata/base64，墓碑不保留图片字段。现有 schema 1–4 样本保持冻结。
-- 本机仓库及同步下行验证格式、哈希与字节；图片同步默认关闭，确认开启后传输新实体，客户端识别上限为 schema 5。旧样本不改写。
+- 本机仓库及同步下行验证格式、哈希与字节；图片同步默认关闭，确认开启后传输新实体。该格式引入时识别上限为 schema 5，当前上限见 schema 6 节；旧样本不改写。
 - `schema4-sync-pull.ts.txt` 冻结自 `1e04254` 的实际 schema 4 下行实现，测试以旧版上限 4 执行，证明 schema 5 会锁住旧客户端的全局上传且不触发删除。
 - `image-sync-local-meta-v1.json` 记录仅本机的图片开关/确认键、reset 与投影排除契约；它不是 Drive 正文，也不进入业务备份。
 
@@ -63,6 +63,7 @@
 
 ## 多段依据与独立草稿（schema 6 / format 2）
 
-- `schema6-decision.json`、`schema6-state-evidence-draft.json`、`backup5-multi-evidence.json`：同来源多段依据、稳定 ID、可选判断事项与来源版本；state6 只用于携带 format2 依据草稿或其墓碑，普通 state1、question4、images5 不升级。备份仍复用未发布的 v5。
+- `schema6-decision.json`、`schema6-state-evidence-draft.json`、`backup5-multi-evidence.json`：同来源多段依据、稳定 ID、可选判断事项与来源版本；state6 用于携带 format2 草稿或其墓碑，普通 state1、question4、images5 不升级。备份仍复用未发布的 v5。
+- `schema6-state-reviewed-draft.json`：决策草稿只有 `content.sourceUpdatedAt`、尚无摘录时仍使用 format2/state6；`draft-version-boundary.test.ts` 同时覆盖旧 format1 可读、同 ID 升级、备份 v5 和关闭草稿同步后的携带保护。
 - `task3-*.ts.txt` 冻结自 `e124197a0b6960b273933b50429bd1847fd9a5d7` 的实际源码。`schema6-evidence-compat.test.ts` 实际执行旧同步读取器、决策校验器和草稿读取器，证明独立新草稿也不会被旧客户端静默降级；既有冻结样本未修改。
 - 源码与 SHA-256：`main/sync-pull.ts` → `task3-sync-pull.ts.txt`：`388a4bbf808159a37a2c491d8b80caeb1b189a8768cf6d117f678bf6041ae108`；`shared/decision.ts` → `task3-decision.ts.txt`：`e2d5e08525bd8d48a0ef753cc0fe2ad3d96207f53f0b958b708730437d30a4d6`；`shared/drafts.ts` → `task3-drafts.ts.txt`：`14af129a7b67182b257ddfd6497ec8633357b696f367da3b31aa5ff6b4670f28`。
