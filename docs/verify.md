@@ -1642,3 +1642,5 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 在 `desktop/` 运行 `npm run test:unit -- test/multi-evidence-native.check.ts`。测试使用生产 ManualComparison/useComparisonWorksheet、DecisionWorkspace、草稿恢复 hooks 与真实 SQLite ArchiveService/DecisionService/DraftRepository，通过限定测试 IPC 桥连接，加载与生产入口一致的四份全局样式。三语 × 640/1280px 共六组：可信鼠标从两份合成来源选择三段原文，输入同一判断事项并集中回查第二段精确选区；Tab/Escape 返回后等待 format2 草稿落库，重载页面显式恢复全部摘录和稳定 ID，形成并保存 schema6 决策，单独删除第一段而保留其余 ID，再回查保存原文。只读面每段只显示一次，编辑面保留逐条控件。
 
 输出目录由测试打印，保留六张 PNG、report.json、runtime.log、process-boundary.json；断网临时 profile、共同 4GiB/512MiB cgroup、全部观测 PID 退出及 profile 清理均核对。Linux/WSL 合成流程不替代真实站点/Drive 双设备、Windows/macOS、物理 IME 或读屏验收；执行耗时只反映自动化检查，不是用户效率研究。
+
+来源版本冲突专项可运行 `POLYASK_EVIDENCE_CONFLICT_NATIVE=1 npm run test:unit -- test/multi-evidence-native.check.ts`，仅执行简中 640px：后台来源 100→101、保存被拒且保留编辑、显式采用已核对版本、再次保存为 101；保留冲突提示和采用按钮两张额外截图，使用相同资源与隔离边界。

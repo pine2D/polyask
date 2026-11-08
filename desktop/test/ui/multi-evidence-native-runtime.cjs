@@ -2,25 +2,28 @@ const {app,BrowserWindow,session,ipcMain,nativeTheme}=require('electron');
 const {join}=require('node:path');
 const {writeFileSync}=require('node:fs');
 const {processBoundary}=require('./native-process-boundary.cjs');
-const output=process.argv[2], report=[];
+const output=process.argv[2], report=[], conflict=process.argv[3]==='conflict';
 app.setPath('userData',join(output,'profile'));
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const check=(value,message)=>{if(!value)throw Error(message);};
 app.whenReady().then(async()=>{
   const {DesktopDatabase,ArchiveService,DecisionService,DraftRepository}=require(join(output,'services.cjs'));
-  let db,archives,decisions,drafts,source;
+  let db,archives,decisions,drafts,source,conflictNext=false;
   session.defaultSession.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_,cb)=>cb({cancel:true}));
   const win=new BrowserWindow({width:1280,height:1000,show:true,webPreferences:{sandbox:true,contextIsolation:true,preload:join(output,'preload.cjs')}});
   win.setMenuBarVisibility(false);
   const sample=processBoundary(app,output);
   const errors=[];win.webContents.on('console-message',event=>{if(event.level==='error')errors.push(event.message);});
   ipcMain.handle('evidence-native',(_event,name,args)=>{
-    const api={getArchive:()=>source,createDecision:value=>decisions.create(value),updateDecision:(id,value)=>decisions.update(id,value),
+    const api={getArchive:()=>source,createDecision:value=>decisions.create(value),updateDecision:(id,value)=>{
+      if(conflictNext){conflictNext=false;source={...source,updatedAt:101};db.archives.put(source);}
+      return decisions.update(id,value);
+    },
       listDrafts:(kind,context)=>({epoch:drafts.epoch(),deviceId:'native',drafts:drafts.list(kind,context)}),
       saveDraft:(value,epoch)=>drafts.save(value,epoch),removeDraft:(id,stamp,epoch)=>drafts.remove(id,stamp,epoch)};
     if(!api[name])throw Error(`unavailable fixture operation ${name}`);return api[name](...args);
   });
-  const js=code=>win.webContents.executeJavaScript(code,true);
+  const js=async code=>{try{return await win.webContents.executeJavaScript(code,true);}catch(error){writeFileSync(join(output,'failure.png'),(await win.capturePage()).toPNG());writeFileSync(join(output,'failure-dom.html'),await win.webContents.executeJavaScript('document.body.outerHTML'));throw Error(`${code}\n${errors.join(';')}\n${error}`);}};
   const until=async(code,message)=>{for(let i=0;i<120;i++){if(await js(code))return;await pause(25);}throw Error(message);};
   const click=async selector=>{
     win.focus();win.webContents.focus();
@@ -48,7 +51,7 @@ app.whenReady().then(async()=>{
     await button('excerptUseSelection',"document.querySelector('.folder-modal')");
     await button('excerptManualCompare',`document.querySelector('.manual-comparison-source:nth-child(${sourceIndex+1})')`);
   };
-  for(const locale of ['en','zh-CN','zh-TW'])for(const width of [1280,640]){
+  for(const locale of (conflict?['zh-CN']:['en','zh-CN','zh-TW']))for(const width of (conflict?[640]:[1280,640])){
     if(db)db.close();db=DesktopDatabase.open(':memory:');db.meta.put('deviceId','native');
     archives=new ArchiveService(db.archives,{deviceId:()=> 'native',now:()=>100,createId:()=> 'native-source'});
     source=archives.add({text:'Synthetic decision question',task:'Compare costs',results:[
@@ -57,7 +60,7 @@ app.whenReady().then(async()=>{
     decisions=new DecisionService(db.decisions,archives,{deviceId:()=> 'native'});drafts=new DraftRepository(db.state,db.meta);
     nativeTheme.themeSource=locale==='en'?'dark':'light';win.setSize(width,1000);
     await win.loadFile(join(output,'index.html'),{query:{locale}});await until('!!document.querySelector(".manual-comparison")','comparison mounted');
-    await click('.manual-comparison > summary');await add(0,0);await add(0,1);await add(1,0);
+    await click('.manual-comparison > summary');await until('!!document.querySelector(".answer-excerpt-open")','comparison sources opened');await add(0,0);await add(0,1);await add(1,0);
     check(await js('document.querySelectorAll(".manual-quote").length===3'),'three retained passages');
     for(const selector of ['[name=comparison-topic-0-0]','[name=comparison-topic-0-1]','[name=comparison-topic-1-0]'])await type(selector,'Cost');
     await type('[name=comparison-note-evidence-0]','Keep all four note categories.');
@@ -78,6 +81,20 @@ app.whenReady().then(async()=>{
     await button('decisionSave');await until('!!document.querySelector(".decision-editor[data-editing=false]")','decision saved');
     const card=decisions.search()[0];check(card.schema===6&&card.evidence.length===3,'real service saved all excerpts');
     check(card.evidence.map(e=>e.id).join(',')===ids.join(','),'comparison ids persist through decision save');
+    if(conflict){
+      await button('decisionEdit');await type('[name=decision-title]','Pending judgment after source update');conflictNext=true;
+      await button('decisionSave');await until('!!document.querySelector("[data-evidence-use-reviewed]")','conflict refresh offers explicit review');
+      check(decisions.search()[0].sourceUpdatedAt===100,'conflict did not save or adopt version101');
+      check(await js("document.querySelector('[name=decision-title]').value==='Pending judgment after source update'"),'conflict retains edited title');
+      await js("document.querySelector('.decision-source-conflict').scrollIntoView({block:'center'})");await pause(80);
+      writeFileSync(join(output,'source-conflict-zh-CN-640.png'),(await win.capturePage()).toPNG());
+      await js("document.querySelector('[data-evidence-use-reviewed]').scrollIntoView({block:'center'})");await pause(80);
+      writeFileSync(join(output,'source-review-zh-CN-640.png'),(await win.capturePage()).toPNG());
+      await click('[data-evidence-use-reviewed]');await button('decisionSave');
+      await until('!!document.querySelector(".decision-editor[data-editing=false]")','reviewed conflict saved');
+      const reviewed=decisions.search()[0];check(reviewed.sourceUpdatedAt===101&&reviewed.title==='Pending judgment after source update','explicit reviewed version persisted');
+      check(reviewed.evidence.map(e=>e.id).join(',')===ids.join(','),'conflict recovery retains stable identities');
+    }
     await button('decisionEdit');await click('.decision-excerpt header button');await button('decisionSave');
     await until('!!document.querySelector(".decision-editor[data-editing=false]")','single removal saved');
     const after=decisions.search()[0];check(after.evidence.length===2&&after.evidence[0].id===ids[1],'single deletion retains second same-source identity');
@@ -86,7 +103,7 @@ app.whenReady().then(async()=>{
     const geometry=await js(`(()=>{const n=document.querySelector('.decision-editor');return {width:n.clientWidth,scroll:n.scrollWidth,body:document.body.scrollWidth,viewport:innerWidth};})()`);
     check(geometry.scroll<=geometry.width+1&&geometry.body<=geometry.viewport+1,'no horizontal overflow');
     sample();const name=`${locale}-${width}`;writeFileSync(join(output,`${name}.png`),(await win.capturePage()).toPNG());
-    report.push({locale,width,ok:true,steps:['native-select-three','topic-group','original-range','keyboard-return','format2-save','reload-recover','schema6-decision-save','single-delete','saved-review'],geometry,ids});
+    report.push({locale,width,ok:true,steps:[...(conflict?['backend-source100-to101','save-conflict-retains-edits','explicit-reviewed-version','save101-stable-ids']:[]),'native-select-three','topic-group','original-range','keyboard-return','format2-save','reload-recover','schema6-decision-save','single-delete','saved-review'],geometry,ids});
     writeFileSync(join(output,'report.json'),JSON.stringify(report,null,2));
   }
   check(errors.length===0,`renderer errors: ${errors.join(';')}`);sample();db.close();win.destroy();app.exit(0);

@@ -42,7 +42,7 @@ export class DecisionService {
   update(id: string, value: unknown): DecisionRecord {
     const current = this.get(id);
     if (!current) throw new Error("not_found");
-    if (!isDecisionInput(value) || value.archiveId !== current.archiveId) throw new Error("invalid_decision");
+    if (!isDecisionInput(value) || value.archiveId !== current.archiveId || (current.schema === 6 && value.sourceUpdatedAt === undefined)) throw new Error("invalid_decision");
     const record: DecisionRecord = {...current,...this.fields(value),evidence:this.evidence(value,current),
       updatedAt:Math.max(this.now(),current.updatedAt+1),deviceId:this.options.deviceId(), schema:current.schema === 6 || value.sourceUpdatedAt !== undefined || value.evidence.some(e => e.id) ? 6 : 2};
     return this.repository.put(record) as DecisionRecord;
@@ -73,13 +73,14 @@ export class DecisionService {
 
   private evidence(value: DecisionInput, current?: DecisionRecord): DecisionEvidence[] {
     const source = this.archives.get(value.archiveId);
+    if (source && value.sourceUpdatedAt !== undefined && value.sourceUpdatedAt !== source.updatedAt) throw new Error("decision_source_changed");
+    if (!source && value.sourceUpdatedAt !== current?.sourceUpdatedAt) throw new Error("invalid_decision");
     return value.evidence.map(e => {
       if (!source) {
         const saved = current?.evidence.find(old => sameEvidence(old, e));
         if (!saved) throw new Error("invalid_decision");
         return {...saved};
       }
-      if (value.sourceUpdatedAt !== undefined && value.sourceUpdatedAt !== source.updatedAt) throw new Error("invalid_decision");
       const answer = source.results[e.resultIndex];
       if (!answer?.text?.includes(e.excerpt)) throw new Error("invalid_decision");
       return {...(e.id === undefined ? {} : {id:e.id}), ...(e.topic === undefined ? {} : {topic:e.topic}), resultIndex:e.resultIndex,excerpt:e.excerpt,host:answer.host,label:answer.label,capturedAt:source.ts};

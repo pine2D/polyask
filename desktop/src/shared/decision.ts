@@ -60,7 +60,7 @@ export function isDecisionInput(value: unknown): value is DecisionInput {
   if (!Array.isArray(v.evidence) || v.evidence.length > 36) return false;
   const ids = new Set<string>(), tuples = new Set<string>();
   const extended = v.sourceUpdatedAt !== undefined || v.evidence.some(e => e?.id !== undefined || e?.topic !== undefined);
-  if (!extended && v.evidence.length > 9) return false;
+  if (extended ? !time(v.sourceUpdatedAt) : v.evidence.length > 9) return false;
   return v.evidence.every(e => {
     if (!e || typeof e !== "object" || !Number.isInteger(e.resultIndex) || e.resultIndex < 0 || e.resultIndex >= 9 ||
       !bounded(e.excerpt, 4000, true) || (e.topic !== undefined && !bounded(e.topic, 120))) return false;

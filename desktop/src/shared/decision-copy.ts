@@ -1,5 +1,6 @@
 export const DECISION_COPY = {
   en: {
+    decisionSourceChanged: "The source result changed. Your edits are retained. Review the current source before saving.", decisionReloadSource: "Reload source",
     evidenceUseReviewedSource: "Use reviewed source version",
     evidenceTopic: "Judgment topic (optional)", evidenceByTopic: "Evidence by topic", evidenceUnassigned: "Unassigned", evidenceReview: "Review original passage", evidenceTopicTooLong: "Topics allow up to 120 characters.",
     decisionConfirm: "Confirm", decisionPick: "Select a decision card to view its details.", decisionTitle: "Decision cards", decisionArchives: "Saved results", decisionCreate: "Create decision card",
@@ -27,6 +28,7 @@ export const DECISION_COPY = {
     decisionNew: "New decision card", decisionExport: "Export Markdown", decisionUnsaved: "Unsaved changes"
   },
   zhCN: {
+    decisionSourceChanged: "来源归档已更新，编辑内容已保留。请核对当前来源后再保存。", decisionReloadSource: "重新读取来源",
     evidenceUseReviewedSource: "使用已核对的来源版本",
     evidenceTopic: "判断事项（可选）", evidenceByTopic: "按判断事项查看依据", evidenceUnassigned: "未指定事项", evidenceReview: "回查原文片段", evidenceTopicTooLong: "判断事项最多 120 字。",
     decisionConfirm: "确认", decisionPick: "选择一张决策卡查看详情。", decisionTitle: "决策卡", decisionArchives: "归档结果", decisionCreate: "创建决策卡",
@@ -54,6 +56,7 @@ export const DECISION_COPY = {
     decisionNew: "新建决策卡", decisionExport: "导出 Markdown", decisionUnsaved: "尚未保存"
   },
   zhTW: {
+    decisionSourceChanged: "來源封存已更新，編輯內容已保留。請核對目前來源後再儲存。", decisionReloadSource: "重新讀取來源",
     evidenceUseReviewedSource: "使用已核對的來源版本",
     evidenceTopic: "判斷事項（選填）", evidenceByTopic: "依判斷事項查看依據", evidenceUnassigned: "未指定事項", evidenceReview: "回查原文片段", evidenceTopicTooLong: "判斷事項最多 120 字。",
     decisionConfirm: "確認", decisionPick: "選擇一張決策卡查看詳情。", decisionTitle: "決策卡", decisionArchives: "封存結果", decisionCreate: "建立決策卡",

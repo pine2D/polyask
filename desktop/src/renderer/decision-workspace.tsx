@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
 import type { DecisionInput, DecisionRecord, DecisionStatus } from "../shared/decision";
+import { ipcErrorCode } from "../shared/ipc-error";
 import { dateTimeAttribute, formatDateTime } from "../shared/format";
 import { DecisionEditor, decisionInput, decisionStatuses, decisionStatusLabel } from "./decision-editor";
 import { validateDecisionDraft } from "./decision-validation";
@@ -41,6 +42,8 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
   const [editing, setEditing] = useState(!!initialSource);
   const [source, setSource] = useState<ArchiveRecord | null | undefined>(initialSource ?? undefined);
   const [sourceFailed, setSourceFailed] = useState(false);
+  const [sourceConflict, setSourceConflict] = useState(false);
+  const [sourceRevision, setSourceRevision] = useState(0);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<DecisionStatus | "">("");
   const [loading, setLoading] = useState(true);
@@ -63,7 +66,10 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
   const dirty = editing && !!value && (!saved || JSON.stringify(value) !== JSON.stringify(decisionInput(saved)));
   const draftDirty = editing && !!value && JSON.stringify(value) !== JSON.stringify(saved ? decisionInput(saved) : initialBaseline.current);
   const [draftSourceVersion, setDraftSourceVersion] = useState(initialRecord?.updatedAt ?? initialSource?.updatedAt);
-  const changeValue = (next: DecisionInput) => { editRevision.current++; setValue(next); };
+  const changeValue = (next: DecisionInput) => {
+    editRevision.current++; setValue(next);
+    if (sourceConflict && source && next.sourceUpdatedAt === source.updatedAt) { setSourceConflict(false); setMessage(""); }
+  };
   const persistent = usePersistentDraft({ kind: 'decision', context: saved ? `decision:${saved.id}` : `archive:${value?.archiveId ?? ''}`,
     title: [...(value?.title ?? '')].slice(0, 160).join(''), content: value, enabled: !!value && editing, dirty: draftDirty, sourceUpdatedAt: draftSourceVersion,
     onRestore: (content, draft) => {
@@ -109,7 +115,7 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
     if (value) shell.getArchive(value.archiveId).then((record) => { if (active) setSource(record); })
       .catch(() => { if (active) setSourceFailed(true); });
     return () => { active = false; };
-  }, [value?.archiveId, revision]);
+  }, [value?.archiveId, revision, sourceRevision]);
   useEffect(() => {
     if (!dirty) return;
     const beforeUnload = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -122,11 +128,16 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
     let failed = false;
     busyRef.current = true;
     setBusy(true); setMessage("");
-    try { await action(); } catch { failed = true; setMessage(copy.decisionFailed); }
+    try { await action(); } catch (error) {
+      failed = true;
+      if (ipcErrorCode(error) === "decision_source_changed") {
+        setSourceConflict(true); setSourceRevision(count => count + 1); setMessage(copy.decisionSourceChanged);
+      } else setMessage(copy.decisionFailed);
+    }
     finally { finishFocus(failed); busyRef.current = false; setBusy(false); }
   };
   const select = (record: DecisionRecord) => guard(() => {
-    setDraftSourceVersion(record.updatedAt);
+    setSourceConflict(false); setDraftSourceVersion(record.updatedAt);
     setSaved(record); setValue(decisionInput(record)); setEditing(false); setMessage(""); setValidationStarted(false);
   });
   const save = () => {
@@ -139,14 +150,14 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
       const record = saved ? await shell.updateDecision(saved.id, value) : await shell.createDecision(value);
       void persistent.clearSaved(sentDraft);
       if (!saved) persistent.supersede();
-      setSaved(record); setDraftSourceVersion(record.updatedAt);
+      setSourceConflict(false); setSaved(record); setDraftSourceVersion(record.updatedAt);
       if (editRevision.current === sentRevision) { setValue(decisionInput(record)); setEditing(false); }
       setRevision((count) => count + 1);
       setValidationStarted(false);
       setMessage(copy.decisionSaved); onChanged?.(record);
     });
   };
-  const clearDetail = () => { setSaved(null); setValue(null); setEditing(false); setMessage(""); setValidationStarted(false); };
+  const clearDetail = () => { setSourceConflict(false); setSaved(null); setValue(null); setEditing(false); setMessage(""); setValidationStarted(false); };
   const remove = () => {
     if (!saved) return;
     setConfirmation({ text: copy.decisionDeleteConfirm, action: () => { void run(async () => {
@@ -199,6 +210,11 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
             </div>
           </div>
           {editing && <DraftRecovery {...persistent.recovery} copy={copy} locale={locale} busy={busy || persistent.recovery.busy} sourceUpdatedAt={saved?.updatedAt ?? source?.updatedAt} />}
+          {editing && sourceConflict ? <div className="decision-source-conflict">
+            <p role="status">{copy.decisionSourceChanged}</p>
+            <button type="button" data-decision-reload-source disabled={busy || (source === undefined && !sourceFailed)}
+              onClick={() => setSourceRevision(count => count + 1)}>{copy.decisionReloadSource}</button>
+          </div> : null}
           <DecisionEditor errors={errors} onOpenLink={url => { void run(() => shell.openExternal(url)); }} copy={copy} value={value} saved={saved} source={source} sourceFailed={sourceFailed} editing={editing} busy={busy} onChange={changeValue} onOpenSource={() => guard(() => { if (source) onArchives(source); })} />
         </> : <div className="decision-placeholder">{items.length ? copy.decisionPick : copy.decisionEmpty}</div>}
       </main>

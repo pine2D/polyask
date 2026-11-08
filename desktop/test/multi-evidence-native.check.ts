@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import webpack from 'webpack';
+const conflict=process.env.POLYASK_EVIDENCE_CONFLICT_NATIVE==='1';
 test('native comparison drafts and decisions save, review, delete and recover multiple excerpts', {timeout:180000},async()=>{
   const output=mkdtempSync(join(tmpdir(),'polyask-multi-evidence-'));
   console.log(`Multi-evidence native: ${output}`);
@@ -21,7 +22,7 @@ test('native comparison drafts and decisions save, review, delete and recover mu
   writeFileSync(join(output,'index.html'),'<!doctype html><meta charset="utf-8"><div id="root"></div><script src="bundle.js"></script>');
   writeFileSync(join(output,'preload.cjs'),"const {contextBridge,ipcRenderer}=require('electron');contextBridge.exposeInMainWorld('evidenceNative',{call:(name,args)=>ipcRenderer.invoke('evidence-native',name,args)});");
   const binary=require('electron') as string;
-  const result=spawnSync('xvfb-run',['-a',binary,join(__dirname,'ui/multi-evidence-native-runtime.cjs'),output],{encoding:'utf8',timeout:130000,
+  const result=spawnSync('xvfb-run',['-a',binary,join(__dirname,'ui/multi-evidence-native-runtime.cjs'),output,...(conflict?['conflict']:[])],{encoding:'utf8',timeout:130000,
     env:{...process.env,ELECTRON_RUN_AS_NODE:'',DBUS_SESSION_BUS_ADDRESS:`unix:path=${output}/no-session-bus`,WAYLAND_DISPLAY:'',WAYLAND_SOCKET:''}});
   writeFileSync(join(output,'runtime.log'),result.stdout+'\n'+result.stderr);
   const boundary=join(output,'process-boundary.json');
@@ -29,5 +30,5 @@ test('native comparison drafts and decisions save, review, delete and recover mu
   rmSync(join(output,'profile'),{recursive:true,force:true});
   assert.equal(result.status,0,`Native evidence: ${output}; ${result.stdout}; ${result.error?.message??''}`);
   const report=JSON.parse(readFileSync(join(output,'report.json'),'utf8'));
-  assert.equal(report.length,6); assert.equal(report.every((r:any)=>r.ok),true);
+  assert.equal(report.length,conflict?1:6); assert.equal(report.every((r:any)=>r.ok),true);
 });

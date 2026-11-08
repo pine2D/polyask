@@ -7,6 +7,7 @@ import { DraftRepository } from '../src/main/draft-repository';
 import { SyncRepository } from '../src/main/sync-repository';
 import { projectBody } from '../src/main/backup-validation';
 import { parseDecisionContent } from '../src/renderer/editor-draft-content';
+import { createArchiveRecord } from '../src/shared/archive';
 import { isStoredDecision } from '../src/shared/decision';
 import { mergeStateFragments } from '../src/shared/sync';
 function setup() {
@@ -36,7 +37,7 @@ test('multiple excerpts retain identities and topics across save, remove and orp
 test('duplicate tuple and stale source version reject while distinct topics remain distinct',()=>{
   const {db,service,input} = setup();
   try {
-    assert.throws(()=>service.create({...input,sourceUpdatedAt:99}),/invalid_decision/);
+    assert.throws(()=>service.create({...input,sourceUpdatedAt:99}),/decision_source_changed/);
     assert.throws(()=>service.create({...input,evidence:[input.evidence[0],{...input.evidence[0],id:'another'}]}),/invalid_decision/);
     assert.equal(service.create({...input,evidence:[input.evidence[0],{...input.evidence[0],id:'another',topic:'Speed'}]}).evidence.length,2);
   } finally {db.close();}
@@ -127,5 +128,37 @@ test('a legacy empty decision can adopt an explicit source version without inven
     assert.equal(saved.schema,2);
     const next=service.update(saved.id,{...input,evidence:[]});
     assert.equal(next.schema,6); assert.equal(next.sourceUpdatedAt,input.sourceUpdatedAt);
+  } finally {db.close();}
+});
+
+test('schema6 updates cannot omit or retain a stale source version and rejected writes leave record and outbox intact',()=>{
+  const {db,service,input,source}=setup();
+  try {
+    const saved=service.create(input);
+    db.archives.put(createArchiveRecord({...source,updatedAt:101,results:[{...source.results[0],text:'New excerpt. Second excerpt.'}]},{id:source.id,now:101,deviceId:'local'}));
+    const next={...input,evidence:[{...input.evidence[0],excerpt:'New excerpt.'}]};
+    const {sourceUpdatedAt:ignored,...omitted}=next;
+    const pending=db.outbox.ready(Number.MAX_SAFE_INTEGER);
+    for(const [payload,code] of [[omitted,'invalid_decision'],[{...next,sourceUpdatedAt:100},'decision_source_changed'],
+      [{...next,sourceUpdatedAt:NaN},'invalid_decision'],[{...next,sourceUpdatedAt:100,evidence:[]},'decision_source_changed'],[{...omitted,evidence:[]},'invalid_decision']] as const) {
+      assert.throws(()=>service.update(saved.id,payload),new RegExp(code));
+      assert.deepEqual(service.get(saved.id),saved);
+      assert.deepEqual(db.outbox.ready(Number.MAX_SAFE_INTEGER),pending);
+    }
+    const updated=service.update(saved.id,{...next,sourceUpdatedAt:101});
+    assert.equal(updated.sourceUpdatedAt,101);assert.equal(updated.evidence[0].excerpt,'New excerpt.');
+    assert.equal(updated.evidence[0].id,'quote-a');
+    assert.equal(db.outbox.ready(0).find(o=>o.key==='decision:card')!.revision,pending.find(o=>o.key==='decision:card')!.revision+1);
+  } finally {db.close();}
+});
+
+test('missing-source schema6 body editing preserves the saved provenance',()=>{
+  const {db,service,input,archives}=setup();
+  try {
+    const saved=service.create(input);archives.delete(input.archiveId);
+    assert.equal(service.update(saved.id,{...input,title:'Body edit'}).title,'Body edit');
+    const before=service.get(saved.id),pending=db.outbox.ready(0);
+    assert.throws(()=>service.update(saved.id,{...input,sourceUpdatedAt:101}),/invalid_decision/);
+    assert.deepEqual(service.get(saved.id),before);assert.deepEqual(db.outbox.ready(0),pending);
   } finally {db.close();}
 });
