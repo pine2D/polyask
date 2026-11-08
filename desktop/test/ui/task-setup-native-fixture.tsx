@@ -25,19 +25,19 @@ document.documentElement.lang=locale;
 const templates=[{id:'template',name:copy.taskSetupVerify,text:'Check {{topic}}',updatedAt:1,deviceId:'native'}];
 const groups=[{id:'pair',name:'Claude + Kimi',sites:['claude','kimi'] as const,updatedAt:1,deviceId:'native'}];
 let state:WorkspaceState={selectedSites:['claude'],participatingSites:['claude'],tier:null,groups};
-let failure='', delay=0, broadcasts=0, sessions=0;
+let failure='', delay=0, broadcasts=0, sessions=0, notifications=0, tierCalls=0;
 const pause=()=>new Promise(resolve=>setTimeout(resolve,delay));
 setShellApi({setSelection:async (value:WorkspaceState['selectedSites'])=>{await pause();if(failure==='open')throw Error('fixture open failure');state={...state,selectedSites:value};return state;},
   setParticipation:async (value:WorkspaceState['selectedSites'])=>{await pause();if(failure==='save')throw Error('fixture save failure');state={...state,participatingSites:value};return state;},
-  applyTier:async (tier:Tier)=>{await pause();state={...state,tier};return {workspace:state,results:state.participatingSites!.map(site=>({site,ok:failure!=='tier'})) as SiteRunResult[]};},
+  applyTier:async (tier:Tier)=>{tierCalls++;await pause();if(failure==='tier-reject')throw Error('fixture tier failure');state={...state,tier};return {workspace:state,results:state.participatingSites!.map(site=>({site,ok:failure!=='tier'})) as SiteRunResult[]};},
   bootstrap:async()=>({workspace:state}),broadcast:async()=>{broadcasts++;throw Error('must not send');},newSession:async()=>{sessions++;throw Error('must not navigate');}} as any);
 export function TaskSetupNativeFixture({ onPrepared }: { onPrepared?: (prompt: string) => void } = {}){
   const prepared = useRef('');
   const lock=useRef(new ExclusiveActionLock()).current, revision=useRef(new DraftRevision()).current;
   const [prompt,setPrompt]=useState('Synthetic current draft'),[surface,setSurface]=useState<DesktopSurface>('sites');
   const commands=useRef({}),confirmation=useDraftConfirmation(commands);
-  const flow=useWorkspaceFlow(SITES,'workspace failed',()=>{});
-  const participation=useSyncedSiteParticipation(flow,true,lock,()=>{});
+  const flow=useWorkspaceFlow(SITES,'workspace failed',()=>{notifications++;});
+  const participation=useSyncedSiteParticipation(flow,true,lock,()=>{notifications++;});
   const images=useImageSelection(copy,true,()=>{});
   const change=(next:DesktopSurface)=>requestSurfaceChange(surface,next,{surfaceChanged:confirmation.surfaceChanged,
     closeImages:images.invalidateAndClose,closeHistory:()=>{},resetComposer:()=>{},closeDrawer:()=>{},commit:setSurface});
@@ -48,7 +48,7 @@ export function TaskSetupNativeFixture({ onPrepared }: { onPrepared?: (prompt: s
   useEffect(()=>{flow.accept(state);images.replace([{name:'synthetic.png',mime:'image/png',bytes:1,dataUrl:'data:image/png;base64,AA=='} as any]);},[]);
   (window as any).taskNative={copy,configure:(kind:string,wait=0)=>{failure=kind;delay=wait;},
     snapshot:()=>({prompt,images:images.images.length,imageName:images.images[0]?.name,scope:participation.currentSites(),
-      pending:setup.pending,error:setup.error,surface,lock:lock.busy,broadcasts,sessions,open:!!setup.session})};
+      pending:setup.pending,error:setup.error,surface,lock:lock.busy,broadcasts,sessions,notifications,tierCalls,open:!!setup.session})};
   return <main style={{padding:20}}><button id="task-opener" onClick={()=>executeCommand('open-task-setup',{'open-task-setup':setup.open})}>{copy.taskSetup}</button>
     <textarea name="fixture-draft" value={prompt} readOnly/>
     {setup.session?<TaskSetup setup={setup} copy={copy} sites={SITES} templates={templates} groups={groups}/>:null}

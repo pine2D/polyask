@@ -18,7 +18,7 @@ interface TaskSetupOptions {
   readonly busy: () => boolean;
   readonly lock: ExclusiveActionLock;
   readonly participation: ReturnType<typeof useSyncedSiteParticipation>;
-  readonly changeTier: (tier: Tier) => Promise<readonly SiteRunResult[] | null>;
+  readonly changeTier: (tier: Tier, isCurrent?: () => boolean) => Promise<readonly SiteRunResult[] | null>;
   readonly onApply: (text: string) => void;
   readonly onApplied?: () => void;
   readonly onBlockingChange: DraftBlockingChange;
@@ -67,7 +67,7 @@ export function useTaskSetup(options: TaskSetupOptions) {
       if (!active()) { if (lease.current === current) setError('stale'); return false; }
       if (!accepted || !sameTaskSites(latest.current.participation.currentSites(), plan.sites)) { setError('failed'); return false; }
       if (plan.tier !== null) {
-        const results = await initial.lock.run(() => latest.current.changeTier(plan.tier));
+        const results = await initial.lock.run(() => latest.current.changeTier(plan.tier, active));
         if (!active()) { if (lease.current === current) setError('stale'); return false; }
         if (!results || !plan.sites.every(site => results.some(result => result.site === site && result.ok))) { setError('failed'); return false; }
       }

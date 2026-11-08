@@ -6,9 +6,9 @@ export interface SiteParticipationOptions {
   readonly opened: readonly SiteKey[];
   readonly ready: boolean;
   readonly busy?: boolean;
-  readonly openPages: (next: readonly SiteKey[]) => Promise<readonly SiteKey[]>;
+  readonly openPages: (next: readonly SiteKey[], isCurrent?: () => boolean) => Promise<readonly SiteKey[]>;
   readonly saved?: readonly SiteKey[];
-  readonly save?: (next: readonly SiteKey[]) => Promise<readonly SiteKey[]>;
+  readonly save?: (next: readonly SiteKey[], isCurrent?: () => boolean) => Promise<readonly SiteKey[]>;
   readonly onError: () => void;
 }
 
@@ -47,6 +47,7 @@ export function useSiteParticipation(options: SiteParticipationOptions) {
     let target: readonly SiteKey[];
     try { target = participationSites(value); } catch { latest.current.onError(); return false; }
     const request = ++revision.current;
+    const owned = () => active(request) && isCurrent();
     const opened = latest.current.opened;
     // Missing pages become participants only after their own accepted open ACK.
     accept(target.filter(site => opened.includes(site)));
@@ -60,12 +61,12 @@ export function useSiteParticipation(options: SiteParticipationOptions) {
         const base = pagesNeededForParticipation(opened, [...new Set(inFlight)]);
         const next = pagesNeededForParticipation(base, target);
         opening.current.set(request, next);
-        accepted = participationSites(await latest.current.openPages(next));
+        accepted = participationSites(await latest.current.openPages(next, owned));
       }
       // Caller ownership must also survive the open ACK before starting a persistent save.
       if (!active(request) || !isCurrent()) return false;
       const confirmed = target.filter(site => accepted.includes(site));
-      const saved = latest.current.save ? participationSites(await latest.current.save(confirmed)) : confirmed;
+      const saved = latest.current.save ? participationSites(await latest.current.save(confirmed, owned)) : confirmed;
       if (!active(request) || !isCurrent()) return false;
       accept(saved);
       const complete = target.every(site => accepted.includes(site));
@@ -74,7 +75,7 @@ export function useSiteParticipation(options: SiteParticipationOptions) {
     } catch {
       if (active(request)) {
         if (latest.current.saved !== undefined) accept(latest.current.saved.filter(site => latest.current.opened.includes(site)));
-        latest.current.onError();
+        if (isCurrent()) latest.current.onError();
       }
       return false;
     } finally {

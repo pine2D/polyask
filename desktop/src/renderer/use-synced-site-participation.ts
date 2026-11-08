@@ -6,13 +6,13 @@ export function useSyncedSiteParticipation(flow: ReturnType<typeof useWorkspaceF
   lock: ExclusiveActionLock, onError: () => void) {
   return useSiteParticipation({ opened: flow.workspace.selectedSites, saved: flow.workspace.participatingSites,
     ready, get busy() { return lock.busy; }, onError,
-    openPages: async next => {
-      const accepted = await lock.run(() => flow.openPages(next));
+    openPages: async (next, isCurrent) => {
+      const accepted = await lock.run(() => flow.openPages(next, isCurrent));
       if (!accepted) throw new Error('operation_busy');
       return accepted;
     },
-    save: async next => {
-      const accepted = await lock.run(() => flow.saveParticipation(next));
+    save: async (next, isCurrent) => {
+      const accepted = await lock.run(() => flow.saveParticipation(next, isCurrent));
       if (!accepted) throw new Error('operation_busy');
       return accepted;
     }

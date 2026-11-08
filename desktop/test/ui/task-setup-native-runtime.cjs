@@ -69,7 +69,17 @@ app.whenReady().then(async()=>{
     await until('!window.taskNative.snapshot().open&&!window.taskNative.snapshot().pending','cancelled ACK settles');
     check(await js(`window.taskNative.snapshot().prompt===${JSON.stringify(beforeCancel)}&&window.taskNative.snapshot().broadcasts===0&&window.taskNative.snapshot().sessions===0`),'cancelled late ACK retains draft with no send/navigation');
     check(await js("document.activeElement===document.querySelector('#task-opener')"),'cancel restores opener focus');
-    sample();report.push({locale,width,ok:true,geometry,steps:['native-select','variable-fill','custom-output','exact-preview-scope','IME-Escape','Tab-trap','confirmation-cancel','tier-failure','newer-edit-late-ACK','explicit-apply','cancel-late-ACK','focus-return','no-send-or-new-session']});
+    await open();await js("window.taskNative.configure('save',600)");await confirm();
+    await until('window.taskNative.snapshot().pending','delayed failure starts');
+    const notifications=await js('window.taskNative.snapshot().notifications');await key('Escape');
+    await until('!window.taskNative.snapshot().open&&!window.taskNative.snapshot().pending','cancelled failure settles');
+    check(await js(`window.taskNative.snapshot().notifications===${notifications}`),'cancelled failure does not announce into the next surface');
+    await open();await select('task-tier',1);await js("window.taskNative.configure('tier-reject',350)");
+    const tierCalls=await js('window.taskNative.snapshot().tierCalls');await confirm();
+    await until(`window.taskNative.snapshot().tierCalls>${tierCalls}`,'delayed tier failure starts');await key('Escape');
+    await until('!window.taskNative.snapshot().open&&!window.taskNative.snapshot().pending','cancelled tier failure settles');
+    check(await js(`window.taskNative.snapshot().notifications===${notifications}`),'cancelled tier failure remains silent');
+    sample();report.push({locale,width,ok:true,geometry,steps:['native-select','variable-fill','custom-output','exact-preview-scope','IME-Escape','Tab-trap','confirmation-cancel','tier-failure','newer-edit-late-ACK','explicit-apply','cancel-late-ACK','cancel-late-failure','cancel-tier-failure','focus-return','no-send-or-new-session']});
     writeFileSync(join(output,'report.json'),JSON.stringify(report,null,2));
   }
   check(errors.length===0,`renderer errors: ${errors.join(';')}`);sample();win.destroy();app.exit(0);

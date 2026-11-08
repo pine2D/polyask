@@ -19,7 +19,7 @@ async function fixture() {
   const tier = deferred<{workspace: WorkspaceState; results: readonly SiteRunResult[]}>();
   let flow!: ReturnType<typeof useWorkspaceFlow>, participation!: ReturnType<typeof useSyncedSiteParticipation>;
   let setup!: ReturnType<typeof useTaskSetup>, prompt = 'Original draft', intent = '1:original-image', busy = false;
-  const lock = new ExclusiveActionLock(), calls: string[] = [];
+  const lock = new ExclusiveActionLock(), calls: string[] = []; let notifications = 0;
   const template = {id:'current',name:'Current',text:'Task',updatedAt:1,deviceId:'d'};
   let templates = [template];
   const state: WorkspaceState = {selectedSites:['claude'], participatingSites:['claude'], groups:[], tier:null};
@@ -28,7 +28,7 @@ async function fixture() {
     applyTier: () => {calls.push('tier'); return tier.promise;}, bootstrap: async () => ({workspace:state}),
     broadcast: () => {calls.push('SEND');}, newSession: () => {calls.push('NEW');}} as any);
   function Fixture() {
-    flow = useWorkspaceFlow(SITES, 'failed', () => {});
+    flow = useWorkspaceFlow(SITES, 'failed', () => { notifications++; });
     participation = useSyncedSiteParticipation(flow, true, lock, () => {});
     setup = useTaskSetup({templates, groups:[], sites:SITES, prompt, imageCount:1,
       getIntent:()=>intent, busy:()=>busy, lock, participation, changeTier:flow.changeTier,
@@ -42,7 +42,7 @@ async function fixture() {
   const openState = {...state,selectedSites:['claude','kimi'] as const};
   const accepted = {...state,selectedSites:['claude','kimi'] as const,participatingSites:['claude','kimi'] as const};
   return {...h, plan, accepted, openState, state, opening,saving,tier,lock,calls,template, participation:()=>participation, flow:()=>flow,
-    expireSource:async()=>{templates=[];await h.render(<Fixture/>);}, setup:()=>setup, prompt:()=>prompt,
+    expireSource:async()=>{templates=[];await h.render(<Fixture/>);}, setup:()=>setup, prompt:()=>prompt, notifications:()=>notifications,
     changeIntent:()=>{intent='2:new-image';}, setBusy:()=>{busy=true;},
     close:async()=>{await h.close();setShellApi(null);}};
 }
@@ -60,6 +60,22 @@ test('real workspace and participation composition waits for open/save/tier ACK 
     assert.equal(h.prompt(),'Prepared task');assert.equal(h.lock.busy,false);
     assert.equal(h.calls.some(value=>value==='SEND'||value==='NEW'),false);
   }finally{await h.close();}
+});
+
+for (const owner of ['current', 'cancelled', 'edited'] as const) test(`task tier failure only notifies the ${owner} owner when still current`, async () => {
+  const h = await fixture(); try {
+    let applied!: Promise<boolean>;
+    await act(async () => { applied = h.setup().apply(h.plan); });
+    await act(async () => h.opening.resolve(h.openState));
+    await act(async () => h.saving.resolve(h.accepted));
+    assert.equal(h.calls.at(-1), 'tier');
+    if (owner === 'cancelled') await act(async () => h.setup().close());
+    if (owner === 'edited') await act(async () => h.setup().edit());
+    await act(async () => { h.tier.reject(Error('late tier IPC failure')); assert.equal(await applied, false); });
+    assert.equal(h.notifications(), owner === 'current' ? 1 : 0);
+    assert.equal(h.prompt(), 'Original draft');
+    assert.equal(h.lock.busy, false);
+  } finally { await h.close(); }
 });
 
 for(const reason of ['open-failure','save-failure','tier-failure','cancel','edit','new-image','busy','source-expired','scope-mismatch'] as const) {

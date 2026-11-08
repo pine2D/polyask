@@ -29,16 +29,16 @@ export function useWorkspaceFlow(
     setWorkspace({ ...value, selectedSites,
       ...(pendingParticipation.current ? { participatingSites: pendingParticipation.current } : {}) });
   };
-  const recover = (): void => {
+  const recover = (notify = true): void => {
     pendingSelection.current = null;
     accept(acceptedWorkspace.current);
     const request = ++selectionRequest.current;
-    announce(failedMessage);
+    if (notify) announce(failedMessage);
     void shell.bootstrap().then((state) => {
       if (request === selectionRequest.current) accept(state.workspace);
     }).catch(() => undefined);
   };
-  const openPages = async (value: readonly SiteKey[]): Promise<readonly SiteKey[]> => {
+  const openPages = async (value: readonly SiteKey[], isCurrent = () => true): Promise<readonly SiteKey[]> => {
     const ordered = [...new Set(value)].filter((key) => sites.some((site) => site.key === key));
     const request = ++selectionRequest.current;
     pendingSelection.current = ordered;
@@ -51,7 +51,7 @@ export function useWorkspaceFlow(
       accept(state);
       return selectionRef.current;
     } catch (error) {
-      if (request === selectionRequest.current) recover();
+      if (request === selectionRequest.current) recover(isCurrent());
       throw error;
     }
   };
@@ -70,7 +70,7 @@ export function useWorkspaceFlow(
     },
     changeSelection,
     openPages,
-    saveParticipation: async (sites: readonly SiteKey[]): Promise<readonly SiteKey[]> => {
+    saveParticipation: async (sites: readonly SiteKey[], isCurrent = () => true): Promise<readonly SiteKey[]> => {
       const request = ++participationRequest.current;
       pendingParticipation.current = sites;
       try {
@@ -79,7 +79,7 @@ export function useWorkspaceFlow(
         pendingParticipation.current = null; accept(state);
         return acceptedWorkspace.current.participatingSites ?? acceptedWorkspace.current.selectedSites;
       } catch (error) {
-        if (request === participationRequest.current) { pendingParticipation.current = null; recover(); }
+        if (request === participationRequest.current) { pendingParticipation.current = null; recover(isCurrent()); }
         throw error;
       }
     },
@@ -88,13 +88,13 @@ export function useWorkspaceFlow(
       if (next.has(site)) next.delete(site); else next.add(site);
       changeSelection([...next]);
     },
-    changeTier: async (tier: Tier): Promise<readonly SiteRunResult[] | null> => {
+    changeTier: async (tier: Tier, isCurrent = () => true): Promise<readonly SiteRunResult[] | null> => {
       setWorkspace((current) => ({ ...current, tier }));
       try {
         const result = await shell.applyTier(tier);
         accept(result.workspace);
         return result.results;
-      } catch { recover(); return null; }
+      } catch { recover(isCurrent()); return null; }
     },
     saveGroup: async (name: string, participating: readonly SiteKey[] = selectionRef.current): Promise<boolean> => {
       try {
@@ -106,7 +106,7 @@ export function useWorkspaceFlow(
       }
     },
     deleteGroup: (id: string) => {
-      void shell.deleteGroup(id).then(accept).catch(recover);
+      void shell.deleteGroup(id).then(accept).catch(() => recover());
     },
     recover
   };
