@@ -29,8 +29,8 @@ export async function uploadSyncOperation(repository: SyncRepository, drive: Syn
   } else if (operation.kind === "state") {
     key = `state:${deviceId}`;
     name = `state-${deviceId}.json`;
-    properties = { app: "polyask", schema: "1", kind: "state", id: deviceId };
     body = repository.localStateFragment();
+    properties = { app: "polyask", schema: String(body.schema), kind: "state", id: deviceId };
   } else if (operation.kind === "history" && operation.entityId) {
     const record = repository.history(operation.entityId);
     if (!record) { repository.complete(operation.key, operation.revision); return; }
@@ -48,7 +48,7 @@ export async function uploadSyncOperation(repository: SyncRepository, drive: Syn
     if (!record) { repository.complete(operation.key, operation.revision); return; }
     key = `decision:${record.id}`;
     name = `decision-${record.id}.json`;
-    properties = { app: "polyask", schema: "2", kind: "decision", id: record.id, deleted: "deletedAt" in record ? "1" : "0" };
+    properties = { app: "polyask", schema: String(record.schema), kind: "decision", id: record.id, deleted: "deletedAt" in record ? "1" : "0" };
     body = record;
   } else if ((operation.kind === "question" || operation.kind === "questionAnswer") && operation.entityId) {
     const record = operation.kind === "question" ? repository.question(operation.entityId) : repository.questionAnswer(operation.entityId);

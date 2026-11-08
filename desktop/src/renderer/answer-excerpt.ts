@@ -10,6 +10,8 @@ export interface ExcerptSource {
   readonly truncated: boolean;
 }
 export interface ExactExcerpt extends Omit<ExcerptSource, 'sourceText'> {
+  readonly id?: string;
+  readonly topic?: string;
   readonly start: number;
   readonly end: number;
   readonly excerpt: string;

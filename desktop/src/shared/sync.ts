@@ -1,5 +1,5 @@
 export const SYNC_SCHEMA = 1;
-/** Attempts/archives with webpage observations use 6; images 5, questions 4, folders 3, decisions 2. */
+/** Observations and extended evidence/draft fragments use 6; images 5, questions 4, folders 3, legacy decisions 2. */
 export const SUPPORTED_SYNC_SCHEMA = 6;
 export const CLEAR_REMOTE_CONFIRMATION = "DELETE";
 
@@ -139,8 +139,8 @@ export function mergeStateFragments(fragments: readonly unknown[]): MergedState 
   for (const value of fragments) {
     if (!value || typeof value !== "object") { corrupt += 1; continue; }
     const fragment = value as Partial<StateFragment>;
-    if (Number(fragment.schema) > SYNC_SCHEMA) { readOnly = true; continue; }
-    if (fragment.schema !== SYNC_SCHEMA || typeof fragment.deviceId !== "string") { corrupt += 1; continue; }
+    if (Number(fragment.schema) > SYNC_SCHEMA && fragment.schema !== 6) { readOnly = true; continue; }
+    if ((fragment.schema !== SYNC_SCHEMA && fragment.schema !== 6) || typeof fragment.deviceId !== "string") { corrupt += 1; continue; }
     for (const [key, candidate] of Object.entries(fragment.settings ?? {})) {
       if (!validVersioned(candidate)) { corrupt += 1; continue; }
       const normalized = { ...candidate, deviceId: candidate.deviceId || fragment.deviceId };

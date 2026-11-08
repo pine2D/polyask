@@ -132,9 +132,9 @@ export class SyncPull {
     const props = file.appProperties ?? {};
     if (props.app !== "polyask") return;
     const legacySchema = props.kind === "questionAttachments" ? 5 : (props.kind === "question" || props.kind === "questionAnswer") ? 4 : (props.kind === "folder" || props.kind === "folderMembership") ? 3 : props.kind === "decision" ? 2 : SYNC_SCHEMA;
-    const expectedSchema = props.kind === "questionAnswer" || props.kind === "archive" ? 6 : legacySchema;
+    const expectedSchema = ["questionAnswer", "archive", "decision", "state"].includes(props.kind) ? 6 : legacySchema;
     const supported = (schema: unknown) => Number(schema) === legacySchema || Number(schema) === expectedSchema;
-    if (Number(props.schema) > expectedSchema) {
+    if (!supported(props.schema) && Number(props.schema) > legacySchema) {
       future.set(file.id, Number(props.schema));
       this.repository.deleteDriveFile(file.id);
       return;
@@ -170,7 +170,7 @@ export class SyncPull {
       }
       throw error;
     }
-    if (body && typeof body === "object" && Number((body as { schema?: unknown }).schema) > expectedSchema) {
+    if (body && typeof body === "object" && !supported((body as { schema?: unknown }).schema) && Number((body as { schema?: unknown }).schema) > legacySchema) {
       future.set(file.id, Number((body as { schema?: unknown }).schema));
       this.repository.deleteDriveFile(file.id);
       return;

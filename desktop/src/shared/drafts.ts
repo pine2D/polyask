@@ -14,7 +14,7 @@ export interface StoredDraft extends DraftInput {
   readonly updatedAt: number;
   readonly deviceId: string;
   readonly deletedAt?: number;
-  readonly format: 1;
+  readonly format: 1 | 2;
 }
 export const DRAFT_SYNC_META_KEY = 'draftSyncEnabled';
 export const DRAFT_STATE_PREFIX = 'draft:';
@@ -99,12 +99,23 @@ export function parseStoredDraft(value: unknown): StoredDraft | null {
   try {
     const item = jsonClone(value);
     if (!plain(item) || Object.keys(item).some(key => !storedFields.includes(key)) || !validInput(item) ||
-      item.format !== 1 || !validDraftId(item.id) || !validSyncTime(item.updatedAt) ||
+      (item.format !== 1 && item.format !== 2) || !validDraftId(item.id) || !validSyncTime(item.updatedAt) ||
       typeof item.deviceId !== 'string' || !item.deviceId || item.deviceId.length > 256 ||
       (Object.hasOwn(item, 'deletedAt') && (!validSyncTime(item.deletedAt) || item.deletedAt !== item.updatedAt))) return null;
+    if (item.format === 2 && item.kind !== 'comparison' && item.kind !== 'decision') return null;
+    if (item.format === 1 && draftFormat(item as unknown as DraftInput) === 2) return null;
     // Tombstones contain identity only; deleted editing labor must not survive ingestion.
     if (Object.hasOwn(item, 'deletedAt') &&
       (item.title !== '' || item.content !== null || Object.hasOwn(item, 'sourceUpdatedAt'))) return null;
     return item as unknown as StoredDraft;
   } catch { return null; }
+}
+
+/** Only extended evidence labor needs a new wire boundary; ordinary drafts remain format 1. */
+export function draftFormat(input: DraftInput): 1 | 2 {
+  if (input.kind !== 'comparison' && input.kind !== 'decision') return 1;
+  const content = input.content as { evidence?: unknown[]; quotes?: unknown[]; sourceUpdatedAt?: unknown } | null;
+  const items = content?.evidence ?? content?.quotes;
+  return Array.isArray(items) && (items.length > 9 || items.some(item => !!item && typeof item === 'object' &&
+    ('id' in item || 'topic' in item))) ? 2 : 1;
 }

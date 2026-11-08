@@ -51,15 +51,20 @@ test('forming a decision retains only manual judgment and notes with literal sou
   } finally { await h.close(); }
 });
 
-for (const accept of [false, true]) test(`a second disjoint quote from one source is replaced only explicitly (${accept ? 'accept' : 'cancel'})`, async () => {
+test('two excerpts from one source coexist, group by judgment topic and remove independently', async () => {
   const h = await comparisonMount(); try {
     await addQuote(h); await h.input(field(h, 'comparison-note-evidence-0'), 'Keep this manual evidence note.');
     await addQuote(h, 'Claude paragraph 3.');
-    assert.equal(!!h.document.querySelector('.confirm-dialog'), true);
-    await h.click(h.button(accept ? 'Use selected excerpt' : copy.cancel)!);
-    assert.equal(field(h, 'comparison-excerpt-0').value, accept ? 'Claude paragraph 3.' : quote);
+    const quotes = () => [...h.document.querySelectorAll<HTMLTextAreaElement>('.manual-comparison-source [name^=comparison-excerpt-]')];
+    assert.equal(quotes().length, 2);
+    const topics = [...h.document.querySelectorAll<HTMLInputElement>('.manual-comparison-source [name^=comparison-topic-]')];
+    await h.input(topics[0], 'Cost'); await h.input(topics[1], 'Cost');
+    assert.equal(h.document.querySelector('[data-evidence-topic="Cost"]')?.querySelectorAll('blockquote').length, 2);
+    const second = quotes()[1];
+    await h.click(h.document.querySelector<HTMLButtonElement>('.manual-quote button')!);
+    assert.equal(quotes().length, 1); assert.equal(quotes()[0] === second, true);
+    assert.equal(quotes()[0].value, 'Claude paragraph 3.');
     assert.equal(field(h, 'comparison-note-evidence-0').value, 'Keep this manual evidence note.');
-    assert.equal(h.writes + h.decisionWrites, 0);
   } finally { await h.close(); }
 });
 

@@ -60,3 +60,9 @@
 - `schema6-questionAnswer.json` / `schema6-archive.json`：每次尝试及独立采集中的结构化网页观测；旧schema4回答和schema1采集样本不变。
 - `backup-format5.json`：保留观测的新备份清单；v5二进制容器沿用有界原图载荷布局，使用独立magic。
 - `schema5-sync-pull.ts.txt` / `backup4-validation.ts.txt`：冻结的旧reader源码，由兼容测试实际执行，验证schema6同步只读和v5备份拒收。不可就地更新；新契约另增fixture。
+
+## 多段依据与独立草稿（schema 6 / format 2）
+
+- `schema6-decision.json`、`schema6-state-evidence-draft.json`、`backup5-multi-evidence.json`：同来源多段依据、稳定 ID、可选判断事项与来源版本；state6 只用于携带 format2 依据草稿或其墓碑，普通 state1、question4、images5 不升级。备份仍复用未发布的 v5。
+- `task3-*.ts.txt` 冻结自 `e124197a0b6960b273933b50429bd1847fd9a5d7` 的实际源码。`schema6-evidence-compat.test.ts` 实际执行旧同步读取器、决策校验器和草稿读取器，证明独立新草稿也不会被旧客户端静默降级；既有冻结样本未修改。
+- 源码与 SHA-256：`main/sync-pull.ts` → `task3-sync-pull.ts.txt`：`388a4bbf808159a37a2c491d8b80caeb1b189a8768cf6d117f678bf6041ae108`；`shared/decision.ts` → `task3-decision.ts.txt`：`e2d5e08525bd8d48a0ef753cc0fe2ad3d96207f53f0b958b708730437d30a4d6`；`shared/drafts.ts` → `task3-drafts.ts.txt`：`14af129a7b67182b257ddfd6497ec8633357b696f367da3b31aa5ff6b4670f28`。

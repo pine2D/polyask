@@ -23,3 +23,12 @@
 @container library-detail (max-width: 760px) {
   .manual-comparison-sources { grid-template-columns: minmax(0, 1fr); gap: 16px; }
 }
+.manual-quote { margin: 14px 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; }
+.manual-quote label { display: grid; margin-bottom: 8px; }
+.manual-quote input { min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--field); color: inherit; font: inherit; }
+.manual-quote button, .evidence-overview button { min-height: 32px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: inherit; }
+.evidence-overview { margin: 20px 0; min-width: 0; overflow-wrap: anywhere; }
+.evidence-overview h3, .evidence-overview h4 { margin: 12px 0; }
+.evidence-overview-item { margin: 12px 0; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
+.evidence-overview blockquote { white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0; padding-left: 12px; border-left: 3px solid var(--accent); line-height: 1.65; }
+[name=evidence-review-original] { width: 100%; min-height: 220px; resize: vertical; font: inherit; line-height: 1.65; }

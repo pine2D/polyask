@@ -146,7 +146,7 @@ export class SyncRepository {
         groups: {}
       }
     ]).materialized.templates;
-    return { schema: SYNC_SCHEMA, deviceId, settings, templates, groups };
+    return { schema: Object.entries(settings).some(([key, setting]) => key.startsWith("polyask.draft.") && (setting.value as {format?: number})?.format === 2) ? 6 : SYNC_SCHEMA, deviceId, settings, templates, groups };
   }
 
   applyStateFragments(remoteStates: Readonly<Record<string, StateFragment>>): { readonly changed: boolean; readonly readOnly: boolean; readonly corrupt: number } {

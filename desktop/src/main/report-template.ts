@@ -73,8 +73,8 @@ export function renderReportHtml(source: ReportSource, locale: DesktopLocale = '
     }
     const evidence = decision.evidence.map(item => {
       const original = source.archive?.results[item.resultIndex];
-      const changed = source.archive && (original?.host !== item.host || !original?.text?.includes(item.excerpt));
-      return `<section><h3>${escape(`${answerSourceId(item.resultIndex)} ${item.label || item.host}`)}</h3>` +
+      const changed = source.archive && ((decision.sourceUpdatedAt !== undefined && decision.sourceUpdatedAt !== source.archive.updatedAt) || original?.host !== item.host || !original?.text?.includes(item.excerpt));
+      return `<section><h3>${escape(`${item.topic ? item.topic + " · " : ""}${answerSourceId(item.resultIndex)} ${item.label || item.host}`)}</h3>` +
         metadata([[report.reportSite, item.host], [report.reportCapturedAt, date(item.capturedAt)]]) +
         (changed ? `<p class="notice">${escape(report.reportEvidenceChanged)}</p>` : '') +
         `<blockquote class="excerpt">${escape(item.excerpt)}</blockquote></section>`;

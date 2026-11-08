@@ -30,7 +30,7 @@ interface Props {
   readonly onClose: () => void;
 }
 
-const newCard = (source: ArchiveRecord): DecisionInput => ({ archiveId: source.id,
+const newCard = (source: ArchiveRecord): DecisionInput => ({ archiveId: source.id, sourceUpdatedAt:source.updatedAt,
   title: [...(source.task || source.text)].slice(0, 160).join(""), conclusion: "", rationale: "",
   uncertainties: "", nextStep: "", status: "draft", evidence: [] });
 

@@ -140,7 +140,7 @@ test('old backups retain current drafts and shared preferences while validating 
       { kind: 'preference', id: 'unknown', body: { value: true, updatedAt: 10 } },
       { kind: 'preference', id: 'density', body: { value: 'invalid', updatedAt: 10 } },
       { kind: 'preference', id: 'density', body: { value: 'compact', updatedAt: 10, deletedAt: 11 } },
-      { ...entry(draft()), body: { ...entry(draft()).body, format: 2 } }
+      { ...entry(draft()), body: { ...entry(draft()).body, format: 99 } }
     ]) assert.throws(() => backup.preview(document([invalid])), /backup_invalid/);
     assert.throws(() => backup.preview({ ...document([entry(draft())]), version: 2 }), /backup_version/);
   } finally { db.close(); }

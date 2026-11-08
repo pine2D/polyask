@@ -1,0 +1,54 @@
+{
+  "file": {
+    "id": "state-source",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "state",
+      "schema": "6",
+      "id": "source"
+    }
+  },
+  "body": {
+    "schema": 6,
+    "deviceId": "source",
+    "settings": {
+      "polyask.draft.extended-draft": {
+        "updatedAt": 100,
+        "deviceId": "source",
+        "value": {
+          "format": 2,
+          "id": "extended-draft",
+          "kind": "decision",
+          "context": "archive-a",
+          "title": "Unfinished comparison",
+          "content": {
+            "archiveId": "archive-a",
+            "sourceUpdatedAt": 100,
+            "title": "Choice",
+            "conclusion": "Use A",
+            "rationale": "Evidence",
+            "uncertainties": "Cost",
+            "nextStep": "Check",
+            "status": "verify",
+            "evidence": [
+              {
+                "id": "quote-a",
+                "topic": "Cost",
+                "resultIndex": 0,
+                "excerpt": "A is cheaper"
+              },
+              {
+                "id": "quote-b",
+                "topic": "Cost",
+                "resultIndex": 0,
+                "excerpt": "Second source passage."
+              }
+            ]
+          }
+        }
+      }
+    },
+    "groups": {},
+    "templates": {}
+  }
+}

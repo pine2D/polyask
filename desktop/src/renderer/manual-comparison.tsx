@@ -6,7 +6,8 @@ import { answerSourceId } from '../shared/answer-source';
 import { validateExcerpt, type ExactExcerpt, type ExcerptSource } from './answer-excerpt';
 import { COMPARISON_CATEGORIES, comparisonCategoryLabel, comparisonDecisionInput, emptyComparisonDraft, type ComparisonCategory, type ComparisonDraft } from './comparison-draft';
 import { createComparisonDraftStore, type ComparisonDraftStore } from './comparison-draft-store';
-import { ExcerptReplacementDialog } from './excerpt-replacement-dialog';
+import { evidenceTuple } from '../shared/decision';
+import { EvidenceOverview, evidenceKey } from './evidence-overview';
 import { requestDecisionNavigation } from './decision-navigation';
 import { shell } from './shell-api';
 import { usePersistentDraft } from './use-persistent-draft';
@@ -36,11 +37,11 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
   if (!fallback.current) fallback.current = createComparisonDraftStore();
   const store = provided ?? fallback.current;
   const [draft, setDraft] = useState<ComparisonDraft | null>(() => record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null);
-  const [localOpen, setLocalOpen] = useState(false), [replacement, setReplacement] = useState<ExactExcerpt | null>(null);
+  const [localOpen, setLocalOpen] = useState(false), [addError, setAddError] = useState<'duplicate' | 'limit' | null>(null);
   const open = visibility?.open ?? localOpen, setOpen = visibility?.change ?? setLocalOpen;
   const epoch = useRef(0), mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; epoch.current++; }; }, []);
-  useLayoutEffect(() => { setDraft(record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null); setReplacement(null); setLocalOpen(false); epoch.current++; }, [record?.id, store]);
+  useLayoutEffect(() => { setDraft(record ? store.restore(record)?.draft ?? emptyComparisonDraft(record) : null); setAddError(null); setLocalOpen(false); epoch.current++; }, [record?.id, store]);
   const change = (next: ComparisonDraft) => { if (record?.id !== next.archiveId) return; epoch.current++; store.save(record, next); setDraft(next); };
   const persistent = usePersistentDraft({ kind: 'comparison', context: record?.id ?? '',
     title: [...(record?.task || record?.text || '')].slice(0, 160).join(''), content: draft,
@@ -49,16 +50,14 @@ export function useComparisonWorksheet(record: ArchiveRecord | undefined, provid
       Object.values(draft.categories).some(v => v.length > 0) || Object.values(draft.notes).some(v => Object.values(v).some(Boolean))),
     onRestore: value => { const restored = record && parseComparisonContent(value, record.id);
       if (!restored) return false; change(restored); setOpen(true); return true; } });
-  const replace = (value: ExactExcerpt) => {
-    if (!record || !draft || !validateExcerpt(record, value) || [...value.excerpt].length > 4000) return;
-    change({ ...draft, sourceUpdatedAt: record.updatedAt, quotes: [...draft.quotes.filter(old => old.resultIndex !== value.resultIndex), value] }); setOpen(true);
-  };
   const add = (value: ExactExcerpt) => {
-    if (!record || !draft || !validateExcerpt(record, value)) return;
-    const previous = draft.quotes.find(old => old.resultIndex === value.resultIndex);
-    if (previous && previous.excerpt !== value.excerpt) setReplacement(value); else replace(value);
+    if (!record || !draft || !validateExcerpt(record, value) || [...value.excerpt].length > 4000) return;
+    if (draft.quotes.some(old => evidenceTuple(old) === evidenceTuple(value))) { setAddError('duplicate'); return; }
+    if (draft.quotes.length >= 36) { setAddError('limit'); return; }
+    setAddError(null);
+    change({ ...draft, sourceUpdatedAt: record.updatedAt, quotes: [...draft.quotes, { ...value, id: crypto.randomUUID() }] }); setOpen(true);
   };
-  return { draft, change, open, setOpen, replacement, setReplacement, replace, add, epoch, mounted, recovery: persistent.recovery };
+  return { draft, change, open, setOpen, add, addError, epoch, mounted, recovery: persistent.recovery };
 }
 
 export function ManualComparison(props: {
@@ -82,10 +81,12 @@ export function ManualComparison(props: {
   }, [draft?.quotes]);
   const latest = useRef(props); latest.current = props;
   if (!draft) return null;
+  const duplicate = new Set(draft.quotes.map(evidenceTuple)).size !== draft.quotes.length;
+  const topicTooLong = draft.quotes.some(q => [...(q.topic ?? "")].length > 120);
   const invalid = draft.quotes.some(value => !validateExcerpt(record, value));
   const change = (next: ComparisonDraft) => { setChecking(false); worksheet.change(next); };
   const form = () => {
-    if (!props.onCreate || props.busy || checking || invalid) return;
+    if (!props.onCreate || props.busy || checking || invalid || duplicate || topicTooLong) return;
     const request = ++worksheet.epoch.current;
     const active = () => worksheet.mounted.current && request === worksheet.epoch.current && !latest.current.busy;
     requestDecisionNavigation(() => {
@@ -107,18 +108,27 @@ export function ManualComparison(props: {
       <summary>{copy.manualTitle}</summary><p>{copy.manualHint}</p>
       <DraftRecovery {...worksheet.recovery} copy={copy} sourceUpdatedAt={record.updatedAt} busy={props.busy || checking} />
       {invalid ? <p className="manual-source-changed" role="status">{copy.manualSourceChanged}</p> : null}
-      {invalid ? <ul className="manual-invalid-quotes">{draft.quotes.filter(value => !validateExcerpt(record, value)).map(value => <li key={value.resultIndex}>
-        {answerSourceId(value.resultIndex)} {value.label}<button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => old.resultIndex !== value.resultIndex) })}>{copy.manualRemoveExcerpt}</button>
+      {invalid ? <ul className="manual-invalid-quotes">{draft.quotes.filter(value => !validateExcerpt(record, value)).map(value => <li key={evidenceKey(value)}>
+        {answerSourceId(value.resultIndex)} {value.label}<button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => evidenceKey(old) !== evidenceKey(value)) })}>{copy.manualRemoveExcerpt}</button>
       </li>)}</ul> : null}
+      {duplicate ? <p role="status">{copy.decisionEvidenceDuplicate}</p> : null}
+      {worksheet.addError ? <p role="status">{worksheet.addError === 'duplicate' ? copy.decisionEvidenceDuplicate : copy.decisionEvidenceTooMany}</p> : null}
+      {draft.quotes.length ? <EvidenceOverview copy={copy} items={draft.quotes} source={record} /> : null}
       <div className="manual-comparison-sources">{props.sources.map(source => {
-        const quote = draft.quotes.find(value => value.resultIndex === source.resultIndex), index = source.resultIndex;
+        const quotes = draft.quotes.filter(value => value.resultIndex === source.resultIndex), index = source.resultIndex;
         return <section className="manual-comparison-source" data-source-index={index} key={source.host}>
           <h3>{answerSourceId(index)} {source.label}</h3>
           {source.truncated ? <p className="answer-capture-warning">{copy.answerTruncated}</p> : null}
-          {quote ? <><label>{copy.manualExcerpt}<textarea name={`comparison-excerpt-${index}`} readOnly value={quote.excerpt} /></label><button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => old.resultIndex !== index) })}>{copy.manualRemoveExcerpt}</button></> : <>
-            <p>{copy.manualEmpty}</p>{worksheet.open ? <ArchiveAnswerReading copy={copy} source={source} busy={props.busy}
-              onCompare={value => { excerptFocus.current = index; worksheet.add(value); }}>{null}</ArchiveAnswerReading> : null}
-          </>}
+          {quotes.map((quote, quoteIndex) => <div className="manual-quote" key={evidenceKey(quote)}>
+            <label>{copy.evidenceTopic}<input name={`comparison-topic-${index}-${quoteIndex}`} value={quote.topic ?? ''} onChange={event => change({ ...draft,
+              quotes: draft.quotes.map(old => evidenceKey(old) === evidenceKey(quote) ? {...old, id: old.id ?? `legacy:${old.resultIndex}`, topic:event.target.value} : old) })} /></label>
+            {[...(quote.topic ?? '')].length > 120 ? <p role="status">{copy.evidenceTopicTooLong}</p> : null}
+            <label>{copy.manualExcerpt}<textarea name={`comparison-excerpt-${index}${quoteIndex ? `-${quoteIndex}` : ''}`} readOnly value={quote.excerpt} /></label>
+            <button type="button" onClick={() => change({ ...draft, quotes: draft.quotes.filter(old => evidenceKey(old) !== evidenceKey(quote)) })}>{copy.manualRemoveExcerpt}</button>
+          </div>)}
+          {!quotes.length ? <p>{copy.manualEmpty}</p> : null}
+          {worksheet.open ? <ArchiveAnswerReading copy={copy} source={source} busy={props.busy}
+            onCompare={value => { excerptFocus.current = index; worksheet.add(value); }}>{null}</ArchiveAnswerReading> : null}
           {COMPARISON_CATEGORIES.map(category => <ManualNote key={`${source.host}:${category}`} copy={copy} source={source} category={category}
             selected={draft.categories[source.host]?.includes(category) ?? false} value={draft.notes[category][source.host] ?? ''}
             onSelect={selected => change({ ...draft, categories: { ...draft.categories, [source.host]: selected
@@ -128,12 +138,9 @@ export function ManualComparison(props: {
       })}</div>
       <label>{copy.manualJudgment}<textarea name="comparison-judgment" value={draft.judgment} onChange={event => change({ ...draft, judgment: event.target.value })} /></label>
       <label>{copy.manualNextStep}<textarea name="comparison-next-step" value={draft.nextStep} onChange={event => change({ ...draft, nextStep: event.target.value })} /></label>
-      <button type="button" data-decision-origin="manual" disabled={props.busy || checking || invalid || !props.onCreate} onClick={form}>{copy.manualFormDecision}</button>
+      <button type="button" data-decision-origin="manual" disabled={props.busy || checking || invalid || duplicate || topicTooLong || !props.onCreate} onClick={form}>{copy.manualFormDecision}</button>
       <p role="status">{message}</p>
     </details>
-    {worksheet.replacement ? <ExcerptReplacementDialog copy={copy} message={copy.manualReplaceQuote} busy={props.busy}
-      previous={draft.quotes.find(value => value.resultIndex === worksheet.replacement!.resultIndex)?.excerpt ?? ''}
-      selected={worksheet.replacement} onCancel={() => worksheet.setReplacement(null)}
-      onConfirm={() => { worksheet.replace(worksheet.replacement!); worksheet.setReplacement(null); }} /> : null}
+
   </>;
 }

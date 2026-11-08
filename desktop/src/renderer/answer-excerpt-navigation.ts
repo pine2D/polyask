@@ -22,5 +22,6 @@ export async function runExcerptNavigation(value: ExactExcerpt, effects: {
 export function excerptDecisionDraft(record: ArchiveRecord, value?: ExactExcerpt): DecisionInput {
   return { archiveId: record.id, title: [...(record.task || record.text)].slice(0, 160).join(''),
     conclusion: '', rationale: '', uncertainties: '', nextStep: '', status: 'draft',
-    evidence: value ? [{ resultIndex: value.resultIndex, excerpt: value.excerpt }] : [] };
+    sourceUpdatedAt: record.updatedAt,
+    evidence: value ? [{ id: crypto.randomUUID(), resultIndex: value.resultIndex, excerpt: value.excerpt }] : [] };
 }

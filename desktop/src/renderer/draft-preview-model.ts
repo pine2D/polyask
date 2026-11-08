@@ -40,7 +40,7 @@ export function draftPreviewFields(kind: DraftKind, content: unknown, copy: Draf
     scalar('conclusion', copy.draftFieldConclusion); scalar('rationale', copy.draftFieldRationale);
     scalar('uncertainties', copy.draftFieldUncertainties); scalar('nextStep', copy.draftFieldNextStep);
     add('evidence', copy.draftFieldEvidence, array(value.evidence).map((entry, index) => {
-      const evidence = record(entry); return { label: sourceLabel(copy, evidence.resultIndex, index), text: text(evidence.excerpt) || copy.draftNotSet };
+      const evidence = record(entry); return { label: sourceLabel(copy, evidence.resultIndex, index), text: [text(evidence.topic), text(evidence.excerpt)].filter(Boolean).join("\n") || copy.draftNotSet };
     }));
   } else if (kind === 'comparison') {
     if (typeof value.judgment !== 'string') return [];
@@ -50,7 +50,7 @@ export function draftPreviewFields(kind: DraftKind, content: unknown, copy: Draf
     add('quotes', copy.draftFieldQuotes, array(value.quotes).map((entry, index) => {
       const quote = record(entry), source = sourceLabel(copy, quote.resultIndex, index);
       const classified = array(categories[text(quote.host)]).map(category => labels[text(category)] ?? copy.draftUnknownSetting);
-      return { label: [source, siteLabel(quote.host, copy, ''), ...classified].filter(Boolean).join(' · '), text: text(quote.excerpt) || copy.draftNotSet };
+      return { label: [source, siteLabel(quote.host, copy, ''), ...classified].filter(Boolean).join(' · '), text: [text(quote.topic), text(quote.excerpt)].filter(Boolean).join('\n') || copy.draftNotSet };
     }));
     add('categories', copy.draftFieldCategories, Object.entries(categories).filter(([, selected]) => array(selected).length > 0)
       .map(([host, selected], index) => ({ label: siteLabel(host, copy, sourceLabel(copy, undefined, index)),

@@ -1,3 +1,4 @@
+import { EvidenceOverview, evidenceKey } from './evidence-overview';
 import { useId } from "react";
 import type { ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
@@ -12,9 +13,9 @@ export const decisionStatusLabel = (copy: DesktopCopy, status: DecisionStatus): 
   ({ draft: copy.decisionDraft, verify: copy.decisionVerify, final: copy.decisionFinal })[status];
 
 export function decisionInput(record: DecisionInput): DecisionInput {
-  return { archiveId: record.archiveId, title: record.title, conclusion: record.conclusion,
+  return { ...(record.sourceUpdatedAt === undefined ? {} : {sourceUpdatedAt:record.sourceUpdatedAt}), archiveId: record.archiveId, title: record.title, conclusion: record.conclusion,
     rationale: record.rationale, uncertainties: record.uncertainties, nextStep: record.nextStep,
-    status: record.status, evidence: record.evidence.map(({ resultIndex, excerpt }) => ({ resultIndex, excerpt })) };
+    status: record.status, evidence: record.evidence.map(({ id, topic, resultIndex, excerpt }) => ({ ...(id === undefined ? {} : {id}), ...(topic === undefined ? {} : {topic}), resultIndex, excerpt })) };
 }
 
 interface Props {
@@ -40,7 +41,7 @@ export function DecisionEditor({ copy, value, saved, source, sourceFailed, editi
     too_many_evidence: copy.decisionEvidenceTooMany, duplicate_source: copy.decisionEvidenceDuplicate,
     invalid_evidence_source: copy.decisionEvidenceSourceInvalid, excerpt_required: copy.decisionExcerptRequired,
     excerpt_too_long: copy.decisionExcerptTooLong, excerpt_not_in_source: copy.decisionExcerptMismatch,
-    source_unavailable: copy.decisionExcerptSourceUnavailable
+    source_unavailable: copy.decisionExcerptSourceUnavailable, topic_too_long: copy.evidenceTopicTooLong, source_changed: copy.manualSourceChanged
   };
   const aria = (field: DecisionField) => ({ id: fieldId(field), "aria-invalid": errors[field] ? true : undefined,
     "aria-describedby": `${fieldId(field)}-count${errors[field] ? ` ${fieldId(field)}-error` : ""}` });
@@ -54,6 +55,9 @@ export function DecisionEditor({ copy, value, saved, source, sourceFailed, editi
   ] as const;
   const changeExcerpt = (index: number, excerpt: string) => onChange({ ...value,
     evidence: value.evidence.map((item, itemIndex) => itemIndex === index ? { ...item, excerpt } : item) });
+  const extend = (items: DecisionInput['evidence']): DecisionInput => ({...value, sourceUpdatedAt:value.sourceUpdatedAt ?? source?.updatedAt,
+    evidence:items.map(item => ({...item,id:item.id ?? `legacy:${item.resultIndex}`}))});
+  const sourceChanged = source && value.sourceUpdatedAt !== undefined && value.sourceUpdatedAt !== source.updatedAt;
   return <article className="decision-editor" data-editing={editing}>
     {editing ? <div className="decision-field"><label htmlFor={fieldId("title")}>{copy.decisionName}</label><input {...aria("title")} name="decision-title" autoComplete="off" value={value.title} disabled={busy} onChange={(event) => onChange({ ...value, title: event.target.value })} />{hints("title", value.title, 160)}</div> : <h1>{value.title}</h1>}
     <div className="decision-meta">
@@ -64,24 +68,30 @@ export function DecisionEditor({ copy, value, saved, source, sourceFailed, editi
     </div>
     <div className="decision-fields">{fields.map(([key, label]) => editing ? <div key={key} className="decision-field"><label htmlFor={fieldId(key)}>{label}</label><textarea {...aria(key)} name={`decision-${key}`} autoComplete="off" value={value[key]} disabled={busy} rows={key === "conclusion" ? 4 : 3} onChange={(event) => onChange({ ...value, [key]: event.target.value })} />{hints(key, value[key], 4000)}</div> : <section key={key}><h2>{label}</h2><MarkdownPreview contextLabel={label} onOpenLink={onOpenLink} value={value[key] || "—"} /></section>)}</div>
     <section className="decision-source">
+      {sourceChanged ? <><p role="status">{copy.manualSourceChanged}</p>{editing ? <button type="button" data-evidence-use-reviewed
+        disabled={busy || !value.evidence.every(item => source.results[item.resultIndex]?.text?.includes(item.excerpt))}
+        onClick={() => onChange({...value,sourceUpdatedAt:source.updatedAt})}>{copy.evidenceUseReviewedSource}</button> : null}</> : null}
       <strong>{copy.decisionSource}</strong><p>{source?.task || saved?.sourceTitle || "—"}</p>
       {source ? <button type="button" disabled={busy} onClick={onOpenSource}>{copy.decisionOpenSource}</button> : <p role="status">{source === null ? copy.decisionSourceMissing : sourceFailed ? copy.decisionSourceFailed : copy.decisionSourceLoading}</p>}
     </section>
-    <section className="decision-evidence" tabIndex={errors.evidence ? -1 : undefined} aria-invalid={errors.evidence ? true : undefined} aria-describedby={errors.evidence ? `${prefix}-evidence-error` : undefined}><h2>{copy.decisionEvidence} · {value.evidence.length}/9</h2>
+    {value.evidence.length ? <EvidenceOverview copy={copy} items={saved && !editing ? saved.evidence : value.evidence} source={source} sourceUpdatedAt={value.sourceUpdatedAt} /> : null}
+    {editing ? <section className="decision-evidence" tabIndex={errors.evidence ? -1 : undefined} aria-invalid={errors.evidence ? true : undefined} aria-describedby={errors.evidence ? `${prefix}-evidence-error` : undefined}><h2>{copy.decisionEvidence} · {value.evidence.length}/36</h2>
       {errors.evidence ? <p id={`${prefix}-evidence-error`} className="decision-field-error">{messages[errors.evidence]}</p> : null}
       {value.evidence.map((item, index) => {
         const field = `evidence-${index}` as const;
-        const evidence = saved?.evidence.find((old) => old.resultIndex === item.resultIndex);
+        const evidence = saved?.evidence.find((old) => evidenceKey(old) === evidenceKey(item));
         const result = source?.results[item.resultIndex];
-        return <section className="decision-excerpt" key={item.resultIndex}>
+        return <section className="decision-excerpt" key={evidenceKey(item)}>
           <header><strong>{`[S${item.resultIndex + 1}]`} {result?.label || evidence?.label || `#${item.resultIndex + 1}`}</strong>{editing ? <button type="button" disabled={busy} onClick={() => onChange({ ...value, evidence: value.evidence.filter((_old, itemIndex) => itemIndex !== index) })}>{copy.decisionRemoveEvidence}</button> : null}</header>
+          {editing && source ? <label>{copy.evidenceTopic}<input name={`decision-topic-${index}`} value={item.topic ?? ''} disabled={busy}
+            onChange={event => onChange(extend(value.evidence.map((old, oldIndex) => oldIndex === index ? {...old,topic:event.target.value} : old)))} /></label> : item.topic ? <p>{item.topic}</p> : null}
           {editing && source ? <div className="decision-field"><label htmlFor={fieldId(field)}>{copy.decisionEvidenceHint}</label><textarea {...aria(field)} name={`decision-${field}`} aria-label={`${copy.decisionEvidence}: ${result?.label || item.resultIndex + 1}`} disabled={busy} rows={4} value={item.excerpt} onChange={(event) => changeExcerpt(index, event.target.value)} />{hints(field, item.excerpt, 4000)}</div> : <><blockquote {...(editing ? aria(field) : {})} tabIndex={editing && errors[field] ? -1 : undefined}>{item.excerpt}</blockquote>{editing ? hints(field, item.excerpt, 4000) : null}</>}
         </section>;
       })}
       {editing && source ? source.results.map((result, resultIndex) => result.text?.trim() ? <details key={resultIndex} className="decision-answer">
         <summary>{result.label}</summary><pre>{result.text}</pre>
-        <button type="button" disabled={busy || value.evidence.length >= 9 || value.evidence.some((item) => item.resultIndex === resultIndex)} onClick={() => onChange({ ...value, evidence: [...value.evidence, { resultIndex, excerpt: "" }] })}>{copy.decisionAddEvidence}</button>
+        <button type="button" disabled={busy || value.evidence.length >= 36} onClick={() => onChange(extend([...value.evidence, { id: crypto.randomUUID(), resultIndex, excerpt: "" }]))}>{copy.decisionAddEvidence}</button>
       </details> : null) : null}
-    </section>
+    </section> : null}
   </article>;
 }

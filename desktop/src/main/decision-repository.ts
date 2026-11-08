@@ -31,6 +31,6 @@ export class DecisionRepository {
     const record = this.get(id);
     if (!record) return null;
     const stamp = Math.max(now, record.updatedAt + 1, "deletedAt" in record ? record.deletedAt + 1 : 0);
-    return this.put({id,createdAt:record.createdAt,updatedAt:stamp,deletedAt:stamp,deviceId,schema:2});
+    return this.put({id,createdAt:record.createdAt,updatedAt:stamp,deletedAt:stamp,deviceId,schema:record.schema});
   }
 }

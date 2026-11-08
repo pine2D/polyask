@@ -13,24 +13,26 @@ export function parseDecisionContent(value: unknown, archiveId: string): Decisio
   if (!record(value) || value.archiveId !== archiveId || typeof value.title !== 'string' ||
     !['draft', 'verify', 'final'].includes(value.status) ||
     ![value.conclusion, value.rationale, value.uncertainties, value.nextStep].every(v => typeof v === 'string') ||
-    !Array.isArray(value.evidence) || value.evidence.length > 9 || !value.evidence.every((v: unknown) =>
-      record(v) && Number.isSafeInteger(v.resultIndex) && v.resultIndex >= 0 && v.resultIndex < 9 && typeof v.excerpt === 'string')) return null;
-  return { archiveId, title: value.title, conclusion: value.conclusion, rationale: value.rationale,
+    !Array.isArray(value.evidence) || value.evidence.length > 36 || !value.evidence.every((v: unknown) =>
+      record(v) && Number.isSafeInteger(v.resultIndex) && v.resultIndex >= 0 && v.resultIndex < 9 && typeof v.excerpt === 'string' &&
+      (v.id === undefined || text(v.id,128)) && (v.topic === undefined || typeof v.topic === 'string'))) return null;
+  if (value.sourceUpdatedAt !== undefined && (!Number.isSafeInteger(value.sourceUpdatedAt) || value.sourceUpdatedAt < 0)) return null;
+  return { ...(value.sourceUpdatedAt === undefined ? {} : {sourceUpdatedAt:value.sourceUpdatedAt}), archiveId, title: value.title, conclusion: value.conclusion, rationale: value.rationale,
     uncertainties: value.uncertainties, nextStep: value.nextStep, status: value.status,
-    evidence: value.evidence.map((v: any) => ({ resultIndex: v.resultIndex, excerpt: v.excerpt })) };
+    evidence: value.evidence.map((v: any) => ({ ...(v.id === undefined ? {} : {id:v.id}), ...(v.topic === undefined ? {} : {topic:v.topic}), resultIndex: v.resultIndex, excerpt: v.excerpt })) };
 }
 
 export function parseComparisonContent(value: unknown, archiveId: string): ComparisonDraft | null {
   value = parseDraftInput({ kind: 'comparison', context: archiveId, title: '', content: value })?.content;
   if (!record(value) || value.archiveId !== archiveId || !Number.isSafeInteger(value.sourceUpdatedAt) || value.sourceUpdatedAt < 0 ||
-    !text(value.judgment) || !text(value.nextStep) || !Array.isArray(value.quotes) || value.quotes.length > 9 ||
+    !text(value.judgment) || !text(value.nextStep) || !Array.isArray(value.quotes) || value.quotes.length > 36 ||
     !record(value.categories) || !Object.values(value.categories).every(v => Array.isArray(v) &&
       v.length <= 4 && v.every(c => COMPARISON_CATEGORIES.includes(c))) || !record(value.notes) ||
     !COMPARISON_CATEGORIES.every(c => strings(value.notes[c]))) return null;
   if (!value.quotes.every((v: unknown) => record(v) && v.archiveId === archiveId &&
     Number.isSafeInteger(v.sourceUpdatedAt) && Number.isSafeInteger(v.resultIndex) && v.resultIndex >= 0 && v.resultIndex < 9 &&
     Number.isSafeInteger(v.start) && Number.isSafeInteger(v.end) && v.start >= 0 && v.end > v.start &&
-    text(v.host, 256) && text(v.label, 256) && text(v.excerpt) && typeof v.truncated === 'boolean')) return null;
+    (v.id === undefined || text(v.id,128)) && (v.topic === undefined || typeof v.topic === 'string') && text(v.host, 256) && text(v.label, 256) && text(v.excerpt) && typeof v.truncated === 'boolean')) return null;
   return structuredClone(value) as ComparisonDraft;
 }
 

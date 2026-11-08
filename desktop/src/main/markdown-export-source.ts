@@ -119,7 +119,7 @@ export class MarkdownSources {
       }
       lines.push(`### ${copy.decisionEvidence}`, markdownText(r.sourceTitle));
       if (!this.repos.archives.get(r.archiveId)) lines.push(`> ${copy.decisionSourceMissing}`);
-      for (const e of r.evidence) { assertMarkdownSize(e.excerpt); lines.push(`#### [S${e.resultIndex + 1}] ${markdownText(e.label)}`, safeExportMarkdown(e.excerpt, 4)); }
+      for (const e of r.evidence) { assertMarkdownSize(e.excerpt); lines.push(`#### ${e.topic ? markdownText(e.topic) + " · " : ""}[S${e.resultIndex + 1}] ${markdownText(e.label)}`, safeExportMarkdown(e.excerpt, 4)); }
     }
     const markdown = lines.filter(Boolean).join('\n\n'); assertMarkdownSize(markdown);
     return { document, markdown };

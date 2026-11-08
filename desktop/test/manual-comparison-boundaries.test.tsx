@@ -11,14 +11,13 @@ async function addQuote(h: Awaited<ReturnType<typeof comparisonMount>>, value: s
   await h.click(h.button(copy.excerptUseSelection)!); await h.click(h.button(copy.excerptManualCompare)!);
 }
 
-test('replacing a manual excerpt displays both exact passages inside its confirmation before any change', async () => {
+test('adding an existing source/excerpt/topic twice rejects duplication without replacing prior labor', async () => {
   const h = await comparisonMount(); try {
     await addQuote(h, 'Claude paragraph 2.'); await addQuote(h, 'Claude paragraph 3.');
-    assert.equal(h.document.querySelector('[data-excerpt-preview=previous] pre')?.textContent, 'Claude paragraph 2.');
-    assert.equal(h.document.querySelector('[data-excerpt-preview=selected] pre')?.textContent, 'Claude paragraph 3.');
-    const cancel = [...h.document.querySelectorAll<HTMLButtonElement>('.confirm-dialog button')].find(node => node.textContent === copy.cancel)!;
-    await h.click(cancel);
-    assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-excerpt-0]')!.value, 'Claude paragraph 2.');
+    await addQuote(h, 'Claude paragraph 2.');
+    const fields = [...h.document.querySelectorAll<HTMLTextAreaElement>('.manual-quote textarea')];
+    assert.deepEqual(fields.map(field => field.value), ['Claude paragraph 2.', 'Claude paragraph 3.']);
+    assert.equal(h.document.querySelector('.manual-comparison')?.textContent?.includes(copy.decisionEvidenceDuplicate),true);
     assert.equal(h.writes + h.decisionWrites, 0);
   } finally { await h.close(); }
 });

@@ -1,5 +1,7 @@
 export const DECISION_COPY = {
   en: {
+    evidenceUseReviewedSource: "Use reviewed source version",
+    evidenceTopic: "Judgment topic (optional)", evidenceByTopic: "Evidence by topic", evidenceUnassigned: "Unassigned", evidenceReview: "Review original passage", evidenceTopicTooLong: "Topics allow up to 120 characters.",
     decisionConfirm: "Confirm", decisionPick: "Select a decision card to view its details.", decisionTitle: "Decision cards", decisionArchives: "Saved results", decisionCreate: "Create decision card",
     decisionName: "Title", decisionConclusion: "Conclusion", decisionRationale: "Rationale",
     decisionUncertainties: "Uncertainties", decisionNextStep: "Next step", decisionEvidence: "Evidence",
@@ -15,7 +17,7 @@ export const DECISION_COPY = {
     decisionValidationReview: "Review the highlighted fields.",
     decisionTitleRequired: "Enter a title.", decisionTitleTooLong: "Title must be 160 characters or fewer.",
     decisionBodyTooLong: "This field must be 4,000 characters or fewer.", decisionFinalConclusionRequired: "Final cards need a conclusion.",
-    decisionEvidenceTooMany: "Keep up to 9 excerpts.", decisionEvidenceDuplicate: "Keep only one excerpt per source answer.",
+    decisionEvidenceTooMany: "Keep up to 36 excerpts.", decisionEvidenceDuplicate: "This source, excerpt and judgment topic are already included.",
     decisionEvidenceSourceInvalid: "This source answer is unavailable. Remove this excerpt.",
     decisionExcerptRequired: "Enter an exact excerpt from the source.", decisionExcerptTooLong: "This excerpt must be 4,000 characters or fewer.",
     decisionExcerptMismatch: "This excerpt must match the source exactly.",
@@ -25,6 +27,8 @@ export const DECISION_COPY = {
     decisionNew: "New decision card", decisionExport: "Export Markdown", decisionUnsaved: "Unsaved changes"
   },
   zhCN: {
+    evidenceUseReviewedSource: "使用已核对的来源版本",
+    evidenceTopic: "判断事项（可选）", evidenceByTopic: "按判断事项查看依据", evidenceUnassigned: "未指定事项", evidenceReview: "回查原文片段", evidenceTopicTooLong: "判断事项最多 120 字。",
     decisionConfirm: "确认", decisionPick: "选择一张决策卡查看详情。", decisionTitle: "决策卡", decisionArchives: "归档结果", decisionCreate: "创建决策卡",
     decisionName: "标题", decisionConclusion: "结论", decisionRationale: "判断理由",
     decisionUncertainties: "待确认事项", decisionNextStep: "下一步", decisionEvidence: "证据摘录",
@@ -40,7 +44,7 @@ export const DECISION_COPY = {
     decisionValidationReview: "请检查标出的字段。",
     decisionTitleRequired: "请填写标题。", decisionTitleTooLong: "标题最多 160 字。",
     decisionBodyTooLong: "此字段最多 4,000 字。", decisionFinalConclusionRequired: "定稿须填写结论。",
-    decisionEvidenceTooMany: "最多保留 9 条摘录。", decisionEvidenceDuplicate: "每条来源回答只能保留一条摘录。",
+    decisionEvidenceTooMany: "最多保留 36 条摘录。", decisionEvidenceDuplicate: "这份来源、原文和判断事项的组合已存在。",
     decisionEvidenceSourceInvalid: "这条来源回答不可用，请移除此摘录。",
     decisionExcerptRequired: "请填写来源中的原文片段。", decisionExcerptTooLong: "此摘录最多 4,000 字。",
     decisionExcerptMismatch: "摘录须与来源原文完全一致。",
@@ -50,6 +54,8 @@ export const DECISION_COPY = {
     decisionNew: "新建决策卡", decisionExport: "导出 Markdown", decisionUnsaved: "尚未保存"
   },
   zhTW: {
+    evidenceUseReviewedSource: "使用已核對的來源版本",
+    evidenceTopic: "判斷事項（選填）", evidenceByTopic: "依判斷事項查看依據", evidenceUnassigned: "未指定事項", evidenceReview: "回查原文片段", evidenceTopicTooLong: "判斷事項最多 120 字。",
     decisionConfirm: "確認", decisionPick: "選擇一張決策卡查看詳情。", decisionTitle: "決策卡", decisionArchives: "封存結果", decisionCreate: "建立決策卡",
     decisionName: "標題", decisionConclusion: "結論", decisionRationale: "判斷理由",
     decisionUncertainties: "待確認事項", decisionNextStep: "下一步", decisionEvidence: "證據摘錄",
@@ -65,7 +71,7 @@ export const DECISION_COPY = {
     decisionValidationReview: "請檢查標示的欄位。",
     decisionTitleRequired: "請填寫標題。", decisionTitleTooLong: "標題最多 160 字。",
     decisionBodyTooLong: "此欄位最多 4,000 字。", decisionFinalConclusionRequired: "定稿須填寫結論。",
-    decisionEvidenceTooMany: "最多保留 9 則摘錄。", decisionEvidenceDuplicate: "每則來源回答只能保留一則摘錄。",
+    decisionEvidenceTooMany: "最多保留 36 則摘錄。", decisionEvidenceDuplicate: "這份來源、原文和判斷事項的組合已存在。",
     decisionEvidenceSourceInvalid: "這則來源回答無法使用，請移除此摘錄。",
     decisionExcerptRequired: "請填寫來源中的原文片段。", decisionExcerptTooLong: "此摘錄最多 4,000 字。",
     decisionExcerptMismatch: "摘錄須與來源原文完全一致。",

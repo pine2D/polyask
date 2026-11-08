@@ -201,7 +201,7 @@ i18n → core → read-commands → tier → selection-match → send → upload
 - 新键登记：`preferences-repository.ts` / `draft-repository.ts`、`sync-preferences.ts` / `sync-drafts.ts`、`database.resetLocalData()` 清空 state/meta，以及只增 fixture `schema1-state-preferences.json` / `schema1-state-drafts.json`。无需修改 SQLite schema；凭据、窗口与瞬时焦点保持本机。
 - **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删（草稿墓碑传播完成后的保留期回收见上文，回收的只是墓碑本身）。`DataAdminService` 的「清空历史」「清空结果库」「清空决策卡」「清空任务文件夹」「清空草稿」走的就是这条正常路径，删除会同步到其它设备——否则其它设备会把记录同步回来。
 - **「重置全部本机数据」是本应用唯一的物理删除路径**，语义刻意不同：先 `sync.disconnect()` 断开 Drive，再 `database.resetLocalData()` 物理清空十二张业务/同步表（含两张原图表）并只保留 `meta` 里的 `deviceId`；随后的 VACUUM / WAL checkpoint 收缩失败只记 `reset_compaction_failed` 告警，不让调用方跳过收尾，主进程 `afterReset` 与渲染层 `onReset` 无论重置成败都执行（失败时清空可能已经发生）。这里**不能用 tombstone**——tombstone 比云端记录新，重新连接后会赢过云端副本并上传，等于把云端也删了，与「重置不会删除云端数据」的承诺相反。`deviceId` 保留是因为本机在云端的旧 fragment 靠它找回，换掉会让重置后首轮上传把本机不建模的设置键整体丢掉。同设备有多份远端 fragment 时，携带设置与模板前先合并全部片段，再收敛重复文件；普通键按现有 LWW，草稿按删除终态。改这两条语义之前先改用户可见的承诺文案。
-- Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，文件夹和关联实体采用 schema 3，提问与旧回答采用 schema 4、原图集采用 schema 5、新回答及带观测的采集采用 schema 6，`SUPPORTED_SYNC_SCHEMA = 6` 表达客户端可识别的最高版本；state/history 仍仅接受 schema 1，archive 接受 1/6，questionAnswer 接受 4/6，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
+- Drive 同步：scope 固定 `https://www.googleapis.com/auth/drive.appdata`，全部操作限定 `appDataFolder`。旧实体沿用 `SYNC_SCHEMA = 1`：每设备一个 state fragment、每设备/文本哈希一份 history、每条结果库记录一份 archive；按 `updatedAt` 后 `deviceId` 合并，同时刻 tombstone 优先。独立 decision 实体采用 schema 2，文件夹和关联实体采用 schema 3，提问与旧回答采用 schema 4、原图集采用 schema 5、新回答及带观测的采集采用 schema 6，`SUPPORTED_SYNC_SCHEMA = 6` 表达客户端可识别的最高版本；history 仍仅接受 schema 1；state 普通片段为 1，携带 format 2 依据草稿时为 6；archive 接受 1/6，questionAnswer 接受 4/6，decision 接受 2/6，不将未知的 state schema 2 冒充可兼容。遇不支持格式进入同步只读，仍可下载可识别文件但禁止上传。
 - 出箱仍有记录时保持 `waiting`，不把“暂未到期”当空闲。按最早 `nextAt` 唤醒，限流遵守退避与 Retry-After；旧失败只更新相同 revision，不覆盖上传期间的新修改。断开或销毁取消定时器并使排队任务失效。
 - **上传隔离与大文件**（`sync-engine.ts`、`drive-client.ts`）：出箱按批上传（state 整份一批，其余实体一条一批）。只与本批载荷/目标有关的失败（`request_failed`、`invalid_response`、`not_found`）只给该批记退避，其余批继续上传，本轮仍如实报 `error` 并按该批退避唤醒；限流/服务端错误整体退避，鉴权、配额、网络等全局失败仍立即中止本轮。Drive 文档规定 multipart 只用于 5 MB 及以下文件，正文超过 4 MiB（`MULTIPART_BODY_LIMIT`，留 ≥20% 余量）改走 resumable：先以元数据开会话，`Location` 必须仍是 `https://www.googleapis.com/upload/drive/v3/files…` 才带令牌，再一次 PUT 整个正文；失败不续传，由出箱下次重开会话，超时按体积放宽（按 ≥128 KiB/s 估算）。
 - **同键重复文件收敛**（`sync-duplicates.ts`）：首次创建的响应丢失（超时、崩溃）会在 Drive 留下同一逻辑键的多份文件。每轮拉取后（只读模式除外），本机负责写入的键（自己的 state 文件与共享实体 archive/decision/folder/folderMembership/question/questionAnswer/questionAttachments）若对应多份，保留文件 ID 最小的一份（与 `findDriveFile` 选择一致，各设备结论相同），删除其余并把本机合并后的胜者重新上传进保留文件；删除失败留待下轮。原图集还须满足附件出箱资格、本机胜者可完整校验且所有同键远端副本已验证（`seenAt !== 0`）；活原图集要求开启原图同步并满足父依赖，墓碑资格见「提问历史存储与同步基础」。其它设备自己的 state/history 文件交给其写入方。上传时若索引中的文件已被其它设备删除（404），改写幸存副本或新建。
@@ -293,7 +293,7 @@ npm run soak -- --minutes=60
 
 摘录只直接接受同一文本节点内唯一的原文字面片段；跨格式、重复或图形选择先打开已保存 Markdown 原文，由用户选择连续范围并确认。HTML textarea 的 LF 选区回映到原始 CRLF/CR 的 UTF-16 偏移，拒绝拆开代理对、空范围和身份/版本变化。摘录导航在来源读取前后都检查未保存编辑；确认等待结束后重新读取来源，重读期间新稿仍需另行确认，最终检查与导航之间不跨异步等待。导航与发送前重新核对保存来源，辅助发送可带临时 `sourceUpdatedAt`，导航后派发前再次检查，变化返回 `source_changed`，不发送旧材料。超过决策证据的 4,000 码点仍可追问，不截断正文；替换已有追问摘录先逐字展示旧新内容并确认。
 
-比较可就地展开；进入比较时详情容器宽度 ≤760px 自动复用专注阅读，返回浏览和单纯缩放不重复触发。进入、展开和返回沿用未保存备注的导航保护。原文、两列比较及补充分析仅挂载当前面；各面和每个来源的阅读位置在会话内保留，换记录或明确新导航使旧上下文失效。人工对照按结论/依据/条件/成本保存会话内笔记和逐字来源，变化的来源需重新核对，笔记仍保留；形成决策仅填入草稿，用户明确保存才写库，不把字面相同或人工共识标为事实。
+比较可就地展开；进入比较时详情容器宽度 ≤760px 自动复用专注阅读，返回浏览和单纯缩放不重复触发。进入、展开和返回沿用未保存备注的导航保护。原文、两列比较及补充分析仅挂载当前面；各面和每个来源的阅读位置在会话内保留，换记录或明确新导航使旧上下文失效。人工对照保留结论/依据/条件/成本四类笔记；同来源可保留多段逐字摘录，各段按可选判断事项集中查看并回查保存原文，变化的来源需重新核对，笔记仍保留；形成决策仅填入草稿，用户明确保存才写库，不把字面相同或人工共识标为事实。
 
 阅读来源导航按已保存的 `winnerHost` 显示最佳回答星标，常驻 12px 星标位置，标记、改选及取消不改变导航尺寸。保留原编号、站名及锚点，可访问名称补充三语“最佳回答”。标记、改选或取消均沿用现有保存流程，等待和失败不改变原星标；不新增持久化字段、不自动跳转，也不将人工选择标为当前阅读位置或核验结论。
 
@@ -315,11 +315,14 @@ npm run soak -- --minutes=60
 
 - 编辑器按字段显示必填、长度、定稿结论和摘录校验错误，字符计数按 Unicode 码点计算；保存时聚焦首个错误，修改后即时更新提示，保存失败保留输入。来源未加载时只允许同一结果记录中未修改的已存摘录；客户端提示不替代主进程的原文核对。
 
-- `shared/decision.ts`：DecisionRecord schema 2；标题≤160，结论/理由/待核实/下一步各≤4,000，证据≤9份、resultIndex唯一且0–8、逐字摘录≤4,000。每卡只有一个 archiveId，更新不可改来源；多张卡可引用同条结果。来源显示标题快照≤320、host/label≤256、id/deviceId≤128，均按码点；时间为非负安全整数。
+- `shared/decision.ts`：DecisionRecord 兼容旧 schema 2；新依据采用 schema 6、sourceUpdatedAt 与稳定 evidence.id。标题≤160，结论/理由/待核实/下一步各≤4,000，证据≤36条、最多九来源（resultIndex 0–8）、逐字摘录≤4,000；可选 topic≤120。相同来源/原文/topic（缺省等于空串）重复拒收，稳定 id 不重复；保存时核对来源版本与原文。每卡只有一个 archiveId，更新不可改来源；多张卡可引用同条结果。来源显示标题快照≤320、host/label≤256、id/deviceId≤128，均按码点；时间为非负安全整数。
 - 状态只允许 `draft` / `verify` / `final`；`final` 必须有非空结论。标题与 archiveId 必填，证据摘录不能为空；`updatedAt` 不得早于 `createdAt`。
 - 证据只由主进程从保存原文核对并补入 host/label/capturedAt。删除来源后保持独立卡片与原摘录；来源查不到时文案同时说明可能尚未同步，不把“未找到”武断视为已删除。可以修改决策正文和移除证据，不能伪造缺失来源的新摘录。所有删除/清空来源的确认提示说明摘录保留。
 - 新实体 `decision:<id>` 独立 outbox；import 按 updatedAt/deletedAt 与 deviceId 整卡合并，版本与设备完全相同的 tombstone 优先。更新和删除时间单调增加；本机重置删除 decisions 表内容，保留 deviceId，断开 Drive 后执行。
 - 旧客户端读取远端 decision schema 2 会沿用 future-schema 保护停止上传；新版若发现先前跳过的可支持格式则全扫补拉。已有只读锁只能在该文件成功导入或 listing+changes 确认其已删除时清除；文件损坏/下载解析失败不能解锁。持续存在的不支持 state schema 2 会保持只读并重复扫描，正常 decision 补拉后恢复增量。
+
+- 多依据草稿（决策或比较 content 含稳定 id/topic）自动使用 format 2；普通草稿仍为 format 1。格式在 SQLite state_items、恢复解析、草稿投影和备份中保留；删除沿用当前 format 的墓碑，旧 reader 不得降级恢复。含 format 2 草稿/墓碑的 state fragment 及上传元数据用 schema 6；普通 state 不升级。新草稿尚未保存决策时也受旧客户端只读保护。备份按需为 v5，旧 v1–4 拒收 format 2；本机重置沿用既有 state_items/decisions 清理。
+- 草稿和决策各有独立 512 KiB JSON/UTF-8 资源上限；36×4,000 个 emoji 可能超出，不因字段均合法而绕过总量限制。失败保留输入并显示保存失败，可减量后重试，不截断编辑劳动。缺失来源的旧记录允许正文编辑或移除原有证据；新证据按稳定 id 与来源/原文/topic 全部精确匹配，不能改 id 借用旧摘录。Markdown、HTML/PDF 与草稿预览保留每一条依据及 topic。
 
 ### 任务文件夹契约
 

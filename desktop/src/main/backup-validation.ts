@@ -30,7 +30,7 @@ const fields: Record<BackupKind, string[]> = {
   questionAnswer: ["id", "questionId", "site", "attempt", "createdAt", "updatedAt", "schema", "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt", "observation"],
   history: ["id", "textHash", "text", "preview", "createdAt", "lastUsedAt", "updatedAt", "schema"],
   archive: ["id", "text", "task", "source", "results", "favorite", "tags", "note", "winnerHost", "synthesis", "hosts", "resultPreviews", "searchText", "preview", "createdAt", "updatedAt", "ts", "schema"],
-  decision: ["id", "archiveId", "title", "sourceTitle", "conclusion", "rationale", "uncertainties", "nextStep", "status", "evidence", "createdAt", "updatedAt", "schema"],
+  decision: ["sourceUpdatedAt", "id", "archiveId", "title", "sourceTitle", "conclusion", "rationale", "uncertainties", "nextStep", "status", "evidence", "createdAt", "updatedAt", "schema"],
   folder: ["id", "name", "createdAt", "updatedAt", "schema"],
   folderMembership: ["id", "folderId", "targetKind", "targetId", "createdAt", "updatedAt", "schema"],
   template: ["id", "name", "text", "updatedAt"], group: ["id", "name", "sites", "updatedAt"], workspace: ["selectedSites", "tier", "updatedAt", "participation"]
@@ -61,7 +61,7 @@ export function projectBody(kind: BackupKind, value: unknown, id?: string): Body
       b.synthesis = pick(b.synthesis, ["host", "text", "state", "instruction", "createdAt"]);
   }
   if (kind === "decision" && Array.isArray(b.evidence))
-    b.evidence = b.evidence.map((r: Body) => object(r) ? pick(r, ["resultIndex", "excerpt", "host", "label", "capturedAt"]) : r);
+    b.evidence = b.evidence.map((r: Body) => object(r) ? pick(r, ["id", "topic", "resultIndex", "excerpt", "host", "label", "capturedAt"]) : r);
   const stored = { ...b, deviceId: "backup" };
   let ok = validSyncTime(b.updatedAt);
   if (kind !== "workspace" && kind !== "preference")
@@ -130,7 +130,7 @@ export function validateBackup(value: unknown): BackupDocument {
     if (seen.has(key))
       throw new Error("backup_invalid");
     seen.add(key);
-    if (value.version < 5 && object(e.body) && Number(e.body.schema) >= 6) throw new Error("backup_version");
+    if (value.version < 5 && object(e.body) && (Number(e.body.schema) >= 6 || (e.kind === "draft" && e.body.format === 2))) throw new Error("backup_version");
     const body = projectBody(kind, e.body, e.id);
     if (kind === "workspace" ? e.id !== "workspace" : kind !== "preference" && body.id !== e.id)
       throw new Error("backup_invalid");

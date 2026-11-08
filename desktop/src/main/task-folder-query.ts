@@ -39,7 +39,7 @@ export class TaskFolderQuery {
       ${query ? `AND instr(polyask_library_lower(json_extract(body, '$.title') || char(10) ||
         json_extract(body, '$.conclusion') || char(10) || json_extract(body, '$.rationale') || char(10) ||
         json_extract(body, '$.uncertainties') || char(10) || json_extract(body, '$.nextStep') || char(10) ||
-        json_extract(body, '$.sourceTitle') || coalesce((SELECT char(10) || group_concat(json_extract(value, '$.excerpt'), char(10))
+        json_extract(body, '$.sourceTitle') || coalesce((SELECT char(10) || group_concat(coalesce(json_extract(value, '$.topic'), '') || char(10) || json_extract(value, '$.excerpt'), char(10))
           FROM json_each(body, '$.evidence')), '')), ${bind(query)}) > 0` : ''}`);
     const folder = request.folderId;
     const membership = folder ? `WHERE ${folder === '__unfiled__' ? 'NOT ' : ''}EXISTS (

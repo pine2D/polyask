@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { DRAFT_STATE_PREFIX, DRAFT_SYNC_META_KEY, parseDraftInput, parseStoredDraft, validDraftId,
+import { draftFormat, DRAFT_STATE_PREFIX, DRAFT_SYNC_META_KEY, parseDraftInput, parseStoredDraft, validDraftId,
   type DraftInput, type DraftKind, type StoredDraft } from '../shared/drafts';
 import { nextSyncTime, validSyncTime } from '../shared/sync';
 import type { StateRepository } from './state-repository';
@@ -51,7 +51,7 @@ export class DraftRepository {
     if (!current) purgeDraftTombstones(this.state, this.meta.get<Record<string, StateFragment>>('remoteStates') ?? {}, this.now());
     const id = current?.id ?? this.createId();
     if (!current && this.state.get(`${DRAFT_STATE_PREFIX}${id}`) !== null) throw new Error('invalid_draft');
-    const draft = parseStoredDraft({ ...input, format: 1, id, deviceId,
+    const draft = parseStoredDraft({ ...input, format: current?.format === 2 ? 2 : draftFormat(input), id, deviceId,
       updatedAt: nextSyncTime(this.now(), ...(current ? [current.updatedAt] : [])) });
     if (!draft) throw new Error('invalid_draft');
     this.checkEpoch(expectedEpoch);
@@ -66,7 +66,7 @@ export class DraftRepository {
     if (!current || Object.hasOwn(current, 'deletedAt') ||
       (expectedUpdatedAt !== undefined && current.updatedAt > expectedUpdatedAt)) return false;
     const updatedAt = nextSyncTime(this.now(), current.updatedAt);
-    const deleted: StoredDraft = { format: 1, id: current.id, kind: current.kind, context: current.context,
+    const deleted: StoredDraft = { format: current.format, id: current.id, kind: current.kind, context: current.context,
       title: '', content: null, deviceId: current.deviceId, updatedAt, deletedAt: updatedAt };
     this.checkEpoch(expectedEpoch);
     this.state.put(`${DRAFT_STATE_PREFIX}${id}`, deleted, updatedAt, this.syncEnabled());

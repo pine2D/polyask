@@ -1,6 +1,6 @@
 import type { ArchiveRecord } from '../shared/archive';
 import type { DesktopCopy } from '../shared/copy';
-import type { DecisionInput } from '../shared/decision';
+import { evidenceTuple, type DecisionInput } from '../shared/decision';
 import { answerSourceId } from '../shared/answer-source';
 import { validateExcerpt, type ExactExcerpt } from './answer-excerpt';
 
@@ -26,7 +26,7 @@ export function comparisonCategoryLabel(copy: DesktopCopy, category: ComparisonC
 export function comparisonDecisionInput(record: ArchiveRecord, draft: ComparisonDraft, copy: DesktopCopy): DecisionInput | null {
   const indices = draft.quotes.map(quote => quote.resultIndex);
   if (record.id !== draft.archiveId || draft.quotes.some(quote => !validateExcerpt(record, quote))
-    || new Set(indices).size !== indices.length || indices.length > 9) return null;
+    || new Set(draft.quotes.map(evidenceTuple)).size !== indices.length || indices.length > 36 || draft.quotes.some(q => [...(q.topic ?? "")].length > 120)) return null;
   const section = (category: ComparisonCategory) => {
     const notes = record.results.flatMap((source, index) => {
       const note = draft.notes[category][source.host];
@@ -34,8 +34,8 @@ export function comparisonDecisionInput(record: ArchiveRecord, draft: Comparison
     });
     return notes.length ? `${comparisonCategoryLabel(copy, category)}\n${notes.join('\n\n')}` : '';
   };
-  return { archiveId: record.id, title: [...(record.task || record.text)].slice(0, 160).join(''), status: 'draft',
+  return { archiveId: record.id, sourceUpdatedAt: record.updatedAt, title: [...(record.task || record.text)].slice(0, 160).join(''), status: 'draft',
     conclusion: draft.judgment, rationale: ['conclusion', 'evidence', 'cost'].map(category => section(category as ComparisonCategory)).filter(Boolean).join('\n\n'),
     uncertainties: section('conditions'), nextStep: draft.nextStep,
-    evidence: [...draft.quotes].sort((a, b) => a.resultIndex - b.resultIndex).map(quote => ({ resultIndex: quote.resultIndex, excerpt: quote.excerpt })) };
+    evidence: [...draft.quotes].sort((a, b) => a.resultIndex - b.resultIndex).map(quote => ({ id: quote.id ?? `legacy:${quote.resultIndex}`, ...(quote.topic === undefined ? {} : {topic:quote.topic}), resultIndex: quote.resultIndex, excerpt: quote.excerpt })) };
 }

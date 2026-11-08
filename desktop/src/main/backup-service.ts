@@ -58,7 +58,7 @@ export class BackupService {
       if (kind === "questionAnswer" && !active(this.database.questions.get(body.questionId))) continue;
       entries.push({ kind, id, body: projectBody(kind, body, id) });
     }
-    const extended = entries.some(e => e.body.schema === 6);
+    const extended = entries.some(e => e.body.schema === 6 || (e.kind === "draft" && e.body.format === 2));
     const document = validateBackup({ format: "polyask-backup", version: extended ? 5 : 3, exportedAt: this.now(), entries });
     return extended ? backupContainerDocument(this.database, document, true) : document;
   }
