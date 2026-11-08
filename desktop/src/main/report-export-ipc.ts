@@ -3,6 +3,7 @@ import { parseReportExportRequest } from '../shared/report-export';
 import type { ArchiveService } from './archive-service';
 import type { DecisionService } from './decision-service';
 import { ReportExportService } from './report-export-service';
+import { renderReportDiagrams } from './report-render';
 import { printReportPdf } from './report-pdf';
 
 interface ReportIpcEvent {
@@ -18,6 +19,7 @@ export function registerReportExportIpc(options: {
   readonly isCurrent: () => boolean;
 }): () => void {
   const service = new ReportExportService({ ...options, printPdf: printReportPdf,
+    renderDiagrams: (sources, rendering) => renderReportDiagrams(sources, rendering, REPORT_RENDER_PRELOAD_WEBPACK_ENTRY),
     choosePath: async (request, filename) => {
       const result = await dialog.showSaveDialog(options.window, { defaultPath: filename,
         filters: [{ name: request.format.toUpperCase(), extensions: [request.format] }] });

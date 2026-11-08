@@ -129,3 +129,24 @@ test('atomic output preserves an existing file on stale completion and removes o
     assert.deepEqual(await readdir(dir), ['report.html']);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+test('pre-render and PDF share an absolute budget and cannot commit changed or cancelled sources', async () => {
+  for (const mutation of ['none','changed','cancelled','timeout'] as const) {
+    let archive = { ...archiveFixture(),results:[{host:'claude.ai',label:'Claude',text:'```mermaid\ngraph TD; A-->B\n```'}] };
+    let writes=0,printDeadline=0,renderDeadline=0;
+    const service = new ReportExportService({archives:{get:()=>archive},decisions:{get:()=>null},epoch:()=>0,isCurrent:()=>true,
+      choosePath:async()=>'/unused/report.pdf', renderDiagrams:async(_sources,options)=>{
+        renderDeadline=options.deadline!;
+        if(mutation==='changed') archive={...archive,updatedAt:archive.updatedAt+1};
+        if(mutation==='cancelled') service.dispose();
+        if(mutation==='timeout') throw Error('report_pdf_timeout');
+        return new Map();
+      },printPdf:async(_html,options)=>{printDeadline=options.deadline!;return Buffer.from('%PDF-');},
+      writeFile:async()=>{writes++;}});
+    const result=await service.export({...request,format:'pdf'});
+    assert.equal(result.status,mutation==='none'?'saved':mutation==='cancelled'?'cancelled':'failed');
+    assert.equal(writes,mutation==='none'?1:0);
+    assert.equal(renderDeadline>0,true);
+    if(mutation==='none')assert.equal(printDeadline,renderDeadline);
+  }
+});

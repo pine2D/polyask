@@ -1661,3 +1661,12 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 原生部分复用生产 ViewManager、绘制恢复与销毁，测 1/3/9 个实际挂载页面的可见空闲、隐藏生成模拟、最小化及恢复；仅本地 data 页面以 20Hz 更新有界文本，初始 AI URL 请求在发出前拦截。站点 preload 为空，不代表站点适配器或真实生成。`--pages-only --host-display` 仅在已有 DISPLAY 后端检查本任务合成窗口；默认独立 Xvfb。最小化必须读到 `isMinimized()`，否则明确标为未确认，不将隐藏窗口替代最小化。记录实际页数、挂载、加载、焦点、可见性、生成 tick 与节流状态。
 
 CPU 首次读取只建立基线，随后每状态五次约 300ms 区间样本；工作集/CPU 按 PID 及类别列出，不相加宣称独占内存。操作延迟为生产 setPage 加首个页面 DOM 确认，主进程时钟测量。整项截止 420 秒（构建最多45秒，每数据档最多95秒、原生最多90秒），慢查询在外层终止进程树并记录删失，不填造 P95。输出临时目录含 report.json、各档原始样本、in-flight.json、进程边界与 cleanup.json；结束核对归属进程退出，删除合成数据库、临时 profile，保留库外证据。所有 Electron 进程必须处于共同 4GiB/512MiB cgroup，不允许无界 fallback。
+
+
+### 2026-11-08 · 静态报告导出专项
+
+`npm run test:unit -- test/report-static.test.ts test/report-export-service.test.ts test/report-pdf.test.ts test/report-export-ipc.test.ts test/report-template.test.ts` 检查共享公式解析、安全源码回退、PNG 预解码限额、累计公式数量与让步取消、全链 deadline、来源版本与既有文件写入保护。
+
+`POLYASK_REPORT_KEEP_ARTIFACTS=1 npm run test:unit -- test/report-export.check.ts` 运行独立内存 session 的真实 Electron 导出：三语/CJK、90 行跨页表格、公式/图表、网页模型观测、不完整回答和恶意 HTML/URL/SVG/超长图；HTTP 请求前观察器和本地探针均为零，检查 PDF 页数/A4/全文末尾、打印截图，以及取消/关闭/来源变化/超时后的实际销毁。证据为临时目录 HTML/PDF/PNG 与标量 JSON。
+
+`npm run test:unit -- test/report-combined.check.ts` 从生产 useTaskSetup 及工作区/参与站点 hooks 应用并确认合成草稿，保存合成回答到真实 SQLite，再经生产人工比较、原文多摘录、决策组件与 DecisionService 保存三条依据，最后调用实际 ReportExportService 导出 HTML/PDF。外部站点 ACK 在夹具边界替代；未发送问题或导航新会话，不代表真实站点或 Drive 验收。该专项保留三语组合截图、PDF/HTML、密集公式主进程 heartbeat/取消数据，校验所有已观察进程退出并清理隔离 profile；Linux 必须使用 test-safe 的 4GiB/512MiB cgroup。

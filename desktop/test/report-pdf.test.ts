@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { runInNewContext } from 'node:vm';
 import test from 'node:test';
 import { transformSync } from 'esbuild';
+import { reportImageUrls } from '../src/main/report-visuals';
 import { REPORT_CSP } from '../src/main/report-template';
 import { readSource } from './fixtures';
 
@@ -49,12 +50,13 @@ function harness() {
   }
   const module = { exports: {} as { printReportPdf: (html: string, options: { signal: AbortSignal; guard: () => void; timeoutMs?: number }) => Promise<Uint8Array> } };
   runInNewContext(transformSync(readSource('src/main/report-pdf.ts'), { loader: 'ts', format: 'cjs' }).code, {
-    module, exports: module.exports, Response, setTimeout, clearTimeout, Error,
+    module, exports: module.exports, Response, setTimeout, clearTimeout, Error, Date,
     require: (name: string) => {
       if (name === 'electron') return { BrowserWindow: FakeWindow, session: { fromPartition: (partition: string, options: { cache: boolean }) => {
         assert.equal(options.cache, false); partitions.push(partition); return isolated;
       } } };
       if (name === 'node:crypto') return { randomUUID };
+      if (name === './report-visuals') return { reportImageUrls };
       if (name === './report-template') return { REPORT_CSP };
       throw new Error(name);
     }

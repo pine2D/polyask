@@ -18,6 +18,7 @@ test('report IPC trusts only the shell, strips no forbidden intent, and owns nat
     module, exports: module.exports, Error, require: (name: string) => {
       if (name === '../shared/report-export') return report;
       if (name === './report-export-service') return { ReportExportService: Service };
+      if (name === './report-render') return { renderReportDiagrams: () => new Map() };
       if (name === './report-pdf') return { printReportPdf: () => {} };
       if (name === 'electron') return { ipcMain: {
         handle: (channel: string, run: typeof handler) => { assert.equal(channel, 'polyask:report-export'); handler = run; },

@@ -75,13 +75,13 @@ test('independent decision report retains exact excerpts and identifies unavaila
   const decision: DecisionRecord = { id: 'd', archiveId: archive.id, sourceTitle: 'Saved question title', title: 'My decision',
     conclusion: 'Choose one', rationale: 'Because', uncertainties: 'To check', nextStep: 'Verify', status: 'final',
     evidence: [{ resultIndex: 0, excerpt: '**Exact** <source>', host: 'claude.ai', label: 'Claude', capturedAt: 1000 }],
-    createdAt: 1000, updatedAt: 2000, schema: 2, deviceId: 'device' };
+    createdAt: 1000, updatedAt: 2000, schema: 2, deviceId: 'device', sourceUpdatedAt: 2000 };
   for (const available of [archive, null]) {
     const dom = new JSDOM(renderReportHtml({ kind: 'decision', decision, archive: available }, 'zhTW'));
     try {
       const doc = dom.window.document, text = doc.body.textContent ?? '';
       assert.equal(doc.querySelector('blockquote.excerpt')?.textContent, '**Exact** <source>');
-      assert.match(text, /Choose one/); assert.match(text, /Because/); assert.match(text, /To check/); assert.match(text, /Verify/);
+      assert.match(text, /已核對來源版本/); assert.match(text, /Choose one/); assert.match(text, /Because/); assert.match(text, /To check/); assert.match(text, /Verify/);
       assert.match(text, /修改狀態不會自動驗證內容/);
       assert.match(text, available ? /與目前可讀取的來源不一致/ : /問題標題快照/);
       assert.equal(text.includes('Rayleigh scattering.'), !!available);

@@ -31,7 +31,8 @@ setShellApi({setSelection:async (value:WorkspaceState['selectedSites'])=>{await 
   setParticipation:async (value:WorkspaceState['selectedSites'])=>{await pause();if(failure==='save')throw Error('fixture save failure');state={...state,participatingSites:value};return state;},
   applyTier:async (tier:Tier)=>{await pause();state={...state,tier};return {workspace:state,results:state.participatingSites!.map(site=>({site,ok:failure!=='tier'})) as SiteRunResult[]};},
   bootstrap:async()=>({workspace:state}),broadcast:async()=>{broadcasts++;throw Error('must not send');},newSession:async()=>{sessions++;throw Error('must not navigate');}} as any);
-function Fixture(){
+export function TaskSetupNativeFixture({ onPrepared }: { onPrepared?: (prompt: string) => void } = {}){
+  const prepared = useRef('');
   const lock=useRef(new ExclusiveActionLock()).current, revision=useRef(new DraftRevision()).current;
   const [prompt,setPrompt]=useState('Synthetic current draft'),[surface,setSurface]=useState<DesktopSurface>('sites');
   const commands=useRef({}),confirmation=useDraftConfirmation(commands);
@@ -41,8 +42,8 @@ function Fixture(){
   const change=(next:DesktopSurface)=>requestSurfaceChange(surface,next,{surfaceChanged:confirmation.surfaceChanged,
     closeImages:images.invalidateAndClose,closeHistory:()=>{},resetComposer:()=>{},closeDrawer:()=>{},commit:setSurface});
   const setup=useTaskSetup({templates,groups,sites:SITES,prompt,imageCount:images.images.length,lock,participation,changeTier:flow.changeTier,
-    getIntent:()=>`${revision.current}:${images.intent()}`,busy:()=>false,onApply:value=>{revision.edit();setPrompt(value);},
-    onApplied:()=>focusPromptForEditing({current:document.querySelector<HTMLTextAreaElement>('[name=fixture-draft]')},()=>{}),
+    getIntent:()=>`${revision.current}:${images.intent()}`,busy:()=>false,onApply:value=>{revision.edit();setPrompt(value);prepared.current=value;},
+    onApplied:()=>{focusPromptForEditing({current:document.querySelector<HTMLTextAreaElement>('[name=fixture-draft]')},()=>{});onPrepared?.(prepared.current);},
     onBlockingChange:(value,owner)=>confirmation.change(value,owner,change)});
   useEffect(()=>{flow.accept(state);images.replace([{name:'synthetic.png',mime:'image/png',bytes:1,dataUrl:'data:image/png;base64,AA=='} as any]);},[]);
   (window as any).taskNative={copy,configure:(kind:string,wait=0)=>{failure=kind;delay=wait;},
@@ -53,4 +54,4 @@ function Fixture(){
     {setup.session?<TaskSetup setup={setup} copy={copy} sites={SITES} templates={templates} groups={groups}/>:null}
   </main>;
 }
-createRoot(document.getElementById('root')!).render(<Fixture/>);
+if (!new URLSearchParams(location.search).has('combined')) createRoot(document.getElementById('root')!).render(<TaskSetupNativeFixture/>);

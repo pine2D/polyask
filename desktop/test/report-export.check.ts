@@ -22,6 +22,17 @@ test('native reports preserve three languages, tables and pagination without net
       compiler.run((error, stats) => compiler.close(() => error || stats?.hasErrors()
         ? reject(error || new Error(stats?.toString({ all: false, errors: true }))) : resolve()));
     });
+    await new Promise<void>((resolve, reject) => {
+      const compiler = webpack({ mode: 'development', context: join(__dirname, '..'), target: 'electron-preload', devtool: false,
+        entry: join(__dirname, '../src/preload/report-render.ts'),
+        output: { path: output, filename: 'report-preload.cjs' },
+        resolve: { extensions: ['.ts', '.js'] },
+        plugins: [new webpack.optimize.LimitChunkCountPlugin({ maxChunks: 1 })],
+        module: { rules: [{ test: /\.ts$/, exclude: /node_modules/, use: [{ loader: 'ts-loader', options: { transpileOnly: true } }] }] }
+      });
+      compiler.run((error, stats) => compiler.close(() => error || stats?.hasErrors()
+        ? reject(error || new Error(stats?.toString({ all: false, errors: true }))) : resolve()));
+    });
     const binary = require('electron') as string, headless = process.platform === 'linux' && !process.env.DISPLAY;
     const args = [join(__dirname, 'ui/report-export-runtime.cjs'), output];
     const result = await runOwnedNative({ command: headless ? 'xvfb-run' : binary,
@@ -32,7 +43,8 @@ test('native reports preserve three languages, tables and pagination without net
     });
     assert.equal(result.live.length, 0); assert.equal(result.errors.length, 0);
     const report = JSON.parse(readFileSync(join(output, 'report.json'), 'utf8'));
-    assert.equal(report.cases.length, 8); assert.equal(report.destroyed, 8);
+    assert.equal(report.cases.length >= 12, true); assert.equal(report.destroyed >= 15, true);
+    assert.equal(report.staticDiagrams, 3); assert.equal(report.staticFormulas, 6);
     assert.equal(report.networkRequests, 0); assert.equal(report.deliveredRequests, 0);
     const pages: number[] = [];
     for (const [locale, question] of [['en', 'Saved question example'], ['zhCN', '示例问题'], ['zhTW', '範例問題']]) {

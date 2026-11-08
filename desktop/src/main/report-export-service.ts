@@ -3,11 +3,14 @@ import type { DecisionService } from './decision-service';
 import { dateTimeAttribute } from '../shared/format';
 import { REPORT_EXPORT_CODES, type ReportExportRequest, type ReportExportResult, type ReportExportCode } from '../shared/report-export';
 import { assertReportSize, MAX_REPORT_BYTES, renderReportHtml, type ReportSource } from './report-template';
+import { renderReportMath } from './report-math';
+import type { MathTokenValue } from '../shared/markdown-math-tokens';
 import { writeReportFile } from './report-file';
 
 export interface ReportPdfOptions {
   readonly signal: AbortSignal;
   readonly guard: () => void;
+  readonly deadline?: number;
 }
 interface ReportExportOptions {
   readonly archives: Pick<ArchiveService, 'get'>;
@@ -15,6 +18,7 @@ interface ReportExportOptions {
   readonly epoch: () => number;
   readonly isCurrent: () => boolean;
   readonly choosePath: (request: ReportExportRequest, filename: string) => Promise<string | null>;
+  readonly renderDiagrams?: (sources: readonly string[], options: ReportPdfOptions) => Promise<Map<string, string>>;
   readonly printPdf: (html: string, options: ReportPdfOptions) => Promise<Uint8Array>;
   readonly writeFile?: typeof writeReportFile;
 }
@@ -57,19 +61,33 @@ export class ReportExportService {
       const path = await this.options.choosePath(request, `polyask-${request.kind}-${stamp}.${request.format}`);
       guard();
       if (!path) return { status: 'cancelled' };
-      const html = renderReportHtml(source, request.locale);
+      // Dialog time is excluded; all computation and native rendering share one absolute budget.
+      const deadline = Date.now() + 30_000;
+      const boundedGuard = () => { guard(); if (Date.now() >= deadline) throw new Error('report_pdf_timeout'); };
+      const rendering = { signal: controller.signal, guard: boundedGuard, deadline };
+      const collect = new Set<string>(), collectMath = new Map<string, MathTokenValue>();
+      let html = renderReportHtml(source, request.locale, { guard: boundedGuard, collect, collectMath });
+      const math = await renderReportMath(collectMath, rendering);
+      boundedGuard();
+      let diagrams = new Map<string, string>();
+      if (collect.size && this.options.renderDiagrams) {
+        diagrams = await this.options.renderDiagrams([...collect], rendering);
+        boundedGuard();
+      }
+      if (math.size || diagrams.size) html = renderReportHtml(source, request.locale, { guard: boundedGuard, diagrams, math });
+      boundedGuard();
       let data: Uint8Array | string = html;
       if (request.format === 'pdf') {
-        try { data = await this.options.printPdf(html, { signal: controller.signal, guard }); }
+        try { data = await this.options.printPdf(html, rendering); }
         catch (error) {
           guard();
           if (error instanceof Error && REPORT_EXPORT_CODES.includes(error.message as ReportExportCode)) throw error;
           throw new Error('report_pdf_failed');
         }
-        guard();
+        boundedGuard();
       }
       if (typeof data !== 'string' && data.byteLength > MAX_REPORT_BYTES) throw new Error('report_too_large');
-      await (this.options.writeFile ?? writeReportFile)(path, data, guard);
+      await (this.options.writeFile ?? writeReportFile)(path, data, boundedGuard);
       // writeReportFile 最后一次 guard 与提交之间没有 await；提交后不再把已保存文件误报为失败。
       return { status: 'saved' };
     } catch (error) {

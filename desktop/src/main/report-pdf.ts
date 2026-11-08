@@ -1,13 +1,14 @@
 import { BrowserWindow, session, type WebContents } from 'electron';
 import { randomUUID } from 'node:crypto';
 import type { ReportPdfOptions } from './report-export-service';
+import { reportImageUrls } from './report-visuals';
 import { REPORT_CSP } from './report-template';
 
 export const REPORT_PDF_TIMEOUT_MS = 30_000;
 const SCHEME = 'polyask-report';
 let printing = false;
 
-async function destroyReportWindow(window: BrowserWindow | null, contents: WebContents | null): Promise<void> {
+export async function destroyReportWindow(window: BrowserWindow | null, contents: WebContents | null): Promise<void> {
   if (!contents || contents.isDestroyed()) {
     if (window && !window.isDestroyed()) window.destroy();
     return;
@@ -27,6 +28,7 @@ export async function printReportPdf(html: string, options: ReportPdfOptions & {
   options.guard();
   if (options.signal.aborted) throw new Error('report_source_changed');
   if (printing) throw new Error('report_busy');
+  const images = reportImageUrls(html);
   const token = randomUUID(), url = `${SCHEME}://${token}/report.html`;
   // Electron 会缓存 Session 对象；复用专用内存分区，避免每次打印遗留一个会话。
   const isolated = session.fromPartition('polyask-reports', { cache: false });
@@ -43,7 +45,7 @@ export async function printReportPdf(html: string, options: ReportPdfOptions & {
     isolated.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
     isolated.setPermissionCheckHandler(() => false);
     isolated.on('will-download', prevent);
-    isolated.webRequest.onBeforeRequest((details, callback) => callback({ cancel: details.url !== url || details.resourceType !== 'mainFrame' }));
+    isolated.webRequest.onBeforeRequest((details, callback) => callback({ cancel: !((details.url === url && details.resourceType === 'mainFrame') || (details.resourceType === 'image' && images.has(details.url))) }));
     isolated.protocol.handle(SCHEME, request => request.url === url
       ? new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8', 'Content-Security-Policy': REPORT_CSP, 'Cache-Control': 'no-store' } })
       : new Response('', { status: 404 }));
@@ -62,7 +64,7 @@ export async function printReportPdf(html: string, options: ReportPdfOptions & {
     contents.once('render-process-gone', failed);
     window.once('closed', failed);
     options.signal.addEventListener('abort', cancel, { once: true });
-    timer = setTimeout(() => rejectStopped(new Error('report_pdf_timeout')), options.timeoutMs ?? REPORT_PDF_TIMEOUT_MS);
+    timer = setTimeout(() => rejectStopped(new Error('report_pdf_timeout')), Math.max(0, Math.min(options.timeoutMs ?? REPORT_PDF_TIMEOUT_MS, (options.deadline ?? Date.now() + REPORT_PDF_TIMEOUT_MS) - Date.now())));
     const generate = async () => {
       // 主进程发起的唯一 loadURL 不经过 will-navigate，其余导航全部拒绝。
       await window!.loadURL(url); options.guard();

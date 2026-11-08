@@ -66,6 +66,10 @@ const config: ForgeConfig = {
             preload: { js: "./src/preload/site-entry.ts" }
           },
           {
+            name: "report_render",
+            preload: { js: "./src/preload/report-render.ts", config: "./webpack.report.config.ts" }
+          },
+          {
             name: "web_badging",
             preload: { js: "./src/preload/web-badging.ts" }
           }

@@ -10,12 +10,12 @@ import { reportLocaleTag } from '../shared/report-export';
 import { describeCollectionCode } from '../shared/status-copy';
 import { safeExternalUrl } from './security';
 import { SITES } from './sites';
-import { escapeReportText as escape, renderReportMarkdown as markdown } from './report-markdown';
+import { escapeReportText as escape, renderReportMarkdown, type ReportMarkdownContext } from './report-markdown';
 
 export type ReportSource = { readonly kind: 'archive'; readonly archive: ArchiveRecord }
   | { readonly kind: 'decision'; readonly decision: DecisionRecord; readonly archive: ArchiveRecord | null };
 export const MAX_REPORT_BYTES = 64 * 1024 * 1024;
-export const REPORT_CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src 'none'; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
+export const REPORT_CSP = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'";
 
 const STYLE = `
 @page { size: A4; margin: 17mm 16mm 19mm; }
@@ -42,6 +42,9 @@ thead { display: table-header-group; }
 tr { break-inside: avoid; }
 th,td { border: 1px solid #cbd5e1; padding: 7px 9px; vertical-align: top; overflow-wrap: anywhere; }
 th { background: #f1f5f9; }
+math[display=block] { display: block; margin: 16px 0; overflow-wrap: normal; }
+.report-diagram { margin: 16px 0; break-inside: avoid; }
+.report-diagram img { display: block; max-width: 100%; max-height: 220mm; object-fit: contain; height: auto; }
 a { color: #1d4ed8; text-decoration: underline; }
 footer { border-top: 1px solid #d6dce5; margin-top: 32px; padding-top: 12px; font-size: 12px; color: #475569; }
 @media print { body { max-width: none; margin: 0; padding: 0; font-size: 10.5pt; } a { color: inherit; } }
@@ -53,7 +56,9 @@ export function assertReportSize(source: ReportSource): void {
   }
 }
 
-export function renderReportHtml(source: ReportSource, locale: DesktopLocale = 'en'): string {
+export function renderReportHtml(source: ReportSource, locale: DesktopLocale = 'en', context: ReportMarkdownContext = {}): string {
+  const markdown = (value: string) => renderReportMarkdown(value, context);
+  context.guard?.();
   assertReportSize(source);
   const language = reportLocaleTag(locale), copy = getCopy(language), report = REPORT_EXPORT_COPY[locale];
   const date = (value: number) => formatDateTime(value, language);
@@ -65,6 +70,7 @@ export function renderReportHtml(source: ReportSource, locale: DesktopLocale = '
   const chunks = [metadata([[report.reportSavedAt, date(record.createdAt)], [report.reportUpdatedAt, date(record.updatedAt)]])];
   if (source.kind === 'decision') {
     const decision = source.decision;
+    if (decision.sourceUpdatedAt !== undefined) chunks.push(metadata([[report.reportSourceReviewedAt, date(decision.sourceUpdatedAt)]]));
     const status = { draft: copy.decisionDraft, verify: copy.decisionVerify, final: copy.decisionFinal }[decision.status];
     chunks.push(metadata([[copy.decisionStatus, status]]), `<p class="notice">${escape(copy.decisionManual)}</p>`);
     for (const [label, text] of [[copy.decisionConclusion, decision.conclusion], [copy.decisionRationale, decision.rationale],

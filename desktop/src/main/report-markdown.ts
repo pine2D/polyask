@@ -1,5 +1,17 @@
 import MarkdownIt from 'markdown-it';
 import { safeExternalUrl } from './security';
+import { addMathTokens, mathTokenValue, type MathTokenValue } from '../shared/markdown-math-tokens';
+import { reportMathKey, REPORT_MATH_LIMIT } from './report-math';
+import { validReportPng, REPORT_DIAGRAM_LIMIT } from './report-visuals';
+
+export interface ReportMarkdownContext {
+  readonly [key: string | symbol]: unknown;
+  readonly guard?: () => void;
+  readonly diagrams?: Map<string, string>;
+  readonly collect?: Set<string>;
+  readonly collectMath?: Map<string, MathTokenValue>;
+  readonly math?: Map<string, string>;
+}
 
 export const escapeReportText = (value: string): string => value.replace(/[&<>"']/g,
   character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!);
@@ -25,4 +37,24 @@ for (const type of ['heading_open', 'heading_close']) markdown.renderer.rules[ty
   return token.nesting === 1 ? `<h${level}>` : `</h${level}>\n`;
 };
 
-export const renderReportMarkdown = (value: string): string => markdown.render(value);
+addMathTokens(markdown);
+for (const type of ['math_inline', 'math_block']) markdown.renderer.rules[type] = (tokens, index, _options, env: ReportMarkdownContext = {}) => {
+  const value = mathTokenValue(tokens[index]), key = reportMathKey(value);
+  if (env.collectMath && env.collectMath.size < REPORT_MATH_LIMIT) env.collectMath.set(key, value);
+  const fallback = `<code>${escapeReportText(value.literal)}</code>`;
+  return env.math?.get(key) ?? (type === 'math_block' ? `<pre>${fallback}</pre>` : fallback);
+};
+const fence = markdown.renderer.rules.fence!;
+markdown.renderer.rules.fence = (tokens, index, options, env: ReportMarkdownContext = {}, self) => {
+  const token = tokens[index];
+  if (token.info.trim().toLowerCase() === 'mermaid') {
+    if (env.collect && env.collect.size < REPORT_DIAGRAM_LIMIT) env.collect.add(token.content);
+    const image = env.diagrams?.get(token.content);
+    if (image && validReportPng(image)) return `<figure class="report-diagram"><img src="${image}" alt="${escapeReportText(token.content)}"></figure>`;
+  }
+  return fence(tokens, index, options, env, self);
+};
+export const renderReportMarkdown = (value: string, context: ReportMarkdownContext = {}): string => {
+  context.guard?.();
+  return markdown.render(value, context);
+};
