@@ -18,6 +18,7 @@ interface ReportExportOptions {
   readonly epoch: () => number;
   readonly isCurrent: () => boolean;
   readonly choosePath: (request: ReportExportRequest, filename: string) => Promise<string | null>;
+  readonly fitMath?: (html: string, math: ReadonlyMap<string, string>, options: ReportPdfOptions) => Promise<Map<string, string>>;
   readonly renderDiagrams?: (sources: readonly string[], options: ReportPdfOptions) => Promise<Map<string, string>>;
   readonly printPdf: (html: string, options: ReportPdfOptions) => Promise<Uint8Array>;
   readonly writeFile?: typeof writeReportFile;
@@ -67,7 +68,7 @@ export class ReportExportService {
       const rendering = { signal: controller.signal, guard: boundedGuard, deadline };
       const collect = new Set<string>(), collectMath = new Map<string, MathTokenValue>();
       let html = renderReportHtml(source, request.locale, { guard: boundedGuard, collect, collectMath });
-      const math = await renderReportMath(collectMath, rendering);
+      let math = await renderReportMath(collectMath, rendering);
       boundedGuard();
       let diagrams = new Map<string, string>();
       if (collect.size && this.options.renderDiagrams) {
@@ -75,6 +76,11 @@ export class ReportExportService {
         boundedGuard();
       }
       if (math.size || diagrams.size) html = renderReportHtml(source, request.locale, { guard: boundedGuard, diagrams, math });
+      if (math.size) {
+        math = this.options.fitMath ? await this.options.fitMath(html, math, rendering) : new Map();
+        boundedGuard();
+        html = renderReportHtml(source, request.locale, { guard: boundedGuard, diagrams, math });
+      }
       boundedGuard();
       let data: Uint8Array | string = html;
       if (request.format === 'pdf') {

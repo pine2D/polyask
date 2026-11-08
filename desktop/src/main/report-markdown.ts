@@ -11,6 +11,7 @@ export interface ReportMarkdownContext {
   readonly collect?: Set<string>;
   readonly collectMath?: Map<string, MathTokenValue>;
   readonly math?: Map<string, string>;
+  readonly mathIds?: Map<string, number>;
 }
 
 export const escapeReportText = (value: string): string => value.replace(/[&<>"']/g,
@@ -42,7 +43,9 @@ for (const type of ['math_inline', 'math_block']) markdown.renderer.rules[type] 
   const value = mathTokenValue(tokens[index]), key = reportMathKey(value);
   if (env.collectMath && env.collectMath.size < REPORT_MATH_LIMIT) env.collectMath.set(key, value);
   const fallback = `<code>${escapeReportText(value.literal)}</code>`;
-  return env.math?.get(key) ?? (type === 'math_block' ? `<pre>${fallback}</pre>` : fallback);
+  const markup = env.math?.get(key);
+  return markup ? markup.replace('<math ', `<math data-report-math="${env.mathIds?.get(key)}" `)
+    : (type === 'math_block' ? `<pre>${fallback}</pre>` : fallback);
 };
 const fence = markdown.renderer.rules.fence!;
 markdown.renderer.rules.fence = (tokens, index, options, env: ReportMarkdownContext = {}, self) => {

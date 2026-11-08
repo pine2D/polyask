@@ -7,7 +7,7 @@ app.setPath('userData',join(output,'profile'));
 const pause=ms=>new Promise(r=>setTimeout(r,ms));
 const check=(value,message)=>{if(!value)throw Error(message);};
 app.whenReady().then(async()=>{
-  const {DesktopDatabase,ArchiveService,DecisionService,DraftRepository,ReportExportService,renderReportDiagrams,printReportPdf,renderReportMath,renderReportHtml,createArchiveRecord}=require(join(output,'services.cjs'));
+  const {DesktopDatabase,ArchiveService,DecisionService,DraftRepository,ReportExportService,fitReportMath,renderReportDiagrams,printReportPdf,renderReportMath,renderReportHtml,createArchiveRecord}=require(join(output,'services.cjs'));
   let db,archives,decisions,drafts,source,conflictNext=false,preparedPrompt='';
   let httpRequests=0;
   const dense=createArchiveRecord({text:'Dense formulas',task:'Dense formulas',results:[{host:'claude.ai',label:'Claude',
@@ -103,6 +103,7 @@ app.whenReady().then(async()=>{
     const reportLocale={en:'en','zh-CN':'zhCN','zh-TW':'zhTW'}[locale];
     const exporter=new ReportExportService({archives,decisions,epoch:()=>0,isCurrent:()=>!win.isDestroyed(),
       choosePath:async request=>join(output,`${reportLocale}.${request.format}`),printPdf:printReportPdf,
+      fitMath:(html,math,options)=>fitReportMath(html,math,options,join(output,'report-preload.cjs')),
       renderDiagrams:(sources,options)=>renderReportDiagrams(sources,options,join(output,'report-preload.cjs'))});
     for(const format of ['html','pdf'])check((await exporter.export({kind:'decision',id:card.id,format,locale:reportLocale})).status==='saved','actual report service wrote '+format);
     check(BrowserWindow.getAllWindows().length===1,'all trusted render and PDF windows released');

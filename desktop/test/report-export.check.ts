@@ -57,6 +57,15 @@ test('native reports preserve three languages, tables and pagination without net
         'A4 dimensions allow Chromium sub-point rounding');
       const text = execFileSync('pdftotext', ['-layout', pdf, '-'], { encoding: 'utf8' });
       assert.equal(text.replace(/\s/g, '').includes(question.replace(/\s/g, '')), true, `${locale}: question retained`);
+      for (const [start, end, marker] of [['BLOCKSTART','BLOCKEND','ENDLONGFORMULA'],['INLINESTART','INLINEEND','ENDINLINEFORMULA']]) {
+        const formula = text.split(start)[1]?.split(end)[0] ?? '';
+        assert.equal((formula.match(/x/g) ?? []).length, 150, `${locale}: complete ${start} formula`);
+        assert.equal(formula.replace(/\s/g, '').includes(marker), true, `${locale}: ${marker} retained`);
+      }
+      assert.equal(text.replace(/\s/g, '').includes('ENDTABLEFORMULA'), true);
+      const tall = text.split('TALLSTART')[1]?.split('TALLEND')[0] ?? '';
+      assert.equal((tall.match(/z/g) ?? []).length, 80, `${locale}: complete tall matrix`);
+      assert.equal(tall.replace(/\s/g, '').includes('ENDTALLFORMULA'), true);
       assert.match(text, /OBSERVATION_MARKER/); assert.match(text, /FINAL_MARKER/); assert.match(text, /Readable source/); assert.match(text, /image description/);
       for (let i = 0; i < 90; i++) {
         assert.equal(text.includes(`ROW_${String(i).padStart(3, '0')}`), true, `${locale}: row ${i} retained`);

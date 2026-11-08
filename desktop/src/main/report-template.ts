@@ -36,7 +36,7 @@ dt,dd { margin: 0; }
 .question,.excerpt { white-space: pre-wrap; }
 blockquote { margin: 14px 0; border-left: 3px solid #94a3b8; padding: 4px 16px; }
 pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #f1f5f9; padding: 12px; border-radius: 4px; }
-code { font: .9em/1.6 ui-monospace, monospace; }
+code { overflow-wrap: anywhere; white-space: pre-wrap; font: .9em/1.6 ui-monospace, monospace; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .92em; margin: 14px 0; }
 thead { display: table-header-group; }
 tr { break-inside: avoid; }
@@ -57,7 +57,8 @@ export function assertReportSize(source: ReportSource): void {
 }
 
 export function renderReportHtml(source: ReportSource, locale: DesktopLocale = 'en', context: ReportMarkdownContext = {}): string {
-  const markdown = (value: string) => renderReportMarkdown(value, context);
+  const mathContext = { ...context, mathIds: new Map([...(context.math?.keys() ?? [])].map((key, index) => [key, index])) };
+  const markdown = (value: string) => renderReportMarkdown(value, mathContext);
   context.guard?.();
   assertReportSize(source);
   const language = reportLocaleTag(locale), copy = getCopy(language), report = REPORT_EXPORT_COPY[locale];

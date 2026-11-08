@@ -26,3 +26,35 @@ contextBridge.exposeInMainWorld('reportRender', async (sources: unknown) => {
   }
   return results;
 });
+
+contextBridge.exposeInMainWorld('reportFitMath', async () => {
+  // Mirror the final A4 content box and print font; no user-controlled style enters here.
+  const style = document.createElement('style');
+  style.textContent = 'body { width:178mm; max-width:none; margin:0; padding:0; font-size:10.5pt; }';
+  document.head.append(style);
+  await document.fonts.ready;
+  const page = document.createElement('div');
+  page.style.height = '261mm'; document.body.append(page);
+  const pageHeight = page.getBoundingClientRect().height; page.remove();
+  const formulas = [...document.querySelectorAll<MathMLElement>('math[data-report-math]')];
+  if (formulas.length > 2048) return []; // Bound repeated placements as well as unique formulas.
+  const seen = new Set<number>(), rejected = new Set<number>();
+  for (const formula of formulas) {
+    await new Promise<void>(resolve => setTimeout(resolve, 0));
+    const id = Number(formula.dataset.reportMath);
+    if (!Number.isInteger(id) || id < 0 || id >= 256) return [];
+    seen.add(id);
+    if (formula.getBoundingClientRect().height > pageHeight - 1) { rejected.add(id); continue; }
+    let container = formula.parentElement;
+    while (container && getComputedStyle(container).display === 'inline') container = container.parentElement;
+    if (!container) { rejected.add(id); continue; }
+    const box = container.getBoundingClientRect(), css = getComputedStyle(container);
+    const left = box.left + parseFloat(css.paddingLeft) + parseFloat(css.borderLeftWidth);
+    const right = box.right - parseFloat(css.paddingRight) - parseFloat(css.borderRightWidth);
+    for (const node of [formula, ...formula.querySelectorAll('*')]) {
+      const bounds = node.getBoundingClientRect();
+      if (!Number.isFinite(bounds.right) || bounds.left < left - .5 || bounds.right > right + .5) { rejected.add(id); break; }
+    }
+  }
+  return [...seen].filter(id => !rejected.has(id));
+});

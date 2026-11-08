@@ -150,3 +150,34 @@ test('pre-render and PDF share an absolute budget and cannot commit changed or c
     if(mutation==='none')assert.equal(printDeadline,renderDeadline);
   }
 });
+
+test('static formulas require successful printable-layout validation before a report is saved', async () => {
+  const archive={...archiveFixture(),results:[{host:'claude.ai',label:'Claude',text:'$$x^2$$'}]};
+  let html='';
+  const service=new ReportExportService({archives:{get:()=>archive},decisions:{get:()=>null},epoch:()=>0,isCurrent:()=>true,
+    choosePath:async()=>'/unused/report.html',printPdf:async()=>Buffer.from('%PDF-'),
+    writeFile:async(_path,data)=>{html=String(data);}});
+  assert.equal((await service.export(request)).status,'saved');
+  assert.equal(html.includes('<math'),false,'without a layout validator, preserve source rather than risk clipping');
+  assert.equal(html.includes('$$x^2$$'),true);
+});
+
+test('formula layout validation shares the deadline and rejects stale or cancelled completions', async () => {
+  for (const mutation of ['none','changed','cancelled','timeout'] as const) {
+    let archive={...archiveFixture(),results:[{host:'claude.ai',label:'Claude',text:'$$x^2$$'}]};
+    let writes=0,layoutDeadline=0,printDeadline=0;
+    const service=new ReportExportService({archives:{get:()=>archive},decisions:{get:()=>null},epoch:()=>0,isCurrent:()=>true,
+      choosePath:async()=>'/unused/report.pdf',fitMath:async(_html,math,options)=>{
+        layoutDeadline=options.deadline!;
+        if(mutation==='changed')archive={...archive,updatedAt:archive.updatedAt+1};
+        if(mutation==='cancelled')service.dispose();
+        if(mutation==='timeout')throw Error('report_pdf_timeout');
+        return new Map(math);
+      },printPdf:async(_html,options)=>{printDeadline=options.deadline!;return Buffer.from('%PDF-');},writeFile:async()=>{writes++;}});
+    const result=await service.export({...request,format:'pdf'});
+    assert.equal(result.status,mutation==='none'?'saved':mutation==='cancelled'?'cancelled':'failed');
+    assert.equal(writes,mutation==='none'?1:0);
+    assert.equal(layoutDeadline>0,true);
+    if(mutation==='none')assert.equal(printDeadline,layoutDeadline);
+  }
+});
