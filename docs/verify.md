@@ -1644,3 +1644,9 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 输出目录由测试打印，保留六张 PNG、report.json、runtime.log、process-boundary.json；断网临时 profile、共同 4GiB/512MiB cgroup、全部观测 PID 退出及 profile 清理均核对。Linux/WSL 合成流程不替代真实站点/Drive 双设备、Windows/macOS、物理 IME 或读屏验收；执行耗时只反映自动化检查，不是用户效率研究。
 
 来源版本冲突专项可运行 `POLYASK_EVIDENCE_CONFLICT_NATIVE=1 npm run test:unit -- test/multi-evidence-native.check.ts`，仅执行简中 640px：后台来源 100→101、保存被拒且保留编辑、显式采用已核对版本、再次保存为 101；保留冲突提示和采用按钮两张额外截图，使用相同资源与隔离边界。
+
+## 会话内任务准备专项
+
+`cd desktop && npm run test:unit -- test/task-setup-command.test.ts test/task-setup-flow.test.tsx test/task-setup-component.test.tsx test/task-setup-prompt.test.ts` 覆盖入口、真实工作区/参与站点 hooks 的 open/save/tier ACK 等待与失败、取消、较新编辑和换图意图、忙碌、实际范围不符，以及真实遮罩转场后的图片意图快照。组件验证模板单次填充、可编辑维度/输出、草稿确认取消和附件保留。
+
+`cd desktop && npm run test:unit -- test/task-setup-native.check.ts` 用生产任务准备组件、工作区/草稿确认/图片 hooks 与隔离合成 Shell ACK，断网、临时 profile，三语×480/1280px 六组。实际 Electron 鼠标、按键和文本插入验证选择、变量、预览范围、确认取消、阶段失败、编辑后迟到 ACK、显式应用、取消后迟到 ACK、焦点与 Tab 圈定；Chromium 组合 Escape 事件验证 IME 分支。打印证据目录，保存预览/失败截图、report.json、runtime.log 和共同 4GiB/512MiB 进程边界，退出后删除本任务临时 profile 并核对进程退出。它不是物理输入法、真实站点切档/发送或 Windows/macOS 实机验收。

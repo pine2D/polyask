@@ -1,3 +1,6 @@
+import { useTaskSetup } from './use-task-setup';
+import { TaskSetup } from './task-setup';
+import { workspaceMenuActions } from './workspace-menu-actions';
 import { tierChangeAction } from './tier-change-action';
 import { useSyncedPreferences } from './use-synced-preferences';
 import { useNotificationNavigation } from './use-notification-navigation';
@@ -11,7 +14,6 @@ import { QuestionHistory } from "./question-history";
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-import { moreMenuCommandIds } from "./toolbar-fit";
 import { resolveCommands, type CommandId } from "../shared/commands";
 import type { SiteDefinition } from "../shared/contracts";
 import type { CommandActions } from "./command-dispatcher";
@@ -366,6 +368,11 @@ function App(): React.JSX.Element {
     });
   };
   const changeTier = tierChangeAction({ copy, sites, run: runAuxiliary, change: workspaceFlow.changeTier, announce: setAnnouncement });
+  const taskSetup = useTaskSetup({ templates: promptLibrary.templates, groups: workspace.groups, sites, prompt: text, imageCount: images.length,
+    getIntent: () => `${draftRevision.current}:${imageSelection.intent()}`, busy: () => runState !== 'idle' || auxiliaryBusy,
+    lock: actionLock.current!, participation, changeTier: workspaceFlow.changeTier, onApply: setText,
+    onApplied: () => { setAnnouncement(copy.taskSetupApplied); focusPromptForEditing(promptRef, composer.setExpanded); },
+    onBlockingChange: (blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface) });
   const {collectAndCopy, collectSynthesis, collectAndCompare} = archiveCollectionActions({copy,
     capture: archiveCapture, synthesis, runAuxiliary, announce: setAnnouncement,
     openArchive: (id, mode) => { if (id && mode === 'read') archiveNavigation.history(id, 'read'); else archiveNavigation.collection(id); changeSurface("archive"); }});
@@ -378,23 +385,7 @@ function App(): React.JSX.Element {
       invalidate: () => { broadcast.invalidate(); runProgress.invalidate(); archiveCapture.invalidate(); }
     }); } finally { newSessionInFlight.current = false; }
   };
-  const showGroupMenu = async (): Promise<void> => {
-    try {
-      const id = await shell.showGroupMenu();
-      const group = workspace.groups.find((candidate) => candidate.id === id);
-      if (group) void participation.change(group.sites);
-    } catch {
-      setAnnouncement(copy.workspaceActionFailed);
-    }
-  };
-  const showMoreMenu = async (): Promise<void> => {
-    try {
-      const command = await shell.showCommandMenu(moreMenuCommandIds().filter((id) => !!commandActions.current[id]));
-      if (command) executeCommand(command, commandActions.current);
-    } catch {
-      setAnnouncement(copy.workspaceActionFailed);
-    }
-  };
+  const {showGroupMenu, showMoreMenu} = workspaceMenuActions(workspace.groups, participation.change, commandActions, () => setAnnouncement(copy.workspaceActionFailed));
 
   const openCommandSurface = (mode: CommandPaletteMode): void => {
     setCommandMode(mode);
@@ -453,6 +444,7 @@ function App(): React.JSX.Element {
     } });
   commandActions.current = navigationBlocked ? {} : {
     "open-command-palette": () => openCommandSurface("commands"),
+    "open-task-setup": taskSetup.open,
     "open-sites": () => {
       openPanel("sites", "keyboard");
     },
@@ -682,6 +674,7 @@ function App(): React.JSX.Element {
       />
       <SiteFind copy={copy} sites={sites} layout={layout} />
       <QuestionHistory imageSyncEnabled={syncStatus.imageSyncEnabled ?? false} active={surface === 'sites'} openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftIntent={() => `${draftRevision.current}:${imageSelection.intent()}`} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={(value, images) => { imageSelection.replace(images); setText(value); focusPromptForEditing(promptRef, composer.setExpanded); }} />
+      {taskSetup.session ? <TaskSetup setup={taskSetup} copy={copy} sites={sites} templates={promptLibrary.templates} groups={workspace.groups} /> : null}
       {retryReview.review}
       {pageClose.dialog}
       {pendingNewSession && (

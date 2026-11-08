@@ -1,0 +1,13 @@
+.task-setup.confirm-dialog { width: min(880px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.task-setup > p { color: var(--muted); line-height: 1.5; }
+.task-setup-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; }
+.confirm-dialog.task-setup label { display: flex; flex-direction: column; align-items: stretch; text-align: start; gap: 6px; min-width: 0; font-weight: 500; }
+.task-setup select, .task-setup textarea { box-sizing: border-box; width: 100%; min-width: 0; font: inherit; font-weight: 400; }
+.task-setup select { min-height: 34px; border: 1px solid var(--border); border-radius: 6px; padding: 4px 8px; color: inherit; background: var(--field); }
+.task-setup textarea { resize: vertical; line-height: 1.5; }
+.task-setup-wide { grid-column: 1 / -1; }
+.task-setup-preview { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 12px; }
+.task-setup-preview h3 { margin: 0; font-size: inherit; }
+.task-setup-preview p { overflow-wrap: anywhere; line-height: 1.5; }
+.task-setup footer { display: flex; justify-content: flex-end; margin-top: 16px; }
+@media (max-width: 600px) { .task-setup-fields { grid-template-columns: minmax(0, 1fr); } }

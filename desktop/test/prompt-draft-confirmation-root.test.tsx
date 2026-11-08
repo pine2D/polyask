@@ -117,6 +117,15 @@ test('production root blocks commands and direct send, tier and collection while
     assert.equal(document.querySelector('[data-tier-icon=think]')?.getAttribute('aria-pressed'), 'true');
     assert.equal(prompt.value, 'Synthetic active question');
     tierChanges = 0;
+    await emit('open-task-setup');
+    assert.equal(document.querySelector('.task-setup') === null, false, 'production command opens task preparation');
+    assert.equal(surfaces.at(-1), 'confirmation', 'task preparation covers native views');
+    await emit('set-fast'); await emit('new-session'); await click('.send');
+    assert.equal(tierChanges, 0); assert.equal(newSessions, 0); assert.equal(broadcasts, 0);
+    await act(async () => window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    assert.equal(document.querySelector('.task-setup') === null, true);
+    assert.equal(prompt.value, 'Synthetic active question', 'cancelling task preparation preserves the composer');
+    assert.equal(surfaces.at(-1), 'sites');
     const expanded = () => document.querySelector('[data-composer-toggle]')?.getAttribute('aria-expanded');
     await emit('focus-prompt');
     assert.equal(expanded(), 'true'); assert.equal(document.activeElement === prompt, true);

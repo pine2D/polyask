@@ -1,0 +1,76 @@
+const {app,BrowserWindow,session,nativeTheme}=require('electron');
+const {join}=require('node:path');
+const {writeFileSync}=require('node:fs');
+const {processBoundary}=require('./native-process-boundary.cjs');
+const output=process.argv[2],report=[];
+app.setPath('userData',join(output,'profile'));
+const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+const check=(value,message)=>{if(!value)throw Error(message);};
+app.whenReady().then(async()=>{
+  session.defaultSession.webRequest.onBeforeRequest({urls:['http://*/*','https://*/*']},(_,cb)=>cb({cancel:true}));
+  const win=new BrowserWindow({width:1280,height:1000,show:true,webPreferences:{sandbox:true,contextIsolation:true}});
+  win.setMenuBarVisibility(false);const sample=processBoundary(app,output),errors=[];
+  win.webContents.on('console-message',event=>{if(event.level==='error')errors.push(event.message);});
+  const js=async code=>{try{return await win.webContents.executeJavaScript(code,true);}catch(error){
+    writeFileSync(join(output,'failure.png'),(await win.capturePage()).toPNG());throw Error(`${code}\n${error}`);}};
+  const until=async(code,message)=>{for(let i=0;i<160;i++){if(await js(code))return;await pause(25);}throw Error(message);};
+  const click=async selector=>{
+    win.focus();win.webContents.focus();
+    const rect=await js(`(()=>{const n=document.querySelector(${JSON.stringify(selector)});if(!n)throw Error('missing '+${JSON.stringify(selector)});n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};})()`);
+    win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...rect});
+    win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,...rect});await pause(70);
+  };
+  const key=async(keyCode,modifiers=[])=>{win.focus();win.webContents.focus();win.webContents.sendInputEvent({type:'keyDown',keyCode,modifiers});win.webContents.sendInputEvent({type:'keyUp',keyCode,modifiers});await pause(35);};
+  const type=async(selector,text)=>{await click(selector);await key('a',['control']);win.webContents.insertText(text);await pause(60);};
+  const select=async(name,index)=>{await click(`[name=${name}]`);await key('Home');for(let i=0;i<index;i++)await key('Down');await key('Return');};
+  const open=async()=>{await click('#task-opener');await until('!!document.querySelector(".task-setup")','task setup opens');};
+  const confirm=async()=>{await click('[data-task-apply]');await until('!!document.querySelector(".confirm-actions .primary")','draft confirmation opens');await click('.confirm-actions .primary');};
+  for(const locale of ['en','zh-CN','zh-TW'])for(const width of [1280,480]){
+    nativeTheme.themeSource=locale==='en'?'dark':'light';win.setSize(width,1000);
+    await win.loadFile(join(output,'index.html'),{query:{locale}});await until('window.taskNative?.snapshot().images===1','fixture ready');
+    await open();
+    check(await js("document.activeElement===document.querySelector('.task-setup header button')"),'initial cancel focus');
+    await key('Tab',['shift']);check(await js("document.activeElement===document.querySelector('[data-task-apply]')"),'reverse focus trap');
+    await key('Tab');check(await js("document.activeElement===document.querySelector('.task-setup header button')"),'forward focus trap');
+    await select('task-preset',1);await select('task-template',1);
+    check(await js('document.querySelector("[data-task-apply]").disabled'),'unfilled variables block apply');
+    await type('[name=task-variable-0]','论据 {{literal}} $1');
+    await select('task-group',1);await select('task-tier',1);
+    await type('[name=task-dimensions]','成本 / Evidence / 條件');await type('[name=task-output]','Custom output 保留自订内容');
+    await js(`document.querySelector('[name=task-output]').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',keyCode:229,isComposing:true,bubbles:true}))`);
+    check(await js('!!document.querySelector(".task-setup")'),'IME Escape retains task editor');
+    check(await js("document.querySelector('[data-task-scope]').textContent==='Claude · Kimi'"),'preview has exact scope');
+    const preview=await js("document.querySelector('[name=task-preview]').value");
+    check(preview.includes('论据 {{literal}} $1')&&preview.includes('Custom output 保留自订内容'),'single-pass variables and custom content');
+    await js("document.querySelector('.task-setup').scrollTop=0");await pause(60);
+    const geometry=await js(`(()=>{const n=document.querySelector('.task-setup');return {width:n.clientWidth,scroll:n.scrollWidth,body:document.body.scrollWidth,viewport:innerWidth};})()`);
+    check(geometry.scroll<=geometry.width+1&&geometry.body<=geometry.viewport+1,'no horizontal overflow');
+    writeFileSync(join(output,`${locale}-${width}-preview.png`),(await win.capturePage()).toPNG());
+    await click('[data-task-apply]');await until('!!document.querySelector(".confirm-actions")','confirm before mutations');
+    check(await js("window.taskNative.snapshot().prompt==='Synthetic current draft'"),'preview does not modify draft');
+    await key('Escape');await until('!!document.querySelector(".task-setup")','cancel confirmation returns');
+    check(await js("document.querySelector('[name=task-output]').value==='Custom output 保留自订内容'"),'confirmation cancellation retains setup edits');
+    await js("window.taskNative.configure('tier')");await confirm();
+    await until("window.taskNative.snapshot().error==='failed'",'tier failure displayed');
+    check(await js("window.taskNative.snapshot().prompt==='Synthetic current draft'&&window.taskNative.snapshot().images===1&&!window.taskNative.snapshot().lock"),'partial failure keeps draft and images and unlocks');
+    if(locale==='zh-CN'&&width===480){await js("document.querySelector('[role=alert]').scrollIntoView({block:'center'})");await pause(50);writeFileSync(join(output,'failure-feedback-zh-CN-480.png'),(await win.capturePage()).toPNG());}
+    await js("window.taskNative.configure('',350)");await confirm();
+    await until('window.taskNative.snapshot().pending','delayed ACK starts');
+    await type('[name=task-output]','Newer output survives late ACK');
+    await until('!window.taskNative.snapshot().pending','delayed ACK settles');
+    check(await js("window.taskNative.snapshot().prompt==='Synthetic current draft'&&document.querySelector('[name=task-output]').value==='Newer output survives late ACK'"),'late ACK does not overwrite newer editing');
+    await js("window.taskNative.configure('')");await confirm();
+    await until('!window.taskNative.snapshot().open','explicit application closes');
+    check(await js("window.taskNative.snapshot().prompt.includes('Newer output survives late ACK')&&window.taskNative.snapshot().scope.join(',')==='claude,kimi'&&window.taskNative.snapshot().images===1"),'explicit application matches final preview scope and preserves images');
+    check(await js("document.activeElement===document.querySelector('[name=fixture-draft]')"),'applied draft receives focus');
+    await open();await js("window.taskNative.configure('',300)");await confirm();
+    await until('window.taskNative.snapshot().pending','cancelled delayed apply starts');
+    const beforeCancel=await js('window.taskNative.snapshot().prompt');await key('Escape');
+    await until('!window.taskNative.snapshot().open&&!window.taskNative.snapshot().pending','cancelled ACK settles');
+    check(await js(`window.taskNative.snapshot().prompt===${JSON.stringify(beforeCancel)}&&window.taskNative.snapshot().broadcasts===0&&window.taskNative.snapshot().sessions===0`),'cancelled late ACK retains draft with no send/navigation');
+    check(await js("document.activeElement===document.querySelector('#task-opener')"),'cancel restores opener focus');
+    sample();report.push({locale,width,ok:true,geometry,steps:['native-select','variable-fill','custom-output','exact-preview-scope','IME-Escape','Tab-trap','confirmation-cancel','tier-failure','newer-edit-late-ACK','explicit-apply','cancel-late-ACK','focus-return','no-send-or-new-session']});
+    writeFileSync(join(output,'report.json'),JSON.stringify(report,null,2));
+  }
+  check(errors.length===0,`renderer errors: ${errors.join(';')}`);sample();win.destroy();app.exit(0);
+}).catch(error=>{writeFileSync(join(output,'failure.txt'),String(error.stack));console.log(String(error.stack));app.exit(1);});

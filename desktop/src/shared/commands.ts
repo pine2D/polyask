@@ -4,6 +4,7 @@ import { normalizeAccelerator } from './accelerators';
 
 export type CommandId =
   | "open-command-palette"
+  | "open-task-setup"
   | "open-sites"
   | "open-site-health"
   | "show-page-1"
@@ -80,6 +81,7 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "focus-current-site", labelKey: "focusCurrentSiteMenu", group: "navigate" },
   { id: "focus-prompt", labelKey: "focusPromptMenu", group: "compose", accelerator: "Alt+Q" },
   { id: 'find-page', labelKey: 'findPage', group: 'navigate', accelerator: 'CmdOrCtrl+F' },
+  { id: "open-task-setup", labelKey: "taskSetup", group: "compose", aliases: ["task", "prepare", "任务", "任務"] },
   { id: "set-think", labelKey: "chooseThinkMode", group: "compose", accelerator: "Alt+T" },
   { id: "set-fast", labelKey: "chooseFastMode", group: "compose", accelerator: "Alt+Y" },
   { id: "collect-compare", labelKey: "collectCompare", group: "results" },
