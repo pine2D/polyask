@@ -1650,3 +1650,14 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 `cd desktop && npm run test:unit -- test/task-setup-command.test.ts test/task-setup-flow.test.tsx test/task-setup-component.test.tsx test/task-setup-prompt.test.ts` 覆盖入口、真实工作区/参与站点 hooks 的 open/save/tier ACK 等待与失败、取消、较新编辑和换图意图、忙碌、实际范围不符，以及真实遮罩转场后的图片意图快照。组件验证模板单次填充、可编辑维度/输出、草稿确认取消和附件保留。
 
 `cd desktop && npm run test:unit -- test/task-setup-native.check.ts` 用生产任务准备组件、工作区/草稿确认/图片 hooks 与隔离合成 Shell ACK，断网、临时 profile，三语×480/1280px 六组。实际 Electron 鼠标、按键和文本插入验证选择、变量、预览范围、确认取消、阶段失败、编辑后迟到 ACK、显式应用、取消后迟到 ACK、焦点与 Tab 圈定；Chromium 组合 Escape 事件验证 IME 分支。打印证据目录，保存预览/失败截图、report.json、runtime.log 和共同 4GiB/512MiB 进程边界，退出后删除本任务临时 profile 并核对进程退出。它不是物理输入法、真实站点切档/发送或 Windows/macOS 实机验收。
+
+
+## 2026-11-08 真实 SQLite/IPC 与原生多页资源基线
+
+从 `desktop/` 执行 `node scripts/test-safe.mjs command node scripts/resource-baseline.mjs`。默认 1,000/5,000/20,000 条，各半结果与 schema6 决策；仅 12 条结果各带九份约 32KiB 长回答，其余正文有界。每种查询重开真实磁盘 SQLite，调用生产 `registerTaskFolderIpc` → service/repository/query，隔离 preload 经真实 IPC 接收当前页摘要；夹具包装只记录同一次请求的 prepare/SQLite 执行（含 JS SQL 函数）、主进程总时长与非 SQL 部分、IPC 往返及 vanilla DOM 消费端更新，不新增生产调试接口。消费端不包含 React、绘制或输入延迟。
+
+默认每场景首次 library query 单列、两次预热、10 次正式样本；P50/P95 用 nearest-rank `ceil(p*n)`，n=10 的 P95 为样本最大值，不能当稳定尾延迟估计。重开连接/首次查询不等于磁盘冷缓存，未清系统缓存。覆盖日期分页、中文/英文/Unicode/字面符号查询、目录、长回答摘要和标题选中定位。`--sizes=1000,5000 --repeats=3 --db-only` 可先校准；3–30 正式样本、大小仅允许上述三档。
+
+原生部分复用生产 ViewManager、绘制恢复与销毁，测 1/3/9 个实际挂载页面的可见空闲、隐藏生成模拟、最小化及恢复；仅本地 data 页面以 20Hz 更新有界文本，初始 AI URL 请求在发出前拦截。站点 preload 为空，不代表站点适配器或真实生成。`--pages-only --host-display` 仅在已有 DISPLAY 后端检查本任务合成窗口；默认独立 Xvfb。最小化必须读到 `isMinimized()`，否则明确标为未确认，不将隐藏窗口替代最小化。记录实际页数、挂载、加载、焦点、可见性、生成 tick 与节流状态。
+
+CPU 首次读取只建立基线，随后每状态五次约 300ms 区间样本；工作集/CPU 按 PID 及类别列出，不相加宣称独占内存。操作延迟为生产 setPage 加首个页面 DOM 确认，主进程时钟测量。整项截止 420 秒（构建最多45秒，每数据档最多95秒、原生最多90秒），慢查询在外层终止进程树并记录删失，不填造 P95。输出临时目录含 report.json、各档原始样本、in-flight.json、进程边界与 cleanup.json；结束核对归属进程退出，删除合成数据库、临时 profile，保留库外证据。所有 Electron 进程必须处于共同 4GiB/512MiB cgroup，不允许无界 fallback。

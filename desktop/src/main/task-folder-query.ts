@@ -62,21 +62,27 @@ export class TaskFolderQuery {
       const titles = this.database.prepare(`${cte} SELECT kind, id, ${title} AS title FROM filtered`).all(...params);
       titles.sort((a, b) => collator.compare(String(a.title), String(b.title)) || String(a.id).localeCompare(String(b.id)) || String(a.kind).localeCompare(String(b.kind)));
       const ranks = titles.map(row => ({ kind: row.kind, id: row.id }));
+      if (request.selected) {
+        const position = ranks.findIndex(row => row.kind === request.selected!.kind && row.id === request.selected!.id);
+        if (position >= 0) selectedPage = Math.floor(position / FOLDER_PAGE_SIZE);
+      }
+      if (request.locateSelected) page = selectedPage ?? 0;
+      // Reuse the already collated IDs for selection; only rejoin one page for bounded summaries.
       orderedCte += `, ranks AS (SELECT CAST(key AS INTEGER) AS position, json_extract(value, '$.kind') AS rank_kind,
         json_extract(value, '$.id') AS rank_id FROM json_each(?)), ordered AS (
         SELECT filtered.*, ranks.position FROM filtered JOIN ranks ON kind = rank_kind AND id = rank_id)`;
-      orderedParams.push(JSON.stringify(ranks)); order = 'position ASC';
+      orderedParams.push(JSON.stringify(ranks.slice(page * FOLDER_PAGE_SIZE, (page + 1) * FOLDER_PAGE_SIZE))); order = 'position ASC';
     }
     const table = request.sort === 'title-asc' ? 'ordered' : 'filtered';
-    if (request.selected) {
+    if (request.selected && request.sort !== 'title-asc') {
       const selected = this.database.prepare(`${orderedCte}, numbered AS (
         SELECT kind, id, row_number() OVER (ORDER BY ${order}) - 1 AS position FROM ${table})
         SELECT position FROM numbered WHERE kind = ? AND id = ?`).get(...orderedParams, request.selected.kind, request.selected.id);
       if (selected) selectedPage = Math.floor(Number(selected.position) / FOLDER_PAGE_SIZE);
       if (request.locateSelected) page = selectedPage ?? 0;
-    } else if (request.locateSelected) page = 0;
+    } else if (!request.selected && request.locateSelected) page = 0;
     const items = this.database.prepare(`${orderedCte} SELECT ${summary} FROM ${table}
-      ORDER BY ${order} LIMIT ? OFFSET ?`).all(...orderedParams, FOLDER_PAGE_SIZE, page * FOLDER_PAGE_SIZE)
+      ORDER BY ${order} LIMIT ? OFFSET ?`).all(...orderedParams, FOLDER_PAGE_SIZE, request.sort === 'title-asc' ? 0 : page * FOLDER_PAGE_SIZE)
       .flatMap(row => readJson<FolderContentSummary>(row) ?? []);
     const selectedTargets = request.selectedTargets?.length ? this.database.prepare(`${cte} SELECT DISTINCT target.kind, target.id
       FROM json_each(?) selection JOIN filtered target ON json_extract(selection.value, '$.kind') = target.kind
