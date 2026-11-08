@@ -1,3 +1,4 @@
+import { QUESTION_OBSERVATION_COPY } from './question-observation-copy';
 import { MARKDOWN_EXPORT_COPY } from './markdown-export-copy';
 import { COMMAND_PALETTE_SHORTCUT_COPY } from './command-palette-shortcut-copy';
 import { QUESTION_ATTACHMENT_COPY } from './question-attachment-copy';
@@ -34,6 +35,7 @@ import { GLOBAL_PROMPT_SHORTCUT_COPY } from './global-prompt-shortcut-copy';
 
 export const COPY = {
   en: {
+    ...QUESTION_OBSERVATION_COPY.en,
     ...GLOBAL_PROMPT_SHORTCUT_COPY.en,
     ...COMMAND_PALETTE_SHORTCUT_COPY.en,
     ...NOTIFICATION_COPY.en,
@@ -217,6 +219,7 @@ export const COPY = {
     checkForUpdates: "View latest release"
   },
   zhCN: {
+    ...QUESTION_OBSERVATION_COPY.zhCN,
     ...GLOBAL_PROMPT_SHORTCUT_COPY.zhCN,
     ...COMMAND_PALETTE_SHORTCUT_COPY.zhCN,
     ...NOTIFICATION_COPY.zhCN,
@@ -400,6 +403,7 @@ export const COPY = {
     checkForUpdates: "查看最新版本"
   },
   zhTW: {
+    ...QUESTION_OBSERVATION_COPY.zhTW,
     ...GLOBAL_PROMPT_SHORTCUT_COPY.zhTW,
     ...COMMAND_PALETTE_SHORTCUT_COPY.zhTW,
     ...NOTIFICATION_COPY.zhTW,

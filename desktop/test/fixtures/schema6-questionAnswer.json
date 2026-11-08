@@ -1,0 +1,43 @@
+{
+  "file": {
+    "id": "schema6-questionAnswer",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "questionAnswer",
+      "schema": "6",
+      "id": "8eac35041082a3f3a874d969692c2c8e9b04b6204c678955aa20b63d3da1d772",
+      "deleted": "0"
+    }
+  },
+  "body": {
+    "schema": 6,
+    "id": "11d75a2e5c6cdffc65c191a010348497ed5c8fdcb7591dfba056358c3158ec05",
+    "questionId": "q-a",
+    "site": "claude",
+    "attempt": 1,
+    "createdAt": 10,
+    "updatedAt": 10,
+    "deviceId": "device-a",
+    "submission": "submitted",
+    "submissionCode": null,
+    "conversationUrl": null,
+    "answerMarkdown": "Saved answer",
+    "capture": "complete",
+    "captureCode": null,
+    "capturedAt": 10,
+    "truncated": false,
+    "sealedAt": 10,
+    "observation": {
+      "questionId": "q-a",
+      "site": "claude",
+      "attempt": 1,
+      "observedAt": 10,
+      "selection": {
+        "requested": "think",
+        "outcome": "preferred",
+        "observed": "think",
+        "model": "Example Pro"
+      }
+    }
+  }
+}

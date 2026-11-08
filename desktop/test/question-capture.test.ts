@@ -24,7 +24,7 @@ test("only current token snapshots persist and deletion prevents late capture re
   try {
     const q = history.begin(request("run-a"))!;
     const token = history.token("claude")!;
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     history.accept("claude", { token: "old", owned: true, text: "Wrong", url: null, generation: "generating" });
     assert.equal(db.questions.answers(q.id)[0].answerMarkdown, null);
     history.accept("claude", { token, owned: true, text: "Partial", url: null, generation: "generating" });
@@ -44,7 +44,7 @@ test("only observed completion permits releasing a page after generation probing
   const history = new QuestionHistoryService(db.questions, { deviceId: () => "local", now: () => ++now });
   try {
     history.begin(request("complete"));
-    history.result("complete", { site: "claude", ok: true });
+    history.result("complete", { site: "claude", ok: true }, history.token("claude"));
     const token = history.token("claude")!;
     assert.equal(history.releasable("claude"), false);
     history.accept("claude", { token, owned: true, text: "Answer", generation: "generating" });
@@ -73,7 +73,7 @@ test('a pre-reset token cannot write after the same IDs are imported again', () 
   const db = DesktopDatabase.open(':memory:');
   const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local' });
   try {
-    const q = history.begin(request('run-reset'))!; history.result('run-reset', { site: 'claude', ok: true });
+    const q = history.begin(request('run-reset'))!; history.result('run-reset', { site: 'claude', ok: true }, history.token('claude'));
     const token = history.token('claude')!, a = db.questions.answers(q.id)[0];
     db.resetLocalData(); db.questions.put(q, false); db.questions.putAnswer(a, false);
     history.accept('claude', { token, owned: true, text: 'Late pre-reset answer' });
@@ -87,7 +87,7 @@ test("owned answer progress keeps unknown completion capture alive within one fi
   try {
     const q = history.begin(request("progress"))!;
     const token = history.token("claude")!;
-    history.result("progress", { site: "claude", ok: true });
+    history.result("progress", { site: "claude", ok: true }, history.token("claude"));
     now = 5000;
     history.accept("claude", { token, owned: true, text: "First", generation: null });
     now = 60_000;
@@ -106,7 +106,7 @@ test('an owned turn with no answer becomes unavailable when its capture budget e
   const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => now });
   try {
     const q = history.begin(request('empty'))!;
-    history.result('empty', { site: 'claude', ok: true });
+    history.result('empty', { site: 'claude', ok: true }, history.token('claude'));
     const token = history.token('claude')!;
     now += 15 * 60_000 + 2;
     history.accept('claude', { token, owned: true, generation: null });
@@ -125,7 +125,7 @@ test('an unowned capture of an unconfirmed submission becomes releasable when it
   const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => now });
   try {
     const q = history.begin(request('uncertain'))!;
-    history.result('uncertain', { site: 'claude', ok: false, code: 'submit_unconfirmed' });
+    history.result('uncertain', { site: 'claude', ok: false, code: 'submit_unconfirmed' }, history.token('claude'));
     const token = history.token('claude')!;
     history.accept('claude', { token, owned: false });
     assert.equal(history.releasable('claude'), false, 'still inside the observation budget');
@@ -144,7 +144,7 @@ test('thought-only generation stays within the fixed budget, expires unavailable
   const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => now });
   try {
     const q = history.begin(request('thinking'))!;
-    history.result('thinking', { site: 'claude', ok: true });
+    history.result('thinking', { site: 'claude', ok: true }, history.token('claude'));
     const token = history.token('claude')!;
     now += 5000;
     history.accept('claude', { token, owned: true, generation: 'generating' });

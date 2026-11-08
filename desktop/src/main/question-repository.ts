@@ -18,12 +18,12 @@ function stamp(now: number, current: { updatedAt: number; createdAt: number }): 
   if (!Number.isSafeInteger(value)) throw new Error("invalid_question_time");
   return value;
 }
-function tombstone(record: QuestionVersion, now: number, deviceId: string): QuestionTombstone {
+function tombstone(record: Omit<QuestionVersion, "schema">, now: number, deviceId: string): QuestionTombstone {
   const updatedAt = stamp(now, record);
   return { schema: 4, id: record.id, createdAt: record.createdAt, updatedAt, deletedAt: updatedAt, deviceId };
 }
 function answerTombstone(record: QuestionAnswerIdentity, now: number, deviceId: string): QuestionAnswerTombstone {
-  return { ...tombstone(record, now, deviceId), questionId: record.questionId, site: record.site, attempt: record.attempt };
+  return { ...tombstone(record, now, deviceId), schema: record.schema, questionId: record.questionId, site: record.site, attempt: record.attempt };
 }
 
 function foldQuestionSearch(value: unknown): string {
@@ -98,6 +98,12 @@ export class QuestionRepository {
       if (current && !("deletedAt" in value)) {
         if (compareSyncVersion(value, current) <= 0) {
           if (!enqueue && compareSyncVersion(value, current) < 0) this.enqueue("questionAnswer", current.id);
+          return;
+        }
+        if (!("deletedAt" in current) && !restore && (enqueue || value.sealedAt === null) &&
+          (current.observation || current.sealedAt !== null) &&
+          JSON.stringify(value.observation ?? null) !== JSON.stringify(current.observation ?? null)) {
+          if (!enqueue) this.enqueue("questionAnswer", current.id);
           return;
         }
         if (!("deletedAt" in current) && current.sealedAt !== null && !restore && (enqueue || value.sealedAt === null) &&

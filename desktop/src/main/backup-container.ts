@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { TextDecoder } from 'node:util';
-import { BACKUP_CONTAINER_MAX_BYTES, BACKUP_MAGIC, BACKUP_MAX_BYTES, type BackupDocument, type BackupEntry } from '../shared/backup';
+import { BACKUP_CONTAINER_MAX_BYTES, BACKUP_MAGIC, BACKUP_LEGACY_MAGIC, BACKUP_MAX_BYTES, type BackupDocument, type BackupEntry } from '../shared/backup';
 import { verifyQuestionImage } from './question-attachment-validation';
 import { attachmentBody, validateContainerManifest } from './backup-container-manifest';
 import { readBackupFile } from './backup-files';
@@ -13,6 +13,7 @@ type File = Awaited<ReturnType<typeof open>>;
 export type BackupGuard = () => void;
 const noop = () => {};
 const magic = Buffer.from(BACKUP_MAGIC, 'ascii');
+const legacyMagic = Buffer.from(BACKUP_LEGACY_MAGIC, 'ascii');
 async function exact(file: File, length: number, guard: BackupGuard): Promise<Buffer> {
   const buffer = Buffer.alloc(length);
   for (let offset = 0; offset < length;) {
@@ -72,10 +73,10 @@ export async function readBackupContainer(path: string, options: {
     if (stat.size > BACKUP_CONTAINER_MAX_BYTES) throw new Error('backup_too_large');
     const prefix = Buffer.alloc(magic.length);
     const { bytesRead } = await file.read(prefix, 0, prefix.length, null); guard();
-    if (bytesRead !== magic.length || !prefix.equals(magic)) {
+    if (bytesRead !== magic.length || (!prefix.equals(magic) && !prefix.equals(legacyMagic))) {
       await file.close(); file = undefined; guard();
       const document = await readBackupFile(path); guard();
-      if ((document as any)?.version === 4) throw new Error('backup_invalid');
+      if ((document as any)?.version >= 4) throw new Error('backup_invalid');
       return { document };
     }
     const length = (await exact(file, 4, guard)).readUInt32BE();
@@ -84,6 +85,7 @@ export async function readBackupContainer(path: string, options: {
     try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await exact(file, length, guard))); }
     catch (error) { guard(); throw new Error(error instanceof Error && error.message === 'backup_stale' ? 'backup_stale' : 'backup_invalid'); }
     const document = validateContainerManifest(parsed);
+    if (document.version !== (prefix.equals(magic) ? 5 : 4)) throw new Error("backup_version");
     const expectedSize = magic.length + 4 + length + document.payloads!.reduce((n, p) => n + p.size, 0);
     if (expectedSize !== stat.size) throw new Error('backup_invalid');
     const root = options.stagingRoot ?? tmpdir();
@@ -116,7 +118,7 @@ export async function writeBackupContainer(path: string, value: BackupDocument,
   let file: File | undefined;
   try {
     guard(); file = await open(temporary, 'wx', 0o600); guard();
-    await write(file, magic, guard); await write(file, length, guard); await write(file, manifest, guard);
+    await write(file, document.version === 5 ? magic : legacyMagic, guard); await write(file, length, guard); await write(file, manifest, guard);
     for (const entry of document.entries.filter(e => e.kind === 'questionAttachments')) {
       guard();
       const bytes = read(entry), body = attachmentBody(entry);

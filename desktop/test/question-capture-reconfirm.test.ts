@@ -14,7 +14,7 @@ test("revoked completion rearms exactly the current attempt and can be confirmed
   const monitor = new GenerationMonitor();
   try {
     const q = history.begin(request)!; const token = history.token("claude")!;
-    history.result("run", {site:"claude", ok:true}); monitor.begin("run", ["claude"]);
+    history.result("run", {site:"claude", ok:true}, history.token("claude")); monitor.begin("run", ["claude"]);
     history.setGenerationResumeHandler((run, site) => { reopens++; assert.equal(monitor.reopen(run, site), true); });
     monitor.onComplete = (run, site) => { history.complete(run, site); };
     monitor.accept("run", "claude", "generating");

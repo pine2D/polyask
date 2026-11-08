@@ -1,3 +1,4 @@
+import { observationDescription, observationTime } from '../shared/question-observation-display';
 import { QuestionAttachments } from './question-attachments';
 import { useLayoutEffect, useRef, useState } from 'react';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
@@ -79,6 +80,11 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
         {answer && <span className={`question-status is-${answer.capture}`}>{answerState(answer, copy)}</span>}
         {answer?.capturedAt != null && <time dateTime={dateTimeAttribute(answer.capturedAt)}>{formatCopy(copy.questionCaptured, { time: formatDateTime(answer.capturedAt, calendarLocale) })}</time>}
       </span></summary>
+      {answer && <div className="question-observation">
+        <p>{observationDescription(answer.observation, copy)}</p>
+        {answer.observation && <p>{observationTime(answer.observation, copy, calendarLocale)}</p>}
+        <p className="question-note">{copy.observationNote}</p>
+      </div>}
       <p className="question-note">{copy.questionSnapshotNote}</p>
       </details>
       {answer?.truncated && <p role="note">{copy.questionTruncated}</p>}

@@ -1630,3 +1630,9 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 ### v1.30.0 本地发布门禁
 
 2026-11-04 将持续阅读工作区合入 main 后，在最终产品代码与 1.30.0 版本上重新执行完整测试：2,621 项应用测试、545 项运行时测试全部通过。独立类型检查、生产依赖审计（0 vulnerabilities）、Electron 运行时审计及仓库门禁通过。Linux package 成功；受限临时 cgroup 中的离线包内 smoke 确认 shell=1、sites=9、attached=9，不读取真实账号或发送问题。阅读布局与交互证据沿用上述同源组件检查，版本提交仅更新版本号与文档。Windows/macOS 物理输入、实际安装和真实站点/Drive 链路未在本机验收。
+
+### 每次尝试网页观测（2026-11-08）
+
+`question-selection-observation.test.ts` 覆盖四种选择结果、非法模型降级、同runId重试、旧token、取消及迟到确认；`question-observation-data.test.ts` / `question-observation-container.test.ts` 覆盖真实内存SQLite、同步pull/upload、墓碑/reset、备份v5原图容器与恢复身份、历史→采集→Markdown/HTML。`schema6-observation-compat.test.ts` 执行冻结的旧reader源码，证明上限5客户端在下载前锁住schema6、旧备份验证器拒收v5；不改旧fixture。
+
+隔离禁网的 `question-history-interaction.check.ts` 覆盖en/zh-CN/zh-TW、700/1400宽度观测说明及既有键盘/IME/异步读取；`report-export.check.ts` 检查三语PDF中的观测标记、分页、0网络与窗口释放。截图只使用合成数据，可用 `POLYASK_HISTORY_KEEP_ARTIFACTS=1` / `POLYASK_REPORT_KEEP_ARTIFACTS=1` 保留。真实账号站点、Drive双设备和Windows/macOS物理平台不由这些测试证明。

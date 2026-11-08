@@ -47,7 +47,7 @@ test('failed BLOB transaction preserves committed question, attempts, capture to
   assert.equal(db.outbox.ready(100).filter(op => op.kind === 'questionAttachments').length, 0);
   assert.equal(attachmentFailures, 1); assert.equal(handlerFailures, 1); assert.equal(textFailures, 0);
   assert.equal(history.getRunProgress('run-a')?.state, 'available');
-  history.result('run-a', { site: 'claude', ok: true });
+  history.result('run-a', { site: 'claude', ok: true }, history.token('claude'));
   assert.equal(db.questions.answers(q.id)[0].submission, 'submitted');
   raw.exec('DROP TRIGGER deny_blob');
   history.begin({ ...request(), images: [image('different.png')] });

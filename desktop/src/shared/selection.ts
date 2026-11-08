@@ -7,7 +7,7 @@ export type TierSelection =
 
 export type SubmissionEvidence = "message" | "composer";
 
-// 仅作本轮显示：不进入数据库、同步或自动重发判定。
+// 发送链路元数据；selection 可快照入尝试历史，不参与自动重发判定。
 export interface SelectionMetadata {
   readonly selection?: TierSelection;
   readonly submissionEvidence?: SubmissionEvidence;

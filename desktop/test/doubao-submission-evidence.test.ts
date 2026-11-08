@@ -28,7 +28,7 @@ for (const failed of [false, true]) test(`optimistic Doubao bubble must not reve
   };
   const result=await h.send({source:'AMS',cmd:'submitPrompt',text:'Question',deadline:12000,historyToken:token});
   assert.equal(clicks,1);assert.equal(result.ok,false);assert.equal(result.code,'submit_unconfirmed');
-  history.result('run',{site:'doubao',...result});
+  history.result('run',{site:'doubao',...result}, history.token('doubao'));
   assert.equal(db.questions.answers(question.id)[0].submission,'unconfirmed');
   const snapshot=h.S.history.snapshot(token);
   history.accept('doubao',snapshot,history.readMark());

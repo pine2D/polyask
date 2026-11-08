@@ -1,3 +1,4 @@
+import { observationDescription, observationTime } from '../shared/question-observation-display';
 import type { ArchiveRecord } from '../shared/archive';
 import type { DecisionRecord } from '../shared/decision';
 import { answerSourceId } from '../shared/answer-source';
@@ -97,7 +98,9 @@ export function renderReportHtml(source: ReportSource, locale: DesktopLocale = '
       const available = !!answer.text?.trim();
       const completeness = answer.code === 'answer_truncated' ? copy.answerTruncated
         : available ? report.reportUnverified : report.reportMissingAnswer;
-      const content = metadata([[report.reportSite, answer.host], [report.reportCompleteness, completeness]]) +
+      const observed = `<p>${escape(observationDescription(answer.observation, copy))}</p>` +
+        (answer.observation ? `<p>${escape(observationTime(answer.observation, copy, language))}</p><p class="notice">${escape(copy.observationNote)}</p>` : "");
+      const content = observed + metadata([[report.reportSite, answer.host], [report.reportCompleteness, completeness]]) +
         (archive.winnerHost === answer.host && available ? `<p>${escape(report.reportUserSelected)}</p>` : '') +
         (answer.code && answer.code !== 'answer_truncated' ? `<p>${escape(describeCollectionCode(copy, answer.code))}</p>` : '') +
         (available ? markdown(answer.text!) : `<p>${escape(report.reportMissingAnswer)}</p>`);

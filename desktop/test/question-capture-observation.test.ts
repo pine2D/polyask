@@ -10,7 +10,7 @@ for (const code of [undefined, 'submit_unconfirmed'] as const) {
     const history = new QuestionHistoryService(db.questions, { deviceId: () => 'test', now: () => now });
     try {
       const q = history.begin({ runId: 'run', sites: ['doubao'], text: 'Question', tier: 'think', images: [] })!;
-      history.result('run', { site: 'doubao', ok: !code, code });
+      history.result('run', { site: 'doubao', ok: !code, code }, history.token('doubao'));
       const token = history.token('doubao')!;
       now = 61_000;
       history.accept('doubao', { token, owned: false, generation: null, text: 'Unowned' });

@@ -70,7 +70,7 @@ test("a previous broadcast's late confirmation still upgrades after a synthesis 
   const h = register();
   try {
     const question = history.begin({ runId: "earlier", sites: ["claude"], text: "Question", tier: null, images: [] })!;
-    history.result("earlier", { site: "claude", ok: false, code: "submit_unconfirmed" });
+    history.result("earlier", { site: "claude", ok: false, code: "submit_unconfirmed" }, history.token("claude"));
     h.listeners.get("polyask:synthesis-cancel")!({ trusted: true });
     let status: SiteStatus = statusForResult("claude", { ok: false, code: "submit_unconfirmed" }, "earlier");
     const watched: string[] = [];

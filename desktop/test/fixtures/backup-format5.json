@@ -1,0 +1,109 @@
+{
+  "format": "polyask-backup",
+  "version": 5,
+  "exportedAt": 30,
+  "entries": [
+    {
+      "kind": "question",
+      "id": "q-a",
+      "body": {
+        "id": "q-a",
+        "text": "Example question",
+        "sites": [
+          "claude"
+        ],
+        "requestedTier": null,
+        "inputImageCount": 0,
+        "createdAt": 10,
+        "updatedAt": 10,
+        "schema": 4
+      }
+    },
+    {
+      "kind": "questionAnswer",
+      "id": "11d75a2e5c6cdffc65c191a010348497ed5c8fdcb7591dfba056358c3158ec05",
+      "body": {
+        "id": "11d75a2e5c6cdffc65c191a010348497ed5c8fdcb7591dfba056358c3158ec05",
+        "questionId": "q-a",
+        "site": "claude",
+        "attempt": 1,
+        "createdAt": 10,
+        "updatedAt": 10,
+        "schema": 6,
+        "submission": "submitted",
+        "submissionCode": null,
+        "conversationUrl": null,
+        "answerMarkdown": "Saved answer",
+        "capture": "complete",
+        "captureCode": null,
+        "capturedAt": 10,
+        "truncated": false,
+        "sealedAt": 10,
+        "observation": {
+          "questionId": "q-a",
+          "site": "claude",
+          "attempt": 1,
+          "observedAt": 10,
+          "selection": {
+            "requested": "think",
+            "outcome": "preferred",
+            "observed": "think",
+            "model": "Example Pro"
+          }
+        }
+      }
+    },
+    {
+      "kind": "archive",
+      "id": "observation-archive",
+      "body": {
+        "id": "observation-archive",
+        "text": "Example question",
+        "task": "Example question",
+        "source": null,
+        "results": [
+          {
+            "host": "claude.ai",
+            "label": "Claude · Attempt 1 · Saved 1/1/1970, 8:00:00 AM · Complete",
+            "text": "Saved answer",
+            "observation": {
+              "questionId": "q-a",
+              "site": "claude",
+              "attempt": 1,
+              "observedAt": 10,
+              "selection": {
+                "requested": "think",
+                "outcome": "preferred",
+                "observed": "think",
+                "model": "Example Pro"
+              }
+            }
+          }
+        ],
+        "favorite": false,
+        "tags": [],
+        "note": "",
+        "winnerHost": null,
+        "synthesis": null,
+        "hosts": [
+          "claude.ai"
+        ],
+        "resultPreviews": [
+          {
+            "host": "claude.ai",
+            "label": "Claude · Attempt 1 · Saved 1/1/1970, 8:00:00 AM · Complete",
+            "text": "Saved answer"
+          }
+        ],
+        "searchText": "example question\nclaude · attempt 1 · saved 1/1/1970, 8:00:00 am · complete\nsaved answer",
+        "preview": "Example question",
+        "createdAt": 20,
+        "updatedAt": 20,
+        "ts": 20,
+        "schema": 6
+      }
+    }
+  ],
+  "payloads": [],
+  "omissions": []
+}

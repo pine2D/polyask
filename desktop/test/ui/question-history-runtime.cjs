@@ -1,6 +1,7 @@
 const { app, BrowserWindow, session, nativeTheme } = require('electron');
 const { join } = require('node:path');
 const assert = require('node:assert/strict');
+const { writeFileSync } = require('node:fs');
 const accessibility = require('../../scripts/ui-accessibility.cjs');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
@@ -19,6 +20,21 @@ app.whenReady().then(async () => {
     await win.webContents.executeJavaScript('window.historyListDone=true; window.historyResult');
     console.log(JSON.stringify({ scenario: 'list-semantics', locale, headings, style, ok: true }));
   }
+  win.show(); win.focus(); win.webContents.focus();
+  for (const locale of ['en', 'zh-CN', 'zh-TW']) {
+    for (const width of [700, 1400]) {
+      win.setSize(width, 900);
+      await win.loadFile(join(output, 'index.html'), { query: { locale, scenario: 'observation' } });
+      await win.webContents.executeJavaScript('(async()=>{while(!window.observationReady) await new Promise(resolve=>setTimeout(resolve,20))})()');
+      await win.webContents.executeJavaScript('(async()=>{while(getComputedStyle(document.querySelector(".question-history")).opacity!=="1") await new Promise(resolve=>requestAnimationFrame(resolve)); await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));})()');
+      const fits = await win.webContents.executeJavaScript('(()=>{const n=document.querySelector(".question-observation");return n.scrollWidth<=n.clientWidth})()');
+      assert.equal(fits, true);
+      writeFileSync(join(output, `observation-${locale}-${width}.png`), (await win.webContents.capturePage()).toPNG());
+      await win.webContents.executeJavaScript('window.observationDone=true; window.historyResult');
+      console.log(JSON.stringify({ scenario: 'observation', locale, width, ok: true }));
+    }
+  }
+  win.setSize(1400, 900);
   let failed = false;
   for (const scenario of ['source-links', 'ime-composing', 'ime-229', 'back', 'escape', 'menu-tab', 'menu-shift-tab', 'close', 'switch', 'delete', 'pages', 'slow-list', 'slow-detail']) {
     await win.loadFile(join(output, 'index.html'), { query: { scenario } });
@@ -32,7 +48,7 @@ app.whenReady().then(async () => {
       for (const [shift, selector, description] of [
         [false, '.markdown-preview a[href="https://example.com/first"]', 'toolbar Tab reaches the first source'],
         [false, '.markdown-preview a[href="https://example.com/second"]', 'next Tab reaches the second source'],
-        [false, '.question-header button', 'last source Tab wraps to the header'],
+        [false, '.question-header .question-back', 'last source Tab wraps to the header'],
         [true, '.markdown-preview a[href="https://example.com/second"]', 'header Shift+Tab reaches the last source'],
         [true, '.markdown-preview a[href="https://example.com/first"]', 'source Shift+Tab follows native reverse order'],
         [true, '.question-answer-actions > button:last-child', 'first source Shift+Tab returns to the answer toolbar']

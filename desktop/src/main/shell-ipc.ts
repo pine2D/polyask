@@ -209,6 +209,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       collection.beginRun(request.runId, request.sites);
       const { remaining, dispatch, settled } = await capture.prepareRun(request, request.images.length ? 90_000 : 44_000, lateSentResult(manager, request.runId));
       const lifecycle = options.questions.repository.lifecycle;
+      const tokens = new Map(dispatch.sites.map(site => [site, options.questions.token(site)]));
       manager.beginGenerationRun(request.runId, dispatch.sites);
       // Recorded before dispatch, matching the extension (console/console.js pushes
       // history ahead of sendAll): a question the user actually asked belongs in the
@@ -218,9 +219,9 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       for (const site of dispatch.sites) manager.markStatus(statusForSending(site, request.runId));
       const results = await coordinator.send(
         dispatch,
-        (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: options.questions.token(site) }, signal),
+        (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: tokens.get(site) }, signal),
         remaining,
-        result => acceptBroadcastResult(lifecycle, request.runId, result, options.questions, capture, manager),
+        result => acceptBroadcastResult(lifecycle, request.runId, result, options.questions, capture, manager, tokens.get(result.site)),
         { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
       );
       return [...settled, ...results];

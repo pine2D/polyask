@@ -131,14 +131,16 @@ export class SyncPull {
     signal.throwIfAborted();
     const props = file.appProperties ?? {};
     if (props.app !== "polyask") return;
-    const expectedSchema = props.kind === "questionAttachments" ? 5 : (props.kind === "question" || props.kind === "questionAnswer") ? 4 : (props.kind === "folder" || props.kind === "folderMembership") ? 3 : props.kind === "decision" ? 2 : SYNC_SCHEMA;
+    const legacySchema = props.kind === "questionAttachments" ? 5 : (props.kind === "question" || props.kind === "questionAnswer") ? 4 : (props.kind === "folder" || props.kind === "folderMembership") ? 3 : props.kind === "decision" ? 2 : SYNC_SCHEMA;
+    const expectedSchema = props.kind === "questionAnswer" || props.kind === "archive" ? 6 : legacySchema;
+    const supported = (schema: unknown) => Number(schema) === legacySchema || Number(schema) === expectedSchema;
     if (Number(props.schema) > expectedSchema) {
       future.set(file.id, Number(props.schema));
       this.repository.deleteDriveFile(file.id);
       return;
     }
     let key = logicalKey(file);
-    if (!key || Number(props.schema) !== expectedSchema) {
+    if (!key || !supported(props.schema)) {
       this.noteCorrupt(file.id);
       return;
     }
@@ -149,7 +151,7 @@ export class SyncPull {
       if (typeof result === "number") { future.set(file.id, result); this.repository.deleteDriveFile(file.id); }
       else if (result === "corrupt") this.noteCorrupt(file.id);
       else if (result === "failed") this.roundCorrupt++;
-      else if (result === "valid" || (future.get(file.id) ?? 0) <= SUPPORTED_SYNC_SCHEMA) future.delete(file.id);
+      else if (result === "valid" || (future.get(file.id) ?? 0) <= legacySchema) future.delete(file.id);
       return;
     }
     let body: unknown;
@@ -173,7 +175,7 @@ export class SyncPull {
       this.repository.deleteDriveFile(file.id);
       return;
     }
-    if (!body || typeof body !== "object" || (body as { schema?: unknown }).schema !== expectedSchema) {
+    if (!body || typeof body !== "object" || (!supported((body as { schema?: unknown }).schema) || Number((body as { schema?: unknown }).schema) !== Number(props.schema))) {
       this.noteCorrupt(file.id);
       return;
     }

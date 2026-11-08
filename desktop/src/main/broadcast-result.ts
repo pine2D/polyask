@@ -6,10 +6,11 @@ import type { ViewManager } from "./view-manager";
 
 export function acceptBroadcastResult(
   lifecycle: number, runId: string, result: SiteRunResult,
-  questions: QuestionHistoryService, capture: QuestionCaptureService, manager: ViewManager
+  questions: QuestionHistoryService, capture: QuestionCaptureService, manager: ViewManager, token: string | undefined
 ): void {
   if (questions.repository.lifecycle !== lifecycle) return;
-  questions.result(runId, result);
+  if (token && !questions.ownsResult(runId, result, token)) return;
+  questions.result(runId, result, token);
   capture.start();
   manager.markStatus(statusForResult(result.site, result, runId));
   if (result.ok) manager.watchGeneration(runId, result.site);

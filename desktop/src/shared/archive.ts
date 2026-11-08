@@ -1,6 +1,8 @@
+import { isAttemptObservation, type AttemptObservation } from "./question-observation";
 import { nextSyncTime, SYNC_SCHEMA, utf8Preview, validSyncTime } from "./sync";
 
 export interface ArchiveResult {
+  readonly observation?: AttemptObservation;
   readonly host: string;
   readonly label: string;
   readonly text: string | null;
@@ -49,7 +51,7 @@ export interface ArchiveRecord {
   readonly updatedAt: number;
   readonly ts: number;
   readonly deviceId: string;
-  readonly schema: 1;
+  readonly schema: 1 | 6;
 }
 
 export interface ArchiveTombstone {
@@ -58,7 +60,7 @@ export interface ArchiveTombstone {
   readonly updatedAt: number;
   readonly deletedAt: number;
   readonly deviceId: string;
-  readonly schema: 1;
+  readonly schema: 1 | 6;
 }
 
 export type StoredArchive = ArchiveRecord | ArchiveTombstone;
@@ -106,7 +108,8 @@ function normalizeResult(value: ArchiveResult): ArchiveResult {
   if (value.text !== null && typeof value.text !== "string") throw new Error("invalid_result");
   if (value.state != null && (typeof value.state !== "string" || value.state.length > 64)) throw new Error("invalid_result");
   if (value.code != null && (typeof value.code !== "string" || value.code.length > 64)) throw new Error("invalid_result");
-  return { host, label, text: value.text, ...(value.state ? { state: value.state } : {}), ...(value.code ? { code: value.code } : {}) };
+  if (value.observation !== undefined && !isAttemptObservation(value.observation)) throw new Error("invalid_result");
+  return { host, label, text: value.text, ...(value.observation ? { observation: value.observation } : {}), ...(value.state ? { state: value.state } : {}), ...(value.code ? { code: value.code } : {}) };
 }
 
 function searchText(record: Pick<ArchiveRecord, "task" | "source" | "note" | "tags" | "results" | "resultPreviews" | "synthesis">): string {
@@ -219,7 +222,7 @@ export function createArchiveRecord(
     updatedAt: validSyncTime(input.updatedAt) ? input.updatedAt : context.now,
     ts: validSyncTime(input.ts) ? input.ts : createdAt,
     deviceId: context.deviceId,
-    schema: SYNC_SCHEMA
+    schema: results.some(result => result.observation) ? 6 : SYNC_SCHEMA
   } satisfies Omit<ArchiveRecord, "searchText">;
   return { ...base, searchText: searchText(base) };
 }
@@ -227,13 +230,14 @@ export function createArchiveRecord(
 export function isArchiveRecord(value: unknown): value is ArchiveRecord {
   if (!value || typeof value !== "object" || "deletedAt" in value) return false;
   const record = value as Partial<ArchiveRecord>;
-  if (!record.id || !record.deviceId || record.schema !== SYNC_SCHEMA) return false;
+  if (!record.id || !record.deviceId || (record.schema !== SYNC_SCHEMA && record.schema !== 6)) return false;
   if (![record.createdAt, record.updatedAt, record.ts].every(validSyncTime)) return false;
   if (typeof record.text !== "string" || typeof record.task !== "string" || !Array.isArray(record.results)) return false;
   if (!Array.isArray(record.tags) || !Array.isArray(record.hosts) || !Array.isArray(record.resultPreviews)) return false;
   if (typeof record.favorite !== "boolean" || typeof record.note !== "string" || [...record.note].length > 4_000 || typeof record.searchText !== "string") return false;
   try {
     const normalized = record.results.map(normalizeResult);
+    if (record.schema === 1 && record.results.some(r => Object.hasOwn(r, "observation"))) return false;
     const tags = cleanTags(record.tags);
     const source = normalizeSource(record.source);
     const synthesis = normalizeSynthesis(record.synthesis);
@@ -265,6 +269,6 @@ export function tombstoneArchive(
     updatedAt,
     deletedAt: updatedAt,
     deviceId,
-    schema: SYNC_SCHEMA
+    schema: record.schema
   };
 }

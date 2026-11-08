@@ -32,5 +32,5 @@ export function backupContainerDocument(database: DesktopDatabase, document: Bac
     entries.push({ kind: 'questionAttachments', id: metadata.id, body: projectBody('questionAttachments', metadata, metadata.id) });
     metadata.images.forEach((img, index) => payloads.push({ key: payloadKey(payloads.length), setId: metadata.id, index, size: img.size, sha256: img.sha256 }));
   }
-  return validateContainerManifest({ ...document, version: 4, entries, payloads, omissions });
+  return validateContainerManifest({ ...document, version: document.version === 5 ? 5 : 4, entries, payloads, omissions });
 }

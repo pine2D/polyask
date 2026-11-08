@@ -29,7 +29,7 @@ function fixture(result: { ok: boolean; code?: string; selection?: unknown } = {
   history.setSubmissionHandler((runId, site) => { upgrades.push(`${runId}:${site}`); });
   const q = history.begin(request())!;
   const token = history.token("claude")!;
-  history.result("run", { site: "claude", ...result } as never);
+  history.result("run", { site: "claude", ...result } as never, token);
   const accept = (value: Partial<HistorySnapshot>, site: SiteKey = "claude") =>
     history.accept(site, { token, owned: true, ...value } as HistorySnapshot, history.readMark());
   return { db, history, q, token, upgrades, accept, advance: (ms: number) => { now += ms; },
@@ -123,7 +123,7 @@ test("cancel, delete and a same-runId retry retire the old attempt's evidence", 
     assert.deepEqual(retried.upgrades, [], "a snapshot for the superseded attempt is dropped");
     retried.history.accept("claude", { token: fresh, owned: true, locate: "selector" }, retried.history.readMark());
     assert.deepEqual(retried.upgrades, [], "the retry is still pending its own result");
-    retried.history.result("run", { site: "claude", ok: false, code: "submit_unconfirmed" });
+    retried.history.result("run", { site: "claude", ok: false, code: "submit_unconfirmed" }, retried.history.token("claude"));
     retried.history.accept("claude", { token: fresh, owned: true, locate: "selector" }, retried.history.readMark());
     assert.deepEqual(retried.upgrades, ["run:claude"]);
     assert.deepEqual(retried.answers().map(a => a.submission), ["unconfirmed", "submitted"], "only the current attempt is upgraded");
@@ -202,7 +202,7 @@ for (const locate of ["selector", "anchor"] as const) {
       let dispatches = 0, probes = 0;
       const results = await new BroadcastCoordinator().send(request(),
         async () => { dispatches++; return { ok: false, code: "submit_unconfirmed" }; }, 44_000,
-        result => acceptBroadcastResult(db.questions.lifecycle, "run", result, history, capture, fake.manager as unknown as ViewManager),
+        result => acceptBroadcastResult(db.questions.lifecycle, "run", result, history, capture, fake.manager as unknown as ViewManager, history.token(result.site)),
         { confirm: async () => { probes++; return { supported: false, ok: false }; }, resubmit: false });
       assert.equal(results[0].code, "submit_unconfirmed");
       assert.equal(fake.statuses.get("claude")?.submission?.state, "unconfirmed");
@@ -260,7 +260,7 @@ test("a same-runId retry whose capture flush upgrades the site never dispatches 
   try {
     const q = history.begin(request())!;
     const token = history.token("claude")!;
-    history.result("run", { site: "claude", ok: false, code: "submit_unconfirmed" });
+    history.result("run", { site: "claude", ok: false, code: "submit_unconfirmed" }, history.token("claude"));
     fake.manager.markStatus(statusForResult("claude", { ok: false, code: "submit_unconfirmed" }, "run"));
     // 渲染层还显示重试，用户点「重试 Claude」：主进程按 shell-ipc.ts 的顺序 prepareRun → 只对 dispatch 开监视、标发送中、派发。
     const { dispatch, settled } = await capture.prepareRun(request(), 44_000, lateSentResult(fake.manager, "run"));
@@ -289,7 +289,7 @@ test("a retry whose flush finds no evidence still resends only through the norma
   try {
     history.begin(request());
     const token = history.token("claude")!;
-    history.result("run", { site: "claude", ok: false, code: "submit_unconfirmed" });
+    history.result("run", { site: "claude", ok: false, code: "submit_unconfirmed" }, history.token("claude"));
     fake.manager.markStatus(statusForResult("claude", { ok: false, code: "submit_unconfirmed" }, "run"));
     const { dispatch, settled } = await capture.prepareRun(request(), 44_000, lateSentResult(fake.manager, "run"));
     assert.deepEqual(dispatch.sites, ["claude"], "anchor evidence is not evidence");

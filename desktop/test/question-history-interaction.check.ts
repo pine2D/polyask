@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process';
 import webpack from 'webpack';
 test('history keeps links reachable, preserves IME Escape, and ignores departed detail requests', { timeout: 90000 }, async () => {
   const output = mkdtempSync(join(tmpdir(), 'polyask-history-ui-'));
+  console.log(`History native evidence: ${output}`);
   const root = join(__dirname, '..');
   try {
     await new Promise<void>((resolve, reject) => {
@@ -27,5 +28,5 @@ test('history keeps links reachable, preserves IME Escape, and ignores departed 
       { encoding: 'utf8', timeout: 60000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '' } });
     process.stdout.write(result.stdout);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}\n${result.error ?? ''}`);
-  } finally { rmSync(output, { recursive: true, force: true }); }
+  } finally { if (process.env.POLYASK_HISTORY_KEEP_ARTIFACTS !== "1") rmSync(output, { recursive: true, force: true }); }
 });

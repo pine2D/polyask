@@ -32,8 +32,9 @@ setShellApi({
   deleteQuestion: async (id: string) => { rows = rows.filter(q => q.id !== id); },
   getQuestion: async (id: string): Promise<QuestionDetail> => {
     if (delay) delayedDetailReads++;
-    const value: QuestionDetail = { question: rows.find(q => q.id === id)!, answers: scenario === 'source-links' ? [{
-      schema: 4, id: 'a0', questionId: id, site: 'claude', attempt: 1, createdAt: 1000, updatedAt: 2000, deviceId: 'fixture',
+    const value: QuestionDetail = { question: rows.find(q => q.id === id)!, answers: (scenario === 'source-links' || scenario === 'observation') ? [{
+      schema: 6, observation: { questionId: id, site: 'claude', attempt: 1, observedAt: 1500,
+        selection: { requested: 'think', observed: 'think', outcome: 'preferred', model: 'Example Pro' } }, id: 'a0', questionId: id, site: 'claude', attempt: 1, createdAt: 1000, updatedAt: 2000, deviceId: 'fixture',
       submission: 'submitted', submissionCode: null, conversationUrl: null, capture: 'complete', captureCode: null,
       answerMarkdown: '[First source](https://example.com/first)\n\n[Second source](https://example.com/second)',
       capturedAt: 2000, truncated: false, sealedAt: 2000
@@ -62,7 +63,14 @@ const queueRefresh = async () => {
 };
 async function run() {
   while (cards().length !== 50) await pause();
-  if (scenario === 'list-semantics') {
+  if (scenario === 'observation') {
+    await openFirst();
+    await click('.question-answer-info summary');
+    const text = document.querySelector('.question-observation')?.textContent || '';
+    check(text.includes(copy.observationTitle) && text.includes('Example Pro') && text.includes(copy.observationNote), 'localized webpage observation and provenance are visible');
+    (window as any).observationReady = true;
+    while (!(window as any).observationDone) await pause();
+  } else if (scenario === 'list-semantics') {
     (window as any).historyListReady = true;
     while (!(window as any).historyListDone) await pause();
   } else if (scenario === 'source-links') {

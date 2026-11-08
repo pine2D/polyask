@@ -22,8 +22,8 @@ test("the main process counts each capture's locate level once per site", () => 
     const history = new QuestionHistoryService(db.questions, { deviceId: () => "test", now: () => now,
       onLocate: (site, locate) => counts.record(site, locate) });
     history.begin({ runId: "run", sites: ["kimi", "claude"], text: "Question", tier: null, images: [] });
-    history.result("run", { site: "kimi", ok: true });
-    history.result("run", { site: "claude", ok: true });
+    history.result("run", { site: "kimi", ok: true }, history.token("kimi"));
+    history.result("run", { site: "claude", ok: true }, history.token("claude"));
     const kimi = history.token("kimi")!, claude = history.token("claude")!;
     history.accept("kimi", { token: kimi, owned: false, locate: "anchor" } as never);
     assert.deepEqual(counts.snapshot(), {}, "未归属的快照不记账");
@@ -70,7 +70,7 @@ test("slow observer batches flow from snapshots to a numbers-only report line, c
     const history = new QuestionHistoryService(db.questions, { deviceId: () => "test", now: () => now,
       onSlowObserver: (site, token, count) => counts.recordSlow(site, token, count) });
     history.begin({ runId: "run", sites: ["kimi"], text: "Question", tier: null, images: [] });
-    history.result("run", { site: "kimi", ok: true });
+    history.result("run", { site: "kimi", ok: true }, history.token("kimi"));
     const kimi = history.token("kimi")!;
     history.accept("kimi", { token: kimi, owned: false, slowObserver: 1 });
     now += 1000; history.accept("kimi", { token: kimi, owned: true, text: "Par", slowObserver: 3 });

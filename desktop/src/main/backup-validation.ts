@@ -27,7 +27,7 @@ const fields: Record<BackupKind, string[]> = {
   draft: ["format", "id", "kind", "context", "title", "content", "sourceUpdatedAt", "updatedAt"],
   question: ["id", "text", "sites", "requestedTier", "inputImageCount", "createdAt", "updatedAt", "schema"],
   questionAttachments: ["schema", "id", "questionId", "createdAt", "updatedAt", "images"],
-  questionAnswer: ["id", "questionId", "site", "attempt", "createdAt", "updatedAt", "schema", "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt"],
+  questionAnswer: ["id", "questionId", "site", "attempt", "createdAt", "updatedAt", "schema", "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt", "observation"],
   history: ["id", "textHash", "text", "preview", "createdAt", "lastUsedAt", "updatedAt", "schema"],
   archive: ["id", "text", "task", "source", "results", "favorite", "tags", "note", "winnerHost", "synthesis", "hosts", "resultPreviews", "searchText", "preview", "createdAt", "updatedAt", "ts", "schema"],
   decision: ["id", "archiveId", "title", "sourceTitle", "conclusion", "rationale", "uncertainties", "nextStep", "status", "evidence", "createdAt", "updatedAt", "schema"],
@@ -53,7 +53,7 @@ export function projectBody(kind: BackupKind, value: unknown, id?: string): Body
       throw new Error("backup_invalid");
     if (b.results.some((r: unknown) => !object(r) || typeof r.host !== "string" || typeof r.label !== "string"))
       throw new Error("backup_invalid");
-    b.results = b.results.map((r: Body) => object(r) ? pick(r, ["host", "label", "text", "state", "code"]) : r);
+    b.results = b.results.map((r: Body) => object(r) ? pick(r, ["host", "label", "text", "state", "code", "observation"]) : r);
     b.resultPreviews = b.resultPreviews.map((r: Body) => object(r) ? pick(r, ["host", "label", "text"]) : r);
     if (object(b.source))
       b.source = pick(b.source, ["kind", "title", "url", "truncated", "capturedAt"]);
@@ -115,7 +115,7 @@ export function validateBackup(value: unknown): BackupDocument {
     throw new Error("backup_too_large");
   if (!object(value) || value.format !== "polyask-backup")
     throw new Error("backup_invalid");
-  if (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4)
+  if (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4 && value.version !== 5)
     throw new Error("backup_version");
   if (!validSyncTime(value.exportedAt) || !Array.isArray(value.entries) || value.entries.length > BACKUP_MAX_ENTRIES)
     throw new Error("backup_invalid");
@@ -125,17 +125,18 @@ export function validateBackup(value: unknown): BackupDocument {
       throw new Error("backup_invalid");
     if (value.version === 1 && (e.kind === "question" || e.kind === "questionAnswer")) throw new Error("backup_version");
     if (value.version < 3 && (e.kind === "preference" || e.kind === "draft")) throw new Error("backup_version");
-    if (value.version !== 4 && e.kind === "questionAttachments") throw new Error("backup_version");
+    if (value.version < 4 && e.kind === "questionAttachments") throw new Error("backup_version");
     const kind = e.kind as BackupKind, key = `${kind}:${e.id}`;
     if (seen.has(key))
       throw new Error("backup_invalid");
     seen.add(key);
+    if (value.version < 5 && object(e.body) && Number(e.body.schema) >= 6) throw new Error("backup_version");
     const body = projectBody(kind, e.body, e.id);
     if (kind === "workspace" ? e.id !== "workspace" : kind !== "preference" && body.id !== e.id)
       throw new Error("backup_invalid");
     return { kind, id: e.id, body };
   });
-  return JSON.parse(JSON.stringify({ format: "polyask-backup", version: value.version, exportedAt: value.exportedAt, entries, ...(value.version === 4 ? { payloads: value.payloads, omissions: value.omissions } : {}) }));
+  return JSON.parse(JSON.stringify({ format: "polyask-backup", version: value.version, exportedAt: value.exportedAt, entries, ...(value.version >= 4 ? { payloads: value.payloads, omissions: value.omissions } : {}) }));
 }
 export function comparison(body: Readonly<Record<string, unknown>>): Body {
   return Object.fromEntries(Object.entries(body).filter(([k]) => !["deviceId", "updatedAt", "createdAt", "lastUsedAt", "ts"].includes(k))

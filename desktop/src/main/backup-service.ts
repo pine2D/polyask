@@ -58,7 +58,9 @@ export class BackupService {
       if (kind === "questionAnswer" && !active(this.database.questions.get(body.questionId))) continue;
       entries.push({ kind, id, body: projectBody(kind, body, id) });
     }
-    return validateBackup({ format: "polyask-backup", version: 3, exportedAt: this.now(), entries });
+    const extended = entries.some(e => e.body.schema === 6);
+    const document = validateBackup({ format: "polyask-backup", version: extended ? 5 : 3, exportedAt: this.now(), entries });
+    return extended ? backupContainerDocument(this.database, document, true) : document;
   }
   /** Every asynchronous continuation checks both UI intent and reset lifecycle. */
   beginOperation(): BackupGuard {
@@ -126,7 +128,7 @@ export class BackupService {
   preview(value: unknown, staging?: BackupStaging): BackupPreview {
     for (const token of this.plans.keys()) this.release(token);
     const document = validateBackup(value), snapshot = this.snapshot();
-    if (document.version === 4) {
+    if (document.version >= 4) {
       validateContainerManifest(value);
       if (document.entries.some(e => e.kind === 'questionAttachments') && !staging) throw new Error('backup_invalid');
     }
@@ -172,7 +174,7 @@ export class BackupService {
       }
       if (e.kind === "questionAnswer" || e.kind === "questionAttachments") {
         const dependency = `question:${e.body.questionId}`;
-        const hasOriginals = document.version === 4 && document.entries.some(entry => entry.kind === 'questionAttachments' && entry.body.questionId === e.body.questionId);
+        const hasOriginals = document.version >= 4 && document.entries.some(entry => entry.kind === 'questionAttachments' && entry.body.questionId === e.body.questionId);
         const seed = hasOriginals ? questionRestoreSeed(String(e.body.questionId), document.entries, snapshot) : null;
         requires = active(snapshot.get(dependency)) && status !== "deleted" && seed === null ? [] : [dependency];
         if (e.kind === 'questionAttachments' && seed !== null) {

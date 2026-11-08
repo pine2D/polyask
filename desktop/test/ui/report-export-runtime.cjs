@@ -40,7 +40,8 @@ app.whenReady().then(async () => {
       const table = '| SOURCE_KEY | Saved content | Final column |\n| --- | --- | --- |\n' +
         Array.from({ length: 90 }, (_, index) => `| ROW_${String(index).padStart(3, '0')} | ${question} · saved text with enough context to wrap across lines | VALUE_${String(index).padStart(3, '0')} |`).join('\n');
       const archive = createArchiveRecord({ text: question, task: question, results: [
-        { host: 'claude.ai', label: 'Claude', text: `Saved answer start\n\n${table}\n\nFINAL_MARKER\n\n` +
+        { host: 'claude.ai', label: 'Claude', observation: { questionId: 'synthetic-question', site: 'claude', attempt: 2, observedAt: 1700000000000,
+          selection: { requested: 'think', observed: 'think', outcome: 'preferred', model: 'Example Pro OBSERVATION_MARKER' } }, text: `Saved answer start\n\n${table}\n\nFINAL_MARKER\n\n` +
           `[Readable source](${probe})\n\n![image description](${probe})\n\n<img src="${probe}">\n\n<script src="${probe}"></script>` },
         { host: 'chatgpt.com', label: 'ChatGPT', text: 'Truncated saved answer.', code: 'answer_truncated' }
       ] }, { id: 'report-fixture', now: 1_700_000_000_000, deviceId: 'synthetic' });

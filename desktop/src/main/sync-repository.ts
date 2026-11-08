@@ -353,7 +353,7 @@ function validArchive(value: unknown): value is StoredArchive {
   if (isArchiveRecord(value)) return true;
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<ArchiveTombstone>;
-  return !!item.id && item.schema === SYNC_SCHEMA && typeof item.deviceId === "string" &&
+  return !!item.id && (item.schema === SYNC_SCHEMA || item.schema === 6) && typeof item.deviceId === "string" &&
     [item.createdAt, item.updatedAt, item.deletedAt].every(validSyncTime);
 }
 

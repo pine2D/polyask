@@ -15,7 +15,7 @@ function fixture() {
   const db = DesktopDatabase.open(":memory:");
   const history = new QuestionHistoryService(db.questions, { deviceId: () => "test-device" });
   const q = history.begin({ runId: "test-run", sites: ["claude"], text: "Synthetic question", tier: null, images: [] })!;
-  history.result("test-run", { site: "claude", ok: true });
+  history.result("test-run", { site: "claude", ok: true }, history.token("claude"));
   return { db, history, q, token: history.token("claude")! };
 }
 
@@ -119,7 +119,7 @@ test("flush captures a new token introduced while the previous poll is pending",
   try {
     const tick = capture.tick();
     const next = history.begin({ runId: "next", sites: ["claude"], text: "Next synthetic question", tier: null, images: [] })!;
-    history.result("next", { site: "claude", ok: true });
+    history.result("next", { site: "claude", ok: true }, history.token("claude"));
     const flush = capture.flush(["claude"]);
     pending.resolve({ token, owned: true, text: "Old turn late text" });
     await Promise.all([tick, flush]);

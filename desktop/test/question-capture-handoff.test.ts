@@ -12,7 +12,7 @@ test("a quick follow-up waits for a confirmed first answer's final re-read befor
   t.mock.timers.enable({apis:["Date","setTimeout"],now:1000});
   const db = DesktopDatabase.open(":memory:");
   const history = new QuestionHistoryService(db.questions,{deviceId:()=>"local"});
-  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true});
+  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true}, history.token("claude"));
   const token = history.token("claude")!;
   const capture = new QuestionCaptureService(history, async (_site,currentToken) => ({token:currentToken,owned:true,text:"First final answer",generation:null}));
   try {
@@ -32,7 +32,7 @@ test("a quick follow-up waits for a confirmed first answer's final re-read befor
 test("an unconfirmed quiet answer neither delays a follow-up nor becomes complete", async () => {
   const db = DesktopDatabase.open(":memory:");
   const history = new QuestionHistoryService(db.questions,{deviceId:()=>"local"});
-  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true});
+  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true}, history.token("claude"));
   const capture = new QuestionCaptureService(history, async (_site,token) => ({token,owned:true,text:"Unconfirmed text",generation:null}));
   try {
     await capture.prepareRun(request("follow-up"),44_000);
@@ -45,7 +45,7 @@ test("reset or disposal during the quiet-window wait cancels the deferred follow
   t.mock.timers.enable({apis:["Date","setTimeout"],now:1000});
   const db = DesktopDatabase.open(":memory:");
   const history = new QuestionHistoryService(db.questions,{deviceId:()=>"local"});
-  history.begin(request("first")); history.result("first",{site:"claude",ok:true});
+  history.begin(request("first")); history.result("first",{site:"claude",ok:true}, history.token("claude"));
   const capture = new QuestionCaptureService(history, async (_site,token) => ({token,owned:true,text:"Final",generation:null}));
   try {
     history.complete("first","claude"); await capture.tick();
@@ -61,7 +61,7 @@ test("a handoff cannot extend an almost exhausted send budget", async t => {
   t.mock.timers.enable({apis:["Date","setTimeout"],now:1000});
   const db = DesktopDatabase.open(":memory:");
   const history = new QuestionHistoryService(db.questions,{deviceId:()=>"local"});
-  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true});
+  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true}, history.token("claude"));
   const capture = new QuestionCaptureService(history, async (_site,token) => ({token,owned:true,text:"Final",generation:null}));
   try {
     history.complete("first","claude"); await capture.tick();
@@ -75,7 +75,7 @@ test("shell cancellation during preparation prevents dispatch and keeps the prev
   t.mock.timers.enable({apis:["Date","setTimeout"],now:1000});
   const db = DesktopDatabase.open(":memory:");
   const history = new QuestionHistoryService(db.questions,{deviceId:()=>"local"});
-  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true});
+  const q = history.begin(request("first"))!; history.result("first",{site:"claude",ok:true}, history.token("claude"));
   const coordinator = new BroadcastCoordinator();
   const capture = new QuestionCaptureService(history, async (_site,token) => ({token,owned:true,text:"Final",generation:null}));
   let dispatches = 0;

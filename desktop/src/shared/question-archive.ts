@@ -23,7 +23,7 @@ export function projectQuestionArchiveInput(question: QuestionRecord, answers: r
     const label = [site.label, formatCopy(copy.questionAttempt, { number: answer.attempt }),
       formatCopy(copy.questionCaptured, { time: new Date(answer.capturedAt ?? answer.createdAt).toLocaleString(locale) }),
       questionAnswerState(answer, copy)].join(' · ');
-    return [{ host: site.host, label, text: answer.answerMarkdown, ...(answer.truncated ? { code: 'answer_truncated' } : {}) }];
+    return [{ host: site.host, label, text: answer.answerMarkdown, ...(answer.observation ? { observation: answer.observation } : {}), ...(answer.truncated ? { code: 'answer_truncated' } : {}) }];
   });
   return { text: question.text, task: question.text, source: null, results };
 }

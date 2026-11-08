@@ -41,7 +41,7 @@ export async function uploadSyncOperation(repository: SyncRepository, drive: Syn
     const record = repository.archive(operation.entityId);
     if (!record) { repository.complete(operation.key, operation.revision); return; }
     name = `archive-${record.id}.json`;
-    properties = { app: "polyask", schema: "1", kind: "archive", id: record.id, deleted: "deletedAt" in record ? "1" : "0", preview: "deletedAt" in record ? "" : utf8Preview(record.text) };
+    properties = { app: "polyask", schema: String(record.schema), kind: "archive", id: record.id, deleted: "deletedAt" in record ? "1" : "0", preview: "deletedAt" in record ? "" : utf8Preview(record.text) };
     body = record;
   } else if (operation.kind === "decision" && operation.entityId) {
     const record = repository.decision(operation.entityId);
@@ -56,7 +56,7 @@ export async function uploadSyncOperation(repository: SyncRepository, drive: Syn
     key = `${operation.kind}:${record.id}`;
     const wireId = createHash("sha256").update(record.id).digest("hex");
     name = `${operation.kind}-${wireId}.json`;
-    properties = { app: "polyask", schema: "4", kind: operation.kind, id: wireId, deleted: "deletedAt" in record ? "1" : "0" };
+    properties = { app: "polyask", schema: String(record.schema), kind: operation.kind, id: wireId, deleted: "deletedAt" in record ? "1" : "0" };
     body = record;
   } else if ((operation.kind === "folder" || operation.kind === "folderMembership") && operation.entityId) {
     const record = operation.kind === "folder" ? repository.folder(operation.entityId) : repository.folderMembership(operation.entityId);

@@ -84,3 +84,24 @@ test('history prioritizes titles and dates while surfacing incomplete captures a
     assert.equal(h.document.querySelector('.question-main')?.getAttribute('aria-describedby'), `question-meta-${row.id}`);
   } finally { await h.close(); }
 });
+for (const locale of ['en', 'zh-CN', 'zh-TW']) {
+  test(`${locale}: history distinguishes all observation outcomes from legacy unrecorded attempts`, () => {
+    const copy = getCopy(locale);
+    for (const selection of [
+      { requested: 'think', outcome: 'preferred', observed: 'think', model: 'Example Pro' },
+      { requested: 'think', outcome: 'alternative', observed: 'think', model: 'Example Light' },
+      { requested: 'think', outcome: 'mode_only', observed: 'think' },
+      { requested: 'think', outcome: 'unconfirmed' }, null
+    ] as const) {
+      const answer = { ...questionAnswerFixture(), schema: 6 as const,
+        observation: selection ? { questionId: 'q-a', site: 'claude' as const, attempt: 1, observedAt: 10, selection } : null };
+      const html = renderToStaticMarkup(<QuestionHistoryReader detail={{ question: questionFixture(), answers: [answer] }}
+        copy={copy} sites={[]} busy={false} onRestore={noop} onReask={noop} onDelete={noop} onAnnounce={noop} />);
+      assert.equal(html.includes(copy.observationTitle), true);
+      assert.equal(html.includes(copy.observationNote), true);
+      if (!selection) assert.equal(html.includes(copy.observationMissing), true);
+      else if ('model' in selection && typeof selection.model === 'string') assert.equal(html.includes(selection.model), true);
+      else assert.equal(html.includes('Example Pro') || html.includes('Example Light'), false);
+    }
+  });
+}

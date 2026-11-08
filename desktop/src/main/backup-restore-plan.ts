@@ -72,6 +72,7 @@ export function planBackupRestore(entries: readonly BackupEntry[], source: Reado
       if (hasOriginals && questionRestoreSeed(body.questionId, entries, source) !== null && !questionMap.has(body.questionId)) continue;
       body.questionId = questionMap.get(body.questionId) ?? body.questionId;
       body.id = questionAnswerId(body.questionId, body.site, body.attempt);
+      if (body.observation) body.observation = { ...body.observation, questionId: body.questionId, site: body.site, attempt: body.attempt };
       if (!activeBackupBody(snapshot.get(`question:${body.questionId}`))) continue;
       const target = snapshot.get(`questionAnswer:${body.id}`);
       if (target && !activeBackupBody(target)) continue;

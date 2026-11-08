@@ -13,7 +13,7 @@ import { inTransaction, readJson } from "./repository-utils";
 
 function isStoredArchive(value: StoredArchive): boolean {
   return "deletedAt" in value
-    ? !!value.id && value.schema === SYNC_SCHEMA && [value.createdAt, value.updatedAt, value.deletedAt].every(validSyncTime)
+    ? !!value.id && (value.schema === SYNC_SCHEMA || value.schema === 6) && [value.createdAt, value.updatedAt, value.deletedAt].every(validSyncTime)
     : isArchiveRecord(value);
 }
 

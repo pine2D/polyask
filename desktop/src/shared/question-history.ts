@@ -1,3 +1,4 @@
+import { isAttemptObservation, type AttemptObservation } from "./question-observation";
 import type { PromptHistoryItem } from "./prompt-library";
 import { SITE_KEYS, type SiteKey } from "./contracts";
 import { MAX_IMAGE_COUNT } from "./images";
@@ -22,12 +23,14 @@ export interface QuestionRecord extends QuestionVersion {
 export interface QuestionTombstone extends QuestionVersion { readonly deletedAt: number }
 export type SubmissionState = "pending" | "submitted" | "failed" | "unconfirmed" | "cancelled";
 export type CaptureState = "waiting" | "partial" | "complete" | "unknown" | "unavailable" | "interrupted";
-export interface QuestionAnswerIdentity extends QuestionVersion {
+export interface QuestionAnswerIdentity extends Omit<QuestionVersion, "schema"> {
+  readonly schema: 4 | 6;
   readonly questionId: string;
   readonly site: SiteKey;
   readonly attempt: number;
 }
 export interface QuestionAnswerRecord extends QuestionAnswerIdentity {
+  readonly observation?: AttemptObservation | null;
   readonly submission: SubmissionState;
   readonly submissionCode: string | null;
   readonly conversationUrl: string | null;
@@ -54,8 +57,8 @@ const object = (v: unknown): v is Record<string, unknown> => !!v && typeof v ===
 export const questionIdValid = (v: unknown): v is string => typeof v === "string" && !!v.trim() && v.length <= 128 && !/[\x00-\x1f\x7f]/.test(v);
 const VERSION_KEYS = ["schema", "id", "createdAt", "updatedAt", "deviceId"];
 const only = (v: Record<string, unknown>, keys: readonly string[]) => Object.keys(v).every(k => keys.includes(k));
-function version(v: Record<string, unknown>): boolean {
-  return v.schema === QUESTION_SCHEMA && questionIdValid(v.id) && questionIdValid(v.deviceId) &&
+function version(v: Record<string, unknown>, answer = false): boolean {
+  return (v.schema === QUESTION_SCHEMA || (answer && v.schema === 6)) && questionIdValid(v.id) && questionIdValid(v.deviceId) &&
     validSyncTime(v.createdAt) && validSyncTime(v.updatedAt) && v.updatedAt >= v.createdAt;
 }
 export function isStoredQuestion(v: unknown): v is StoredQuestion {
@@ -69,11 +72,14 @@ export function isStoredQuestion(v: unknown): v is StoredQuestion {
 }
 const code = (v: unknown) => v === null || (typeof v === "string" && /^[a-z][a-z0-9_]{0,63}$/.test(v));
 export function isStoredQuestionAnswer(v: unknown): v is StoredQuestionAnswer {
-  if (!object(v) || !version(v) || !questionIdValid(v.questionId) || !SITE_KEYS.includes(v.site as SiteKey) ||
+  if (!object(v) || !version(v, true) || !questionIdValid(v.questionId) || !SITE_KEYS.includes(v.site as SiteKey) ||
     !Number.isSafeInteger(v.attempt) || Number(v.attempt) < 1) return false;
   const identity = [...VERSION_KEYS, "questionId", "site", "attempt"];
   if ("deletedAt" in v) return only(v, [...identity, "deletedAt"]) && validSyncTime(v.deletedAt) && v.deletedAt >= Number(v.createdAt);
-  if (!only(v, [...identity, "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt"])) return false;
+  if (!only(v, [...identity, "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt", ...(v.schema === 6 ? ["observation"] : [])])) return false;
+  if (v.schema === 6 && v.observation !== null && (!isAttemptObservation(v.observation) ||
+    v.observation.questionId !== v.questionId || v.observation.site !== v.site || v.observation.attempt !== v.attempt ||
+    v.observation.observedAt < Number(v.createdAt) || v.observation.observedAt > Number(v.updatedAt))) return false;
   if (!["pending", "submitted", "failed", "unconfirmed", "cancelled"].includes(String(v.submission)) ||
     !["waiting", "partial", "complete", "unknown", "unavailable", "interrupted"].includes(String(v.capture)) ||
     !code(v.submissionCode) || !code(v.captureCode) || typeof v.truncated !== "boolean") return false;

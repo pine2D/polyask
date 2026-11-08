@@ -1,0 +1,59 @@
+{
+  "file": {
+    "id": "schema6-archive",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "archive",
+      "schema": "6",
+      "id": "observation-archive",
+      "deleted": "0"
+    }
+  },
+  "body": {
+    "id": "observation-archive",
+    "text": "Example question",
+    "task": "Example question",
+    "source": null,
+    "results": [
+      {
+        "host": "claude.ai",
+        "label": "Claude · Attempt 1 · Saved 1/1/1970, 8:00:00 AM · Complete",
+        "text": "Saved answer",
+        "observation": {
+          "questionId": "q-a",
+          "site": "claude",
+          "attempt": 1,
+          "observedAt": 10,
+          "selection": {
+            "requested": "think",
+            "outcome": "preferred",
+            "observed": "think",
+            "model": "Example Pro"
+          }
+        }
+      }
+    ],
+    "favorite": false,
+    "tags": [],
+    "note": "",
+    "winnerHost": null,
+    "synthesis": null,
+    "hosts": [
+      "claude.ai"
+    ],
+    "resultPreviews": [
+      {
+        "host": "claude.ai",
+        "label": "Claude · Attempt 1 · Saved 1/1/1970, 8:00:00 AM · Complete",
+        "text": "Saved answer"
+      }
+    ],
+    "preview": "Example question",
+    "createdAt": 20,
+    "updatedAt": 20,
+    "ts": 20,
+    "deviceId": "device-a",
+    "schema": 6,
+    "searchText": "example question\nclaude · attempt 1 · saved 1/1/1970, 8:00:00 am · complete\nsaved answer"
+  }
+}

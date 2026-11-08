@@ -31,7 +31,7 @@ test("monitor-confirmed completion seals an owned answer that stays unchanged ac
   const { db, history, token, advance, answer } = fixture();
   try {
     assert.equal(history.complete("run-a", "claude"), false, "a pending submission cannot be confirmed");
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     history.accept("claude", { token, owned: true, text: "Partial", generation: "generating" }, history.readMark());
     assert.equal(history.complete("other-run", "claude"), false, "another run's monitor cannot confirm this copy");
     assert.equal(history.complete("run-a", "claude"), true);
@@ -54,7 +54,7 @@ test("monitor-confirmed completion seals an owned answer that stays unchanged ac
 test("a follow-up, cancel or later snapshot leaves a sealed complete copy untouched", () => {
   const { db, history, token, settle, answer } = fixture();
   try {
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     history.complete("run-a", "claude");
     settle("Final answer");
     const sealed = answer();
@@ -72,7 +72,7 @@ test("a follow-up, cancel or later snapshot leaves a sealed complete copy untouc
 test("without monitor confirmation a follow-up keeps the existing interrupted outcome", () => {
   const { db, history, token, answer } = fixture();
   try {
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     for (let i = 0; i < 4; i++) history.accept("claude", { token, owned: true, text: "Quiet answer", generation: null }, history.readMark());
     assert.equal(answer().sealedAt, null, "quiet text never implies completion");
     history.accept("claude", { token, owned: false, ended: true });
@@ -83,7 +83,7 @@ test("without monitor confirmation a follow-up keeps the existing interrupted ou
 test("only reads started after the confirmation can seal; ended, truncated or generating snapshots cannot", () => {
   const { db, history, token, advance, answer } = fixture();
   try {
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     const early = history.readMark();
     history.complete("run-a", "claude");
     history.accept("claude", { token, owned: true, text: "Stale in-flight text", generation: null }, early);
@@ -110,7 +110,7 @@ test("only reads started after the confirmation can seal; ended, truncated or ge
 test("generation seen again after confirmation revokes the evidence", () => {
   const { db, history, token, settle, answer } = fixture();
   try {
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     history.complete("run-a", "claude");
     history.accept("claude", { token, owned: true, text: "More", generation: "generating" }, history.readMark());
     settle("More text");
@@ -122,7 +122,7 @@ test("generation seen again after confirmation revokes the evidence", () => {
 test("a false monitor completion cannot seal an answer that is still growing (Yuanbao draft hides Stop)", () => {
   const { db, history, token, advance, answer } = fixture();
   try {
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     history.accept("claude", { token, owned: true, text: "Half", generation: "generating" }, history.readMark());
     // The composer holds a draft: Stop is hidden, the monitor settles, the snapshot reports no generation.
     assert.equal(history.complete("run-a", "claude"), true);
@@ -143,7 +143,7 @@ test("a false monitor completion cannot seal an answer that is still growing (Yu
 test("identical reads closer than the quiet window do not seal (tail growth margin)", () => {
   const { db, history, token, advance, answer } = fixture();
   try {
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     history.complete("run-a", "claude");
     history.accept("claude", { token, owned: true, text: "Answer", generation: null }, history.readMark());
     advance(SEAL_QUIET_MS - 1_000);
@@ -162,10 +162,10 @@ test("identical reads closer than the quiet window do not seal (tail growth marg
 test("a retry attempt cannot inherit the previous attempt's confirmation", () => {
   const { db, history, answer } = fixture();
   try {
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     history.begin(request("run-a"));
     assert.equal(history.complete("run-a", "claude"), false, "the new attempt has not been submitted yet");
-    history.result("run-a", { site: "claude", ok: true });
+    history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
     const token = history.token("claude")!;
     history.accept("claude", { token, owned: true, text: "Retry streaming", generation: null }, history.readMark());
     assert.equal(answer().attempt, 2);
@@ -175,7 +175,7 @@ test("a retry attempt cannot inherit the previous attempt's confirmation", () =>
 
 test("capture service reads right after confirmation, re-reads after an in-flight poll and seals after the quiet window", async () => {
   const { db, history, token, advance, answer } = fixture();
-  history.result("run-a", { site: "claude", ok: true });
+  history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
   let release!: (s: HistorySnapshot) => void;
   const reads: string[] = [];
   const capture = new QuestionCaptureService(history, async () => {
@@ -229,7 +229,7 @@ test("generation monitor reports each site's settled completion once and binding
 test("capture service re-reads a seal candidate after the quiet window instead of the 5s poll", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const { db, history, token, advance, answer } = fixture();
-  history.result("run-a", { site: "claude", ok: true });
+  history.result("run-a", { site: "claude", ok: true }, history.token("claude"));
   let reads = 0;
   const capture = new QuestionCaptureService(history, async () => { reads++; return { token, owned: true, text: "Done", generation: null }; });
   const settle = async () => { for (let i = 0; i < 10; i++) await new Promise(resolve => setImmediate(resolve)); };

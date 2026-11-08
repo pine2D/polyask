@@ -1,6 +1,6 @@
 export const SYNC_SCHEMA = 1;
-/** Original image sets use schema 5; questions stay 4, folders 3, decisions 2 and legacy entities 1. */
-export const SUPPORTED_SYNC_SCHEMA = 5;
+/** Attempts/archives with webpage observations use 6; images 5, questions 4, folders 3, decisions 2. */
+export const SUPPORTED_SYNC_SCHEMA = 6;
 export const CLEAR_REMOTE_CONFIRMATION = "DELETE";
 
 export interface HistoryRecord {

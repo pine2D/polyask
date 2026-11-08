@@ -17,7 +17,7 @@ test('run progress uses latest attempts and returns finite metadata without save
     assert.equal(first?.state, 'available'); assert.equal(first?.questionId, question.id);
     assert.equal(first?.answers.length, 2);
     assert.equal(first?.answers.every((a: any) => a.attempt === 1 && !a.hasText), true);
-    history.result('run-a', { site: 'claude', ok: true });
+    history.result('run-a', { site: 'claude', ok: true }, history.token('claude'));
     history.accept('claude', { token: history.token('claude')!, owned: true, text: 'Partial saved body', generation: 'generating' });
     const captured = progress(history);
     assert.equal(captured?.answers.find((a: any) => a.site === 'claude')?.hasText, true);
@@ -35,7 +35,7 @@ test('positive completion alone cannot count a complete copy before the post-con
   const db = DesktopDatabase.open(':memory:'); let now = 1000;
   const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local', now: () => ++now });
   try {
-    history.begin(request(['claude'])); history.result('run-a', { site: 'claude', ok: true });
+    history.begin(request(['claude'])); history.result('run-a', { site: 'claude', ok: true }, history.token('claude'));
     const token = history.token('claude')!;
     history.accept('claude', { token, owned: true, text: 'Final body', generation: null }, history.readMark());
     history.complete('run-a', 'claude');

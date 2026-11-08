@@ -9,7 +9,7 @@ function fixture() {
   let now = 1000;
   const history = new QuestionHistoryService(db.questions, { deviceId: () => 'test', now: () => now });
   const q = history.begin({ runId: 'run', sites: ['gemini'], text: 'Question', tier: null, images: [] })!;
-  history.result('run', { site: 'gemini', ok: true });
+  history.result('run', { site: 'gemini', ok: true }, history.token('gemini'));
   const token = history.token('gemini')!;
   const accept = (value: object) => history.accept('gemini', normalizeHistorySnapshot({ token, ...value }, token));
   return { db, history, q, token, accept, at: (value: number) => { now = value; } };

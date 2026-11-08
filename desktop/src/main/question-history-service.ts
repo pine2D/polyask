@@ -87,7 +87,7 @@ export class QuestionHistoryService {
         for (const site of request.sites) {
           const attempt = Math.max(0, ...previous.filter(a => a.site === site).map(a => a.attempt)) + 1;
           const answerId = questionAnswerId(record.id, site, attempt);
-          this.repository.putAnswer({ schema: 4, id: answerId, questionId: record.id, site, attempt,
+          this.repository.putAnswer({ schema: 6, observation: null, id: answerId, questionId: record.id, site, attempt,
             createdAt: now, updatedAt: now, deviceId: this.options.deviceId(),
             submission: "pending", submissionCode: null, conversationUrl: null, answerMarkdown: null,
             capture: "waiting", captureCode: null, capturedAt: null, truncated: false, sealedAt: null });
@@ -163,22 +163,31 @@ export class QuestionHistoryService {
       return true;
     }, false);
   }
-  result(runId: string, result: SiteRunResult): void {
-    this.guarded(() => {
+  ownsResult(runId: string, result: SiteRunResult, token: string | undefined): boolean {
+    const e = this.active.get(result.site);
+    return !!e && e.lifecycle === this.repository.lifecycle && e.runId === runId && !!token && e.token === token &&
+      (!e.held || result.code === "cancelled");
+  }
+  result(runId: string, result: SiteRunResult, token: string | undefined): boolean {
+    return this.guarded(() => {
       const e = this.active.get(result.site);
-      if (!e || e.runId !== runId) return;
+      if (!e || !this.ownsResult(runId, result, token)) return false;
       const current = this.current(result.site);
-      if (!current) return;
+      if (!current || current.submission !== "pending") return false;
       const now = Math.max(this.now(), current.updatedAt + 1);
+      const selection = normalizeSelectionMetadata(result).selection;
       const submission = result.ok ? "submitted" : result.code === "submit_unconfirmed" ? "unconfirmed" : result.code === "cancelled" ? "cancelled" : "failed";
       e.ready = submission === "submitted" || submission === "unconfirmed";
-      e.tierUnconfirmed = normalizeSelectionMetadata(result).selection?.outcome === "unconfirmed";
+      e.tierUnconfirmed = selection?.outcome === "unconfirmed";
       this.releasableSites.delete(result.site);
       e.deadline = now + OBSERVATION_MS;
-      this.repository.putAnswer({ ...current, submission, submissionCode: result.code ?? null,
+      this.repository.putAnswer({ ...current, schema: 6,
+        observation: selection && result.code !== "cancelled" ? { questionId: current.questionId, site: current.site,
+          attempt: current.attempt, observedAt: now, selection } : null, submission, submissionCode: result.code ?? null,
         updatedAt: now, capture: e.ready ? "waiting" : "unavailable", sealedAt: e.ready ? null : now });
       if (!e.ready) this.active.delete(result.site);
-    }, undefined);
+      return true;
+    }, false);
   }
   accept(site: SiteKey, snapshot: HistorySnapshot, mark?: ReadMark): void {
     this.guarded(() => {

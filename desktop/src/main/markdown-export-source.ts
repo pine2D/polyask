@@ -1,3 +1,4 @@
+import { observationDescription } from '../shared/question-observation-display';
 import { createHash } from 'node:crypto';
 import type { ArchiveService } from './archive-service';
 import type { DecisionService } from './decision-service';
@@ -81,6 +82,8 @@ export class MarkdownSources {
         lines.push(`### ${markdownText(entry.label)}`, formatCopy(copy.questionAttempt, { number: a.attempt }),
           `${copy.reportCapturedAt}: ${stamp(a.capturedAt!)}`, this.status(entry, copy));
         if (tier) lines.push(`${copy.markdownRequestedTier}: ${tier}`);
+        lines.push(markdownText(observationDescription(a.observation, copy)));
+        if (a.observation) lines.push(markdownText(formatCopy(copy.observationAt, { time: stamp(a.observation.observedAt) })), markdownText(copy.observationNote));
         const link = a.conversationUrl && safeExternalUrl(a.conversationUrl);
         if (link) lines.push(`[${copy.archiveSource}](<${link}>)`);
         assertMarkdownSize(a.answerMarkdown); lines.push(safeExportMarkdown(a.answerMarkdown));
@@ -99,6 +102,10 @@ export class MarkdownSources {
         const state = entry.kind === 'synthesis' ? r.synthesis!.state : answer.state;
         const tier = state === 'think' ? copy.think : state === 'fast' ? copy.fast : '';
         lines.push(`### ${entry.kind === 'answer' ? `[S${index + 1}] ` : ''}${markdownText(entry.label)}${tier ? ` · ${tier}` : ''}`, this.status(entry, copy));
+        if (entry.kind === "answer") {
+          lines.push(markdownText(observationDescription(answer.observation, copy)));
+          if (answer.observation) lines.push(markdownText(formatCopy(copy.observationAt, { time: stamp(answer.observation.observedAt) })), markdownText(copy.observationNote));
+        }
         if (entry.best) lines.push(`> ${copy.reportUserSelected}`);
         if (entry.kind === 'synthesis' && document.entries.some(e => e.kind === 'answer' && e.available && !selected.has(e.id))) lines.push(`> ${copy.markdownSynthesisWarning}`);
         assertMarkdownSize(body); lines.push(safeExportMarkdown(body));

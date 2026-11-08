@@ -8,10 +8,10 @@ export const payloadKey = (index: number) => `images/${index}.bin`;
 export function attachmentBody(entry: BackupEntry): Omit<QuestionAttachmentsManifest, 'deviceId'> {
   return entry.body as unknown as Omit<QuestionAttachmentsManifest, 'deviceId'>;
 }
-/** v4 is a closed envelope: every image-bearing parent is complete or explicitly omitted. */
+/** v4/v5 are a closed envelope: every image-bearing parent is complete or explicitly omitted. */
 export function validateContainerManifest(value: unknown): BackupDocument {
   const document = validateBackup(value);
-  if (document.version !== 4) throw new Error('backup_version');
+  if (document.version !== 4 && document.version !== 5) throw new Error('backup_version');
   const raw = value as Record<string, unknown>;
   if (Object.keys(raw).some(key => !['format', 'version', 'exportedAt', 'entries', 'payloads', 'omissions'].includes(key)) ||
     !Array.isArray(raw.payloads) || !Array.isArray(raw.omissions)) throw new Error('backup_invalid');

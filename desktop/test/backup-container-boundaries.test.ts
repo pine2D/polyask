@@ -7,7 +7,7 @@ import { backupContainerDocument } from '../src/main/backup-export';
 import { tmpdir } from 'node:os';
 import { DesktopDatabase } from '../src/main/database';
 import { BackupService } from '../src/main/backup-service';
-import { BACKUP_MAGIC, BACKUP_CONTAINER_MAX_BYTES, BACKUP_MAX_BYTES } from '../src/shared/backup';
+import { BACKUP_LEGACY_MAGIC as BACKUP_MAGIC, BACKUP_CONTAINER_MAX_BYTES, BACKUP_MAX_BYTES } from '../src/shared/backup';
 import { readBackupContainer, writeBackupContainer } from '../src/main/backup-container';
 import { image, question } from './lib/question-attachment-fixtures';
 

@@ -19,7 +19,7 @@ function capturing() {
   let text = "Partial", generation: "generating" | null = "generating";
   const capture = new QuestionCaptureService(history, async (_site, token) => ({ token, owned: true, text, generation }));
   const question = history.begin(request("first"))!;
-  history.result("first", { site: "claude", ok: true });
+  history.result("first", { site: "claude", ok: true }, history.token("claude"));
   return { db, history, capture, question, finish(value: string) { text = value; generation = null; } };
 }
 
