@@ -1651,7 +1651,7 @@ Linux package 已通过；包内真实 main/preload 的离线 smoke 确认 1 个
 
 `cd desktop && npm run test:unit -- test/task-setup-command.test.ts test/task-setup-flow.test.tsx test/task-setup-component.test.tsx test/task-setup-prompt.test.ts` 覆盖入口、真实工作区/参与站点 hooks 的 open/save/tier ACK 等待与失败、取消、较新编辑和换图意图、忙碌、实际范围不符，以及真实遮罩转场后的图片意图快照。组件验证模板单次填充、可编辑维度/输出、草稿确认取消和附件保留。
 
-`cd desktop && npm run test:unit -- test/task-setup-native.check.ts` 用生产任务准备组件、工作区/草稿确认/图片 hooks 与隔离合成 Shell ACK，断网、临时 profile，三语×480/1280px 六组。实际 Electron 鼠标、按键和文本插入验证选择、变量、预览范围、确认取消、阶段失败、编辑后迟到 ACK、显式应用、取消后迟到 ACK、焦点与 Tab 圈定；Chromium 组合 Escape 事件验证 IME 分支。打印证据目录，保存预览/失败截图、report.json、runtime.log 和共同 4GiB/512MiB 进程边界，退出后删除本任务临时 profile 并核对进程退出。它不是物理输入法、真实站点切档/发送或 Windows/macOS 实机验收。
+`cd desktop && npm run test:unit -- test/task-setup-native.check.ts` 用生产任务准备组件、工作区/草稿确认/图片 hooks 与隔离合成 Shell ACK，断网、临时 profile，三语×480/1280px 六组。实际 Electron 鼠标、按键和文本插入验证选择、变量、预览范围、确认取消、阶段失败、编辑后迟到 ACK、显式应用、取消后迟到 ACK、取消后的保存/切档失败无过期提示、焦点与 Tab 圈定；Chromium 组合 Escape 事件验证 IME 分支。打印证据目录，保存预览/失败截图、report.json、runtime.log 和共同 4GiB/512MiB 进程边界，退出后删除本任务临时 profile 并核对进程退出。它不是物理输入法、真实站点切档/发送或 Windows/macOS 实机验收。
 
 
 ## 2026-11-08 真实 SQLite/IPC 与原生多页资源基线
@@ -1669,6 +1669,12 @@ CPU 首次读取只建立基线，随后每状态五次约 300ms 区间样本；
 
 `npm run test:unit -- test/report-static.test.ts test/report-export-service.test.ts test/report-pdf.test.ts test/report-export-ipc.test.ts test/report-template.test.ts` 检查共享公式解析、安全源码回退、PNG 预解码限额、累计公式数量与让步取消、全链 deadline、来源版本与既有文件写入保护。
 
-`POLYASK_REPORT_KEEP_ARTIFACTS=1 npm run test:unit -- test/report-export.check.ts` 运行独立内存 session 的真实 Electron 导出：三语/CJK、90 行跨页表格、公式/图表、网页模型观测、不完整回答和恶意 HTML/URL/SVG/超长图；HTTP 请求前观察器和本地探针均为零，检查 PDF 页数/A4/全文末尾、打印截图，以及取消/关闭/来源变化/超时后的实际销毁。证据为临时目录 HTML/PDF/PNG 与标量 JSON。
+`POLYASK_REPORT_KEEP_ARTIFACTS=1 npm run test:unit -- test/report-export.check.ts` 运行独立内存 session 的真实 Electron 导出：三语/CJK、摘要以外的完整提问、90 行跨页表格、公式/图表、网页模型观测、不完整回答和恶意 HTML/URL/SVG/超长图；HTTP 请求前观察器和本地探针均为零，检查 PDF 页数/A4/全文末尾、打印截图，以及取消/关闭/来源变化/超时后的实际销毁。证据为临时目录 HTML/PDF/PNG 与标量 JSON。
 
 `npm run test:unit -- test/report-combined.check.ts` 从生产 useTaskSetup 及工作区/参与站点 hooks 应用并确认合成草稿，保存合成回答到真实 SQLite，再经生产人工比较、原文多摘录、决策组件与 DecisionService 保存三条依据，最后调用实际 ReportExportService 导出 HTML/PDF。外部站点 ACK 在夹具边界替代；未发送问题或导航新会话，不代表真实站点或 Drive 验收。该专项保留三语组合截图、PDF/HTML、密集公式主进程 heartbeat/取消数据，校验所有已观察进程退出并清理隔离 profile；Linux 必须使用 test-safe 的 4GiB/512MiB cgroup。
+
+### 2026-11-08 · 草稿版本、旧导出与取消错误回归
+
+从 `desktop/` 执行 `npm run test:unit -- test/draft-version-boundary.test.ts test/schema6-evidence-compat.test.ts test/legacy-markdown-export.test.ts test/report-question-content.test.ts test/participation-cancelled-error.test.tsx test/task-setup-flow.test.tsx`。真实 SQLite 检查零摘录决策草稿的 draft2/state6/backup5 边界、旧 format1 可读及同 ID 升级、关闭同步时携带的片段保护；冻结旧 reader 在自己的 VM realm 解析 JSON，并有旧格式正对照，避免跨 realm 普通对象检查造成假拒绝。新样本只增 `schema6-state-reviewed-draft.json`。
+
+旧复制入口经实际 ArchiveService/DecisionService 生成 Markdown，再以启用 HTML 的 Markdown reader 渲染，核对没有可执行元素、远程图片和带凭据 URL，保留文字、合法链接、网页观测与完整提问。报告模板另核对字面 HTML 与相同提问去重。生产 hooks 组合检查 open/save/tier 迟到拒绝的归属与恢复，当前任务失败仍有反馈；三语真实 PDF 和原生取消操作复用上面两个原生专项。
