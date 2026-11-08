@@ -20,6 +20,8 @@ async function fixture() {
   let flow!: ReturnType<typeof useWorkspaceFlow>, participation!: ReturnType<typeof useSyncedSiteParticipation>;
   let setup!: ReturnType<typeof useTaskSetup>, prompt = 'Original draft', intent = '1:original-image', busy = false;
   const lock = new ExclusiveActionLock(), calls: string[] = [];
+  const template = {id:'current',name:'Current',text:'Task',updatedAt:1,deviceId:'d'};
+  let templates = [template];
   const state: WorkspaceState = {selectedSites:['claude'], participatingSites:['claude'], groups:[], tier:null};
   setShellApi({setSelection: (keys: readonly SiteKey[]) => {calls.push(`open:${keys.join(',')}`); return opening.promise;},
     setParticipation: (keys: readonly SiteKey[]) => {calls.push(`save:${keys.join(',')}`); return saving.promise;},
@@ -28,7 +30,7 @@ async function fixture() {
   function Fixture() {
     flow = useWorkspaceFlow(SITES, 'failed', () => {});
     participation = useSyncedSiteParticipation(flow, true, lock, () => {});
-    setup = useTaskSetup({templates:[], groups:[], sites:SITES, prompt, imageCount:1,
+    setup = useTaskSetup({templates, groups:[], sites:SITES, prompt, imageCount:1,
       getIntent:()=>intent, busy:()=>busy, lock, participation, changeTier:flow.changeTier,
       onApply:value=>{prompt=value;}, onBlockingChange:()=>{}});
     return <span>{participation.participating.join(',')}</span>;
@@ -37,8 +39,10 @@ async function fixture() {
   await act(async()=>flow.accept(state));
   await act(async()=>setup.open());
   const plan = {text:'Prepared task', sites:['claude','kimi'] as const, tier:'think' as const};
+  const openState = {...state,selectedSites:['claude','kimi'] as const};
   const accepted = {...state,selectedSites:['claude','kimi'] as const,participatingSites:['claude','kimi'] as const};
-  return {...h, plan, accepted, state, opening,saving,tier,lock,calls, setup:()=>setup, prompt:()=>prompt,
+  return {...h, plan, accepted, openState, state, opening,saving,tier,lock,calls,template, participation:()=>participation, flow:()=>flow,
+    expireSource:async()=>{templates=[];await h.render(<Fixture/>);}, setup:()=>setup, prompt:()=>prompt,
     changeIntent:()=>{intent='2:new-image';}, setBusy:()=>{busy=true;},
     close:async()=>{await h.close();setShellApi(null);}};
 }
@@ -48,7 +52,7 @@ test('real workspace and participation composition waits for open/save/tier ACK 
     let applied!:Promise<boolean>;
     await act(async()=>{applied=h.setup().apply(h.plan);});
     assert.equal(h.prompt(),'Original draft'); assert.deepEqual(h.calls,['open:claude,kimi']);
-    await act(async()=>h.opening.resolve(h.accepted));
+    await act(async()=>h.opening.resolve(h.openState));
     assert.equal(h.prompt(),'Original draft');assert.deepEqual(h.calls,['open:claude,kimi','save:claude,kimi']);
     await act(async()=>h.saving.resolve(h.accepted));
     assert.equal(h.prompt(),'Original draft'); assert.equal(h.calls.at(-1),'tier');
@@ -58,21 +62,28 @@ test('real workspace and participation composition waits for open/save/tier ACK 
   }finally{await h.close();}
 });
 
-for(const reason of ['open-failure','save-failure','tier-failure','cancel','edit','new-image','busy','scope-mismatch'] as const) {
+for(const reason of ['open-failure','save-failure','tier-failure','cancel','edit','new-image','busy','source-expired','scope-mismatch'] as const) {
   test(`task setup preserves draft and attachments after ${reason}`,async()=>{
     const h=await fixture();try {
       let applied!:Promise<boolean>;
-      await act(async()=>{applied=h.setup().apply(h.plan);});
+      await act(async()=>{applied=h.setup().apply(reason==='source-expired'?{...h.plan,template:h.template}:h.plan);});
       if(reason==='cancel')await act(async()=>h.setup().close());
       if(reason==='edit')await act(async()=>h.setup().edit());
       if(reason==='new-image')h.changeIntent();
       if(reason==='busy')h.setBusy();
-      await act(async()=>reason==='open-failure'?h.opening.reject(Error('offline')):h.opening.resolve(h.accepted));
+      if(reason==='source-expired')await h.expireSource();
+      await act(async()=>reason==='open-failure'?h.opening.reject(Error('offline')):h.opening.resolve(h.openState));
+      if(['cancel','edit','new-image','busy','source-expired'].includes(reason)) {
+        assert.equal(h.calls.some(call=>call.startsWith('save:')),false,'an invalid task must not start save after the open ACK');
+        assert.equal(h.participation().pending,false);assert.equal(h.lock.busy,false);
+        assert.deepEqual(h.flow().currentSelection(),['claude','kimi'],'already accepted open pages are retained');
+        assert.deepEqual(h.participation().currentSites(),['claude'],'accepted saved membership is retained without starting save');
+      }
       await act(async()=>reason==='save-failure'?h.saving.reject(Error('offline')):h.saving.resolve(reason==='scope-mismatch'?h.state:h.accepted));
       await act(async()=>{h.tier.resolve({workspace:h.accepted,results:[{site:'claude',ok:reason!=='tier-failure'},{site:'kimi',ok:true}]});assert.equal(await applied,false);});
       assert.equal(h.prompt(),'Original draft');assert.equal(h.lock.busy,false);
       assert.equal(h.calls.some(value=>value==='SEND'||value==='NEW'),false);
-      if(['cancel','edit','new-image','busy','scope-mismatch'].includes(reason))assert.equal(h.calls.includes('tier'),false);
+      if(['cancel','edit','new-image','busy','source-expired','scope-mismatch'].includes(reason))assert.equal(h.calls.includes('tier'),false);
     }finally{await h.close();}
   });
 }

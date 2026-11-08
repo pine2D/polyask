@@ -59,3 +59,30 @@ test('save failure restores accepted membership instead of claiming it was saved
     assert.equal(h.controller().pending, false);
   } finally { await h.close(); }
 });
+
+test('an invalid caller cannot start participation changes or persistent saves', async () => {
+  const h = await fixture(['claude', 'kimi']);
+  try {
+    await act(async () => { assert.equal(await h.controller().change(['kimi'], () => false), false); });
+    assert.equal(h.calls.length, 0);
+    assert.deepEqual(h.controller().currentSites(), ['claude', 'kimi']);
+    assert.equal(h.controller().pending, false);
+  } finally { await h.close(); }
+});
+
+test('a stale guarded save cannot release pending ownership or replace a newer request', async () => {
+  const h = await fixture(['claude', 'kimi']);
+  let current = true;
+  try {
+    let old!: Promise<boolean>, next!: Promise<boolean>;
+    await act(async () => { old = h.controller().change(['kimi'], () => current); });
+    current = false;
+    await act(async () => { next = h.controller().change(['claude']); });
+    await act(async () => { h.calls[0].finish(); assert.equal(await old, false); });
+    assert.equal(h.controller().pending, true);
+    assert.deepEqual(h.controller().currentSites(), ['claude']);
+    await act(async () => { h.calls[1].finish(); assert.equal(await next, true); });
+    assert.equal(h.controller().pending, false);
+    assert.deepEqual(h.controller().currentSites(), ['claude']);
+  } finally { await h.close(); }
+});

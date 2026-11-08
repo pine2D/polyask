@@ -42,8 +42,8 @@ export function useSiteParticipation(options: SiteParticipationOptions) {
   }, [options.opened, options.ready, options.saved, pending, resetRevision]);
   const currentSites = () => desired.current.filter(site => latest.current.opened.includes(site));
   const active = (request: number) => mounted.current && request === revision.current;
-  const change = async (value: readonly SiteKey[]): Promise<boolean> => {
-    if (!latest.current.ready || latest.current.busy) return false;
+  const change = async (value: readonly SiteKey[], isCurrent: () => boolean = () => true): Promise<boolean> => {
+    if (!latest.current.ready || latest.current.busy || !isCurrent()) return false;
     let target: readonly SiteKey[];
     try { target = participationSites(value); } catch { latest.current.onError(); return false; }
     const request = ++revision.current;
@@ -62,10 +62,11 @@ export function useSiteParticipation(options: SiteParticipationOptions) {
         opening.current.set(request, next);
         accepted = participationSites(await latest.current.openPages(next));
       }
-      if (!active(request)) return false;
+      // Caller ownership must also survive the open ACK before starting a persistent save.
+      if (!active(request) || !isCurrent()) return false;
       const confirmed = target.filter(site => accepted.includes(site));
       const saved = latest.current.save ? participationSites(await latest.current.save(confirmed)) : confirmed;
-      if (!active(request)) return false;
+      if (!active(request) || !isCurrent()) return false;
       accept(saved);
       const complete = target.every(site => accepted.includes(site));
       if (!complete) latest.current.onError();

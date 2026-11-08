@@ -63,7 +63,7 @@ export function useTaskSetup(options: TaskSetupOptions) {
     inFlight.current = true; setPending(true); setError(null);
     try {
       // Participation owns its open/save locks. An outer lock here would reject its own calls.
-      const accepted = await initial.participation.change(plan.sites);
+      const accepted = await initial.participation.change(plan.sites, active);
       if (!active()) { if (lease.current === current) setError('stale'); return false; }
       if (!accepted || !sameTaskSites(latest.current.participation.currentSites(), plan.sites)) { setError('failed'); return false; }
       if (plan.tier !== null) {
