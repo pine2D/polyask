@@ -1,45 +1,63 @@
-import assert from "node:assert/strict";
-import test from "node:test";
-import { acceptBroadcastResult } from "../src/main/broadcast-result";
-import type { QuestionCaptureService } from "../src/main/question-capture-service";
-import type { QuestionHistoryService } from "../src/main/question-history-service";
-import type { ViewManager } from "../src/main/view-manager";
-
-test("a late broadcast result cannot restore status or capture after local reset", () => {
-  const events: string[] = [];
-  const repository = { lifecycle: 1 };
-  const questions = { repository, ownsResult: () => true, result: () => { events.push("answer"); return true; } } as unknown as QuestionHistoryService;
-  const capture = { start: () => { events.push("capture"); } } as unknown as QuestionCaptureService;
-  const manager = { markStatus: () => { events.push("status"); },
-    watchGeneration: () => { events.push("watch"); } } as unknown as ViewManager;
-  acceptBroadcastResult(1, "run", { site: "claude", ok: true }, questions, capture, manager, "token");
-  assert.deepEqual(events, ["answer", "capture", "status", "watch"]);
-  repository.lifecycle = 2;
-  acceptBroadcastResult(1, "run", { site: "claude", ok: true }, questions, capture, manager, "token");
-  assert.deepEqual(events, ["answer", "capture", "status", "watch"]);
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { BroadcastResultReceiver } from '../src/main/broadcast-result';
+import { QuestionCaptureService } from '../src/main/question-capture-service';
+import { QuestionHistoryService } from '../src/main/question-history-service';
+import { DesktopDatabase } from '../src/main/database';
+import type { SiteStatus } from '../src/shared/protocol';
+const request = { runId: 'run', sites: ['claude'] as const, text: 'Synthetic question', tier: null, images: [] };
+function setup() {
+  const db = DesktopDatabase.open(':memory:');
+  const history = new QuestionHistoryService(db.questions, { deviceId: () => 'local' });
+  const capture = new QuestionCaptureService(history, async (_site, token) => ({ token, owned: false }));
+  const statuses: SiteStatus[] = [], watched: string[] = [];
+  const receiver = new BroadcastResultReceiver(history, capture, {
+    markStatus: status => { statuses.push(status); }, watchGeneration: (runId, site) => { watched.push(`${runId}:${site}`); }
+  });
+  return { db, history, capture, receiver, statuses, watched, close: () => { capture.dispose(); db.close(); } };
+}
+test('local reset invalidates an actual dispatch receipt before status, watch or history can be restored', async () => {
+  const f = setup();
+  try {
+    const prepared = await f.capture.prepareRun(request, 44_000);
+    const receive = f.receiver.begin(prepared.dispatch, prepared.historyTokens);
+    f.db.resetLocalData();
+    receive({ site: 'claude', ok: true });
+    assert.equal(f.statuses.length, 0); assert.equal(f.watched.length, 0);
+    assert.equal(f.db.questions.search().items.length, 0);
+  } finally { f.close(); }
 });
-test('a missing history entry does not suppress successful send feedback', () => {
-  const events: string[] = [];
-  const questions = { repository: { lifecycle: 1 }, ownsResult: () => false, result: () => false } as unknown as QuestionHistoryService;
-  const capture = { start: () => { events.push('capture'); } } as unknown as QuestionCaptureService;
-  const manager = { markStatus: () => { events.push('status'); }, watchGeneration: () => { events.push('watch'); } } as unknown as ViewManager;
-  acceptBroadcastResult(1, 'run', { site: 'claude', ok: true }, questions, capture, manager, undefined);
-  assert.deepEqual(events, ['capture', 'status', 'watch']);
+test('receipt identity rejects replacement, unrelated sites and duplicate terminal results independently of history', () => {
+  const f = setup();
+  try {
+    const old = f.receiver.begin(request, new Map());
+    const current = f.receiver.begin(request, new Map());
+    old({ site: 'claude', ok: false, code: 'cancelled' });
+    old({ site: 'claude', ok: true });
+    current({ site: 'chatgpt', ok: true });
+    assert.equal(f.statuses.length, 0);
+    current({ site: 'claude', ok: true });
+    current({ site: 'claude', ok: false, code: 'cancelled' });
+    assert.equal(f.statuses.length, 1); assert.equal(f.statuses[0].phase, 'submitted');
+    assert.deepEqual(f.watched, ['run:claude']);
+  } finally { f.close(); }
 });
-test('a rejected old attempt cannot update status or start generation monitoring', () => {
-  const events: string[] = [];
-  const questions = { repository: { lifecycle: 1 }, ownsResult: () => false, result: () => false } as unknown as QuestionHistoryService;
-  const capture = { start: () => { events.push('capture'); } } as unknown as QuestionCaptureService;
-  const manager = { markStatus: () => { events.push('status'); }, watchGeneration: () => { events.push('watch'); } } as unknown as ViewManager;
-  acceptBroadcastResult(1, 'run', { site: 'claude', ok: true }, questions, capture, manager, 'old-token');
-  assert.deepEqual(events, []);
+test('a failure writing a valid history result still publishes its independent dispatch receipt', async () => {
+  const f = setup();
+  try {
+    const prepared = await f.capture.prepareRun(request, 44_000);
+    const receive = f.receiver.begin(prepared.dispatch, prepared.historyTokens);
+    f.db.questions.putAnswer = () => { throw Error('synthetic_write_failure'); };
+    receive({ site: 'claude', ok: true });
+    assert.equal(f.statuses[0].phase, 'submitted'); assert.equal(f.watched.length, 1);
+  } finally { f.close(); }
 });
-
-test('a failure saving an owned result does not suppress successful send feedback', () => {
-  let status = 0;
-  const questions = { repository: { lifecycle: 1 }, ownsResult: () => true, result: () => false } as unknown as QuestionHistoryService;
-  const capture = { start: () => {} } as unknown as QuestionCaptureService;
-  const manager = { markStatus: () => { status++; }, watchGeneration: () => {} } as unknown as ViewManager;
-  acceptBroadcastResult(1, 'run', { site: 'claude', ok: true }, questions, capture, manager, 'owned-token');
-  assert.equal(status, 1);
+test('a new run invalidates receipts for sites not included in the new request', () => {
+  const f = setup();
+  try {
+    const old = f.receiver.begin(request, new Map());
+    f.receiver.begin({ runId: 'next', sites: ['chatgpt'] }, new Map());
+    old({ site: 'claude', ok: false, code: 'cancelled' });
+    assert.equal(f.statuses.length, 0);
+  } finally { f.close(); }
 });

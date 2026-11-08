@@ -258,8 +258,9 @@ export class QuestionHistoryService {
   cancel(sites: readonly SiteKey[] = [...this.active.keys()], reason: CaptureReason = "capture_cancelled"): void {
     for (const site of sites) this.guarded(() => {
       this.releasableSites.delete(site);
-      const current = this.current(site);
-      this.active.delete(site);
+      let current: QuestionAnswerRecord | null;
+      try { current = this.current(site); }
+      finally { this.active.delete(site); } // Storage failure must still detach the old page token.
       if (!current) return;
       const now = Math.max(this.now(), current.updatedAt + 1);
       this.repository.putAnswer({ ...current, updatedAt: now, sealedAt: now, capture: "interrupted", captureCode: reason, submission: current.submission === "pending" ? "cancelled" : current.submission });

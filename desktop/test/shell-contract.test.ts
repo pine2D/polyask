@@ -296,7 +296,9 @@ test("answer generation monitoring is run-scoped and never changes navigation", 
   assert.match(ipc, /for \(const site of dispatch\.sites\) manager\.markStatus\(statusForSending/);
   assert.match(ipc, /coordinator\.send\(\s*dispatch,/);
   assert.match(ipc, /prepareRun\(request, [^\n]*lateSentResult\(manager, request\.runId\)\)/);
-  assert.match(ipc, /acceptBroadcastResult\(/);
+  assert.match(ipc, /broadcastResults\.begin\(dispatch, historyTokens\)/);
+  assert.match(ipc, /historyToken: historyTokens\.get\(site\)/);
+  assert.equal(ipc.includes("options.questions.token(site)"), false);
   assert.match(result, /manager\.watchGeneration\(runId, result\.site\)/);
   assert.match(ipc, /cancelGenerationRun\(sites\)/);
   assert.match(manager, /cmd: "generation"/);

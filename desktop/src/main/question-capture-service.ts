@@ -3,7 +3,10 @@ import type { HistorySnapshot } from "../shared/question-capture";
 import type { BroadcastRequest, SiteRunResult } from "../shared/protocol";
 import type { QuestionHistoryService } from "./question-history-service";
 
-export interface PreparedRun { remaining: number; dispatch: BroadcastRequest; settled: SiteRunResult[] }
+export interface PreparedRun {
+  remaining: number; dispatch: BroadcastRequest; settled: SiteRunResult[];
+  historyTokens: ReadonlyMap<SiteKey, string>;
+}
 
 /** Bounded, independent of the UI's single-run generation monitor. */
 export class QuestionCaptureService {
@@ -37,8 +40,17 @@ export class QuestionCaptureService {
     if (!current()) throw new Error("cancelled");
     const settled = request.sites.flatMap(site => settle(site) ?? []);
     const dispatch = settled.length ? { ...request, sites: request.sites.filter(site => !settled.some(r => r.site === site)) } : request;
-    if (dispatch.sites.length) this.history.begin(dispatch);
-    return { remaining: Math.max(1, deadline - Date.now()), dispatch, settled };
+    const historyTokens = new Map<SiteKey, string>();
+    if (dispatch.sites.length) {
+      const recorded = this.history.begin(dispatch);
+      if (recorded) {
+        for (const site of dispatch.sites) {
+          const token = this.history.token(site);
+          if (token) historyTokens.set(site, token);
+        }
+      } else this.history.cancel(dispatch.sites, "superseded");
+    }
+    return { remaining: Math.max(1, deadline - Date.now()), dispatch, settled, historyTokens };
   }
   /**
    * 导航离开前（新会话、辅助综合）与开轮同口径：先读完这些站，正向完成候选只差静默复读时在预算内等它封存。

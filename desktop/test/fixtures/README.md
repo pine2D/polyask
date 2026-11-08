@@ -29,13 +29,13 @@
 - `schema3-*.json`：任务文件夹、归属关系及删除标记，实体 schema 3。
 - `backup-format1.json`：八类业务数据备份，`format: "polyask-backup"` / `version: 1`；不是 Drive 同步封装，不含设备身份。
 
-`shared/sync.ts` 的 `SYNC_SCHEMA = 1` 继续用于旧 history/archive/state，`SUPPORTED_SYNC_SCHEMA = 5` 是客户端识别上限。决策卡和文件夹使用各自实体格式；已有样本始终保留，由对应 wire-format、同步和备份测试校验。
+`shared/sync.ts` 的 `SYNC_SCHEMA = 1` 继续用于旧 history/archive/state，`SUPPORTED_SYNC_SCHEMA = 6` 是客户端识别上限。决策卡和文件夹使用各自实体格式；已有样本始终保留，由对应 wire-format、同步和备份测试校验。
 
 ## 提问历史 schema 4 与备份 v2
 
 - `schema4-question.json` / `schema4-questionAnswer.json`：逐次提问与独立站点尝试；Drive 元数据 ID 为正文 ID 的 SHA-256，不附正文或 URL 预览。
 - `backup-format2.json`：包含新两类实体的业务备份；仍支持读取冻结的 version 1。
-- 提问/回答保持 schema 4；当前客户端识别上限为 `SUPPORTED_SYNC_SCHEMA = 5`，旧实体格式保持不变。
+- 提问与旧回答保持 schema 4，新回答采用 schema 6；当前客户端识别上限为 `SUPPORTED_SYNC_SCHEMA = 6`，旧实体格式保持不变。
 
 ## 偏好与草稿备份 v3
 
@@ -54,3 +54,9 @@
 - `backup-format4.polyask`：冻结的 988 字节二进制容器，SHA-256 `56864beeca35b925a7e08ebc04e182d1e49500c45265ab010597be61efd4b2c9`。包含一条 schema 4 提问、一份 schema 5 附件元数据和真实可解码 1×1 PNG；没有 deviceId/base64 或同步开关。既有 v1–3 样本不改写。
 - 字节顺序为 ASCII `POLYASK-BACKUP-4\n`（17 字节，最后一字节 LF）、uint32BE 清单长度、UTF-8 JSON、清单 payloads 顺序的原始图片字节。payload key 固定为 `images/<从0开始的顺序>.bin`，只作为校验标识，不作为解压路径。完整字段与上限见 `docs/desktop.md`「业务备份与恢复契约」。
 - `backup-container.test.ts` 读取冻结文件并逐字节恢复。`test/lib/backup-image-fixtures.ts` 的 `seedLargeBackupImages` 为合成数据库保存四组有效 2048×1536 RGB PNG（每组约 9 MiB），可供大于 32 MiB 流转与原生解码检查复用；不会访问真实用户数据或网络。
+
+## 网页观测 schema 6 与备份 v5
+
+- `schema6-questionAnswer.json` / `schema6-archive.json`：每次尝试及独立采集中的结构化网页观测；旧schema4回答和schema1采集样本不变。
+- `backup-format5.json`：保留观测的新备份清单；v5二进制容器沿用有界原图载荷布局，使用独立magic。
+- `schema5-sync-pull.ts.txt` / `backup4-validation.ts.txt`：冻结的旧reader源码，由兼容测试实际执行，验证schema6同步只读和v5备份拒收。不可就地更新；新契约另增fixture。

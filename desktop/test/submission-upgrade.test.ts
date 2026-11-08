@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { BroadcastCoordinator } from "../src/main/broadcast";
-import { acceptBroadcastResult } from "../src/main/broadcast-result";
+import { BroadcastResultReceiver } from "../src/main/broadcast-result";
 import { DesktopDatabase } from "../src/main/database";
 import { createQuestionCapture } from "../src/main/question-capture-binding";
 import { QuestionHistoryService, SEAL_QUIET_MS } from "../src/main/question-history-service";
@@ -202,7 +202,7 @@ for (const locate of ["selector", "anchor"] as const) {
       let dispatches = 0, probes = 0;
       const results = await new BroadcastCoordinator().send(request(),
         async () => { dispatches++; return { ok: false, code: "submit_unconfirmed" }; }, 44_000,
-        result => acceptBroadcastResult(db.questions.lifecycle, "run", result, history, capture, fake.manager as unknown as ViewManager, history.token(result.site)),
+        new BroadcastResultReceiver(history, capture, fake.manager as unknown as ViewManager).begin(request(), new Map([["claude", token]])),
         { confirm: async () => { probes++; return { supported: false, ok: false }; }, resubmit: false });
       assert.equal(results[0].code, "submit_unconfirmed");
       assert.equal(fake.statuses.get("claude")?.submission?.state, "unconfirmed");
