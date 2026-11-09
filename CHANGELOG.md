@@ -8,6 +8,14 @@
 
 ## [未发布]
 
+## [1.32.0] - 2026-11-09
+
+升级说明：使用新的网页模型观测、多段依据或历史与决策卡星标后，相应同步记录与备份需要 v1.32.0 或更高版本读取；多设备使用时请一起升级。旧记录与旧备份仍可读取。
+
+验收范围：Linux/WSL 下通过 2,738 项应用/UI 测试、546 项运行时测试、类型检查、依赖审计、仓库门禁、Linux 打包及离线包内九站加载检查；星标功能另通过三语、明暗主题、宽窄窗口与缩放共 26 组隔离 Electron 交互检查。
+
+验收限制：未完成 Windows/macOS 实机安装与交互、真实站点发送及 Drive 双设备同步；ChatGPT Default 新菜单的真实点击、方向键与组合切换仍待用户环境验收。本轮未核验 Google Cloud 控制台指标及公众账号 OAuth 授权。完整结果库视觉专项仍有来源导航宽度基线断言失败，星标交互专项已单独通过，详见[验收记录](https://github.com/pine2D/polyask/blob/v1.32.0/docs/acceptance.md#2026-11-09-历史与采集库星标验收)。
+
 ### 新增
 
 - 历史提问与采集库的回答、决策卡支持直接加星和取消星标，列表与详情状态一致；搜索旁可筛选星标内容，采集库支持混合批量操作。星标随同步与备份保留，新格式需本版或更高版本读取；取消星标保留当前阅读位置。
@@ -1699,7 +1707,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.31.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.32.0...HEAD
+[1.32.0]: https://github.com/pine2D/polyask/compare/v1.31.0...v1.32.0
 [1.31.0]: https://github.com/pine2D/polyask/compare/v1.30.0...v1.31.0
 [1.30.0]: https://github.com/pine2D/polyask/compare/v1.29.0...v1.30.0
 [1.29.0]: https://github.com/pine2D/polyask/compare/v1.28.3...v1.29.0
