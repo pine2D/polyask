@@ -163,6 +163,10 @@ Linux 原生专项：在 `desktop/` 运行 `node scripts/test-safe.mjs command n
 - 任一 `.ts` 写 `const n: number = "x"` → `npm test` 必红；在 `desktop/test/` 新建子目录放一个 `.test.ts` → 用例总数不得下降（证明 glob 真收得到——文件没被捡到时运行器照样 exit 0）。
 - 行数门禁：给越界文件加一行空行必须红（棘轮只降不升）；同一 commit 里连基线一起改才不红。
 
+### 星标交互专项
+
+`cd desktop && npm run test:unit -- test/stars-native.check.ts` 在隔离 Electron profile 与临时资源 cgroup 中，使用生产历史/结果库组件和合成数据检查两页三语、明暗、640/1400px 及 200% 缩放的 26 组场景。原生鼠标/Space 验证列表和详情加星、失败重试、单次写入、取消后保持阅读位置、决策卡及混合批量星标；保存截图，核对零网络、无 renderer error、归属进程退出及 profile 清理。异步旧回包、SQLite 重启、schema 7 同步和 v6 备份由 `starred-*.test.ts(x)` 覆盖；不代替真实 Drive 双设备、Windows/macOS 和物理读屏验收。
+
 ## 真机环境（Desktop 开发态）
 
 - **本机登录档案默认使用 `~/.config/PolyAsk`**（用户于 2026-09-28 明确指定并授权用于真机排障）。后续站点排障直接复用该档案，不重复询问路径或要求重新登录；不复制登录资料。启动前检查已有实例，避免并发占用；调试端口仅监听本机。该约定不包含发送提问、删除数据或对外传送登录资料的授权。

@@ -120,6 +120,9 @@ export class QuestionHistoryService {
   token(site: SiteKey): string | undefined { const e = this.active.get(site); return e?.lifecycle === this.repository.lifecycle ? e.token : undefined; }
   releasable(site: SiteKey): boolean { return this.releasableSites.get(site) === this.repository.lifecycle; }
   clearReleaseEvidence(sites: readonly SiteKey[]): void { for (const site of sites) this.releasableSites.delete(site); }
+  setFavorite(id: string, favorite: boolean): QuestionRecord {
+    return this.repository.setFavorite(id, favorite, this.now(), this.options.deviceId());
+  }
   delete(id: string): boolean {
     for (const [site, entry] of this.active) if (entry.questionId === id) { this.active.delete(site); this.releasableSites.delete(site); }
     const deleted = this.repository.delete(id, this.now(), this.options.deviceId());

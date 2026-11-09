@@ -96,7 +96,7 @@ test('a hidden dirty organizer guards record navigation once and returns to its 
     note.focus(); await h.input(note, 'Do not discard me');
     await h.click(h.document.querySelector<HTMLButtonElement>('.archive-organization-close')!);
     assert.equal(h.document.activeElement === organize, true, JSON.stringify({ active: h.document.activeElement?.outerHTML.slice(0, 250), connected: organize.isConnected, same: h.document.querySelector('.library-organize') === organize }));
-    const other = h.document.querySelector<HTMLButtonElement>('.archive-list button:not([aria-current=true])')!;
+    const other = h.document.querySelector<HTMLButtonElement>('[data-action=library-open-item]:not([aria-current=true])')!;
     await h.click(other); await comparisonWait(() => h.document.querySelector('.confirm-dialog'));
     assert.equal(h.document.querySelectorAll('.confirm-dialog').length, 1);
     await h.click(h.document.querySelector<HTMLButtonElement>('.confirm-actions button:not(.primary)')!);

@@ -12,7 +12,7 @@ export type FolderContentSummary = {
   };
 } | {
   readonly kind: 'decision';
-  readonly record: Pick<DecisionRecord, 'id' | 'title' | 'status' | 'createdAt' | 'updatedAt'>;
+  readonly record: Pick<DecisionRecord, 'id' | 'title' | 'status' | 'createdAt' | 'updatedAt' | 'favorite'>;
 };
 export interface FolderPageRequest extends FolderFilters {
   readonly page?: number;

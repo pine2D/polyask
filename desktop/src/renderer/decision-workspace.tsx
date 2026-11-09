@@ -1,3 +1,4 @@
+import { StarButton } from './star-button';
 import { useEffect, useRef, useState } from "react";
 import type { ArchiveRecord } from "../shared/archive";
 import type { DesktopCopy } from "../shared/copy";
@@ -23,6 +24,7 @@ interface Props {
   readonly onCancelNew?: () => void;
   readonly initialRecord?: DecisionRecord;
   readonly initialDraft?: DecisionInput;
+  readonly onStarred?: (record: DecisionRecord) => void;
   readonly onChanged?: (record?: DecisionRecord) => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
@@ -35,7 +37,7 @@ const newCard = (source: ArchiveRecord): DecisionInput => ({ archiveId: source.i
   title: [...(source.task || source.text)].slice(0, 160).join(""), conclusion: "", rationale: "",
   uncertainties: "", nextStep: "", status: "draft", evidence: [] });
 
-export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize, onBusy, onCancelNew }: Props): React.JSX.Element {
+export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, onArchives, onClose, embedded, initialRecord, onChanged, onOrganize, onBusy, onCancelNew, onStarred }: Props): React.JSX.Element {
   const [items, setItems] = useState<DecisionRecord[]>([]);
   const [saved, setSaved] = useState<DecisionRecord | null>(initialRecord ?? null);
   const [value, setValue] = useState<DecisionInput | null>(() => initialSource ? initialDraft?.archiveId === initialSource.id ? initialDraft : newCard(initialSource) : initialRecord ? decisionInput(initialRecord) : null);
@@ -201,6 +203,11 @@ export function DecisionWorkspace({ copy, locale, initialSource, initialDraft, o
                 <button type="button" disabled={busy} onClick={() => guard(() => { if (saved) { setValue(decisionInput(saved)); setEditing(false); setValidationStarted(false); } else { clearDetail(); onCancelNew?.(); } })}>{copy.decisionCancel}</button>
                 <button className="library-primary" type="button" disabled={busy} onClick={save}>{busy ? copy.librarySaving : copy.decisionSave}</button>
               </> : <>
+                {saved && <StarButton copy={copy} starred={!!saved.favorite} disabled={busy} onChange={async () => {
+                  const record = await shell.setDecisionFavorite(saved.id, !saved.favorite);
+                  setSaved(current => current?.id === record.id && current.updatedAt <= record.updatedAt ? record : current);
+                  onStarred?.(record);
+                }} />}
                 {onOrganize ? <button type="button" disabled={busy} onClick={onOrganize}>{copy.libraryOrganize}</button> : null}
                 <button type="button" disabled={busy} onClick={() => setEditing(true)}>{copy.decisionEdit}</button>
                 <LibraryMenu label={copy.libraryMore} disabled={busy} actions={[{ label: copy.decisionExport, run: exportCard },

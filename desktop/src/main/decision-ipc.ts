@@ -6,7 +6,7 @@ interface DecisionIpcEvent {
   readonly sender: Electron.WebContents;
   readonly senderFrame: Electron.WebFrameMain | null;
 }
-const CHANNELS = ["polyask:decision-search", "polyask:decision-get", "polyask:decision-create", "polyask:decision-update", "polyask:decision-delete", "polyask:decision-markdown"] as const;
+const CHANNELS = ["polyask:decision-search", "polyask:decision-get", "polyask:decision-create", "polyask:decision-update", "polyask:decision-delete", "polyask:decision-markdown", "polyask:decision-favorite"] as const;
 const id = (value: unknown): string => {
   if (typeof value !== "string" || !value.trim() || value.length > 128) throw new Error("invalid_request");
   return value;
@@ -30,6 +30,11 @@ export function registerDecisionIpc(options: {
     return options.decisions.update(id(v.id),v.input);
   });
   handle(CHANNELS[4], value => options.decisions.delete(id(value)));
+  handle('polyask:decision-favorite', value => {
+    const v = value as { id?: unknown; favorite?: unknown } | null;
+    if (typeof v?.favorite !== 'boolean') throw new Error('invalid_request');
+    return options.decisions.setFavorite(id(v.id), v.favorite);
+  });
   handle(CHANNELS[5], value => {
     if (!value || typeof value !== "object") throw new Error("invalid_request");
     const v = value as {id?:unknown;locale?:unknown};

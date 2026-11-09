@@ -111,7 +111,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           {record.source ? <button type="button" className="archive-source" title={record.source.url} onClick={() => props.onOpenSource(record.source!.url)}>{copy.archiveSource}: {record.source.title || record.source.url}</button> : null}
         </div>
         <div className="archive-detail-actions">
-          <button type="button" className={record.favorite ? 'active' : ''} title={favoriteLabel} aria-label={favoriteLabel} aria-pressed={record.favorite} disabled={props.busy} onClick={() => requestDecisionNavigation(() => props.onPatch({ favorite: !record.favorite }))}><StarIcon /></button>
+          <button type="button" className="star-button" title={favoriteLabel} aria-label={favoriteLabel} aria-pressed={record.favorite} aria-disabled={props.busy || undefined} onClick={() => !props.busy && requestDecisionNavigation(() => props.onPatch({ favorite: !record.favorite }))}><StarIcon /></button>
           {props.recordActions}
         </div>
       </header>

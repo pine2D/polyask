@@ -3,14 +3,17 @@ import type { QuestionAnswerRecord } from '../shared/question-history';
 import { shell } from './shell-api';
 import { ChevronDownIcon, CopyIcon, ExternalLinkIcon, LinkIcon } from './icons';
 import { LibraryMenu } from './library-menu';
+import { StarButton } from './star-button';
 
 export function QuestionHistoryRecordActions({ questionId, prompt, canOrganize, copy, busy,
-  onReask, onDelete, onAnnounce, onOrganize, onExportWhole }: {
+  onReask, onDelete, onAnnounce, onOrganize, onExportWhole, starred, onFavorite }: {
   questionId: string; prompt: string; canOrganize: boolean; copy: DesktopCopy; busy: boolean;
   onReask: () => void; onDelete: () => void; onAnnounce: (text: string) => void;
   onOrganize?: () => void; onExportWhole?: () => void;
+  starred?: boolean; onFavorite?: () => Promise<unknown>;
 }): React.JSX.Element {
   return <div className="question-prompt-actions">
+      {onFavorite && <StarButton copy={copy} starred={!!starred} disabled={busy} onChange={onFavorite} />}
       <span className="question-copy-action"><span aria-hidden="true">{copy.questionCopyPrompt}</span><button type="button" className="question-icon-action" data-action="copy-question" aria-label={copy.questionCopyPrompt} data-hint={copy.questionCopyPrompt} onClick={() => {
         void navigator.clipboard.writeText(prompt).then(() => onAnnounce(copy.questionPromptCopied)).catch(() => onAnnounce(copy.questionFailed));
       }}><CopyIcon /></button></span>

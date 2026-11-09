@@ -8,13 +8,14 @@ import { validSyncTime } from "./sync";
 export const QUESTION_SCHEMA = 4;
 export const QUESTION_ANSWER_LIMIT = 200_000;
 export interface QuestionVersion {
-  readonly schema: 4;
+  readonly schema: 4 | 7;
   readonly id: string;
   readonly createdAt: number;
   readonly updatedAt: number;
   readonly deviceId: string;
 }
 export interface QuestionRecord extends QuestionVersion {
+  readonly favorite?: boolean;
   readonly text: string;
   readonly sites: readonly SiteKey[];
   readonly requestedTier: Tier;
@@ -48,7 +49,7 @@ export interface QuestionSummary extends QuestionRecord {
   readonly savedSites: number;
   readonly answers: readonly Omit<QuestionAnswerRecord, "answerMarkdown">[];
 }
-export interface QuestionFilters { readonly query?: string; readonly cursor?: string; readonly limit?: number }
+export interface QuestionFilters { readonly query?: string; readonly favorite?: boolean; readonly cursor?: string; readonly limit?: number }
 export interface QuestionLegacyPage { readonly items: readonly PromptHistoryItem[]; readonly cursor: string | null }
 export interface QuestionPage { readonly items: readonly QuestionSummary[]; readonly cursor: string | null }
 export interface QuestionDetail { readonly loadedAnswerId?: string | null; readonly question: QuestionRecord; readonly answers: readonly QuestionAnswerRecord[] }
@@ -58,13 +59,14 @@ export const questionIdValid = (v: unknown): v is string => typeof v === "string
 const VERSION_KEYS = ["schema", "id", "createdAt", "updatedAt", "deviceId"];
 const only = (v: Record<string, unknown>, keys: readonly string[]) => Object.keys(v).every(k => keys.includes(k));
 function version(v: Record<string, unknown>, answer = false): boolean {
-  return (v.schema === QUESTION_SCHEMA || (answer && v.schema === 6)) && questionIdValid(v.id) && questionIdValid(v.deviceId) &&
+  return (v.schema === QUESTION_SCHEMA || (answer ? v.schema === 6 : v.schema === 7)) && questionIdValid(v.id) && questionIdValid(v.deviceId) &&
     validSyncTime(v.createdAt) && validSyncTime(v.updatedAt) && v.updatedAt >= v.createdAt;
 }
 export function isStoredQuestion(v: unknown): v is StoredQuestion {
   if (!object(v) || !version(v)) return false;
   if ("deletedAt" in v) return only(v, [...VERSION_KEYS, "deletedAt"]) && validSyncTime(v.deletedAt) && v.deletedAt >= Number(v.createdAt);
-  return only(v, [...VERSION_KEYS, "text", "sites", "requestedTier", "inputImageCount"]) && typeof v.text === "string" && !!v.text.trim() && v.text.length <= 100_000 &&
+  return only(v, [...VERSION_KEYS, "text", "sites", "requestedTier", "inputImageCount", ...(v.schema === 7 ? ["favorite"] : [])]) &&
+    (v.schema !== 7 || typeof v.favorite === "boolean") && typeof v.text === "string" && !!v.text.trim() && v.text.length <= 100_000 &&
     Array.isArray(v.sites) && v.sites.length > 0 && v.sites.length <= SITE_KEYS.length &&
     new Set(v.sites).size === v.sites.length && v.sites.every(site => SITE_KEYS.includes(site)) &&
     (v.requestedTier === null || v.requestedTier === "fast" || v.requestedTier === "think") &&

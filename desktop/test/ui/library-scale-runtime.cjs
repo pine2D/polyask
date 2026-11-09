@@ -63,7 +63,7 @@ async function run(win, locale, width) {
   await click(win, action('multi-select')); await until(win, "!document.querySelector('.library-selection').hidden");
   await click(win, action('select-page'));
   await until(win, "document.querySelectorAll('.library-content-row input:checked').length===100");
-  check(await win.webContents.executeJavaScript("document.querySelector('[data-action=library-bulk-favorite]').disabled"), 'mixed page cannot favorite decision cards');
+  check(await win.webContents.executeJavaScript("!document.querySelector('[data-action=library-bulk-favorite]').disabled"), 'mixed page can star saved results and decision cards');
   await click(win, action('previous-page'));
   await until(win, "document.querySelectorAll('.library-item-title').length===100&&document.querySelector('.archive-list').getAttribute('aria-busy')==='false'&&document.querySelectorAll('.library-content-row input:checked').length===0");
   await click(win, q('.library-content-row .library-row-check'));

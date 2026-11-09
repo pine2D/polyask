@@ -13,10 +13,11 @@ test('result rows prioritize the title and date without repeating type, sources 
   for (const locale of ['en', 'zh-CN', 'zh-TW']) {
     const copy = getCopy(locale);
     const html = renderToStaticMarkup(<LibraryContentRow item={{ kind: 'archive', record }} copy={copy} labels={getLibraryCopy(locale)}
-      locale={locale} current={true} checked={false} disabled={false} onCheck={() => {}} onOpen={() => {}} />);
+      locale={locale} current={true} checked={false} disabled={false} onCheck={() => {}} onOpen={() => {}} onFavorite={async () => {}} />);
     assert.match(html, /title="Question">Question/);
     assert.match(html, /<time dateTime="1970-01-01T00:00:00.100Z"/);
-    assert.ok(html.includes(copy.libraryFavorited));
+    assert.ok(html.includes(copy.unfavoriteArchive));
+    assert.match(html, /aria-pressed="true"/);
     assert.doesNotMatch(html, /Claude|ChatGPT|Kimi|Repeated tag|library-item-type|library-source-count/);
     assert.match(html, /aria-current="true"/);
   }

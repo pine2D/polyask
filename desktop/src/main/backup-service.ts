@@ -61,8 +61,9 @@ export class BackupService {
       const exported = draft ? { ...draft, format: draft.format === 2 ? 2 : draftFormat(draft) } : body;
       entries.push({ kind, id, body: projectBody(kind, exported, id) });
     }
-    const extended = entries.some(e => e.body.schema === 6 || (e.kind === "draft" && e.body.format === 2));
-    const document = validateBackup({ format: "polyask-backup", version: extended ? 5 : 3, exportedAt: this.now(), entries });
+    const starred = entries.some(e => e.body.schema === 7);
+    const extended = starred || entries.some(e => e.body.schema === 6 || (e.kind === "draft" && e.body.format === 2));
+    const document = validateBackup({ format: "polyask-backup", version: starred ? 6 : extended ? 5 : 3, exportedAt: this.now(), entries });
     return extended ? backupContainerDocument(this.database, document, true) : document;
   }
   /** Every asynchronous continuation checks both UI intent and reset lifecycle. */

@@ -13,8 +13,8 @@ async function perform(target: FolderTarget, request: BulkRequest): Promise<stri
   if (request.action === 'add-folder') {
     await shell.patchFolderMemberships(target, (request.folderIds ?? []).map(folderId => ({ folderId, present: true })));
   } else if (request.action === 'favorite') {
-    if (target.kind !== 'archive') throw new Error('archive_only');
-    await shell.updateArchive(target.id, { favorite: request.favorite !== false });
+    if (target.kind === 'archive') await shell.updateArchive(target.id, { favorite: request.favorite !== false });
+    else await shell.setDecisionFavorite(target.id, request.favorite !== false);
   } else return target.kind === 'archive' ? shell.archiveMarkdown(target.id, request.locale) : shell.decisionMarkdown(target.id, request.locale);
 }
 
@@ -26,7 +26,6 @@ export function useLibraryBulk(onBlocking: (busy: boolean) => void, onComplete: 
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; stopping.current = true; }; }, []);
   const execute = async (request: BulkRequest, original?: { request: BulkRequest; outcome: BulkOutcome }, skipped: readonly FolderTarget[] = []) => {
     if (pending.current || !mounted.current || (!request.targets.length && !skipped.length)) return;
-    if (request.action === 'favorite' && request.targets.some(target => target.kind !== 'archive')) return;
     pending.current = true; stopping.current = false;
     callbacks.current.onBlocking(true); setRunning(true); setDone(0);
     try {

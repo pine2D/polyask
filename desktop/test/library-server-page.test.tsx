@@ -34,7 +34,7 @@ test('production workspace loads SQL summary pages and keeps selected IDs for a 
     assert.equal(h.document.querySelector('.library-item-title')?.textContent, 'Result 104');
     assert.equal(h.document.querySelector('.library-selection-summary')?.textContent?.includes('100'), true);
     await h.click(h.document.querySelector<HTMLInputElement>('.library-row-check input')!);
-    const favorite = [...h.document.querySelectorAll<HTMLButtonElement>('.library-bulk-actions button')].find(b => b.textContent?.includes('Favorite'))!;
+    const favorite = [...h.document.querySelectorAll<HTMLButtonElement>('.library-bulk-actions button')].find(b => b.dataset.action === 'library-bulk-favorite')!;
     await h.click(favorite); await waitForInitial();
     assert.equal(f.writes.length, 101);
     assert.equal(f.services.archives.get('r0204')!.favorite, true);

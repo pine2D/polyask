@@ -5,10 +5,11 @@ import { dateTimeAttribute, formatDateTime, formatListDate } from '../shared/for
 import type { FolderContentSummary } from '../shared/task-folder-page';
 import { decisionStatusLabel } from './decision-editor';
 import { libraryTitle, type LibrarySort } from './library-list-model';
-import { StarIcon } from './icons';
+import { StarButton } from './star-button';
 
-export function LibraryContentRow({ item, copy, labels, locale, current, checked, disabled, onCheck, onOpen, showKind = true, sort = 'updated-desc' }: {
+export function LibraryContentRow({ item, copy, labels, locale, current, checked, disabled, onCheck, onOpen, onFavorite, showKind = true, sort = 'updated-desc' }: {
   item: FolderContentSummary; copy: DesktopCopy; labels: LibraryCopy; locale: string;
+  onFavorite?: () => Promise<unknown>;
   showKind?: boolean; sort?: LibrarySort;
   current: boolean; checked: boolean; disabled: boolean; onCheck: () => void; onOpen: () => void;
 }) {
@@ -20,7 +21,6 @@ export function LibraryContentRow({ item, copy, labels, locale, current, checked
     <button type="button" data-action="library-open-item" aria-current={current ? 'true' : undefined} disabled={disabled} onClick={onOpen}>
       <span className="library-item-heading">
         <span className="library-item-title" title={title}>{title || '—'}</span>
-        {item.kind === 'archive' && item.record.favorite ? <span className="library-item-favorite" role="img" title={copy.libraryFavorited} aria-label={copy.libraryFavorited}><StarIcon /></span> : null}
       </span>
       <span className="library-item-meta">
         <time dateTime={instant} title={fullDate}>{formatListDate(time, locale)}</time>
@@ -30,5 +30,6 @@ export function LibraryContentRow({ item, copy, labels, locale, current, checked
         </> : null}
       </span>
     </button>
+    {onFavorite && <StarButton copy={copy} title={title} starred={!!item.record.favorite} disabled={disabled} onChange={onFavorite} />}
   </div>;
 }

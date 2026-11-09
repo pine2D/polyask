@@ -1,5 +1,6 @@
 export const BACKUP_CONTAINER_MAX_BYTES = 512 * 1024 * 1024;
-export const BACKUP_MAGIC = "POLYASK-BACKUP-5\n";
+export const BACKUP_MAGIC = "POLYASK-BACKUP-6\n";
+export const BACKUP_V5_MAGIC = "POLYASK-BACKUP-5\n";
 export const BACKUP_LEGACY_MAGIC = "POLYASK-BACKUP-4\n";
 export const BACKUP_PREVIEW_TTL_MS = 15 * 60 * 1000;
 export const BACKUP_MAX_BYTES = 32 * 1024 * 1024;
@@ -13,7 +14,7 @@ export interface BackupEntry {
 }
 export interface BackupDocument {
   readonly format: "polyask-backup";
-  readonly version: 1 | 2 | 3 | 4 | 5;
+  readonly version: 1 | 2 | 3 | 4 | 5 | 6;
   readonly exportedAt: number;
   readonly entries: readonly BackupEntry[];
   readonly payloads?: readonly BackupPayload[];

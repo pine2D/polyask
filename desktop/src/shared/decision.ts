@@ -22,13 +22,14 @@ export interface DecisionInput {
   readonly evidence: readonly DecisionEvidenceInput[];
 }
 export interface DecisionRecord extends Omit<DecisionInput, "evidence"> {
+  readonly favorite?: boolean;
   readonly id: string;
   readonly sourceTitle: string;
   readonly evidence: readonly DecisionEvidence[];
   readonly createdAt: number;
   readonly updatedAt: number;
   readonly deviceId: string;
-  readonly schema: 2 | 6;
+  readonly schema: 2 | 6 | 7;
 }
 export interface DecisionTombstone {
   readonly id: string;
@@ -36,10 +37,11 @@ export interface DecisionTombstone {
   readonly updatedAt: number;
   readonly deletedAt: number;
   readonly deviceId: string;
-  readonly schema: 2 | 6;
+  readonly schema: 2 | 6 | 7;
 }
 export type StoredDecision = DecisionRecord | DecisionTombstone;
 export interface DecisionFilters {
+  readonly favorite?: boolean;
   readonly query?: string;
   readonly status?: DecisionStatus | "";
   readonly archiveId?: string;
@@ -74,9 +76,10 @@ export function isDecisionInput(value: unknown): value is DecisionInput {
 export function isStoredDecision(value: unknown): value is StoredDecision {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const v = value as Partial<DecisionRecord & DecisionTombstone>;
-  if ((v.schema !== 2 && v.schema !== 6) || !bounded(v.id, 128, true) || !bounded(v.deviceId, 128, true) ||
+  if ((v.schema !== 2 && v.schema !== 6 && v.schema !== 7) || !bounded(v.id, 128, true) || !bounded(v.deviceId, 128, true) ||
     !time(v.createdAt) || !time(v.updatedAt) || v.updatedAt < v.createdAt) return false;
   if ("deletedAt" in v) return time(v.deletedAt) && v.deletedAt >= v.createdAt;
+  if (v.schema === 7 ? typeof v.favorite !== 'boolean' : v.favorite !== undefined) return false;
   if (!isDecisionInput(v)) return false;
   if (v.schema === 2 && (v.sourceUpdatedAt !== undefined || v.evidence?.some(e => e.id !== undefined || e.topic !== undefined))) return false;
   if (v.schema === 6 && (!time(v.sourceUpdatedAt) || !v.evidence?.every(e => bounded(e.id, 128, true)))) return false;

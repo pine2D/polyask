@@ -25,12 +25,12 @@ export function isBackupPreferenceKey(key: unknown): key is PreferenceKey {
 const fields: Record<BackupKind, string[]> = {
   preference: ["value", "updatedAt"],
   draft: ["format", "id", "kind", "context", "title", "content", "sourceUpdatedAt", "updatedAt"],
-  question: ["id", "text", "sites", "requestedTier", "inputImageCount", "createdAt", "updatedAt", "schema"],
+  question: ["favorite", "id", "text", "sites", "requestedTier", "inputImageCount", "createdAt", "updatedAt", "schema"],
   questionAttachments: ["schema", "id", "questionId", "createdAt", "updatedAt", "images"],
   questionAnswer: ["id", "questionId", "site", "attempt", "createdAt", "updatedAt", "schema", "submission", "submissionCode", "conversationUrl", "answerMarkdown", "capture", "captureCode", "capturedAt", "truncated", "sealedAt", "observation"],
   history: ["id", "textHash", "text", "preview", "createdAt", "lastUsedAt", "updatedAt", "schema"],
   archive: ["id", "text", "task", "source", "results", "favorite", "tags", "note", "winnerHost", "synthesis", "hosts", "resultPreviews", "searchText", "preview", "createdAt", "updatedAt", "ts", "schema"],
-  decision: ["sourceUpdatedAt", "id", "archiveId", "title", "sourceTitle", "conclusion", "rationale", "uncertainties", "nextStep", "status", "evidence", "createdAt", "updatedAt", "schema"],
+  decision: ["favorite", "sourceUpdatedAt", "id", "archiveId", "title", "sourceTitle", "conclusion", "rationale", "uncertainties", "nextStep", "status", "evidence", "createdAt", "updatedAt", "schema"],
   folder: ["id", "name", "createdAt", "updatedAt", "schema"],
   folderMembership: ["id", "folderId", "targetKind", "targetId", "createdAt", "updatedAt", "schema"],
   template: ["id", "name", "text", "updatedAt"], group: ["id", "name", "sites", "updatedAt"], workspace: ["selectedSites", "tier", "updatedAt", "participation"]
@@ -115,7 +115,7 @@ export function validateBackup(value: unknown): BackupDocument {
     throw new Error("backup_too_large");
   if (!object(value) || value.format !== "polyask-backup")
     throw new Error("backup_invalid");
-  if (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4 && value.version !== 5)
+  if (value.version !== 1 && value.version !== 2 && value.version !== 3 && value.version !== 4 && value.version !== 5 && value.version !== 6)
     throw new Error("backup_version");
   if (!validSyncTime(value.exportedAt) || !Array.isArray(value.entries) || value.entries.length > BACKUP_MAX_ENTRIES)
     throw new Error("backup_invalid");
@@ -131,6 +131,7 @@ export function validateBackup(value: unknown): BackupDocument {
       throw new Error("backup_invalid");
     seen.add(key);
     if (value.version < 5 && object(e.body) && (Number(e.body.schema) >= 6 || (e.kind === "draft" && e.body.format === 2))) throw new Error("backup_version");
+    if (value.version < 6 && object(e.body) && Number(e.body.schema) >= 7) throw new Error("backup_version");
     const body = projectBody(kind, e.body, e.id);
     if (kind === "workspace" ? e.id !== "workspace" : kind !== "preference" && body.id !== e.id)
       throw new Error("backup_invalid");

@@ -4,14 +4,14 @@ import type { QuestionFilters, QuestionPage, QuestionSummary } from '../shared/q
 // not push an already visible record out of the refreshed window.
 export async function refreshQuestionPages(
   list: (filters: QuestionFilters) => Promise<QuestionPage>, query: string,
-  previous: QuestionPage, current: () => boolean,
+  previous: QuestionPage, current: () => boolean, favorite?: boolean,
 ): Promise<QuestionPage | null> {
   const tail = previous.items.at(-1);
   const items: QuestionSummary[] = [];
   const seen = new Set<string>();
   let cursor: string | undefined;
   do {
-    const result = await list({ query, cursor, limit: 50 });
+    const result = await list({ query, cursor, limit: 50, ...(favorite ? { favorite } : {}) });
     if (!current()) return null;
     for (const item of result.items) if (!seen.has(item.id)) { seen.add(item.id); items.push(item); }
     const last = result.items.at(-1);

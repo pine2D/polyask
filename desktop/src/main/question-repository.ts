@@ -18,9 +18,9 @@ function stamp(now: number, current: { updatedAt: number; createdAt: number }): 
   if (!Number.isSafeInteger(value)) throw new Error("invalid_question_time");
   return value;
 }
-function tombstone(record: Omit<QuestionVersion, "schema">, now: number, deviceId: string): QuestionTombstone {
+function tombstone(record: Omit<QuestionVersion, "schema"> & { schema?: number }, now: number, deviceId: string): QuestionTombstone {
   const updatedAt = stamp(now, record);
-  return { schema: 4, id: record.id, createdAt: record.createdAt, updatedAt, deletedAt: updatedAt, deviceId };
+  return { schema: record.schema === 7 ? 7 : 4, id: record.id, createdAt: record.createdAt, updatedAt, deletedAt: updatedAt, deviceId };
 }
 function answerTombstone(record: QuestionAnswerIdentity, now: number, deviceId: string): QuestionAnswerTombstone {
   return { ...tombstone(record, now, deviceId), schema: record.schema, questionId: record.questionId, site: record.site, attempt: record.attempt };
@@ -183,7 +183,7 @@ export class QuestionRepository {
   }
   search(filters: QuestionFilters = {}): QuestionPage {
     const limit = Math.max(1, Math.min(100, Math.floor(filters.limit ?? 50)));
-    if (!Number.isFinite(limit) || (filters.query?.length ?? 0) > 1000) throw new Error("invalid_question_query");
+    if (!Number.isFinite(limit) || (filters.query?.length ?? 0) > 1000 || (filters.favorite !== undefined && typeof filters.favorite !== 'boolean')) throw new Error("invalid_question_query");
     let cursor: [number, string] | null = null;
     if (filters.cursor) {
       try { cursor = JSON.parse(filters.cursor); } catch { throw new Error("invalid_question_query"); }
@@ -191,9 +191,10 @@ export class QuestionRepository {
     }
     const query = foldQuestionSearch((filters.query ?? "").trim());
     const records = this.db.prepare(`SELECT body FROM questions WHERE deleted_at IS NULL
+      AND (? = 0 OR json_extract(body, '$.favorite') = 1)
       AND (? = '' OR instr(question_search_fold(json_extract(body, '$.text')), ?) > 0)
       AND (? IS NULL OR sort_time < ? OR (sort_time = ? AND id > ?))
-      ORDER BY sort_time DESC,id LIMIT ?`).all(query, query, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[1] ?? "", limit + 1)
+      ORDER BY sort_time DESC,id LIMIT ?`).all(filters.favorite ? 1 : 0, query, query, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[0] ?? null, cursor?.[1] ?? "", limit + 1)
       .flatMap(row => { const v = readJson<QuestionRecord>(row); return v ? [v] : []; });
     const selected = records.slice(0, limit);
     type Summary = { metadata: Omit<QuestionAnswerRecord, "answerMarkdown">; saved: boolean };
@@ -218,6 +219,15 @@ export class QuestionRepository {
     });
     const last = items.at(-1);
     return { items, cursor: records.length > limit && last ? JSON.stringify([last.createdAt, last.id]) : null };
+  }
+  setFavorite(id: string, favorite: boolean, now: number, deviceId: string): QuestionRecord {
+    if (typeof favorite !== 'boolean') throw new Error('invalid_favorite');
+    const current = this.get(id);
+    if (!current || 'deletedAt' in current) throw new Error('history_not_found');
+    if (!!current.favorite === favorite) return current;
+    const record: QuestionRecord = { ...current, schema: 7, favorite, updatedAt: stamp(now, current), deviceId };
+    this.put(record);
+    return record;
   }
   delete(id: string, now: number, deviceId: string): boolean {
     const current = this.get(id);

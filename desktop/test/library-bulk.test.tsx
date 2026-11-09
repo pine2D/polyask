@@ -39,10 +39,16 @@ test('bulk favorite reports blocking synchronously, suppresses repeats and relea
   } finally { await h.close(); setShellApi(null); }
 });
 
-test('mixed kinds cannot be favorited and adding a folder preserves unrelated memberships', async () => {
+test('mixed kinds can be starred and adding a folder preserves unrelated memberships', async () => {
   const members = new Map<string, string[]>([[`archive:${record.id}`, ['existing']], [`decision:${decision.id}`, ['other']]]);
-  const changes: string[] = [];
+  const changes: string[] = [], stars: string[] = [];
   api([{ kind: 'archive', record }, { kind: 'decision', record: decision }], {
+    updateArchive: async (id: string, patch: ArchivePatch) => {
+      assert.equal(patch.favorite, true); stars.push(`archive:${id}`); return { ...record, ...patch };
+    },
+    setDecisionFavorite: async (id: string, favorite: boolean) => {
+      assert.equal(favorite === true, true); stars.push(`decision:${id}`); return { ...decision, schema: 7, favorite };
+    },
     patchFolderMemberships: async (target: FolderTarget, delta: readonly FolderMembershipChange[]) => {
       assert.deepEqual(delta, [{ folderId: folder.id, present: true }]);
       const key = `${target.kind}:${target.id}`; changes.push(key);
@@ -52,8 +58,9 @@ test('mixed kinds cannot be favorited and adding a folder preserves unrelated me
   const h = await mountDom(workspace({ preferredId: null }));
   try {
     await selectPage(h);
-    assert.equal(h.document.querySelector<HTMLButtonElement>('[data-action="library-bulk-favorite"]')?.disabled, true);
-    assert.equal(h.document.querySelector('.library-bulk-actions')?.textContent?.includes('saved results only'), true);
+    await h.click(button(h.document, '[data-action="library-bulk-favorite"]'));
+    await waitForInitial();
+    assert.equal(stars.sort().join(','), `archive:${record.id},decision:${decision.id}`);
     await h.click(button(h.document, '[data-action="library-bulk-add-folder"]'));
     await h.click(h.document.querySelector<HTMLInputElement>('[name="library-bulk-folder"]')!);
     await h.click(button(h.document, '[data-action="library-bulk-confirm-folders"]'));

@@ -50,7 +50,7 @@ test('schema5 is recognized and indexed without downloading live bytes while dis
   const s = setup();
   try {
     s.remote('remote'); const status = await s.engine.syncNow();
-    assert.equal(SUPPORTED_SYNC_SCHEMA, 6);
+    assert.equal(SUPPORTED_SYNC_SCHEMA, 7);
     assert.equal(status.readOnly, false);
     assert.equal(s.downloaded.length, 0);
     assert.equal(s.repo.driveFiles().length, 1);

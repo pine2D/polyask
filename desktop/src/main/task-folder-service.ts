@@ -76,7 +76,7 @@ export class TaskFolderService {
     validateFilters(filters);
     const result:FolderContent[]=[];
     if(filters.kind!=="decision")for(const record of this.archives.search({query:filters.query,tag:filters.tag,favorite:filters.favorite}).items)result.push({kind:"archive",record});
-    if(filters.kind!=="archive")for(const record of this.decisions.search({query:filters.query,status:filters.status}))result.push({kind:"decision",record});
+    if(filters.kind!=="archive")for(const record of this.decisions.search({query:filters.query,status:filters.status,favorite:filters.favorite}))result.push({kind:"decision",record});
     const folders=new Set(this.list().map(f=>f.id)),linked=new Set<string>(),selected=new Set<string>();
     for(const m of this.repository.listMemberships()) {
       if ("deletedAt" in m||!folders.has(m.folderId))continue;

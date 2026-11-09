@@ -1,0 +1,28 @@
+{
+  "file": {
+    "id": "file-decision",
+    "appProperties": {
+      "app": "polyask",
+      "kind": "decision",
+      "schema": "7",
+      "id": "starred-decision"
+    }
+  },
+  "body": {
+    "schema": 7,
+    "id": "starred-decision",
+    "favorite": true,
+    "archiveId": "source",
+    "sourceTitle": "Synthetic source",
+    "title": "Synthetic decision",
+    "conclusion": "",
+    "rationale": "",
+    "uncertainties": "",
+    "nextStep": "",
+    "status": "draft",
+    "evidence": [],
+    "createdAt": 10,
+    "updatedAt": 20,
+    "deviceId": "fixture"
+  }
+}

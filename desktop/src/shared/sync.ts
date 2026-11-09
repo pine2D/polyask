@@ -1,6 +1,6 @@
 export const SYNC_SCHEMA = 1;
 /** Observations and extended evidence/draft fragments use 6; images 5, questions 4, folders 3, legacy decisions 2. */
-export const SUPPORTED_SYNC_SCHEMA = 6;
+export const SUPPORTED_SYNC_SCHEMA = 7;
 export const CLEAR_REMOTE_CONFIRMATION = "DELETE";
 
 export interface HistoryRecord {

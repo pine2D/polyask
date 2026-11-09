@@ -17,11 +17,12 @@ import { ReadingNavigation } from './reading-controls';
 import { resolveLocale } from '../shared/locale';
 
 export function QuestionHistoryReader({ detail, view, session: suppliedSession, copy, sites, busy, onLoadAnswer, locale = 'en',
-  onRestore, onReask, onDelete, onAnnounce, onOrganize, onExportAnswer, onExportWhole, imageSyncEnabled }: {
+  onRestore, onReask, onDelete, onAnnounce, onOrganize, onExportAnswer, onExportWhole, imageSyncEnabled, onFavorite }: {
   detail: QuestionDetail; view?: QuestionDetailView; session?: QuestionReaderSession; locale?: string;
   copy: DesktopCopy; sites: readonly SiteDefinition[]; busy: boolean; onLoadAnswer?: (id: string) => void;
   onRestore: (answerId?: string) => void; onReask: () => void; onDelete: () => void; onAnnounce: (text: string) => void;
   imageSyncEnabled?: boolean;
+  onFavorite?: (id: string, favorite: boolean) => Promise<unknown>;
   onOrganize?: (answerId: string) => void; onExportAnswer?: (answerId: string) => void; onExportWhole?: () => void;
 }): React.JSX.Element {
   const fallback = useRef(new QuestionReaderSession()), scroller = useRef<HTMLDivElement>(null);
@@ -54,6 +55,7 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
       <QuestionPrompt text={detail.question.text} copy={copy} />
       <div className="question-record-meta"><time dateTime={dateTimeAttribute(detail.question.createdAt)}>{formatDateTime(detail.question.createdAt, calendarLocale)}</time><div className="question-record-actions">
         <QuestionHistoryRecordActions questionId={detail.question.id} prompt={detail.question.text} canOrganize={ready && !!answer?.answerMarkdown}
+          starred={detail.question.favorite} onFavorite={onFavorite ? () => onFavorite(detail.question.id, !detail.question.favorite) : undefined}
           copy={copy} busy={busy} onReask={onReask} onDelete={onDelete} onAnnounce={onAnnounce} onExportWhole={onExportWhole}
           onOrganize={onOrganize && answer ? () => onOrganize(answer.id) : undefined} />
       </div></div>

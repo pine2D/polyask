@@ -39,10 +39,10 @@ test('changing folder and favorites retains matching reading without losing the 
     await waitForInitial();
     await h.click([...h.document.querySelectorAll<HTMLButtonElement>('.folder-sidebar nav button')].find(node => node.querySelector('.library-folder-name')?.textContent === folder.name)!);
     await waitForInitial(); assert.equal(readerTitle(h.document), record.task);
-    await h.click(button(h.document, '.library-favorite')); await waitForInitial();
+    await h.click(button(h.document, '[data-star-filter]')); await waitForInitial();
     assert.equal(readerTitle(h.document), record.task);
     assert.equal(h.document.querySelector('.folder-sidebar [aria-current="page"] .library-folder-name')?.textContent, folder.name);
-    assert.equal(h.document.querySelector('.library-favorite')?.getAttribute('aria-pressed'), 'true');
+    assert.equal(h.document.querySelector('[data-star-filter]')?.getAttribute('aria-pressed'), 'true');
   } finally { await h.close(); setShellApi(null); }
 });
 

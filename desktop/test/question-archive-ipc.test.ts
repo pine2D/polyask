@@ -39,6 +39,13 @@ test('history archive IPC rejects foreign senders and validates the full request
     const record=handler(true,request) as {text:string;results:{text:string}[];source:unknown};
     assert.equal(record.text,questionFixture().text);assert.equal(record.results[0].text,questionAnswerFixture().answerMarkdown);
     assert.equal(record.source,null);assert.equal(db.archives.list().length,1);assert.equal(views,0);
+    const star=handlers.get('polyask:question-favorite')!;
+    const queued=db.outbox.ready(Number.MAX_SAFE_INTEGER);
+    assert.throws(()=>star(false,{id:'q-a',favorite:true}),/untrusted_sender/);
+    for(const value of [null,{}, {id:'q-a',favorite:'true'}, {id:'',favorite:true}]) assert.throws(()=>star(true,value));
+    assert.deepEqual(db.outbox.ready(Number.MAX_SAFE_INTEGER),queued);
+    assert.equal((star(true,{id:'q-a',favorite:true}) as historyTypes.QuestionRecord).favorite,true);
+    assert.equal(views,0,'starring a saved question never touches a live site');
     dispose();assert.equal(handlers.size,0);
   } finally {db.close();}
 });

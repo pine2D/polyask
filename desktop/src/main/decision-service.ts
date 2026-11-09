@@ -26,7 +26,7 @@ export class DecisionService {
   search(filters: DecisionFilters = {}): DecisionRecord[] {
     const query = typeof filters.query === "string" ? filters.query.trim().toLocaleLowerCase() : "";
     return this.repository.list().filter(r => (!filters.archiveId || r.archiveId === filters.archiveId) &&
-      (!filters.status || r.status === filters.status) && (!query ||
+      (!filters.favorite || r.favorite) && (!filters.status || r.status === filters.status) && (!query ||
         [r.title,r.conclusion,r.rationale,r.uncertainties,r.nextStep,r.sourceTitle,...r.evidence.flatMap(e=>[e.topic ?? "",e.excerpt])].join("\n").toLocaleLowerCase().includes(query)));
   }
 
@@ -43,10 +43,19 @@ export class DecisionService {
   update(id: string, value: unknown): DecisionRecord {
     const current = this.get(id);
     if (!current) throw new Error("not_found");
-    if (!isDecisionInput(value) || value.archiveId !== current.archiveId || (current.schema === 6 && value.sourceUpdatedAt === undefined)) throw new Error("invalid_decision");
+    if (!isDecisionInput(value) || value.archiveId !== current.archiveId || (current.sourceUpdatedAt !== undefined && value.sourceUpdatedAt === undefined)) throw new Error("invalid_decision");
     const record: DecisionRecord = {...current,...this.fields(value),evidence:this.evidence(value,current),
-      updatedAt:Math.max(this.now(),current.updatedAt+1),deviceId:this.options.deviceId(), schema:current.schema === 6 || value.sourceUpdatedAt !== undefined || value.evidence.some(e => e.id) ? 6 : 2};
+      updatedAt:Math.max(this.now(),current.updatedAt+1),deviceId:this.options.deviceId(), schema:current.schema === 7 ? 7 : current.schema === 6 || value.sourceUpdatedAt !== undefined || value.evidence.some(e => e.id) ? 6 : 2};
     return this.repository.put(record) as DecisionRecord;
+  }
+
+  setFavorite(id: string, favorite: boolean): DecisionRecord {
+    if (typeof favorite !== 'boolean') throw new Error('invalid_favorite');
+    const current = this.get(id);
+    if (!current) throw new Error('not_found');
+    if (!!current.favorite === favorite) return current;
+    return this.repository.put({ ...current, schema: 7, favorite,
+      updatedAt: Math.max(this.now(), current.updatedAt + 1), deviceId: this.options.deviceId() }) as DecisionRecord;
   }
 
   delete(id: string): void {

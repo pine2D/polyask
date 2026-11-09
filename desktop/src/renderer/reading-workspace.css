@@ -20,7 +20,7 @@
 .question-history .question-card-heading { grid-column: 1 / -1; }
 .question-history .question-card .question-main { padding: var(--space-2) var(--reading-list-inset); gap: 3px; background: transparent; }
 .question-history .question-title { font-size: 14px; line-height: 20px; font-weight: 500; }
-.question-history .question-main .question-meta { display: flex; align-items: center; gap: 6px; min-height: 20px; padding-right: 28px; width: 100%; }
+.question-history .question-main .question-meta { display: flex; align-items: center; gap: 6px; min-height: 20px; padding-right: 60px; width: 100%; }
 .question-meta time, .question-images { flex-shrink: 0; }
 .question-history .question-card-actions { position: absolute; right: 4px; bottom: 4px; padding: 0; }
 .question-history .question-card-actions summary { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; font-weight: 500; color: var(--muted); }

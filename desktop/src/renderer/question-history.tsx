@@ -1,4 +1,5 @@
 import { useMarkdownExport } from './use-markdown-export';
+import { StarFilter } from './star-button';
 import { PageZoomControls } from './page-zoom-controls';
 import { useQuestionHistorySelection, QuestionHistorySelection } from './question-history-selection';
 import { useQuestionReask } from './use-question-reask';
@@ -13,7 +14,7 @@ import { QuestionHistoryLegacy } from "./question-history-legacy";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import type { SiteDefinition } from '../shared/contracts';
-import type { QuestionDetail, QuestionPage } from '../shared/question-history';
+import type { QuestionDetail, QuestionPage, QuestionRecord } from '../shared/question-history';
 import { QUESTION_PANEL_BREAKPOINT, QUESTION_PANEL_WIDTH } from '../shared/question-layout';
 import { ConfirmDialog } from './confirm-dialog';
 import { CloseIcon, FocusIcon } from './icons';
@@ -43,6 +44,14 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
   const selection = useQuestionHistorySelection(open, copy, announce);
   const present = usePresence(open, PANEL_EXIT_MS, active);
   const [query, setQuery] = useState('');
+  const [favorite, setFavorite] = useState(false);
+  const favoriteRef = useRef(favorite); favoriteRef.current = favorite;
+  const starVersions = useRef(new Map<string, Pick<QuestionRecord, 'schema' | 'favorite' | 'updatedAt' | 'deviceId'>>()), starSession = useRef(0);
+  useEffect(() => { starSession.current++; starVersions.current.clear(); }, [open, active]);
+  const currentStar = <T extends QuestionRecord,>(record: T): T => {
+    const saved = starVersions.current.get(record.id);
+    return saved && saved.updatedAt > record.updatedAt ? { ...record, ...saved } : record;
+  };
   const [page, setPage] = useState<QuestionPage>({ items: [], cursor: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -148,18 +157,19 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
     setLoading(true); setError('');
     try {
       const result = refresh
-        ? await refreshQuestionPages(filters => shell.listQuestions(filters), query, pageRef.current, () => request === sequence.current)
-        : await shell.listQuestions({ query, cursor, limit: 50 });
+        ? await refreshQuestionPages(filters => shell.listQuestions(filters), query, pageRef.current, () => request === sequence.current, favorite)
+        : await shell.listQuestions({ query, cursor, limit: 50, ...(favorite ? { favorite } : {}) });
       if (!result || request !== sequence.current) return;
       if (refresh && scroll.current) {
         const top = scroll.current.getBoundingClientRect().top;
         const node = [...scroll.current.querySelectorAll<HTMLElement>('[data-question-id]')].find(n => n.getBoundingClientRect().bottom > top);
         if (node) anchor.current = { id: node.dataset.questionId!, top: node.getBoundingClientRect().top };
       }
-      setPage(old => ({ items: cursor ? [...old.items, ...result.items.filter(q => !old.items.some(a => a.id === q.id))] : result.items, cursor: result.cursor }));
+      const items = result.items.map(currentStar).filter(item => !favorite || item.favorite);
+      setPage(old => ({ items: cursor ? [...old.items, ...items.filter(q => !old.items.some(a => a.id === q.id))] : items, cursor: result.cursor }));
     } catch { if (request === sequence.current) setError(copy.questionLoadFailed); }
     finally { if (listPending.current === request) listPending.current = 0; if (request === sequence.current) setLoading(false); }
-  }, [query, copy]);
+  }, [query, favorite, copy]);
   const latestLoad = useRef(load); latestLoad.current = load;
   useEffect(() => {
     if (!open) return;
@@ -191,7 +201,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
         if (result?.question.id === id) {
           answerId = readerSession.current.answer(result, readerSession.current.site(result));
           if (answerId && result.loadedAnswerId !== answerId) {
-            setDetail(result); setDetailView({ questionId: id, answerId, state: 'loading' });
+            setDetail({ ...result, question: currentStar(result.question) }); setDetailView({ questionId: id, answerId, state: 'loading' });
             result = await shell.getQuestion(id, answerId);
           }
         }
@@ -202,7 +212,7 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
       const requestedAnswer = answerId && result.answers.find(answer => answer.id === answerId);
       if (!refresh && requestedAnswer) readerSession.current.select(result, requestedAnswer.site, requestedAnswer.id);
       if (navigation !== undefined) setReaderNavigation(navigation);
-      setDetail(result);
+      setDetail({ ...result, question: currentStar(result.question) });
       setDetailView({ questionId: id, answerId: result.loadedAnswerId ?? answerId, state: 'ready' });
     } catch (error) { if (request === detailSequence.current) {
       setDetailView({ questionId: id, answerId, state: ipcErrorCode(error) === 'history_not_found' ? 'missing' : 'failed' });
@@ -283,6 +293,16 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
       else await execute();
     } catch { if (request === restoreSequence.current) setError(copy.questionFailed); }
   };
+  const setStar = async (id: string, value: boolean) => {
+    const session = starSession.current;
+    const record = await shell.setQuestionFavorite(id, value);
+    if (session !== starSession.current || (starVersions.current.get(id)?.updatedAt ?? -1) > record.updatedAt) return;
+    starVersions.current.set(id, { schema: record.schema, favorite: record.favorite, updatedAt: record.updatedAt, deviceId: record.deviceId });
+    setPage(old => ({ ...old, items: old.items.map(item => item.id === id && item.updatedAt <= record.updatedAt ? { ...item, ...record } : item)
+      .filter(item => !favoriteRef.current || item.favorite) }));
+    setDetail(old => old?.question.id === id && old.question.updatedAt <= record.updatedAt ? { ...old, question: record } : old);
+    if (favoriteRef.current && !record.favorite) selection.remove(id);
+  };
   if (!present) return null;
   return <aside ref={panel} tabIndex={-1} className={`question-history${renderedFull ? ' is-full' : ''}${detailView ? ' has-detail' : ''}`} style={{ width: renderedFull ? undefined : QUESTION_PANEL_WIDTH }}
     data-state={open ? 'open' : 'closed'} inert={!open} aria-hidden={open ? undefined : true} aria-label={copy.questionHistory}>
@@ -306,17 +326,21 @@ export function QuestionHistory({ open, active = true, copy, sites, draft, draft
           event.preventDefault(); target.focus({ preventScroll: true });
           target.scrollTop = Math.max(0, Math.min(Math.max(0, target.scrollHeight - target.clientHeight),
             target.scrollTop + target.clientHeight * 0.875 * (event.key === 'PageDown' ? 1 : -1)));
-        }} aria-label={copy.questionSearch} placeholder={copy.questionSearch} /></div>
+        }} aria-label={copy.questionSearch} placeholder={copy.questionSearch} />
+        <StarFilter copy={copy} active={favorite} disabled={disabled} onChange={() => {
+          sequence.current++; listPending.current = 0; setLoading(true); setPage({ items: [], cursor: null });
+          selection.clear(); setFavorite(value => !value);
+        }} /></div>
       {selection.selecting && <QuestionHistorySelection copy={copy} items={page.items} ids={selection.ids} disabled={disabled || loading}
         onLoaded={() => selection.loaded(page.items)} onClear={selection.clear} onExport={() => markdown.open(selection.ids.map(id => ({ kind: 'history', id })))} />}
       <div ref={scroll} className="question-scroll" tabIndex={0} role="region" aria-label={copy.questionHistory} aria-busy={loading}>
-        {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : copy.questionEmpty}</p>}
-        <QuestionHistoryList currentId={detailView?.questionId} selecting={selection.selecting} selectedIds={selection.ids} onToggle={selection.toggle} onExport={id => markdown.open([{ kind: 'history', id }])} items={page.items} locale={locale} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
+        {loading && !page.items.length ? <p className="question-empty" role="status">{copy.questionLoading}</p> : !error && !page.items.length && <p className="question-empty">{query ? copy.questionNoResults : favorite ? <>{copy.starredEmpty}<br />{copy.starredEmptyHint}</> : copy.questionEmpty}</p>}
+        <QuestionHistoryList onFavorite={setStar} currentId={detailView?.questionId} selecting={selection.selecting} selectedIds={selection.ids} onToggle={selection.toggle} onExport={id => markdown.open([{ kind: 'history', id }])} items={page.items} locale={locale} copy={copy} busy={disabled} onRestore={id => { void restore(id); }} onRead={id => { void read(id); }} onReask={reask} onDelete={remove} />
         {page.cursor && <button type="button" className="question-load-more" disabled={loading} onClick={() => { void load(page.cursor!); }}>{copy.questionMore}</button>}
-        <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={text => reaskFlow.start({ text, imageCount: 0 })} />
+        {!favorite && <QuestionHistoryLegacy query={query} copy={copy} busy={disabled} onReask={text => reaskFlow.start({ text, imageCount: 0 })} />}
       </div>
     </section>
-    {detail ? <QuestionHistoryReader key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} locale={locale} copy={copy} sites={sites} busy={disabled} imageSyncEnabled={imageSyncEnabled} onExportAnswer={answerId => { void markdown.single({ kind: 'history', id: detail.question.id }, answerId); }} onExportWhole={() => markdown.open([{ kind: 'history', id: detail.question.id }])} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.id, detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { reaskFlow.invalidate(); archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
+    {detail ? <QuestionHistoryReader onFavorite={setStar} key={`reader:${detail.question.id}:${readerNavigation}`} detail={detail} view={detailView ?? undefined} session={readerSession.current} locale={locale} copy={copy} sites={sites} busy={disabled} imageSyncEnabled={imageSyncEnabled} onExportAnswer={answerId => { void markdown.single({ kind: 'history', id: detail.question.id }, answerId); }} onExportWhole={() => markdown.open([{ kind: 'history', id: detail.question.id }])} onLoadAnswer={answerId => { void read(detail.question.id, answerId); }} onRestore={answerId => { void restore(detail.question.id, answerId); }} onReask={() => reask(detail.question.id, detail.question.text, detail.question.inputImageCount)} onDelete={() => remove(detail.question.id)} onAnnounce={announce} onOrganize={answerId => { if (!disabled && detailView?.state === 'ready') { reaskFlow.invalidate(); archiveEpoch.current++; setOrganizing(answerId); } }} /> : detailView ? <div className="question-detail-state question-empty">
       <p data-state={detailView.state} role={detailView.state === 'failed' ? 'alert' : 'status'}>{detailView.state === 'loading' ? copy.questionDetailLoading : detailView.state === 'missing' ? copy.questionRecordMissing : copy.questionDetailFailed}</p>
       {detailView.state !== 'loading' && <button type="button" onClick={() => { void read(detailView.questionId, detailView.answerId); }}>{copy.questionRetry}</button>}
     </div> : null}

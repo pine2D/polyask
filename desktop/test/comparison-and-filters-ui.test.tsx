@@ -35,7 +35,7 @@ test('comparison columns scroll independently unless the reader opts into synchr
   } finally { await h.close(); }
 });
 
-test('library list keeps tag, favorite, status and sort behind one Filters toggle and shows selection tools only while selecting', async () => {
+test('library list keeps star filtering visible and tag, status and sort behind one Filters toggle and shows selection tools only while selecting', async () => {
   const labels = getLibraryCopy('en');
   const content: FolderContent = { kind: 'archive', record };
   setShellApi(withFolderPages({ listFolders: async () => [folder], listArchiveTags: async () => ['research'],
@@ -48,13 +48,14 @@ test('library list keeps tag, favorite, status and sort behind one Filters toggl
     const selection = () => h.document.querySelector<HTMLElement>('.library-selection')!;
     assert.equal(toggle.getAttribute('aria-expanded'), 'false');
     assert.equal(panel().hidden, true);
+    assert.equal(panel().contains(h.document.querySelector('[data-star-filter]')), false);
     assert.equal(panel().contains(h.document.querySelector('[name="library-sort"]')), true);
     assert.equal(selection().hidden, true, 'select-page / clear stay out of the way until multi-select');
     await h.click(toggle);
     assert.equal(panel().hidden, false);
-    await h.click(button(h.document, '.library-favorite'));
+    await h.click(button(h.document, '[data-star-filter]'));
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 20)); });
-    assert.equal(h.document.querySelector('.library-filter-toggle')!.textContent, labels.filtersActive.replace('{count}', '1'));
+    assert.equal(h.document.querySelector('.library-filter-toggle')!.textContent, labels.filters);
     const multi = h.document.querySelector<HTMLButtonElement>('[data-action="library-multi-select"]')!;
     await h.click(multi);
     assert.equal(selection().hidden, false);

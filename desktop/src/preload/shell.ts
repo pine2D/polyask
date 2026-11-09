@@ -5,7 +5,7 @@ import type { QuestionAttachmentsManifest, QuestionReask } from '../shared/quest
 import type { DesktopImage } from '../shared/images';
 import type { GeneralPreferenceGroup, PreferenceKey, PreferenceSnapshot, PreferenceValues } from '../shared/preferences';
 import type { DraftInput, DraftKind, StoredDraft } from '../shared/drafts';
-import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage } from "../shared/question-history";
+import type { QuestionDetail, QuestionPage, QuestionFilters, QuestionLegacyPage, QuestionRecord } from "../shared/question-history";
 import type { QuestionArchiveRequest } from "../shared/question-archive";
 import type { SitePageClosePreview, SitePageCloseRequest, SitePageCloseResult } from '../shared/site-page';
 import type { QuestionRunProgress } from '../shared/question-run-progress';
@@ -111,6 +111,8 @@ export interface PolyAskDesktopApi extends NotificationApi {
   restoreQuestion(token: string, confirmed: boolean): Promise<QuestionRestoreResult[]>;
   cancelQuestionRestore(): Promise<void>;
   deleteQuestion(id: string): Promise<boolean>;
+  setQuestionFavorite(id: string, favorite: boolean): Promise<QuestionRecord>;
+  setDecisionFavorite(id: string, favorite: boolean): Promise<DecisionRecord>;
   onQuestionSaveFailed(listener: () => void): () => void;
   bootstrap(): Promise<BootstrapState>;
   menuShortcuts(): Promise<MenuShortcut[]>;
@@ -273,6 +275,8 @@ const api: PolyAskDesktopApi = Object.freeze({
   restoreQuestion: (token: string, confirmed: boolean) => invoke("polyask:question-restore", { token, confirmed }),
   cancelQuestionRestore: () => invoke("polyask:question-cancel"),
   deleteQuestion: (id: string) => invoke("polyask:question-delete", id),
+  setQuestionFavorite: (id: string, favorite: boolean) => invoke("polyask:question-favorite", { id, favorite }),
+  setDecisionFavorite: (id: string, favorite: boolean) => invoke("polyask:decision-favorite", { id, favorite }),
   onQuestionSaveFailed: (listener: () => void) => subscribe("polyask:question-save-failed", listener),
   bootstrap: () => invoke("polyask:bootstrap"),
   menuShortcuts: () => invoke("polyask:menu-shortcuts"),

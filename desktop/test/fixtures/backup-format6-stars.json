@@ -1,0 +1,26 @@
+{
+  "format": "polyask-backup",
+  "version": 6,
+  "exportedAt": 30,
+  "entries": [
+    {
+      "kind": "question",
+      "id": "starred-question",
+      "body": {
+        "schema": 7,
+        "id": "starred-question",
+        "favorite": true,
+        "text": "Synthetic starred question",
+        "sites": [
+          "claude"
+        ],
+        "requestedTier": null,
+        "inputImageCount": 0,
+        "createdAt": 10,
+        "updatedAt": 20
+      }
+    }
+  ],
+  "payloads": [],
+  "omissions": []
+}

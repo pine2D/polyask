@@ -6,12 +6,14 @@ import type { FolderFilters } from '../shared/task-folder';
 import type { FolderContentPage, FolderContentSummary } from '../shared/task-folder-page';
 import { decisionStatuses, decisionStatusLabel } from './decision-editor';
 import { LibrarySelect } from './library-select';
-import { ChevronDownIcon, StarIcon } from './icons';
+import { ChevronDownIcon } from './icons';
 import { LIBRARY_PAGE_SIZE, pageLibraryContents, sortLibraryContents, type LibrarySort } from './library-list-model';
 import { matchingSelection, selectLibraryPage, toggleLibrarySelection } from './library-selection';
+import { StarFilter } from './star-button';
 import { LibraryContentRow } from './library-content-row';
 
 export function libraryEmptyHint(copy: DesktopCopy, filters: FolderFilters): string {
+  if (filters.favorite && !filters.query && !filters.tag && !filters.status) return copy.starredEmptyHint;
   if (filters.query || filters.tag || filters.favorite || filters.status) return copy.libraryNoMatchesHint;
   if (filters.folderId && filters.folderId !== '__unfiled__') return copy.libraryFolderEmptyHint;
   return filters.kind === 'decision' ? copy.libraryDecisionEmptyHint : copy.libraryEmptyHint;
@@ -23,9 +25,10 @@ export function libraryEmptyTitle(copy: DesktopCopy, filters: FolderFilters): st
 }
 
 export function LibraryContentList<T extends FolderContentSummary>({ copy, locale, items, filters, tags, loading, failed, selectedKey, onChange, onSelect, onRetry,
-  page: controlledPage, sort: controlledSort, selectedKeys: controlledKeys, onPageChange, onSortChange, onSelectedKeysChange, disabled = false, onScroll, listScroll = 0, serverPage }: {
+  page: controlledPage, sort: controlledSort, selectedKeys: controlledKeys, onPageChange, onSortChange, onSelectedKeysChange, disabled = false, onScroll, listScroll = 0, serverPage, onFavorite }: {
   copy: DesktopCopy; locale: string; items: readonly T[]; filters: FolderFilters; tags: readonly string[];
   loading: boolean; failed: boolean; selectedKey: string | null; onChange: (patch: Partial<FolderFilters>) => void;
+  onFavorite?: (item: T) => Promise<unknown>;
   onSelect: (item: T) => void; onRetry: () => void;
   page?: number; sort?: LibrarySort; selectedKeys?: readonly string[]; disabled?: boolean;
   onPageChange?: (page: number) => void; onSortChange?: (sort: LibrarySort) => void;
@@ -45,9 +48,9 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     end: Math.min((serverPage.page + 1) * LIBRARY_PAGE_SIZE, serverPage.total) } : pageLibraryContents(sorted, page);
   const unavailable = disabled || loading || failed;
   const scroller = useRef<HTMLDivElement>(null);
-  // 标签/收藏/状态/排序收进「筛选」面板，多选工具只在多选时出现：列表首屏多留几条内容。
+  // 标签/状态/排序收进「筛选」面板，多选工具只在多选时出现：列表首屏多留几条内容。
   const panelId = useId(), [filtersOpen, setFiltersOpen] = useState(false), [multi, setMulti] = useState(false);
-  const activeFilters = [filters.tag, filters.favorite, filters.status].filter(Boolean).length;
+  const activeFilters = [filters.tag, filters.status].filter(Boolean).length;
   const selecting = multi || keys.length > 0;
   useLayoutEffect(() => {
     if (!loading && !failed && scroller.current) scroller.current.scrollTop = listScroll;
@@ -64,8 +67,10 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
   const emptyHint = libraryEmptyHint(copy, filters);
   return <section className="folder-content-list" data-selecting={selecting} aria-label={copy.folderAll}>
     <div className="folder-filters">
-      <input type="search" name="library-search" autoComplete="off" aria-label={copy.folderSearch} placeholder={`${copy.folderSearch}…`}
+      <div className="library-search-row"><input type="search" name="library-search" autoComplete="off" aria-label={copy.folderSearch} placeholder={`${copy.folderSearch}…`}
         disabled={disabled} value={filters.query ?? ''} onChange={event => onChange({ query: event.target.value })} />
+        <StarFilter copy={copy} active={!!filters.favorite} disabled={disabled} onChange={() => onChange({ favorite: !filters.favorite })} />
+      </div>
       <div className="library-segments" role="group" aria-label={copy.folderKind}>
         {[['', copy.libraryAll], ['archive', copy.libraryResults], ['decision', copy.libraryCards]].map(([kind, label]) =>
           <button key={kind} type="button" disabled={disabled} aria-pressed={(filters.kind ?? '') === kind} onClick={() => onChange({ kind: kind as FolderFilters['kind'] })}>{label}</button>)}
@@ -83,8 +88,6 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
           {filters.kind !== 'decision' ? <>
             <LibrarySelect disabled={disabled} label={copy.archiveTags} value={filters.tag ?? ''} searchLabel={copy.librarySearchOptions} emptyLabel={copy.archiveNoMatches}
               options={[{ value: '', label: copy.allArchiveTags }, ...tags.map(tag => ({ value: tag, label: tag }))]} onChange={tag => onChange({ tag })} />
-            <button className="library-favorite" type="button" aria-label={copy.favoriteArchives} title={copy.favoriteArchives}
-              disabled={disabled} aria-pressed={!!filters.favorite} onClick={() => onChange({ favorite: !filters.favorite })}><StarIcon /></button>
           </> : null}
           {filters.kind !== 'archive' ? <LibrarySelect disabled={disabled} label={copy.decisionStatus} value={filters.status ?? ''}
             options={[{ value: '', label: copy.decisionAll }, ...decisionStatuses.map(status => ({ value: status, label: decisionStatusLabel(copy, status) }))]}
@@ -105,11 +108,12 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     <div ref={scroller} className="archive-list" aria-busy={loading} onScroll={event => onScroll?.(event.currentTarget.scrollTop)}>
       {failed ? <div className="library-empty" role="status"><p>{copy.folderLoadFailed}</p><button onClick={onRetry}>{copy.retryShellLoad}</button></div>
         : loading ? <div className="library-empty" role="status">{copy.archiveLoading}</div>
-        : !items.length ? <div className="library-empty"><p>{filtered ? copy.archiveNoMatches : copy.folderEmpty}</p><small>{emptyHint}</small></div>
+        : !items.length ? <div className="library-empty"><p>{filters.favorite && !filters.query && !filters.tag && !filters.status ? copy.starredEmpty : filtered ? copy.archiveNoMatches : copy.folderEmpty}</p><small>{emptyHint}</small></div>
         : current.items.map(item => {
           const key = `${item.kind}:${item.record.id}`;
           return <LibraryContentRow key={key} item={item} copy={copy} labels={labels} locale={locale}
             showKind={!filters.kind} sort={sort} current={selectedKey === key} checked={checkedKeys.has(key)} disabled={unavailable}
+            onFavorite={onFavorite ? () => onFavorite(item) : undefined}
             onCheck={() => setKeys(toggleLibrarySelection(keys, key))} onOpen={() => onSelect(item)} />;
         })}
     </div>

@@ -15,12 +15,16 @@ test("decision IPC rejects untrusted callers for every handler, validates IDs an
   let called=0;
   const decisions=new Proxy({},{get:()=>()=>{called++;return "ok";}});
   const dispose=exported.exports.registerDecisionIpc({decisions,trusted:(e:unknown)=>e===true});
-  assert.equal(handlers.size,6);
+  assert.equal(handlers.size,7);
   for(const fn of handlers.values())assert.throws(()=>fn(false,{}),/untrusted_sender/);
   assert.equal(called,0);
   assert.throws(()=>handlers.get("polyask:decision-get")!(true,""),/invalid_request/);
   assert.equal(handlers.get("polyask:decision-get")!(true,"one"),"ok");
   assert.equal(called,1);
+  const star=handlers.get('polyask:decision-favorite')!;
+  for(const value of [null,{}, {id:'one',favorite:'true'}, {id:'',favorite:true}]) assert.throws(()=>star(true,value),/invalid_request/);
+  assert.equal(called,1);
+  assert.equal(star(true,{id:'one',favorite:true}),'ok'); assert.equal(called,2);
   dispose();assert.equal(handlers.size,0);
 });
 

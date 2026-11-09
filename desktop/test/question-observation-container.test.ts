@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { DesktopDatabase } from '../src/main/database';
 import { BackupService } from '../src/main/backup-service';
 import { readBackupContainer } from '../src/main/backup-container';
-import { BACKUP_MAGIC, BACKUP_LEGACY_MAGIC } from '../src/shared/backup';
+import { BACKUP_V5_MAGIC as BACKUP_MAGIC, BACKUP_LEGACY_MAGIC } from '../src/shared/backup';
 import { questionAnswerFixture } from './question-fixtures';
 import { image, question } from './lib/question-attachment-fixtures';
 import { SyncRepository } from '../src/main/sync-repository';

@@ -9,7 +9,7 @@ import type { ArchiveService } from "./archive-service";
 import { QuestionArchiveService } from "./question-archive-service";
 import { SITES } from "./sites";
 
-const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-legacy", "polyask:question-archive", 'polyask:question-run-progress'] as const;
+const channels = ["polyask:question-list", "polyask:question-get", "polyask:question-preview", "polyask:question-restore", "polyask:question-cancel", "polyask:question-delete", "polyask:question-legacy", "polyask:question-archive", 'polyask:question-run-progress', 'polyask:question-favorite'] as const;
 export function registerQuestionHistoryIpc(options: {
   questions: QuestionHistoryService; archives: ArchiveService; manager: ViewManager; workspace: WorkspaceService; gate: OperationGate;
   flush: (sites: readonly import("../shared/contracts").SiteKey[]) => Promise<void>;
@@ -49,5 +49,6 @@ export function registerQuestionHistoryIpc(options: {
   });
   handle(channels[7], value => archive.create(value));
   handle(channels[8], value => questions.getRunProgress(id(value)));
+  handle('polyask:question-favorite', value => questions.setFavorite(id(value?.id), value?.favorite));
   return () => { questions.setFailureHandler(null); questions.setProgressHandler(null); restore.cancel(); for (const channel of channels) ipcMain.removeHandler(channel); };
 }

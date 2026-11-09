@@ -18,7 +18,7 @@ export function pageFolderContents(items: readonly FolderContent[], request: Fol
         preview: [...item.record.preview].slice(0, 320).join(''), createdAt: item.record.createdAt,
         updatedAt: item.record.updatedAt, ts: item.record.ts, favorite: item.record.favorite, tags: item.record.tags,
         results: item.record.results.map(result => ({ label: result.label })) },
-    } : { kind: 'decision', record: { id: item.record.id, title: item.record.title, status: item.record.status,
+    } : { kind: 'decision', record: { id: item.record.id, title: item.record.title, status: item.record.status, favorite: !!item.record.favorite,
       createdAt: item.record.createdAt, updatedAt: item.record.updatedAt } }) };
 }
 

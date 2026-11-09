@@ -2,7 +2,7 @@ import type { LibraryCopy } from '../shared/library-scale-copy';
 import { formatCopy } from '../shared/copy';
 import type { BulkOutcome, BulkRequest } from './library-bulk-runner';
 
-export function LibraryBulkActions({ labels, count, mixed, disabled, running, done, result, exportHint, exportDisabled, onFavorite, onAdd, onExport, onStop, onRetry }: {
+export function LibraryBulkActions({ labels, count, disabled, running, done, result, exportHint, exportDisabled, onFavorite, onAdd, onExport, onStop, onRetry }: {
   exportHint?: string; exportDisabled?: boolean; labels: LibraryCopy; count: number; mixed: boolean; disabled: boolean; running: boolean; done: number;
   result: { request: BulkRequest; outcome: BulkOutcome } | null;
   onFavorite: (value: boolean) => void; onAdd: () => void; onExport: () => void; onStop: () => void; onRetry: () => void;
@@ -11,11 +11,10 @@ export function LibraryBulkActions({ labels, count, mixed, disabled, running, do
     {(count > 0 || running) && <div className="library-bulk-actions">
       <span>{formatCopy(labels.bulkScope, { count })}</span>
       <button type="button" data-action="library-bulk-add-folder" disabled={disabled} onClick={onAdd}>{labels.bulkAddFolder}</button>
-      <button type="button" data-action="library-bulk-favorite" disabled={disabled || mixed} onClick={() => onFavorite(true)}>{labels.bulkFavorite}</button>
-      <button type="button" data-action="library-bulk-unfavorite" disabled={disabled || mixed} onClick={() => onFavorite(false)}>{labels.bulkUnfavorite}</button>
+      <button type="button" data-action="library-bulk-favorite" disabled={disabled} onClick={() => onFavorite(true)}>{labels.bulkFavorite}</button>
+      <button type="button" data-action="library-bulk-unfavorite" disabled={disabled} onClick={() => onFavorite(false)}>{labels.bulkUnfavorite}</button>
       <button type="button" data-action="library-bulk-export" disabled={disabled || exportDisabled} onClick={onExport}>{labels.bulkExport}</button>
       {exportHint && <p>{exportHint}</p>}
-      {mixed && <p>{labels.favoriteOnly}</p>}
       {running && <><span role="status">{formatCopy(labels.bulkRunning, { done, total: result?.request.targets.length ?? count })}</span>
         <button type="button" data-action="library-bulk-stop" onClick={onStop}>{labels.bulkStop}</button></>}
     </div>}

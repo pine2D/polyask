@@ -15,6 +15,7 @@ const summary = `CASE WHEN kind = 'archive' THEN json_object('kind', kind, 'reco
     'tags', json_extract(body, '$.tags'), 'results', json((SELECT json_group_array(
       json_object('label', json_extract(value, '$.label'))) FROM json_each(body, '$.results')))))
   ELSE json_object('kind', kind, 'record', json_object('id', id,
+    'favorite', json(CASE WHEN json_extract(body, '$.favorite') THEN 'true' ELSE 'false' END),
     'title', json_extract(body, '$.title'), 'status', json_extract(body, '$.status'),
     'createdAt', created_at, 'updatedAt', updated_at)) END AS body`;
 
@@ -35,6 +36,7 @@ export class TaskFolderQuery {
       ${request.tag?.trim() ? `AND EXISTS (SELECT 1 FROM json_each(body, '$.tags') WHERE value = ${bind(request.tag.trim())})` : ''}`);
     if (request.kind !== 'archive') sources.push(`SELECT 'decision' AS kind, id, body FROM decisions
       WHERE deleted_at IS NULL AND json_valid(body)
+      ${request.favorite ? `AND json_extract(body, '$.favorite') = 1` : ''}
       ${request.status ? `AND json_extract(body, '$.status') = ${bind(request.status)}` : ''}
       ${query ? `AND instr(polyask_library_lower(json_extract(body, '$.title') || char(10) ||
         json_extract(body, '$.conclusion') || char(10) || json_extract(body, '$.rationale') || char(10) ||

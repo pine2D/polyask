@@ -32,7 +32,7 @@ type LibraryFailure = 'capture' | 'load';
 
 export function FolderWorkspace(props: ArchiveSurfaceProps & {
   session?: LibrarySessionStore; navigationRevision?: number; onBlockingChange?: (value: boolean) => void;
-  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean) => void, onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput, origin?: string) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: (afterSaved?: () => void) => void, readingFocus: LibraryReadingFocus, readerNavigationKey: string | null) => React.ReactNode;
+  renderArchive: (record: ArchiveRecord, onChanged: (deleted?: boolean, starredRecord?: ArchiveRecord) => void, onCreateDecision: (source: ArchiveRecord, draft?: DecisionInput, origin?: string) => void, onBusy: (busy: boolean) => void, onSavedArchive: (record: ArchiveRecord) => void, onOrganize: (afterSaved?: () => void) => void, readingFocus: LibraryReadingFocus, readerNavigationKey: string | null) => React.ReactNode;
 }): React.JSX.Element {
   const { copy } = props;
   const ownSession = useRef(createLibrarySessionStore());
@@ -53,6 +53,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [tags, setTags] = useState<readonly string[]>([]);
   const [revision, setRevision] = useState(0);
   const [loading, setLoading] = useState(true);
+  const loadingRef = useRef(loading); loadingRef.current = loading;
   const [loadFailed, setLoadFailed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<LibraryFailure | null>(null);
@@ -63,6 +64,13 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [recordToolbar, setRecordToolbar] = useState<HTMLDivElement | null>(null);
   const [pane, setPane] = useState<'navigation' | 'list' | 'detail'>(initial.pane);
   const epoch = useRef(0);
+  const starRefresh = useRef(false);
+  const starVersions = useRef(new Map<string, { favorite: boolean; updatedAt: number }>());
+  const currentStar = <T extends FolderContentSummary,>(item: T): T => {
+    const version = starVersions.current.get(contentKey(item));
+    return version && version.updatedAt > item.record.updatedAt ? { ...item, record: { ...item.record, ...version } } : item;
+  };
+  const filtersRef = useRef(filters); filtersRef.current = filters;
   const intent = useRef(0);
   /** 列表选中项的读取尚未回包时为其意图号；期间旧条目的迟到动作（如证据来源核对）不得再抢占导航。 */
   const selecting = useRef<number | null>(null);
@@ -118,8 +126,9 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   useEffect(() => {
     const request = ++epoch.current;
     const requestIntent = intent.current;
+    const quiet = starRefresh.current; starRefresh.current = false;
     const timer = setTimeout(() => {
-      setLoading(true);
+      if (!quiet) setLoading(true);
       const target = targetFromContentKey(selectedRef.current ? contentKey(selectedRef.current) : restoringKey.current);
       const selection = selectedKeysRef.current.flatMap(key => targetFromContentKey(key) ?? []);
       const fresh = loadedRevision.current !== revision;
@@ -127,7 +136,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       Promise.all([fresh ? shell.listFolders() : null, shell.queryFolderContents({ ...filters, page, sort, locale: props.locale,
         selected: target ?? undefined, selectedTargets: selection, locateSelected: filterChanged.current }), fresh ? shell.listArchiveTags() : null]).then(async ([nextFolders, contents, nextTags]) => {
         if (request !== epoch.current) return;
-        const reread = !!contents.selected && requestIntent === intent.current && (fresh || wasLocating || !selectedRef.current);
+        const reread = !quiet && !!contents.selected && requestIntent === intent.current && (fresh || wasLocating || !selectedRef.current);
         let match: FolderContent | null = null, detailFailed = false;
         if (reread) {
           try { match = await readFolderContent(contents.selected!); } catch { detailFailed = true; }
@@ -136,15 +145,15 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         if (nextFolders) setFolders(nextFolders);
         if (nextTags) setTags(nextTags);
         loadedRevision.current = revision;
-        setItems(contents.items); setTotal(contents.total); setPage(contents.page);
+        setItems(contents.items.map(currentStar).filter(item => !filters.favorite || item.record.favorite)); setTotal(contents.total); setPage(contents.page);
         const live = new Set(contents.selectedTargets.map(target => `${target.kind}:${target.id}`));
         setSelectedKeys(current => current.filter(key => live.has(key)));
         setLoading(false); setLoadFailed(false);
         setFailure(current => current === 'capture' ? current : detailFailed ? 'load' : null);
         const key = target ? `${target.kind}:${target.id}` : null;
         restoringKey.current = null;
-        if (key && requestIntent === intent.current && !detailFailed && !(contents.selected && !reread)) {
-          if (match) setSelected(match);
+        if (!quiet && key && requestIntent === intent.current && !detailFailed && !(contents.selected && !reread)) {
+          if (match) setSelected(currentStar(match));
           else {
             const responseSelection = selectedRef.current ? contentKey(selectedRef.current) : null;
             requestDecisionNavigation(() => {
@@ -185,7 +194,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     filterChanged.current = true; setLoading(true); setSort(value); listScroll.current = 0;
   });
   const openArchive = (record?: ArchiveRecord) => navigate(() => { setNewSource(null); if (record) setFilters({ folderId: '' }); setSelected(record ? { kind: 'archive', record } : null); setPane(record ? 'detail' : 'list'); });
-  const changed = (deleted = false) => { if (deleted) { setSelected(null); setFocused(false); setPane('list'); } refresh(); };
+  const changed = (deleted = false, starredRecord?: ArchiveRecord) => { if (starredRecord) { starred({ kind: 'archive', record: starredRecord }); return; } if (deleted) { setSelected(null); setFocused(false); setPane('list'); } refresh(); };
   const savedArchive = (record: ArchiveRecord) => { setFailure(null); setFilters({ folderId: '' }); setSelected({ kind: 'archive', record }); setNewSource(null); setPane('detail'); refresh(); };
   const capture = () => navigate(() => {
     setFailure(null);
@@ -193,6 +202,27 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     props.onCapture().then(value => { if (mounted.current) savedArchive(value); })
       .catch(() => { if (mounted.current) setFailure('capture'); }).finally(() => blocking('capture', false));
   });
+  const starred = (item: FolderContent) => {
+    if (!mounted.current) return;
+    const key = contentKey(item);
+    if ((starVersions.current.get(key)?.updatedAt ?? 0) > item.record.updatedAt) return;
+    starVersions.current.set(key, { favorite: !!item.record.favorite, updatedAt: item.record.updatedAt });
+    setItems(current => current.map(currentStar)
+      .filter(value => !filtersRef.current.favorite || value.record.favorite));
+    setSelected(current => current && contentKey(current) === key && current.record.updatedAt <= item.record.updatedAt ? item : current);
+    if (filtersRef.current.favorite && !item.record.favorite) {
+      setSelectedKeys(current => current.filter(value => value !== key));
+      setTotal(current => Math.max(0, current - 1));
+      epoch.current++; starRefresh.current = true; refresh();
+    } else if (loadingRef.current) { epoch.current++; starRefresh.current = true; refresh(); }
+  };
+  const favoriteItem = async (item: FolderContentSummary) => {
+    if (busyRef.current) return;
+    const record = item.kind === 'archive'
+      ? await shell.updateArchive(item.record.id, { favorite: !item.record.favorite })
+      : await shell.setDecisionFavorite(item.record.id, !item.record.favorite);
+    starred({ kind: item.kind, record } as FolderContent);
+  };
   const updateDecision = (record?: DecisionRecord) => {
     if (newSource && record) setFilters({ folderId: '' });
     if (!record) { setFocused(false); setPane('list'); }
@@ -257,7 +287,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       })} />
     <div className="folder-columns">
       <FolderSidebar copy={copy} locale={props.locale} folders={folders} selected={filters.folderId ?? ''} disabled={busy} onSelect={folderId => change({ folderId })} onChanged={refresh} />
-      <LibraryContentList copy={copy} locale={props.locale} items={items} filters={filters} tags={tags} loading={loading}
+      <LibraryContentList onFavorite={favoriteItem} copy={copy} locale={props.locale} items={items} filters={filters} tags={tags} loading={loading}
         serverPage={{ page, total }}
         failed={loadFailed} selectedKey={selected ? contentKey(selected) : null} onChange={change} onRetry={refresh}
         page={page} sort={sort} selectedKeys={selectedKeys} onSelectedKeysChange={setSelectedKeys}
@@ -275,13 +305,13 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
             requestDecisionNavigation(() => {
               if (!mounted.current || readingIntent !== intent.current || busyRef.current) return;
               listScroll.current = reading.root.current?.querySelector<HTMLElement>('.archive-list')?.scrollTop ?? listScroll.current;
-              setSelected(record); setNewSource(null); setPane(record ? 'detail' : 'list');
+              setSelected(record ? currentStar(record) : null); setNewSource(null); setPane(record ? 'detail' : 'list');
               setFailure(record ? null : 'load');
             });
           }).catch(() => { if (mounted.current && readingIntent === intent.current) reportLoadFailure(); });
         }} />
       <div className="folder-detail">
-        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={() => organize()} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onCancelNew={() => { decisionReturn.restore(); setNewSource(null); setNewDraft(undefined); }} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
+        {newSource || selected?.kind === 'decision' ? <DecisionWorkspace onStarred={record => starred({ kind: 'decision', record })} key={newSource ? `new:${newSource.id}` : `${selected!.record.id}:${detailRevision}`} embedded onBusy={detailBusy} onOrganize={() => organize()} copy={copy} locale={props.locale} initialSource={newSource} initialDraft={newSource ? newDraft : undefined} initialRecord={selected?.kind === 'decision' && !newSource ? selected.record : undefined} onCancelNew={() => { decisionReturn.restore(); setNewSource(null); setNewDraft(undefined); }} onArchives={openArchive} onClose={props.onClose} onChanged={updateDecision} />
           : selected?.kind === 'archive' ? props.renderArchive(selected.record, changed, (source, draft, origin) => { if (selecting.current === null) navigate(() => { decisionReturn.capture(origin); setNewSource(source); setNewDraft(draft); }); }, detailBusy, savedArchive, organize, { focused, onFocus: focusDetail }, consumedPreferred.current) : <div className="library-welcome"><ArchiveIcon /><h1>{welcomeTitle}</h1>{welcomeHint ? <p>{welcomeHint}</p> : null}</div>}
       </div>
     </div>

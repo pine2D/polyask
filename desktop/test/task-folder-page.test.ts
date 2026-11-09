@@ -67,6 +67,8 @@ test('SQL mixed query applies membership, literal Unicode search and independent
     assert.equal(f.query({ query: 'évidence 100%_' }).total, 2);
     assert.equal(f.query({ folderId: folder.id }).total, 1);
     assert.equal(f.query({ folderId: '__unfiled__' }).items[0].kind, 'archive');
+    assert.equal(f.query({ favorite: true, status: 'final' }).total, 0);
+    f.decisions.setFavorite(card.id, true);
     assert.equal(f.query({ favorite: true, status: 'final' }).items[0].kind, 'decision');
     const page = f.query({ folderId: folder.id, selectedTargets: targets, selected: targets[0] });
     assert.equal(page.selected, null); assert.equal(page.selectedPage, null);

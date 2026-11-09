@@ -22,7 +22,7 @@ test('select announces current value and has a separate accessible label', () =>
 });
 
 test('switching content type removes filters that no longer apply', () => {
-  assert.deepEqual(changeFolderFilters({ folderId: 'work', kind: 'archive', tag: 'x', favorite: true, query: 'q' }, { kind: 'decision' }), { folderId: 'work', kind: 'decision', query: 'q' });
+  assert.deepEqual(changeFolderFilters({ folderId: 'work', kind: 'archive', tag: 'x', favorite: true, query: 'q' }, { kind: 'decision' }), { folderId: 'work', kind: 'decision', favorite: true, query: 'q' });
   assert.deepEqual(changeFolderFilters({ kind: 'decision', status: 'draft' }, { kind: 'archive' }), { kind: 'archive' });
   assert.deepEqual(changeFolderFilters({ folderId: 'work', kind: 'archive', tag: 'x' }, { query: 'hello' }), { folderId: 'work', kind: 'archive', tag: 'x', query: 'hello' });
 });

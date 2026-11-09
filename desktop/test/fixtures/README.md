@@ -29,13 +29,13 @@
 - `schema3-*.json`：任务文件夹、归属关系及删除标记，实体 schema 3。
 - `backup-format1.json`：八类业务数据备份，`format: "polyask-backup"` / `version: 1`；不是 Drive 同步封装，不含设备身份。
 
-`shared/sync.ts` 的 `SYNC_SCHEMA = 1` 继续用于旧 history/archive/state，`SUPPORTED_SYNC_SCHEMA = 6` 是客户端识别上限。决策卡和文件夹使用各自实体格式；已有样本始终保留，由对应 wire-format、同步和备份测试校验。
+`shared/sync.ts` 的 `SYNC_SCHEMA = 1` 继续用于旧 history/archive/state，`SUPPORTED_SYNC_SCHEMA = 7` 是客户端识别上限。决策卡和文件夹使用各自实体格式；已有样本始终保留，由对应 wire-format、同步和备份测试校验。
 
 ## 提问历史 schema 4 与备份 v2
 
 - `schema4-question.json` / `schema4-questionAnswer.json`：逐次提问与独立站点尝试；Drive 元数据 ID 为正文 ID 的 SHA-256，不附正文或 URL 预览。
 - `backup-format2.json`：包含新两类实体的业务备份；仍支持读取冻结的 version 1。
-- 提问与旧回答保持 schema 4，新回答采用 schema 6；当前客户端识别上限为 `SUPPORTED_SYNC_SCHEMA = 6`，旧实体格式保持不变。
+- 提问初建为 schema 4、改变星标后为 schema 7，旧回答保持 schema 4、新回答采用 schema 6；当前客户端识别上限为 `SUPPORTED_SYNC_SCHEMA = 7`，旧实体格式保持不变。
 
 ## 偏好与草稿备份 v3
 
@@ -45,7 +45,7 @@
 ## 原图附件 schema 5（可选同步）
 
 - `schema5-question-attachments.json` / `schema5-question-attachments-tombstone.json`：独立原图集及删除标记；正文保留 questionId，活记录携带有序 metadata/base64，墓碑不保留图片字段。现有 schema 1–4 样本保持冻结。
-- 本机仓库及同步下行验证格式、哈希与字节；图片同步默认关闭，确认开启后传输新实体。该格式引入时识别上限为 schema 5，当前上限见 schema 6 节；旧样本不改写。
+- 本机仓库及同步下行验证格式、哈希与字节；图片同步默认关闭，确认开启后传输新实体。该格式引入时识别上限为 schema 5，当前上限见 schema 7 节；旧样本不改写。
 - `schema4-sync-pull.ts.txt` 冻结自 `1e04254` 的实际 schema 4 下行实现，测试以旧版上限 4 执行，证明 schema 5 会锁住旧客户端的全局上传且不触发删除。
 - `image-sync-local-meta-v1.json` 记录仅本机的图片开关/确认键、reset 与投影排除契约；它不是 Drive 正文，也不进入业务备份。
 
@@ -67,3 +67,9 @@
 - `schema6-state-reviewed-draft.json`：决策草稿只有 `content.sourceUpdatedAt`、尚无摘录时仍使用 format2/state6；`draft-version-boundary.test.ts` 同时覆盖旧 format1 可读、同 ID 升级、备份 v5 和关闭草稿同步后的携带保护。
 - `task3-*.ts.txt` 冻结自 `e124197a0b6960b273933b50429bd1847fd9a5d7` 的实际源码。`schema6-evidence-compat.test.ts` 实际执行旧同步读取器、决策校验器和草稿读取器，证明独立新草稿也不会被旧客户端静默降级；既有冻结样本未修改。
 - 源码与 SHA-256：`main/sync-pull.ts` → `task3-sync-pull.ts.txt`：`388a4bbf808159a37a2c491d8b80caeb1b189a8768cf6d117f678bf6041ae108`；`shared/decision.ts` → `task3-decision.ts.txt`：`e2d5e08525bd8d48a0ef753cc0fe2ad3d96207f53f0b958b708730437d30a4d6`；`shared/drafts.ts` → `task3-drafts.ts.txt`：`14af129a7b67182b257ddfd6497ec8633357b696f367da3b31aa5ff6b4670f28`。
+
+## 星标 schema 7 与备份 v6
+
+- `schema7-question-starred.json` / `schema7-decision-starred.json`：合成的加星提问和决策卡线格式；首次改变星标升级为 schema 7，取消后仍保留该版本及显式 false。采集回答沿用原 favorite 字段及原 schema。
+- `backup-format6-stars.json`：含两类星标实体的文字备份清单；v6 二进制容器使用 `POLYASK-BACKUP-6\n`，原图载荷结构不变。
+- `schema6-sync-pull.ts.txt` / `backup5-validation.ts.txt` 冻结自 `591e1a9` 的实际源码。`starred-compat.test.ts` 实际执行旧读取器，验证 schema 7 下载前的同步只读保护、v6 备份拒收及新客户端往返；原有冻结样本保持不变。
