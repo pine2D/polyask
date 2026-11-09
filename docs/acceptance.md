@@ -156,3 +156,31 @@
 隔离原生专项另通过两个入口：任务准备覆盖三语×480/1280px六组，包含取消后保存/切档失败不通知、正常失败保留草稿与附件、迟到ACK、焦点和Tab；PDF覆盖三语，分别11/9/9页，完整提问标记、90行表格、公式和末尾正文均保留，网络请求与实际投递均为0，25个报告窗口实际销毁。检查了PDF第一页和窄窗截图；已观察进程退出、临时profile删除。日志中的隔离D-Bus消息按前述有限类别处理，没有未处理renderer错误。必要的最终日志、失败对照、报告、截图和进程记录已收拢到本机忽略的测试材料目录，附文件清单和哈希；重复日志、中间 bundle 与本轮构建目录已清理。
 
 本轮未修改适配器、未使用真实账号资料、未发送问题或上传附件。真实九站交互与生成、Drive双设备及旧端云端往返、Windows/macOS实机、物理IME和读屏仍未验；本轮不重复声称先前性能、真实ASAR专用preload或实际最小化专项已重新执行，条件仍见[明确补验条件](#明确补验条件)。
+
+## 2026-11-09 提交邮箱修正与验收标识对应
+
+按用户授权，将本次尚未推送的 21 个提交的作者与提交者邮箱改为 GitHub noreply。逐提交核对 tree、提交消息与时间均未改变，已发布的 v1.31.0 及更早历史保持原样。本文此前验收记录保留当时的提交标识，发布历史中的对应标识如下；原验收结果和限制不变。
+
+| 原标识 | 发布历史标识 | 内容 |
+| --- | --- | --- |
+| `af6c966` | `7e8a814` | docs(acceptance): index site capabilities and verification gaps |
+| `3d8d4b3` | `f998530` | docs(acceptance): narrow historical capture evidence claims |
+| `5eeed20` | `019262e` | fix(release-watch): classify signals and aggregate weekly updates |
+| `798fca8` | `cde1bc3` | feat(history): persist per-attempt webpage model observations |
+| `e124197` | `2957645` | fix(broadcast): separate dispatch receipts from history capture |
+| `a5e41f4` | `2a45080` | feat(decisions): organize multiple evidence excerpts by topic |
+| `6ebeb9c` | `3743a43` | fix(decisions): validate and recover source version conflicts |
+| `93143a8` | `7d50397` | feat(desktop): prepare session tasks before applying to drafts |
+| `41a6ae1` | `d1f6cbf` | fix(desktop): stop stale task setup before participation save |
+| `0ef1e3f` | `6cf697c` | perf(desktop): bound title joins and measure native baselines |
+| `bfa56e6` | `c0ca4d5` | feat(desktop): export safe static formulas and report diagrams |
+| `c6c9cf0` | `dab3803` | fix(desktop): validate report math layout and package preload |
+| `cce47a4` | `8099028` | fix: close final integration review findings |
+| `a6dfd4a` | `1f67c3d` | docs: record final seven-optimization acceptance |
+| `1d79229` | `0c8b8be` | fix(drafts): protect reviewed drafts from legacy readers |
+| `98b88f4` | `b99f450` | fix(exports): preserve full context and sanitize copied markdown |
+| `8e5fe69` | `779af65` | fix(desktop): suppress stale task preparation failures |
+| `988eaf1` | `676bf60` | docs: record bug audit fixes and verification |
+| `591e1a9` | `a981220` | docs: refresh acceptance indexes and artifact retention |
+| `a980ce9` | `a2bf60f` | feat(desktop): add stars to history and library |
+| `a09825f` | `c57943b` | chore(release): prepare v1.32.0 |
