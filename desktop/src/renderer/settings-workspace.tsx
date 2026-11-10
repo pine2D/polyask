@@ -1,3 +1,4 @@
+import { TierPresetSettings } from "./tier-preset-settings";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { DesktopCopy } from "../shared/copy";
@@ -247,6 +248,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           {props.preferenceSync ? <SettingsLayout {...props.preferenceSync} copy={props.copy} busy={busy} /> : null}
         </SettingsCategoryPanel>
         <SettingsCategoryPanel category="interaction" active={currentSection === 'interaction'} title={labels.interaction}>
+          {props.preferenceSync ? <TierPresetSettings copy={props.copy} snapshot={props.preferenceSync.snapshot}
+            disabled={busy || closeLocked || props.operationBusy} resetKey={localResetRevision} onFeedback={props.onAnnounce} /> : null}
           <NotificationSettings copy={props.copy} enabled={!!props.completionNotifications}
             busy={busy || closeLocked || (!!props.preferenceSync && !props.preferenceSync.snapshot)}
             preferenceHint={props.preferenceSync ? props.copy.preferenceSyncNotification : props.copy.localPreference}

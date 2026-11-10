@@ -1,0 +1,53 @@
+export const TIER_PRESET_COPY = {
+  en: {
+    presetTitle: 'Claude model presets', presetDescription: 'Choose the model and effort used by Fast and Think. Saved presets follow your preference sync.',
+    presetReadHint: 'Open Claude and sign in first. Reading options and verification may briefly switch models, then restore your original choice. No message is sent.',
+    presetRefresh: 'Read webpage options', presetRefreshAgain: 'Refresh options', presetWorking: 'Reading or verifying…',
+    presetFast: 'Fast', presetThink: 'Think', presetModel: 'Model', presetEffort: 'Effort', presetChooseModel: 'Choose a model',
+    presetChooseEffort: 'Choose an effort level', presetNoEffort: 'No effort setting', presetCurrent: 'Use webpage choice',
+    presetSave: 'Verify and save', presetReset: 'Use recommendation', presetRecommended: 'Built-in recommendation', presetSavedLabel: 'Saved: {choice}',
+    presetSaved: 'Preset verified and saved. The webpage selection was restored.', presetResetDone: 'Restored the built-in recommendation.',
+    presetReadDone: 'Webpage options refreshed.', presetCurrentDone: 'Webpage choice copied. Verify and save to use it as this preset.',
+    presetReadFailed: 'Could not read or verify Claude. Check the page and try again.',
+    presetOpenClaude: 'Open Claude in the workspace and sign in, then read the options again.',
+    presetTimedOut: 'The operation timed out. Nothing was saved; check Claude’s current selection before retrying.',
+    presetChanged: 'Settings changed while verification was running. Review the saved choice, then try again.',
+    presetChoiceUnavailable: 'This saved or selected choice is not in the latest webpage options.',
+    presetLeaveTitle: 'Discard preset changes?', presetLeaveMessage: 'Your model choices have not been saved.',
+    presetKeepEditing: 'Keep editing', presetDiscard: 'Discard changes', presetCancel: 'Cancel changes'
+  },
+  'zh-CN': {
+    presetTitle: 'Claude 模型档位', presetDescription: '分别设置快速档和思考档使用的模型与思考强度。已保存的预设随偏好同步。',
+    presetReadHint: '请先打开并登录 Claude。读取选项和验证会短暂切换模型，再恢复原来的选择，不会发送消息。',
+    presetRefresh: '读取网页选项', presetRefreshAgain: '刷新选项', presetWorking: '正在读取或验证…',
+    presetFast: '快速档', presetThink: '思考档', presetModel: '模型', presetEffort: '思考强度', presetChooseModel: '选择模型',
+    presetChooseEffort: '选择思考强度', presetNoEffort: '此模型无强度选项', presetCurrent: '使用网页当前组合',
+    presetSave: '验证并保存', presetReset: '恢复内置推荐', presetRecommended: '内置推荐', presetSavedLabel: '已保存：{choice}',
+    presetSaved: '预设已验证并保存，网页已恢复原来的选择。', presetResetDone: '已恢复内置推荐。',
+    presetReadDone: '网页选项已刷新。', presetCurrentDone: '已填入网页当前组合，验证并保存后生效。',
+    presetReadFailed: '未能读取或验证 Claude，请检查网页后重试。',
+    presetOpenClaude: '请先在工作区打开并登录 Claude，再读取网页选项。',
+    presetTimedOut: '操作超时，预设未保存。请先检查 Claude 当前选择，再重试。',
+    presetChanged: '验证期间设置已更新，请检查已保存的组合后重试。',
+    presetChoiceUnavailable: '已保存或选中的组合不在最新网页选项中。',
+    presetLeaveTitle: '放弃档位修改？', presetLeaveMessage: '刚选择的模型档位尚未保存。',
+    presetKeepEditing: '继续编辑', presetDiscard: '放弃修改', presetCancel: '取消修改'
+  },
+  'zh-TW': {
+    presetTitle: 'Claude 模型檔位', presetDescription: '分別設定快速檔和思考檔使用的模型與思考強度。已儲存的預設隨偏好同步。',
+    presetReadHint: '請先開啟並登入 Claude。讀取選項和驗證會短暫切換模型，再還原原來的選擇，不會傳送訊息。',
+    presetRefresh: '讀取網頁選項', presetRefreshAgain: '重新整理選項', presetWorking: '正在讀取或驗證…',
+    presetFast: '快速檔', presetThink: '思考檔', presetModel: '模型', presetEffort: '思考強度', presetChooseModel: '選擇模型',
+    presetChooseEffort: '選擇思考強度', presetNoEffort: '此模型無強度選項', presetCurrent: '使用網頁目前組合',
+    presetSave: '驗證並儲存', presetReset: '還原內建建議', presetRecommended: '內建建議', presetSavedLabel: '已儲存：{choice}',
+    presetSaved: '預設已驗證並儲存，網頁已還原原來的選擇。', presetResetDone: '已還原內建建議。',
+    presetReadDone: '網頁選項已重新整理。', presetCurrentDone: '已填入網頁目前組合，驗證並儲存後生效。',
+    presetReadFailed: '無法讀取或驗證 Claude，請檢查網頁後重試。',
+    presetOpenClaude: '請先在工作區開啟並登入 Claude，再讀取網頁選項。',
+    presetTimedOut: '操作逾時，預設未儲存。請先檢查 Claude 目前選擇，再重試。',
+    presetChanged: '驗證期間設定已更新，請檢查已儲存的組合後重試。',
+    presetChoiceUnavailable: '已儲存或選取的組合不在最新網頁選項中。',
+    presetLeaveTitle: '放棄檔位修改？', presetLeaveMessage: '剛選擇的模型檔位尚未儲存。',
+    presetKeepEditing: '繼續編輯', presetDiscard: '放棄修改', presetCancel: '取消修改'
+  }
+} as const;
