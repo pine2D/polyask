@@ -51,3 +51,21 @@ test('immediate tier IPC gates mutations, freezes participating scope, and isola
   } finally { release(); dispose(); database.close(); }
   assert.equal(handlers.size, 0);
 });
+
+test('immediate tier uses per-site presets captured before dispatch and never affects another site', async () => {
+  const { DEFAULT_PREFERENCE_VALUES } = await import('../src/shared/preferences');
+  const database = DesktopDatabase.open(':memory:');
+  const workspace = new WorkspaceService(database.state, database.meta, () => {}, { createDeviceId: () => 'local' });
+  workspace.setSelection(['claude', 'kimi']); workspace.setParticipation(['claude', 'kimi']);
+  const values = { ...DEFAULT_PREFERENCE_VALUES, claudeFastPreset: { model: 'Opus 5.5', effort: 'Max' } };
+  const calls: unknown[] = [], handlers = new Map<string, Function>();
+  const dispose = registerTierIpc({ ipc: { handle: (key, fn) => { handlers.set(key, fn); }, removeHandler: key => { handlers.delete(key); } },
+    workspace, gate: new OperationGate(), trusted: () => true, blocked: () => false, publish: () => workspace.getState(),
+    preferences: () => values, switchTier: async (site, _tier, _deadline, preset) => {
+      calls.push([site, preset]); values.claudeFastPreset.effort = 'Low'; return { ok: true };
+    } });
+  try {
+    await handlers.get('polyask:apply-tier')!({}, 'fast');
+    assert.deepEqual(calls, [['claude', { model: 'Opus 5.5', effort: 'Max' }], ['kimi', undefined]]);
+  } finally { dispose(); database.close(); }
+});

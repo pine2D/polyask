@@ -1,3 +1,6 @@
+import { captureTierPresets } from "./tier-preset-routing";
+import type { PreferenceValues } from "../shared/preferences";
+import type { TierPreset } from "../shared/tier-presets";
 import type { IpcMain, IpcMainInvokeEvent } from 'electron';
 import type { OperationGate } from '../shared/operation-gate';
 import type { SiteKey } from '../shared/contracts';
@@ -12,8 +15,9 @@ interface TierIpcOptions {
   readonly gate: OperationGate;
   readonly trusted: (event: IpcMainInvokeEvent) => boolean;
   readonly blocked: () => boolean;
+  readonly preferences?: () => PreferenceValues;
   readonly publish: () => WorkspaceState;
-  readonly switchTier: (site: SiteKey, tier: Exclude<Tier, null>, deadline: number) => Promise<SiteResult>;
+  readonly switchTier: (site: SiteKey, tier: Exclude<Tier, null>, deadline: number, preset?: TierPreset) => Promise<SiteResult>;
 }
 
 export function registerTierIpc(options: TierIpcOptions): () => void {
@@ -23,12 +27,13 @@ export function registerTierIpc(options: TierIpcOptions): () => void {
     if (value !== null && value !== 'think' && value !== 'fast') throw new Error('invalid_tier');
     if (options.blocked()) throw new Error('operation_busy');
     return gate.run(async () => {
+      const preset = captureTierPresets(options.preferences?.());
       const state = workspace.setTier(value);
       options.publish();
       const sites = state.selectedSites.filter(site => (state.participatingSites ?? state.selectedSites).includes(site));
       const deadline = Date.now() + 10_000;
       const results = value === null ? [] : await Promise.all(sites.map(async site => {
-        try { return { ...await options.switchTier(site, value, deadline), site }; }
+        try { return { ...await options.switchTier(site, value, deadline, preset(site, value)), site }; }
         catch { return { site, ok: false, code: 'error' }; }
       }));
       return { workspace: workspace.getState(), results };

@@ -1,3 +1,5 @@
+import { registerTierPresetsIpc } from "./tier-presets-ipc";
+import { captureTierPresets } from "./tier-preset-routing";
 import { registerTierIpc } from './tier-ipc';
 import { registerWorkbenchNavigationIpc } from './workbench-navigation-ipc';
 import { registerShellPanelIpc } from './shell-panel-ipc';
@@ -158,7 +160,11 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   };
   const disposeTier = registerTierIpc({ ipc: ipcMain, workspace, gate: operationGate, trusted: trustedShell,
     blocked: () => options.dataAdmin.isResetting || manager.isConfirmationActive(),
-    publish: publishWorkspace, switchTier: (site, tier, deadline) => manager.switchTier(site, tier, deadline) });
+    ...(options.preferences ? { preferences: () => options.preferences!.snapshot().values } : {}),
+    publish: publishWorkspace, switchTier: (site, tier, deadline, preset) => manager.switchTier(site, tier, deadline, preset) });
+  const disposeTierPresets = options.preferences ? registerTierPresetsIpc({ ipc: ipcMain, gate: operationGate, trusted: trustedShell,
+    preferences: options.preferences, epoch: () => options.preferences!.drafts.epoch(),
+    blocked: () => options.dataAdmin.isResetting || manager.isConfirmationActive(), inspect: manager.inspectClaudePreset }) : () => {};
   const publishPromptLibrary = () => {
     const state = promptLibrary.getState();
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);
@@ -206,6 +212,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       throw new Error("image_sites_unsupported");
     }
     return operationGate.run(async () => {
+      const preset = captureTierPresets(options.preferences?.snapshot().values);
       // beginRun first: a stale retry throws before generation monitoring is touched.
       collection.beginRun(request.runId, request.sites);
       const { remaining, dispatch, settled, historyTokens } = await capture.prepareRun(request, request.images.length ? 90_000 : 44_000, lateSentResult(manager, request.runId));
@@ -219,7 +226,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
       for (const site of dispatch.sites) manager.markStatus(statusForSending(site, request.runId));
       const results = await coordinator.send(
         dispatch,
-        (site, command, signal) => manager.sendCommand(site, { ...command, historyToken: historyTokens.get(site) }, signal),
+        (site, command, signal) => manager.sendCommand(site, { ...command, preset: preset(site, command.tier), historyToken: historyTokens.get(site) }, signal),
         remaining,
         receiveResult,
         { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
@@ -336,6 +343,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   return () => {
     disposeNavigation();
     disposeTier();
+    disposeTierPresets();
     disposePanels();
     disposeSiteFind();
     disposePreferences();

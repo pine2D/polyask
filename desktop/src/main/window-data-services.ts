@@ -34,7 +34,7 @@ export async function createWindowDataServices(options: {
   const synthesis = new SynthesisService({
     sites: SITES, archives: local.archives,
     navigate: (site, url) => manager.navigate(site, url),
-    send: request => sendTrackedSynthesis(request, manager, synthesisCoordinator, 44_000),
+    send: request => sendTrackedSynthesis(request, manager, synthesisCoordinator, 44_000, preferences.snapshot().values),
     onPendingChange: () => manager.releaseUnselectedViews(),
     collect: (sites, runId) => collection.collect(sites, runId),
     targetAvailable: site => workspace.getState().selectedSites.includes(site),

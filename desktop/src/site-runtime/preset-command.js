@@ -5,7 +5,7 @@
   if (!S) return;
   S.withPresetRestored = async function (adapter, deadline, action) {
     S.checkDeadline(deadline);
-    const original = adapter.currentPreset();
+    const original = adapter.currentPreset(), url = location.href;
     if (!S.presetValid?.(original)) throw new Error('preset_unavailable');
     const remaining = deadline - Date.now(), reserve = Math.min(4000, Math.ceil(remaining / 2));
     const workDeadline = deadline - reserve;
@@ -13,6 +13,7 @@
     try { return await action(original, workDeadline); }
     finally {
       S.escMenus();
+      if (location.href !== url) throw new Error('not_ready');
       if (!S.presetSame(adapter.currentPreset(), original)) {
         try {
           S.checkDeadline(deadline);
@@ -39,7 +40,7 @@
       if (!S.presetValid(action.preset)) return { ok: false, code: 'invalid_response' };
       const verified = await S.withPresetRestored(a, deadline, (_original, workDeadline) => a.applyPreset(action.preset, workDeadline));
       return { ok: true, current, verified };
-    }).then(respond, error => respond({ ok: false, code: ['preset_unavailable', 'preset_restore_failed', 'timeout'].includes(error?.message)
+    }).then(respond, error => respond({ ok: false, code: ['preset_unavailable', 'preset_restore_failed', 'timeout', 'not_ready'].includes(error?.message)
       ? error.message : 'preset_unavailable' }));
     return true;
   };

@@ -1,3 +1,6 @@
+import { sendSiteCommand } from "./site-send-command";
+import { inspectSitePreset } from "./site-tier-presets";
+import type { TierPreset, TierPresetAction } from "../shared/tier-presets";
 import { switchSiteTier } from './site-tier';
 import { bindSiteFocus } from './site-focus';
 import { reclaimUnselectedViews } from "./view-reclamation";
@@ -436,28 +439,8 @@ export class ViewManager {
   }
 
   sendCommand(site: SiteKey, command: SubmitSiteCommand, signal: AbortSignal): Promise<SiteResult> {
-    const view = this.views.get(site);
-    if (!view || view.webContents.isDestroyed()) {
-      return Promise.resolve({ ok: false, code: "no_view" });
-    }
-    // A crashed or failed page has no preload left to answer, so the request
-    // would burn the whole budget and land on submit_unconfirmed — "maybe sent".
-    // It was never dispatched, so report the certain failure instead. Never
-    // reload and resend here: automatic resends are forbidden.
-    const pageFailure = this.pageFailureCode(site);
-    if (pageFailure) return Promise.resolve({ ok: false, code: pageFailure });
-    const definition = SITES.find((candidate) => candidate.key === site);
-    if (!definition || this.historyAccess.reloads.watching(site) || navigationDisposition(definition, view.webContents.getURL()) !== "site") {
-      return Promise.resolve({ ok: false, code: "not_ready" });
-    }
-    return this.commands.send(view.webContents, command, {
-      signal,
-      timeoutResult: { ok: false, code: "submit_unconfirmed" },
-      onAbort: () => {
-        if (view.webContents.isDestroyed()) return;
-        this.replaceView(definition, view, view.webContents.getURL() || definition.url);
-      }
-    }).then((result) => "ok" in result ? result : { ok: false, code: "invalid_response" });
+    return sendSiteCommand(site, this.views.get(site), this.pageFailureCode(site), this.historyAccess.reloads.watching(site),
+      this.commands, command, signal, (definition, view, url) => this.replaceView(definition, view, url));
   }
 
   // 只读确认，配合 BroadcastCoordinator 的 submit_unconfirmed 恢复。页面有回包才归一（fail-closed）；
@@ -485,8 +468,12 @@ export class ViewManager {
       "ok" in result ? { code: "not_ready" } : result as SiteCollectionResult);
   }
 
-  readonly switchTier = (site: SiteKey, tier: "think" | "fast", deadline: number): Promise<SiteResult> =>
-    switchSiteTier(site, this.views.get(site), this.pageFailureCode(site), this.historyAccess.navigating(site) || this.historyAccess.reloads.watching(site), this.commands, tier, deadline);
+  readonly switchTier = (site: SiteKey, tier: "think" | "fast", deadline: number, preset?: TierPreset): Promise<SiteResult> =>
+    switchSiteTier(site, this.views.get(site), this.pageFailureCode(site), this.historyAccess.navigating(site) || this.historyAccess.reloads.watching(site), this.commands, tier, deadline, preset);
+
+  readonly inspectClaudePreset = (action: TierPresetAction, deadline: number) =>
+    inspectSitePreset(this.views.get('claude'), this.pageFailureCode('claude'), this.historyAccess.navigating('claude') ||
+      this.historyAccess.reloads.watching('claude'), !!this.sitePageCloseReason('claude'), this.commands, action, deadline);
 
   receiveResponse(sender: WebContents, envelope: SiteResponseEnvelope): void {
     this.commands.receive(sender, envelope);

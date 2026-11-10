@@ -1,3 +1,4 @@
+import type { PresetMode, TierPreset, TierPresetCatalog } from "../shared/tier-presets";
 import type { TierChangeResult } from '../shared/tier-switch';
 import type { SiteZoomAction } from '../shared/site-zoom';
 import type { MarkdownPreviewRequest, MarkdownExportRequest, MarkdownExportResult, MarkdownDocument } from '../shared/markdown-export';
@@ -81,6 +82,9 @@ export interface PolyAskDesktopApi extends NotificationApi {
   selectSiteFind(site: SiteKey): Promise<SiteFindState>;
   closeSiteFind(restoreFocus?: boolean): Promise<SiteFindState>;
   onSiteFind(listener: (state: SiteFindState) => void): () => void;
+  getClaudePresets(model?: string): Promise<TierPresetCatalog>;
+  getCurrentClaudePreset(): Promise<TierPreset>;
+  saveClaudePreset(mode: PresetMode, preset: TierPreset | null): Promise<PreferenceSnapshot>;
   getPreferences(): Promise<PreferenceSnapshot>;
   seedPreferences(values: Partial<PreferenceValues>): Promise<PreferenceSnapshot>;
   setPreference(key: PreferenceKey, value: unknown): Promise<PreferenceSnapshot>;
@@ -242,6 +246,9 @@ const api: PolyAskDesktopApi = Object.freeze({
   selectSiteFind: (site: SiteKey) => invoke('polyask:find-select', site),
   closeSiteFind: (restoreFocus?: boolean) => invoke('polyask:find-close', restoreFocus),
   onSiteFind: (listener: (state: SiteFindState) => void) => subscribe('polyask:find-state', listener),
+  getClaudePresets: (model?: string) => invoke('polyask:claude-preset-options', model),
+  getCurrentClaudePreset: () => invoke('polyask:claude-preset-current'),
+  saveClaudePreset: (mode: PresetMode, preset: TierPreset | null) => invoke('polyask:claude-preset-save', { mode, preset }),
   getPreferences: () => invoke('polyask:preferences'),
   seedPreferences: (values: Partial<PreferenceValues>) => invoke('polyask:preferences-seed', values),
   setPreference: (key: PreferenceKey, value: unknown) => invoke('polyask:preference-set', { key, value }),

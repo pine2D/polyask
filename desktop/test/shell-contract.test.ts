@@ -365,7 +365,8 @@ test("commands refuse to reach a crashed or failed page instead of guessing", ()
     manager.indexOf("collect(site: SiteKey"),
     manager.indexOf("private checkSiteHealth(")
   );
-  assert.match(send, /const pageFailure = this\.pageFailureCode\(site\)/);
+  assert.match(send, /sendSiteCommand\(site, this\.views\.get\(site\), this\.pageFailureCode\(site\)/);
+  assert.match(readSource("src/main/site-send-command.ts"), /if \(pageFailure\) return Promise\.resolve\(\{ ok: false, code: pageFailure \}\)/);
   assert.match(collect, /const pageFailure = this\.pageFailureCode\(site\)/);
   assert.match(manager, /if \(phase === "crashed"\) return "renderer_crashed"/);
   assert.match(manager, /if \(phase === "failed"\) return "load_failed"/);
@@ -377,7 +378,7 @@ test("assisted synthesis dispatches through its own coordinator and cancel reach
   const ipc = readSource("src/main/shell-ipc.ts");
   assert.match(main, /const synthesisCoordinator = new BroadcastCoordinator\(\)/);
   assert.match(main, /await createWindowDataServices\(/);
-  assert.match(readSource("src/main/window-data-services.ts"), /sendTrackedSynthesis\(request, manager, synthesisCoordinator, 44_000\)/);
+  assert.match(readSource("src/main/window-data-services.ts"), /sendTrackedSynthesis\(request, manager, synthesisCoordinator, 44_000, preferences\.snapshot\(\)\.values\)/);
   assert.match(main, /synthesisCoordinator,/);
   const cancel = ipc.slice(ipc.indexOf('ipcMain.on("polyask:cancel"'), ipc.indexOf('ipcMain.on("polyask:set-composer-expanded"'));
   assert.match(cancel, /coordinator\.cancel\(\)/);

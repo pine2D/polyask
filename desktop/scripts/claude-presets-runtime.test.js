@@ -123,3 +123,13 @@ test('deadline reached during model change permits menu cleanup but no later eff
     assert.deepEqual(p.clicks, ['model:Opus 5.5']); assert.equal(p.menus(), 0);
   } finally { p.close(); }
 });
+
+test('navigation during verification stops further clicks and does not restore on another conversation', async () => {
+  let p;
+  p = presetPage({ afterClick: () => p.dom.reconfigure({ url: 'https://claude.ai/chat/another' }) });
+  try {
+    const result = await p.command({ kind: 'verify', preset: { model: 'Opus 5.5', effort: 'Max' } });
+    assert.equal(result.ok, false); assert.equal(result.code, 'not_ready');
+    assert.deepEqual(p.clicks, ['model:Opus 5.5']);
+  } finally { p.close(); }
+});

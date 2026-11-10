@@ -58,40 +58,47 @@
     if (result.length > max || new Set(result).size !== result.length) invalid();
     return result;
   }
-  async function open(deadline) {
+  function checkPage(deadline, url) {
     S.checkDeadline(deadline);
+    if (location.href !== url) throw new Error('not_ready');
+  }
+  function act(deadline, url, callback) { checkPage(deadline, url); return S.tierAction(deadline, callback); }
+  async function open(deadline, url) {
+    checkPage(deadline, url);
     const b = button(); if (!b || !visible(b) || !enabled(b)) invalid();
-    S.escMenus(); S.tierAction(deadline, () => S.openMenu(b));
+    S.escMenus(); act(deadline, url, () => S.openMenu(b));
     const roots = await S.waitFor(() => { const r = rootsFor(b); return r.length ? r : null; }, 1800, 80, deadline);
+    checkPage(deadline, url);
     if (!roots) invalid();
     return roots;
   }
-  async function models(deadline) {
-    const roots = await open(deadline);
+  async function models(deadline, url) {
+    const roots = await open(deadline, url);
     const top = entries(roots);
     const more = roots.flatMap(root => [...root.querySelectorAll('[role="menuitem"][aria-haspopup="menu"]')])
       .filter(el => visible(el) && enabled(el) && /^(more models|更多模型)/i.test((el.textContent || '').trim()));
     if (more.length > 1) invalid();
     if (more.length) {
-      S.tierAction(deadline, () => S.openMenu(more[0]));
+      act(deadline, url, () => S.openMenu(more[0]));
       const sub = await S.waitFor(() => { const r = rootsFor(more[0]); return r.length ? r : null; }, 1500, 80, deadline);
+      checkPage(deadline, url);
       if (!sub) invalid();
       const all = [...top, ...entries(sub)];
       return all.filter((item, i) => all.findIndex(other => other.el === item.el) === i);
     }
     return top;
   }
-  async function chooseModel(model, deadline) {
+  async function chooseModel(model, deadline, url) {
     try {
-      const item = unique(await models(deadline), model);
+      const item = unique(await models(deadline, url), model);
       if (a.currentPreset()?.model !== model) {
-        S.tierAction(deadline, () => S.clickEl(item.el));
+        act(deadline, url, () => S.clickEl(item.el));
         if (!await S.waitFor(() => a.currentPreset()?.model === model, 1500, 80, deadline)) invalid();
       }
     } finally { S.escMenus(); }
   }
-  async function efforts(deadline) {
-    const roots = await open(deadline), trigger = a._effortTrigger();
+  async function efforts(deadline, url) {
+    const roots = await open(deadline, url), trigger = a._effortTrigger();
     if (!trigger) {
       if (a.currentPreset()?.effort !== null) invalid();
       return [];
@@ -99,7 +106,7 @@
     if (!roots.some(root => root.contains(trigger)) || !trigger.id) invalid();
     let items = entries(roots, true);
     if (!items.length && trigger.getAttribute('aria-haspopup') === 'menu') {
-      S.tierAction(deadline, () => S.openMenu(trigger));
+      act(deadline, url, () => S.openMenu(trigger));
       items = await S.waitFor(() => { const list = entries(rootsFor(trigger), true); return list.length ? list : null; }, 1500, 80, deadline);
     }
     if (!items?.length) invalid();
@@ -107,30 +114,32 @@
     return items;
   }
   a.applyPreset = async function (preset, deadline) {
+    const url = location.href;
     try {
       S.checkDeadline(deadline);
       if (!valid(preset) || !this.currentPreset()) invalid();
-      await chooseModel(preset.model, deadline);
-      const items = await efforts(deadline);
+      await chooseModel(preset.model, deadline, url);
+      const items = await efforts(deadline, url);
       if (preset.effort === null) { if (items.length) invalid(); }
       else {
         const wanted = unique(items, preset.effort);
-        if (!same(this.currentPreset(), preset)) S.tierAction(deadline, () => S.clickEl(wanted.el));
+        if (!same(this.currentPreset(), preset)) act(deadline, url, () => S.clickEl(wanted.el));
       }
       if (!await S.waitFor(() => same(this.currentPreset(), preset), 1200, 80, deadline)) invalid();
-      S.checkDeadline(deadline);
+      checkPage(deadline, url);
       return { ...preset };
     } finally { S.escMenus(); }
   };
   a.presetOptions = async function (model, deadline) {
+    const url = location.href;
     return S.withPresetRestored(this, deadline, async (current, workDeadline) => {
       try {
-        const list = labels(await models(workDeadline), 50);
+        const list = labels(await models(workDeadline, url), 50);
         const selected = model === undefined ? current.model : model;
         if (!list.includes(selected)) invalid();
         S.escMenus();
-        await chooseModel(selected, workDeadline);
-        return { models: list, model: selected, efforts: labels(await efforts(workDeadline), 12), current };
+        await chooseModel(selected, workDeadline, url);
+        return { models: list, model: selected, efforts: labels(await efforts(workDeadline, url), 12), current };
       } finally { S.escMenus(); }
     });
   };

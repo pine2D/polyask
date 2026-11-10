@@ -60,3 +60,20 @@ test('site tier timeout is certain non-submission and deadline is not extended',
     assert.equal((await f.change(null, false, Date.now() + 10)).code, 'timeout');
   } finally { f.channel.dispose(); }
 });
+
+test('custom tier requires an exact receipt for model and effort, not only a coarse mode', async () => {
+  const preset = { model: 'Fable 5.2', effort: 'Extra' }, channel = new SiteCommandChannel();
+  let sent: SiteCommandEnvelope | undefined;
+  const contents = { id: 192, isDestroyed: () => false, getURL: () => 'https://claude.ai/new',
+    send: (_key: string, envelope: SiteCommandEnvelope) => { sent = envelope; } };
+  try {
+    for (const model of [undefined, 'Fable 5.2 · Max', 'Fable 5.2 · Extra']) {
+      const pending = switchSiteTier('claude', { webContents: contents } as any, null, false, channel, 'fast', Date.now() + 1000, preset);
+      assert.ok(sent); assert.deepEqual('preset' in sent.command && sent.command.preset, preset);
+      channel.receive(contents as any, { requestId: sent.requestId, result: { ok: true, selection: {
+        requested: 'fast', observed: 'fast', ...(model ? { outcome: 'preferred', model } : { outcome: 'mode_only' })
+      } as any } });
+      assert.equal((await pending).ok, model === 'Fable 5.2 · Extra');
+    }
+  } finally { channel.dispose(); }
+});
