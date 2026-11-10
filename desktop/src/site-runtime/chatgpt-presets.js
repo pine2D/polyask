@@ -15,7 +15,13 @@
   }
   const close = deadline => P.close(() => [root()].filter(Boolean), deadline);
   async function open(deadline, url) {
-    P.check(deadline, url); if (!root()) P.click(a._anchor(), deadline, url, true);
+    P.check(deadline, url);
+    // 冷启动先渲染占位输入框；等真正的模型入口可用，每次重取，仍受本次截止时间约束。
+    while (!root()) {
+      const anchor = a._anchor();
+      if (P.visible(anchor) && P.enabled(anchor)) { P.click(anchor, deadline, url, true); break; }
+      await S.sleep(60, deadline); P.check(deadline, url);
+    }
     return P.wait(root, deadline, url);
   }
   async function models(deadline, url) {
