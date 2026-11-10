@@ -19,6 +19,24 @@
 
 **顺序不能反：先离线（`bash scripts/verify.sh` + `cd desktop && npm test && npm run typecheck`），再真机。** 反过来会得到「真机试通了但 CI 红」的返工。
 
+## 2026-11-10 九站自定义模型档位
+
+Claude 分支已合入 main（`23b922b`）；全站扩展从同一基线继续，版本仍为 1.32.0。设置 → 操作与快捷键 → 各站模型档位可选择九站，快速/思考分别保存精确网页选项。18 个偏好键各自版本化，覆盖同步、备份和本机重置；不在后台扫描。
+
+专项入口为 `npm run test:runtime -- scripts/preset-command-runtime.test.js scripts/preset-dom.test.js scripts/claude-presets-runtime.test.js scripts/chatgpt-presets.test.js scripts/gemini-presets.test.js scripts/deepseek-presets.test.js scripts/doubao-presets.test.js scripts/qianwen-presets.test.js scripts/kimi-presets.test.js scripts/yuanbao-presets.test.js scripts/chatglm-presets.test.js`。UI 与 IPC 使用 `npm run test:unit -- test/site-preset-settings.test.tsx test/tier-preset-settings.test.tsx test/tier-presets-ipc.test.ts test/site-tier-presets.test.ts`；原生界面为 `npm run test:unit -- test/tier-presets-native.check.ts`。
+
+- 最终完整 `npm test` 退出 0：应用/UI 2,769 项、运行时 605 项全部通过，无取消或跳过；独立 typecheck、仓库 verify 通过。首轮全量测试暴露的导航 API 回放桩和偏好默认值断言已修复，未删除或跳过用例。
+- 与 `e382789` 相同的产品代码完成 Linux package 与离线包内 smoke，均退出 0，确认 shell=1、sites=9、attached=9。原生检查使用 `test-safe` 的临时 4 GiB 内存/512 MiB swap cgroup；打包使用命令级 `NODE_OPTIONS=--max-old-space-size=1024`，未改持久配置。结束后核对本任务开发/包内可执行进程为 0、调试端口关闭。
+- 隔离原生界面通过三语、明暗、720/1440px 和 200% 缩放共 13 组，以及九站逐个保存/重置、模式或开关标签、切站未保存确认与取消。0 HTTP/HTTPS 请求、0 renderer error；代表截图无裁切，归属进程退出、临时 profile 已清理。合成 API 的保存不会写真实用户档案。
+- 重启 Linux/WSL 开发态，以生产外壳 IPC 从设置页读取九站当前组合与选项。真实菜单覆盖 Claude 13 模型、ChatGPT 旧版两模型各五格、Gemini 模型与强度、DeepSeek DeepThink 开关、豆包快速/专家、千问模型与模式、Kimi 当前模型强度、元宝两层菜单及智谱模型/强度。
+- 生产 `__AMS` 验证后恢复，再实际调用带精确预设的 `resolveTier`：Claude Opus 5.5 Max；ChatGPT 6 Extra High / GPT-5.6 Sol 5.6 High；Gemini 3.8 Flash High / 4 Argon High；DeepSeek On；豆包专家；千问 Qwen-快速思考研究 / Qwen3.7-Max 快速；Kimi K3.1 Pro Max；元宝 Hy4 Expert；智谱 GLM-5.3-Flash 深度 / GLM-5.3 深度。有效组合均返回 `preferred`，恢复各次原组合，菜单归零、页面 idle。
+- Kimi 探测 K2.8 Preview 返回 `preset_model_switch_required` 且原选择不变，用户须先在网页换模型。千问菜单仍列出思考研究，但 Qwen3.7-Max 实际点击提示“不支持思考研究”；验证明确失败并恢复，不保存或改选替代组合。
+- 真机发现的关闭动画残留、二级菜单分层 Escape、千问模型弹层过渡、已打开菜单入口被背景遮罩隐藏等问题均有失败对照和修复回归。队列等待或异步读取后的同 URL 导航也会使操作失效，后续选择和恢复不进入新页面。
+
+ChatGPT 曾在一轮启动后的首次读取失败，初始输入框快照也与结束时不一致，未隔离根因，不将该轮记为草稿保留通过。另一次重启后，先连续两次读取相同模型/强度、间隔 3 秒再建立输入基线；从设置页发现五格，验证并实际把快速档设为 6 Extra High，再恢复原 6 Medium，两次间隔复读一致。验证、切换、恢复三个阶段输入均与稳定基线相同，URL 未变、页面 idle、菜单为 0。此前八站扩展的切档检查也逐项核对输入与 URL 保留。最后两次开发实例分别观测 38 和 36 个归属进程，正常关闭后全部退出，登录档案保留。
+
+真实验证没有发送问题、上传文件或保存测试预设；18 个偏好值及版本未变。ChatGPT 本机仅遇到旧菜单，Default 联合六格仍只有回归覆盖；千问无模型入口形态本轮只做离线回放。Windows/macOS、Drive 双设备、物理输入法与读屏未验，菜单确认也不证明服务端模型路由或完整发送链路。
+
 ## 2026-11-10 Claude Fable 5.2 思考档
 
 - 旧实现先复现选到 Fable 5、目标缺席却不拒绝；精确匹配 5.2 后，回归覆盖旧版与 5.20 / 5.2.1 干扰、紧连说明、目标缺席、快思往返、两种 effort 菜单及实际强度复读。完整应用 2,738 项、运行时 546 项、独立 typecheck 与仓库 verify 通过。
