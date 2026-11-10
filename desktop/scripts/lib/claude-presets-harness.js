@@ -69,7 +69,9 @@ function presetPage(options = {}) {
     d.body.append(menu);
   }
   label(); button.addEventListener('click', open);
-  d.body.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  d.body.addEventListener('keydown', e => { if (e.key === 'Escape' && (!options.scopedEscape || e.target.closest?.('[role="menu"]'))) {
+    if (options.asyncEscape) w.setTimeout(close, 30); else close();
+  } });
   w.t = key => key;
   w.chrome = { runtime: { onMessage: { addListener: fn => { listener = fn; } } } };
   for (const file of ['core.js', 'tier.js', 'adapters-intl.js', 'claude-presets.js', 'preset-command.js']) {

@@ -16,7 +16,7 @@
     if (!el) return [];
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT), found = [];
     for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-      if (node.parentElement?.closest('svg, [aria-hidden="true"], [hidden]')) continue;
+      if (node.parentElement?.closest('svg, [role="img"], [aria-hidden="true"], [hidden]')) continue;
       const text = node.textContent.trim();
       if (text) found.push(text);
       if (found.length > 24) break;
@@ -39,6 +39,14 @@
     const controlled = (trigger.getAttribute('aria-controls') || '').split(/\s+/);
     return [...document.querySelectorAll('[role="menu"]')].filter(root => visible(root) &&
       ((trigger.id && (root.getAttribute('aria-labelledby') || '').split(/\s+/).includes(trigger.id)) || controlled.includes(root.id) && root.id));
+  }
+  async function closeMenus(deadline) {
+    // 新菜单只处理自身冒泡的 Escape；body 上的按键事件不会经过它。
+    const trigger = button();
+    for (const root of rootsFor(trigger)) root.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    S.escMenus();
+    // React 异步移除菜单，确认关闭后才能重新打开；超时后只发 Escape，不再选择。
+    if (rootsFor(trigger).length && !await S.waitFor(() => !rootsFor(trigger).length, 500, 40, deadline)) invalid();
   }
   const effortHome = el => {
     const home = el.closest('[role="group"][aria-labelledby], [role="menu"][aria-labelledby]');
@@ -68,7 +76,8 @@
   async function open(deadline, url) {
     checkPage(deadline, url);
     const b = button(); if (!b || !visible(b) || !enabled(b)) invalid();
-    S.escMenus(); act(deadline, url, () => S.openMenu(b));
+    await closeMenus(deadline);
+    act(deadline, url, () => S.openMenu(b));
     const roots = await S.waitFor(() => { const r = rootsFor(b); return r.length ? r : null; }, 1800, 80, deadline);
     checkPage(deadline, url);
     if (!roots) invalid();
@@ -97,7 +106,7 @@
         act(deadline, url, () => S.clickEl(item.el));
         if (!await S.waitFor(() => a.currentPreset()?.model === model, 1500, 80, deadline)) invalid();
       }
-    } finally { S.escMenus(); }
+    } finally { await closeMenus(deadline); }
   }
   async function efforts(deadline, url) {
     const roots = await open(deadline, url), trigger = a._effortTrigger();
@@ -130,7 +139,7 @@
       if (!await S.waitFor(() => same(this.currentPreset(), preset), 1200, 80, deadline)) invalid();
       checkPage(deadline, url);
       return { ...preset };
-    } finally { S.escMenus(); }
+    } finally { await closeMenus(deadline); }
   };
   a.presetOptions = async function (model, deadline) {
     const url = location.href;
@@ -139,10 +148,10 @@
         const list = labels(await models(workDeadline, url), 50);
         const selected = model === undefined ? current.model : model;
         if (!list.includes(selected)) invalid();
-        S.escMenus();
+        await closeMenus(workDeadline);
         await chooseModel(selected, workDeadline, url);
         return { models: list, model: selected, efforts: labels(await efforts(workDeadline, url), 12), current };
-      } finally { S.escMenus(); }
+      } finally { await closeMenus(workDeadline); }
     });
   };
   S.presetValid = valid;

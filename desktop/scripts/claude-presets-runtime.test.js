@@ -162,7 +162,20 @@ test('split effort words stay exact through verification and restoration; only k
     b.innerHTML = '<span>Fable 5.2</span><span>Extra</span><span>3.5× or more usage</span>';
     b.setAttribute('aria-label', 'Model: Fable 5.2 Extra 3.5× or more usage');
     assert.deepEqual(plain(p.a.currentPreset()), extra);
+    b.innerHTML = '<span>Fable 5.2</span><span>Extra</span><span role="img" aria-label="3.5× or more usage">\ue109</span>';
+    assert.deepEqual(plain(p.a.currentPreset()), extra);
     b.setAttribute('aria-label', 'Model: Fable 5.2 Extra High');
     assert.equal(p.a.currentPreset(), null);
+  } finally { p.close(); }
+});
+
+
+test('menu-owned Escape closes a menu even when the already-selected effort needs no click', async () => {
+  const p = presetPage({ scopedEscape: true, asyncEscape: true });
+  try {
+    const result = await p.command({ kind: 'options' });
+    assert.equal(result.ok, true); assert.equal(p.menus(), 0);
+    await p.a.applyPreset({ model: 'Fable 5.2', effort: 'Medium' }, Date.now() + 5000);
+    assert.equal(p.menus(), 0); assert.equal(p.clicks.length, 0);
   } finally { p.close(); }
 });

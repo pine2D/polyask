@@ -196,6 +196,7 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 - **Claude 自定义预设**（`claude-presets.js` / `preset-command.js`）：设置里的快速/思考各保存一个精确 `{model, effort}`，覆盖本节内置推荐。模型从语义归属明确的可见菜单读取，可展开 More models；强度只取对应模型的 Effort 组/子菜单，Extra 与 Max 分开，未来标签不依赖固定排名。仅打开设置并不会扫描；用户点击读取/刷新、切换模型或验证时才操作菜单。
 - 选项发现和保存验证都串入交互队列，共享绝对 10s 截止时间，预留剩余时间一半（最多 4s）恢复原选择；页面生成中拒绝操作，导航后不再点击或在新对话恢复。恢复失败返回 `preset_restore_failed`，不会保存。同步只读 `currentPreset()` 不开菜单、不缓存上一轮证据。普通 `state/selection/diagnose` 的只读契约不变。
+- 精确标签合并完整的强度文本节点，排除 SVG、`role=img` 用量图标及隐藏文本；仅剥离已确认的 usage 说明，Extra High 不能冒充 Extra。每个菜单动作向所属菜单发送 Escape 并等待其异步关闭，再继续下一步；等待最多 500ms 且夹取绝对 deadline，已选中的组合也必须收菜单。
 - 即时切档、群发（含同轮重试）与辅助发送均采用开始操作时冻结的组合。目标不可用返回未确认，不能偷偷选推荐模型；群发仍按原提交链继续一次，不新增自动重发。目录最多 50 个模型、每模型 12 个强度，名称长度与控制字符过滤由运行时、preload 和共享契约共同校验。
 
 ### ChatGPT（`chatgpt.com`，**`desktop/src/site-runtime/adapters-intl2.js`**）

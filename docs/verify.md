@@ -25,6 +25,17 @@
 - 核对发行与开发运行时 Cookie 加密均启用后，重新 `npm start`，在 Linux/WSL 既有登录档案的 Claude 主帧隔离上下文调用生产 `__AMS.resolveTier`。466×1013 视口下，快→思→思→快四轮均为 `mode_only`，实际标签依次为 Opus 5.5 Medium / Fable 5.2 Max / Fable 5.2 Max / Opus 5.5 Medium，单轮约 1.5–1.9 秒；每轮输入内容不变、菜单归零。
 - 当前账号可见强度为 Low / Medium / High / Extra / Max，未见 Ultra；仅代表本轮账号和页面。恢复原 Fable 5.2 Medium 后正常退出开发实例，33 个观测进程全部退出、调试端口关闭，登录档案保留；进程和线程核验共同 4 GiB/512 MiB 临时 cgroup，1 个桌面会话迁出进程已迁回。未发送提问或上传图片，不代表 Windows/macOS 实机与真实发送链路验收。
 
+## 2026-11-10 Claude 自定义模型档位
+
+本轮为 `feat/claude-tier-presets` 分支在 `86630a6` 之上的未发布功能，源码版本仍为 1.32.0。设置 → 操作与快捷键 → Claude 模型档位按需读取网页选项；快速/思考分别保存精确组合，验证并恢复原选择成功后才写入偏好。
+
+- 完整应用/UI 2,759 项和运行时 560 项通过，独立 typecheck、仓库 verify 通过。真实页面随后暴露的用量字体图标与异步菜单关闭问题均补充失败对照并修复；最终完整运行时 561 项及仓库 verify 再次通过，应用/UI 源码未再变化。回归含 Extra/Extra High/Max 区分、缺失/禁用/歧义、恢复失败、导航和截止时间、新同步值不被迟到保存覆盖、同步/备份/reset，以及切档失败仍只提交一次的合成群发。
+- 隔离 Electron 的生产设置组件完成三语、明暗、720/1440px 及 200% 缩放共 13 组原生合成检查；包含鼠标/键盘、焦点恢复、重复操作阻断、失败保留草稿、IME Escape 与恢复推荐。无溢出，文本对比度最低浅色 5.77、暗色 7.39，0 HTTP/HTTPS 请求、0 renderer error；归属进程退出，合成 profile 已清理。全局反馈与 aria-live 的接线另从生产入口核验，合成截图不包含全局页脚。
+- 最终代码重启 `npm start`，Linux/WSL 既有登录档案、466×1013 视口，通过生产外壳 IPC 读取 13 个模型；当前模型及 Opus 5.5 均返回 Low/Medium/High/Extra/Max。读取前后原组合一致，用户预设及其版本未变。
+- 生产 `__AMS` 分别验证 Fable 5.2 Extra、Fable 5.2 Max、Opus 5.5 Max；再分别作为快速/思考/思考调用 `resolveTier`，三轮回执均为精确 `preferred`。六轮都恢复启动时的 Fable 5.2 Extra，菜单归零、输入内容未变、页面 idle；同一组合的无须点击路径也通过。最终独立复读确认上述状态；33 个观测进程全部退出、调试端口关闭，登录档案保留。
+- 最终 Linux package 和离线包内 smoke 通过：shell=1、sites=9、attached=9，24 个归属进程退出。原生检查共用临时 4 GiB 内存/512 MiB swap cgroup；打包曾触发该上限，最终使用命令级 `NODE_OPTIONS=--max-old-space-size=1024` 成功完成，未修改持久配置或放宽资源边界。
+- 真实站点验证仅操作并恢复菜单，未发送问题、上传文件或向真实档案保存测试预设。Windows/macOS、真实 Drive 双设备、物理输入法与读屏未验；真实站点菜单结果不代表服务端模型路由或完整发送链路已验。
+
 ## 2026-11-04 阅读网格与对齐
 
 在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/reading-experience-native.mjs --grid-only`。生产历史与结果库组件使用合成数据、临时档案、阻断外网及共同 4GiB/512MiB cgroup；45组覆盖三语/明暗/两密度的1319、1320、1366px边界、125/150/200%缩放及历史文字对齐。另验证宽窗口内缩窄库容器、列表/详情返回、文件夹浏览跨断点、阅读节点和滚动/搜索焦点保持、多选可用。完整阅读入口也运行该专项，再执行原有48组阅读布局和复制/来源/比较流程；原生结束后核对归属进程退出及档案清理，不外推到Windows/macOS、物理IME或读屏验收。
