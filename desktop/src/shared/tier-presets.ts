@@ -8,11 +8,6 @@ export const PRESET_KEYS = SITE_KEYS.flatMap(site => [presetKey(site, 'fast'), p
 export const isSitePresetKey = (value: unknown): value is SitePresetKey => PRESET_KEYS.some(key => key === value);
 export const isPresetSite = (value: unknown): value is SiteKey => SITE_KEYS.some(site => site === value);
 export const DEFAULT_TIER_PRESETS = Object.fromEntries(PRESET_KEYS.map(key => [key, null])) as Record<SitePresetKey, null>;
-export const CLAUDE_PRESET_KEYS = ['claudeFastPreset', 'claudeThinkPreset'] as const;
-export type ClaudePresetKey = typeof CLAUDE_PRESET_KEYS[number];
-export const claudePresetKey = (mode: PresetMode): ClaudePresetKey => mode === 'fast' ? 'claudeFastPreset' : 'claudeThinkPreset';
-export const isClaudePresetKey = (value: unknown): value is ClaudePresetKey =>
-  CLAUDE_PRESET_KEYS.some(key => key === value);
 
 export function isPresetName(value: unknown, limit = 48): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= limit && value.trim() === value &&

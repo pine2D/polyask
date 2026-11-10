@@ -59,3 +59,41 @@ test('a transient unreadable target still restores and confirms the known origin
     assert.deepEqual(p.actions, [target, original]);
   } finally { p.close(); }
 });
+
+test('same-URL navigation invalidates verification before any restore on the new page', async () => {
+  const p = page(), apply = p.a.applyPreset;
+  p.a.applyPreset = async preset => {
+    const result = await apply(preset);
+    p.dom.window.history.pushState({}, '', p.dom.window.location.href);
+    p.dom.window.dispatchEvent(new p.dom.window.PopStateEvent('popstate'));
+    return result;
+  };
+  try {
+    const result = await p.command({ kind: 'verify', preset: target });
+    assert.equal(result.code, 'not_ready'); assert.deepEqual(p.actions, [target]);
+  } finally { p.close(); }
+});
+
+test('navigation while queued prevents even the initial read and all selection clicks', async () => {
+  const p = page(); let release;
+  const hold = new Promise(resolve => { release = resolve; });
+  try {
+    const pending = new Promise(resolve => p.S.presetCommand({ cmd: 'tierPreset', action: { kind: 'verify', preset: target },
+      deadline: Date.now() + 3000 }, resolve, task => hold.then(task)));
+    p.S.invalidatePreset(); release();
+    assert.equal((await pending).code, 'not_ready'); assert.equal(p.actions.length, 0); assert.equal(p.reads(), 0);
+  } finally { p.close(); }
+});
+
+for (const readNumber of [2, 3]) test(`navigation after awaited read ${readNumber} stops the next transaction action`, async () => {
+  const p = page(), read = p.S.readPreset; let reads = 0;
+  p.S.readPreset = async (...args) => {
+    const value = await read(...args);
+    if (++reads === readNumber) queueMicrotask(p.S.invalidatePreset);
+    return value;
+  };
+  try {
+    assert.equal((await p.command({ kind: 'verify', preset: target })).code, 'not_ready');
+    assert.deepEqual(p.actions, readNumber === 2 ? [] : [target]);
+  } finally { p.close(); }
+});

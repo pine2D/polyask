@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DesktopDatabase } from "../src/main/database";
+import { DEFAULT_TIER_PRESETS } from "../src/shared/tier-presets";
 import type { PreferenceKey } from "../src/shared/preferences";
 import type { StateFragment, VersionedSyncValue } from "../src/shared/sync";
 import { readSource } from "./fixtures";
@@ -24,7 +25,7 @@ test("uninitialized preferences use device defaults without generating sync writ
     const snapshot = preferences.snapshot();
     assert.deepEqual(snapshot.values, {
       completionNotifications: false, display: { density: "compact", siteScale: 0.9 },
-      layoutMode: "overview", siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, claudeFastPreset: null, claudeThinkPreset: null
+      layoutMode: "overview", siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, ...DEFAULT_TIER_PRESETS
     });
     assert.deepEqual(snapshot.following, { display: false, layout: false, siteZoom: false, proxy: false });
     assert.deepEqual(snapshot.initialized, []);
@@ -67,7 +68,7 @@ test("local display layout and site zoom edits preserve unrelated settings and s
     preferences.set("density", "compact");
     assert.deepEqual(preferences.snapshot().values, {
       completionNotifications: false, display: { density: "compact", siteScale: 1 },
-      layoutMode: "focus", siteZoom: { claude: 0.75, kimi: 1.25 }, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, claudeFastPreset: null, claudeThinkPreset: null
+      layoutMode: "focus", siteZoom: { claude: 0.75, kimi: 1.25 }, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, ...DEFAULT_TIER_PRESETS
     });
     assert.equal(database.outbox.count(), 0);
     assert.equal(database.state.entries("preference:").length, 0);

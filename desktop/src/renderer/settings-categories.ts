@@ -6,7 +6,7 @@ export type LegacySettingsSection = 'overview' | 'drive-diagnostics' | 'data' | 
 export type SettingsTarget = SettingsCategory | LegacySettingsSection | 'layout' | 'connection' | 'image-sync' | 'preference-sync' | 'backup-export' | 'model-presets';
 export type SettingsNavigationTarget = SettingsTarget | { category: SettingsCategory };
 const TARGETS: Partial<Record<SettingsTarget, { category: SettingsCategory; id: string }>> = {
-  'model-presets': { category: 'interaction', id: 'claude-presets-title' },
+  'model-presets': { category: 'interaction', id: 'tier-presets-title' },
   display: { category: 'appearance', id: 'settings-display-title' },
   layout: { category: 'appearance', id: 'settings-layout-title' },
   overview: { category: 'sync', id: 'sync-title' }, connection: { category: 'sync', id: 'sync-title' },

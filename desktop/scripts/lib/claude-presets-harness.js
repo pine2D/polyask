@@ -18,7 +18,10 @@ function presetPage(options = {}) {
     button.innerHTML = `<span aria-hidden="true">icon</span><span><span>${state.model}</span>${state.effort ? `<span> ${state.effort}</span>` : ''}</span>`;
     button.setAttribute('aria-label', `Model: ${state.model}${state.effort ? ` ${state.effort}` : ''}`);
   }
-  function close() { d.querySelectorAll('[role="menu"]').forEach(el => el.remove()); closes++; }
+  function close() {
+    d.querySelectorAll('[role="menu"]').forEach(el => options.keepClosed ? el.setAttribute('data-closed', '') : el.remove());
+    button.setAttribute('aria-expanded', 'false'); closes++;
+  }
   function radio(name, kind, parent, disabled = false) {
     const el = d.createElement('div'); el.setAttribute('role', 'menuitemradio');
     el.innerHTML = `<span><span><span>${name}</span></span><span>${kind === 'model' ? 'For your work' : 'Recommended'}</span></span><span aria-hidden="true">icon</span>`;
@@ -37,7 +40,7 @@ function presetPage(options = {}) {
     parent.append(el); return el;
   }
   function open() {
-    close();
+    close(); button.setAttribute('aria-expanded', 'true');
     const menu = d.createElement('div'); menu.setAttribute('role', 'menu'); menu.setAttribute('aria-labelledby', button.id);
     const group = d.createElement('div'); group.setAttribute('role', 'group'); menu.append(group);
     const names = Object.keys(choices), top = options.submenu ? names.slice(0, 2) : names;

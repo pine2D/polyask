@@ -26,9 +26,10 @@
 | `think` / `fast` | ✓ | `async (deadline?)` | 切到目标档。**关键控件缺失一律 `throw`**。可返回本次动作实际复读的 `{outcome, observed, model?}`，由 `tier.js` 校验；无返回值则读取只读证据确认。不能用静默 `return` 掩盖缺失步骤（例外见下一节），不能复用前次调用的读数 |
 | `state()` | ✓ | 同步 | `"think"` / `"fast"` / `null`。只表示粗档位，不能证明模型版本/强度/开关精确 |
 | `selection(mode)` | | 同步只读 | 返回 `{outcome, observed?, model?}`；`preferred`/`alternative` 需精确模型及目标模式证据，`mode_only` 只证明模式，其他为 `unconfirmed`。不得开菜单或复用上轮缓存；未实现时由 `state()` 提供模式证据 |
-| `currentPreset()` | | 同步只读 | Claude 精确 `{model, effort}` 或 null，effort 为 null 表示无强度选项；不得打开菜单 |
+| `currentPreset()` | | 同步只读 | 九站精确 `{model, effort}` 或 null；model 可表示实际模式/功能，effort=null 表示无第二维；不得打开菜单 |
+| `readPreset(deadline)` | | `async` | 显式预设交互中按需开菜单取得精确当前选择，随后关闭；不能由普通状态/巡检调用 |
 | `presetOptions(model?, deadline)` | | `async` | 按需读取可见模型与指定模型的强度目录，成功或失败均尝试恢复原组合；未恢复不得返回成功 |
-| `applyPreset(preset, deadline)` | | `async` | Claude 自定义组合，精确匹配模型与强度并复读，不按排序或粗档位代替；缺失/歧义/禁用一律抛错 |
+| `applyPreset(preset, deadline)` | | `async` | 九站自定义组合，精确匹配网页两维标签并复读，不按排序或粗档位代替；缺失/歧义/禁用一律抛错 |
 | `diagnose()` | ✓ | 同步 | 锚点命中报告，供巡检标芯片。只列**常驻**控件，会随对话阶段消失的控件不许列（否则巡检恒红误报）。**每条检查必须带 `kind`**，见下方「检查项的 `kind`」 |
 | `submit(el, deadline, historyToken?)` | | `async` | `false` = 发送键此刻不可用 → 落回通用链；**抛异常 = core 直接终止、不回退**（保留 `inject_failed` / `timeout` / `submit_unconfirmed`，其余异常报 `error`），所以内部必须自行判空返回 false。点击成功也要过 `confirmSubmitted` 才算成功 |
 | `inject(el, text)` | | 同步 | `false` = 交回通用注入链（beforeinput→execCommand→textContent）；**抛异常 = 通用链对本站不安全**（Kimi），core 直接报 `inject_failed` 不回退 |
@@ -118,6 +119,26 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 - `state()` 只表示粗档位，不能证明模型版本/强度/开关精确，所以每次群发至少跑一次幂等适配器。
 - **站内 toast 已是 no-op**（`core.js` 的 `toast()` 函数体早退，调用点保留）：用户可见反馈的所有权全在 Desktop 外壳（状态通道 + live region）。九个视图各弹一条硬编码配色、与外壳主题/语言/进度脱节的提示条只会制造噪音。**判断「切档是否成功」看 `runMode` / `resolveTier` 返回值及其证据，不能只凭菜单关闭后的 `state()` 或页面提示。**
 - **切档透传绝对 `deadline`**：`runMode(mode, silent?, deadline?)` 在排队前确定默认 10s 截止时间；群发采用 `min(群发 deadline, now + 10000)`。`think`/`fast`/图片切档及其私有菜单方法传递同一时间戳，轮询和 sleep 夹取剩余时间，交互动作前检查到期。到期允许菜单关闭收尾，不再选择模型或档位；切档预算耗尽但群发仍有余量时继续提交，保留 `tier_unconfirmed`。
+
+## 九站自定义快速与思考档
+
+每站由独立 `*-presets.js` 注册 `presetOptions/applyPreset`，按需提供同步 `currentPreset` 或交互式 `readPreset`，共用 `preset-common.js` 的精确标签与导航守卫、`preset-dom.js` 的菜单归属校验及 `preset-command.js` 的队列/恢复编排。用户显式读取、选择模型和验证时才分析网页；不在后台周期扫描。
+
+| 站点 | 目录的实际维度与边界 |
+| --- | --- |
+| Claude | 模型 + Effort；More models、平铺/子菜单两种强度；Extra 和 Max 分开 |
+| ChatGPT | 模型入口 + 每格实际闭合标签；Default 格子代表模型与强度的联合选择，不由位置或重复的 Light 描述拼出模型。旧版模型也遍历各自滑块范围；最多 12 格，键盘移动必须逐格复读成功 |
+| Gemini | 模型 + 对应 Thinking level；模型列表与所属强度子菜单分开校验 |
+| DeepSeek | 常驻 DeepThink 功能 + On/Off；旧首屏有模式 radio 时使用实际模式 + 开关。搜索状态保持原样；图片与非 Vision 自定义模式冲突时不擅自改选 |
+| 豆包 | 所属模式菜单里的完整标签，仅一维；直接选中标记与菜单内部图标分开 |
+| 千问 | 所属模型卡 + 输入区模式/旧思考开关；只认品牌入口并校验实际卡片，不点“设为默认”。确认日常页但无模型入口时仅保存实际模式；输入区排除附件及 More，不固定新模式词表。菜单可能列出网页实际不支持的组合，必须通过验证才保存 |
+| Kimi | 当前模型 + Thinking effort；不读取 Context length/Speed。设置探测跨模型返回 `preset_model_switch_required`，避免网站换模型跳离会话；实际切档仍可跟随目标模型确认后的站内导航 |
+| 元宝 | Models 子菜单中的实际模型 + 当前模型可用模式；强制单模式的模型单独读取；嵌套菜单按子层、父层分步关闭 |
+| 智谱 | 一级模型 + 所属 think-submenu 强度；唯一 CSS 隐藏例外限于当前可见根下的显式子菜单，仍需唯一 selected 与父级标签一致 |
+
+所有发现/验证共享绝对 10s deadline，预留剩余时间一半（最多 4s）恢复原选择；生成中拒绝操作，到期只收菜单。导航代次在排队前冻结，主帧导航（含同 URL）即时通知运行时失效，不能在新会话继续选择或恢复。读数不明也尝试恢复已知原组合；未恢复不返回成功。每个菜单动作自行收尾，关闭中的节点不可当新选项；关闭状态不能仅由残留动画几何推断。Claude 排除 Base UI `data-closed` 节点并在当前根内找强度；千问模式菜单等待前一模型弹层的退出过渡。
+
+默认推荐仍由原 `think/fast/state` 维护；自定义组合不借粗档位或固定排名证明成功。组合失效明确报未确认，群发继续原提交链一次。菜单名称仅为网页证据，不证明服务端路由；同步/备份只保存组合，不保存账号可用目录。
 
 ## 汇总复制（`answer` + `desktop/src/site-runtime/md.js`）
 

@@ -5,7 +5,8 @@
   if (!S) return;
   S.withPresetRestored = async function (adapter, deadline, action) {
     S.checkDeadline(deadline);
-    const url = location.href, original = await S.readPreset(adapter, deadline);
+    const context = S.presetContext(), original = await S.readPreset(adapter, deadline);
+    S.presetCheck(deadline, context);
     if (!S.presetValid?.(original)) throw new Error('preset_unavailable');
     const remaining = deadline - Date.now(), reserve = Math.min(4000, Math.ceil(remaining / 2));
     const workDeadline = deadline - reserve;
@@ -13,40 +14,46 @@
     try { return await action(original, workDeadline); }
     finally {
       S.escMenus();
-      if (location.href !== url) throw new Error('not_ready');
+      if (!S.presetIsCurrent(context)) throw new Error('not_ready');
       try {
         let current = adapter.currentPreset?.();
         if (!S.presetValid(current)) {
           try { current = await S.readPreset(adapter, deadline); }
-          catch (_) { if (location.href !== url) throw new Error('not_ready'); current = null; }
+          catch (_) { if (!S.presetIsCurrent(context)) throw new Error('not_ready'); current = null; }
         }
+        S.presetCheck(deadline, context);
         if (!S.presetSame(current, original)) {
           S.checkDeadline(deadline);
           await adapter.applyPreset(original, deadline);
           if (!S.presetSame(await S.readPreset(adapter, deadline), original)) throw new Error('preset_restore_failed');
         }
-      } catch (_) { if (location.href !== url) throw new Error('not_ready'); throw new Error('preset_restore_failed'); }
+      } catch (_) { if (!S.presetIsCurrent(context)) throw new Error('not_ready'); throw new Error('preset_restore_failed'); }
       S.escMenus();
     }
   };
   S.presetCommand = function (msg, respond, serialize) {
     if (msg.cmd !== 'tierPreset') return false;
+    const context = S.presetContext();
     serialize(async () => {
       const deadline = Number(msg.deadline) || 0, a = S.pickAdapter(), action = msg.action;
       if (Date.now() >= deadline) return { ok: false, code: 'timeout' };
+      S.presetCheck(deadline, context);
       if ((!a?.currentPreset && !a?.readPreset) || !a.applyPreset || !a.presetOptions) return { ok: false, code: 'preset_unavailable' };
       if (!action || !['current', 'options', 'verify'].includes(action.kind)) return { ok: false, code: 'invalid_response' };
       if (S.generationProbe?.() === 'generating') return { ok: false, code: "preset_busy" };
       if (!S.findComposer()) return { ok: false, code: 'not_ready' };
-      const current = await S.readPreset(a, deadline);
+      const current = await S.readPreset(a, deadline); S.presetCheck(deadline, context);
       if (!S.presetValid(current)) return { ok: false, code: 'preset_unavailable' };
       if (action.kind === 'current') return { ok: true, current };
-      if (action.kind === 'options') return { ok: true, current, catalog: await a.presetOptions(action.model, deadline) };
+      if (action.kind === 'options') {
+        const catalog = await a.presetOptions(action.model, deadline); S.presetCheck(deadline, context);
+        return { ok: true, current, catalog };
+      }
       if (!S.presetValid(action.preset)) return { ok: false, code: 'invalid_response' };
       if (a.presetModelRequiresNavigation && action.preset.model !== current.model)
         return { ok: false, code: "preset_model_switch_required" };
       const verified = await S.withPresetRestored(a, deadline, (_original, workDeadline) => a.applyPreset(action.preset, workDeadline));
-      return { ok: true, current, verified };
+      S.presetCheck(deadline, context); return { ok: true, current, verified };
     }).then(respond, error => respond({ ok: false, code: ['preset_unavailable', 'preset_restore_failed', 'preset_model_switch_required', 'timeout', 'not_ready'].includes(error?.message)
       ? error.message : 'preset_unavailable' }));
     return true;

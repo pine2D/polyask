@@ -147,8 +147,8 @@ function diagMustResolveTranslationAcrossModuleBoundary() {
 // 磁盘上 site-runtime 的每一个 *.js 都必须被 preload require（没有豁免：扩展专用的 pill.js 已随扩展删除）。
 // preload 注入的完整顺序链：i18n 先于一切；core 先于 send/upload/md（它们读 window.__AMS）；
 // 七卷适配器先于 generation/diag（后两者包装 __AMS.adapters）。新开一卷适配器要在这里登记位置。
-const PRELOAD_CHAIN = Object.freeze(["i18n", "core", "read-commands", "tier", "selection-match", "preset-common", "send", "upload", "md-head", "md-diagram", "md", "prompt-markup", "adapters-intl", "claude-presets", "preset-command", "adapters-intl2", "chatgpt-default", "adapters-intl3",
-  "adapters-cn", "adapters-cn2", "adapters-cn3", "adapters-cn4", "generation", "history-route", "history", "history-locate", "history-adapters", "diag"].map((name) => `${SITE_RUNTIME}/${name}.js`));
+const PRELOAD_CHAIN = Object.freeze(["i18n", "core", "read-commands", "tier", "selection-match", "preset-common", "preset-dom", "send", "upload", "md-head", "md-diagram", "md", "prompt-markup", "adapters-intl", "claude-presets", "preset-command", "adapters-intl2", "chatgpt-default", "chatgpt-preset-slider", "chatgpt-presets", "adapters-intl3", "gemini-presets",
+  "adapters-cn", "deepseek-presets", "doubao-presets", "adapters-cn2", "kimi-presets", "chatglm-presets", "adapters-cn3", "yuanbao-presets", "adapters-cn4", "qianwen-presets", "generation", "history-route", "history", "history-locate", "history-adapters", "diag"].map((name) => `${SITE_RUNTIME}/${name}.js`));
 
 // 自洽锚点：preload 的 require 列表 ↔ 磁盘上的 site-runtime/*.js 双向覆盖 + 完整顺序链。
 // 扩展已删除，这一条就是注入清单与顺序的真源。

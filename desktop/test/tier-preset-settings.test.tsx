@@ -13,8 +13,11 @@ const snapshot = (think: typeof extra | null = null): PreferenceSnapshot => ({ v
 const catalogs = (model = 'Fable 5.2') => ({ models: ['Fable 5.2', 'Opus 5.5', 'Haiku 5.5'], model,
   efforts: model === 'Haiku 5.5' ? [] : model === 'Fable 5.2' ? ['Medium', 'Extra', 'Max'] : ['Medium', 'Max'], current: extra });
 function api(patch: Record<string, unknown> = {}) {
-  setShellApi({ getClaudePresets: async (model?: string) => catalogs(model), getCurrentClaudePreset: async () => extra,
-    saveClaudePreset: async (_mode: string, preset: typeof extra | null) => snapshot(preset), ...patch } as any);
+  const fixture: any = { getTierPresets: async (model?: string) => catalogs(model), getCurrentTierPreset: async () => extra,
+    saveTierPreset: async (_mode: string, preset: typeof extra | null) => snapshot(preset), ...patch };
+  setShellApi({ getTierPresets: (site: string, model?: string) => { assert.equal(site, 'claude'); return fixture.getTierPresets(model); },
+    getCurrentTierPreset: (site: string) => { assert.equal(site, 'claude'); return fixture.getCurrentTierPreset(); },
+    saveTierPreset: (site: string, mode: string, preset: unknown) => { assert.equal(site, 'claude'); return fixture.saveTierPreset(mode, preset); } } as any);
 }
 async function select(h: Awaited<ReturnType<typeof mountDom>>, id: string, value: string) {
   await act(async () => { const el = h.document.getElementById(id) as HTMLSelectElement;
@@ -25,7 +28,7 @@ function button(h: Awaited<ReturnType<typeof mountDom>>, action: string, mode?: 
 }
 
 test('presets only read on demand and select model-dependent efforts without guessing', async () => {
-  const calls: unknown[] = []; api({ getClaudePresets: async (model?: string) => { calls.push(model); return catalogs(model); } });
+  const calls: unknown[] = []; api({ getTierPresets: async (model?: string) => { calls.push(model); return catalogs(model); } });
   const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot()} />);
   try {
     assert.equal(calls.length, 0); await h.click(button(h, 'refresh'));
@@ -41,7 +44,7 @@ test('presets only read on demand and select model-dependent efforts without gue
 
 test('current page choice fills only the requested draft and verification saves the exact pair once', async () => {
   const writes: unknown[] = []; let finish!: (value: PreferenceSnapshot) => void;
-  api({ saveClaudePreset: (mode: string, preset: unknown) => { writes.push([mode, preset]); return new Promise(resolve => { finish = resolve; }); } });
+  api({ saveTierPreset: (mode: string, preset: unknown) => { writes.push([mode, preset]); return new Promise(resolve => { finish = resolve; }); } });
   const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot()} />);
   try {
     await h.click(button(h, 'current', 'think'));
@@ -51,13 +54,13 @@ test('current page choice fills only the requested draft and verification saves 
     assert.deepEqual(writes, [['think', extra]]);
     await act(async () => finish(snapshot(extra)));
     assert.match(h.document.querySelector('[data-preset-saved="think"]')!.textContent!, /Fable 5.2 · Extra/);
-    assert.equal(h.document.querySelector('#claude-presets-status')!.textContent, copy.presetSaved);
+    assert.equal(h.document.querySelector('#tier-presets-status')!.textContent, copy.presetSaved);
   } finally { await h.close(); setShellApi(null); }
 });
 
 test('unavailable saved selections remain visible and failures keep the attempted draft', async () => {
   const missing = { model: 'Retired 4.5', effort: 'Extra' };
-  api({ saveClaudePreset: async () => { throw Error('preset_restore_failed'); } });
+  api({ saveTierPreset: async () => { throw Error('preset_restore_failed'); } });
   const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot(missing)} />);
   try {
     await h.click(button(h, 'refresh'));
@@ -66,12 +69,12 @@ test('unavailable saved selections remain visible and failures keep the attempte
     await h.click(button(h, 'current', 'think')); await h.click(button(h, 'save', 'think'));
     assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).value, 'Extra');
     assert.match(h.document.querySelector('[data-preset-saved="think"]')!.textContent!, /Retired 4.5/);
-    assert.equal(h.document.querySelector('#claude-presets-status')!.textContent, copy.presetRestoreFailed);
+    assert.equal(h.document.querySelector('#tier-presets-status')!.textContent, copy.presetRestoreFailed);
   } finally { await h.close(); setShellApi(null); }
 });
 
 test('restore recommendation works without reading a page and unsaved drafts have a leave guard', async () => {
-  const writes: unknown[] = []; api({ saveClaudePreset: async (mode: string, value: unknown) => { writes.push([mode, value]); return snapshot(); } });
+  const writes: unknown[] = []; api({ saveTierPreset: async (mode: string, value: unknown) => { writes.push([mode, value]); return snapshot(); } });
   const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot(max)} />);
   try {
     await h.click(button(h, 'reset', 'think')); assert.deepEqual(writes, [['think', null]]);
@@ -84,7 +87,7 @@ test('restore recommendation works without reading a page and unsaved drafts hav
 });
 
 test('reset invalidates late menu responses and no-effort models can be saved explicitly', async () => {
-  let finish!: (value: ReturnType<typeof catalogs>) => void; api({ getClaudePresets: () => new Promise(resolve => { finish = resolve; }) });
+  let finish!: (value: ReturnType<typeof catalogs>) => void; api({ getTierPresets: () => new Promise(resolve => { finish = resolve; }) });
   const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot()} resetKey={0} />);
   try {
     await h.click(button(h, 'refresh'));
@@ -100,7 +103,7 @@ test('reset invalidates late menu responses and no-effort models can be saved ex
 test('a late save reply cannot replace a newer synced preset or the other mode', async () => {
   for (const changedMode of ['think', 'fast'] as const) {
     let finish!: (value: PreferenceSnapshot) => void;
-    api({ saveClaudePreset: () => new Promise(resolve => { finish = resolve; }) });
+    api({ saveTierPreset: () => new Promise(resolve => { finish = resolve; }) });
     const initial = snapshot(), h = await mountDom(<TierPresetSettings copy={copy} snapshot={initial} />);
     try {
       await h.click(button(h, 'current', 'think')); await h.click(button(h, 'save', 'think'));
@@ -111,7 +114,7 @@ test('a late save reply cannot replace a newer synced preset or the other mode',
       await act(async () => finish({ ...snapshot(extra), versions: { claudeThinkPreset: { updatedAt: 20, deviceId: 'local' } } }));
       assert.match(h.document.querySelector(`[data-preset-saved="${changedMode}"]`)!.textContent!, /Opus 5.5 · Max/);
       assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).value, 'Extra');
-      assert.equal(h.document.querySelector('#claude-presets-status')!.textContent,
+      assert.equal(h.document.querySelector('#tier-presets-status')!.textContent,
         changedMode === 'think' ? copy.presetChanged : copy.presetSaved);
     } finally { await h.close(); setShellApi(null); }
   }

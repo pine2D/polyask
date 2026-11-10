@@ -3,7 +3,7 @@ const { join } = require('node:path');
 const { writeFileSync } = require('node:fs');
 const { nativeReadingTools } = require('./comparison-native-tools.cjs');
 const { processBoundary } = require('./native-process-boundary.cjs');
-const output = process.argv[2], report = { cases: [], errors: [], network: 0 };
+const output = process.argv[2], report = { cases: [], sites: [], errors: [], network: 0 };
 app.setPath('userData', join(output, 'profile'));
 app.commandLine.appendSwitch('disable-background-networking');
 app.on('window-all-closed', () => {});
@@ -29,7 +29,7 @@ app.whenReady().then(async () => {
     const { locale, theme, width, zoom } = value; state.step = `${locale}-${theme}-${width}-${zoom}`;
     win.setSize(width, 1050); nativeTheme.themeSource = theme;
     await win.loadFile(join(output, 'index.html'), { query: { locale } }); win.webContents.setZoomFactor(zoom);
-    await until('document.querySelector("#claude-presets-title")?.getClientRects().length > 0', 'preset card visible');
+    await until('document.querySelector("#tier-presets-title")?.getClientRects().length > 0', 'preset card visible');
     await pause(); boundary();
     check(await js('document.querySelector("#claude-think-model").options.length===1'), 'does not read page on mount');
     await click('[data-preset-action=refresh]');
@@ -42,9 +42,9 @@ app.whenReady().then(async () => {
     const extra = locale === 'en' && theme === 'light' && width === 1440;
     if (extra) {
       await js('window.tierPresetFixture.fail()'); await click('[data-preset-mode=think] [data-preset-action=save]');
-      await until('document.querySelector("#claude-presets-status").textContent===window.tierPresetFixture.copy.presetRestoreFailed', 'restoration failure is visible');
+      await until('document.querySelector("#tier-presets-status").textContent===window.tierPresetFixture.copy.presetRestoreFailed', 'restoration failure is visible');
       check(await js('window.tierPresetFixture.saved().claudeThinkPreset===null'), 'failed save leaves preference unchanged');
-      await js('document.querySelector("#claude-presets-title").scrollIntoView({block:"start"})'); await shot('en-light-failure-wide');
+      await js('document.querySelector("#tier-presets-title").scrollIntoView({block:"start"})'); await shot('en-light-failure-wide');
       const count = await js('window.tierPresetFixture.calls()');
       await js('window.tierPresetFixture.hold()'); await click('[data-preset-mode=think] [data-preset-action=save]'); await key('Space');
       check(await js('window.tierPresetFixture.calls()') === count + 1, 'pending save is single flight');
@@ -71,7 +71,7 @@ app.whenReady().then(async () => {
     check(geometry.labels && geometry.sizes.every(size => size >= 12), 'labels and text sizes');
     check(geometry.minContrast >= 4.5, 'text contrast meets 4.5:1');
     if ((locale === 'zh-CN' && theme === 'dark' && width === 1440) || (locale === 'en' && theme === 'light' && width === 720) || zoom === 2) {
-      await js('document.querySelector("#claude-presets-title").scrollIntoView({block:"start"})'); await shot(state.step);
+      await js('document.querySelector("#tier-presets-title").scrollIntoView({block:"start"})'); await shot(state.step);
       if(zoom===2){await js('document.querySelector("[data-preset-mode=think]").scrollIntoView({block:"start"})');await shot(state.step+'-think');}
     }
     // IME Escape must not close settings; regular Escape remains available after save.
@@ -79,6 +79,42 @@ app.whenReady().then(async () => {
     check(await js('document.body.dataset.closed!=="true"'), 'IME escape does not leave settings');
     await click('[data-preset-mode=think] [data-preset-action=reset]');
     await until('window.tierPresetFixture.saved().claudeThinkPreset===null', 'recommendation restored');
+    // Native site selector and independent storage across all supported capability shapes.
+    if (extra) {
+      const sites = await js('window.tierPresetFixture.sites');
+      for (const [index, site] of sites.entries()) {
+        await js('document.querySelector("#tier-preset-site").focus()'); await key('Home');
+        for (let i = 0; i < index; i++) await key('Down'); await key('Tab');
+        await until(`document.querySelector('#${site}-think-model')!==null`, 'selected site fields');
+        const before = await js('window.tierPresetFixture.saved()');
+        await click('[data-preset-action=refresh]');
+        await until(`document.querySelector('#${site}-think-model').options.length>1`, 'site choices loaded');
+        await click('[data-preset-mode=think] [data-preset-action=current]');
+        if (site === 'deepseek') {
+          check(await js('document.querySelector("label[for=deepseek-think-model]").firstChild.textContent===window.tierPresetFixture.copy.presetFeature'), 'feature label');
+          check(await js('[...document.querySelector("#deepseek-think-effort").options].some(o=>o.value==="Off"&&o.textContent===window.tierPresetFixture.copy.presetOff)'), 'toggle translated');
+        }
+        if (site === 'doubao') check(await js('document.querySelector("#doubao-think-effort")===null'), 'mode only has one selector');
+        await click('[data-preset-mode=think] [data-preset-action=save]');
+        await until(`JSON.stringify(window.tierPresetFixture.saved()['${site}ThinkPreset'])===JSON.stringify(window.tierPresetFixture.current['${site}'])`, 'site exact choice saved');
+        const after = await js('window.tierPresetFixture.saved()');
+        check(Object.keys(before).every(k=>k===`${site}ThinkPreset`||JSON.stringify(before[k])===JSON.stringify(after[k])), 'other sites and fast choice unchanged');
+        if (['deepseek', 'doubao'].includes(site)) { await js('document.querySelector("#tier-presets-title").scrollIntoView({block:"start"})'); await shot(`en-light-${site}`); }
+        await click('[data-preset-mode=think] [data-preset-action=reset]');
+        await until(`window.tierPresetFixture.saved()['${site}ThinkPreset']===null`, 'site recommendation restored');
+        report.sites.push(site);
+      }
+      // Unsaved site changes require a deliberate discard; Escape keeps the exact draft.
+      await click('[data-preset-mode=think] [data-preset-action=current]');
+      await js('document.querySelector("#tier-preset-site").focus()'); await key('Home'); await key('Tab');
+      await until('document.querySelector(".confirm-dialog")!==null', 'dirty site switch confirmed');
+      await key('Escape');
+      check(await js('document.querySelector("#tier-preset-site").value==="chatglm"'), 'cancel keeps selected site');
+      await js('document.querySelector("#tier-preset-site").focus()'); await key('Home'); await key('Tab');
+      await until('document.querySelector(".confirm-dialog")!==null', 'discard dialog opened');
+      await click('.confirm-actions .primary');
+      await until('document.querySelector("#claude-think-model")!==null', 'discard switches site');
+    }
     boundary(); report.cases.push({ ...value, ...geometry });
   }
   check(report.errors.length === 0, 'no renderer errors');

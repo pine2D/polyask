@@ -6,12 +6,16 @@
 .tier-preset-fields label { display: grid; gap: var(--space-2); min-width: 0; font-size: var(--font-control); }
 .tier-preset-fields select { width: 100%; min-width: 0; text-overflow: ellipsis; }
 .tier-presets .settings-actions { gap: var(--space-2); }
-.tier-presets #claude-presets-status:empty { display: none; }
+.tier-presets #tier-presets-status:empty { display: none; }
 @media (max-width: 760px) {
   .tier-preset-fields { grid-template-columns: minmax(0, 1fr); }
   .tier-presets .settings-actions > button { white-space: normal; text-align: start; }
 }
-.tier-preset-fields select { min-height: max(34px, var(--control-height)); padding: 6px 10px;
+.tier-preset-fields select, .tier-preset-site select { min-height: max(34px, var(--control-height)); padding: 6px 10px;
   border: 1px solid var(--settings-control-border); border-radius: var(--radius-control);
   color: var(--text); background: var(--settings-control-fill); font: inherit; }
-.tier-preset-fields select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tier-preset-fields select:focus-visible, .tier-preset-site select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.tier-preset-site { display: grid; gap: var(--space-2); margin-block: var(--space-4); max-width: 320px; font-size: var(--font-control); }
+.tier-preset-site select { width: 100%; min-width: 0; }
+.tier-preset-fields[data-single="true"] { grid-template-columns: minmax(0, 1fr); }

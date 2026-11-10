@@ -6,9 +6,9 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import webpack from 'webpack';
 
-test('Claude presets support native interaction, locales, themes, narrow layout and zoom', { timeout: 110000 }, async () => {
+test('Site presets support native interaction, locales, themes, narrow layout and zoom', { timeout: 150000 }, async () => {
   const output = mkdtempSync(join(tmpdir(), 'polyask-tier-presets-native-'));
-  console.log(`Claude presets native evidence: ${output}`);
+  console.log(`Site presets native evidence: ${output}`);
   await new Promise<void>((resolve, reject) => {
     const compiler = webpack({ mode: 'development', context: join(__dirname, '..'), devtool: false,
       entry: join(__dirname, 'ui/tier-presets-native-fixture.tsx'), output: { path: output, filename: 'bundle.js' },
@@ -23,7 +23,7 @@ test('Claude presets support native interaction, locales, themes, narrow layout 
   const binary = require('electron') as string, args = [join(__dirname, 'ui/tier-presets-native-runtime.cjs'), output];
   const headless = process.platform === 'linux' && !process.env.DISPLAY;
   const result = spawnSync(headless ? 'xvfb-run' : binary, headless ? ['-a', binary, ...args] : args,
-    { encoding: 'utf8', timeout: 90000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '',
+    { encoding: 'utf8', timeout: 130000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '',
       DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` } });
   writeFileSync(join(output, 'runtime.log'), `${result.stdout}\n${result.stderr}`);
   if (existsSync(join(output, 'process-boundary.json'))) {
@@ -32,8 +32,9 @@ test('Claude presets support native interaction, locales, themes, narrow layout 
     assert.equal(alive.length, 0, 'all observed isolated Electron processes exit');
   }
   rmSync(join(output, 'profile'), { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
-  assert.equal(result.status, 0, `Native Claude presets failed: ${output}; ${result.error?.message ?? ''}`);
+  assert.equal(result.status, 0, `Native Site presets failed: ${output}; ${result.error?.message ?? ''}`);
   const report = JSON.parse(readFileSync(join(output, 'report.json'), 'utf8'));
+  assert.equal(report.sites.length, 9); assert.equal(new Set(report.sites).size, 9);
   assert.equal(report.cases.length, 13); assert.equal(report.network, 0);
   assert.equal(report.errors.length, 0);
 });

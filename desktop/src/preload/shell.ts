@@ -82,12 +82,9 @@ export interface PolyAskDesktopApi extends NotificationApi {
   selectSiteFind(site: SiteKey): Promise<SiteFindState>;
   closeSiteFind(restoreFocus?: boolean): Promise<SiteFindState>;
   onSiteFind(listener: (state: SiteFindState) => void): () => void;
-  getClaudePresets(model?: string): Promise<TierPresetCatalog>;
   getTierPresets(site: SiteKey, model?: string): Promise<TierPresetCatalog>;
   getCurrentTierPreset(site: SiteKey): Promise<TierPreset>;
   saveTierPreset(site: SiteKey, mode: PresetMode, preset: TierPreset | null): Promise<PreferenceSnapshot>;
-  getCurrentClaudePreset(): Promise<TierPreset>;
-  saveClaudePreset(mode: PresetMode, preset: TierPreset | null): Promise<PreferenceSnapshot>;
   getPreferences(): Promise<PreferenceSnapshot>;
   seedPreferences(values: Partial<PreferenceValues>): Promise<PreferenceSnapshot>;
   setPreference(key: PreferenceKey, value: unknown): Promise<PreferenceSnapshot>;
@@ -249,12 +246,9 @@ const api: PolyAskDesktopApi = Object.freeze({
   selectSiteFind: (site: SiteKey) => invoke('polyask:find-select', site),
   closeSiteFind: (restoreFocus?: boolean) => invoke('polyask:find-close', restoreFocus),
   onSiteFind: (listener: (state: SiteFindState) => void) => subscribe('polyask:find-state', listener),
-  getClaudePresets: (model?: string) => invoke('polyask:claude-preset-options', model),
   getTierPresets: (site: SiteKey, model?: string) => invoke('polyask:tier-preset-options', { site, model }),
   getCurrentTierPreset: (site: SiteKey) => invoke('polyask:tier-preset-current', site),
   saveTierPreset: (site: SiteKey, mode: PresetMode, preset: TierPreset | null) => invoke('polyask:tier-preset-save', { site, mode, preset }),
-  getCurrentClaudePreset: () => invoke('polyask:claude-preset-current'),
-  saveClaudePreset: (mode: PresetMode, preset: TierPreset | null) => invoke('polyask:claude-preset-save', { mode, preset }),
   getPreferences: () => invoke('polyask:preferences'),
   seedPreferences: (values: Partial<PreferenceValues>) => invoke('polyask:preferences-seed', values),
   setPreference: (key: PreferenceKey, value: unknown) => invoke('polyask:preference-set', { key, value }),

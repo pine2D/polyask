@@ -179,3 +179,15 @@ test('menu-owned Escape closes a menu even when the already-selected effort need
     assert.equal(p.menus(), 0); assert.equal(p.clicks.length, 0);
   } finally { p.close(); }
 });
+
+
+test('Claude excludes closed Base UI menus whose exit animations retain geometry', async () => {
+  const p = presetPage({ keepClosed: true });
+  try {
+    const result = await p.command({ kind: 'options' });
+    assert.equal(result.ok, true);
+    assert.deepEqual(plain(result.catalog.efforts), ['Low', 'Medium', 'High', 'Extra', 'Max']);
+    assert.equal(p.dom.window.document.querySelectorAll('[role="menu"]:not([data-closed])').length, 0);
+    assert.equal(p.dom.window.document.querySelector('button').getAttribute('aria-expanded'), 'false');
+  } finally { p.close(); }
+});

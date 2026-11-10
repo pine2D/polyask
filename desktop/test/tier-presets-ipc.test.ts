@@ -18,7 +18,7 @@ function setup() {
       return response || { ok: true, current: original, ...(action.kind === 'verify' ? { verified: action.preset } : {}) }; }
   });
   return { handlers, gate, writes, actions, snapshot, dispose,
-    invoke: (name: string, value?: unknown, sender = 'shell') => Promise.resolve().then(() => handlers.get(`polyask:claude-preset-${name}`)!(sender, value)),
+    invoke: (name: string, value?: unknown, sender = 'shell') => Promise.resolve().then(() => handlers.get(`polyask:tier-preset-${name}`)!(sender, name === 'current' ? 'claude' : name === 'options' ? { site: 'claude', model: value } : { site: 'claude', ...(value as object) })),
     block: () => { blocked = true; }, reset: () => { epoch++; }, response: (value: TierPresetResult) => { response = value; },
     pause: () => { wait = new Promise<void>(resolve => { release = resolve; }); }, resume: () => release?.() };
 }

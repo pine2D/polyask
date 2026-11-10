@@ -14,8 +14,7 @@ interface Options {
   readonly preferences: Pick<PreferenceRuntime, 'snapshot' | 'set'>;
   readonly inspect: (site: SiteKey, action: TierPresetAction, deadline: number) => Promise<TierPresetResult>;
 }
-const CHANNELS = ['polyask:tier-preset-options', 'polyask:tier-preset-current', 'polyask:tier-preset-save',
-  'polyask:claude-preset-options', 'polyask:claude-preset-current', 'polyask:claude-preset-save'] as const;
+const CHANNELS = ['polyask:tier-preset-options', 'polyask:tier-preset-current', 'polyask:tier-preset-save'] as const;
 const object = (value: unknown): Record<string, unknown> => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('invalid_request');
   return value as Record<string, unknown>;
@@ -70,12 +69,5 @@ export function registerTierPresetsIpc(options: Options): () => void {
     const { site, ...choice } = object(value);
     return save(siteOf(site), choice);
   });
-  // 现有 Claude 设置在全站界面接入前继续使用同一条受保护路径。
-  handle(CHANNELS[3], model => readOptions('claude', model));
-  handle(CHANNELS[4], async value => {
-    if (value !== undefined) throw new Error('invalid_request');
-    return (await inspect('claude', { kind: 'current' })).current;
-  });
-  handle(CHANNELS[5], value => save('claude', value));
   return () => { alive = false; for (const channel of CHANNELS) options.ipc.removeHandler(channel); };
 }

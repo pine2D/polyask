@@ -5,7 +5,7 @@
   if (!a) return;
   const invalid = () => S.presetFail();
   const name = S.presetName, valid = S.presetValid, same = S.presetSame;
-  const visible = el => el?.isConnected && !el.closest('[hidden], [aria-hidden="true"], [data-state="closed"]') && el.getClientRects().length > 0;
+  const visible = el => el?.isConnected && !el.closest('[hidden], [aria-hidden="true"], [data-state="closed"], [role="menu"][data-closed]') && el.getClientRects().length > 0;
   const enabled = el => !el.closest('[disabled], [aria-disabled="true"], [data-disabled]');
   const button = () => document.querySelector('[data-testid="model-selector-dropdown"]');
   function texts(el) {
@@ -31,7 +31,7 @@
     return { model, effort };
   };
   function rootsFor(trigger) {
-    if (!trigger) return [];
+    if (!trigger || trigger.getAttribute('aria-expanded') === 'false') return [];
     const controlled = (trigger.getAttribute('aria-controls') || '').split(/\s+/);
     return [...document.querySelectorAll('[role="menu"]')].filter(root => visible(root) &&
       ((trigger.id && (root.getAttribute('aria-labelledby') || '').split(/\s+/).includes(trigger.id)) || controlled.includes(root.id) && root.id));
@@ -65,8 +65,7 @@
     return result;
   }
   function checkPage(deadline, url) {
-    S.checkDeadline(deadline);
-    if (location.href !== url) throw new Error('not_ready');
+    S.presetCheck(deadline, url);
   }
   function act(deadline, url, callback) { checkPage(deadline, url); return S.tierAction(deadline, callback); }
   async function open(deadline, url) {
@@ -105,14 +104,15 @@
     } finally { await closeMenus(deadline); }
   }
   async function efforts(deadline, url) {
-    const roots = await open(deadline, url), trigger = a._effortTrigger();
-    if (!trigger) {
-      if (a.currentPreset()?.effort !== null) invalid();
-      return [];
-    }
-    if (!roots.some(root => root.contains(trigger)) || !trigger.id) invalid();
+    const roots = await open(deadline, url);
     let items = entries(roots, true);
-    if (!items.length && trigger.getAttribute('aria-haspopup') === 'menu') {
+    if (!items.length) {
+      const triggers = roots.flatMap(root => [...root.querySelectorAll('[role="menuitem"][aria-haspopup="menu"]')])
+        .filter(el => visible(el) && enabled(el) && /^(effort|强度|思考强度|努力)/i.test((el.textContent || '').trim()));
+      if (triggers.length > 1) invalid();
+      const trigger = triggers[0];
+      if (!trigger) { if (a.currentPreset()?.effort !== null) invalid(); return []; }
+      if (!trigger.id) invalid();
       act(deadline, url, () => S.openMenu(trigger));
       items = await S.waitFor(() => { const list = entries(rootsFor(trigger), true); return list.length ? list : null; }, 1500, 80, deadline);
     }
@@ -121,7 +121,7 @@
     return items;
   }
   a.applyPreset = async function (preset, deadline) {
-    const url = location.href;
+    const url = S.presetContext();
     try {
       S.checkDeadline(deadline);
       if (!valid(preset) || !this.currentPreset()) invalid();
@@ -138,7 +138,7 @@
     } finally { await closeMenus(deadline); }
   };
   a.presetOptions = async function (model, deadline) {
-    const url = location.href;
+    const url = S.presetContext();
     return S.withPresetRestored(this, deadline, async (current, workDeadline) => {
       try {
         const list = labels(await models(workDeadline, url), 50);

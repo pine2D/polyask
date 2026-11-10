@@ -9,11 +9,22 @@
     S.presetName(value.model) && (value.effort === null || S.presetName(value.effort, 24));
   S.presetSame = (x, y) => !!x && !!y && x.model === y.model && x.effort === y.effort;
   S.presetFail = (code = 'preset_unavailable') => { throw new Error(code); };
+  let navigationRevision = 0;
+  S.invalidatePreset = () => { navigationRevision++; };
+  // Navigation API 在 pushState（包括同 URL）之前通知；popstate/hashchange 兼容其它导航。
+  window.navigation?.addEventListener('navigate', S.invalidatePreset);
+  window.addEventListener('popstate', S.invalidatePreset);
+  window.addEventListener('hashchange', S.invalidatePreset);
+  S.presetContext = () => ({ url: location.href, revision: navigationRevision });
+  S.presetIsCurrent = context => context.url === location.href && context.revision === navigationRevision;
+  S.presetCheck = (deadline, context) => {
+    S.checkDeadline(deadline); if (!S.presetIsCurrent(context)) S.presetFail('not_ready');
+  };
   S.readPreset = async function (adapter, deadline) {
-    const url = location.href;
+    const context = S.presetContext();
     S.checkDeadline(deadline);
     const value = await (adapter.readPreset ? adapter.readPreset(deadline) : adapter.currentPreset?.());
-    if (location.href !== url) S.presetFail('not_ready');
+    if (!S.presetIsCurrent(context)) S.presetFail('not_ready');
     S.checkDeadline(deadline);
     if (!S.presetValid(value)) S.presetFail();
     return { model: value.model, effort: value.effort };

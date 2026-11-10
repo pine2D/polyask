@@ -49,6 +49,7 @@ require("../site-runtime/read-commands.js");
 require("../site-runtime/tier.js");
 require("../site-runtime/selection-match.js");
 require("../site-runtime/preset-common.js");
+require("../site-runtime/preset-dom.js");
 require("../site-runtime/send.js");
 require("../site-runtime/upload.js");
 require("../site-runtime/md-head.js");
@@ -60,11 +61,20 @@ require("../site-runtime/claude-presets.js");
 require("../site-runtime/preset-command.js");
 require("../site-runtime/adapters-intl2.js");
 require("../site-runtime/chatgpt-default.js");
+require("../site-runtime/chatgpt-preset-slider.js");
+require("../site-runtime/chatgpt-presets.js");
 require("../site-runtime/adapters-intl3.js");
+require("../site-runtime/gemini-presets.js");
 require("../site-runtime/adapters-cn.js");
+require("../site-runtime/deepseek-presets.js");
+require("../site-runtime/doubao-presets.js");
 require("../site-runtime/adapters-cn2.js");
+require("../site-runtime/kimi-presets.js");
+require("../site-runtime/chatglm-presets.js");
 require("../site-runtime/adapters-cn3.js");
+require("../site-runtime/yuanbao-presets.js");
 require("../site-runtime/adapters-cn4.js");
+require("../site-runtime/qianwen-presets.js");
 require("../site-runtime/generation.js");
 require("../site-runtime/history-route.js");
 require("../site-runtime/history.js");
@@ -178,6 +188,10 @@ function dispatch(command: SiteCommand): Promise<SiteCommandResponse> {
     }
   });
 }
+
+ipcRenderer.on('polyask:preset-invalidate', () => {
+  (globalThis as typeof globalThis & { __AMS?: { invalidatePreset?: () => void } }).__AMS?.invalidatePreset?.();
+});
 
 ipcRenderer.on("polyask:site-command", async (_event, envelope: SiteCommandEnvelope) => {
   if (!envelope || typeof envelope.requestId !== "string" || !envelope.command) return;
