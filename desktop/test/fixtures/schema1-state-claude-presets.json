@@ -1,0 +1,36 @@
+{
+  "file": {
+    "id": "drive-state-claude-presets",
+    "name": "state-claude-presets.json",
+    "appProperties": {
+      "app": "polyask",
+      "schema": "1",
+      "kind": "state",
+      "id": "claude-presets"
+    }
+  },
+  "body": {
+    "schema": 1,
+    "deviceId": "fixture-device",
+    "settings": {
+      "polyask.preference.claudeFastPreset": {
+        "value": {
+          "model": "Opus 5.5",
+          "effort": "Max"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.claudeThinkPreset": {
+        "value": {
+          "model": "Fable 5.2",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      }
+    },
+    "templates": {},
+    "groups": {}
+  }
+}

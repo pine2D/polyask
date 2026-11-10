@@ -24,7 +24,7 @@ test("uninitialized preferences use device defaults without generating sync writ
     const snapshot = preferences.snapshot();
     assert.deepEqual(snapshot.values, {
       completionNotifications: false, display: { density: "compact", siteScale: 0.9 },
-      layoutMode: "overview", siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true
+      layoutMode: "overview", siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, claudeFastPreset: null, claudeThinkPreset: null
     });
     assert.deepEqual(snapshot.following, { display: false, layout: false, siteZoom: false, proxy: false });
     assert.deepEqual(snapshot.initialized, []);
@@ -67,7 +67,7 @@ test("local display layout and site zoom edits preserve unrelated settings and s
     preferences.set("density", "compact");
     assert.deepEqual(preferences.snapshot().values, {
       completionNotifications: false, display: { density: "compact", siteScale: 1 },
-      layoutMode: "focus", siteZoom: { claude: 0.75, kimi: 1.25 }, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true
+      layoutMode: "focus", siteZoom: { claude: 0.75, kimi: 1.25 }, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, claudeFastPreset: null, claudeThinkPreset: null
     });
     assert.equal(database.outbox.count(), 0);
     assert.equal(database.state.entries("preference:").length, 0);

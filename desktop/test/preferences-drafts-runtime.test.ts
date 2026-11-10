@@ -8,6 +8,7 @@ import { PreferencesRepository } from '../src/main/preferences-repository';
 import { PreferenceRuntime } from '../src/main/preference-runtime';
 import { SiteZoomController } from '../src/main/site-zoom';
 import * as draftContract from '../src/shared/drafts';
+import * as presetContract from '../src/shared/tier-presets';
 import * as preferenceContract from '../src/shared/preferences';
 import type { DesktopUiState } from '../src/shared/desktop-ui-state';
 import type { DisplayPreferences } from '../src/shared/display';
@@ -98,6 +99,7 @@ function register(runtime: PreferenceRuntime) {
   runInNewContext(transformSync(readSource('src/main/preferences-drafts-ipc.ts'), { loader: 'ts', format: 'cjs' }).code, {
     module, exports: module.exports, require: (name: string) => {
       if (name === '../shared/drafts') return draftContract;
+      if (name === '../shared/tier-presets') return presetContract;
       if (name === '../shared/preferences') return preferenceContract;
       assert.equal(name, 'electron');
       return { ipcMain: { handle: (key: string, action: any) => handlers.set(key, action), removeHandler: (key: string) => handlers.delete(key) } };
@@ -192,5 +194,18 @@ test('while every group follows, proxy writes through preference IPC leave stora
       device: JSON.stringify(s.db.meta.get('devicePreferences')) }, before);
     assert.equal(invoke('preferences').following.proxy, true);
     assert.equal(s.db.meta.get('proxyFollowing'), true);
+  } finally { ipc.dispose(); s.db.close(); }
+});
+
+
+test('generic preference IPC cannot bypass live validation of Claude presets', () => {
+  const s = setup(), ipc = register(s.runtime);
+  try {
+    const preset = { model: 'Fable 5.2', effort: 'Extra' };
+    for (const key of presetContract.CLAUDE_PRESET_KEYS) {
+      assert.throws(() => ipc.handlers.get('polyask:preference-set')!(true, { key, value: preset }), /^Error: invalid_preference$/);
+      assert.throws(() => ipc.handlers.get('polyask:preferences-seed')!(true, { [key]: preset }), /^Error: invalid_preference$/);
+    }
+    assert.equal(s.db.state.entries('preference:claude').length, 0);
   } finally { ipc.dispose(); s.db.close(); }
 });

@@ -135,7 +135,8 @@ export class PreferencesRepository {
   }
 }
 
-const PLAIN_FIELDS = ["completionNotifications", "layoutMode", "workbenchGuide", "sitePageCloseConfirm", "newSessionConfirm"] as const;
+const PLAIN_FIELDS = ["completionNotifications", "layoutMode", "workbenchGuide", "sitePageCloseConfirm", "newSessionConfirm",
+  "claudeFastPreset", "claudeThinkPreset"] as const;
 const isPlainField = (field: string): field is typeof PLAIN_FIELDS[number] => (PLAIN_FIELDS as readonly string[]).includes(field);
 
 function entriesFromValues(values: Partial<PreferenceValues>): PreferenceEntries {
@@ -169,6 +170,8 @@ function valuesFromEntries(entries: PreferenceEntries): PreferenceValues {
     if (typeof value === "number") siteZoom[site] = value;
   }
   return {
+    claudeFastPreset: structuredClone(entries.claudeFastPreset) as PreferenceValues["claudeFastPreset"],
+    claudeThinkPreset: structuredClone(entries.claudeThinkPreset) as PreferenceValues["claudeThinkPreset"],
     completionNotifications: entries.completionNotifications as boolean,
     display: { density: entries.density as "compact" | "comfortable", siteScale: entries.siteScale as 0.9 | 1 },
     layoutMode: entries.layoutMode as "overview" | "focus", siteZoom,
