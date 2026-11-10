@@ -79,6 +79,7 @@ function presetPage(options = {}) {
   S.generationProbe = () => options.generating ? 'generating' : 'idle';
   return { dom, state, clicks, S, a: S.adapters['claude.ai'], closes: () => closes,
     menus: () => d.querySelectorAll('[role="menu"]').length,
+    dispatch: message => new Promise(resolve => listener({ source: 'AMS', deadline: Date.now() + 10000, ...message }, {}, resolve)),
     command: action => new Promise(resolve => listener({ source: 'AMS', cmd: 'tierPreset', action, deadline: Date.now() + 10000 }, {}, resolve)),
     close: () => dom.window.close() };
 }

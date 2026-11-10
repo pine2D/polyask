@@ -133,3 +133,17 @@ test('navigation during verification stops further clicks and does not restore o
     assert.deepEqual(p.clicks, ['model:Opus 5.5']);
   } finally { p.close(); }
 });
+
+
+test('an unavailable custom preset reports unconfirmed but submits the broadcast exactly once', async () => {
+  const p = presetPage(); let submissions = 0;
+  try {
+    p.a.inject = (el, text) => { el.value = text; return true; };
+    p.a.submit = el => { submissions++; el.value = ''; return true; };
+    const result = await p.dispatch({ cmd: 'submitPrompt', tier: 'think', text: 'synthetic local question',
+      images: [], preset: { model: 'Unavailable 9', effort: 'Extra' } });
+    assert.equal(result.ok, true); assert.equal(result.code, 'tier_unconfirmed');
+    assert.equal(result.selection.outcome, 'unconfirmed'); assert.equal(submissions, 1);
+    assert.equal(p.clicks.length, 0); assert.equal(p.menus(), 0);
+  } finally { p.close(); }
+});

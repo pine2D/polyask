@@ -26,6 +26,9 @@
 | `think` / `fast` | ✓ | `async (deadline?)` | 切到目标档。**关键控件缺失一律 `throw`**。可返回本次动作实际复读的 `{outcome, observed, model?}`，由 `tier.js` 校验；无返回值则读取只读证据确认。不能用静默 `return` 掩盖缺失步骤（例外见下一节），不能复用前次调用的读数 |
 | `state()` | ✓ | 同步 | `"think"` / `"fast"` / `null`。只表示粗档位，不能证明模型版本/强度/开关精确 |
 | `selection(mode)` | | 同步只读 | 返回 `{outcome, observed?, model?}`；`preferred`/`alternative` 需精确模型及目标模式证据，`mode_only` 只证明模式，其他为 `unconfirmed`。不得开菜单或复用上轮缓存；未实现时由 `state()` 提供模式证据 |
+| `currentPreset()` | | 同步只读 | Claude 精确 `{model, effort}` 或 null，effort 为 null 表示无强度选项；不得打开菜单 |
+| `presetOptions(model?, deadline)` | | `async` | 按需读取可见模型与指定模型的强度目录，成功或失败均尝试恢复原组合；未恢复不得返回成功 |
+| `applyPreset(preset, deadline)` | | `async` | Claude 自定义组合，精确匹配模型与强度并复读，不按排序或粗档位代替；缺失/歧义/禁用一律抛错 |
 | `diagnose()` | ✓ | 同步 | 锚点命中报告，供巡检标芯片。只列**常驻**控件，会随对话阶段消失的控件不许列（否则巡检恒红误报）。**每条检查必须带 `kind`**，见下方「检查项的 `kind`」 |
 | `submit(el, deadline, historyToken?)` | | `async` | `false` = 发送键此刻不可用 → 落回通用链；**抛异常 = core 直接终止、不回退**（保留 `inject_failed` / `timeout` / `submit_unconfirmed`，其余异常报 `error`），所以内部必须自行判空返回 false。点击成功也要过 `confirmSubmitted` 才算成功 |
 | `inject(el, text)` | | 同步 | `false` = 交回通用注入链（beforeinput→execCommand→textContent）；**抛异常 = 通用链对本站不安全**（Kimi），core 直接报 `inject_failed` 不回退 |
@@ -190,6 +193,10 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - **「无 effort 入口静默 return」的例外已撤销（2026-08-31）**：控件仍在，只是选择子变了；入口缺失 / 档位为空一律 throw。旧的 `_thinkSwitch()` 裸开关分支同时删除（真机已无该开关）。
 - **模型菜单已下沉（2026-08）**：顶层保留 Fable 5 / Opus 5 / Sonnet 5 / Haiku 4.5，其余进「more models / 更多模型」子菜单，`_selectModel` 顶层等 900ms 找不到才展开子菜单；选中后 `sleep(700)` + **`escMenus()`**（子菜单不关会罩住输入框并让后续动作点空；Base UI 菜单 Escape 有效，与 Gemini/智谱/Kimi 三站不同）。
 - 发送键 `button[data-testid="chat-input-send"]`（真机 2026-08-31；`aria-label="Send message"` 随界面语言变，只当兜底），原生 click 有效；此前「拒绝合成点击」的结论是误判——当时点的是侧栏同名假按钮（见发送路径表）。**两个已知坑**：侧栏每条会话的 `More options for <标题>` 按钮标题含 send/发送 时会匹配同一选择器且纵向落在带内（真机带内 9 个）；长提示词把 ProseMirror 撑高后发送键会跌出旧的 240 纵向带（15 行即失效）。两者都由 `desktop/src/site-runtime/send.js` 处理。停止键 testid 是 `chat-input-stop`（`stop-button` 是 ChatGPT 的形状，Claude 上零命中）。`answer()` 新版取末条 `[data-testid="assistant-message"]` 内最后一个 `[data-perf-reply-text]` 正文块（2026-10-02 真机：旧 `.font-claude-response` 已零命中）；只有思考/工具时返回 null，不回退旧回答。历史归属锁定助手容器及其 `data-turn-key`，允许正文块重绘。旧版仍取 `.font-claude-response` → `.row-start-2`（折叠的思考头在 `.row-start-1`），取不到回退旧容器。`attach` 走 `input[data-testid="file-upload"]` + `S.setInputFiles`。
+
+- **Claude 自定义预设**（`claude-presets.js` / `preset-command.js`）：设置里的快速/思考各保存一个精确 `{model, effort}`，覆盖本节内置推荐。模型从语义归属明确的可见菜单读取，可展开 More models；强度只取对应模型的 Effort 组/子菜单，Extra 与 Max 分开，未来标签不依赖固定排名。仅打开设置并不会扫描；用户点击读取/刷新、切换模型或验证时才操作菜单。
+- 选项发现和保存验证都串入交互队列，共享绝对 10s 截止时间，预留剩余时间一半（最多 4s）恢复原选择；页面生成中拒绝操作，导航后不再点击或在新对话恢复。恢复失败返回 `preset_restore_failed`，不会保存。同步只读 `currentPreset()` 不开菜单、不缓存上一轮证据。普通 `state/selection/diagnose` 的只读契约不变。
+- 即时切档、群发（含同轮重试）与辅助发送均采用开始操作时冻结的组合。目标不可用返回未确认，不能偷偷选推荐模型；群发仍按原提交链继续一次，不新增自动重发。目录最多 50 个模型、每模型 12 个强度，名称长度与控制字符过滤由运行时、preload 和共享契约共同校验。
 
 ### ChatGPT（`chatgpt.com`，**`desktop/src/site-runtime/adapters-intl2.js`**）
 
