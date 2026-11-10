@@ -19,7 +19,7 @@ env:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10 # 2026-10-21 全门禁实测 7m58s（含打包与 xvfb 冒烟），保留约 25% 余量
+    timeout-minutes: 12 # 2026-11-10 全门禁实测 9m17s（含打包与 xvfb 冒烟），保留约 29% 余量
     steps:
       - name: 检出源码
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
