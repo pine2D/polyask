@@ -147,3 +147,22 @@ test('an unavailable custom preset reports unconfirmed but submits the broadcast
     assert.equal(p.clicks.length, 0); assert.equal(p.menus(), 0);
   } finally { p.close(); }
 });
+
+test('split effort words stay exact through verification and restoration; only known usage prose is excluded', async () => {
+  const p = presetPage({ choices: { 'Fable 5.2': ['Medium', 'Extra', 'Extra High'] } });
+  try {
+    const b = p.dom.window.document.querySelector('[data-testid="model-selector-dropdown"]');
+    p.state.effort = 'Extra High';
+    b.innerHTML = '<span>Fable 5.2</span><span><span>Extra</span> <span>High</span></span>';
+    b.setAttribute('aria-label', 'Model: Fable 5.2 Extra High');
+    assert.deepEqual(plain(p.a.currentPreset()), { model: 'Fable 5.2', effort: 'Extra High' });
+    const result = await p.command({ kind: 'verify', preset: extra });
+    assert.equal(result.ok, true); assert.deepEqual(p.clicks, ['effort:Extra', 'effort:Extra High']);
+    assert.equal(p.state.effort, 'Extra High');
+    b.innerHTML = '<span>Fable 5.2</span><span>Extra</span><span>3.5× or more usage</span>';
+    b.setAttribute('aria-label', 'Model: Fable 5.2 Extra 3.5× or more usage');
+    assert.deepEqual(plain(p.a.currentPreset()), extra);
+    b.setAttribute('aria-label', 'Model: Fable 5.2 Extra High');
+    assert.equal(p.a.currentPreset(), null);
+  } finally { p.close(); }
+});

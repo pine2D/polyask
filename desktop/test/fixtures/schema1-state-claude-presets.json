@@ -6,7 +6,7 @@
       "app": "polyask",
       "schema": "1",
       "kind": "state",
-      "id": "claude-presets"
+      "id": "fixture-device"
     }
   },
   "body": {

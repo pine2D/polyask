@@ -24,12 +24,14 @@
     return found;
   }
   a.currentPreset = function () {
-    const b = button(), parts = texts(b), model = parts[0], effort = parts[1] || null;
+    // 强度名称可能拆成多个文本节点；只剥离已确认的用量说明，不能接受任意后缀。
+    const withoutUsage = text => text.replace(/\s+\d+(?:[.,]\d+)?\s*[×x](?:\s+or more)?\s+usage$/i, '');
+    const b = button(), parts = texts(b), model = parts[0], effort = withoutUsage(parts.slice(1).join(' ')) || null;
     if (!name(model) || (effort !== null && !name(effort, 24))) return null;
     const label = b?.getAttribute('aria-label') || '', index = label.indexOf(model);
     if (index < 0) return null;
-    const tail = label.slice(index + model.length).trim().replace(/^[·\s]+/, '');
-    if (effort === null ? !!tail : tail !== effort && !tail.startsWith(effort + ' ')) return null;
+    const tail = withoutUsage(label.slice(index + model.length).trim().replace(/^[·\s]+/, ''));
+    if (tail !== (effort ?? '')) return null;
     return { model, effort };
   };
   function rootsFor(trigger) {

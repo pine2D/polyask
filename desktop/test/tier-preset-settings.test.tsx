@@ -96,3 +96,23 @@ test('reset invalidates late menu responses and no-effort models can be saved ex
     assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).disabled, true);
   } finally { await h.close(); setShellApi(null); }
 });
+
+test('a late save reply cannot replace a newer synced preset or the other mode', async () => {
+  for (const changedMode of ['think', 'fast'] as const) {
+    let finish!: (value: PreferenceSnapshot) => void;
+    api({ saveClaudePreset: () => new Promise(resolve => { finish = resolve; }) });
+    const initial = snapshot(), h = await mountDom(<TierPresetSettings copy={copy} snapshot={initial} />);
+    try {
+      await h.click(button(h, 'current', 'think')); await h.click(button(h, 'save', 'think'));
+      const key = changedMode === 'think' ? 'claudeThinkPreset' : 'claudeFastPreset';
+      const newer: PreferenceSnapshot = { ...initial, values: { ...initial.values, [key]: max },
+        versions: { [key]: { updatedAt: 30, deviceId: 'remote' } } };
+      await h.render(<TierPresetSettings copy={copy} snapshot={newer} />);
+      await act(async () => finish({ ...snapshot(extra), versions: { claudeThinkPreset: { updatedAt: 20, deviceId: 'local' } } }));
+      assert.match(h.document.querySelector(`[data-preset-saved="${changedMode}"]`)!.textContent!, /Opus 5.5 · Max/);
+      assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).value, 'Extra');
+      assert.equal(h.document.querySelector('#claude-presets-status')!.textContent,
+        changedMode === 'think' ? copy.presetChanged : copy.presetSaved);
+    } finally { await h.close(); setShellApi(null); }
+  }
+});

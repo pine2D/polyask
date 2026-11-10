@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import { ipcErrorCode } from '../shared/ipc-error';
 import type { PreferenceSnapshot } from '../shared/preferences';
-import { isTierPreset, type PresetMode, type TierPreset } from '../shared/tier-presets';
+import { compareSyncVersion } from '../shared/sync';
+import { claudePresetKey, isTierPreset, type PresetMode, type TierPreset } from '../shared/tier-presets';
 import { shell } from './shell-api';
 
 export interface PresetDraft { readonly model: string; readonly effort: string | null | undefined }
@@ -103,7 +104,10 @@ export function useTierPresets(props: TierPresetSettingsProps) {
     if (!reset && !isTierPreset(value)) return Promise.resolve();
     return run('save', async ticket => {
       const result = await shell.saveClaudePreset(mode, value as TierPreset | null); if (!current(ticket)) return;
-      const next = values(result); setSaved(next);
+      const key = claudePresetKey(mode), authoritative = latest.current.snapshot, newest = authoritative?.versions[key];
+      if (authoritative?.deviceId !== result.deviceId || newest && compareSyncVersion(newest, result.versions[key] ?? {}) > 0)
+        throw new Error('source_changed');
+      const next = values(result); setSaved(previous => ({ ...previous, [mode]: next[mode] }));
       setDrafts(draft => ({ ...draft, [mode]: next[mode] }));
     }, reset ? props.copy.presetResetDone : props.copy.presetSaved);
   };
