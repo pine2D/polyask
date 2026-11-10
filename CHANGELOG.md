@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.33.0] - 2026-11-10
+
+验收范围：通过 2,769 项应用/UI 测试、607 项运行时测试、类型检查、依赖审计、仓库门禁、Linux 打包及包内九站加载检查；九站真实菜单的精确组合验证、切换与恢复通过。Windows 独立 TestLab 另验证 ChatGPT 自定义档位保存、重启回读和快速/思考切换。
+
+验收限制：ChatGPT Default 六档仍待真实环境验证；Windows 其余八站、正式安装包安装、macOS、真实发送及 Drive 双设备同步未完成本轮验收。详见[验收记录](https://github.com/pine2D/polyask/blob/v1.33.0/docs/acceptance.md#2026-11-10-发布前补验)。
+
 ### 新增
 
 - 九站快速档与思考档均可独立设置：按需读取网页实际模型、强度、模式或思考开关，支持采用网页当前选择、验证后保存及恢复内置推荐；预设随偏好同步，失效选择会明确提示。Kimi 更换模型需先在网页选择，再读取该模型的强度。
@@ -1719,7 +1725,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.32.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.33.0...HEAD
+[1.33.0]: https://github.com/pine2D/polyask/compare/v1.32.0...v1.33.0
 [1.32.0]: https://github.com/pine2D/polyask/compare/v1.31.0...v1.32.0
 [1.31.0]: https://github.com/pine2D/polyask/compare/v1.30.0...v1.31.0
 [1.30.0]: https://github.com/pine2D/polyask/compare/v1.29.0...v1.30.0
