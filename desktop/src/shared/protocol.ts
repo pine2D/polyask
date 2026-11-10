@@ -1,3 +1,4 @@
+import type { TierPreset, TierPresetAction, TierPresetResult } from "./tier-presets";
 import { MARKDOWN_EXPORT_CODES } from './markdown-export';
 import type { HistorySnapshot, HistorySnapshotCommand } from "./question-capture";
 import {
@@ -48,6 +49,7 @@ export interface NewSessionSiteResult {
 }
 
 export interface SubmitSiteCommand {
+  readonly preset?: TierPreset;
   readonly historyToken?: string;
   readonly source: "AMS";
   readonly cmd: "submitPrompt";
@@ -90,13 +92,21 @@ export interface WasSubmittedSiteCommand {
 }
 
 export interface TierSiteCommand {
+  readonly preset?: TierPreset;
   readonly source: "AMS";
   readonly cmd: "setTier";
   readonly tier: Exclude<Tier, null>;
   readonly deadline: number;
 }
 
-export type SiteCommand = TierSiteCommand | HistorySnapshotCommand | SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand;
+export interface TierPresetSiteCommand {
+  readonly source: "AMS";
+  readonly cmd: "tierPreset";
+  readonly action: TierPresetAction;
+  readonly deadline: number;
+}
+
+export type SiteCommand = TierPresetSiteCommand | TierSiteCommand | HistorySnapshotCommand | SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand;
 
 export interface SiteSubmittedResponse {
   readonly supported: boolean;
@@ -147,7 +157,7 @@ export interface CollectedAnswer {
   readonly code?: string;
 }
 
-export type SiteCommandResponse = HistorySnapshot | SiteResult | SiteCollectionResult | SiteDiagnosticResponse | SiteGenerationResponse | SiteSubmittedResponse;
+export type SiteCommandResponse = TierPresetResult | HistorySnapshot | SiteResult | SiteCollectionResult | SiteDiagnosticResponse | SiteGenerationResponse | SiteSubmittedResponse;
 
 export interface CollectionRequest {
   readonly sites: readonly SiteKey[];
@@ -175,6 +185,9 @@ export const SITE_CODES = [
   "command_shortcut_save_failed",
   "command_shortcut_apply_failed",
   "tier_unconfirmed",
+  "preset_unavailable",
+  "preset_restore_failed",
+  "preset_busy",
   "composer_not_found",
   "not_ready",
   "submit_unconfirmed",

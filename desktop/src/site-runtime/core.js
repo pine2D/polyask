@@ -232,8 +232,8 @@
   function submitPrompt(text, deadline, images) { return serializeInteraction(() => submitPromptNow(text, deadline, images)); }
 
   // 分卷未加载时只报告未确认，不因动作没有抛错而假报成功。
-  function resolveTier(mode, deadline, image) {
-    return window.__AMS.resolveTier ? window.__AMS.resolveTier(mode, deadline, image)
+  function resolveTier(mode, deadline, image, preset) {
+    return window.__AMS.resolveTier ? window.__AMS.resolveTier(mode, deadline, image, preset)
       : Promise.resolve({ requested: mode, outcome: "unconfirmed" });
   }
 
@@ -259,6 +259,7 @@
       if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode, false, Number(msg.deadline) || undefined);
       // 只读命令（getState / wasSubmitted / collectAnswer / diagnose）在 read-commands.js；返回 true = 异步回包。
       if (window.__AMS.readCommand?.(msg, sendResponse)) return true;
+      if (window.__AMS.presetCommand?.(msg, sendResponse, serializeInteraction)) return true;
       if (window.__AMS.tierCommand?.(msg, sendResponse, serializeInteraction)) return true;
       if (msg.cmd === "submitPrompt") {
         serializeInteraction(async () => {
@@ -276,7 +277,7 @@
             if (imageMode && tier !== "think" && tier !== "fast") tier = getState() || "fast";
             if (tier === "think" || tier === "fast") {
               const tierDeadline = Math.min(deadline || Infinity, Date.now() + 10000);
-              selection = await resolveTier(tier, tierDeadline, !!imageMode); await sleep(deadline ? Math.min(200, Math.max(0, deadline - Date.now())) : 200);
+              selection = await resolveTier(tier, tierDeadline, !!imageMode, msg.preset); await sleep(deadline ? Math.min(200, Math.max(0, deadline - Date.now())) : 200);
             }
             if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout", ...(selection ? { selection } : {}) };
             try { window.__AMS.history?.begin(msg.historyToken, msg.text, deadline, { images: images.length }); } catch (_) {}

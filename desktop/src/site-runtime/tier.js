@@ -31,15 +31,25 @@
       const waitMs = Math.min(4000, Math.max(0, deadline - Date.now()));
       if (!(await S.waitFor(() => S.findComposer(), waitMs, 120, deadline))) return { ok: false, code: "composer_not_found" };
       if (Date.now() >= deadline) return { ok: false, code: "timeout" };
-      const selection = await S.resolveTier(msg.tier, deadline);
+      const selection = await S.resolveTier(msg.tier, deadline, undefined, msg.preset);
       const ok = selection.outcome !== "unconfirmed" && Date.now() < deadline;
       return { ok, selection, ...(!ok ? { code: Date.now() >= deadline ? "timeout" : "tier_unconfirmed" } : {}) };
     }).then(respond, () => respond({ ok: false, code: Date.now() >= Number(msg.deadline) ? "timeout" : "error" }));
     return true;
   };
-  S.resolveTier = async function (mode, deadline = Date.now() + 10000, image) {
+  S.resolveTier = async function (mode, deadline = Date.now() + 10000, image, preset) {
     const unconfirmed = { requested: mode, outcome: "unconfirmed" };
     if (!["think", "fast"].includes(mode) || Date.now() >= deadline) return unconfirmed;
+    if (preset !== undefined && preset !== null) {
+      const a = S.pickAdapter();
+      try {
+        if (!S.presetValid?.(preset) || !a?.applyPreset) return unconfirmed;
+        await a.applyPreset(preset, deadline);
+        if (Date.now() >= deadline || !S.presetSame(a.currentPreset(), preset)) return unconfirmed;
+        return { requested: mode, observed: mode, outcome: 'preferred',
+          model: preset.effort ? `${preset.model} · ${preset.effort}` : preset.model };
+      } catch (_) { return unconfirmed; }
+    }
     // 专用适配器失败只走其既有两次尝试，不把“不安全”异常转给别的点击策略。
     const action = await S.runModeAction(mode, true, image, deadline);
     if (!action || Date.now() >= deadline) return unconfirmed;

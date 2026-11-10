@@ -1,3 +1,4 @@
+import { normalizeTierPresetResult } from "../shared/tier-presets";
 import { normalizeHistorySnapshot } from "../shared/question-capture";
 import { ipcRenderer } from "electron";
 
@@ -54,6 +55,8 @@ require("../site-runtime/md-diagram.js");
 require("../site-runtime/md.js");
 require("../site-runtime/prompt-markup.js");
 require("../site-runtime/adapters-intl.js");
+require("../site-runtime/claude-presets.js");
+require("../site-runtime/preset-command.js");
 require("../site-runtime/adapters-intl2.js");
 require("../site-runtime/chatgpt-default.js");
 require("../site-runtime/adapters-intl3.js");
@@ -151,12 +154,13 @@ function dispatch(command: SiteCommand): Promise<SiteCommandResponse> {
       resolve(command.cmd === "collect"
         ? normalizeCollection(value)
         : command.cmd === "diagnose" ? normalizeDiagnostic(value)
+          : command.cmd === "tierPreset" ? normalizeTierPresetResult(value)
           : probing ? normalizeSubmitted(value) : normalizeResult(value));
     };
     const timer = setTimeout(
       () => finish(command.cmd === "submitPrompt"
         ? { ok: false, code: "submit_unconfirmed" }
-        : command.cmd === "setTier" ? { ok: false, code: "timeout" } : probing ? unsupported : { code: "not_ready" }),
+        : (command.cmd === "setTier" || command.cmd === "tierPreset") ? { ok: false, code: "timeout" } : probing ? unsupported : { code: "not_ready" }),
       remaining
     );
     try {
