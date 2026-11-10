@@ -15,9 +15,9 @@ async function navigate(h: Harness, category: string) {
 test('only one category is visible and hidden cards never enter keyboard traversal', async () => {
   const h = await mountSettings();
   try {
-    assert.equal(h.document.querySelectorAll('[data-settings-category]').length, 7);
+    assert.equal(h.document.querySelectorAll('[data-settings-category]').length, 8);
     assert.equal(h.document.querySelector('[data-settings-category]:not([hidden])')?.getAttribute('data-settings-category'), 'appearance');
-    for (const category of ['interaction', 'sync', 'backup', 'network', 'data', 'about', 'appearance']) {
+    for (const category of ['models', 'interaction', 'sync', 'backup', 'network', 'data', 'about', 'appearance']) {
       await navigate(h, category);
       assert.equal(h.document.querySelectorAll('[data-settings-category]:not([hidden])').length, 1);
       assert.equal(h.document.activeElement?.id, `settings-category-${category}`);

@@ -11,7 +11,7 @@ test('category selector keeps focus for consecutive changes while buttons still 
   try {
     const select = h.document.querySelector<HTMLSelectElement>('.settings-category-select')!;
     select.focus();
-    for (const category of ['interaction', 'sync', 'backup']) {
+    for (const category of ['models', 'interaction', 'sync', 'backup']) {
       await act(async () => { select.value = category; select.dispatchEvent(new h.window.Event('change', { bubbles: true })); });
       assert.equal(h.document.activeElement === select, true, 'select must keep receiving arrow keys');
       assert.equal(h.document.querySelector('[data-settings-category]:not([hidden])')?.getAttribute('data-settings-category'), category);
@@ -108,6 +108,7 @@ test('cloud deletion keeps advanced data open and prevents exit until its write 
 });
 
 for (const [target, category, id] of [
+  ['model-presets', 'models', 'tier-presets-title'],
   ['display', 'appearance', 'settings-display-title'], ['layout', 'appearance', 'settings-layout-title'], ['overview', 'sync', 'sync-title'],
   ['drive-diagnostics', 'sync', 'sync-diagnostics-toggle'], ['proxy', 'network', 'settings-proxy-title'],
   ['image-sync', 'sync', 'question-image-sync-title'], ['preference-sync', 'sync', 'settings-preference-sync-title']

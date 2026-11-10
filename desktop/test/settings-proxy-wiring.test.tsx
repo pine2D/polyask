@@ -84,7 +84,7 @@ test('grouped settings navigation keeps the proxy heading reachable with its dir
   try {
     await settle();
     const sections = [...h.document.querySelectorAll('[data-settings-section]')].map(node => node.getAttribute('data-settings-section'));
-    assert.deepEqual(sections, ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about']);
+    assert.deepEqual(sections, ['appearance', 'models', 'interaction', 'sync', 'backup', 'network', 'data', 'about']);
     assert.equal(h.document.getElementById('settings-proxy-title')!.closest('.settings-group') === h.document.getElementById('app-updates-title')!.closest('.settings-group'), false);
     await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="network"]')!);
     assert.equal(h.document.activeElement === h.document.getElementById('settings-category-network'), true);

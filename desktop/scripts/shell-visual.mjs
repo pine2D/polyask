@@ -24,7 +24,7 @@ await writeFile(join(output, 'index.html'), '<!doctype html><html><head><meta ch
 const env = { ...process.env, ELECTRON_RUN_AS_NODE: '', WAYLAND_DISPLAY: '', WAYLAND_SOCKET: '',
   DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` };
 const child = spawn(require('electron'), [join(root, 'scripts/shell-visual-runtime.cjs'), output, ...process.argv.slice(2)], { stdio: 'inherit', env });
-// Includes all seven settings categories across locale, density, theme and zoom; allow software rendering.
+// Includes all settings categories across locale, density, theme and zoom; allow software rendering.
 const timer = setTimeout(() => child.kill('SIGTERM'), 420_000);
 const status = await new Promise(resolve => child.on('exit', resolve));
 clearTimeout(timer);

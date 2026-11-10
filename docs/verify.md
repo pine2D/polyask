@@ -19,6 +19,20 @@
 
 **顺序不能反：先离线（`bash scripts/verify.sh` + `cd desktop && npm test && npm run typecheck`），再真机。** 反过来会得到「真机试通了但 CI 红」的返工。
 
+## 2026-11-10 模型与档位设置交互
+
+本轮在已发布 v1.33.0 基线之上改进设置界面，归入未发布变更。设置新增“模型与档位”分类，位于外观之后；`model-presets` 仍跳转并聚焦唯一编辑器。快速/思考分别显示已保存值、未保存标记和操作反馈，未改变或不可用时禁用保存；填入网页当前选择与已保存值一致时明确提示无需再次保存。恢复推荐、生效及同步说明可展开查看。未改变 IPC、偏好格式、站点适配或群发行为。
+
+专项为 `npm run test:unit -- test/settings-categories.test.ts test/settings-sections.test.tsx test/settings-category-state.test.tsx test/tier-preset-settings.test.tsx test/site-preset-settings.test.tsx test/copy.test.ts`；原生为 `npm run test:unit -- test/tier-presets-native.check.ts`。回归覆盖分类和旧跳转、当前选择只填草稿、未修改不写入、按档显示进度及失败、失败保留编辑内容、保存后焦点回落、隐藏分类异步完成不抢焦点、推荐恢复与跨站独立配置。
+
+完整 `npm test` 退出 0：2,774 项应用/UI 测试和 607 项运行时测试全部通过，0 fail/cancelled/skipped；独立 typecheck、仓库 verify 通过。UI detector 对改动目标无命中，独立审查发现的旧反馈节点及分类夹具期望已修正并复核。
+
+隔离档位界面专项通过 13 组语言/主题/尺寸/缩放和九站保存/恢复，0 HTTP/HTTPS 请求、0 renderer error；查看了初始、未保存、错误、帮助展开、窄窗及 200% 截图，未见控件裁切。已保存值相同时禁用保存并显示无需重复保存，失败只标注受影响档位，隐藏分类的回包不会抢焦点。
+
+`xvfb-run -a node scripts/test-safe.mjs command node scripts/shell-visual.mjs --settings-section-only` 另通过 12 组交互与 72 组分类布局、576 次分类切换。原生下拉连续 Down 依次经过模型、操作、同步，Tab 进入当前分类；八类按键定位、独立滚动、隐藏内容排除和窄窗适配通过。两个原生专项均在临时 4 GiB/512 MiB cgroup 内运行，各 7 个观测 Electron 进程全部退出，临时 profile 已清理。
+
+以上原生检查使用 Linux/WSL/Xvfb、生产组件与合成 API，不访问真实账号、发送或上传，也不替代九站菜单、Windows/macOS、物理输入法/读屏或 Drive 双设备验收；v1.33.0 及此前真实证据仍按下列各段范围判读。
+
 ## 2026-11-10 九站自定义模型档位
 
 Claude 分支已合入 main（`23b922b`）；全站扩展从同一基线继续，版本仍为 1.32.0。设置 → 操作与快捷键 → 各站模型档位可选择九站，快速/思考分别保存精确网页选项。18 个偏好键各自版本化，覆盖同步、备份和本机重置；不在后台扫描。

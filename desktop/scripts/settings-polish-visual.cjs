@@ -48,7 +48,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     }
     if (zoom === 2) {
       await run('document.querySelector(".settings-category-select").focus()');
-      for (const value of ['interaction', 'sync']) {
+      for (const value of ['models', 'interaction', 'sync']) {
         await key('Down');
         assert.equal(await run('document.querySelector(".settings-category-select").value'), value);
         assert.equal(await run('document.activeElement.matches(".settings-category-select")'), true, 'closed select accepts consecutive arrows');

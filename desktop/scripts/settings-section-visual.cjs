@@ -4,7 +4,7 @@ const { join } = require('node:path');
 const { writeFileSync } = require('node:fs');
 const { nativeTheme } = require('electron');
 const accessibility = require('./ui-accessibility.cjs');
-const categories = ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about'];
+const categories = ['appearance', 'models', 'interaction', 'sync', 'backup', 'network', 'data', 'about'];
 
 module.exports = async ({ win, output, run, wait, paint, shot }) => {
   const reports = [];

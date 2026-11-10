@@ -2,9 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { SETTINGS_CATEGORIES, resolveSettingsTarget, type SettingsNavigationTarget } from '../src/renderer/settings-categories';
 
-test('seven categories and all existing deep links resolve to explicit destinations', () => {
-  assert.deepEqual(SETTINGS_CATEGORIES, ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about']);
+test('model presets have their own category and existing deep links keep explicit destinations', () => {
+  assert.deepEqual(SETTINGS_CATEGORIES, ['appearance', 'models', 'interaction', 'sync', 'backup', 'network', 'data', 'about']);
   const expected = {
+    'model-presets': ['models', 'tier-presets-title'],
     display: ['appearance', 'settings-display-title'], layout: ['appearance', 'settings-layout-title'],
     overview: ['sync', 'sync-title'], connection: ['sync', 'sync-title'],
     'drive-diagnostics': ['sync', 'sync-diagnostics-toggle'], 'image-sync': ['sync', 'question-image-sync-title'],

@@ -54,7 +54,7 @@ test('current page choice fills only the requested draft and verification saves 
     assert.deepEqual(writes, [['think', extra]]);
     await act(async () => finish(snapshot(extra)));
     assert.match(h.document.querySelector('[data-preset-saved="think"]')!.textContent!, /Fable 5.2 · Extra/);
-    assert.equal(h.document.querySelector('#tier-presets-status')!.textContent, copy.presetSaved);
+    assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-feedback]')!.textContent, copy.presetSaved);
   } finally { await h.close(); setShellApi(null); }
 });
 
@@ -69,7 +69,7 @@ test('unavailable saved selections remain visible and failures keep the attempte
     await h.click(button(h, 'current', 'think')); await h.click(button(h, 'save', 'think'));
     assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).value, 'Extra');
     assert.match(h.document.querySelector('[data-preset-saved="think"]')!.textContent!, /Retired 4.5/);
-    assert.equal(h.document.querySelector('#tier-presets-status')!.textContent, copy.presetRestoreFailed);
+    assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-feedback]')!.textContent, copy.presetRestoreFailed);
   } finally { await h.close(); setShellApi(null); }
 });
 
@@ -114,8 +114,71 @@ test('a late save reply cannot replace a newer synced preset or the other mode',
       await act(async () => finish({ ...snapshot(extra), versions: { claudeThinkPreset: { updatedAt: 20, deviceId: 'local' } } }));
       assert.match(h.document.querySelector(`[data-preset-saved="${changedMode}"]`)!.textContent!, /Opus 5.5 · Max/);
       assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).value, 'Extra');
-      assert.equal(h.document.querySelector('#tier-presets-status')!.textContent,
+      assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-feedback]')!.textContent,
         changedMode === 'think' ? copy.presetChanged : copy.presetSaved);
     } finally { await h.close(); setShellApi(null); }
   }
+});
+
+test('an unchanged preset cannot be saved again after options are loaded', async () => {
+  let writes = 0; api({ saveTierPreset: async () => { writes++; return snapshot(extra); } });
+  const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot(extra)} />);
+  try {
+    await h.click(button(h, 'refresh'));
+    assert.equal(button(h, 'save', 'think').disabled, true);
+    await h.click(button(h, 'save', 'think'));
+    assert.equal(writes, 0);
+    await select(h, 'claude-think-effort', 'Max');
+    assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-dirty]') !== null, true);
+    assert.equal(button(h, 'save', 'think').disabled, false);
+  } finally { await h.close(); setShellApi(null); }
+});
+
+test('filling an already saved webpage choice does not ask for a disabled save', async () => {
+  let writes = 0; api({ saveTierPreset: async () => { writes++; return snapshot(extra); } });
+  const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot(extra)} />);
+  try {
+    await h.click(button(h, 'current', 'think'));
+    assert.equal(button(h, 'save', 'think').disabled, true);
+    assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-dirty]') === null, true);
+    assert.match(h.document.querySelector('[data-preset-mode=think] [data-preset-feedback]')!.textContent!, /already matches/i);
+    assert.equal(writes, 0);
+  } finally { await h.close(); setShellApi(null); }
+});
+
+test('save progress and a failed result stay next to the affected tier and preserve its draft', async () => {
+  let reject!: (error: Error) => void;
+  api({ saveTierPreset: () => new Promise((_resolve, fail) => { reject = fail; }) });
+  const announcements: string[] = [];
+  const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot()} onFeedback={message => announcements.push(message)} />);
+  try {
+    await h.click(button(h, 'current', 'think'));
+    await h.click(button(h, 'save', 'think'));
+    const notice = () => h.document.querySelector('[data-preset-mode=think] [data-preset-feedback]');
+    assert.equal(notice()?.getAttribute('data-tone'), 'progress');
+    assert.match(notice()?.textContent ?? '', /verif/i);
+    assert.equal(h.document.querySelector('[data-preset-mode=fast] [data-preset-feedback]')?.textContent, '');
+    await act(async () => reject(new Error('database_unavailable')));
+    assert.equal(notice()?.getAttribute('data-tone'), 'error');
+    assert.match(notice()?.textContent ?? '', /sav/i);
+    assert.doesNotMatch(notice()?.textContent ?? '', /read or verify/i);
+    assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).value, 'Extra');
+    assert.match(h.document.querySelector('[data-preset-saved=think]')!.textContent!, /recommendation/i);
+    assert.match(announcements.at(-1) ?? '', /Think/);
+    assert.equal(button(h, 'save', 'think').disabled, false);
+  } finally { await h.close(); setShellApi(null); }
+});
+
+test('a completed save focuses its tier when the unchanged save button becomes disabled', async () => {
+  let finish!: (value: PreferenceSnapshot) => void;
+  api({ saveTierPreset: () => new Promise(resolve => { finish = resolve; }) });
+  const h = await mountDom(<TierPresetSettings copy={copy} snapshot={snapshot()} />);
+  try {
+    await h.click(button(h, 'current', 'think'));
+    button(h, 'save', 'think').focus(); await h.click(button(h, 'save', 'think'));
+    await act(async () => finish(snapshot(extra)));
+    assert.equal(button(h, 'save', 'think').disabled, true);
+    assert.equal(h.document.activeElement?.id, 'claude-think-title');
+    assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-dirty]') === null, true);
+  } finally { await h.close(); setShellApi(null); }
 });

@@ -2,6 +2,7 @@ export const SETTINGS_RECOVERY_COPY = {
   en: {
     settingsGroupDisplay: 'Display & controls',
     settingsCategoryAppearance: 'Appearance & reading',
+    settingsCategoryModels: 'Models & presets',
     settingsCategoryInteraction: 'Controls & shortcuts',
     settingsCategorySync: 'Sync',
     settingsCategoryBackup: 'Backup & recovery',
@@ -54,6 +55,7 @@ export const SETTINGS_RECOVERY_COPY = {
   zhCN: {
     settingsGroupDisplay: '显示与操作',
     settingsCategoryAppearance: '外观与阅读',
+    settingsCategoryModels: '模型与档位',
     settingsCategoryInteraction: '操作与快捷键',
     settingsCategorySync: '同步',
     settingsCategoryBackup: '备份与恢复',
@@ -106,6 +108,7 @@ export const SETTINGS_RECOVERY_COPY = {
   zhTW: {
     settingsGroupDisplay: '顯示與操作',
     settingsCategoryAppearance: '外觀與閱讀',
+    settingsCategoryModels: '模型與檔位',
     settingsCategoryInteraction: '操作與快捷鍵',
     settingsCategorySync: '同步',
     settingsCategoryBackup: '備份與還原',

@@ -30,8 +30,11 @@ app.whenReady().then(async () => {
     win.setSize(width, 1050); nativeTheme.themeSource = theme;
     await win.loadFile(join(output, 'index.html'), { query: { locale } }); win.webContents.setZoomFactor(zoom);
     await until('document.querySelector("#tier-presets-title")?.getClientRects().length > 0', 'preset card visible');
+    check(await js('document.querySelector("[data-settings-section=models]").getAttribute("aria-current")==="location"'), 'presets have a dedicated category');
+    check(await js('document.querySelectorAll("[data-settings-section]").length===8'), 'eight settings categories');
     await pause(); boundary();
     check(await js('document.querySelector("#claude-think-model").options.length===1'), 'does not read page on mount');
+    if (locale === 'zh-CN' && theme === 'light' && width === 1440) await shot('zh-CN-light-empty');
     await click('[data-preset-action=refresh]');
     await until('document.querySelector("#claude-think-model").options.length===4', 'options loaded');
     await click('[data-preset-mode=think] [data-preset-action=current]');
@@ -39,10 +42,11 @@ app.whenReady().then(async () => {
     // Native keyboard changes the effort in the focused HTML select.
     await js('document.querySelector("#claude-think-effort").focus()'); await key('End'); await key('Tab');
     check(await js('document.querySelector("#claude-think-effort").value==="Max"'), 'native keyboard chooses Max');
+    if (locale === 'zh-CN' && theme === 'light' && width === 1440) await shot('zh-CN-light-unsaved');
     const extra = locale === 'en' && theme === 'light' && width === 1440;
     if (extra) {
       await js('window.tierPresetFixture.fail()'); await click('[data-preset-mode=think] [data-preset-action=save]');
-      await until('document.querySelector("#tier-presets-status").textContent===window.tierPresetFixture.copy.presetRestoreFailed', 'restoration failure is visible');
+      await until('document.querySelector("[data-preset-mode=think] [data-preset-feedback]").textContent===window.tierPresetFixture.copy.presetRestoreFailed', 'restoration failure is beside the affected tier');
       check(await js('window.tierPresetFixture.saved().claudeThinkPreset===null'), 'failed save leaves preference unchanged');
       await js('document.querySelector("#tier-presets-title").scrollIntoView({block:"start"})'); await shot('en-light-failure-wide');
       const count = await js('window.tierPresetFixture.calls()');
@@ -51,10 +55,13 @@ app.whenReady().then(async () => {
       await js('window.tierPresetFixture.release()');
     } else await click('[data-preset-mode=think] [data-preset-action=save]');
     await until('window.tierPresetFixture.saved().claudeThinkPreset?.effort==="Max"', 'exact choice saved');
-    check(await js('document.activeElement===document.querySelector("[data-preset-mode=think] [data-preset-action=save]")'), 'focus restored after disabled fieldset');
+    await until('document.activeElement.id==="claude-think-title"', 'focus stays in the saved tier when its save button becomes disabled');
+    check(await js('document.querySelector("[data-preset-mode=think] [data-preset-action=save]").disabled'), 'unchanged preset cannot be saved twice');
     await click('[data-preset-mode=fast] [data-preset-action=current]');
     await click('[data-preset-mode=fast] [data-preset-action=save]');
     await until('window.tierPresetFixture.saved().claudeFastPreset?.effort==="Extra"', 'independent fast preset saved');
+    await click('[data-preset-mode=fast] [data-preset-action=current]');
+    check(await js('document.querySelector("[data-preset-mode=fast] [data-preset-feedback]").textContent===window.tierPresetFixture.copy.presetCurrentMatchesSaved'), 'matching choice does not request another save');
     const geometry = await js(`(()=>{const card=document.querySelector('.tier-presets');
       const ctx=document.createElement('canvas').getContext('2d');
       const rgb=color=>{ctx.clearRect(0,0,1,1);ctx.fillStyle=color;ctx.fillRect(0,0,1,1);return [...ctx.getImageData(0,0,1,1).data];};
@@ -74,11 +81,29 @@ app.whenReady().then(async () => {
       await js('document.querySelector("#tier-presets-title").scrollIntoView({block:"start"})'); await shot(state.step);
       if(zoom===2){await js('document.querySelector("[data-preset-mode=think]").scrollIntoView({block:"start"})');await shot(state.step+'-think');}
     }
+    if (locale === 'en' && theme === 'light' && width === 720) {
+      await click('.tier-presets-help summary');
+      check(await js('document.querySelector(".tier-presets-help").open'), 'help opens through its summary');
+      await js('document.querySelector(".tier-presets-help").scrollIntoView({block:"end"})'); await shot('en-light-help-narrow');
+      await click('.tier-presets-help summary');
+    }
     // IME Escape must not close settings; regular Escape remains available after save.
     await js('document.dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",isComposing:true,bubbles:true}))');
     check(await js('document.body.dataset.closed!=="true"'), 'IME escape does not leave settings');
     await click('[data-preset-mode=think] [data-preset-action=reset]');
     await until('window.tierPresetFixture.saved().claudeThinkPreset===null', 'recommendation restored');
+    if (extra) {
+      await click('[data-preset-mode=think] [data-preset-action=current]');
+      await js('window.tierPresetFixture.hold()'); await click('[data-preset-mode=think] [data-preset-action=save]');
+      await click('[data-settings-section=appearance]');
+      await js('window.tierPresetFixture.release()');
+      await until('window.tierPresetFixture.saved().claudeThinkPreset?.effort==="Extra"', 'hidden preset save finishes');
+      check(await js('document.activeElement.id==="settings-category-appearance"'), 'hidden completion does not steal focus');
+      await click('[data-settings-section=models]');
+      check(await js('document.querySelector("[data-preset-mode=think] [data-preset-feedback]").textContent===window.tierPresetFixture.copy.presetSaved'), 'returning shows the tier result');
+      await click('[data-preset-mode=think] [data-preset-action=reset]');
+      await until('window.tierPresetFixture.saved().claudeThinkPreset===null', 'recommendation restored after category roundtrip');
+    }
     // Native site selector and independent storage across all supported capability shapes.
     if (extra) {
       const sites = await js('window.tierPresetFixture.sites');

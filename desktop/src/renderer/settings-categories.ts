@@ -1,12 +1,12 @@
 import type { DesktopCopy } from '../shared/copy';
 
-export const SETTINGS_CATEGORIES = ['appearance', 'interaction', 'sync', 'backup', 'network', 'data', 'about'] as const;
+export const SETTINGS_CATEGORIES = ['appearance', 'models', 'interaction', 'sync', 'backup', 'network', 'data', 'about'] as const;
 export type SettingsCategory = typeof SETTINGS_CATEGORIES[number];
 export type LegacySettingsSection = 'overview' | 'drive-diagnostics' | 'data' | 'display' | 'proxy';
 export type SettingsTarget = SettingsCategory | LegacySettingsSection | 'layout' | 'connection' | 'image-sync' | 'preference-sync' | 'backup-export' | 'model-presets';
 export type SettingsNavigationTarget = SettingsTarget | { category: SettingsCategory };
 const TARGETS: Partial<Record<SettingsTarget, { category: SettingsCategory; id: string }>> = {
-  'model-presets': { category: 'interaction', id: 'tier-presets-title' },
+  'model-presets': { category: 'models', id: 'tier-presets-title' },
   display: { category: 'appearance', id: 'settings-display-title' },
   layout: { category: 'appearance', id: 'settings-layout-title' },
   overview: { category: 'sync', id: 'sync-title' }, connection: { category: 'sync', id: 'sync-title' },
@@ -24,7 +24,7 @@ export function resolveSettingsTarget(target?: SettingsNavigationTarget): { cate
   return { category, id: `settings-category-${category}` };
 }
 export function settingsCategoryLabels(copy: DesktopCopy): Record<SettingsCategory, string> {
-  return { appearance: copy.settingsCategoryAppearance, interaction: copy.settingsCategoryInteraction,
+  return { appearance: copy.settingsCategoryAppearance, models: copy.settingsCategoryModels, interaction: copy.settingsCategoryInteraction,
     sync: copy.settingsCategorySync, backup: copy.settingsCategoryBackup, network: copy.settingsCategoryNetwork,
     data: copy.settingsGroupData, about: copy.settingsCategoryAbout };
 }

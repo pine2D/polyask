@@ -78,13 +78,13 @@ test('late catalog replies cannot repopulate a different site after a context ch
   let finish!: (value: unknown) => void, form!: ReturnType<typeof useTierPresets>;
   const state = snapshot();
   setShellApi({ getTierPresets: () => new Promise(resolve => { finish = resolve; }) } as any);
-  function Probe({ site }: { site: SiteKey }) { form = useTierPresets({ copy, snapshot: state }, site); return <div>{form.notice}</div>; }
+  function Probe({ site }: { site: SiteKey }) { form = useTierPresets({ copy, snapshot: state }, site); return <div>{form.notice?.text}</div>; }
   const h = await mountDom(<Probe site="claude" />);
   try {
     await act(async () => { void form.refresh(); });
     await h.render(<Probe site="deepseek" />);
     await act(async () => finish({ model: 'Fable 5.2', models: ['Fable 5.2'], efforts: ['Extra'], current: current('claude') }));
-    assert.equal(form.models, null); assert.equal(form.pending, null); assert.equal(form.notice, ''); assert.equal(form.saved.think, null);
+    assert.equal(form.models, null); assert.equal(form.pending, null); assert.equal(form.notice, null); assert.equal(form.saved.think, null);
   } finally { await h.close(); setShellApi(null); }
 });
 test('Kimi refresh retains the current catalog when a saved other-model preset needs manual selection', async () => {
@@ -100,6 +100,6 @@ test('Kimi refresh retains the current catalog when a saved other-model preset n
     assert.deepEqual([...choice.options].map(option => option.value), ['', 'Kimi current', 'Other Kimi']);
     assert.equal(button(h, 'save', 'fast').disabled, true);
     await select(h, 'kimi-think-model', 'Other Kimi');
-    assert.equal(h.document.querySelector('#tier-presets-status')!.textContent, copy.presetModelSwitchRequired);
+    assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-feedback]')!.textContent, copy.presetModelSwitchRequired);
   } finally { await h.close(); setShellApi(null); }
 });
