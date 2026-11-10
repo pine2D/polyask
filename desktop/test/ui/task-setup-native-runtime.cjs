@@ -2,6 +2,7 @@ const {app,BrowserWindow,session,nativeTheme}=require('electron');
 const {join}=require('node:path');
 const {writeFileSync}=require('node:fs');
 const {processBoundary}=require('./native-process-boundary.cjs');
+const {taskSetupVisual}=require('./task-setup-visual.cjs');
 const output=process.argv[2],report=[];
 app.setPath('userData',join(output,'profile'));
 const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -16,7 +17,9 @@ app.whenReady().then(async()=>{
   const until=async(code,message)=>{for(let i=0;i<160;i++){if(await js(code))return;await pause(25);}throw Error(message);};
   const click=async selector=>{
     win.focus();win.webContents.focus();
-    const rect=await js(`(()=>{const n=document.querySelector(${JSON.stringify(selector)});if(!n)throw Error('missing '+${JSON.stringify(selector)});n.scrollIntoView({block:'center'});const r=n.getBoundingClientRect();return {x:Math.round(r.x+r.width/2),y:Math.round(r.y+r.height/2)};})()`);
+    const point=await js(`(()=>{const n=document.querySelector(${JSON.stringify(selector)});if(!n)throw Error('missing '+${JSON.stringify(selector)});n.scrollIntoView({block:'nearest'});const r=n.getBoundingClientRect();const x=r.x+r.width/2,y=r.y+r.height/2;return {x,y,hit:n.contains(document.elementFromPoint(x,y))};})()`);
+    check(point.hit,`visible native target ${selector}`);
+    const zoom=win.webContents.getZoomFactor(),rect={x:Math.round(point.x*zoom),y:Math.round(point.y*zoom)};
     win.webContents.sendInputEvent({type:'mouseDown',button:'left',clickCount:1,...rect});
     win.webContents.sendInputEvent({type:'mouseUp',button:'left',clickCount:1,...rect});await pause(70);
   };
@@ -29,6 +32,10 @@ app.whenReady().then(async()=>{
     nativeTheme.themeSource=locale==='en'?'dark':'light';win.setSize(width,1000);
     await win.loadFile(join(output,'index.html'),{query:{locale}});await until('window.taskNative?.snapshot().images===1','fixture ready');
     await open();
+    const fieldInsets=await js(`(()=>[...document.querySelectorAll('.task-setup textarea')].map(node=>{
+      const style=getComputedStyle(node);return {name:node.name,x:parseFloat(style.paddingInlineStart),y:parseFloat(style.paddingBlockStart)};}))()`);
+    check(fieldInsets.every(field=>field.x>=10&&field.y>=8),'task text fields need deliberate internal spacing');
+    check(await js(`(()=>{const r=document.querySelector('[data-task-apply]').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;})()`),'primary action is visible without scrolling');
     check(await js("document.activeElement===document.querySelector('.task-setup header button')"),'initial cancel focus');
     await key('Tab',['shift']);check(await js("document.activeElement===document.querySelector('[data-task-apply]')"),'reverse focus trap');
     await key('Tab');check(await js("document.activeElement===document.querySelector('.task-setup header button')"),'forward focus trap');
@@ -42,7 +49,7 @@ app.whenReady().then(async()=>{
     check(await js("document.querySelector('[data-task-scope]').textContent==='Claude · Kimi'"),'preview has exact scope');
     const preview=await js("document.querySelector('[name=task-preview]').value");
     check(preview.includes('论据 {{literal}} $1')&&preview.includes('Custom output 保留自订内容'),'single-pass variables and custom content');
-    await js("document.querySelector('.task-setup').scrollTop=0");await pause(60);
+    await js("document.querySelector('.task-setup-body').scrollTop=0");await pause(60);
     const geometry=await js(`(()=>{const n=document.querySelector('.task-setup');return {width:n.clientWidth,scroll:n.scrollWidth,body:document.body.scrollWidth,viewport:innerWidth};})()`);
     check(geometry.scroll<=geometry.width+1&&geometry.body<=geometry.viewport+1,'no horizontal overflow');
     writeFileSync(join(output,`${locale}-${width}-preview.png`),(await win.capturePage()).toPNG());
@@ -82,5 +89,6 @@ app.whenReady().then(async()=>{
     sample();report.push({locale,width,ok:true,geometry,steps:['native-select','variable-fill','custom-output','exact-preview-scope','IME-Escape','Tab-trap','confirmation-cancel','tier-failure','newer-edit-late-ACK','explicit-apply','cancel-late-ACK','cancel-late-failure','cancel-tier-failure','focus-return','no-send-or-new-session']});
     writeFileSync(join(output,'report.json'),JSON.stringify(report,null,2));
   }
+  await taskSetupVisual({win,output,nativeTheme,js,until,click,key,open,select,sample,check});
   check(errors.length===0,`renderer errors: ${errors.join(';')}`);sample();win.destroy();app.exit(0);
 }).catch(error=>{writeFileSync(join(output,'failure.txt'),String(error.stack));console.log(String(error.stack));app.exit(1);});

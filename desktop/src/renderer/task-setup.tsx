@@ -46,36 +46,51 @@ export function TaskSetup({setup,copy,sites,templates,groups}: {
     confirmLabel={copy.taskSetupApply} cancelLabel={copy.draftKeepEditing}
     onCancel={()=>setConfirmation(null)} onConfirm={()=>{setConfirmation(null); void apply(confirmation);}}/>;
   return <FolderModal copy={copy} title={copy.taskSetup} busy={false} onCancel={setup.close} className="task-setup">
-    <p>{copy.taskSetupHint}</p>
-    <div className="task-setup-fields" aria-busy={setup.pending}>
+    <p className="task-setup-intro">{copy.taskSetupHint}</p>
+    <div className="task-setup-body" aria-busy={setup.pending}>
+    <div className="task-setup-editor">
+    <section className="task-setup-content" aria-labelledby="task-setup-content-title">
+      <h3 id="task-setup-content-title">{copy.taskSetupContent}</h3>
+      <div className="task-setup-fields">
       <label>{copy.taskSetupPreset}<select name="task-preset" value={preset} onChange={event=>choosePreset(event.target.value as TaskPreset)}>
         <option value="compare">{copy.taskSetupCompare}</option><option value="verify">{copy.taskSetupVerify}</option><option value="revise">{copy.taskSetupRevise}</option>
       </select></label>
       <label>{copy.taskSetupTemplate}<select name="task-template" value={template?.id ?? ''} onChange={event=>{
         setup.edit(); setTemplate(templates.find(item=>item.id===event.target.value)); setVariables({});
       }}><option value="">{copy.taskSetupNoTemplate}</option>{templates.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      {!template ? <label className="task-setup-wide">{copy.taskSetupText}<textarea name="task-text" rows={4} value={text} onChange={event=>{setup.edit();setText(event.target.value);}}/></label> : null}
+      {!template ? <label className="task-setup-wide">{copy.taskSetupText}<textarea name="task-text" rows={5} value={text} onChange={event=>{setup.edit();setText(event.target.value);}}/></label> : null}
       {(template ? promptVariables(base) : []).map((name,index)=><label className="task-setup-wide" key={name}>{name}<textarea rows={2} name={`task-variable-${index}`} value={variables[name] ?? ''}
         onChange={event=>{setup.edit();setVariables(previous=>({...previous,[name]:event.target.value}));}}/></label>)}
+      <label>{copy.taskSetupDimensions}<textarea name="task-dimensions" rows={3} value={dimensions} onChange={event=>{setup.edit();setDimensions(event.target.value);}}/></label>
+      <label>{copy.taskSetupOutput}<textarea name="task-output" rows={3} value={output} onChange={event=>{setup.edit();setOutput(event.target.value);}}/></label>
+      </div>
+    </section>
+    <section className="task-setup-delivery" aria-labelledby="task-setup-delivery-title">
+      <h3 id="task-setup-delivery-title">{copy.taskSetupDelivery}</h3>
+      <div className="task-setup-fields">
       <label>{copy.taskSetupGroup}<select name="task-group" value={group?.id ?? ''} onChange={event=>{setup.edit();setGroup(groups.find(item=>item.id===event.target.value));}}>
         <option value="">{copy.taskSetupCurrentGroup}</option>{groups.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}
       </select></label>
       <label>{copy.taskSetupTier}<select name="task-tier" value={tier ?? ''} onChange={event=>{setup.edit();setTier(event.target.value ? event.target.value as Tier : null);}}>
         <option value="">{copy.taskSetupKeepTier}</option><option value="think">{copy.think}</option><option value="fast">{copy.fast}</option>
       </select></label>
-      <label>{copy.taskSetupDimensions}<textarea name="task-dimensions" rows={3} value={dimensions} onChange={event=>{setup.edit();setDimensions(event.target.value);}}/></label>
-      <label>{copy.taskSetupOutput}<textarea name="task-output" rows={3} value={output} onChange={event=>{setup.edit();setOutput(event.target.value);}}/></label>
-    </div>
-    <section className="task-setup-preview" aria-label={copy.taskSetupPreview}>
-      <h3>{copy.taskSetupScope}</h3><p data-task-scope>{scope.map(key=>sites.find(site=>site.key===key)?.label ?? key).join(' · ') || copy.newSessionNoSites}</p>
-      <label>{copy.taskSetupPreview}<textarea name="task-preview" readOnly rows={7} value={preview ?? base}/></label>
-      {preview === null ? <p role="status">{copy.templateInvalid}</p> : null}
+      </div>
     </section>
-    {setup.error ? <p role="alert">{setup.error === 'stale' ? copy.taskSetupStale : copy.taskSetupFailed}</p> : null}
-    <footer><button type="button" className="primary" data-task-apply disabled={setup.pending || preview === null || !scope.length} onClick={()=>{
+    </div>
+    <section className="task-setup-preview" aria-labelledby="task-setup-preview-title">
+      <div><h3 id="task-setup-preview-title">{copy.taskSetupPreview}</h3><p id="task-setup-preview-hint">{copy.taskSetupPreviewHint}</p></div>
+      <textarea name="task-preview" aria-labelledby="task-setup-preview-title" aria-describedby="task-setup-preview-hint" readOnly rows={12} value={preview ?? base}/>
+      <div className="task-setup-scope"><h4>{copy.taskSetupScope}</h4><p data-task-scope>{scope.map(key=>sites.find(site=>site.key===key)?.label ?? key).join(' · ') || copy.newSessionNoSites}</p></div>
+    </section>
+    </div>
+    <footer>
+      {setup.error ? <p className="task-setup-error" role="alert">{setup.error === 'stale' ? copy.taskSetupStale : copy.taskSetupFailed}</p> : null}
+      {preview === null ? <p className="task-setup-invalid" role="status">{copy.templateInvalid}</p> : null}
+      <div className="task-setup-footer-actions"><p>{copy.taskSetupApplyHint}</p>
+      <button type="button" className="primary" data-task-apply disabled={setup.pending || preview === null || !scope.length} onClick={()=>{
       if (preview === null) return;
       const plan = {text:preview,sites:scope,tier,template,group};
       if (session.prompt.trim() || session.imageCount) setConfirmation(plan); else void apply(plan);
-    }}>{setup.pending ? copy.taskSetupApplying : copy.taskSetupApply}</button></footer>
+    }}>{setup.pending ? copy.taskSetupApplying : copy.taskSetupApply}</button></div></footer>
   </FolderModal>;
 }

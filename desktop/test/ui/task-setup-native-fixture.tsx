@@ -20,9 +20,11 @@ import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
 import '../../src/renderer/accessibility.css';
 import '../../src/renderer/feedback.css';
-const locale=new URLSearchParams(location.search).get('locale') || 'en',copy=getCopy(locale);
+const query=new URLSearchParams(location.search),locale=query.get('locale') || 'en',copy=getCopy(locale);
 document.documentElement.lang=locale;
-const templates=[{id:'template',name:copy.taskSetupVerify,text:'Check {{topic}}',updatedAt:1,deviceId:'native'}];
+document.documentElement.dataset.density=query.get('density') || 'compact';
+const templates=[{id:'template',name:copy.taskSetupVerify,text:'Check {{topic}}',updatedAt:1,deviceId:'native'},
+  {id:'long-template',name:'Template with long variable labels',text:'Check {{'+'需要完整保留的比较条件'.repeat(3)+'}}',updatedAt:1,deviceId:'native'}];
 const groups=[{id:'pair',name:'Claude + Kimi',sites:['claude','kimi'] as const,updatedAt:1,deviceId:'native'}];
 let state:WorkspaceState={selectedSites:['claude'],participatingSites:['claude'],tier:null,groups};
 let failure='', delay=0, broadcasts=0, sessions=0, notifications=0, tierCalls=0;

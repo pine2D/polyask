@@ -1,6 +1,8 @@
 export const TASK_SETUP_COPY = {
   en: {
-    taskSetup: 'Prepare task', taskSetupHint: 'Preview a prompt, send group and mode for this session. Apply to the draft, then use the existing Send button. Attachments are kept.',
+    taskSetup: 'Prepare task', taskSetupHint: 'Set up the task and where to send it, then review the preview before applying it to your draft.',
+    taskSetupContent: 'Task content', taskSetupDelivery: 'Send settings', taskSetupPreviewHint: 'Read-only preview. Updates as you edit the task.',
+    taskSetupApplyHint: 'Updates the draft, participants and mode. Keeps attachments; sends nothing.',
     taskSetupPreset: 'Task preset', taskSetupCompare: 'Compare alternatives', taskSetupVerify: 'Check arguments', taskSetupRevise: 'Revise a draft',
     taskSetupComparePrompt: 'Compare the proposed alternatives and explain the tradeoffs.',
     taskSetupVerifyPrompt: 'Check the following arguments and identify what needs verification.',
@@ -20,7 +22,9 @@ export const TASK_SETUP_COPY = {
     taskSetupApplied: 'Task applied to the draft. Review it, then send when ready.',
   },
   zhCN: {
-    taskSetup: '准备任务', taskSetupHint: '为本次会话预览提示词、发送组和档位。应用到草稿后，仍使用原发送按钮发送；保留附件。',
+    taskSetup: '准备任务', taskSetupHint: '设置任务内容和发送方式，核对预览后应用到草稿。',
+    taskSetupContent: '任务内容', taskSetupDelivery: '发送设置', taskSetupPreviewHint: '只读预览，随任务内容更新。',
+    taskSetupApplyHint: '更新草稿、发送范围和档位；保留附件，不会发送。',
     taskSetupPreset: '任务预设', taskSetupCompare: '比较方案', taskSetupVerify: '核对论据', taskSetupRevise: '修改文稿',
     taskSetupComparePrompt: '比较以下方案，说明各自的取舍。', taskSetupVerifyPrompt: '核对以下论据，指出需要进一步查证的内容。', taskSetupRevisePrompt: '修改以下文稿，保留原意和事实。',
     taskSetupCompareDimensions: '收益、成本、风险、适用条件', taskSetupVerifyDimensions: '主张、支持证据、反证、不确定性', taskSetupReviseDimensions: '准确性、结构、表达、受众',
@@ -34,7 +38,9 @@ export const TASK_SETUP_COPY = {
     taskSetupApplied: '任务已应用到草稿，请检查后自行发送。',
   },
   zhTW: {
-    taskSetup: '準備任務', taskSetupHint: '為本次工作階段預覽提示詞、傳送群組及回答模式。套用至草稿後，仍使用原傳送按鈕傳送；保留附件。',
+    taskSetup: '準備任務', taskSetupHint: '設定任務內容及傳送方式，核對預覽後套用至草稿。',
+    taskSetupContent: '任務內容', taskSetupDelivery: '傳送設定', taskSetupPreviewHint: '唯讀預覽，隨任務內容更新。',
+    taskSetupApplyHint: '更新草稿、傳送範圍及回答模式；保留附件，不會傳送。',
     taskSetupPreset: '任務預設', taskSetupCompare: '比較方案', taskSetupVerify: '核對論據', taskSetupRevise: '修改文稿',
     taskSetupComparePrompt: '比較以下方案，說明各自的取捨。', taskSetupVerifyPrompt: '核對以下論據，指出需要進一步查證的內容。', taskSetupRevisePrompt: '修改以下文稿，保留原意和事實。',
     taskSetupCompareDimensions: '收益、成本、風險、適用條件', taskSetupVerifyDimensions: '主張、支持證據、反證、不確定性', taskSetupReviseDimensions: '準確性、結構、表達、受眾',

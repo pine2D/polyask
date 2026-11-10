@@ -320,6 +320,10 @@ components:
 
 重试核对弹窗保留固定标题、取消与底部确认，站点列表独立滚动。常规上下至少留（24px），逻辑高度不超过（480px）时收为（8px）；九站与200%缩放的短窗仍可逐项勾选和查看。
 
+准备任务最大宽（1040px）：左侧按任务内容、发送设置组织字段，右侧为只读最终预览；不超过（900px）时顺序堆叠，不超过（560px）时字段单列。标题、取消与应用固定，内容独立滚动。文字字段（14px / 1.6）、内边距（12px）沿用输入令牌；预览用画布底色、（16px）内边距和（1.75）行高，与可编辑字段区分。底部说明应用对草稿、参与站点、档位及附件的影响。新增表单不能只通过功能及横向溢出检查：需查看默认、长内容、失败与禁用状态的原生实图，核对内距、层级、只读区别以及短窗/放大后的操作可达性。
+
+逻辑高度不超过（420px）时，准备任务压缩上下留白并收起重复的开场说明；失败或变量未填提示与应用按钮并排，取代重复的底部说明，为正文保留空间。完整错误、取消和应用按钮始终保留，预览高度随视口收紧。最小窗口与200%缩放必须叠加验证，不能只在高窗口单测缩放。
+
 来源：`desktop/src/shared/display.ts`、`desktop/src/main/layout.ts`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/toolbar-fit.ts`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`、`desktop/src/renderer/settings.css`。
 
 ## Elevation & Depth

@@ -28,4 +28,6 @@ test('native task setup previews, confirms, cancels and preserves drafts after f
   assert.equal(result.status,0,`Native task setup: ${output}; ${result.stdout}; ${result.error?.message??''}`);
   const report=JSON.parse(readFileSync(join(output,'report.json'),'utf8'));
   assert.equal(report.length,6); assert.equal(report.every((r:any)=>r.ok),true);
+  const visual=JSON.parse(readFileSync(join(output,'visual-report.json'),'utf8'));
+  assert.equal(visual.length,38); assert.equal(visual.every((r:any)=>r.ok),true);
 });
