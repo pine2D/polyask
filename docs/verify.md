@@ -19,6 +19,12 @@
 
 **顺序不能反：先离线（`bash scripts/verify.sh` + `cd desktop && npm test && npm run typecheck`），再真机。** 反过来会得到「真机试通了但 CI 红」的返工。
 
+## 2026-11-10 Claude Fable 5.2 思考档
+
+- 旧实现先复现选到 Fable 5、目标缺席却不拒绝；精确匹配 5.2 后，回归覆盖旧版与 5.20 / 5.2.1 干扰、紧连说明、目标缺席、快思往返、两种 effort 菜单及实际强度复读。完整应用 2,738 项、运行时 546 项、独立 typecheck 与仓库 verify 通过。
+- 核对发行与开发运行时 Cookie 加密均启用后，重新 `npm start`，在 Linux/WSL 既有登录档案的 Claude 主帧隔离上下文调用生产 `__AMS.resolveTier`。466×1013 视口下，快→思→思→快四轮均为 `mode_only`，实际标签依次为 Opus 5.5 Medium / Fable 5.2 Max / Fable 5.2 Max / Opus 5.5 Medium，单轮约 1.5–1.9 秒；每轮输入内容不变、菜单归零。
+- 当前账号可见强度为 Low / Medium / High / Extra / Max，未见 Ultra；仅代表本轮账号和页面。恢复原 Fable 5.2 Medium 后正常退出开发实例，33 个观测进程全部退出、调试端口关闭，登录档案保留；进程和线程核验共同 4 GiB/512 MiB 临时 cgroup，1 个桌面会话迁出进程已迁回。未发送提问或上传图片，不代表 Windows/macOS 实机与真实发送链路验收。
+
 ## 2026-11-04 阅读网格与对齐
 
 在 `desktop/` 运行 `node scripts/test-safe.mjs command node scripts/reading-experience-native.mjs --grid-only`。生产历史与结果库组件使用合成数据、临时档案、阻断外网及共同 4GiB/512MiB cgroup；45组覆盖三语/明暗/两密度的1319、1320、1366px边界、125/150/200%缩放及历史文字对齐。另验证宽窗口内缩窄库容器、列表/详情返回、文件夹浏览跨断点、阅读节点和滚动/搜索焦点保持、多选可用。完整阅读入口也运行该专项，再执行原有48组阅读布局和复制/来源/比较流程；原生结束后核对归属进程退出及档案清理，不外推到Windows/macOS、物理IME或读屏验收。

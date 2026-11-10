@@ -39,6 +39,8 @@ for (const [value, expected] of [
   ["Model: Opus 5.5 · Max", "think"],
   ["Model: Opus 5 · Medium", null],
   ["Model: Opus 5.50 · Medium", null],
+  ["Model: Fable 5.2 · Max", "think"],
+  ["Model: Fable 5.2 · Medium", null],
   ["Model: Fable 5.1 · Max", "think"],
   ["Model: Fable 5.1 · Medium", null],
   ["Model: Fable 5 \u00b7 Max", "think"],

@@ -18,7 +18,8 @@ function claudeEffortCase(options) {
     getAttribute: (name) => (name === "aria-checked" ? String(!!checked) : null) });
   // 「Max Preview」是刻意放的诱饵模型：文本命中档位标签集，但不属于 effort 子菜单容器。
   // 只按文本过滤就会把它当最高档点下去 —— 双重语义校验的第二层就是防它。
-  const models = (opts.models || ["Fable 5.1", "Opus 5", "Opus 5.50", "Opus 5.5For complex tasks", "Max Preview", "Sonnet 5"])
+  const models = (opts.models || ["Fable 5", "Fable 5.1", "Fable 5.20", "Fable 5.2.1", "Fable 5.2For ambitious work",
+    "Opus 5", "Opus 5.50", "Opus 5.5For complex tasks", "Max Preview", "Sonnet 5"])
     .map((name) => Object.assign(radio(name, modelMenu), { modelName: name.split("For")[0] }));
   const tiers = (opts.tiers || ["Low", "MediumDefault", "High", "Extra", "Max"])
     .map((name) => radio(name, effortMenu));
@@ -86,7 +87,7 @@ async function claudeFastMustSelectOpusAndResetEffort() {
   assert.equal(c.adapter.state(), "fast");
   assert.ok(c.S.escCount >= 2, "模型与档位动作各自收尾");
   await c.adapter.think();
-  assert.equal(c.state.label, "Model: Fable 5.1 · Max");
+  assert.equal(c.state.label, "Model: Fable 5.2 · Max");
   assert.equal(c.adapter.state(), "think");
   await c.adapter.fast();
   assert.equal(c.adapter.state(), "fast");
@@ -98,6 +99,16 @@ async function claudeFastMustSelectOpusAndResetEffort() {
   await assert.rejects(() => swallowed.adapter.fast(), /目标 effort 未生效/);
 }
 
+// 新旧版本并存时必须选 5.2；缺席时不能误选 5 / 5.1 或相似版本再报成功。
+async function claudeThinkMustRequireFable52() {
+  for (const model of ["Fable 5", "Fable 5.1", "Fable 5.20", "Fable 5.2.1"]) {
+    const c = claudeEffortCase({ models: [model, "Opus 5.5"] });
+    await assert.rejects(() => c.adapter.think(), /未找到模型/, model);
+    assert.equal(c.clicked.length, 0, "缺少 Fable 5.2 时不得点击其它模型或强度");
+    assert.ok(c.S.escCount > 0, "失败路径必须收起菜单");
+  }
+}
+
 // 2026-09-23 真机：effort 已平铺为带 aria-labelledby 的 group，仍须核实标签归属。
 async function claudeInlineEffortGroup() {
   for (const heading of ["Effort", "思考强度"]) {
@@ -106,7 +117,7 @@ async function claudeInlineEffortGroup() {
     assert.equal(c.state.label, "Model: Opus 5.5 · MediumDefault");
     assert.equal(c.adapter.state(), "fast");
     await c.adapter.think();
-    assert.equal(c.state.label, "Model: Fable 5.1 · Max");
+    assert.equal(c.state.label, "Model: Fable 5.2 · Max");
     assert.equal(c.adapter.state(), "think");
     assert.ok(!c.clicked.some(el => el.textContent === "Max Preview"));
   }
@@ -125,7 +136,7 @@ async function claudeRecommendedCopyMustNotBecomeTheEffortLabel() {
   assert.equal(c.state.label, "Model: Opus 5.5 · Medium");
   assert.equal(c.adapter.state(), "fast");
   await c.adapter.think();
-  assert.equal(c.state.label, "Model: Fable 5.1 · Max");
+  assert.equal(c.state.label, "Model: Fable 5.2 · Max");
   assert.ok(!c.clicked.some(el => el.textContent === "Max Preview"));
 }
 
@@ -169,7 +180,7 @@ async function claudeMissingEffortMustThrow() {
 
 let failed = 0;
 (async () => {
-  const tests = [claudeMustConfirmTheSelectedEffortRank, claudeRecommendedCopyMustNotBecomeTheEffortLabel, claudeInlineEffortGroup, claudeFastMustSelectOpusAndResetEffort, claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
+  const tests = [claudeThinkMustRequireFable52, claudeMustConfirmTheSelectedEffortRank, claudeRecommendedCopyMustNotBecomeTheEffortLabel, claudeInlineEffortGroup, claudeFastMustSelectOpusAndResetEffort, claudeEffortMustTakeHighestKnownTier, claudeFastMustTakeDefaultTier, claudeEffortMustIgnoreModelRadios,
     claudeEffortWithoutTriggerIdMustThrow, claudeMissingEffortMustThrow];
   for (const test of tests) {
     try { await test(); }

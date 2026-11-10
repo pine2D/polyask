@@ -108,7 +108,7 @@
           { name: t("diag_modelReadable"), ok: /opus|sonnet|haiku|fable/i.test(this._label()), kind: "tier" },
         ];
       },
-      // think = Fable 5.1 + 在场最高 effort（当前 Max）；fast = Opus 5.5 + Medium。
+      // think = Fable 5.2 + 在场最高 effort（当前 Max）；fast = Opus 5.5 + Medium。
       // Opus 5.5 Medium 判 fast；其余保留旧模型的粗档位识别，Fable Medium 仍不判。
       // aria-label 形如 `Model: Fable 5 · Max`（分隔符 U+00B7，真机 2026-08-31）。
       state: function () {
@@ -138,7 +138,7 @@
       },
       think: async function (deadline) {
         checkDeadline(deadline);
-        await this._selectModel(/fable\s*5/i, deadline); await this._setEffort(undefined, deadline);
+        await this._selectModel(/fable\s*5\.2(?![\d.])/i, deadline); await this._setEffort(undefined, deadline);
       },
       // 模型菜单文本紧连说明（Opus 5.5For complex tasks），版本后不能用词边界；仅排除后续数字/小数点。
       // fast = Opus 5.5 + 默认档 effort（Medium）。只换模型不回档，上一轮 think 留下的 Max 会原样带过来。
