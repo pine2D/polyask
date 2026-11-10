@@ -1,0 +1,164 @@
+{
+  "file": {
+    "id": "drive-state-site-presets",
+    "name": "state-site-presets.json",
+    "appProperties": {
+      "app": "polyask",
+      "schema": "1",
+      "kind": "state",
+      "id": "fixture-device"
+    }
+  },
+  "body": {
+    "schema": 1,
+    "deviceId": "fixture-device",
+    "settings": {
+      "polyask.preference.claudeFastPreset": {
+        "value": {
+          "model": "Exact choice 0",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.claudeThinkPreset": {
+        "value": {
+          "model": "Exact choice 1",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.chatgptFastPreset": {
+        "value": {
+          "model": "Exact choice 2",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.chatgptThinkPreset": {
+        "value": {
+          "model": "Exact choice 3",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.geminiFastPreset": {
+        "value": {
+          "model": "Exact choice 4",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.geminiThinkPreset": {
+        "value": {
+          "model": "Exact choice 5",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.deepseekFastPreset": {
+        "value": {
+          "model": "Exact choice 6",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.deepseekThinkPreset": {
+        "value": {
+          "model": "Exact choice 7",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.doubaoFastPreset": {
+        "value": {
+          "model": "Exact choice 8",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.doubaoThinkPreset": {
+        "value": {
+          "model": "Exact choice 9",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.qianwenFastPreset": {
+        "value": {
+          "model": "Exact choice 10",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.qianwenThinkPreset": {
+        "value": {
+          "model": "Exact choice 11",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.kimiFastPreset": {
+        "value": {
+          "model": "Exact choice 12",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.kimiThinkPreset": {
+        "value": {
+          "model": "Exact choice 13",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.yuanbaoFastPreset": {
+        "value": {
+          "model": "Exact choice 14",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.yuanbaoThinkPreset": {
+        "value": {
+          "model": "Exact choice 15",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.chatglmFastPreset": {
+        "value": {
+          "model": "Exact choice 16",
+          "effort": null
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      },
+      "polyask.preference.chatglmThinkPreset": {
+        "value": {
+          "model": "Exact choice 17",
+          "effort": "Extra"
+        },
+        "updatedAt": 100,
+        "deviceId": "fixture-device"
+      }
+    },
+    "templates": {},
+    "groups": {}
+  }
+}

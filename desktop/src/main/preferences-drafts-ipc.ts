@@ -1,5 +1,5 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
-import { isClaudePresetKey } from '../shared/tier-presets';
+import { isSitePresetKey } from '../shared/tier-presets';
 import { DRAFT_KINDS, type DraftKind } from '../shared/drafts';
 import { GENERAL_PREFERENCE_GROUPS, isPreferenceKey, type GeneralPreferenceGroup, type PreferenceValues } from '../shared/preferences';
 import type { PreferenceRuntime } from './preference-runtime';
@@ -26,12 +26,12 @@ export function registerPreferencesDraftsIpc(options: { readonly runtime: Prefer
   handle(CHANNELS[0], () => runtime.snapshot());
   handle(CHANNELS[1], value => {
     const seed = object(value);
-    if (Object.keys(seed).some(isClaudePresetKey)) throw new Error('invalid_preference');
+    if (Object.keys(seed).some(isSitePresetKey)) throw new Error('invalid_preference');
     return runtime.seed(seed as Partial<PreferenceValues>);
   });
   // proxy 只走 proxy-set / proxy-follow：这里写入会跳过应用、校验与确认，跟随时还会直接上传。
   handle(CHANNELS[2], value => {
-    const v = object(value); if (!isPreferenceKey(v.key) || v.key === 'proxy' || isClaudePresetKey(v.key)) throw new Error('invalid_preference');
+    const v = object(value); if (!isPreferenceKey(v.key) || v.key === 'proxy' || isSitePresetKey(v.key)) throw new Error('invalid_preference');
     return runtime.set(v.key, v.value);
   });
   handle(CHANNELS[3], value => {

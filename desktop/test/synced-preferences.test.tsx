@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { DEFAULT_TIER_PRESETS } from '../src/shared/tier-presets';
 import { act, StrictMode } from 'react';
 import type { PolyAskDesktopApi } from '../src/preload/shell';
 import type { DisplayPreferences } from '../src/shared/display';
@@ -9,7 +10,7 @@ import { mountDom } from './ui/dom-harness';
 
 function snapshot(patch: Partial<PreferenceValues> = {}): PreferenceSnapshot {
   return { values: { completionNotifications: false, display: { density: 'compact', siteScale: 0.9 },
-    layoutMode: 'overview', siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, claudeFastPreset: null, claudeThinkPreset: null, ...patch },
+    layoutMode: 'overview', siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, ...DEFAULT_TIER_PRESETS, ...patch },
     following: { display: false, layout: false, siteZoom: false, proxy: false }, draftSync: false,
     initialized: (['completionNotifications', 'workbenchGuide'] as PreferenceKey[]).filter(key => Object.hasOwn(patch, key)),
     versions: {}, deviceId: 'fixture' };

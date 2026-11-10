@@ -471,9 +471,9 @@ export class ViewManager {
   readonly switchTier = (site: SiteKey, tier: "think" | "fast", deadline: number, preset?: TierPreset): Promise<SiteResult> =>
     switchSiteTier(site, this.views.get(site), this.pageFailureCode(site), this.historyAccess.navigating(site) || this.historyAccess.reloads.watching(site), this.commands, tier, deadline, preset);
 
-  readonly inspectClaudePreset = (action: TierPresetAction, deadline: number) =>
-    inspectSitePreset(this.views.get('claude'), this.pageFailureCode('claude'), this.historyAccess.navigating('claude') ||
-      this.historyAccess.reloads.watching('claude'), !!this.sitePageCloseReason('claude'), this.commands, action, deadline);
+  readonly inspectPreset = (site: SiteKey, action: TierPresetAction, deadline: number) =>
+    inspectSitePreset(site, this.views.get(site), this.pageFailureCode(site), this.historyAccess.navigating(site) ||
+      this.historyAccess.reloads.watching(site), !!this.sitePageCloseReason(site), this.commands, action, deadline);
 
   receiveResponse(sender: WebContents, envelope: SiteResponseEnvelope): void {
     this.commands.receive(sender, envelope);

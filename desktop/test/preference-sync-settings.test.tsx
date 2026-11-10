@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { DEFAULT_TIER_PRESETS } from '../src/shared/tier-presets';
 import { act } from 'react';
 import type { PreferenceGroup, PreferenceSnapshot } from '../src/shared/preferences';
 import { getCopy } from '../src/shared/copy';
@@ -8,7 +9,7 @@ import { mountSettings } from './ui/settings-dom';
 
 const state: PreferenceSnapshot = {
   values: { completionNotifications: false, display: { density: 'compact', siteScale: 0.9 },
-    layoutMode: 'focus', siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, claudeFastPreset: null, claudeThinkPreset: null },
+    layoutMode: 'focus', siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, ...DEFAULT_TIER_PRESETS },
   following: { display: false, layout: true, siteZoom: false, proxy: false }, draftSync: false,
   initialized: [], versions: {}, deviceId: 'fixture'
 };

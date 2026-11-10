@@ -74,7 +74,7 @@ function presetPage(options = {}) {
   } });
   w.t = key => key;
   w.chrome = { runtime: { onMessage: { addListener: fn => { listener = fn; } } } };
-  for (const file of ['core.js', 'tier.js', 'adapters-intl.js', 'claude-presets.js', 'preset-command.js']) {
+  for (const file of ['core.js', 'tier.js', 'preset-common.js', 'adapters-intl.js', 'claude-presets.js', 'preset-command.js']) {
     try { w.eval(source(file)); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
   const S = w.__AMS;

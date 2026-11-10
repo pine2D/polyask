@@ -10,7 +10,7 @@ function setup() {
   const contents = Object.assign(new EventEmitter(), { id: 72, isDestroyed: () => false, getURL: () => url,
     send: (_name: string, value: SiteCommandEnvelope) => { sent = value; } });
   const invoke = (busy = false, navigating = false, deadline = Date.now() + 1000) =>
-    inspectSitePreset({ webContents: contents } as any, null, navigating, busy, channel, { kind: 'current' }, deadline);
+    inspectSitePreset('claude', { webContents: contents } as any, null, navigating, busy, channel, { kind: 'current' }, deadline);
   return { channel, contents, invoke, sent: () => sent, url: (next: string) => { url = next; },
     reply: (result: unknown) => { assert.ok(sent); channel.receive(contents as any, { requestId: sent.requestId, result: result as any }); } };
 }
@@ -19,6 +19,7 @@ test('preset discovery rejects busy, unavailable and navigating pages without se
   const f = setup();
   try {
     assert.equal((await f.invoke(true)).ok, false); assert.equal((await f.invoke(false, true)).ok, false);
+    f.url('https://chatgpt.com'); assert.equal((await f.invoke()).ok, false);
     f.url('https://accounts.google.com'); assert.equal((await f.invoke()).ok, false);
     assert.equal(f.sent(), undefined);
     f.url('https://claude.ai/new'); const pending = f.invoke(); assert.equal(f.sent()?.command.cmd, 'tierPreset');

@@ -3,12 +3,8 @@
   'use strict';
   const S = window.__AMS, a = S?.adapters?.['claude.ai'];
   if (!a) return;
-  const invalid = () => { throw new Error('preset_unavailable'); };
-  const name = (value, limit = 48) => typeof value === 'string' && value.length > 0 && value.length <= limit &&
-    value.trim() === value && !/[<>\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/u.test(value);
-  const valid = value => value && Object.keys(value).length === 2 && name(value.model) &&
-    (value.effort === null || name(value.effort, 24));
-  const same = (x, y) => !!x && !!y && x.model === y.model && x.effort === y.effort;
+  const invalid = () => S.presetFail();
+  const name = S.presetName, valid = S.presetValid, same = S.presetSame;
   const visible = el => el?.isConnected && !el.closest('[hidden], [aria-hidden="true"], [data-state="closed"]') && el.getClientRects().length > 0;
   const enabled = el => !el.closest('[disabled], [aria-disabled="true"], [data-disabled]');
   const button = () => document.querySelector('[data-testid="model-selector-dropdown"]');
@@ -154,6 +150,4 @@
       } finally { await closeMenus(workDeadline); }
     });
   };
-  S.presetValid = valid;
-  S.presetSame = same;
 })();

@@ -1,4 +1,5 @@
 import { SITE_KEYS, type SiteKey } from "../shared/contracts";
+import { PRESET_KEYS, type SitePresetKey, type TierPreset } from "../shared/tier-presets";
 import { parseDisplayPreferences } from "../shared/display";
 import {
   DEFAULT_PREFERENCE_VALUES, DEVICE_PREFERENCES_KEY, GENERAL_PREFERENCE_GROUPS, isPreferenceKey, isPreferenceValue,
@@ -136,7 +137,7 @@ export class PreferencesRepository {
 }
 
 const PLAIN_FIELDS = ["completionNotifications", "layoutMode", "workbenchGuide", "sitePageCloseConfirm", "newSessionConfirm",
-  "claudeFastPreset", "claudeThinkPreset"] as const;
+  ...PRESET_KEYS] as const;
 const isPlainField = (field: string): field is typeof PLAIN_FIELDS[number] => (PLAIN_FIELDS as readonly string[]).includes(field);
 
 function entriesFromValues(values: Partial<PreferenceValues>): PreferenceEntries {
@@ -170,8 +171,7 @@ function valuesFromEntries(entries: PreferenceEntries): PreferenceValues {
     if (typeof value === "number") siteZoom[site] = value;
   }
   return {
-    claudeFastPreset: structuredClone(entries.claudeFastPreset) as PreferenceValues["claudeFastPreset"],
-    claudeThinkPreset: structuredClone(entries.claudeThinkPreset) as PreferenceValues["claudeThinkPreset"],
+    ...Object.fromEntries(PRESET_KEYS.map(key => [key, structuredClone(entries[key])])) as Record<SitePresetKey, TierPreset | null>,
     completionNotifications: entries.completionNotifications as boolean,
     display: { density: entries.density as "compact" | "comfortable", siteScale: entries.siteScale as 0.9 | 1 },
     layoutMode: entries.layoutMode as "overview" | "focus", siteZoom,

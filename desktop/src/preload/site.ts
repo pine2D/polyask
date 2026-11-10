@@ -48,6 +48,7 @@ require("../site-runtime/core.js");
 require("../site-runtime/read-commands.js");
 require("../site-runtime/tier.js");
 require("../site-runtime/selection-match.js");
+require("../site-runtime/preset-common.js");
 require("../site-runtime/send.js");
 require("../site-runtime/upload.js");
 require("../site-runtime/md-head.js");

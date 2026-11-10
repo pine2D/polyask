@@ -156,7 +156,7 @@ export class DesktopDatabase {
   resetLocalData(): void {
     this.questions.invalidateLifecycle();
     inTransaction(this.database, () => {
-      // state_items includes workspace.participation and shared Claude tier presets (preference:claude*Preset).
+      // state_items includes workspace.participation and all shared site tier presets (preference:*Preset).
       for (const table of ["question_attachment_items", "question_attachment_sets", "questions", "question_answers", "history", "archives", "decisions", "folders", "folder_memberships", "state_items", "outbox", "drive_files"]) this.database.exec(`DELETE FROM ${table}`);
       // Includes local shortcut preferences; their runtimes re-read actual storage in afterReset.
       this.database.prepare("DELETE FROM meta WHERE key <> ?").run("deviceId");

@@ -44,8 +44,8 @@
       const a = S.pickAdapter();
       try {
         if (!S.presetValid?.(preset) || !a?.applyPreset) return unconfirmed;
-        await a.applyPreset(preset, deadline);
-        if (Date.now() >= deadline || !S.presetSame(a.currentPreset(), preset)) return unconfirmed;
+        await a.applyPreset(preset, deadline, image);
+        if (!S.presetSame(await S.readPreset(a, deadline), preset)) return unconfirmed;
         return { requested: mode, observed: mode, outcome: 'preferred',
           model: preset.effort ? `${preset.model} · ${preset.effort}` : preset.model };
       } catch (_) { return unconfirmed; }

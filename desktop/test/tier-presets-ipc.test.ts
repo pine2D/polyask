@@ -14,7 +14,7 @@ function setup() {
   const dispose = registerTierPresetsIpc({ ipc: { handle: (name, handler) => { handlers.set(name, handler); }, removeHandler: name => { handlers.delete(name); } },
     trusted: event => event === 'shell' as any, gate, blocked: () => blocked, epoch: () => epoch,
     preferences: { snapshot: () => structuredClone(snapshot), set: (key, value) => { writes.push([key, value]); return snapshot; } },
-    inspect: async (action, deadline) => { assert.ok(deadline > Date.now()); actions.push(action); await wait;
+    inspect: async (site, action, deadline) => { assert.equal(site, 'claude'); assert.ok(deadline > Date.now()); actions.push(action); await wait;
       return response || { ok: true, current: original, ...(action.kind === 'verify' ? { verified: action.preset } : {}) }; }
   });
   return { handlers, gate, writes, actions, snapshot, dispose,

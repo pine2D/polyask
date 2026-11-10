@@ -164,7 +164,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     publish: publishWorkspace, switchTier: (site, tier, deadline, preset) => manager.switchTier(site, tier, deadline, preset) });
   const disposeTierPresets = options.preferences ? registerTierPresetsIpc({ ipc: ipcMain, gate: operationGate, trusted: trustedShell,
     preferences: options.preferences, epoch: () => options.preferences!.drafts.epoch(),
-    blocked: () => options.dataAdmin.isResetting || manager.isConfirmationActive(), inspect: manager.inspectClaudePreset }) : () => {};
+    blocked: () => options.dataAdmin.isResetting || manager.isConfirmationActive(), inspect: manager.inspectPreset }) : () => {};
   const publishPromptLibrary = () => {
     const state = promptLibrary.getState();
     if (!window.isDestroyed()) window.webContents.send("polyask:prompt-library", state);

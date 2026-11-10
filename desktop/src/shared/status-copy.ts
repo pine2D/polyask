@@ -16,6 +16,7 @@ const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
   command_shortcut_save_failed: "commandShortcutSaveFailed",
   command_shortcut_apply_failed: "commandShortcutApplyFailed",
   preset_unavailable: "presetUnavailable",
+  preset_model_switch_required: "presetModelSwitchRequired",
   preset_restore_failed: "presetRestoreFailed",
   preset_busy: "presetBusy",
   tier_unconfirmed: "tierUnconfirmed",

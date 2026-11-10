@@ -1,4 +1,4 @@
-import { CLAUDE_PRESET_KEYS, isClaudePresetKey, isTierPreset, type ClaudePresetKey, type TierPreset } from "./tier-presets";
+import { DEFAULT_TIER_PRESETS, PRESET_KEYS, isSitePresetKey, isTierPreset, type SitePresetKey, type TierPreset } from "./tier-presets";
 import { SITE_KEYS, type SiteKey } from "./contracts";
 import { DEFAULT_DISPLAY_PREFERENCES, type DisplayPreferences } from "./display";
 import { isProxyPreference } from "./proxy-preference";
@@ -6,7 +6,7 @@ import type { SiteZoomPreferences } from "./site-zoom";
 import { validSyncTime, type VersionedSyncValue } from "./sync";
 
 export type PreferenceKey = "completionNotifications" | "density" | "siteScale" | "layoutMode" |
-  "workbenchGuide" | ClaudePresetKey | ConfirmationKey | `siteZoom.${SiteKey}` | "proxy";
+  "workbenchGuide" | SitePresetKey | ConfirmationKey | `siteZoom.${SiteKey}` | "proxy";
 /** 可「不再提示」的确认：值为 false 表示用户选了不再提示。不归组，始终随同步跨设备生效。 */
 export type ConfirmationKey = "sitePageCloseConfirm" | "newSessionConfirm";
 export const CONFIRMATION_KEYS: readonly ConfirmationKey[] = ["sitePageCloseConfirm", "newSessionConfirm"];
@@ -18,9 +18,7 @@ export type PreferenceGroup = "display" | "layout" | "siteZoom" | "proxy";
 export type GeneralPreferenceGroup = Exclude<PreferenceGroup, "proxy">;
 export type WorkbenchGuideState = null | { readonly version: 1; readonly disposition: "dismissed" | "completed" };
 
-export interface PreferenceValues {
-  readonly claudeFastPreset: TierPreset | null;
-  readonly claudeThinkPreset: TierPreset | null;
+export interface PreferenceValues extends Readonly<Record<SitePresetKey, TierPreset | null>> {
   readonly completionNotifications: boolean;
   readonly display: DisplayPreferences;
   readonly layoutMode: "overview" | "focus";
@@ -51,11 +49,11 @@ export const PREFERENCE_STATE_PREFIX = "preference:";
 export const GENERAL_PREFERENCE_GROUPS: readonly GeneralPreferenceGroup[] = ["display", "layout", "siteZoom"];
 export const PREFERENCE_GROUPS: readonly PreferenceGroup[] = [...GENERAL_PREFERENCE_GROUPS, "proxy"];
 export const PREFERENCE_KEYS: readonly PreferenceKey[] = [
-  "completionNotifications", "density", "siteScale", "layoutMode", "workbenchGuide", ...CONFIRMATION_KEYS, ...CLAUDE_PRESET_KEYS,
+  "completionNotifications", "density", "siteScale", "layoutMode", "workbenchGuide", ...CONFIRMATION_KEYS, ...PRESET_KEYS,
   ...SITE_KEYS.map(site => `siteZoom.${site}` as const), "proxy"
 ];
 export const DEFAULT_PREFERENCE_VALUES: PreferenceValues = {
-  claudeFastPreset: null, claudeThinkPreset: null,
+  ...DEFAULT_TIER_PRESETS,
   completionNotifications: false,
   display: DEFAULT_DISPLAY_PREFERENCES,
   layoutMode: "overview",
@@ -79,7 +77,7 @@ export function preferenceGroup(key: PreferenceKey): PreferenceGroup | null {
 export function isPreferenceValue(key: PreferenceKey, value: unknown): boolean {
   if (!isPreferenceKey(key)) return false;
   if (key === "proxy") return isProxyPreference(value);
-  if (isClaudePresetKey(key)) return value === null || isTierPreset(value);
+  if (isSitePresetKey(key)) return value === null || isTierPreset(value);
   if (key === "completionNotifications" || CONFIRMATION_KEYS.includes(key as ConfirmationKey)) return typeof value === "boolean";
   if (key === "density") return value === "compact" || value === "comfortable";
   if (key === "siteScale") return value === 0.9 || value === 1;

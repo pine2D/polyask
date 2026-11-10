@@ -186,6 +186,7 @@ export const SITE_CODES = [
   "command_shortcut_apply_failed",
   "tier_unconfirmed",
   "preset_unavailable",
+  "preset_model_switch_required",
   "preset_restore_failed",
   "preset_busy",
   "composer_not_found",

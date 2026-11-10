@@ -198,14 +198,14 @@ test('while every group follows, proxy writes through preference IPC leave stora
 });
 
 
-test('generic preference IPC cannot bypass live validation of Claude presets', () => {
+test('generic preference IPC cannot bypass live validation of any site presets', () => {
   const s = setup(), ipc = register(s.runtime);
   try {
     const preset = { model: 'Fable 5.2', effort: 'Extra' };
-    for (const key of presetContract.CLAUDE_PRESET_KEYS) {
+    for (const key of presetContract.PRESET_KEYS) {
       assert.throws(() => ipc.handlers.get('polyask:preference-set')!(true, { key, value: preset }), /^Error: invalid_preference$/);
       assert.throws(() => ipc.handlers.get('polyask:preferences-seed')!(true, { [key]: preset }), /^Error: invalid_preference$/);
     }
-    assert.equal(s.db.state.entries('preference:claude').length, 0);
+    assert.equal(s.db.state.entries('preference:').length, 0);
   } finally { ipc.dispose(); s.db.close(); }
 });
