@@ -82,10 +82,13 @@ app.whenReady().then(async()=>{
     check(await js('document.querySelectorAll(".manual-quote").length===3'),'three retained passages');
     for(const selector of ['[name=comparison-topic-0-0]','[name=comparison-topic-0-1]','[name=comparison-topic-1-0]'])await type(selector,'Cost');
     await type('[name=comparison-note-evidence-0]','Keep all four note categories.');
+    writeFileSync(join(output,`${locale}-${width}-manual-notes.png`),(await win.capturePage()).toPNG());
     await until('document.querySelectorAll("[data-evidence-topic=Cost] blockquote").length===3','cross-source topic group');
     await click('[data-evidence-topic=Cost] .evidence-overview-item:nth-child(3) button');
     await until('!!document.querySelector("[name=evidence-review-original]")','original review');
     check(await js(`(()=>{const n=document.querySelector('[name=evidence-review-original]');return n.value.slice(n.selectionStart,n.selectionEnd)==='Second excerpt.';})()`),'exact second original passage selected');
+    writeFileSync(join(output,`${locale}-${width}-original-review.png`),(await win.capturePage()).toPNG());
+    check(await js("parseFloat(getComputedStyle(document.querySelector('[name=evidence-review-original]')).paddingInlineStart)>=10"),'original review text has deliberate internal spacing');
     await key('Escape');await key('Tab');check(await js("document.activeElement!==document.body"),'keyboard focus after review');
     for(let i=0;i<100&&!drafts.list('comparison').some(d=>d.content.quotes.length===3&&d.content.quotes.every(q=>q.topic==='Cost'));i++)await pause(30);
     const persisted=drafts.list('comparison')[0];check(persisted?.format===2,'format2 comparison draft persisted');

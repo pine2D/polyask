@@ -62,8 +62,8 @@ export function PromptLibrary(props: PromptLibraryProps): React.JSX.Element {
       <div className="prompt-template-save" hidden={!!editing}>
         <input name="prompt-template-name" autoComplete="off" maxLength={80} value={name} disabled={saving} placeholder={props.copy.promptTemplateName} aria-label={props.copy.promptTemplateName} onChange={(event) => { setName(event.target.value); setSaveError(""); }} />
         <button type="button" disabled={saving || !name.trim() || !props.draft.trim()} onClick={() => { void save(); }}><SaveIcon />{props.copy.saveCurrentPrompt}</button>
+        {saveError ? <p className="prompt-template-error" role="status">{saveError}</p> : null}
       </div>
-      {saveError ? <p role="status">{saveError}</p> : null}
       <div className="prompt-library-results">
         {editing ? <PromptTemplateEditor copy={props.copy} template={editing} onApply={insert} onBack={() => {
           setEditing(null);

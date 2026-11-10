@@ -9,6 +9,7 @@
 .workspace-drawer[data-input-method="keyboard"] { transition-duration: 0ms; }
 .app-shell.is-composer-expanded .workspace-drawer { top: var(--composer-expanded-height); }
 .workspace-drawer-header { position: sticky; top: 0; z-index: 1; padding: 12px 0; background: var(--panel); }
+@media (max-height: 420px) { .workspace-drawer-header { position: static; } }
 .drawer-heading { min-height: 28px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
 .drawer-heading strong { font-size: 13px; font-weight: 650; }
 .drawer-heading button, .group-row > button:last-child, .group-save button {

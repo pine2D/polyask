@@ -33,6 +33,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [localMode, setLocalMode] = useState<SitesMode>('select');
   const [helpOpen, setHelpOpen] = useState(false);
+  const saveForm = useRef<HTMLFormElement>(null);
   const mode = props.sitesMode ?? localMode;
   const modeButton = useRef<HTMLButtonElement>(null), previousMode = useRef(mode);
   const changeMode = (next: SitesMode) => props.onSitesModeChange ? props.onSitesModeChange(next) : setLocalMode(next);
@@ -53,6 +54,12 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
       : duplicate ? props.copy.groupAlreadySaved : "";
   // 原因只在用户已输入名称、真要保存时才显示；空表单时保存按钮的悬停说明仍给出原因。
   const visibleSaveHint = name.trim() ? saveHint : "";
+  useEffect(() => {
+    // 新反馈出现时一起带入视野，保留列表原有滚动和删除确认空间。
+    if ((!visibleSaveHint && !saving) || !saveForm.current?.contains(document.activeElement)) return;
+    const frame = requestAnimationFrame(() => saveForm.current?.scrollIntoView({ block: 'nearest' }));
+    return () => cancelAnimationFrame(frame);
+  }, [visibleSaveHint, saving]);
   const presets = [
     [props.copy.allSites, choices.all],
     [props.copy.clearSites, choices.clear],
@@ -115,7 +122,7 @@ export function WorkspaceSites(props: WorkspaceSitesProps): React.JSX.Element {
             ))}
           </div>
         )}
-        <form className="group-save" aria-busy={saving} onSubmit={(event) => {
+        <form ref={saveForm} className="group-save" aria-busy={saving} onSubmit={(event) => {
           event.preventDefault();
           const trimmed = name.trim();
           if (!trimmed || saveHint || saving) return;

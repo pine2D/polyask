@@ -42,6 +42,24 @@ test('filling an empty or identical draft requires no redundant confirmation', a
   }
 });
 
+test('variable editor accepts names that also exist on Object.prototype', async () => {
+  const inserted: string[] = [];
+  const h = await mountDom(<PromptLibrary copy={copy} draft="Existing work" history={[]}
+    templates={[{ ...templates[1], text: '{{__proto__}} / {{constructor}} / {{toString}}' }]}
+    onInsert={text => inserted.push(text)} onSave={() => undefined} onDelete={() => undefined} />);
+  try {
+    await h.click(h.document.querySelector<HTMLButtonElement>('.prompt-library-item button')!);
+    const apply = h.document.querySelector<HTMLButtonElement>('.template-apply')!;
+    assert.equal(apply.disabled, true);
+    assert.equal(h.document.querySelector('.prompt-variable-invalid')?.getAttribute('data-invalid'), 'false');
+    for (let index = 0; index < 3; index++) {
+      await h.input(h.document.querySelector<HTMLTextAreaElement>(`[name="template-variable-${index}"]`)!, `Value ${index}`);
+    }
+    await h.click(apply);
+    assert.deepEqual(inserted, ['Value 0 / Value 1 / Value 2']);
+  } finally { await h.close(); }
+});
+
 test('failed template save retains its name and permits a deliberate retry', async () => {
   let attempts = 0;
   let finish!: () => void;

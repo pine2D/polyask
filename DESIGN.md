@@ -324,6 +324,8 @@ components:
 
 逻辑高度不超过（420px）时，准备任务压缩上下留白并收起重复的开场说明；失败或变量未填提示与应用按钮并排，取代重复的底部说明，为正文保留空间。完整错误、取消和应用按钮始终保留，预览高度随视口收紧。最小窗口与200%缩放必须叠加验证，不能只在高窗口单测缩放。
 
+提问模板的变量填写沿用同一字段尺度：返回与模板名称固定在顶部，输入及只读预览独立滚动，底部完整保留替换说明和应用按钮。高度以实际内容区计算，不能用视口高度越过外壳底栏。未填写提示使用普通说明色，保存失败仅属于保存表单；发送组的新提示随当前表单滚入视野，不覆盖列表中的删除确认。逻辑高度不超过（420px）时，工作台标题随内容滚动，给展开提问框后所剩的极矮空间留出操作位置；Esc 关闭及滚回顶部的入口保持可用。
+
 来源：`desktop/src/shared/display.ts`、`desktop/src/main/layout.ts`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/toolbar-fit.ts`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`、`desktop/src/renderer/settings.css`。
 
 ## Elevation & Depth
