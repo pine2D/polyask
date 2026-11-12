@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState } from 'react';
+import { Fragment, useLayoutEffect, useState } from 'react';
 import type { DesktopCopy } from '../shared/copy';
 import type { SiteDefinition } from '../shared/contracts';
 import type { PromptTemplate } from '../shared/prompt-library';
@@ -9,6 +9,7 @@ import { taskSetupPrompt, type TaskPreset, type TaskSetupPlan } from '../shared/
 import { holdExternalNavigation } from './external-navigation-lock';
 import { FolderModal } from './folder-modal';
 import { ConfirmDialog } from './confirm-dialog';
+import { SiteGlyph } from './ui-primitives';
 import type { useTaskSetup } from './use-task-setup';
 import './task-setup.css';
 
@@ -78,9 +79,12 @@ export function TaskSetup({setup,copy,sites,templates,groups}: {
     </section>
     </div>
     <section className="task-setup-preview" aria-labelledby="task-setup-preview-title">
-      <div><h3 id="task-setup-preview-title">{copy.taskSetupPreview}</h3><p id="task-setup-preview-hint">{copy.taskSetupPreviewHint}</p></div>
+      <div className="task-setup-preview-head"><h3 id="task-setup-preview-title">{copy.taskSetupPreview}</h3><p id="task-setup-preview-hint">{copy.taskSetupPreviewHint}</p></div>
       <textarea name="task-preview" aria-labelledby="task-setup-preview-title" aria-describedby="task-setup-preview-hint" readOnly rows={12} value={preview ?? base}/>
-      <div className="task-setup-scope"><h4>{copy.taskSetupScope}</h4><p data-task-scope>{scope.map(key=>sites.find(site=>site.key===key)?.label ?? key).join(' · ') || copy.newSessionNoSites}</p></div>
+      <div className="task-setup-scope"><h4>{copy.taskSetupScope}</h4><p className="task-setup-scope-list" data-task-scope>{scope.length ? scope.map((key,index)=>{
+        const label = sites.find(site=>site.key===key)?.label ?? key;
+        return <Fragment key={key}>{index > 0 ? <span className="task-scope-sep" aria-hidden="true">{' · '}</span> : null}<span className="task-scope-chip"><SiteGlyph site={key}/><span>{label}</span></span></Fragment>;
+      }) : copy.newSessionNoSites}</p></div>
     </section>
     </div>
     <footer>

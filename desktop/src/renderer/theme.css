@@ -1,79 +1,106 @@
 /* 外壳共用视觉令牌；视图几何仍由 shared/display.ts 与 styles.css 对账。 */
-:root {
-  color-scheme: light dark;
-  --font-ui: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa UI SC", sans-serif;
-  --text: #20212b;
-  --canvas: #f4f5f8;
-  --panel: #ffffff;
-  --panel-muted: #edeef3;
-  --field: #fafafd;
-  --field-border: #818394;
-  --border: #d8dae2;
-  --muted: #626575;
-  --accent: #4f46e5;
-  --on-accent: #ffffff;
-  --accent-soft: #eeedff;
-  --selection-soft: color-mix(in srgb, var(--accent) 5%, var(--panel));
-  --hover-soft: color-mix(in srgb, var(--muted) 7%, var(--panel));
-  /* 圆点/进度颜色与文字分开，避免把亮色图标色用作小字号文字。 */
-  --success: #16a34a;
-  --warning: #ca8a04;
-  --danger: #dc2626;
-  --success-ink: #167039;
-  --warning-ink: #875900;
-  --danger-ink: #b91c1c;
-  --success-soft: #e8f5ed;
-  --warning-soft: #fff4dc;
-  --font-meta: 12px;
-  --font-control: 13px;
-  --font-body: 14px;
-  --font-reading: 16px;
-  --radius-control: 6px;
-  --radius-panel: 8px;
-  /* 空间尺度按 4px 递增；文字基线、边框和图标校正仍由局部样式负责。 */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 20px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-12: 48px;
-  --space-16: 64px;
-  --reading-page-width: 820px;
-  --reading-page-inset: var(--space-6);
-  --reading-list-width: 280px;
-  --reading-list-inset: var(--space-4);
-  --reading-list-edge: var(--space-2);
-  --reading-block-gap: var(--space-4);
-  --reading-section-gap: var(--space-6);
-  --shadow-control: 0 1px 2px #11182714;
-  --field-shadow: 0 1px 2px rgb(32 33 43 / .08), 0 0 1px rgb(32 33 43 / .04);
-  --field-focus-shadow: 0 1px 4px rgb(32 33 43 / .15), 0 0 2px rgb(32 33 43 / .07);
-  --field-focus-line: color-mix(in srgb, var(--accent) 58%, var(--muted));
-  --image-outline: oklch(0 0 0 / 0.1);
-}
-@media (prefers-color-scheme: dark) {
+@layer tokens, base, primitives, surfaces;
+@layer tokens {
   :root {
-    --text: #f0f0f5;
-    --canvas: #17171c;
-    --panel: #222228;
-    --panel-muted: #2c2c35;
-    --field: #1b1b22;
-    --field-border: #79798c;
-    --border: #3e3e4a;
-    --muted: #b0b0c0;
-    --accent: #a5a0ff;
-    --on-accent: #201d41;
-    --accent-soft: #2d2a50;
-    --success-ink: #86d9a3;
-    --warning-ink: #efc267;
-    --danger-ink: #fca5a5;
-    --success-soft: #1e392c;
-    --warning-soft: #3c3220;
-    --shadow-control: 0 1px 2px #00000033;
-    --field-shadow: 0 1px 2px rgb(0 0 0 / .24), 0 0 1px rgb(0 0 0 / .12);
-    --field-focus-shadow: 0 1px 4px rgb(0 0 0 / .38), 0 0 2px rgb(0 0 0 / .2);
-    --image-outline: oklch(1 0 0 / 0.1);
+    color-scheme: light dark;
+    --font-ui: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa UI SC", sans-serif;
+    --text: #20212b;
+    --surface-sunken: #eceef4;
+    --canvas: #f4f5f8;
+    --panel: #ffffff;
+    --panel-muted: #edeef3;
+    --surface-elevated: #ffffff;
+    --field: #fafafd;
+    --field-border: #818394;
+    --border: #d8dae2;
+    --border-subtle: color-mix(in srgb, var(--border) 62%, var(--panel));
+    --border-strong: color-mix(in srgb, var(--text) 16%, var(--border));
+    --muted: #626575;
+    --accent: #4f46e5;
+    --on-accent: #ffffff;
+    --accent-soft: #eeedff;
+    --selection-soft: color-mix(in srgb, var(--accent) 5%, var(--panel));
+    --hover-soft: color-mix(in srgb, var(--muted) 7%, var(--panel));
+    /* 圆点/进度颜色与文字分开，避免把亮色图标色用作小字号文字。 */
+    --success: #16a34a;
+    --warning: #ca8a04;
+    --danger: #dc2626;
+    --success-ink: #167039;
+    --warning-ink: #875900;
+    --danger-ink: #b91c1c;
+    --success-soft: #e8f5ed;
+    --warning-soft: #fff4dc;
+    --font-meta: 12px;
+    --font-control: 13px;
+    --font-body: 14px;
+    --font-reading: 16px;
+    --radius-inset: 5px;
+    --radius-control: 6px;
+    --radius-toolbar: 7px;
+    --radius-panel: 8px;
+    --radius-card: 10px;
+    --radius-overlay: 12px;
+    /* 空间尺度按 4px 递增；文字基线、边框和图标校正仍由局部样式负责。 */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+    --reading-page-width: 820px;
+    --reading-page-inset: var(--space-6);
+    --reading-list-width: 280px;
+    --reading-list-inset: var(--space-4);
+    --reading-list-edge: var(--space-2);
+    --reading-block-gap: var(--space-4);
+    --reading-section-gap: var(--space-6);
+    --inner-highlight: inset 0 1px 0 rgb(255 255 255 / .75);
+    --shadow-control: 0 1px 2px #11182714;
+    --shadow-popover: 0 10px 28px -6px rgb(20 22 36 / .14), 0 2px 6px rgb(20 22 36 / .06);
+    --shadow-elevated: 0 18px 46px -10px rgb(17 24 39 / .18), 0 2px 8px rgb(17 24 39 / .06);
+    --field-shadow: 0 1px 2px rgb(32 33 43 / .08), 0 0 1px rgb(32 33 43 / .04);
+    --field-focus-shadow: 0 1px 4px rgb(32 33 43 / .15), 0 0 2px rgb(32 33 43 / .07);
+    --field-focus-line: color-mix(in srgb, var(--accent) 58%, var(--muted));
+    --image-outline: oklch(0 0 0 / 0.1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --text: #f0f0f5;
+      --surface-sunken: #131318;
+      --canvas: #17171c;
+      --panel: #222228;
+      --panel-muted: #2c2c35;
+      --surface-elevated: #272730;
+      --field: #1b1b22;
+      --field-border: #79798c;
+      --border: #3e3e4a;
+      --border-subtle: color-mix(in srgb, var(--border) 58%, var(--panel));
+      --border-strong: color-mix(in srgb, var(--text) 18%, var(--border));
+      --muted: #b0b0c0;
+      --accent: #a5a0ff;
+      --on-accent: #201d41;
+      --accent-soft: #2d2a50;
+      --success-ink: #86d9a3;
+      --warning-ink: #efc267;
+      --danger-ink: #fca5a5;
+      --success-soft: #1e392c;
+      --warning-soft: #3c3220;
+      --inner-highlight: inset 0 1px 0 rgb(255 255 255 / .05);
+      --shadow-control: 0 1px 2px #00000033;
+      --shadow-popover: 0 12px 32px -6px rgb(0 0 0 / .44), 0 2px 8px rgb(0 0 0 / .24);
+      --shadow-elevated: 0 20px 52px -10px rgb(0 0 0 / .52), 0 2px 10px rgb(0 0 0 / .28);
+      --field-shadow: 0 1px 2px rgb(0 0 0 / .24), 0 0 1px rgb(0 0 0 / .12);
+      --field-focus-shadow: 0 1px 4px rgb(0 0 0 / .38), 0 0 2px rgb(0 0 0 / .2);
+      --image-outline: oklch(1 0 0 / 0.1);
+    }
+  }
+  @media (prefers-contrast: more) {
+    :root {
+      --border-subtle: var(--muted);
+      --border-strong: var(--text);
+    }
   }
 }

@@ -1,42 +1,52 @@
 .prompt-library { min-height: 0; grid-row: 2 / -1; display: grid; grid-template-rows: auto auto minmax(0, 1fr); }
 .prompt-template-save { padding: 0 var(--space-3) var(--space-3); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
-.prompt-template-save input, .prompt-template-save button { min-height: 40px; border: 1px solid var(--border); border-radius: var(--radius-control); color: inherit; background: transparent; font-size: var(--font-body); }
-.prompt-template-save input { min-width: 0; padding: 0 var(--space-3); }
-.prompt-template-save button { padding: var(--space-2) var(--space-3); display: flex; align-items: center; gap: var(--space-2); }
-.prompt-template-save button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); }
+.prompt-template-save input, .prompt-template-save button { min-height: 40px; border-radius: var(--radius-control); color: inherit; font-size: var(--font-body); }
+.prompt-template-save input { min-width: 0; padding: 0 var(--space-3); background: var(--field); }
+.prompt-template-save button { padding: var(--space-2) var(--space-3); display: flex; align-items: center; gap: var(--space-2); border: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--panel-muted) 45%, var(--panel)); }
+.prompt-template-save button:hover:not(:disabled) { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 .prompt-template-save button:disabled { opacity: .42; }
 .prompt-template-error { grid-column: 1 / -1; margin: 0; color: var(--danger-ink); font-size: var(--font-control); line-height: 1.6; overflow-wrap: anywhere; }
 .prompt-library-results { min-height: 120px; padding: 2px 8px 10px; overflow: auto; }
-.prompt-library-results h2 { margin: 8px 6px 3px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.prompt-library-results h2 { margin: 8px 8px 4px; color: var(--muted); font-size: var(--font-meta); font-weight: 600; }
 .prompt-library-item { display: grid; grid-template-columns: minmax(0, 1fr) 34px; gap: 2px; }
-.prompt-library-item button, .prompt-history-item { min-width: 0; min-height: 42px; padding: 6px 9px; border: 0; border-radius: 7px; color: inherit; background: transparent; }
+.prompt-library-item button, .prompt-history-item { min-width: 0; min-height: 42px; padding: 6px 10px; border: 0; border-radius: var(--radius-toolbar); color: inherit; background: transparent; }
 .prompt-library-item > button:first-child { display: grid; gap: 2px; text-align: left; }
 .prompt-library-item > button:last-child { padding: 0; display: grid; place-items: center; color: var(--muted); }
 .prompt-library-item button:hover, .prompt-history-item:hover { color: var(--accent); background: var(--accent-soft); }
 .prompt-library-item strong, .prompt-library-item small, .prompt-history-item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.prompt-library-item small { color: var(--muted); font-size: 12px; }
+.prompt-library-item small { color: var(--muted); font-size: var(--font-meta); }
 .prompt-history-item { width: 100%; display: block; text-align: left; }
-.template-variable-hint { margin: 8px 6px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.template-variable-hint { margin: 8px 8px; color: var(--muted); font-size: var(--font-meta); line-height: 1.6; }
 .command-palette:has(.prompt-variable-editor) { height: min(680px, 100%); max-height: 100%; grid-template-rows: auto minmax(0, 1fr); }
 .prompt-library:has(.prompt-variable-editor) { grid-template-rows: minmax(0, 1fr); }
 .prompt-library-results:has(.prompt-variable-editor) { min-height: 0; padding: 0; overflow: hidden; }
 .prompt-variable-editor { display: flex; flex-direction: column; height: 100%; min-height: 0; }
-.prompt-variable-editor > header { flex-shrink: 0; display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); }
+.prompt-variable-editor > header { flex-shrink: 0; display: flex; align-items: center; gap: var(--space-4); padding: var(--space-4); border-bottom: 1px solid var(--border-subtle); }
 .prompt-variable-editor > header > div { min-width: 0; }
 .prompt-variable-editor h2 { margin: 0 0 var(--space-1); color: var(--text); font-size: var(--font-reading); line-height: 1.5; }
 .prompt-variable-editor p { margin: 0; color: var(--muted); font-size: var(--font-control); line-height: 1.6; }
 .prompt-variable-editor .prompt-template-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.prompt-variable-editor > .prompt-variable-hint { flex-shrink: 0; padding: 0 var(--space-4) var(--space-4); }
+.prompt-variable-editor > .prompt-variable-hint { flex-shrink: 0; padding: var(--space-3) var(--space-4); }
 .prompt-variable-fields { min-height: 0; padding: 0 var(--space-4) var(--space-4); overflow-y: auto; overscroll-behavior: contain; display: grid; gap: var(--space-4); }
 .prompt-variable-editor label { min-width: 0; display: grid; gap: var(--space-2); font-size: var(--font-control); font-weight: 500; line-height: 1.6; overflow-wrap: anywhere; }
 .prompt-variable-editor textarea { width: 100%; min-height: 80px; padding: var(--space-3); resize: vertical; font: 400 var(--font-body)/1.6 var(--font-ui); }
-.prompt-variable-preview { padding-top: var(--space-4); border-top: 1px solid var(--border); }
-#root .prompt-variable-preview textarea { padding: var(--space-4); background: var(--canvas); border-color: var(--border); box-shadow: none; line-height: 1.75; }
+.prompt-variable-preview {
+  padding: var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-card);
+  background: var(--surface-sunken);
+}
+#root .prompt-variable-preview textarea {
+  padding: var(--space-4); background: var(--panel); border-color: var(--border-subtle);
+  border-radius: var(--radius-panel); box-shadow: var(--shadow-control); line-height: 1.75;
+}
 #root .prompt-variable-preview textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.prompt-variable-editor button { flex-shrink: 0; min-height: 40px; padding: var(--space-2) var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-control); background: var(--panel); color: inherit; }
+.prompt-variable-editor button { flex-shrink: 0; min-height: 40px; padding: var(--space-2) var(--space-3); border: 1px solid var(--border-subtle); border-radius: var(--radius-control); background: var(--panel); color: inherit; }
 .prompt-variable-editor button:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.prompt-variable-editor > footer { flex-shrink: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4); padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border); }
-.prompt-variable-editor .template-apply { color: var(--on-accent); border-color: var(--accent); background: var(--accent); }
+.prompt-variable-editor > footer {
+  flex-shrink: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--space-4);
+  padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--panel-muted) 30%, var(--panel));
+}
+.prompt-variable-editor .template-apply { color: var(--on-accent); border-color: var(--accent); background: var(--accent); font-weight: 600; }
 .prompt-variable-editor .template-apply:hover:not(:disabled) { color: var(--on-accent); background: var(--accent); filter: brightness(.94); }
 .prompt-variable-editor button:disabled { color: var(--muted); background: var(--panel-muted); border-color: var(--border); cursor: default; }
 .prompt-variable-editor .prompt-variable-invalid[data-invalid="true"] { color: var(--danger-ink); }
@@ -47,8 +57,9 @@
   .prompt-variable-editor > footer { padding: var(--space-2) var(--space-3); }
 }
 @media (forced-colors: active) {
+  .prompt-variable-preview { border-color: CanvasText; background: Canvas; }
   .prompt-variable-editor .template-apply { color: ButtonText; border-color: ButtonText; background: ButtonFace; }
   .prompt-variable-editor button:disabled { color: GrayText; border-color: GrayText; background: Canvas; }
-  #root .prompt-variable-preview textarea { background: Canvas; border-color: CanvasText; }
+  #root .prompt-variable-preview textarea { background: Canvas; border-color: CanvasText; box-shadow: none; }
   #root .prompt-variable-preview textarea:focus-visible { outline-color: Highlight; }
 }

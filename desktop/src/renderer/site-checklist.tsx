@@ -3,6 +3,7 @@ import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import { SelectionMark } from "./selection-mark";
 import { ClosePageIcon } from './icons';
+import { SiteGlyph } from './ui-primitives';
 import type { SitesMode } from './workspace-panel-state';
 
 interface SiteChecklistProps {
@@ -111,8 +112,8 @@ export function SiteChecklist(props: SiteChecklistProps): React.JSX.Element {
             : null}
           {props.mode === 'select' ? <label data-selected={checked}>
             <input className="sr-only" type="checkbox" name="scope-sites" value={site.key} checked={checked} disabled={props.disabled} onChange={() => props.onToggle(site.key)} />
-            <span>{site.label}</span><SelectionMark />
-          </label> : <span className="site-order-label">{site.label}</span>}
+            <SiteGlyph site={site.key} /><span>{site.label}</span><SelectionMark />
+          </label> : <span className="site-order-label"><SiteGlyph site={site.key} /><span>{site.label}</span></span>}
           <span className="site-page-state">{opened ? !checked ? props.copy.sitePageRetained : '' : props.copy.sitePageClosed}</span>
           {opened && props.mode === 'order' && <div className="site-move-actions">
             <button type="button" data-move="up" aria-label={formatCopy(props.copy.moveSiteUp, { site: site.label })} disabled={props.disabled || index === 0} onClick={() => move(site.key, index - 1)}>↑</button>

@@ -1,0 +1,139 @@
+/* 零泄漏 UI 原语层：九站几何微标、色阶分组簇、分段拨杆与轻量徽章。 */
+@layer primitives {
+  .site-glyph,
+  .site-dot-mark {
+    --site-tint: var(--accent);
+  }
+  .site-glyph {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    display: inline-block;
+    vertical-align: -2px;
+    color: color-mix(in srgb, var(--site-tint) 68%, var(--text));
+  }
+  .site-dot-mark {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    display: inline-block;
+    border-radius: 2px;
+    transform: rotate(45deg);
+    background: color-mix(in srgb, var(--site-tint) 76%, var(--text));
+  }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="chatgpt"] { --site-tint: #10a37f; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="claude"] { --site-tint: #c96442; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="gemini"] { --site-tint: #4285f4; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="grok"] { --site-tint: #525866; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="deepseek"] { --site-tint: #2563eb; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="kimi"] { --site-tint: #0891b2; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="doubao"] { --site-tint: #0284c7; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="yuanbao"] { --site-tint: #0d9488; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="qianwen"] { --site-tint: #6366f1; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="chatglm"] { --site-tint: #3b82f6; }
+
+  @media (prefers-color-scheme: dark) {
+    .site-glyph {
+      color: color-mix(in srgb, var(--site-tint) 58%, var(--text));
+    }
+    .site-dot-mark {
+      background: color-mix(in srgb, var(--site-tint) 68%, var(--text));
+    }
+    :is(.site-glyph, .site-dot-mark)[data-site-glyph="grok"] { --site-tint: #a1a8b8; }
+  }
+
+  .ui-cluster {
+    min-width: 0;
+    padding: var(--space-4);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--panel-muted) 42%, var(--panel));
+  }
+  .ui-cluster[data-tone="sunken"] {
+    background: var(--surface-sunken);
+  }
+  .ui-cluster[data-tone="elevated"] {
+    background: var(--surface-elevated);
+    box-shadow: var(--shadow-control);
+  }
+
+  .ui-segmented {
+    padding: 2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-toolbar);
+    background: color-mix(in srgb, var(--panel-muted) 72%, var(--panel));
+  }
+  .ui-segmented > button {
+    min-height: calc(var(--control-height) - 4px);
+    padding: 0 var(--space-2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    border: 0;
+    border-radius: var(--radius-inset);
+    color: var(--muted);
+    background: transparent;
+    font-size: var(--font-meta);
+    white-space: nowrap;
+  }
+  .ui-segmented > button:hover:not(:disabled) {
+    color: var(--text);
+  }
+  .ui-segmented > button.active,
+  .ui-segmented > button[aria-pressed="true"],
+  .ui-segmented > button[aria-selected="true"] {
+    color: var(--text);
+    font-weight: 600;
+    background: var(--panel);
+    box-shadow: var(--shadow-control);
+  }
+
+  .ui-pill {
+    min-height: 20px;
+    padding: 1px 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: var(--radius-inset);
+    color: var(--muted);
+    background: var(--panel-muted);
+    font-size: var(--font-meta);
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ui-pill[data-tone="accent"] {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .ui-pill[data-tone="success"] {
+    color: var(--success-ink);
+    background: var(--success-soft);
+  }
+  .ui-pill[data-tone="warning"] {
+    color: var(--warning-ink);
+    background: var(--warning-soft);
+  }
+  .ui-pill[data-tone="danger"] {
+    color: var(--danger-ink);
+    background: color-mix(in srgb, var(--danger) 10%, var(--panel));
+  }
+
+  @media (forced-colors: active) {
+    .site-glyph {
+      color: currentColor;
+    }
+    .ui-cluster,
+    .ui-segmented,
+    .ui-pill {
+      border: 1px solid CanvasText;
+      background: Canvas;
+      color: CanvasText;
+      box-shadow: none;
+    }
+  }
+}

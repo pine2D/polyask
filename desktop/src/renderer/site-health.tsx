@@ -5,6 +5,7 @@ import { isAdvisoryCheck, siteReloadAllowed, summarizeSiteHealth, type SiteHealt
 import { describeStatus } from "../shared/status-copy";
 import { BackIcon, ChevronDownIcon, CopyIcon, FocusIcon, ReloadIcon, TrashIcon } from "./icons";
 import { siteRecoveryAdvice, SITE_RECOVERY_COPY } from "./site-health-recovery";
+import { SiteGlyph } from "./ui-primitives";
 
 interface SiteHealthPanelProps {
   readonly copy: DesktopCopy;
@@ -65,7 +66,7 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
     return (
       <section className="site-status-detail">
         <button type="button" className="detail-back" onClick={props.onBack}><BackIcon />{props.copy.backToSiteStatus}</button>
-        <div className="health-detail-heading"><h2>{detailSite.label}</h2><span className="health-state" data-health-state={current.state}>{stateLabel(props.copy, current.state)}</span></div>
+        <div className="health-detail-heading"><h2><SiteGlyph site={detailSite.key} /><span>{detailSite.label}</span></h2><span className="health-state" data-health-state={current.state}>{stateLabel(props.copy, current.state)}</span></div>
         <div className="health-first-step" data-reason={advice.reason} data-advisory={advice.advisory}>
           <h3>{props.copy.healthRecoveryTitle}</h3><p>{props.copy[SITE_RECOVERY_COPY[advice.reason]]}</p>
           <button type="button" data-recovery-action={advice.action} disabled={advice.action === "check" ? props.checking : advice.action === "reload" && reloadBlocked} onClick={firstAction}>
@@ -126,7 +127,7 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
             const current = props.health[site.key] ?? { site: site.key, state: "unknown" as const, checks: [] };
             return (
               <button type="button" key={site.key} data-health-state={current.state} onClick={() => props.onDetail(site.key)}>
-                <span className="health-site-copy"><strong>{site.label}</strong><small data-hint={recentLabel(props.copy, current)}>{props.copy.healthLatestSend}：{recentLabel(props.copy, current)}</small></span>
+                <span className="health-site-copy"><strong><SiteGlyph site={site.key} /><span>{site.label}</span></strong><small data-hint={recentLabel(props.copy, current)}>{props.copy.healthLatestSend}：{recentLabel(props.copy, current)}</small></span>
                 <em className="health-state">{stateLabel(props.copy, current.state)}</em><ChevronDownIcon />
               </button>
             );
