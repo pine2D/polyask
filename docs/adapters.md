@@ -245,6 +245,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 ### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl3.js`）
 
+- **2026-11-12 新菜单**：模型项和等级项使用 `role=menuitemradio`，也保留旧 `menuitem` / Material 按钮。模型项 `.label` 为用途（如 `Code & analysis` / `Most complex work`），`.sublabel` 才是 `4 Argon` / `4 Carbon`；内置推荐通过 `_modelLabel` 从主副标题辨认版本开头的模型名，兼容旧菜单的相反排列，不用整行起始文本匹配。内置两档仍为 Argon Low/High，不因 Ultra 或 Carbon 可用而自动升级。自定义预设仍按实际可见主标签精确读写，保留已经保存的用途标签组合；Carbon 的 Low/Medium/High 走同一套动态预设，无需把它硬编码为默认模型。闭合 Carbon 标签明确 Low/High 时分别为 fast/think，省略等级或 Medium 时仍为 null。
+
 - 2026-10-27 真机：上传菜单媒体输入为 `accept="image/*,video/*"`；按逗号分隔的 MIME 项识别 `image/*`，排除 capture、disabled 和文档输入。上传菜单的 Escape 不可靠，结束时仅在触发器仍 `aria-expanded=true` 时再点击收尾；到期不得设置文件。等待入口时遇到明确到期的 `timeout` 返回 false，由上传总入口保留 `attachment_timeout`；其它异常继续抛出并按上传失败处理。
 
 - 档位：两档均优先实际菜单 `4 Argon`，think = High、fast = Low。菜单没有 Argon 时，think 保留任意版本 Pro + Extended（新版等级菜单则 High），fast 保留非 Lite 的任意版本 Flash（旧版关闭 Extended，新版 Low）。Argon 在场但禁用或同优先项重复时直接报错，不退选 Pro/Flash；`4.1 Argon` / `4 Argon-Lite` 不当已确认模型。Argon 与新版 Low/High 必须复读子菜单的 `.selected` / `aria-checked`，不靠粗档位判断冒充等级确认；Argon 本次切档复读成功后回传 `mode_only`，不缓存上轮成功。
@@ -253,7 +255,7 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - **旧菜单 Flash 回退正则必须版本无关**（2026-08-31 事故）：菜单从 `3.6 Flash` 换成 `3.7 Flash`，写死版本号的旧正则当天让整站 `fast()` 抛「未找到模型」。现按「任意版本号 + Flash、且不是 Flash-Lite」匹配，后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法——**Lite 是更弱的另一档，绝不能被当成快档选中**。think 的 Pro 备用同样版本无关，Argon 使用实测明确版本。
 - 菜单项实测（2026-08-31）：`3.5 Flash-Lite Fastest answers` / `3.7 Flash All-around helpNew` / `3.1 Pro Advanced reasoning`(selected) / `Extended thinking Complex problem solving`。当前选中项带 `.selected` 类，鼠标高亮项带 `.active` 类——**判选中只能看 `.selected`**。
 - **`escMenus()` 对本站无效**（2026-08-31 真机：Escape 与点 `.cdk-overlay-backdrop` 都关不掉，`aria-expanded` 一直是 `true`），**只有再点一次触发器才收**。所有收尾一律走 `_close()`：先 `escMenus()`，仍开着就 `clickEl(_modelBtn())`。菜单不关会罩住输入框、让随后的注入点空。`_selectModel` / `_setThinking` 的每条出口（含 throw 前）都已改走它。
-- 模型按钮 `_modelBtn()`：先找 aria-label 含 `mode picker` 的 button，回退 `button[class*="input-area-swi"]`（窄屏模型按钮无 `aria-haspopup`）。菜单项选择子常量 `_MI = "button.mat-mdc-menu-item, [role=menuitem]"`；菜单可能要 `openMenu` 两次。
+- 模型按钮 `_modelBtn()`：先找 aria-label 含 `mode picker` 的 button，回退 `button[class*="input-area-swi"]`（窄屏模型按钮无 `aria-haspopup`）。菜单项选择子常量 `_MI` 包含 `button.mat-mdc-menu-item`、`[role=menuitem]` 和 `[role=menuitemradio]`；菜单可能要 `openMenu` 两次。
 - **`_MI` 必须过 `_items()` 只取可见项**（2026-08-14 真机）：页面常驻一个隐藏的导出菜单（`gv-pm-saved-export-menu gv-hidden`，含 JSON / Markdown 两个 `[role=menuitem]`）。老写法 `if (!document.querySelector(this._MI)) openMenu(btn)` 因此恒判「菜单已展开」，**模型按钮从来没被点开过**，随后在 `[JSON, Markdown]` 里找 Flash 自然抛「未找到模型」。开菜单改用 `aria-expanded !== "true" || !this._items().length` 判定，找项一律走 `this._find(re)`。
 - **`state()` 只读粗档位**：aria-label 为 `Open mode picker, currently <Mode>`。Argon 有明确 Low 标签才判 fast、High 判 think，Medium、等级省略或冲突均为 null，不因模型名直接判 think；Flash 判 fast，Pro / Extended 判 think。`state()` 不证明模型版本；Argon Low 的闭合标签可能省略等级，因此本次动作确认来自子菜单复读，读状态不会开菜单。
 - `_setThinking` 兼容直达 Extended 开关与嵌套等级菜单，按 `.selected` / `aria-checked` 幂等操作。子菜单最多重开并重取 6 轮，沿用 `openMenu(trig)` 指针序列与 `focus()` + Enter keydown + `clickEl`；High/Low 点击后重开复读，所有等待透传 deadline。子菜单在但目标缺失、禁用或未生效必须 throw；Argon 不允许缺少等级入口，Pro 旧布局缺整个入口才保留合法静默分支。

@@ -4,6 +4,16 @@
 
 当前验收状态从[能力验收表与入口](acceptance.md)进入：按源码版本、站点、能力、日期和环境区分历史实测、离线回放、原生合成、本轮真实验证与待验证。本文件的日期段保留历史结论；后续复验追加新记录，不将历史通过自动晋升为当前真实站点或全平台通过。
 
+## 2026-11-12 Gemini 新菜单与 Carbon 预设
+
+本轮为 1.33.1 基线上的未发布修复。Linux/WSL 真实菜单中，模型与强度均为 `menuitemradio`；模型主标题改为用途，副标题为 `4 Argon` / `4 Carbon`。旧内置思考返回 `unconfirmed`，没有改变原 Carbon Low，原因是选择器漏掉模型项、整行开头也不再是模型名。自定义预设原本支持 radio，并按主标题保存，实际 Carbon 主标题为 `Most complex work`；用户反馈自定义保存后能正常切换，本轮保留这些既有标识，不迁移配置、不把 Carbon 自动设为内置推荐。
+
+离线入口：`npm run test:runtime -- scripts/gemini-presets.test.js scripts/gemini-argon-runtime.test.js scripts/intl-runtime.test.js scripts/tier-deadline.test.js`。回归覆盖新版主副标题及 radio、内置 Argon 两档、Carbon Low/Medium/High 与旧标签兼容、验证后恢复、禁用 Carbon 拒绝、旧菜单及超时收尾。最终夹具在原始适配器上为 5 过 1 失败，失败点正是新版菜单的内置切档；修复后全绿。完整 `npm test` 在临时 4GiB/512MiB cgroup 中通过 2,775 项应用/UI 和 610 项运行时测试，独立 typecheck、仓库 verify 通过。首次沙箱运行的开发启动保护、本机代理和 OAuth 回环测试失败，换到具备本机运行条件的同一受限入口后全部通过。
+
+最终重启开发态，以生产 `__AMS` 验证内置 fast → think → think → fast，均返回 `mode_only`，复读为 Argon Low/High/High/Low；Carbon 自定义 High → Low → Low → Medium 均返回 `preferred`，实际主标签与强度逐一匹配。Carbon Low 闭合标签省略等级、Medium 不对应默认两档，`state()` 为 null，动作本次确认仍有效。选项发现和 High 验证后均恢复原组合；每轮草稿与 URL 不变、菜单归零，结束恢复本次启动的 Argon Low。
+
+生产外壳设置 IPC 成功读取 Carbon 的 Low/Medium/High，读取前后组合一致，18 个已保存预设及版本逐项未变。未向真实档案保存测试预设，保存机制由完整应用/UI 回归覆盖；本轮 WSLg 的原生快捷键未能可靠打开设置面板，不把 IPC 验证称为实际设置 UI 点击验收。未发送问题、上传、验证 Windows/macOS 或追溯历史 Ultra 订阅权限；仅确认本次账号 Carbon 可选。独立代码审查未发现阻塞问题。
+
 ## 2026-10-29 外壳审计修复验证入口
 
 - `cd desktop && npm run test:unit -- test/broadcast-retry-viewport.check.ts`：36组三语、明暗、两密度，1366×768九站与200%实测480×300的九站/三站。站点列表可滚动，标题、取消、确认可见；可信Tab/Shift+Tab、明确勾选、IME/229 Escape与busy保护保持。

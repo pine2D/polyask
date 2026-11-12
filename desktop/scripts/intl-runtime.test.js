@@ -94,6 +94,11 @@ function geminiStateMustFollowModeLabel() {
     ["Mode picker, currently Argon Medium", null],
     ["Mode picker, currently Argon Low High", null],
     ["Mode picker, currently Argon", null],
+    ["Mode picker, currently Carbon Low", "fast"],
+    ["Mode picker, currently Carbon High", "think"],
+    ["Mode picker, currently Carbon Medium", null],
+    ["Mode picker, currently Carbon Low High", null],
+    ["Mode picker, currently Gemini Carbon", null],
     ["Mode picker, currently Extended thinking", "think"],
     ["模式选择器，当前为扩展思考", "think"],       // 中文界面走 class 回退锚点
     ["Mode picker, currently Deep Research", null], // 既非 flash 也非 pro/extended：不猜

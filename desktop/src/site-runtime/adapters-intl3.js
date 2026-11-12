@@ -35,12 +35,20 @@
           if (add?.getAttribute('aria-expanded') === 'true') add.click();
         }
       },
-      _MI: "button.mat-mdc-menu-item, [role=menuitem]",
+      _MI: "button.mat-mdc-menu-item, [role=menuitem], [role=menuitemradio]",
       // 只认可见项：页面常驻隐藏的导出菜单（`gv-pm-saved-export-menu gv-hidden` 的 JSON/Markdown 也是
       // [role=menuitem]），拿它当「菜单已展开」会让模型按钮永远不被点开（真机 2026-08-14）。
       _items: function () { return [...document.querySelectorAll(this._MI)]
         .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }); },
       _find: function (re) { return this._items().find((el) => re.test((el.textContent || "").trim())) || null; },
+      // 新菜单把用途放在 label、模型名放在 sublabel；旧菜单顺序相反。
+      // 内置推荐只在这两处文本中辨认版本开头的模型名，不依赖用途说明。
+      _modelLabel: function (el) {
+        const labels = [".label", ".sublabel"].map(selector => (el.querySelector?.(selector)?.textContent || "").trim());
+        const models = labels.filter(text => /^\d+(?:\.\d+)*\s+\S/.test(text));
+        if (models.length > 1) throw new Error("Gemini: 模型标签歧义");
+        return models[0] || labels[0] || (el.textContent || "").trim();
+      },
       _modelBtn: function () { return [...document.querySelectorAll("button")]
         .find((b) => /mode picker/i.test(b.getAttribute("aria-label") || "")) ||
         document.querySelector('button[class*="input-area-swi"]'); },
@@ -71,7 +79,7 @@
           const patterns = Array.isArray(re) ? re : [re];
           const match = await waitFor(() => {
             for (const pattern of patterns) {
-              const matches = this._items().filter(el => pattern.test((el.textContent || "").trim()));
+              const matches = this._items().filter(el => pattern.test(this._modelLabel(el)));
               if (!matches.length) continue;
               const el = matches[0];
               return { el, invalid: matches.length !== 1 || el.disabled || el.getAttribute("aria-disabled") === "true" };
@@ -82,7 +90,7 @@
           // waitFor 会捕获回调异常；校验在外面做，禁用/歧义立即失败且不退选 Pro。
           if (match.invalid) throw new Error("Gemini: 模型不可用或选项歧义");
           const item = match.el;
-          const model = (item.textContent || "").trim();
+          const model = this._modelLabel(item);
           tierAction(deadline, () => clickEl(item)); await sleep(700, deadline); await this._close(deadline); // 收尾：不依赖后续 _setThinking 替它关菜单
           return model;
         } finally { await this._close(deadline); }
@@ -165,11 +173,11 @@
           { name: t("diag_tierReadable"), ok: this.state() != null, kind: "tier" },
         ];
       },
-      // Argon 两档共用模型；闭合标签省略 Low 时返回 null，不靠模型名猜成 think。
+      // Argon 与 Carbon 均按明确等级判断；省略 Low 时不靠模型名猜成 think。
       // 实际等级确认由本次动作复读子菜单并回传，state 始终只读、不开菜单。
       state: function () {
         const t = this._modelBtn()?.getAttribute("aria-label") || "";
-        if (/\bargon(?:\s|$)/i.test(t)) {
+        if (/\b(?:argon|carbon)(?:\s|$)/i.test(t)) {
           const low = /\blow\b|低/i.test(t), high = /\bhigh\b|高/i.test(t);
           return low !== high ? (low ? "fast" : "think") : null;
         }

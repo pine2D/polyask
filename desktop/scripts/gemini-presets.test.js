@@ -3,17 +3,22 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const { page, plain } = require('./lib/site-preset-harness');
 function setup(options = {}) {
   const f = page('gemini.google.com', '<button aria-label="Open mode picker, currently Gemini Flash"></button>', ['adapters-intl3', 'gemini-presets']);
-  const state = { model: '3.8 Flash', effort: 'Low' }, clicks = [], choices = { '3.8 Flash': ['Low', 'Medium', 'High'], '4 Argon': ['Low', 'High'], 'Future Lite': [] };
+  const state = { model: options.initialModel || (options.modern ? '4 Carbon' : '3.8 Flash'), effort: 'Low' }, clicks = [];
+  const choices = { '3.8 Flash': ['Low', 'Medium', 'High'], '4 Argon': ['Low', 'High'], 'Future Lite': [] };
+  if (options.modern) { delete choices['Future Lite']; choices['3.5 Flash-Lite'] = []; choices['4 Carbon'] = ['Low', 'Medium', 'High']; }
+  const descriptions = { '3.8 Flash': 'All-around help', '4 Argon': 'Code & analysis', '4 Carbon': 'Most complex work', 'Future Lite': 'Quick answers' };
   const close = () => f.d.querySelectorAll('[role="menu"]').forEach(el => el.remove());
   const button = f.d.querySelector('button');
   function item(name, kind) {
     const el = f.d.createElement('gem-menu-item'); el.setAttribute('role', 'menuitemradio');
-    el.innerHTML = `<gem-menu-item-content><span class="label">${name}</span><span class="sublabel">Description with High and other models</span></gem-menu-item-content>`;
+    const flipped = options.modern && kind === 'model';
+    el.innerHTML = `<gem-menu-item-content><span class="label"> ${flipped ? descriptions[name] || 'Quick answers' : name} </span><span class="sublabel">${flipped ? name : 'Description with High and other models'}</span></gem-menu-item-content>`;
     el.className = name === state[kind] ? 'selected' : 'active';
+    if (options.disabled?.includes(name)) el.setAttribute('aria-disabled', 'true');
     if (kind === 'model') el.setAttribute('data-test-id', `bard-mode-option-${name}`);
     const select = () => { if (!el.isConnected) return; clicks.push(`${kind}:${name}`);
       if (!options.ignore) { state[kind] = name; if (kind === 'model') state.effort = choices[name][0] || null; }
-      close(); button.setAttribute('aria-label', `Open mode picker, currently Gemini ${state.model}`);
+      close(); button.setAttribute('aria-label', `Open mode picker, currently Gemini ${state.model}${state.effort === 'Low' ? '' : ` ${state.effort}`}`);
     };
     el.onclick = select; el.onkeydown = e => { if (e.key === 'Enter') select(); }; return el;
   }
@@ -52,4 +57,48 @@ test('Gemini rejects duplicate model labels and does not confirm an ignored effo
     const f = setup(options); try { assert.equal((await f.command({ kind: 'verify', preset: { model: '3.8 Flash', effort: 'High' } })).ok, false); }
     finally { f.close(); }
   }
+});
+test('Gemini keeps saved modern menu labels compatible when reading and verifying Carbon presets', async () => {
+  const f = setup({ modern: true }); try {
+    assert.deepEqual(plain((await f.command({ kind: 'current' })).current), { model: 'Most complex work', effort: 'Low' });
+    const options = plain(await f.command({ kind: 'options', model: 'Most complex work' }));
+    assert.equal(options.ok, true);
+    assert.deepEqual(options.catalog.models, ['All-around help', 'Code & analysis', 'Quick answers', 'Most complex work']);
+    assert.deepEqual(options.catalog.efforts, ['Low', 'Medium', 'High']);
+    const verified = plain(await f.command({ kind: 'verify', preset: { model: 'Most complex work', effort: 'High' } }));
+    assert.equal(verified.ok, true);
+    assert.deepEqual(verified.verified, { model: 'Most complex work', effort: 'High' });
+    assert.deepEqual(f.state, { model: '4 Carbon', effort: 'Low' });
+    assert.equal(f.d.querySelector('textarea').value, 'untouched draft');
+    assert.equal(f.menus(), 0);
+  } finally { f.close(); }
+});
+test('Gemini recommended tiers select Argon in modern radios and exact presets select Carbon', async () => {
+  const f = setup({ modern: true }); try {
+    for (const [mode, effort] of [['think', 'High'], ['fast', 'Low']]) {
+      const result = plain(await f.S.resolveTier(mode, Date.now() + 10000));
+      assert.equal(result.outcome, 'mode_only');
+      assert.deepEqual(f.state, { model: '4 Argon', effort });
+      assert.equal(f.menus(), 0);
+    }
+    for (const [mode, effort] of [['think', 'High'], ['fast', 'Low'], ['fast', 'Low'], ['think', 'Medium']]) {
+      const result = plain(await f.S.resolveTier(mode, Date.now() + 10000, undefined, { model: 'Most complex work', effort }));
+      assert.equal(result.outcome, 'preferred');
+      assert.deepEqual(f.state, { model: '4 Carbon', effort });
+      assert.equal(f.a.state(), effort === 'High' ? 'think' : null);
+      assert.equal(f.menus(), 0);
+    }
+    assert.equal(f.d.querySelector('textarea').value, 'untouched draft');
+  } finally { f.close(); }
+});
+test('Gemini excludes a disabled Carbon model and cannot validate it or change the current model', async () => {
+  const f = setup({ modern: true, initialModel: '4 Argon', disabled: ['4 Carbon'] }); try {
+    const result = plain(await f.command({ kind: 'options' }));
+    assert.equal(result.ok, true);
+    assert.equal(result.catalog.models.includes('Most complex work'), false);
+    assert.equal((await f.command({ kind: 'verify', preset: { model: 'Most complex work', effort: 'High' } })).ok, false);
+    assert.deepEqual(f.state, { model: '4 Argon', effort: 'Low' });
+    assert.equal(f.clicks.includes('model:4 Carbon'), false);
+    assert.equal(f.menus(), 0);
+  } finally { f.close(); }
 });
