@@ -6,7 +6,7 @@ import type { SiteStatus } from '../shared/protocol';
 import { useGlobalFeedback } from './feedback-provider';
 import type { QuestionRunProgress } from '../shared/question-run-progress';
 import { formatCopy } from '../shared/copy';
-import { runProgressCounts } from './run-progress-model';
+import { runProgressCounts, runSiteCells } from './run-progress-model';
 
 export interface WorkspaceProgressProps {
   readonly copy: DesktopCopy;
@@ -20,6 +20,7 @@ export function WorkspaceProgress(props: WorkspaceProgressProps): React.JSX.Elem
   const { workspaceHost, announce } = useGlobalFeedback();
   const [expanded, setExpanded] = useState(false), detailsId = useId();
   const counts = runProgressCounts(props.runId, props.activeSites, props.statuses, props.progress);
+  const cells = runSiteCells(props.runId, props.activeSites, props.statuses, props.progress);
   const total = props.activeSites.length, copy = props.copy;
   const progress = props.progress?.runId === props.runId ? props.progress : null;
   const pending = total - counts.submitted - counts.failed - counts.unconfirmed - counts.cancelled;
@@ -44,6 +45,8 @@ export function WorkspaceProgress(props: WorkspaceProgressProps): React.JSX.Elem
   return createPortal(<div className="run-progress" role="group" aria-label={copy.runProgressLabel} data-expanded={expanded}>
     <div className="run-progress-content">
       <div className="run-progress-summary">
+        {cells.length > 0 && <span className="run-progress-matrix" aria-hidden="true">{cells.map(cell =>
+          <i key={cell.site} className="run-progress-cell" data-site={cell.site} data-cell-state={cell.state} />)}</span>}
         <strong data-progress-stage>{stage}</strong>
         <span className="run-progress-summary-counts">{formatCopy(copy.runSubmitted, { count: counts.submitted, total })}
           <span>{formatCopy(copy.runEnded, { count: counts.ended, total })}</span>

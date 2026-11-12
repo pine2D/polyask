@@ -94,3 +94,26 @@ test('native workspace chrome reserves only the composer; progress uses the exis
     assert.equal(shellHeightForComposer(density, true), (density === 'compact' ? 120 : 144));
   }
 });
+
+test('telemetry matrix mirrors nine-site progress states with zero textContent leakage', async () => {
+  const h = await mountDom(<FeedbackProvider copy={getCopy('en')}><WorkspaceProgress copy={getCopy('en')}
+    statuses={{
+      claude: { site: 'claude', phase: 'complete', submission: { runId: 'a', state: 'sent' }, generation: { runId: 'a', state: 'complete' } },
+      chatgpt: { site: 'chatgpt', phase: 'generating', submission: { runId: 'a', state: 'sent' }, generation: { runId: 'a', state: 'generating' } },
+      kimi: { site: 'kimi', phase: 'failed', submission: { runId: 'a', state: 'unconfirmed' } },
+      gemini: { site: 'gemini', phase: 'failed', submission: { runId: 'a', state: 'failed' } }
+    }}
+    runId="a" activeSites={SITE_KEYS} progress={null} onRead={() => {}} /></FeedbackProvider>);
+  try {
+    const matrix = h.document.querySelector('.run-progress-matrix')!;
+    assert.equal(matrix.getAttribute('aria-hidden'), 'true');
+    assert.equal(matrix.textContent, '');
+    const cells = [...matrix.querySelectorAll('.run-progress-cell')];
+    assert.equal(cells.length, 9);
+    assert.equal(matrix.querySelector('[data-site="claude"]')?.getAttribute('data-cell-state'), 'complete');
+    assert.equal(matrix.querySelector('[data-site="chatgpt"]')?.getAttribute('data-cell-state'), 'generating');
+    assert.equal(matrix.querySelector('[data-site="kimi"]')?.getAttribute('data-cell-state'), 'unconfirmed');
+    assert.equal(matrix.querySelector('[data-site="gemini"]')?.getAttribute('data-cell-state'), 'failed');
+    assert.equal(matrix.querySelector('[data-site="deepseek"]')?.getAttribute('data-cell-state'), 'pending');
+  } finally { await h.close(); }
+});

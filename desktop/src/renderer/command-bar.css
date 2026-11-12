@@ -1,32 +1,33 @@
 .command-bar {
   position: relative; z-index: 2; width: 100%; height: var(--shell-height); padding: var(--space-1) var(--space-2);
   display: grid; grid-template-columns: auto auto minmax(200px, 1fr) auto auto auto auto auto;
-  align-items: center; gap: var(--space-1); border-bottom: 1px solid var(--border); background: var(--panel);
+  align-items: center; gap: var(--space-1); border-bottom: 1px solid var(--border-subtle); background: var(--panel);
 }
 .command-bar.has-pages { grid-template-columns: auto auto auto minmax(200px, 1fr) auto auto auto auto auto; }
 .command-bar.is-expanded { height: var(--composer-expanded-height); align-items: start; }
 .command-bar > * { min-width: 0; }
 .command-bar .mode-switch { margin-left: var(--space-1); }
 .workspace-entry { height: var(--control-height); display: flex; align-items: stretch; gap: 3px; }
-.scope-split { max-width: 172px; display: grid; grid-template-columns: minmax(0, 1fr) var(--target-size); border: 1px solid var(--border); border-radius: 7px; background: transparent; }
+.scope-split { max-width: 172px; display: grid; grid-template-columns: minmax(0, 1fr) var(--target-size); border: 1px solid var(--border-subtle); border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel)); }
 .scope-split button, .health-trigger {
   min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; border: 0;
   color: var(--muted); background: transparent;
+  transition: color 120ms ease, background-color 120ms ease;
 }
 .scope-main { border-radius: 6px 0 0 6px; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.scope-menu { border-radius: 0 6px 6px 0; padding: 0 !important; border-left: 1px solid var(--border) !important; display: grid; place-items: center; }
+.scope-menu { border-radius: 0 6px 6px 0; padding: 0 !important; border-left: 1px solid var(--border-subtle) !important; display: grid; place-items: center; }
 .scope-label-full, .scope-label-compact { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scope-label-compact { display: none; }
-.health-trigger { position: relative; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 7px; background: transparent; }
-.scope-split button:hover, .health-trigger:hover { background: var(--hover-soft); }
+.health-trigger { position: relative; display: grid; place-items: center; border: 1px solid var(--border-subtle); border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel)); }
+.scope-split button:hover, .health-trigger:hover { color: var(--text); background: var(--panel); }
 .health-trigger.active, .scope-split:has(.scope-main[aria-expanded="true"]) { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
 .health-trigger[data-health-attention]::after {
   position: absolute; top: 3px; right: 3px; width: 6px; height: 6px;
   border: 1px solid var(--panel); border-radius: 50%; background: var(--danger); content: "";
 }
 .mode-switch, .tier-switch {
-  height: var(--control-height); display: flex; padding: 2px; border: 1px solid transparent;
-  border-radius: 7px; background: var(--hover-soft);
+  height: var(--control-height); display: flex; padding: 2px; border: 1px solid var(--border-subtle);
+  border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel));
 }
 .mode-switch button, .tier-switch button {
   min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; display: inline-flex;
@@ -35,7 +36,7 @@
   transition: color 120ms ease, background-color 120ms ease;
 }
 .mode-switch button.active, .tier-switch button.active {
-  color: inherit; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border);
+  color: var(--text); font-weight: 600; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border-subtle);
 }
 .mode-switch .layout-toggle { display: none; }
 .command-bar textarea {
@@ -48,17 +49,25 @@
 .summary { max-width: 112px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-actions {
   height: var(--control-height); display: flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 8px;
-  border-left: 1px solid var(--border); background: transparent;
+  border-left: 1px solid var(--border-subtle); background: transparent;
 }
 .workspace-actions > button {
   min-width: var(--target-size); height: 100%; padding: 0 6px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 3px; border: 0; border-radius: 5px; color: var(--muted); background: transparent;
+  justify-content: center; gap: 3px; border: 0; border-radius: 6px; color: var(--muted); background: transparent;
+  transition: color 120ms ease, background-color 120ms ease;
 }
-.workspace-actions > button:hover { background: var(--hover-soft); }
+.workspace-actions > button:hover { color: var(--text); background: var(--hover-soft); }
 .workspace-actions > button.active { color: var(--accent); background: var(--selection-soft); }
 .workspace-actions > button:disabled, .workspace-actions > button[aria-disabled="true"] { opacity: .4; }
 .workspace-actions > button[aria-disabled="true"] { cursor: default; color: var(--muted); background: transparent; }
-.workspace-actions > button.retry-trigger { color: var(--danger-ink); white-space: nowrap; }
+.workspace-actions > button.retry-trigger { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 8%, var(--panel)); white-space: nowrap; }
+.workspace-actions > button.uncertain-retry-trigger { color: var(--warning-ink); background: var(--warning-soft); font-weight: 600; white-space: nowrap; }
+.workspace-actions > button.compare-trigger:not([aria-disabled="true"]):not(:disabled) {
+  color: var(--accent); background: var(--accent-soft); font-weight: 600;
+}
+.workspace-actions > button.compare-trigger:not([aria-disabled="true"]):not(:disabled):hover {
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+}
 .workspace-actions .summary { margin: 0 5px 0 2px; }
 .workspace-actions > button.sync-attention { position: relative; }
 .workspace-actions > button.sync-attention::after {
@@ -82,19 +91,19 @@
   min-width: 88px; height: var(--control-height); padding: 0 10px; display: inline-flex; align-items: center;
   justify-content: center; gap: 6px; border: 0; border-radius: 7px; color: white; font-weight: 650;
 }
-.send { color: var(--on-accent); background: var(--accent); }
+.send { color: var(--on-accent); background: var(--accent); box-shadow: var(--inner-highlight), var(--shadow-control); }
 .send-count, .scope-label-compact, .retry-trigger > span,
 .workspace-actions > button.more-trigger::after { font-variant-numeric: tabular-nums; }
-.cancel { background: var(--danger); }
-.primary-action:hover:not(:disabled) { filter: brightness(.92); }
-.send:disabled { opacity: .45; }
-.cancel:disabled { opacity: .68; }
+.cancel { background: var(--danger); box-shadow: var(--shadow-control); }
+.primary-action:hover:not(:disabled) { filter: brightness(.94); }
+.send:disabled { opacity: .45; box-shadow: none; }
+.cancel:disabled { opacity: .68; box-shadow: none; }
 kbd { opacity: .7; font: 10px system-ui; }
 .send kbd { opacity: 1; color: var(--on-accent); }
 
 .page-tabs {
   position: relative; flex-shrink: 0; height: var(--control-height); padding: 2px; display: grid; grid-auto-flow: column;
-  grid-auto-columns: 1fr; border: 1px solid var(--border); border-radius: 7px; background: var(--panel-muted);
+  grid-auto-columns: 1fr; border: 1px solid var(--border-subtle); border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel));
 }
 .page-tabs button {
   position: relative; z-index: 1; min-width: 42px; height: 100%; padding: 0 6px; display: inline-flex;
@@ -102,12 +111,12 @@ kbd { opacity: .7; font: 10px system-ui; }
   color: var(--muted); background: transparent; font-size: var(--font-meta); font-variant-numeric: tabular-nums;
   transition: color 120ms ease;
 }
-.page-tabs button[aria-selected="true"] { color: var(--accent); }
+.page-tabs button[aria-selected="true"] { color: var(--accent); font-weight: 600; }
 .page-tabs button > span { white-space: nowrap; }
 .page-tab-badges { display: inline-flex; gap: 3px; }
 .page-tab-indicator {
   position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 2px; border-radius: 5px;
-  background: var(--panel); box-shadow: 0 1px 2px #11182718;
+  background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border-subtle);
   transition: transform 180ms var(--ease-in-out);
 }
 .page-tabs[data-input-method="keyboard"] .page-tab-indicator { transition-duration: 0ms; }
@@ -122,12 +131,13 @@ kbd { opacity: .7; font: 10px system-ui; }
 .prompt-history-tools { height: var(--control-height); display: flex; align-items: center; gap: var(--space-1); }
 .new-session-trigger, .question-trigger, .draft-trigger, .image-trigger, .image-warning button, .image-error button {
   min-width: var(--control-height); height: var(--control-height); padding: 0; display: inline-flex;
-  align-items: center; justify-content: center; gap: 2px; border: 1px solid transparent; border-radius: var(--radius-control);
-  color: var(--muted); background: var(--hover-soft);
+  align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control);
+  color: var(--muted); background: color-mix(in srgb, var(--panel-muted) 56%, var(--panel));
+  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
 }
 .new-session-trigger { padding-inline: 6px; gap: 4px; white-space: nowrap; }
 .question-trigger[aria-expanded="true"], .draft-trigger[aria-expanded="true"], .image-trigger.active { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
-.question-trigger:hover, .draft-trigger:hover:not(:disabled), .image-trigger:hover:not(:disabled) { background: var(--hover-soft); }
+.new-session-trigger:hover:not(:disabled), .question-trigger:hover, .draft-trigger:hover:not(:disabled), .image-trigger:hover:not(:disabled) { color: var(--text); background: var(--panel); border-color: var(--border); }
 .new-session-trigger:disabled, .draft-trigger:disabled, .image-trigger:disabled { opacity: .4; }
 .image-count, .image-warning span { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .image-warning button, .image-error button { min-width: var(--target-size); width: var(--target-size); border-color: var(--warning-ink); color: var(--warning-ink); background: transparent; }
@@ -137,6 +147,7 @@ kbd { opacity: .7; font: 10px system-ui; }
    1 = 次要文字收起；2 = 档位说明收起；3 = 历史入口进更多菜单、档位改为下拉；
    4 = 站点状态/比较改由工作台与更多菜单承接。发送和结果库始终保留文字。 */
 .command-bar[data-fit~="1"] :is(.mode-switch .priority-p1, .workspace-actions .priority-p1, kbd, .scope-label-full, .workspace-actions .retry-label, .new-session-label) { display: none; }
+.command-bar[data-fit~="1"] .mode-switch button { padding: 0 5px; }
 .command-bar[data-fit~="1"] .scope-label-compact { display: inline; }
 .command-bar[data-fit~="1"] > :is(.page-tabs, .workspace-actions, .mode-switch, .tier-switch, .image-picker, .prompt-history-tools) { min-width: max-content; }
 .command-bar[data-fit~="1"] .workspace-actions .compare-trigger { width: var(--target-size); min-width: var(--target-size); }

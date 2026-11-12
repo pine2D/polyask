@@ -35,3 +35,36 @@ test("loading progress ends on ready, failure and every command phase", () => {
     assert.match(html, /aria-label="Reload Claude"/);
   }
 });
+
+test("tile headers echo confirmed model or tier badges, site glyphs, and amber uncertain markers", () => {
+  const withModel = render({
+    site: site.key,
+    phase: "generating",
+    selection: { requested: "think", outcome: "preferred", observed: "think", model: "Claude 3.7 Sonnet" }
+  });
+  assert.match(withModel, /data-site-glyph="claude"/);
+  assert.match(withModel, /class="site-model-badge priority-p1"[^>]*data-tier-mode="think"[^>]*aria-hidden="true">Claude 3\.7 Sonnet<\/span>/);
+  assert.doesNotMatch(withModel, /data-uncertain="true"/);
+
+  const modeOnly = render({
+    site: site.key,
+    phase: "submitted",
+    selection: { requested: "fast", outcome: "mode_only", observed: "fast" }
+  });
+  assert.match(modeOnly, /class="site-model-badge priority-p1"[^>]*data-tier-mode="fast"[^>]*>Fast<\/span>/);
+
+  const unconfirmedTier = render({
+    site: site.key,
+    phase: "warning",
+    code: "tier_unconfirmed",
+    selection: { requested: "think", outcome: "unconfirmed" }
+  });
+  assert.doesNotMatch(unconfirmedTier, /class="site-model-badge/);
+
+  const unconfirmedSubmit = render({
+    site: site.key,
+    phase: "failed",
+    code: "submit_unconfirmed"
+  });
+  assert.match(unconfirmedSubmit, /<article class="tile-frame phase-failed" data-uncertain="true"/);
+});

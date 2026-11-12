@@ -7,17 +7,26 @@ export interface RunProgressCounts {
   readonly complete: number; readonly partial: number; readonly failed: number;
   readonly unconfirmed: number; readonly cancelled: number; readonly hasReadableCopy: boolean;
 }
-export function runProgressCounts(runId: string | null, scope: readonly SiteKey[],
-  statuses: Readonly<Record<string, SiteStatus>>, progress: QuestionRunProgress | null): RunProgressCounts {
-  const counts = { submitted: 0, generating: 0, ended: 0, complete: 0, partial: 0,
-    failed: 0, unconfirmed: 0, cancelled: 0, hasReadableCopy: false };
-  if (!runId) return counts;
+export type RunSiteCellState = 'pending' | 'submitted' | 'generating' | 'complete' | 'unconfirmed' | 'failed' | 'cancelled';
+export interface RunSiteCell {
+  readonly site: SiteKey;
+  readonly state: RunSiteCellState;
+}
+function latestRunAnswers(runId: string, progress: QuestionRunProgress | null): Map<SiteKey, QuestionRunProgress['answers'][number]> {
   const answers = new Map<SiteKey, QuestionRunProgress['answers'][number]>();
   if (progress?.runId === runId && progress.state === 'available') {
     for (const answer of progress.answers) {
       if (!answers.has(answer.site) || answers.get(answer.site)!.attempt < answer.attempt) answers.set(answer.site, answer);
     }
   }
+  return answers;
+}
+export function runProgressCounts(runId: string | null, scope: readonly SiteKey[],
+  statuses: Readonly<Record<string, SiteStatus>>, progress: QuestionRunProgress | null): RunProgressCounts {
+  const counts = { submitted: 0, generating: 0, ended: 0, complete: 0, partial: 0,
+    failed: 0, unconfirmed: 0, cancelled: 0, hasReadableCopy: false };
+  if (!runId) return counts;
+  const answers = latestRunAnswers(runId, progress);
   for (const site of new Set(scope)) {
     const status = statuses[site], answer = answers.get(site);
     // 本次重试已建立新 attempt 时，旧页面的提交徽记不能盖过新 pending。
@@ -38,4 +47,25 @@ export function runProgressCounts(runId: string | null, scope: readonly SiteKey[
     }
   }
   return counts;
+}
+export function runSiteCells(runId: string | null, scope: readonly SiteKey[],
+  statuses: Readonly<Record<string, SiteStatus>>, progress: QuestionRunProgress | null): readonly RunSiteCell[] {
+  if (!runId) return [];
+  const answers = latestRunAnswers(runId, progress);
+  return [...new Set(scope)].map(site => {
+    const status = statuses[site], answer = answers.get(site);
+    const submission = answer?.submission ?? (status?.submission?.runId === runId
+      ? status.submission.state === 'sent' ? 'submitted' : status.submission.state : undefined);
+    if (submission === 'failed') return { site, state: 'failed' };
+    if (submission === 'unconfirmed') return { site, state: 'unconfirmed' };
+    if (submission === 'cancelled') return { site, state: 'cancelled' };
+    if (submission === 'submitted') {
+      const generation = status?.generation?.runId === runId ? status.generation.state : undefined;
+      if (generation === 'generating') return { site, state: 'generating' };
+      const sealed = Boolean(answer?.hasText && answer.capture === 'complete' && !answer.truncated && answer.sealedAt !== null);
+      if (sealed || generation === 'complete') return { site, state: 'complete' };
+      return { site, state: 'submitted' };
+    }
+    return { site, state: 'pending' };
+  });
 }

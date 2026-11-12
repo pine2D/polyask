@@ -6,9 +6,22 @@ import type {
   SiteStatus
 } from "../shared/protocol";
 import { siteReloadAllowed } from "../shared/site-health";
+import { normalizeSelectionMetadata } from "../shared/selection";
 import { describeStatus, visibleStatus } from "../shared/status-copy";
 import { BackIcon, FocusIcon, ReloadIcon } from "./icons";
 import { SelectionMark } from "./selection-mark";
+import { SiteGlyph } from "./ui-primitives";
+
+function siteSelectionBadge(copy: DesktopCopy, status: SiteStatus): {
+  readonly label: string;
+  readonly mode: "think" | "fast";
+  readonly outcome: "preferred" | "alternative" | "mode_only";
+} | null {
+  const selection = normalizeSelectionMetadata(status).selection ?? normalizeSelectionMetadata(status.submission).selection;
+  if (!selection || selection.outcome === "unconfirmed") return null;
+  const label = "model" in selection && selection.model ? selection.model : copy[selection.observed];
+  return { label, mode: selection.observed, outcome: selection.outcome };
+}
 
 interface SiteFramesProps {
   readonly copy: DesktopCopy;
@@ -54,13 +67,16 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
             (["loading", "sending", "generating"].includes(status.phase) ? statusText : null);
           const reloadBlocked = !siteReloadAllowed(status.phase);
           const uncertain = props.uncertainSites?.includes(site.key);
+          const isUncertain = Boolean(uncertain || status.code === "submit_unconfirmed");
+          const badge = siteSelectionBadge(copy, status);
           // 提交未确认：卡片给出下一步——先看原站页面，没看到问题才重试；任何路径都不自动重发。
-          const nextStep = uncertain || status.code === "submit_unconfirmed" ? copy.retryUnconfirmed : null;
+          const nextStep = isUncertain ? copy.retryUnconfirmed : null;
           const stateHint = nextStep ? `${statusText} · ${nextStep}` : statusText;
           const retryLabel = formatCopy(uncertain ? copy.retryReviewSite : copy.retrySite, {site: site.label});
           return (
             <article
               className={`tile-frame phase-${status.phase}`}
+              data-uncertain={isUncertain ? "true" : undefined}
               key={site.key}
               style={{
                 left: placement.bounds.x,
@@ -73,8 +89,9 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
                 <label className="site-select priority-p0" data-selected={participating.has(site.key)} data-hint={participating.has(site.key) ? formatCopy(copy.selectSite, { site: site.label }) : copy.sitePageRetained}>
                   <input className="sr-only" type="checkbox" name="sites" value={site.key} checked={participating.has(site.key)} disabled={props.participationBusy}
                     aria-label={`${copy.participationLabel}: ${site.label}`} aria-description={participating.has(site.key) ? undefined : copy.sitePageRetained} onChange={() => onToggle(site.key)} />
-                  <SelectionMark /><span className="site-name">{site.label}</span>
+                  <SelectionMark /><SiteGlyph site={site.key} /><span className="site-name">{site.label}</span>
                 </label>
+                {badge && <span className="site-model-badge priority-p1" data-tier-mode={badge.mode} data-selection-outcome={badge.outcome} data-hint={statusText} aria-hidden="true">{badge.label}</span>}
                 <span className="site-status-dot priority-p0" data-hint={stateHint} aria-hidden="true" />
                 <span className="tile-status-sr sr-only">{stateHint}</span>
                 {attentionText && <span className="site-state priority-p0" data-hint={stateHint}>{attentionText}</span>}
