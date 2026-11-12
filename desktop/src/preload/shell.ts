@@ -34,7 +34,7 @@ import type {
   ArchiveRecord,
   ArchiveSearchResult
 } from "../shared/archive";
-import type { SiteKey } from "../shared/contracts";
+import type { LayoutMode, SiteKey } from "../shared/contracts";
 import type { CommandId } from "../shared/commands";
 import type { PromptLibraryState, PromptTemplate } from "../shared/prompt-library";
 import type { DisplayPreferences } from "../shared/display";
@@ -156,7 +156,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   cancel(): void;
   /** 只取消辅助综合的派发与导航，不碰群发（群发取消会作废上一轮「提交未确认」的迟到确认）。 */
   cancelSynthesis(): void;
-  setLayout(mode: "overview" | "focus", focused: SiteKey): void;
+  setLayout(mode: LayoutMode, focused: SiteKey): void;
   inspectSite(site: SiteKey): Promise<boolean>;
   setPage(page: number): void;
   stepPage(offset: -1 | 1): void;
@@ -322,7 +322,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   openExternal: (url: string) => invoke("polyask:open-external", url),
   cancel: () => ipcRenderer.send("polyask:cancel"),
   cancelSynthesis: () => ipcRenderer.send("polyask:synthesis-cancel"),
-  setLayout: (mode: "overview" | "focus", focused: SiteKey) => ipcRenderer.send("polyask:set-layout", { mode, focused }),
+  setLayout: (mode: LayoutMode, focused: SiteKey) => ipcRenderer.send("polyask:set-layout", { mode, focused }),
   inspectSite: (site: SiteKey) => invoke("polyask:inspect-site", site),
   setPage: (page: number) => ipcRenderer.send("polyask:set-page", page),
   stepPage: (offset: -1 | 1) => ipcRenderer.send("polyask:step-page", offset),

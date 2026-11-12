@@ -31,6 +31,10 @@ export function FocusIcon(): React.JSX.Element {
   return <Icon><path d="M8 4H4v4M16 4h4v4M20 16v4h-4M8 20H4v-4" /><rect x="8" y="8" width="8" height="8" /></Icon>;
 }
 
+export function DuelIcon(): React.JSX.Element {
+  return <Icon><rect x="3.5" y="4" width="7.2" height="16" rx="1.5" /><rect x="13.3" y="4" width="7.2" height="16" rx="1.5" /></Icon>;
+}
+
 export function SiteSettingIcon(): React.JSX.Element {
   return <Icon><path d="M3 4h7m4 0h7M3 12h5m4 0h9M3 20h9m4 0h5M12 2v4M10 10v4M14 18v4" /></Icon>;
 }

@@ -3,6 +3,7 @@ import { MARKDOWN_EXPORT_CODES } from './markdown-export';
 import type { HistorySnapshot, HistorySnapshotCommand } from "./question-capture";
 import {
   SITE_KEYS,
+  type LayoutMode,
   type SiteDefinition,
   type SiteKey,
   type ViewPlacement
@@ -254,7 +255,7 @@ export interface SiteHistoryState {
 
 export interface LayoutState {
   readonly automaticFocus?: boolean;
-  readonly mode: "overview" | "focus";
+  readonly mode: LayoutMode;
   readonly focused: SiteKey;
   readonly page: number;
   readonly pageCount: number;

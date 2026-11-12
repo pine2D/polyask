@@ -110,7 +110,7 @@ function Fixture(): React.JSX.Element {
   const [text, setText] = useState('比较不同方案的依据、风险与适用条件。 / Compare evidence, risks, and trade-offs.');
   const [tier, setTier] = useState<Tier>('think');
   const { expanded, reservedExpanded, setExpanded } = useComposerSession('sites');
-  const [layout, setLayout] = useState<'overview' | 'focus'>('overview');
+  const [layout, setLayout] = useState<'overview' | 'duel' | 'focus'>('overview');
   const [page, setPage] = useState(0);
   const [inputMethod, setInputMethod] = useState<'keyboard' | 'pointer'>('keyboard');
   const [images, setImages] = useState(query.has('details') ? previewImages : []);

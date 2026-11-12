@@ -38,7 +38,7 @@ export function formatBackupValue(value: unknown, field: string, copy: DesktopCo
   if (['site', 'host', 'hosts', 'sites', 'selectedSites', 'winnerHost'].includes(field)) return SITE_NAMES[text] ?? (SITE_KEYS[text] ? copy[SITE_KEYS[text]] : text);
   let enums: Record<string, keyof DesktopCopy> | undefined;
   if (field === 'status') enums = { draft: 'decisionDraft', verify: 'decisionVerify', final: 'decisionFinal' };
-  else if (field === 'value' && ['compact', 'comfortable', 'overview', 'focus'].includes(text)) enums = { compact: 'compactDensity', comfortable: 'comfortableDensity', overview: 'overview', focus: 'focus' };
+  else if (field === 'value' && ['compact', 'comfortable', 'overview', 'duel', 'focus'].includes(text)) enums = { compact: 'compactDensity', comfortable: 'comfortableDensity', overview: 'overview', duel: 'duel', focus: 'focus' };
   else if (['tier', 'requestedTier'].includes(field)) enums = { think: 'think', fast: 'fast' };
   else if (field === 'submission') enums = { pending: 'sending', submitted: 'submitted', failed: 'questionSubmissionFailed', unconfirmed: 'questionSubmissionUnconfirmed', cancelled: 'questionSubmissionCancelled' };
   else if (field === 'capture') enums = { waiting: 'questionStateWaiting', partial: 'questionStatePartial', complete: 'questionStateComplete', unknown: 'questionStateUnknown', unavailable: 'questionStateUnavailable', interrupted: 'questionStateInterrupted' };

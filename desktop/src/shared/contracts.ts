@@ -35,10 +35,12 @@ export interface ViewPlacement {
   readonly bounds: ViewBounds;
 }
 
+export type LayoutMode = "overview" | "duel" | "focus";
+
 export type LayoutOptions =
   | { readonly mode: "overview"; readonly gap?: number }
   | {
-      readonly mode: "focus";
+      readonly mode: "duel" | "focus";
       readonly focused: SiteKey;
       readonly gap?: number;
     };

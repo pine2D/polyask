@@ -1,4 +1,4 @@
-import { SITE_KEYS, type SiteKey } from "../shared/contracts";
+import { SITE_KEYS, type LayoutMode, type SiteKey } from "../shared/contracts";
 import { PRESET_KEYS, type SitePresetKey, type TierPreset } from "../shared/tier-presets";
 import { parseDisplayPreferences } from "../shared/display";
 import {
@@ -174,7 +174,7 @@ function valuesFromEntries(entries: PreferenceEntries): PreferenceValues {
     ...Object.fromEntries(PRESET_KEYS.map(key => [key, structuredClone(entries[key])])) as Record<SitePresetKey, TierPreset | null>,
     completionNotifications: entries.completionNotifications as boolean,
     display: { density: entries.density as "compact" | "comfortable", siteScale: entries.siteScale as 0.9 | 1 },
-    layoutMode: entries.layoutMode as "overview" | "focus", siteZoom,
+    layoutMode: entries.layoutMode as LayoutMode, siteZoom,
     workbenchGuide: structuredClone(entries.workbenchGuide) as PreferenceValues["workbenchGuide"],
     sitePageCloseConfirm: entries.sitePageCloseConfirm as boolean,
     newSessionConfirm: entries.newSessionConfirm as boolean

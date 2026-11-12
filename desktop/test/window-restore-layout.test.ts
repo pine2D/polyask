@@ -114,3 +114,17 @@ test("a genuinely small visible window still automatically switches to focus", (
   assert.equal(h.manager.getLayout().mode, "focus");
   assert.equal(h.manager.getLayout().automaticFocus, true);
 });
+
+test("duel mode places two full-height views while keeping hidden third-site bounds positive", () => {
+  const h = harness({ maximized: false, layoutMode: "duel", currentPage: 0, focusedByPage: { 0: "claude" }, siteZoom: {} });
+  const layout = h.manager.getLayout();
+  assert.equal(layout.mode, "duel");
+  assert.deepEqual(layout.placements.map((item: { key: string }) => item.key), ["claude", "chatgpt"]);
+  assert.equal(layout.placements[0].bounds.height, layout.placements[1].bounds.height);
+  const geminiBounds = h.bounds.filter((item) => item.id === 3).at(-1)?.value;
+  assert.ok(geminiBounds && geminiBounds.width > 0 && geminiBounds.height > 0);
+  h.setGeometry(false, 740, 680);
+  h.window.emit("resize");
+  assert.equal(h.manager.getLayout().mode, "focus");
+  assert.equal(h.manager.getLayout().automaticFocus, true);
+});

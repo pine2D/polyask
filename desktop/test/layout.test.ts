@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   computeViewLayout,
   paginateSiteKeys,
+  resolveDuelSites,
   resolveSitePage,
   resolveSitePageIndex,
   resolveLayoutMode,
@@ -175,4 +176,25 @@ test("the single workspace panel reserves one fixed width at every density", () 
   assert.equal(drawerWidthForDensity("compact", true), 320);
   assert.equal(drawerWidthForDensity("comfortable", true), 320);
   assert.equal(drawerWidthForDensity("compact", false), 0);
+});
+
+test("duel mode pairs the focused site with one challenger at full-height 50:50 split", () => {
+  assert.deepEqual(resolveDuelSites(["claude", "chatgpt", "gemini", "deepseek"], "gemini"), ["gemini", "claude"]);
+  assert.deepEqual(resolveDuelSites(["claude"], "claude"), ["claude"]);
+  const split = computeViewLayout(["claude", "chatgpt", "gemini", "deepseek"], { x: 0, y: 0, width: 1200, height: 600 }, {
+    mode: "duel",
+    focused: "claude",
+    gap: 4
+  });
+  assert.deepEqual(split, [
+    { key: "claude", bounds: { x: 0, y: 0, width: 598, height: 600 } },
+    { key: "chatgpt", bounds: { x: 602, y: 0, width: 598, height: 600 } }
+  ]);
+  assert.deepEqual(
+    computeViewLayout(["claude"], { x: 0, y: 0, width: 1200, height: 600 }, { mode: "duel", focused: "claude", gap: 4 }),
+    [{ key: "claude", bounds: { x: 0, y: 0, width: 1200, height: 600 } }]
+  );
+  assert.equal(resolveLayoutMode("duel", { x: 0, y: 0, width: 763, height: 600 }, 4, 4), "focus");
+  assert.equal(resolveLayoutMode("duel", { x: 0, y: 0, width: 764, height: 600 }, 4, 4), "duel");
+  assert.equal(resolveLayoutMode("duel", { x: 0, y: 0, width: 1200, height: 209 }, 4, 2), "focus");
 });

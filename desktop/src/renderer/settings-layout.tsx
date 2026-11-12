@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { LayoutMode } from '../shared/contracts';
 import type { DesktopCopy } from '../shared/copy';
 import type { PreferenceSyncSettingsState } from './use-synced-preferences';
 
@@ -10,7 +11,7 @@ export function SettingsLayout(props: Pick<PreferenceSyncSettingsState, 'snapsho
   const [pending, setPending] = useState(false), [failed, setFailed] = useState(false);
   const mounted = useRef(true), inFlight = useRef(false), latest = useRef(props); latest.current = props;
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
-  const change = async (mode: 'overview' | 'focus') => {
+  const change = async (mode: LayoutMode) => {
     if (inFlight.current || latest.current.busy || !latest.current.snapshot) return;
     inFlight.current = true; setPending(true); setFailed(false);
     try { await latest.current.onLayoutModeChange(mode); }
@@ -23,10 +24,10 @@ export function SettingsLayout(props: Pick<PreferenceSyncSettingsState, 'snapsho
     <p id="settings-layout-mode-hint">{copy.preferenceSyncLayoutHint}</p>
     <fieldset disabled={props.busy || pending || !snapshot} aria-describedby="settings-layout-mode-hint settings-layout-scope">
       <legend className="sr-only">{copy.preferenceSyncLayoutValue}</legend>
-      <div className="settings-display-options">{(['overview', 'focus'] as const).map(mode => <label key={mode}>
+      <div className="settings-display-options">{(['overview', 'duel', 'focus'] as const).map(mode => <label key={mode}>
         <input type="radio" name="settings-layout-mode" value={mode} disabled={props.busy || pending || !snapshot}
           checked={snapshot?.values.layoutMode === mode} onChange={() => { void change(mode); }} />
-        <span>{mode === 'overview' ? copy.overview : copy.focus}</span>
+        <span>{mode === 'overview' ? copy.overview : mode === 'duel' ? copy.duel : copy.focus}</span>
       </label>)}</div>
     </fieldset>
     <p id="settings-layout-scope" className="settings-control-hint">{!snapshot ? copy.preferenceSyncLoading

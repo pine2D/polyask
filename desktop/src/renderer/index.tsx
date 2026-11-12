@@ -15,7 +15,7 @@ import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "r
 import { createRoot } from "react-dom/client";
 
 import { resolveCommands, type CommandId } from "../shared/commands";
-import type { SiteDefinition } from "../shared/contracts";
+import type { LayoutMode, SiteDefinition } from "../shared/contracts";
 import type { CommandActions } from "./command-dispatcher";
 import { formatCopy, getCopy, resolveLocale } from "../shared/copy";
 import { imageSupportWarning } from './image-support-warning';
@@ -345,7 +345,7 @@ function App(): React.JSX.Element {
     });
   };
 
-  const setMode = (mode: "overview" | "focus", focused = layout.focused): void => {
+  const setMode = (mode: LayoutMode, focused = layout.focused): void => {
     if (draftConfirmation.isBlocking()) return;
     shell.setLayout(mode, focused);
   };
@@ -467,6 +467,7 @@ function App(): React.JSX.Element {
     ...(siteHistory[layout.focused]?.back ? { "site-back": () => { changeSurface("sites"); shell.stepHistory(-1); } } : {}),
     ...(siteHistory[layout.focused]?.forward ? { "site-forward": () => { changeSurface("sites"); shell.stepHistory(1); } } : {}),
     "focus-current-site": focusCurrentSite,
+    "set-layout-duel": () => { changeSurface("sites"); setMode("duel"); },
     "edit-prompt": activatePrompt,
     "focus-prompt": () => {
       if (composer.expanded) { composer.setExpanded(false); focusCurrentSite(); }

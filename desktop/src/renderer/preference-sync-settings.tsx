@@ -35,7 +35,7 @@ export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
       density: snapshot.values.display.density === 'compact' ? copy.compactDensity : copy.comfortableDensity,
       scale: `${Math.round(snapshot.values.display.siteScale * 100)}%`
     }) : copy.preferenceSyncLoading,
-    layout: snapshot ? snapshot.values.layoutMode === 'overview' ? copy.overview : copy.focus : copy.preferenceSyncLoading,
+    layout: snapshot ? snapshot.values.layoutMode === 'overview' ? copy.overview : snapshot.values.layoutMode === 'duel' ? copy.duel : copy.focus : copy.preferenceSyncLoading,
     siteZoom: !snapshot ? copy.preferenceSyncLoading : Object.keys(snapshot.values.siteZoom).length ? Object.entries(snapshot.values.siteZoom)
       .map(([site, zoom]) => `${formatBackupValue(site, 'site', copy, '')} ${Math.round(zoom * 100)}%`).join(' · ')
       : copy.preferenceSyncZoomDefault

@@ -46,15 +46,20 @@ test("send has a localized scope name even when narrow layouts hide its text", (
 });
 
 test("layout buttons keep stable localized names when their visible labels collapse", () => {
-  for (const [locale, overview, focus] of [["en", "Overview", "Focus"], ["zh-CN", "总览", "聚焦"], ["zh-TW", "總覽", "聚焦"]]) {
+  for (const [locale, overview, focus, duel] of [["en", "Overview", "Focus", "Duel"], ["zh-CN", "总览", "聚焦", "对决"], ["zh-TW", "總覽", "聚焦", "對決"]]) {
     for (const automaticFocus of [false, true]) {
       const buttons = render({ copy: getCopy(locale), layoutMode: "focus", automaticFocus })
         .match(/<div class="mode-switch[^]*?<\/div>/)![0].match(/<button[^>]*>/g)!;
       assert.ok(buttons[0].includes(`aria-label="${overview}"`), `${locale} overview has a name independent of hidden text`);
       assert.ok(buttons[1].includes(`aria-label="${focus}"`), `${locale} automatic focus does not replace the action name`);
+      assert.ok(buttons[2].includes(`aria-label="${duel}"`), `${locale} duel has a localized name`);
       assert.ok(buttons[1].includes('aria-pressed="true"'));
       assert.ok(buttons[0].includes('aria-pressed="false"'));
+      assert.ok(buttons[2].includes('aria-pressed="false"'));
     }
+    const duelButtons = render({ copy: getCopy(locale), layoutMode: "duel" })
+      .match(/<div class="mode-switch[^]*?<\/div>/)![0].match(/<button[^>]*>/g)!;
+    assert.ok(duelButtons[2].includes('aria-pressed="true"'));
   }
 });
 

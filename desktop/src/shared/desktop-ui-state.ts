@@ -1,4 +1,4 @@
-import { SITE_KEYS, type SiteKey } from "./contracts";
+import { SITE_KEYS, type LayoutMode, type SiteKey } from "./contracts";
 import { paginateSiteKeys } from "./site-pages";
 import { parseSiteZoom, type SiteZoomPreferences } from "./site-zoom";
 
@@ -12,7 +12,7 @@ export interface DesktopBounds {
 export interface DesktopUiState {
   readonly windowBounds?: DesktopBounds;
   readonly maximized: boolean;
-  readonly layoutMode: "overview" | "focus";
+  readonly layoutMode: LayoutMode;
   readonly currentPage: number;
   readonly focusedByPage: Readonly<Record<number, SiteKey>>;
   readonly siteZoom?: SiteZoomPreferences;
@@ -115,7 +115,7 @@ export function parseDesktopUiState(
   return {
     ...(windowBounds ? { windowBounds } : {}),
     maximized: candidate.maximized === true,
-    layoutMode: candidate.layoutMode === "focus" ? "focus" : "overview",
+    layoutMode: candidate.layoutMode === "focus" ? "focus" : candidate.layoutMode === "duel" ? "duel" : "overview",
     currentPage,
     focusedByPage,
     siteZoom: parseSiteZoom(candidate.siteZoom)

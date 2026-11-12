@@ -17,6 +17,7 @@ export type CommandId =
   | "site-back"
   | "site-forward"
   | "focus-current-site"
+  | "set-layout-duel"
   | "edit-prompt" // 全局唤起只展开，不参与应用内 Alt+Q 切换。
   | "focus-prompt"
   | "find-page"
@@ -79,6 +80,7 @@ export const COMMANDS: readonly CommandDescriptor[] = Object.freeze([
   { id: "site-back", labelKey: "siteBackMenu", group: "navigate", accelerator: "Alt+Left" },
   { id: "site-forward", labelKey: "siteForwardMenu", group: "navigate", accelerator: "Alt+Right" },
   { id: "focus-current-site", labelKey: "focusCurrentSiteMenu", group: "navigate" },
+  { id: "set-layout-duel", labelKey: "duelMenu", group: "navigate", aliases: ["duel", "split", "1v1", "对决", "對決", "并排", "並排"] },
   { id: "focus-prompt", labelKey: "focusPromptMenu", group: "compose", accelerator: "Alt+Q" },
   { id: 'find-page', labelKey: 'findPage', group: 'navigate', accelerator: 'CmdOrCtrl+F' },
   { id: "open-task-setup", labelKey: "taskSetup", group: "compose", aliases: ["task", "prepare", "任务", "任務"] },

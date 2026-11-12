@@ -221,6 +221,8 @@ test("schema one preference fixture round trips and shared imports do not enqueu
 test("invalid local edits and unknown groups reject before mutating valid preferences", async () => {
   const { database, preferences } = await openPreferences();
   try {
+    preferences.set("layoutMode", "duel");
+    assert.equal(preferences.snapshot().values.layoutMode, "duel");
     preferences.set("siteZoom.kimi", 1.25);
     const before = JSON.stringify(preferences.snapshot());
     const invalid: [string, unknown][] = [

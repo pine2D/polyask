@@ -1,4 +1,4 @@
-import { SITE_KEYS, type SiteKey } from '../shared/contracts';
+import { SITE_KEYS, type LayoutMode, type SiteKey } from '../shared/contracts';
 import { parsePageIndex } from '../shared/protocol';
 import type { ViewManager } from './view-manager';
 
@@ -11,11 +11,11 @@ interface NavigationIpc {
 
 /** 页面与站点焦点操作共用外壳信任检查，聚焦不修改站点布局。 */
 export function registerWorkbenchNavigationIpc(ipcMain: NavigationIpc, manager: ViewManager,
-  trustedShell: (event: any) => boolean, saveLayout: (mode: 'overview' | 'focus') => void = () => {}): () => void {
+  trustedShell: (event: any) => boolean, saveLayout: (mode: LayoutMode) => void = () => {}): () => void {
   ipcMain.on("polyask:set-layout", (event, value: unknown) => {
     if (!trustedShell(event) || !value || typeof value !== "object") return;
     const candidate = value as { mode?: unknown; focused?: unknown };
-    if (candidate.mode !== "overview" && candidate.mode !== "focus") return;
+    if (candidate.mode !== "overview" && candidate.mode !== "duel" && candidate.mode !== "focus") return;
     if (typeof candidate.focused !== "string" || !SITE_KEYS.includes(candidate.focused as SiteKey)) return;
     if (manager.setLayout(candidate.mode, candidate.focused as SiteKey)) saveLayout(candidate.mode);
   });

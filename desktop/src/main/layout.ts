@@ -1,5 +1,6 @@
 import { MIN_SITE_COLUMN_WIDTH } from "../shared/display";
 import type {
+  LayoutMode,
   LayoutOptions,
   SiteKey,
   ViewBounds,
@@ -22,14 +23,21 @@ const GRID_TILE_MIN_WIDTH = MIN_SITE_COLUMN_WIDTH;
 const GRID_TILE_MIN_HEIGHT = 210;
 
 export function resolveLayoutMode(
-  requested: "overview" | "focus",
+  requested: LayoutMode,
   area: ViewBounds,
   gap = 4,
   count = SITE_PAGE_SIZE
-): "overview" | "focus" {
+): LayoutMode {
   if (requested === "focus") return "focus";
   const safeGap = Math.max(0, Math.floor(gap));
   const safeCount = Math.max(1, Math.min(SITE_PAGE_SIZE, Math.floor(count)));
+  if (requested === "duel") {
+    if (safeCount === 1) return area.height < GRID_TILE_MIN_HEIGHT ? "focus" : "duel";
+    const duelWidth = (area.width - safeGap) / 2;
+    return duelWidth < GRID_TILE_MIN_WIDTH || area.height < GRID_TILE_MIN_HEIGHT
+      ? "focus"
+      : "duel";
+  }
   const columns = safeCount <= 3 ? safeCount : safeCount === 4 ? 2 : 3;
   const rows = Math.ceil(safeCount / columns);
   const tileWidth = (area.width - safeGap * (columns - 1)) / columns;
@@ -37,6 +45,14 @@ export function resolveLayoutMode(
   return tileWidth < GRID_TILE_MIN_WIDTH || tileHeight < GRID_TILE_MIN_HEIGHT
     ? "focus"
     : "overview";
+}
+
+export function resolveDuelSites(keys: readonly SiteKey[], focused: SiteKey): SiteKey[] {
+  const active = keys.slice(0, SITE_PAGE_SIZE);
+  if (active.length === 0) return [];
+  const primary = active.includes(focused) ? focused : active[0];
+  const challenger = active.find((key) => key !== primary);
+  return challenger ? [primary, challenger] : [primary];
 }
 
 export function swapFocusedSite(
@@ -140,6 +156,10 @@ export function computeViewLayout(
   const active = keys.slice(0, SITE_PAGE_SIZE);
 
   if (options.mode === "overview") return overview(active, area, gap);
+  if (options.mode === "duel") {
+    const pair = resolveDuelSites(active, options.focused);
+    return grid(pair, area, pair.length, gap);
+  }
 
   const focused = active.includes(options.focused) ? options.focused : active[0];
   const secondary = active.filter((key) => key !== focused);

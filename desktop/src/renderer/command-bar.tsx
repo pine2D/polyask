@@ -1,9 +1,10 @@
 import { useRef, type ReactNode, type RefObject } from "react";
 
+import type { LayoutMode } from "../shared/contracts";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { Tier } from "../shared/protocol";
 import type { SyncStatus } from "../shared/sync";
-import { ChevronDownIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, NewSessionIcon, ScopeIcon, SendIcon, StopIcon } from "./icons";
+import { ChevronDownIcon, DuelIcon, FocusIcon, GridIcon, HealthIcon, HistoryIcon, NewSessionIcon, ScopeIcon, SendIcon, StopIcon } from "./icons";
 import { commandHint } from "./command-hint";
 import { PromptComposer } from "./prompt-composer";
 import { TierControls } from "./tier-controls";
@@ -23,7 +24,7 @@ interface CommandBarProps {
   readonly runState: RunState;
   readonly auxiliaryBusy: boolean;
   readonly automaticFocus?: boolean;
-  readonly layoutMode: "overview" | "focus";
+  readonly layoutMode: LayoutMode;
   readonly selectedCount: number;
   readonly failureCount: number;
   readonly cancelledCount: number;
@@ -52,7 +53,7 @@ interface CommandBarProps {
   readonly onRetry: () => void;
   readonly onCancel: () => void;
   readonly onTierChange: (value: Tier) => void;
-  readonly onLayoutChange: (value: "overview" | "focus") => void;
+  readonly onLayoutChange: (value: LayoutMode) => void;
   readonly onExpandedChange: (value: boolean) => void;
   readonly onPanelChange: (tab: WorkspacePanelTab | null) => void;
   readonly onShowGroupMenu: () => void;
@@ -88,9 +89,10 @@ export function CommandBar(props: CommandBarProps): React.JSX.Element {
       <div className="mode-switch priority-p0" role="group" aria-label={props.copy.layoutLabel}>
         <button type="button" aria-label={props.copy.overview} data-hint={props.copy.overview} aria-pressed={props.layoutMode === "overview"} className={props.layoutMode === "overview" ? "active" : ""} onClick={() => props.onLayoutChange("overview")}><GridIcon /><span className="priority-p1">{props.copy.overview}</span></button>
         <button type="button" aria-label={props.copy.focus} data-hint={props.automaticFocus ? props.copy.layoutAutoFocus : props.copy.focus} aria-pressed={props.layoutMode === "focus"} className={props.layoutMode === "focus" ? "active" : ""} onClick={() => props.onLayoutChange("focus")}><FocusIcon /><span className="priority-p1">{props.copy.focus}</span></button>
-        <button type="button" className="layout-toggle" aria-label={props.layoutMode === "focus" ? props.copy.overview : props.copy.focus}
-          data-hint={props.layoutMode === "focus" ? props.copy.overview : props.copy.focus} onClick={() => props.onLayoutChange(props.layoutMode === "focus" ? "overview" : "focus")}>
-          {props.layoutMode === "focus" ? <GridIcon /> : <FocusIcon />}</button>
+        <button type="button" aria-label={props.copy.duel} data-hint={props.copy.duelMenu} aria-pressed={props.layoutMode === "duel"} className={props.layoutMode === "duel" ? "active" : ""} onClick={() => props.onLayoutChange("duel")}><DuelIcon /><span className="priority-p1">{props.copy.duel}</span></button>
+        <button type="button" className="layout-toggle" aria-label={props.layoutMode !== "overview" ? props.copy.overview : props.copy.focus}
+          data-hint={props.layoutMode !== "overview" ? props.copy.overview : props.copy.focus} onClick={() => props.onLayoutChange(props.layoutMode !== "overview" ? "overview" : "focus")}>
+          {props.layoutMode !== "overview" ? <GridIcon /> : <FocusIcon />}</button>
       </div>
       {props.pageControl}
       <PromptComposer copy={props.copy} promptRef={props.promptRef} text={props.text} revision={props.draftRevision}

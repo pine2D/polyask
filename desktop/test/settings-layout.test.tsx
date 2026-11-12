@@ -23,7 +23,8 @@ test('layout starts in appearance and the sync shortcut focuses the single edito
     await h.click(h.document.querySelector<HTMLButtonElement>('[data-settings-section="sync"]')!);
     await h.click(h.document.querySelector<HTMLButtonElement>('.settings-inline-action')!);
     assert.equal(h.document.activeElement?.id, 'settings-layout-title');
-    assert.equal(h.document.querySelectorAll('[name="settings-layout-mode"]').length, 2);
+    assert.equal(h.document.querySelectorAll('[name="settings-layout-mode"]').length, 3);
+    assert.equal(radio(h.document, 'duel').checked, false);
     assert.equal(radio(h.document, 'focus').closest('[hidden],[inert]') === null, true);
     assert.equal(writes, 0, 'jumping from sync never edits accepted preferences');
   } finally { await h.close(); }

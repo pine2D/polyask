@@ -1,6 +1,6 @@
 import type { WebContentsView } from "electron";
 
-import type { SiteKey, ViewBounds, ViewPlacement } from "../shared/contracts";
+import type { LayoutMode, SiteKey, ViewBounds, ViewPlacement } from "../shared/contracts";
 import {
   WORKSPACE_FEEDBACK_HEIGHT,
   metricsForDensity,
@@ -23,14 +23,14 @@ interface WorkspaceLayoutInput {
   readonly composerExpanded: boolean;
   readonly findOpen?: boolean;
   readonly drawerOpen: boolean;
-  readonly requestedMode: "overview" | "focus";
+  readonly requestedMode: LayoutMode;
   readonly focused: SiteKey;
   readonly overviewOrder: readonly SiteKey[];
   readonly focusOrder: readonly SiteKey[];
 }
 
 interface WorkspaceLayoutResult {
-  readonly mode: "overview" | "focus";
+  readonly mode: LayoutMode;
   readonly placements: readonly ViewPlacement[];
   readonly metrics: DisplayMetrics;
 }
@@ -42,7 +42,7 @@ interface ApplyWorkspaceLayoutInput {
   readonly metrics: DisplayMetrics;
   readonly zoom: number;
   readonly display: DisplayPreferences;
-  readonly mode: "overview" | "focus";
+  readonly mode: LayoutMode;
   readonly focused: SiteKey;
 }
 
@@ -76,15 +76,15 @@ export function computeWorkspaceLayout(input: WorkspaceLayoutInput): WorkspaceLa
     baseArea,
     drawerWidthForDensity(input.density, input.drawerOpen)
   );
-  const requestedKeys = input.requestedMode === "focus" ? input.focusOrder : input.overviewOrder;
+  const requestedKeys = input.requestedMode === "overview" ? input.overviewOrder : input.focusOrder;
   const mode = resolveLayoutMode(input.requestedMode, area, metrics.viewGap, requestedKeys.length);
-  const keys = mode === "focus" ? input.focusOrder : input.overviewOrder;
+  const keys = mode === "overview" ? input.overviewOrder : input.focusOrder;
   return {
     mode,
     metrics,
     placements: computeViewLayout(keys, area, mode === "overview"
       ? { mode: "overview", gap: metrics.viewGap }
-      : { mode: "focus", focused: input.focused, gap: metrics.viewGap })
+      : { mode, focused: input.focused, gap: metrics.viewGap })
   };
 }
 

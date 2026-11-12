@@ -1,5 +1,5 @@
 import { DEFAULT_TIER_PRESETS, PRESET_KEYS, isSitePresetKey, isTierPreset, type SitePresetKey, type TierPreset } from "./tier-presets";
-import { SITE_KEYS, type SiteKey } from "./contracts";
+import { SITE_KEYS, type LayoutMode, type SiteKey } from "./contracts";
 import { DEFAULT_DISPLAY_PREFERENCES, type DisplayPreferences } from "./display";
 import { isProxyPreference } from "./proxy-preference";
 import type { SiteZoomPreferences } from "./site-zoom";
@@ -21,7 +21,7 @@ export type WorkbenchGuideState = null | { readonly version: 1; readonly disposi
 export interface PreferenceValues extends Readonly<Record<SitePresetKey, TierPreset | null>> {
   readonly completionNotifications: boolean;
   readonly display: DisplayPreferences;
-  readonly layoutMode: "overview" | "focus";
+  readonly layoutMode: LayoutMode;
   readonly siteZoom: SiteZoomPreferences;
   readonly workbenchGuide: WorkbenchGuideState;
   readonly sitePageCloseConfirm: boolean;
@@ -81,7 +81,7 @@ export function isPreferenceValue(key: PreferenceKey, value: unknown): boolean {
   if (key === "completionNotifications" || CONFIRMATION_KEYS.includes(key as ConfirmationKey)) return typeof value === "boolean";
   if (key === "density") return value === "compact" || value === "comfortable";
   if (key === "siteScale") return value === 0.9 || value === 1;
-  if (key === "layoutMode") return value === "overview" || value === "focus";
+  if (key === "layoutMode") return value === "overview" || value === "duel" || value === "focus";
   if (key === "workbenchGuide") {
     if (value === null) return true;
     if (!value || typeof value !== "object" || Array.isArray(value)) return false;

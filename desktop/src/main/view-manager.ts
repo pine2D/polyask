@@ -18,7 +18,7 @@ import {
   type WebContents
 } from "electron";
 
-import type { SiteDefinition, SiteKey, ViewPlacement } from "../shared/contracts";
+import type { LayoutMode, SiteDefinition, SiteKey, ViewPlacement } from "../shared/contracts";
 import { captureSiteFocus, type DesktopUiState } from "../shared/desktop-ui-state";
 import { normalizeSelection } from "../shared/workspace";
 import {
@@ -51,9 +51,7 @@ import {
   SITE_PARTITION,
   type DiagnosticSiteInput
 } from "./diagnostics";
-import {
-  swapFocusedSite
-} from "./layout";
+import { resolveDuelSites, swapFocusedSite } from "./layout";
 import { GenerationMonitor, GENERATION_MISS_LIMIT } from "./generation-monitor";
 import { clearProbeTracking, generationObservationStatus, scheduleGenerationProbe } from "./generation-probe-scheduler";
 import { navigationDisposition } from "./navigation";
@@ -109,8 +107,8 @@ export class ViewManager {
   private readonly generationDeadlines = new Map<SiteKey, number>();
   private readonly generationObserved = new Set<SiteKey>();
   private readonly generationMisses = new Map<SiteKey, number>();
-  private mode: "overview" | "focus" = "overview";
-  private renderedMode: "overview" | "focus" = "overview";
+  private mode: LayoutMode = "overview";
+  private renderedMode: LayoutMode = "overview";
   private focused: SiteKey = "claude";
   private selected: SiteKey[] = SITES.map((site) => site.key);
   private page = 0;
@@ -184,7 +182,7 @@ export class ViewManager {
   getLayout(): LayoutState {
     return {
       mode: this.renderedMode,
-      automaticFocus: this.mode === "overview" && this.renderedMode === "focus",
+      automaticFocus: this.mode !== "focus" && this.renderedMode === "focus",
       focused: this.focused,
       page: this.page,
       pageCount: this.pageCount,
@@ -255,13 +253,13 @@ export class ViewManager {
     this.layout();
   }
 
-  setLayout(mode: "overview" | "focus", requestedFocus: SiteKey = this.focused, activate = true): boolean {
-    if (mode === "focus" && !this.selected.includes(requestedFocus)) return false;
+  setLayout(mode: LayoutMode, requestedFocus: SiteKey = this.focused, activate = true): boolean {
+    if (mode !== "overview" && !this.selected.includes(requestedFocus)) return false;
     const selectedIndex = this.selected.indexOf(requestedFocus);
     if (selectedIndex >= 0) this.page = resolveSitePageIndex(this.selected, requestedFocus);
     const current = resolveSitePage(this.selected, this.page);
     const focused = resolveFocusedSite(current.keys, requestedFocus, this.focusedByPage.get(current.page));
-    if (activate && mode === "focus" && current.keys.includes(focused)) {
+    if (activate && mode !== "overview" && current.keys.includes(focused)) {
       this.focusOrder = swapFocusedSite(this.focusOrder, this.focused, focused);
       this.focusedByPage.set(current.page, focused);
     }
@@ -270,7 +268,7 @@ export class ViewManager {
     this.reconcileViews();
     this.clearVisibleUnread();
     this.layout();
-    if (activate && this.surface === 'sites' && mode === "focus" && current.keys.includes(focused)) {
+    if (activate && this.surface === 'sites' && mode !== "overview" && current.keys.includes(focused)) {
       this.focusCurrentSite();
     }
     return true;
@@ -300,7 +298,7 @@ export class ViewManager {
     if (!keys.length) return;
     const current = keys.indexOf(this.focused);
     const next = (current + offset + keys.length) % keys.length;
-    this.setLayout("focus", keys[next]);
+    this.setLayout(this.mode === "duel" ? "duel" : "focus", keys[next]);
   }
 
   pageRelative(offset: -1 | 1): void {
@@ -594,12 +592,12 @@ export class ViewManager {
     // 但后台视图也必须落格：视图树里尺寸为 0 的视图，页面 innerWidth/innerHeight 就是 0。
     // 用与当前页第一格**完全相同**的矩形（而不是窗口外偏移——移出边界是否触发遮挡剔除未实测），
     // 配合 reconcileViews 的层序，它们被第一格完全盖住，不漏出也不抢事件。
+    const placed = new Set(this.placements.map((item) => item.key));
     const cover = next.placements[0];
     const background = cover
-      ? this.selected
-        .filter((site) => !current.keys.includes(site))
-        .map((key) => ({ key, bounds: cover.bounds }))
+      ? this.selected.filter((site) => !placed.has(site)).map((key) => ({ key, bounds: cover.bounds }))
       : [];
+    if (this.surface === "sites") for (const item of this.placements) this.attach(item.key);
     applyWorkspaceLayout({
       views: this.views,
       placements: [...background, ...this.placements],
@@ -660,7 +658,8 @@ export class ViewManager {
   }
 
   private visibleSites(): readonly SiteKey[] {
-    return resolveSitePage(this.selected, this.page).keys;
+    const keys = resolveSitePage(this.selected, this.page).keys;
+    return this.mode === "duel" && this.renderedMode !== "focus" ? resolveDuelSites(this.focusOrder.filter((s) => keys.includes(s)), this.focused) : keys;
   }
 
   // 挂载的是**全部已勾选站点**（不只当前页）：未挂进视图树的 WebContentsView 视口恒 0×0，

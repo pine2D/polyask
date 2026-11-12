@@ -112,8 +112,8 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     await paint();
     assert.equal(await run(`(() => {const card=document.querySelector('#settings-layout-title').closest('section');
       const radios=[...document.querySelectorAll('input[name=settings-layout-mode]')];
-      return radios.length===2 && radios.every(node=>node.closest('[data-settings-category]')?.dataset.settingsCategory==='appearance')
-        && radios.map(node=>node.value).sort().join(',')==='focus,overview' && card.getClientRects().length>0
+      return radios.length===3 && radios.every(node=>node.closest('[data-settings-category]')?.dataset.settingsCategory==='appearance')
+        && radios.map(node=>node.value).sort().join(',')==='duel,focus,overview' && card.getClientRects().length>0
         && card.scrollWidth<=card.clientWidth+1
         && document.querySelector('[data-preference-group=layout] [data-preference-current]').textContent
           ===document.querySelector('input[name=settings-layout-mode]:checked+span').textContent;})()`), true,

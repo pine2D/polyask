@@ -1,3 +1,5 @@
+import type { LayoutMode } from "./contracts";
+
 export const MIN_SITE_COLUMN_WIDTH = 380;
 export const WORKSPACE_FEEDBACK_HEIGHT = 32;
 
@@ -49,7 +51,7 @@ export function shellHeightForComposer(density: Density, expanded: boolean, layo
 
 export function zoomForSite(
   preferences: DisplayPreferences,
-  mode: "overview" | "focus",
+  mode: LayoutMode,
   isFocused: boolean
 ): SiteScale {
   if (preferences.siteScale === 1 || (mode === "focus" && isFocused)) return 1;

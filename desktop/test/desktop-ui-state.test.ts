@@ -19,6 +19,7 @@ test("restored UI state centers off-screen bounds and resets a stale page", () =
   assert.equal(state.currentPage, 0);
   assert.equal(state.focusedByPage[0], "claude");
   assert.equal(state.layoutMode, "focus");
+  assert.equal(parseDesktopUiState({ layoutMode: "duel" }, display, selected).layoutMode, "duel");
 });
 
 test("restored bounds and focus are clamped to current displays and selection", () => {
