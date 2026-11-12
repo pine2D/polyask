@@ -14,7 +14,7 @@ export function ArchiveQuestionPrompt({ text, copy, expanded, overflow, onExpand
     const measure = () => {
       if (!node.clientHeight) return;
       const line = parseFloat(window.getComputedStyle(node).lineHeight);
-      const next = node.scrollHeight > (expanded ? line * 3 : node.clientHeight) + 1;
+      const next = node.scrollHeight > (expanded ? line * 2 : node.clientHeight) + 1;
       if (!next && !expanded && control.current === node.ownerDocument.activeElement) node.focus({ preventScroll: true });
       onOverflowChange(next);
     };

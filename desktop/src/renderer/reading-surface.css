@@ -1,7 +1,7 @@
 /* 历史、采集与比较共用的阅读尺度；页面只负责各自的入口和数据。 */
 .reading-page {
-  --reading-title-size: 20px;
-  width: 100%; max-width: var(--reading-page-width); margin: 0 auto; padding: var(--space-5) var(--reading-page-inset) var(--space-16);
+  --reading-title-size: 18px;
+  width: 100%; max-width: var(--reading-page-width); margin: 0 auto; padding: var(--space-4) var(--reading-page-inset) var(--space-16);
   color: var(--text); font-size: var(--font-body);
 }
 .reading-page .archive-question-prompt h1, .reading-page .question-prompt h2 {
@@ -23,8 +23,15 @@
 }
 .reading-page .reading-source-list > :is(a, button):hover { color: var(--text); background: var(--hover-soft); }
 .reading-page .reading-source-list > :is(a, button):focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.reading-page .archive-answer-nav a[data-best=true] { border-color: transparent; }
-.reading-page .archive-answer-nav a[data-best=true]:not([aria-current=location]) { background: transparent; }
+.reading-page .archive-answer-nav a[data-best=true] { border-color: color-mix(in srgb, var(--accent) 42%, var(--border)); }
+.reading-page .archive-answer-nav a[data-best=true]:not([aria-current=location]) { color: var(--accent); background: color-mix(in srgb, var(--accent-soft) 55%, var(--panel)); }
+.archive-answer-length, .archive-heading-length { display: inline-flex; align-items: center; flex-shrink: 0; font-family: var(--font-ui); font-size: 10px; line-height: 1.2; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--muted); }
+.archive-answer-length::after, .archive-heading-length::after { content: attr(data-length); }
+.archive-heading-length { padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel-muted); }
+.question-site-tabs .site-glyph { width: 13px; height: 13px; }
+@media (max-width: 960px) {
+  .question-site-tabs .archive-answer-length { display: none; }
+}
 .reading-action {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 28px; min-height: 28px;
   padding: 3px 8px; border: 1px solid var(--border); border-radius: var(--radius-control);

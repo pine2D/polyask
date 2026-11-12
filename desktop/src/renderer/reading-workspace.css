@@ -25,8 +25,8 @@
 .question-history .question-card-actions { position: absolute; right: 4px; bottom: 4px; padding: 0; }
 .question-history .question-card-actions summary { width: 28px; height: 28px; display: grid; place-items: center; padding: 0; font-weight: 500; color: var(--muted); }
 .question-history .question-state-summary { flex: 1; max-width: none; }
-.question-history .question-reader-intro { margin-bottom: 14px; }
-.question-record-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 20px; margin-top: 10px; }
+.question-history .question-reader-intro { margin-bottom: 10px; }
+.question-record-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 20px; margin-top: 6px; }
 .question-record-actions { min-width: 0; }
 .question-record-actions :is(.library-menu-trigger,.question-icon-action) { display: grid; place-items: center; width: 32px; }
 .question-record-actions .question-prompt-actions { margin: 0; gap: 4px; }
@@ -44,8 +44,8 @@
 .library .library-content-row:has([aria-current=true]) { border-color: transparent; }
 .library .library-content-row:has([aria-current=true]) .library-item-title, .question-history .question-card[data-current=true] .question-title { font-weight: 600; }
 .library .library-list-summary :is(.library-filter-toggle,.library-multi-toggle) { border-color: transparent; background: transparent; }
-.library .archive-detail .archive-metadata { border: 0; margin: 8px 0 0; padding: 4px 0; }
-.library .library-reading-navigation { margin-top: 10px; }
+.library .archive-detail .archive-metadata { border: 0; margin: 4px 0 0; padding: 2px 0; }
+.library .library-reading-navigation { margin-top: 6px; }
 .library .library-record-actions button, .library .library-record-actions button:first-child, .library .archive-detail-actions button { border-color: transparent; background: transparent; font-size: 12px; min-height: 30px; padding: 4px 8px; }
 .library .archive-answer > header button { border-color: transparent; background: transparent; color: var(--muted); }
 .library .archive-answer > header button[aria-pressed=true] { color: var(--accent); background: var(--accent-soft); }

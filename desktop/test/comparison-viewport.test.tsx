@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { act } from 'react';
 import { comparisonCopy as copy, comparisonMount } from './ui/comparison-dom';
 import { readingGeometry } from './ui/reading-geometry';
 
@@ -42,5 +43,43 @@ test('manual comparison has a direct entry that opens and focuses the existing w
     assert.equal(h.document.querySelector<HTMLDetailsElement>('.manual-comparison')!.open, true, 'returning restores the active worksheet');
     assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-judgment]')?.value, 'Keep my judgment');
     assert.equal(h.writes, 0); assert.equal(h.decisionWrites, 0);
+  } finally { await h.close(); }
+});
+
+test('split evidence dock keeps both answer columns visible alongside the worksheet and auto-docks on wide excerpt selection', async () => {
+  const h = await comparisonMount({ detailWidth: 1280 });
+  try {
+    const compare = () => h.document.querySelector<HTMLElement>('.archive-compare')!;
+    const dockToggle = h.document.querySelector<HTMLButtonElement>('.comparison-dock-toggle')!;
+    const grid = h.document.querySelector<HTMLElement>('.archive-compare-grid')!;
+    const details = h.document.querySelector<HTMLDetailsElement>('.manual-comparison')!;
+    assert.equal(dockToggle.getAttribute('aria-pressed'), 'false');
+    await h.click(dockToggle);
+    assert.equal(dockToggle.getAttribute('aria-pressed'), 'true');
+    assert.equal(compare().getAttribute('data-evidence-dock'), 'true');
+    assert.equal(details.open, true);
+    assert.equal(grid.hidden, false, 'docked mode keeps both answer columns visible next to the evidence dock');
+    await h.click(dockToggle);
+    assert.equal(dockToggle.getAttribute('aria-pressed'), 'false');
+    assert.equal(details.open, false);
+    assert.equal(grid.hidden, false);
+
+    // Wide-screen excerpt selection auto-opens the split evidence dock without hiding the answers.
+    await h.click(h.document.querySelector<HTMLButtonElement>('.archive-compare-column .answer-excerpt-open')!);
+    const textarea = h.document.querySelector<HTMLTextAreaElement>('[name=answer-excerpt-original]')!;
+    const quote = 'Claude paragraph 2.';
+    await act(async () => {
+      textarea.focus();
+      const first = textarea.value.indexOf(quote);
+      textarea.setSelectionRange(first, first + quote.length);
+      h.document.dispatchEvent(new h.window.Event('selectionchange'));
+    });
+    await h.click(h.button('Use this excerpt')!);
+    await h.click(h.button('Add to manual comparison')!);
+    assert.equal(compare().getAttribute('data-evidence-dock'), 'true');
+    assert.equal(details.open, true);
+    assert.equal(grid.hidden, false);
+    assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=comparison-excerpt-0]')?.value, quote);
+    assert.equal(h.writes, 0);
   } finally { await h.close(); }
 });

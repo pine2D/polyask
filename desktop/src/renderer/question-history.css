@@ -36,8 +36,8 @@
 .question-legacy { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; color: var(--muted); font-size: 12px; }
 .question-legacy > button { display: block; width: 100%; margin: 6px 0; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .question-reader { overflow: auto; overscroll-behavior: contain; padding: 0; }
-.question-reader-intro h2 { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 19px; line-height: 1.6; font-weight: 600; }
-.question-prompt h2.is-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.question-reader-intro h2 { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 18px; line-height: 1.5; font-weight: 600; }
+.question-prompt h2.is-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 .question-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0; }
 .question-actions .question-icon-action { width: 32px; padding: 4px; display: grid; place-items: center; }
 .question-reader-actions { align-items: center; gap: 12px 24px; }

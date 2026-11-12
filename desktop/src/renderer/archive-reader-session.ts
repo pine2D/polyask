@@ -9,6 +9,7 @@ export interface ArchiveReaderState {
   /** 仅属阅读会话，保证综合编辑返回时原入口仍可见。 */
   readonly comparisonContextExpanded: boolean;
   readonly manualComparisonOpen: boolean;
+  readonly evidenceDockOpen?: boolean;
   /** 重挂详情时保留控件占位，避免浏览器滚动锚定因重新插入展开按钮而移动正文。 */
   readonly questionOverflow: boolean | null;
   readonly leftHost: string;

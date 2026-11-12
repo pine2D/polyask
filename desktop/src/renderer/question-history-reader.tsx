@@ -15,6 +15,7 @@ import { answerSourceId } from '../shared/answer-source';
 import { dateTimeAttribute, formatDateTime } from '../shared/format';
 import { ReadingNavigation } from './reading-controls';
 import { resolveLocale } from '../shared/locale';
+import { SiteGlyph, compactCharCount } from './ui-primitives';
 
 export function QuestionHistoryReader({ detail, view, session: suppliedSession, copy, sites, busy, onLoadAnswer, locale = 'en',
   onRestore, onReask, onDelete, onAnnounce, onOrganize, onExportAnswer, onExportWhole, imageSyncEnabled, onFavorite }: {
@@ -65,8 +66,16 @@ export function QuestionHistoryReader({ detail, view, session: suppliedSession, 
     <ReadingNavigation activeSource={site} className="question-reading-navigation">
     <div className="question-reader-switches">
     <div className="question-site-tabs reading-source-list" role="group" aria-label={copy.sitesCompact}>
-      {detail.question.sites.map(key => <button type="button" key={key} aria-pressed={site === key}
-        onClick={() => choose(key, session.answer(detail, key))}>{sites.find(s => s.key === key)?.label ?? key}</button>)}
+      {detail.question.sites.map(key => {
+        const latestForSite = detail.answers.filter(a => a.site === key).at(-1);
+        const lengthBadge = compactCharCount(latestForSite?.answerMarkdown);
+        return <button type="button" key={key} aria-pressed={site === key}
+          onClick={() => choose(key, session.answer(detail, key))}>
+          <SiteGlyph site={key} />
+          <span>{sites.find(s => s.key === key)?.label ?? key}</span>
+          {lengthBadge ? <span className="archive-answer-length" data-length={lengthBadge} aria-hidden="true" /> : null}
+        </button>;
+      })}
     </div>
     <label className="question-attempt-selector"><span className="sr-only">{copy.questionCopies}</span>
       <select value={answer?.id ?? ''} onChange={e => choose(site, e.target.value)}>

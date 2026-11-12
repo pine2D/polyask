@@ -23,6 +23,7 @@ import { useArchiveSourceLocation } from './archive-source-location';
 import { ArchiveQuestionPrompt } from './archive-question-prompt';
 import { useReadingLayout } from './reading-layout';
 import { ReadingNavigation } from './reading-controls';
+import { SiteGlyph, compactCharCount, siteKeyFromSource } from './ui-primitives';
 
 interface ArchiveDetailProps {
   readonly recordActions?: React.ReactNode;
@@ -133,10 +134,15 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
         {record.results.map((result, index) => {
           const best = record.winnerHost === result.host;
           const label = `${answerSourceId(index)} ${result.label}`;
+          const siteKey = siteKeyFromSource(result.host, result.label);
+          const lengthBadge = compactCharCount(result.text);
           return <a key={`${result.host}:${index}`} href={`#archive-answer-${index}`} data-best={best || undefined}
             onClick={event => revealSource(event, index)}
             aria-current={currentSource === index ? 'location' : undefined}
-            aria-label={best ? `${label} · ${copy.archiveBestAnswer}` : undefined}>{label}
+            aria-label={best ? `${label} · ${copy.archiveBestAnswer}` : undefined}>
+            {siteKey ? <i className="site-dot-mark" data-site-glyph={siteKey} aria-hidden="true" /> : null}
+            <span>{label}</span>
+            {lengthBadge ? <span className="archive-answer-length" data-length={lengthBadge} aria-hidden="true" /> : null}
             <span className="archive-answer-best" aria-hidden="true">{best ? <StarIcon /> : null}</span></a>;
         })}
       </nav> : null}
@@ -148,10 +154,12 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           const successful = !!result.text?.trim();
           const best = record.winnerHost === result.host;
           const tier = result.state === "think" ? ` · ${copy.think}` : result.state === "fast" ? ` · ${copy.fast}` : "";
+          const siteKey = siteKeyFromSource(result.host, result.label);
+          const lengthBadge = compactCharCount(result.text);
           return (
             <section className="archive-answer" id={`archive-answer-${index}`} key={`${result.host}:${index}`}>
               <header>
-                <h2>{answerSourceId(index)} {result.label}{tier}</h2>
+                <h2 className="archive-answer-heading">{siteKey ? <SiteGlyph site={siteKey} className="archive-answer-glyph" /> : null}<span>{answerSourceId(index)} {result.label}{tier}</span>{lengthBadge ? <span className="archive-heading-length" data-length={lengthBadge} aria-hidden="true" /> : null}</h2>
                 {successful ? <div className="archive-answer-actions">
                   {props.onExportAnswer && <button type="button" data-action="archive-answer-export" disabled={props.busy} onClick={() => props.onExportAnswer?.(index)}>{copy.markdownSingle}</button>}
                   <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} disabled={props.busy} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button>

@@ -1,6 +1,7 @@
 export const COMPARISON_COPY = {
   en: {
     comparisonReturnAnswers: 'Back to answers',
+    comparisonDockOpen: 'Split evidence dock', comparisonDockClose: 'Close evidence dock',
     comparisonExpand: 'Expand comparison', comparisonBrowse: 'Return to browsing',
     comparisonContext: 'Question and record details', manualClassify: 'Include this category',
     synthesisNewConversation: 'A new conversation will open at the selected site.',
@@ -28,6 +29,7 @@ export const COMPARISON_COPY = {
   },
   'zh-CN': {
     comparisonReturnAnswers: '返回回答',
+    comparisonDockOpen: '同屏证据槽', comparisonDockClose: '收起证据槽',
     comparisonExpand: '展开比较', comparisonBrowse: '返回浏览',
     comparisonContext: '问题与记录信息', manualClassify: '归入此分类',
     synthesisNewConversation: '将在所选站点打开新会话。',
@@ -55,6 +57,7 @@ export const COMPARISON_COPY = {
   },
   'zh-TW': {
     comparisonReturnAnswers: '返回回答',
+    comparisonDockOpen: '同螢幕證據槽', comparisonDockClose: '收起證據槽',
     comparisonExpand: '展開比較', comparisonBrowse: '返回瀏覽',
     comparisonContext: '問題與記錄資訊', manualClassify: '歸入此分類',
     synthesisNewConversation: '將在所選站點開啟新對話。',

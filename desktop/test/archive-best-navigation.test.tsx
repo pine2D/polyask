@@ -43,6 +43,8 @@ for (const locale of ['en', 'zh-CN', 'zh-TW']) {
         assert.equal(link.getAttribute('href'), `#archive-answer-${i}`);
         assert.equal(link.hasAttribute('aria-current'), false);
         assert.equal(!!link.querySelector('svg'), i === index);
+        assert.equal(link.querySelector('.site-dot-mark')?.getAttribute('data-site-glyph'), i === 0 ? 'claude' : 'chatgpt');
+        assert.equal(link.querySelector('.archive-answer-length')?.getAttribute('data-length'), i === 0 ? '12' : '13');
         if (i === index) {
           assert.equal(link.getAttribute('aria-label'), `[S${i + 1}] ${records[0].results[i].label} · ${copy.archiveBestAnswer}`);
           assert.equal(link.querySelector('svg')?.getAttribute('aria-hidden'), 'true');
