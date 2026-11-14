@@ -3,11 +3,28 @@ import { app, dialog } from "electron";
 import { getCopy } from "../shared/copy";
 import type { DesktopDistribution } from "../shared/runtime";
 
+export function formatPortableDataConflict(
+  copy: Pick<ReturnType<typeof getCopy>, "portableDataConflictTitle" | "portableDataConflictMessage">,
+  dataDirectoryName?: string
+): [string, string] {
+  if (!dataDirectoryName || dataDirectoryName === "PolyAsk Data") {
+    return [copy.portableDataConflictTitle, copy.portableDataConflictMessage];
+  }
+  return [
+    copy.portableDataConflictTitle.replaceAll("PolyAsk Data", dataDirectoryName),
+    copy.portableDataConflictMessage.replaceAll("PolyAsk Data", dataDirectoryName)
+  ];
+}
+
 /**
  * 启动失败的终局：弹本地化错误框后退出。从 main/index.ts 原样迁出（给代理启动接线腾行数，spec §3.3）。
  * 弹框本身失败也必须退出——finally 里的 app.quit() 不能被任何异常跳过。
  */
-export function showStartupFailure(error: unknown, distribution: DesktopDistribution): void {
+export function showStartupFailure(
+  error: unknown,
+  distribution: DesktopDistribution,
+  dataDirectoryName?: string
+): void {
   try {
     try {
       console.error("PolyAsk startup failed", error);
@@ -22,7 +39,7 @@ export function showStartupFailure(error: unknown, distribution: DesktopDistribu
     const failure = code === "portable_import_failed"
       ? [copy.portableImportFailedTitle, copy.portableImportFailedMessage]
       : code === "portable_data_unrecognized"
-        ? [copy.portableDataConflictTitle, copy.portableDataConflictMessage]
+        ? formatPortableDataConflict(copy, dataDirectoryName)
         : portableStorageFailed
           ? [copy.portableStorageFailedTitle, copy.portableStorageFailedMessage]
           : [copy.startupFailedTitle, copy.startupFailedMessage];

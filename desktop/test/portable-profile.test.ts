@@ -10,6 +10,7 @@ import {
   hasImportableLegacyData,
   initializePortableData,
   isPortableDataInitialized,
+  preparePortableBootstrap,
   resolveRuntimeProfile
 } from "../src/main/portable-profile";
 
@@ -376,4 +377,117 @@ test("portable marker parser rejects path traversal, invalid formats, and previe
   ]) {
     assert.throws(() => resolveRuntimeProfile({ ...base, readMarker: () => invalid }), /portable_data_unrecognized/);
   }
+});
+
+test("Windows Chromium startup caches created after pre-setPath bootstrap never trip unrecognized-data errors", async () => {
+  const root = await mkdtemp(join(tmpdir(), "polyask-win-chromium-bootstrap-"));
+
+  // 1. Packaged Preview first launch: preparePortableBootstrap runs before setPath, then Chromium writes caches
+  const previewProfile = {
+    distribution: "portable",
+    version: "1.34.0",
+    preview: true,
+    portableRoot: root,
+    userDataPath: join(root, "Preview Data")
+  } as const;
+  const previewNonce = preparePortableBootstrap(previewProfile);
+  assert.ok(previewNonce);
+  await mkdir(join(previewProfile.userDataPath, "GPUPersistentCache", "DawnGraphiteCache"), { recursive: true });
+  await mkdir(join(previewProfile.userDataPath, "GrShaderCache"), { recursive: true });
+  await mkdir(join(previewProfile.userDataPath, "ShaderCache"), { recursive: true });
+  await writeFile(join(previewProfile.userDataPath, "Local State"), "{\"os_crypt\":{}}");
+  assert.equal(await initializePortableData(previewProfile, async () => false), "fresh");
+  assert.equal(isPortableDataInitialized(previewProfile), true);
+
+  // 2. Formal Portable first launch + staged import with Windows Chromium GPU caches
+  const legacyDir = join(root, "Roaming", "PolyAsk");
+  const portableDir = join(root, "PolyAsk Data");
+  await mkdir(legacyDir, { recursive: true });
+  await writeFile(join(legacyDir, "polyask.sqlite"), "formal-db");
+  const portableProfile = {
+    distribution: "portable",
+    version: "1.34.0",
+    portableRoot: root,
+    userDataPath: portableDir,
+    legacyUserDataPath: legacyDir
+  } as const;
+  const portableNonce = preparePortableBootstrap(portableProfile);
+  assert.ok(portableNonce);
+  await mkdir(join(portableDir, "GPUPersistentCache"), { recursive: true });
+  await mkdir(join(portableDir, "GrShaderCache"), { recursive: true });
+  await mkdir(join(portableDir, "ShaderCache"), { recursive: true });
+  await writeFile(join(portableDir, "Local State"), "bootstrap-local-state");
+  assert.equal(await initializePortableData(portableProfile, async () => true), "import_staged");
+  assert.equal(finalizePortableDataImport(portableProfile), true);
+  assert.equal(await readFile(join(portableDir, "polyask.sqlite"), "utf8"), "formal-db");
+});
+
+test("uninitialized Preview Data with only Chromium startup files recovers cleanly while user files still block", async () => {
+  const root = await mkdtemp(join(tmpdir(), "polyask-preview-recovery-"));
+  const previewData = join(root, "Preview Data");
+  await mkdir(join(previewData, "GPUPersistentCache", "DawnGraphiteCache"), { recursive: true });
+  await mkdir(join(previewData, "GrShaderCache"), { recursive: true });
+  await mkdir(join(previewData, "ShaderCache"), { recursive: true });
+  await writeFile(join(previewData, "Local State"), "{}");
+
+  const previewProfile = {
+    distribution: "portable",
+    version: "1.34.0",
+    preview: true,
+    portableRoot: root,
+    userDataPath: previewData
+  } as const;
+
+  assert.ok(preparePortableBootstrap(previewProfile));
+  assert.equal(await initializePortableData(previewProfile, async () => false), "fresh");
+  assert.equal(isPortableDataInitialized(previewProfile), true);
+
+  // Unknown user file in uninitialized Preview Data or Formal Portable still fails closed before setPath
+  const conflictDir = join(root, "Conflict Preview Data");
+  await mkdir(conflictDir, { recursive: true });
+  await writeFile(join(conflictDir, "notes.txt"), "important");
+  assert.throws(() => preparePortableBootstrap({
+    ...previewProfile,
+    userDataPath: conflictDir
+  }), /portable_data_unrecognized/);
+
+  // Formal portable without bootstrap marker still rejects unmarked Local State before setPath
+  const unmarkedFormal = join(root, "Unmarked PolyAsk Data");
+  await mkdir(unmarkedFormal, { recursive: true });
+  await writeFile(join(unmarkedFormal, "Local State"), "preexisting");
+  assert.throws(() => preparePortableBootstrap({
+    distribution: "portable",
+    version: "1.34.0",
+    portableRoot: root,
+    userDataPath: unmarkedFormal,
+    legacyUserDataPath: join(root, "legacy")
+  }), /portable_data_unrecognized/);
+
+  // Session/cookie directories (Network, Local Storage, Preferences) or mismatched file/dir types still fail closed
+  const sessionPreview = join(root, "Session Preview Data");
+  await mkdir(join(sessionPreview, "Network"), { recursive: true });
+  await writeFile(join(sessionPreview, "Network", "Cookies"), "real-session");
+  assert.throws(() => preparePortableBootstrap({ ...previewProfile, userDataPath: sessionPreview }), /portable_data_unrecognized/);
+
+  const wrongTypePreview = join(root, "Wrong Type Preview Data");
+  await mkdir(join(wrongTypePreview, "Local State"), { recursive: true });
+  assert.throws(() => preparePortableBootstrap({ ...previewProfile, userDataPath: wrongTypePreview }), /portable_data_unrecognized/);
+
+  const stagedSessionRoot = await mkdtemp(join(tmpdir(), "polyask-staged-session-"));
+  const stagedLegacy = join(stagedSessionRoot, "legacy");
+  const stagedTarget = join(stagedSessionRoot, "PolyAsk Data");
+  await mkdir(stagedLegacy, { recursive: true });
+  await writeFile(join(stagedLegacy, "polyask.sqlite"), "legacy-db");
+  const stagedProfile = {
+    distribution: "portable",
+    version: "1.34.0",
+    portableRoot: stagedSessionRoot,
+    userDataPath: stagedTarget,
+    legacyUserDataPath: stagedLegacy
+  } as const;
+  assert.equal(await initializePortableData(stagedProfile, async () => true), "import_staged");
+  await mkdir(join(stagedTarget, "Network"), { recursive: true });
+  await writeFile(join(stagedTarget, "Network", "Cookies"), "do-not-delete");
+  assert.throws(() => finalizePortableDataImport(stagedProfile), /portable_data_unrecognized/);
+  assert.equal(await readFile(join(stagedTarget, "Network", "Cookies"), "utf8"), "do-not-delete");
 });

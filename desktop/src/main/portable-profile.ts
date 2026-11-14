@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readdirSync, readFileSync, renameSync, rmSync, statSync } from "node:fs";
+import { lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 
@@ -34,6 +34,20 @@ const DEFAULT_PORTABLE_DATA_DIR = "PolyAsk Data";
 const DEFAULT_PREVIEW_DATA_DIR = "Preview Data";
 const SAFE_DATA_DIR_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$/;
 const LEGACY_DATA_ENTRIES = ["polyask.sqlite", "Local State", "Partitions", "Default"] as const;
+const MAX_BOOTSTRAP_LOCAL_STATE_BYTES = 64 * 1024;
+const CHROMIUM_EPHEMERAL_DIRS = new Set([
+  "Crashpad",
+  "GPUPersistentCache",
+  "GPUCache",
+  "GrShaderCache",
+  "ShaderCache",
+  "GraphiteDawnCache",
+  "DawnCache",
+  "DawnWebGPUCache",
+  "DawnGraphiteCache",
+  "Code Cache",
+  "blob_storage"
+]);
 type PathExists = (path: string) => boolean;
 
 export function resolveRuntimeProfile(input: ResolveRuntimeProfileInput): RuntimeProfile {
@@ -67,6 +81,27 @@ export function isPortableDataInitialized(
   exists: PathExists = markerExists
 ): boolean {
   return profile.distribution === "portable" && exists(join(profile.userDataPath, DATA_MARKER));
+}
+
+export function preparePortableBootstrap(profile: RuntimeProfile): string | null {
+  if (profile.distribution !== "portable" || isPortableDataInitialized(profile)) return null;
+  const marker = join(profile.userDataPath, BOOTSTRAP_MARKER);
+  if (pathExists(profile.userDataPath)) {
+    if (!statSync(profile.userDataPath).isDirectory()) throw new Error("portable_data_unrecognized");
+    const existing = readBootstrap(marker);
+    const entries = readdirSync(profile.userDataPath);
+    const allowChromiumRuntime = Boolean(existing || profile.preview);
+    const unknown = entries.filter((entry) => !isAllowedRuntimeEntry(profile.userDataPath, entry, allowChromiumRuntime));
+    if (unknown.length || (existing && !entries.includes(BOOTSTRAP_MARKER))) {
+      throw new Error("portable_data_unrecognized");
+    }
+    if (existing) return existing;
+  } else {
+    mkdirSync(profile.userDataPath, { recursive: true });
+  }
+  const bootstrap = randomUUID();
+  writeFileSync(marker, `${bootstrap}\n`);
+  return bootstrap;
 }
 
 export function hasImportableLegacyData(
@@ -106,7 +141,7 @@ export async function initializePortableData(
   if (profile.preview) {
     await mkdir(profile.userDataPath, { recursive: true });
     if (await markerFileExists(join(profile.userDataPath, DATA_MARKER))) return "ready";
-    await ensureBootstrapDirectory(profile.userDataPath);
+    await ensureBootstrapDirectory(profile.userDataPath, true);
     await writeFile(join(profile.userDataPath, DATA_MARKER), "1\n");
     await rm(join(profile.userDataPath, BOOTSTRAP_MARKER), { force: true });
     return "fresh";
@@ -166,7 +201,7 @@ export function finalizePortableDataImport(profile: RuntimeProfile): boolean {
       const stagingBootstrap = readBootstrap(join(staging, BOOTSTRAP_MARKER));
       const entries = readdirSync(profile.userDataPath);
       if (!targetBootstrap || targetBootstrap !== stagingBootstrap
-        || entries.some((entry) => !isImportFinalizationEntry(entry))) {
+        || entries.some((entry) => !isAllowedRuntimeEntry(profile.userDataPath, entry, true))) {
         throw new Error("portable_data_unrecognized");
       }
     }
@@ -179,11 +214,12 @@ export function finalizePortableDataImport(profile: RuntimeProfile): boolean {
   }
 }
 
-async function ensureBootstrapDirectory(path: string): Promise<string> {
+async function ensureBootstrapDirectory(path: string, preview = false): Promise<string> {
   const marker = join(path, BOOTSTRAP_MARKER);
   const existing = await readBootstrapAsync(marker);
   const entries = await readdir(path);
-  const unknown = entries.filter((entry) => !isBootstrapRuntimeEntry(entry));
+  const allowChromiumRuntime = Boolean(existing || preview);
+  const unknown = entries.filter((entry) => !isAllowedRuntimeEntry(path, entry, allowChromiumRuntime));
   if (unknown.length || (existing && !entries.includes(BOOTSTRAP_MARKER))) {
     throw new Error("portable_data_unrecognized");
   }
@@ -193,13 +229,22 @@ async function ensureBootstrapDirectory(path: string): Promise<string> {
   return bootstrap;
 }
 
-function isBootstrapRuntimeEntry(entry: string): boolean {
-  return entry === BOOTSTRAP_MARKER || entry === "Crashpad"
-    || entry === "lockfile" || entry.startsWith("Singleton");
-}
-
-function isImportFinalizationEntry(entry: string): boolean {
-  return entry === "Local State" || isBootstrapRuntimeEntry(entry);
+function isAllowedRuntimeEntry(baseDir: string, entry: string, allowChromiumRuntime: boolean): boolean {
+  let info;
+  try { info = lstatSync(join(baseDir, entry)); }
+  catch { return false; }
+  if (entry.startsWith("Singleton")) {
+    return info.isFile() || info.isSocket() || info.isSymbolicLink();
+  }
+  if (entry === BOOTSTRAP_MARKER || entry === "lockfile") {
+    return info.isFile() && info.size <= 4096;
+  }
+  if (entry === "Crashpad") return info.isDirectory();
+  if (!allowChromiumRuntime) return false;
+  if (entry === "Local State") {
+    return info.isFile() && info.size <= MAX_BOOTSTRAP_LOCAL_STATE_BYTES;
+  }
+  return CHROMIUM_EPHEMERAL_DIRS.has(entry) && info.isDirectory();
 }
 
 function resolvePortableMarkerConfig(

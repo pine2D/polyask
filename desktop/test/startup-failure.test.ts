@@ -26,7 +26,12 @@ function loadStartupFailure({ dialogThrows = false } = {}) {
     module, exports: module.exports, console: { error() {} },
     require: (name: string) => name === "electron" ? electron : require(name)
   });
-  return { show: module.exports.showStartupFailure as (error: unknown, distribution: string) => void, shown, quits: () => quits };
+  return {
+    show: module.exports.showStartupFailure as (error: unknown, distribution: string, dataDirectoryName?: string) => void,
+    formatConflict: module.exports.formatPortableDataConflict as (copy: unknown, dataDirectoryName?: string) => [string, string],
+    shown,
+    quits: () => quits
+  };
 }
 
 const copy = getCopy("en");
@@ -48,11 +53,18 @@ test("portable import and conflict codes keep their dedicated dialogs", () => {
   const h = loadStartupFailure();
   h.show(new Error("portable_import_failed"), "portable");
   h.show(new Error("portable_data_unrecognized"), "installed");
+  h.show(new Error("portable_data_unrecognized"), "portable", "Preview Data");
   assert.deepEqual(h.shown, [
     `${copy.portableImportFailedTitle}|${copy.portableImportFailedMessage}`,
-    `${copy.portableDataConflictTitle}|${copy.portableDataConflictMessage}`
+    `${copy.portableDataConflictTitle}|${copy.portableDataConflictMessage}`,
+    `${copy.portableDataConflictTitle.replaceAll("PolyAsk Data", "Preview Data")}|${copy.portableDataConflictMessage.replaceAll("PolyAsk Data", "Preview Data")}`
   ]);
-  assert.equal(h.quits(), 2);
+  const zhCopy = getCopy("zh-CN");
+  assert.deepEqual([...h.formatConflict(zhCopy, "Preview Data")], [
+    "未改动 Preview Data",
+    zhCopy.portableDataConflictMessage.replaceAll("PolyAsk Data", "Preview Data")
+  ]);
+  assert.equal(h.quits(), 3);
 });
 
 test("a dialog that cannot open never blocks the quit", () => {

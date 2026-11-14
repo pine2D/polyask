@@ -8,7 +8,7 @@ import { installNativeShell, initialShellBackground } from "./native-shell";
 import { createWindowDataServices } from './window-data-services';
 import type { PreferenceRuntime } from './preference-runtime';
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 
 import {
   app,
@@ -40,6 +40,7 @@ import {
   hasImportableLegacyData,
   initializePortableData,
   isPortableDataInitialized,
+  preparePortableBootstrap,
   resolveRuntimeProfile
 } from "./portable-profile";
 import { createProxyServices, type ProxyServices } from "./proxy-services";
@@ -51,7 +52,7 @@ import { startRuntimeGates } from "./runtime-gates";
 import { registerShellIpc } from "./shell-ipc";
 import { SITES } from "./sites";
 import { runStartup } from "./startup";
-import { showStartupFailure } from "./startup-failure";
+import { formatPortableDataConflict, showStartupFailure } from "./startup-failure";
 import { UiStateStore } from "./ui-state-store";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
@@ -94,6 +95,7 @@ if (runtimeProfile.distribution === "portable") {
       instanceLockHeld = legacyProfileLock;
       if (!legacyProfileLock) throw new Error("portable_legacy_in_use");
       finalizePortableDataImport(runtimeProfile);
+      preparePortableBootstrap(runtimeProfile);
       mkdirSync(runtimeProfile.userDataPath, { recursive: true });
       app.setPath("userData", runtimeProfile.userDataPath);
       app.setPath("sessionData", runtimeProfile.userDataPath);
@@ -103,6 +105,7 @@ if (runtimeProfile.distribution === "portable") {
         instanceLockHeld = app.requestSingleInstanceLock();
       }
     } else {
+      preparePortableBootstrap(runtimeProfile);
       mkdirSync(runtimeProfile.userDataPath, { recursive: true });
       app.setPath("userData", runtimeProfile.userDataPath);
       app.setPath("sessionData", runtimeProfile.userDataPath);
@@ -116,7 +119,7 @@ if (runtimeProfile.distribution === "portable") {
     const failure = code === "portable_import_failed"
       ? [copy.portableImportFailedTitle, copy.portableImportFailedMessage]
       : code === "portable_data_unrecognized"
-        ? [copy.portableDataConflictTitle, copy.portableDataConflictMessage]
+        ? formatPortableDataConflict(copy, basename(runtimeProfile.userDataPath))
         : code === "portable_legacy_in_use"
           ? [copy.portableLegacyInUseTitle, copy.portableLegacyInUseMessage]
           : [copy.portableStorageFailedTitle, copy.portableStorageFailedMessage];
@@ -320,7 +323,11 @@ async function createWindow(): Promise<void> {
   });
 }
 
-const failStartup = (error: unknown): void => showStartupFailure(error, runtimeProfile.distribution);
+const failStartup = (error: unknown): void => showStartupFailure(
+  error,
+  runtimeProfile.distribution,
+  runtimeProfile.distribution === "portable" ? basename(runtimeProfile.userDataPath) : undefined
+);
 
 const gotLock = profileReady && (runtimeProfile.distribution === "portable"
   ? instanceLockHeld
