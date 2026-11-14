@@ -12,7 +12,7 @@ import type { SitePageClosePreview, SitePageCloseRequest, SitePageCloseResult } 
 import type { QuestionRunProgress } from '../shared/question-run-progress';
 import type { LocalDataStats } from "../shared/local-data";
 import type { QuestionRestorePreview, QuestionRestoreResult } from "../shared/question-restore";
-import type { BackupPreview, BackupApplyResult, BackupSelectionPreview, BackupExportMode, BackupExportResult } from "../shared/backup";
+import type { AutoBackupSummary, BackupPreview, BackupApplyResult, BackupSelectionPreview, BackupExportMode, BackupExportResult } from "../shared/backup";
 import type { TaskFolder, TaskFolderSummary, FolderTarget, FolderMembershipChange, FolderFilters, FolderContent } from "../shared/task-folder";
 import type { FolderContentPage, FolderPageRequest } from '../shared/task-folder-page';
 import type { DecisionFilters, DecisionInput, DecisionRecord } from "../shared/decision";
@@ -27,39 +27,20 @@ import type { GlobalPromptShortcutState } from '../shared/global-prompt-shortcut
 
 import { ipcErrorCode } from "../shared/ipc-error";
 
-import type {
-  ArchiveFilters,
-  ArchiveInput,
-  ArchivePatch,
-  ArchiveRecord,
-  ArchiveSearchResult
-} from "../shared/archive";
+import type { ArchiveFilters, ArchiveInput, ArchivePatch, ArchiveRecord, ArchiveSearchResult } from "../shared/archive";
 import type { LayoutMode, SiteKey } from "../shared/contracts";
 import type { CommandId } from "../shared/commands";
 import type { PromptLibraryState, PromptTemplate } from "../shared/prompt-library";
 import type { DisplayPreferences } from "../shared/display";
 import type {
-  BootstrapState,
-  BroadcastRequest,
-  CollectedAnswer,
-  CollectionRequest,
-  DesktopSurface,
-  LayoutState,
-  MenuShortcut,
-  NewSessionSiteResult,
-  SiteHistoryState,
-  SiteRunResult,
-  SiteStatus
+  BootstrapState, BroadcastRequest, CollectedAnswer, CollectionRequest, DesktopSurface,
+  LayoutState, MenuShortcut, NewSessionSiteResult, SiteHistoryState, SiteRunResult, SiteStatus
 } from "../shared/protocol";
 import type { WorkspaceState } from "../shared/workspace";
 import type { SyncStatus } from "../shared/sync";
 import type { SyncDiagnosticSnapshot } from "../shared/sync-diagnostics";
 import type { SiteHealth } from "../shared/site-health";
-import type {
-  SynthesisCandidate,
-  SynthesisSendRequest,
-  SynthesisSendResponse
-} from "../shared/synthesis";
+import type { SynthesisCandidate, SynthesisSendRequest, SynthesisSendResponse } from "../shared/synthesis";
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 
 export interface PolyAskDesktopApi extends NotificationApi {
@@ -127,6 +108,9 @@ export interface PolyAskDesktopApi extends NotificationApi {
   previewBackupSelection(token: string, selectedKeys: readonly string[]): Promise<BackupSelectionPreview>;
   applyBackup(token: string, selectedKeys: readonly string[]): Promise<BackupApplyResult>;
   cancelBackup(token: string): Promise<void>;
+  listAutoBackups(): Promise<AutoBackupSummary[]>;
+  previewAutoBackup(id: string): Promise<BackupPreview>;
+  exportAutoBackup(id: string): Promise<boolean | "text-only">;
   listFolders(): Promise<TaskFolderSummary[]>;
   createFolder(name: string): Promise<TaskFolder>;
   renameFolder(id: string, name: string): Promise<TaskFolder>;
@@ -294,6 +278,9 @@ const api: PolyAskDesktopApi = Object.freeze({
   previewBackupSelection: (token: string, selectedKeys: readonly string[]) => invoke("polyask:backup-selection-preview", { token, selectedKeys }),
   applyBackup: (token: string, selectedKeys: readonly string[]) => invoke("polyask:backup-apply", { token, selectedKeys }),
   cancelBackup: (token: string) => invoke("polyask:backup-cancel", token),
+  listAutoBackups: () => invoke("polyask:auto-backup-list"),
+  previewAutoBackup: (id: string) => invoke("polyask:auto-backup-preview", id),
+  exportAutoBackup: (id: string) => invoke("polyask:auto-backup-export", id),
   listFolders: () => invoke("polyask:folder-list"),
   createFolder: (name: string) => invoke("polyask:folder-create", name),
   renameFolder: (id: string, name: string) => invoke("polyask:folder-rename", { id, name }),

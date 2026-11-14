@@ -22,9 +22,10 @@ export async function createWindowDataServices(options: {
   readonly applyDisplay: (value: DisplayPreferences) => void;
   readonly setNotifications: (enabled: boolean) => void;
   readonly proxy: ProxyServices;
+  readonly userDataPath?: string;
 }) {
   const { database, manager, workspace, coordinator, synthesisCoordinator, publish } = options;
-  const local = createLocalDataServices(database);
+  const local = createLocalDataServices(database, { userDataPath: options.userDataPath });
   const collection = new CollectionService(SITES, (site, deadline) => manager.collect(site, deadline));
   // proxy 回调只置脏标记（spec §3.4）：只有同步拉取、备份恢复、本机重置的 refresh 触发，proxy-runtime 从 store 重读最新输入。
   const preferences = new PreferenceRuntime(new PreferencesRepository(database.state, database.meta),
@@ -51,7 +52,9 @@ export async function createWindowDataServices(options: {
       preferences.refresh(); publish('polyask:drafts-changed');
     }
   });
-  const dataAdmin = new DataAdminService({ database, deviceId: local.deviceId, sync, wipeSecrets: () => options.proxy.runtime.wipeSecrets(),
+  const dataAdmin = new DataAdminService({ database, deviceId: local.deviceId, sync,
+    wipeSecrets: () => options.proxy.runtime.wipeSecrets(),
+    wipeAutoBackups: () => local.autoBackup.clearAll(),
     beforeDisconnect: () => { local.backup.invalidate(); coordinator.cancel(); synthesisCoordinator.cancel(); },
     beforeWipe: () => { preferences.drafts.invalidate(); collection.clearRun(); synthesis.reset(); manager.resetRunStatus(); }
   });

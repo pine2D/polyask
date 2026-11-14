@@ -22,20 +22,18 @@ import {
 import squirrelStartup from "electron-squirrel-startup";
 
 import type { CommandId } from "../shared/commands";
-import { getCopy } from "../shared/copy";
+import { formatCopy, getCopy } from "../shared/copy";
 import { parseDesktopUiState } from "../shared/desktop-ui-state";
-import {
-  DEFAULT_DISPLAY_PREFERENCES,
-  type DisplayPreferences
-} from "../shared/display";
+import { DEFAULT_DISPLAY_PREFERENCES, type DisplayPreferences } from "../shared/display";
 import type { RuntimeInfo } from "../shared/runtime";
+import { captureStartupUpgradeSnapshot } from "./auto-backup-service";
 import { BroadcastCoordinator } from "./broadcast";
 import { CollectionService } from "./collection-service";
 import { createCompletionNotifications } from './completion-notifications';
 import { GlobalPromptShortcutRuntime } from './global-prompt-shortcut';
 import { GlobalPromptShortcutRepository } from './global-prompt-shortcut-repository';
 import type { QuestionHistoryService } from './question-history-service';
-import { DesktopDatabase } from "./database";
+import { DesktopDatabase, peekSqliteUserVersion } from "./database";
 import {
   applyPortableImportIdentity,
   finalizePortableDataImport,
@@ -74,7 +72,8 @@ const runtimeProfile = resolveRuntimeProfile({
 });
 const runtimeInfo: RuntimeInfo = {
   distribution: runtimeProfile.distribution,
-  version: runtimeProfile.version
+  version: runtimeProfile.version,
+  ...(runtimeProfile.preview ? { preview: true } : {})
 };
 let profileReady = true;
 let instanceLockHeld = false;
@@ -126,9 +125,11 @@ if (runtimeProfile.distribution === "portable") {
   }
 }
 if (process.platform === "win32") {
-  app.setAppUserModelId(runtimeProfile.distribution === "portable"
-    ? "com.pine2d.polyask.portable"
-    : "com.squirrel.PolyAsk.PolyAsk");
+  app.setAppUserModelId(runtimeProfile.preview
+    ? "com.pine2d.polyask.preview"
+    : runtimeProfile.distribution === "portable"
+      ? "com.pine2d.polyask.portable"
+      : "com.squirrel.PolyAsk.PolyAsk");
 }
 
 const coordinator = new BroadcastCoordinator();
@@ -204,8 +205,9 @@ async function createWindow(): Promise<void> {
   const bounds = initialUiState.windowBounds;
   const restorePosition = !(process.platform === "linux"
     && process.env.XDG_SESSION_TYPE?.toLowerCase() === "wayland");
+  const windowTitle = runtimeInfo.preview ? formatCopy(copy.previewWindowTitle, { title: copy.appTitle }) : copy.appTitle;
   const window = new BrowserWindow({
-    title: copy.appTitle,
+    title: windowTitle,
     width: bounds?.width ?? 1600,
     height: bounds?.height ?? 1050,
     ...(bounds && restorePosition ? { x: bounds.x, y: bounds.y } : {}),
@@ -265,8 +267,8 @@ async function createWindow(): Promise<void> {
   );
   managerForWorkspace = manager;
   viewManager = manager;
-  const { archives, history, promptLibrary, decisions, folders, backup, questions, collection, preferences, synthesis, sync, dataAdmin } = await createWindowDataServices({
-    database, manager, workspace, coordinator, synthesisCoordinator, proxy, publish: sendToShell,
+  const { archives, history, promptLibrary, decisions, folders, backup, autoBackup, questions, collection, preferences, synthesis, sync, dataAdmin } = await createWindowDataServices({
+    database, manager, workspace, coordinator, synthesisCoordinator, proxy, publish: sendToShell, userDataPath: app.getPath("userData"),
     applyDisplay: value => applyDisplayPreferences(manager, value),
     setNotifications: enabled => completionNotifier.setEnabled(enabled)
   });
@@ -284,7 +286,7 @@ async function createWindow(): Promise<void> {
     synthesisCoordinator,
     collection, questions,
     archives,
-    decisions, folders, backup,
+    decisions, folders, backup, autoBackup,
     history,
     promptLibrary,
     synthesis,
@@ -365,9 +367,17 @@ else {
         return;
       }
     }
-    desktopDatabase = DesktopDatabase.open(join(app.getPath("userData"), "polyask.sqlite"));
+    const userDataPath = app.getPath("userData");
+    const dbPath = join(userDataPath, "polyask.sqlite");
+    const preOpenDbSchema = peekSqliteUserVersion(dbPath);
+    desktopDatabase = DesktopDatabase.open(dbPath);
     applyPortableImportIdentity(runtimeProfile, (deviceId) => {
       desktopDatabase!.adoptImportedProfile(deviceId);
+    });
+    await captureStartupUpgradeSnapshot(desktopDatabase, {
+      userDataPath,
+      currentVersion: runtimeInfo.version,
+      preOpenDbSchema
     });
     proxyServices = createProxyServices(desktopDatabase);
     promptShortcut = new GlobalPromptShortcutRuntime({ shortcuts: globalShortcut,

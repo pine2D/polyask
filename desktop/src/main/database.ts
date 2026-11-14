@@ -1,4 +1,4 @@
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
@@ -15,7 +15,22 @@ import { inTransaction } from "./repository-utils";
 import { StateRepository } from "./state-repository";
 import { readLocalDataStats } from "./local-data-stats";
 
-const SCHEMA_VERSION = 5;
+export const LOCAL_DB_SCHEMA_VERSION = 5;
+const SCHEMA_VERSION = LOCAL_DB_SCHEMA_VERSION;
+
+export function peekSqliteUserVersion(path: string): number | null {
+  if (path === ":memory:" || !existsSync(path)) return null;
+  let database: DatabaseSync | null = null;
+  try {
+    database = new DatabaseSync(path, { readOnly: true });
+    const row = database.prepare("PRAGMA user_version").get() as { user_version?: unknown } | undefined;
+    return Number(row?.user_version) || 0;
+  } catch {
+    return null;
+  } finally {
+    try { database?.close(); } catch { /* ignore read-only probe close failure */ }
+  }
+}
 
 function migrate(database: DatabaseSync): void {
   database.exec("PRAGMA foreign_keys = ON");

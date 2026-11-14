@@ -39,7 +39,18 @@ export const BACKUP_COPY = {
     backupSyncNotice: "Imported changes join normal Drive sync; drafts and original images sync only when their respective sync settings are enabled. When disconnected, changes wait until you reconnect. Items kept on this device and device overrides remain unchanged.",
     backupSummary: "Import {count} selected items; keep or skip {skipped} items.", backupConfirmTitle: "Confirm merge", backupConfirm: "Confirm import", backupReviewSummary: "Review & import", backupEmpty: "No items in this view", backupNoLocal: "No active local version", backupCompleted: "Imported {count} items; skipped {skipped}.", backupFailed: "Could not complete the backup operation. Choose the file again to review the restore result.", backupExportFailed: "Could not export the backup. Try again. If saving fails, choose another save location.", backupStale: "Local data changed after this preview. Choose the backup again to review the latest differences.", backupInvalid: "This file is not a supported, valid PolyAsk backup.", backupTooLarge: "The backup exceeds a limit: 512 MiB total, 32 MiB manifest or legacy JSON, or 20,000 entries including image payloads.", backupApplying: "Importing…", backupDate: "Exported {date}", backupFolderRemap: "Restoring this folder creates a new folder identity. Select its memberships separately.", backupBlocked: "This association cannot be restored because its folder or content is unavailable. Restore the required items first, then preview again.",
     backupReuseFolder: "Use the previously restored folder", backupFolderReused: "This folder was restored before. Its restored copy and current edits will be kept.", backupSkipped: "Skip", backupDependency: "Also select the required folder and content to restore this link; otherwise it will be skipped.", backupKindTemplate: "Templates", backupKindGroup: "Site groups", backupKindWorkspace: "Sites & tier",
-    backupKindHistory: "Questions", backupKindArchive: "Saved results", backupKindDecision: "Decision cards", backupKindFolder: "Folders", backupKindMembership: "Folder links", backupKindState: "Templates & preferences", backupDetails: "Business data", backupFieldValue: "Value"
+    backupKindHistory: "Questions", backupKindArchive: "Saved results", backupKindDecision: "Decision cards", backupKindFolder: "Folders", backupKindMembership: "Folder links", backupKindState: "Templates & preferences", backupDetails: "Business data", backupFieldValue: "Value",
+    autoBackupTitle: "Automatic pre-upgrade protection",
+    autoBackupBadge: "Up to 5 kept locally",
+    autoBackupDescription: "Before upgrading local data to a newer app or storage version, PolyAsk automatically saves a local recovery snapshot here. Snapshots stay on this device and never use Drive quota.",
+    autoBackupEmptyTitle: "No automatic upgrade snapshots yet",
+    autoBackupEmptyHint: "Your current data is ready. The next time you open a newer PolyAsk version, a recovery point will be saved automatically before any upgrade changes run.",
+    autoBackupTransition: "v{from} → v{to}",
+    autoBackupBeforeVersion: "Saved before upgrading to v{to}",
+    autoBackupTextOnlyTag: "Text only",
+    autoBackupRestore: "Review & restore…",
+    autoBackupExport: "Save copy…",
+    autoBackupLoadFailed: "Could not read automatic upgrade snapshots on this device."
   },
   zhCN: {
     backupGoConnection: "前往 Drive 连接设置",
@@ -79,7 +90,18 @@ export const BACKUP_COPY = {
     backupKeepLocal: "保留本机", backupUseIncoming: "使用备份", backupRestoreDeleted: "恢复这条已删除内容", backupInclude: "导入此条", backupSame: "内容相同 · 无需改动", backupNew: "新增", backupConflict: "冲突", backupDeleted: "本机已删除", backupAll: "全部条目",
     backupSyncNotice: "导入的改动会参与正常 Drive 同步；草稿和原图仅在各自同步开关开启后传播。未连接时等待重连后同步；保留本机的条目及本机覆盖不作改动。", backupSummary: "将导入 {count} 条，保留或跳过 {skipped} 条。", backupConfirmTitle: "确认合并", backupConfirm: "确认导入", backupReviewSummary: "核对并导入", backupEmpty: "此分类没有条目", backupNoLocal: "本机无有效版本", backupCompleted: "已导入 {count} 条，跳过 {skipped} 条。", backupFailed: "备份操作未完成。请重新选择文件核对恢复结果。", backupExportFailed: "备份未能导出。请重试；若无法保存文件，可选择其他保存位置。", backupStale: "预览后本机数据已变化。请重新选择备份，核对最新差异。", backupInvalid: "文件不是有效且受支持的 PolyAsk 备份。", backupTooLarge: "备份超过限制：总大小 512 MiB、清单或旧版 JSON 32 MiB，或含图片载荷的条目数 20,000。", backupApplying: "正在导入…", backupDate: "导出于 {date}", backupFolderRemap: "恢复此文件夹将创建新的文件夹身份；归属关系需单独选择恢复。", backupBlocked: "所需文件夹或内容不可用，暂不能恢复此归属。请先恢复所需内容，再重新预览。",
     backupReuseFolder: "复用此前恢复的文件夹", backupFolderReused: "此文件夹此前已恢复，将复用恢复后的文件夹并保留现有编辑。", backupSkipped: "跳过", backupDependency: "请同时选择恢复所需文件夹和内容，否则将跳过此归属关系。", backupKindTemplate: "自存模板", backupKindGroup: "站点分组", backupKindWorkspace: "站点与档位",
-    backupKindHistory: "提问历史", backupKindArchive: "保存结果", backupKindDecision: "决策卡", backupKindFolder: "文件夹", backupKindMembership: "归属关系", backupKindState: "模板与偏好", backupDetails: "业务数据", backupFieldValue: "内容"
+    backupKindHistory: "提问历史", backupKindArchive: "保存结果", backupKindDecision: "决策卡", backupKindFolder: "文件夹", backupKindMembership: "归属关系", backupKindState: "模板与偏好", backupDetails: "业务数据", backupFieldValue: "内容",
+    autoBackupTitle: "升级前自动保护快照",
+    autoBackupBadge: "保留最近 5 份 · 仅存本机",
+    autoBackupDescription: "每次升级应用版本或底层数据结构首次启动改写前，系统会自动在本机留存一份恢复点，不上传云端、不占网盘空间。若升级后想退回旧版，可随时核对恢复或另存副本。",
+    autoBackupEmptyTitle: "尚无自动升级保护点",
+    autoBackupEmptyHint: "当前版本数据已就绪；下次安装新版本首次打开时，系统会在改写数据前自动生成保护快照。",
+    autoBackupTransition: "v{from} → v{to}",
+    autoBackupBeforeVersion: "升级至 v{to} 前自动留存",
+    autoBackupTextOnlyTag: "仅文字",
+    autoBackupRestore: "核对并恢复…",
+    autoBackupExport: "另存副本…",
+    autoBackupLoadFailed: "无法读取本机自动升级保护快照。"
   },
   zhTW: {
     backupGoConnection: "前往 Drive 連線設定",
@@ -119,6 +141,17 @@ export const BACKUP_COPY = {
     backupKeepLocal: "保留本機", backupUseIncoming: "使用備份", backupRestoreDeleted: "還原這筆已刪除內容", backupInclude: "匯入此筆", backupSame: "內容相同 · 無須變更", backupNew: "新增", backupConflict: "衝突", backupDeleted: "本機已刪除", backupAll: "全部項目",
     backupSyncNotice: "匯入的變更會參與正常 Drive 同步；草稿和原圖僅在各自同步開關開啟後傳播。未連線時等待重新連線後同步；保留本機的項目及本機覆寫不作變更。", backupSummary: "將匯入 {count} 筆，保留或略過 {skipped} 筆。", backupConfirmTitle: "確認合併", backupConfirm: "確認匯入", backupReviewSummary: "核對並匯入", backupEmpty: "此分類沒有項目", backupNoLocal: "本機無有效版本", backupCompleted: "已匯入 {count} 筆，略過 {skipped} 筆。", backupFailed: "備份操作未完成。請重新選擇檔案核對還原結果。", backupExportFailed: "備份未能匯出。請重試；若無法儲存檔案，可選擇其他儲存位置。", backupStale: "預覽後本機資料已變更。請重新選擇備份，核對最新差異。", backupInvalid: "檔案不是有效且受支援的 PolyAsk 備份。", backupTooLarge: "備份超過限制：總大小 512 MiB、清單或舊版 JSON 32 MiB，或含圖片內容的項目數 20,000。", backupApplying: "正在匯入…", backupDate: "匯出於 {date}", backupFolderRemap: "還原此資料夾將建立新的資料夾身分；歸屬關係需另行選擇還原。", backupBlocked: "所需資料夾或內容無法使用，暫不能還原此歸屬。請先還原所需內容，再重新預覽。",
     backupReuseFolder: "沿用先前還原的資料夾", backupFolderReused: "此資料夾先前已還原，將沿用還原後的資料夾並保留現有編輯。", backupSkipped: "略過", backupDependency: "請同時選擇還原所需資料夾和內容，否則將略過此歸屬關係。", backupKindTemplate: "自存範本", backupKindGroup: "網站分組", backupKindWorkspace: "網站與回答模式",
-    backupKindHistory: "提問歷史", backupKindArchive: "儲存結果", backupKindDecision: "決策卡", backupKindFolder: "資料夾", backupKindMembership: "歸屬關係", backupKindState: "範本與偏好", backupDetails: "業務資料", backupFieldValue: "內容"
+    backupKindHistory: "提問歷史", backupKindArchive: "儲存結果", backupKindDecision: "決策卡", backupKindFolder: "資料夾", backupKindMembership: "歸屬關係", backupKindState: "範本與偏好", backupDetails: "業務資料", backupFieldValue: "內容",
+    autoBackupTitle: "升級前自動保護快照",
+    autoBackupBadge: "保留最近 5 份 · 僅存本機",
+    autoBackupDescription: "每次升級應用程式版本或底層資料結構首次啟動改寫前，系統會自動在本機留存一份還原點，不上傳雲端、不佔雲端硬碟空間。若升級後想退回舊版，可隨時核對還原或另存副本。",
+    autoBackupEmptyTitle: "尚無自動升級保護點",
+    autoBackupEmptyHint: "目前版本資料已就緒；下次安裝新版本首次開啟時，系統會在改寫資料前自動產生保護快照。",
+    autoBackupTransition: "v{from} → v{to}",
+    autoBackupBeforeVersion: "升級至 v{to} 前自動留存",
+    autoBackupTextOnlyTag: "僅文字",
+    autoBackupRestore: "核對並還原…",
+    autoBackupExport: "另存副本…",
+    autoBackupLoadFailed: "無法讀取本機自動升級保護快照。"
   }
 } as const;

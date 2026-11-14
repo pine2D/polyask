@@ -510,7 +510,7 @@ test("prompt templates and recent history use a trusted synchronized library bri
   assert.match(preload, /deletePromptTemplate/);
   assert.match(preload, /onPromptLibrary/);
   assert.match(main, /await createWindowDataServices\(/);
-  assert.match(readSource("src/main/window-data-services.ts"), /createLocalDataServices\(database\)/);
+  assert.match(readSource("src/main/window-data-services.ts"), /createLocalDataServices\(database\b/);
   assert.match(readSource("src/main/local-data-services.ts"), /new PromptLibraryService\(database.state, database.meta, history\)/);
 });
 

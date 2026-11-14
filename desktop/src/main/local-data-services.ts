@@ -6,11 +6,12 @@ import { TaskFolderService } from "./task-folder-service";
 import { randomUUID } from "node:crypto";
 import type { DesktopDatabase } from "./database";
 import { ArchiveService } from "./archive-service";
+import { AutoBackupService } from "./auto-backup-service";
 import { DecisionService } from "./decision-service";
 import { HistoryService } from "./history-service";
 import { PromptLibraryService } from "./prompt-library-service";
 
-export function createLocalDataServices(database: DesktopDatabase) {
+export function createLocalDataServices(database: DesktopDatabase, options?: { readonly userDataPath?: string }) {
   const deviceId = () => {
     const stored = database.meta.get<unknown>("deviceId");
     if (typeof stored === "string" && stored) return stored;
@@ -27,5 +28,6 @@ export function createLocalDataServices(database: DesktopDatabase) {
   const decisions = new DecisionService(database.decisions, archives, { deviceId });
   const folders = new TaskFolderService(database.folders, archives, decisions, { deviceId });
   const backup = new BackupService(database, { deviceId });
-  return { deviceId, questions, archives, history, promptLibrary, decisions, folders, backup };
+  const autoBackup = new AutoBackupService(database, backup, { userDataPath: options?.userDataPath });
+  return { deviceId, questions, archives, history, promptLibrary, decisions, folders, backup, autoBackup };
 }

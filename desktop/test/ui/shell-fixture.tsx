@@ -43,12 +43,15 @@ import '../../src/renderer/feedback.css';
 const query = new URLSearchParams(location.search);
 const locale = query.get('locale') || 'zh-CN';
 const stress = query.get('stress') === '1';
+const preview = query.get('preview') === '1';
 const copy = getCopy(locale);
 document.documentElement.lang = locale;
 document.documentElement.dataset.density = query.get('density') || 'compact';
 const platform = (query.get('platform') || currentPlatform) as DesktopPlatform;
 document.documentElement.dataset.platform = platform;
-const runtime = { version: '1.6.0-fixture', distribution: 'installed' as const };
+const runtime = preview
+  ? { version: '1.6.0-fixture', distribution: 'portable' as const, preview: true }
+  : { version: '1.6.0-fixture', distribution: 'installed' as const };
 const status: SyncStatus = { state: 'idle', connected: true, pending: 0, errorCount: 0,
   readOnly: false, oauthConfigured: true, secureTokenStorage: true, lastSuccessAt: 1_790_208_000_000,
   ...(query.get('connection') === 'off' ? { connected: false } : {}),
@@ -91,8 +94,21 @@ if (stress) SITES.forEach((site, i) => {
 const finishOperation = () => new Promise<void>(resolve => document.addEventListener('fixture:finish-operation', () => resolve(), { once: true }));
 let dataStats: LocalDataStats = { history: 3, archives: 0, decisions: 0, folders: 0, answers: 9, memberships: 0,
   drafts: 0, reset: { preferences: 0, answers: 9, memberships: 0, templates: 0, groups: 1, workspace: 1 } };
+const autoBackupFixtures = query.get('autoBackups') === '1' ? [
+  { id: 'auto-20261114-093000-a1b2c3d4', filename: 'polyask-auto-v1.33.1-to-v1.34.0-2026-11-14.polyask',
+    fromVersion: '1.33.1', toVersion: '1.34.0', fromDbSchema: 4, toDbSchema: 4, fromSyncSchema: 7, toSyncSchema: 7,
+    createdAt: 1_790_208_000_000, sizeBytes: 184_320, textOnly: false },
+  { id: 'auto-20261102-211500-e5f6a7b8', filename: 'polyask-auto-before-v1.33.1-2026-11-02.polyask',
+    fromVersion: null, toVersion: '1.33.1', fromDbSchema: 4, toDbSchema: 4, fromSyncSchema: null, toSyncSchema: 7,
+    createdAt: 1_789_200_000_000, sizeBytes: 42_500, textOnly: true }
+] : [];
 setShellApi({
   cancelBackup: async () => {},
+  listAutoBackups: async () => autoBackupFixtures,
+  previewAutoBackup: async (id: string) => ({ token: `fixture-${id}`, filename: 'auto.polyask', exportedAt: 1_790_208_000_000, items: [] }),
+  exportAutoBackup: async (id: string) => autoBackupFixtures.find(item => item.id === id)?.textOnly ? 'text-only' : true,
+  previewBackupSelection: async (_token: string, keys: string[]) => ({ imported: keys.length, skipped: 0, keys }),
+  applyBackup: async (_token: string, keys: string[]) => ({ imported: keys.length, skipped: 0 }),
   ...(query.has('backupError') ? { exportBackup: async () => { throw Error('backup_failed'); }, previewBackup: async () => { throw Error('backup_failed'); } } : {}),
   commandPaletteShortcutState: async () => ({ mode: 'standard', revision: 1, error: null }), onCommandPaletteShortcut: () => () => {},
   ...desktopToolsShellStubs(),
@@ -138,6 +154,7 @@ function Fixture(): React.JSX.Element {
       closeSitePage: async request => ({ state: 'closed', workspace: { selectedSites: selected.filter(site => site !== request.site), groups: [], tier } })
     }, onOpen: () => setPanel(null), onClose: () => queueMicrotask(() => promptRef.current?.focus()), onWorkspace: state => setSelected(state.selectedSites), onAnnounce: noop });
   if (query.get('surface') === 'settings') return <SettingsWorkspace copy={copy} locale={locale}
+    initialSection={(query.get('section') as any) || undefined}
     status={status} runtime={runtime} onStatus={noop} onAnnounce={noop} onClose={() => { document.body.dataset.settingsClosed = 'true'; }}
     display={{ ...preferences.values.display, density: document.documentElement.dataset.density as 'compact' | 'comfortable' }}
     onDisplayChange={async display => { document.documentElement.dataset.density = display.density;
@@ -205,4 +222,4 @@ function ProxyEditFixture() {
     : <button data-proxy-reopen onClick={() => setOpen(true)}>Reopen settings</button>;
 }
 createRoot(document.getElementById('root')!).render(query.get('surface') === 'proxy-edit' ? <ProxyEditFixture /> : query.get('surface') === 'shortcuts' ? <ShortcutFixture /> : query.get('surface') === 'native' ? <NativeFixture />
-  : <FeedbackProvider copy={copy}><Fixture /></FeedbackProvider>);
+  : <FeedbackProvider copy={copy} preview={preview}><Fixture /></FeedbackProvider>);

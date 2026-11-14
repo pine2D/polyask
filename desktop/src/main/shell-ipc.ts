@@ -18,6 +18,8 @@ import { cancelSubmissions, lateSentResult } from "./submission-upgrade";
 import type { QuestionHistoryService } from "./question-history-service";
 import type { BackupService } from "./backup-service";
 import { registerBackupIpc } from "./backup-ipc";
+import type { AutoBackupService } from "./auto-backup-service";
+import { registerAutoBackupIpc } from "./auto-backup-ipc";
 import type { TaskFolderService } from "./task-folder-service";
 import { registerTaskFolderIpc } from "./task-folder-ipc";
 import type { DecisionService } from "./decision-service";
@@ -87,6 +89,7 @@ export interface ShellIpcOptions {
   readonly decisions: DecisionService;
   readonly folders: TaskFolderService;
   readonly backup: BackupService;
+  readonly autoBackup?: AutoBackupService;
   readonly history: HistoryService;
   readonly questions: QuestionHistoryService;
   readonly promptLibrary: PromptLibraryService;
@@ -184,6 +187,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     state => showSiteFindMenu(window, state, SITES, options.copy));
   const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
   const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, fetchAttachments: id => options.sync.fetchQuestionAttachments(id), trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); options.preferences?.refresh(); publishDrafts(); } });
+  const disposeAutoBackupIpc = options.autoBackup ? registerAutoBackupIpc({ window, autoBackup: options.autoBackup, trusted: trustedShell }) : () => {};
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
   const disposeSyncIpc = registerSyncIpc({ sync, runtime: options.runtime, trusted: trustedShell });
@@ -353,6 +357,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     disposeSynthesisIpc();
     capture.dispose();
     disposeBackupIpc();
+    disposeAutoBackupIpc();
     disposeFolderIpc();
     disposeDecisionIpc();
     disposeSyncIpc();

@@ -15,6 +15,7 @@ import type { RuntimeInfo } from "../shared/runtime";
 import type { DisplayPreferences } from "../shared/display";
 import type { ConfirmationKey } from "../shared/preferences";
 import { CloseIcon } from "./icons";
+import { AutoBackupCard } from "./auto-backup-card";
 import { BackupCard } from "./backup-workspace";
 import { LocalDataCard } from "./local-data-card";
 import { SettingsDisplay } from "./settings-display";
@@ -226,8 +227,9 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
           <strong>{props.copy.settings}</strong>
           <span>{formatCopy(props.copy.appVersion, {
             version: props.runtime.version,
-            mode: props.runtime.distribution === "portable" ? props.copy.portableMode : props.copy.installedMode
+            mode: props.runtime.preview ? props.copy.previewMode : props.runtime.distribution === "portable" ? props.copy.portableMode : props.copy.installedMode
           })}</span>
+          {props.runtime.preview ? <strong className="preview-badge" title={props.copy.previewIsolationHint}><i aria-hidden="true" />{props.copy.previewBadge}</strong> : null}
         </div>
         <button className="panel-close" type="button" title={props.copy.closeSettings} aria-label={props.copy.closeSettings} disabled={closeLocked} onClick={props.onClose}><CloseIcon /></button>
       </header>
@@ -315,6 +317,8 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         <SettingsCategoryPanel category="backup" active={currentSection === 'backup'} title={labels.backup}>
           <BackupCard syncStatus={props.status} onOpenSync={target => navigateSection(target === 'connection' ? 'connection' : 'image-sync')}
             copy={props.copy} locale={props.locale} busy={busy} onBusy={setActionBusy} onFeedback={(message) => { setFeedback("backup", message); props.onAnnounce(message); }} />
+          <AutoBackupCard copy={props.copy} locale={props.locale} busy={busy} resetKey={localResetRevision}
+            onBusy={setActionBusy} onFeedback={(message) => { setFeedback("backup", message); props.onAnnounce(message); }} />
         </SettingsCategoryPanel>
         <SettingsCategoryPanel category="network" active={currentSection === 'network'} title={labels.network}>
           <SettingsProxy copy={props.copy} proxy={proxy} busy={busy || !!props.operationBusy} onFeedback={(message) => { setFeedback("network", message); props.onAnnounce(message); }}

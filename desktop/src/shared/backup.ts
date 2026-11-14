@@ -66,3 +66,17 @@ export interface BackupOmission {
 export interface BackupMissingOriginals extends BackupOmission { readonly title: string }
 export type BackupExportMode = 'complete' | 'download' | 'text-only';
 export type BackupExportResult = boolean | 'text-only' | { readonly missing: readonly BackupMissingOriginals[] };
+
+export interface AutoBackupSummary {
+  readonly id: string;
+  readonly filename: string;
+  readonly fromVersion: string | null;
+  readonly toVersion: string;
+  readonly fromDbSchema: number | null;
+  readonly toDbSchema: number;
+  readonly fromSyncSchema: number | null;
+  readonly toSyncSchema: number;
+  readonly createdAt: number;
+  readonly sizeBytes: number;
+  readonly textOnly: boolean;
+}
