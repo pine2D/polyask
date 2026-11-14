@@ -40,6 +40,7 @@ import type { WorkspaceState } from "../shared/workspace";
 import type { SyncStatus } from "../shared/sync";
 import type { SyncDiagnosticSnapshot } from "../shared/sync-diagnostics";
 import type { SiteHealth } from "../shared/site-health";
+import type { SiteSnapshotExportResult } from "../shared/site-snapshot";
 import type { SynthesisCandidate, SynthesisSendRequest, SynthesisSendResponse } from "../shared/synthesis";
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 
@@ -176,6 +177,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   getCaptureLocateCounts(): Promise<CaptureLocateCounts>;
   reloadSite(site: SiteKey, ignoreCache?: boolean): Promise<boolean>;
   clearSiteData(site: SiteKey): Promise<boolean>;
+  exportSiteSnapshot(site: SiteKey): Promise<SiteSnapshotExportResult>;
   clearHistory(): Promise<number>;
   clearDecisions(): Promise<number>;
   clearArchives(): Promise<number>;
@@ -349,6 +351,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   getCaptureLocateCounts: () => invoke("polyask:capture-locate-counts"),
   reloadSite: (site: SiteKey, ignoreCache?: boolean) => invoke("polyask:reload-site", site, ignoreCache),
   clearSiteData: (site: SiteKey) => invoke("polyask:clear-site-data", site),
+  exportSiteSnapshot: (site: SiteKey) => invoke("polyask:export-site-snapshot", site),
   clearHistory: () => invoke("polyask:clear-history"),
   clearDecisions: () => invoke("polyask:clear-decisions"),
   clearArchives: () => invoke("polyask:clear-archives"),

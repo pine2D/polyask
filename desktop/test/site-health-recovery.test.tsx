@@ -61,7 +61,8 @@ test('first step and folded recovery actions use only existing manual callbacks'
   const calls: string[] = [];
   const actions = { onFocus: (key: string) => calls.push(`focus:${key}`), onCheck: (keys: string[]) => calls.push(`check:${keys.join()}`),
     onReload: (key: string) => calls.push(`reload:${key}`), onHardReload: (key: string) => calls.push(`hard:${key}`),
-    onClearData: (key: string) => calls.push(`cache:${key}`), onCopyReport: () => calls.push('report') };
+    onClearData: (key: string) => calls.push(`cache:${key}`), onCopyReport: () => calls.push('report'),
+    onExportSnapshot: (key: string) => calls.push(`snapshot:${key}`) };
   const h = await mountDom(element(health({ checks: [check('control')] }), status(), actions));
   try {
     const first = h.document.querySelector<HTMLButtonElement>('.health-first-step button');
@@ -76,7 +77,14 @@ test('first step and folded recovery actions use only existing manual callbacks'
     assert.equal(buttons.length, 3);
     for (const button of buttons) await h.click(button);
     await h.click([...h.document.querySelectorAll<HTMLButtonElement>('button')].find(button => button.textContent === copy.healthCopyReport)!);
-    assert.deepEqual(calls, ['focus:claude', 'reload:claude', 'hard:claude', 'cache:claude', 'report']);
+    const snapshotBtn = h.document.querySelector<HTMLButtonElement>('[data-export-snapshot="claude"]');
+    assert.equal(snapshotBtn === null, false, 'single-site detail must place snapshot export alongside copy report');
+    await h.click(snapshotBtn!);
+    assert.deepEqual(calls, ['focus:claude', 'reload:claude', 'hard:claude', 'cache:claude', 'report', 'snapshot:claude']);
+    await h.render(<SiteHealthPanel copy={copy} sites={[site]} statuses={{ claude: status() }} health={{ claude: health() }}
+      detail={null} checking={false} onDetail={noop} onCheck={noop} onFocus={noop} onReload={noop} onHardReload={noop}
+      onClearData={noop} onCopyReport={noop} onExportSnapshot={noop} onBack={noop} />);
+    assert.equal(h.document.querySelector('[data-export-snapshot]') === null, true, 'overview list must not expose single-site snapshot button');
     await h.render(element(health({ recent: { phase: 'generating' }, page: 'error' }), status(), actions));
     assert.equal(h.document.querySelector<HTMLElement>('.health-first-step')!.dataset.reason, 'busy');
     assert.equal([...h.document.querySelectorAll<HTMLButtonElement>('.health-more-recovery button')].every(button => button.disabled), true);

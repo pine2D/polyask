@@ -77,7 +77,7 @@ function Fixture(): React.JSX.Element {
         code: healthCase === 'unconfirmed' ? 'submit_unconfirmed' : undefined } }} health={{ claude: current }} detail="claude"
         checking={false} feedback={feedback} onDetail={() => {}} onBack={() => {}} onFocus={() => record('focus')}
         onCheck={() => record('check')} onReload={() => record('reload')} onHardReload={() => record('hard')}
-        onClearData={() => record('cache')} onCopyReport={() => record('report')} />
+        onClearData={() => record('cache')} onCopyReport={() => record('report')} onExportSnapshot={() => record('snapshot')} />
     </div>;
   }
   return <SettingsWorkspace copy={copy} locale={locale} runtime={runtime} status={status} display={display}

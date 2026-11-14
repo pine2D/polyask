@@ -6,35 +6,16 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { JSDOM } = require("jsdom");
-const { findSensitive, attrValueOk, FILLER, KEEP_ATTRS, EXPECT_ATTR, DROP_TAGS, EMPTY_TAGS, PROMPT_TOKEN } = require("./dom-fixture-sanitize");
+const {
+  findSensitive, attrValueOk, isSafeDataAttr, isPromptText, isFillerText, isSanitizedRoute,
+  FILLER, KEEP_ATTRS, PROSE_NO_ID_TAGS, EXPECT_ATTR, DROP_TAGS, EMPTY_TAGS, PROMPT_TOKEN
+} = require("./dom-fixture-sanitize");
 const { desktopSites } = require("./desktop-anchors");
 
 const FIXTURE_DIR = path.join(__dirname, "..", "fixtures-dom");
 const META_KEYS = new Set(["schema", "host", "path", "promptToken", "source", "capturedAt", "note", "expect", "stats"]);
 const EXPECT_KEYS = new Set(["userCount", "userText", "answer", "answerRoot", "locate"]);
 const STAT_KEYS = new Set(["elements", "texts", "promptHits", "droppedElements", "droppedAttrs", "truncated", "marked"]);
-
-// 「token」或多行问题的「token-L1\ntoken-L2…」；任何别的大写串都不是合法占位。
-function isPromptText(value, token) {
-  const lines = value.split("\n");
-  if (lines.length === 1) return lines[0] === token;
-  return lines.every((line, i) => line === `${token}-L${i + 1}`);
-}
-
-const FILLER_WORDS = FILLER.split(" ");
-// 占位文本：每个词都在 FILLER 词表里；filler() 按长度档截断，末词允许是某个词表词的前缀（"lore"、"a"）。
-function isFillerText(value) {
-  const words = value.split(" ");
-  return words.every((word, i) => FILLER_WORDS.includes(word)
-    || (i === words.length - 1 && /^[a-z]+$/.test(word) && FILLER_WORDS.some((filler) => filler.startsWith(word))));
-}
-
-// 路径形状与采集脚本 sanitizeRoute 同口径：每段为空、纯字母短横（≤24）或 id-N；查询串只许 chatglm 的 ?cid=id-N。
-function isSanitizedRoute(value) {
-  if (typeof value !== "string" || value.length > 120) return false;
-  const m = /^(\/[^?#]*)(?:\?cid=id-\d{1,5})?$/.exec(value);
-  return !!m && m[1].split("/").every((seg) => !seg || /^[A-Za-z_-]{1,24}$/.test(seg) || /^id-\d{1,5}$/.test(seg));
-}
 
 function scanHtml(html, promptToken) {
   const problems = findSensitive(html).map((name) => `sensitive:${name}`);
@@ -55,9 +36,9 @@ function scanHtml(html, promptToken) {
     if (EMPTY_TAGS.includes(tag) && node.childNodes.length) problems.push(`element:${tag}:children`);
     if (node.closest("svg") && tag !== "svg") problems.push("element:svg_descendant");
     for (const attr of node.attributes) {
-      const known = KEEP_ATTRS.includes(attr.name) || attr.name === "aria-label" || attr.name === EXPECT_ATTR || /^data-[a-z0-9_.:-]+$/.test(attr.name);
+      const known = KEEP_ATTRS.includes(attr.name) || attr.name === "aria-label" || attr.name === EXPECT_ATTR || isSafeDataAttr(attr.name);
       if (!known) problems.push(`attr:${attr.name}`);
-      else if (!attrValueOk(attr.name, attr.value)) problems.push(`attr_value:${attr.name}`);
+      else if ((attr.name === "id" && PROSE_NO_ID_TAGS.includes(tag)) || !attrValueOk(attr.name, attr.value)) problems.push(`attr_value:${attr.name}`);
       if (findSensitive(attr.value).length) problems.push(`attr_sensitive:${attr.name}`);
     }
   }

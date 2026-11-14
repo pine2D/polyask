@@ -1,4 +1,5 @@
 import { sendSiteCommand } from "./site-send-command";
+import { collectSiteDomSnapshot, type CollectedSiteSnapshot } from "./site-snapshot-service";
 import { inspectSitePreset } from "./site-tier-presets";
 import type { TierPreset, TierPresetAction } from "../shared/tier-presets";
 import { switchSiteTier } from './site-tier';
@@ -358,6 +359,10 @@ export class ViewManager {
 
   checkHealth(sites: readonly SiteKey[]): Promise<SiteHealth[]> {
     return Promise.all(sites.map((site) => checkSiteHealth(site, this.views.get(site), this.pageStatus.get(site), this.runStatus.get(site), this.commands)));
+  }
+
+  sampleSnapshot(site: SiteKey, appVersion: string): Promise<CollectedSiteSnapshot> {
+    return collectSiteDomSnapshot(site, this.views.get(site), this.pageStatus.get(site), this.commands, appVersion);
   }
 
   readonly historyAccess = new SiteHistoryAccess(site => this.views.get(site), this.commands, (site, abandoned) => {

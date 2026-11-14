@@ -4,11 +4,14 @@ import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { RuntimeInfo } from "../shared/runtime";
 import type { SiteHealth } from "../shared/site-health";
 import type { SiteStatus } from "../shared/protocol";
+import { ipcErrorCode } from "../shared/ipc-error";
 import { buildSiteReport } from "../shared/site-report";
+import { describeSiteSnapshotError } from "../shared/status-copy";
 import { shell } from "./shell-api";
 
 // proxy-state 在主进程可能等钥匙串（最长 10s）；报告的附加行不值得拖住复制。
 export const REPORT_PROXY_STATE_TIMEOUT_MS = 1_500;
+let exportSnapshotInFlight = false;
 function withTimeout<T>(task: Promise<T> | undefined, ms: number): Promise<T | undefined> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<undefined>((resolve) => { timer = setTimeout(() => resolve(undefined), ms); });
@@ -58,6 +61,24 @@ export function siteHealthActions(input: {
         await navigator.clipboard.writeText(report);
         input.noteHealth(input.copy.healthReportCopied);
       } catch { input.noteHealth(input.copy.healthReportCopyFailed); }
+    },
+    onExportSiteSnapshot: async (site: SiteKey) => {
+      if (exportSnapshotInFlight) return;
+      exportSnapshotInFlight = true;
+      try {
+        const result = await shell.exportSiteSnapshot(site);
+        if (result.status === "cancelled") return;
+        if (result.status === "exported") {
+          const label = input.sites.find((candidate) => candidate.key === site)?.label ?? site;
+          input.noteHealth(formatCopy(input.copy.healthSnapshotExported, { site: label }));
+          return;
+        }
+        input.noteHealth(describeSiteSnapshotError(input.copy, result.code));
+      } catch (error) {
+        input.noteHealth(describeSiteSnapshotError(input.copy, ipcErrorCode(error)));
+      } finally {
+        exportSnapshotInFlight = false;
+      }
     }
   };
 }

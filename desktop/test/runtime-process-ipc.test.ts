@@ -4,7 +4,7 @@ import { runInNewContext } from "node:vm";
 import { transformSync } from "esbuild";
 import { readSource } from "./fixtures";
 
-test("runtime diagnostics cross only the trusted shell bridge and handlers are removed", () => {
+test("runtime diagnostics cross only the trusted shell bridge and handlers are removed", async () => {
   const handlers = new Map<string, (event: unknown) => unknown>();
   const expected = [{ processType: "GPU", reason: "crashed", exitCode: 1 }];
   const locate = { kimi: { anchor: 1 } };
@@ -24,6 +24,7 @@ test("runtime diagnostics cross only the trusted shell bridge and handlers are r
       if (name === "../shared/contracts") return { SITE_KEYS: ["kimi"] };
       if (name === "./capture-locate-diagnostics") return { captureLocateDiagnostics: { snapshot: () => locate } };
       if (name === "./site-inspection-ipc") return inspection.exports;
+      if (name === "./site-snapshot-service") return { exportSiteSnapshot: async () => ({ status: "cancelled" }) };
       assert.equal(name, "./runtime-process-diagnostics");
       return { runtimeProcessDiagnostics: { snapshot: () => expected } };
     }
@@ -35,6 +36,8 @@ test("runtime diagnostics cross only the trusted shell bridge and handlers are r
   const counts = handlers.get("polyask:capture-locate-counts")!;
   assert.throws(() => counts({}), /untrusted_sender/);
   assert.deepEqual(counts(trusted), locate);
+  const exportSnap = handlers.get("polyask:export-site-snapshot")!;
+  await assert.rejects(() => exportSnap({}) as Promise<unknown>, /untrusted_sender/);
   stop();
   assert.equal(handlers.size, 0);
 });

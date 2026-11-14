@@ -191,7 +191,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   const disposeFolderIpc = registerTaskFolderIpc({ folders: options.folders, trusted: trustedShell });
   const disposeDecisionIpc = registerDecisionIpc({ decisions: options.decisions, trusted: trustedShell });
   const disposeSyncIpc = registerSyncIpc({ sync, runtime: options.runtime, trusted: trustedShell });
-  const disposeSiteHealthIpc = registerSiteHealthIpc({ manager, trusted: trustedShell });
+  const disposeSiteHealthIpc = registerSiteHealthIpc({ manager, window, appVersion: options.runtime.version, trusted: trustedShell });
   const disposeDesktopTools = registerDesktopToolsIpc(options, { trusted: trustedShell,
     gate: operationGate, publishWorkspace, publishPromptLibrary, publishDrafts });
   const disposeProxyIpc = options.proxy ? registerProxyIpc({ ...options.proxy, trusted: trustedShell, gate: operationGate, dataAdmin: options.dataAdmin,

@@ -20,7 +20,14 @@ function producerFiles(): string[] {
   for (const known of ["view-manager.ts", "broadcast.ts", "workspace-service.ts", "site-command-channel.ts", "submission-upgrade.ts"]) {
     assert.ok(main.includes(`src/main/${known}`), `主进程目录扫描失效：缺 ${known}`);
   }
-  return [...requires, preload, ...main, "src/shared/markdown-export.ts"];
+  return [
+    ...requires,
+    preload,
+    "src/preload/site-snapshot-sampler.ts",
+    ...main,
+    "src/shared/markdown-export.ts",
+    "src/shared/site-snapshot.ts"
+  ];
 }
 
 function producedCodes(): Map<string, string> {

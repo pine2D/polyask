@@ -25,6 +25,8 @@ test("sensitive shapes are rejected", () => {
     jwt: ["eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.c2lnbmF0dXJl"],
     token: ["sk-abcdefghijklmnop", "sk_live_abcdefghijkl", "ghp_abcdefghijklmnop1234", "xoxb-1234567890-abc", "AKIA" + "ABCDEFGHIJKLMNOP",
       "AIzaSyAbcdefghijklmnopqrstu", "Bearer abcdefghijklmn"],
+    cookie: ["sessionid=abcdef0123456789", "__Secure-next-auth.session-token=abcdefghij1234"],
+    local_path: ["C:\\Users\\Alice\\Desktop\\report.pdf", "/home/alice/.config/polyask/config.json", "/Users/alice/Documents/a.txt"],
   };
   for (const [kind, values] of Object.entries(cases)) {
     for (const value of values) assert.ok(findSensitive(value).includes(kind), `${kind} 漏检: ${value}`);
@@ -59,10 +61,18 @@ test("unsanitized markup is rejected element by element", () => {
     '<div class="john&#64;example&#46;com">lorem</div>': "attr_value:class",
     '<div class="https&#x3a;&#x2f;&#x2f;evil&#x2e;com">lorem</div>': "attr_sensitive:class",
     '<div class="before:content-[&#39;secret_text&#39;]">lorem</div>': "attr_value:class",
+    '<code class="language-acme-payroll-alice">lorem</code>': "attr_value:class",
+    '<h2 id="acme-secret-heading">lorem</h2>': "attr_value:id",
+    '<div data-author="AliceSmith">lorem</div>': "attr_value:data-author",
+    '<div data-user.secret="true">lorem</div>': "attr:data-user.secret",
   };
   for (const [html, problem] of Object.entries(bad)) assert.ok(scanHtml(html, "POLYASK_PROMPT").includes(problem), `${html} 应报 ${problem}`);
   assert.deepEqual(scanHtml('<div class="x" data-message-id="id-1" aria-label="label-1" data-polyask-expect="user"><p>POLYASK_PROMPT</p></div>', "POLYASK_PROMPT"), []);
+  assert.deepEqual(scanHtml('<button type="button" aria-haspopup="menu" aria-expanded="true" aria-selected="false" disabled="">lorem</button>', "POLYASK_PROMPT"), []);
+  assert.ok(scanHtml('<button type="image" aria-expanded="open">lorem</button>', "POLYASK_PROMPT").includes("attr_value:type"));
   assert.deepEqual(scanHtml("<p>POLYASK_PROMPT-L1\nPOLYASK_PROMPT-L2</p>", "POLYASK_PROMPT"), []);
+  assert.deepEqual(scanHtml("<p>POLYASK_PROMPT-L1</p><p>POLYASK_PROMPT-L2</p>", "POLYASK_PROMPT"), []);
+  assert.deepEqual(scanHtml('<code class="language-code">lorem</code><code class="language-mermaid">lorem</code>', "POLYASK_PROMPT"), []);
   assert.deepEqual(scanHtml("<p>lorem ipsum dolor sit amet consectetur a</p><p>dolor sit</p><p>lore</p>", "POLYASK_PROMPT"), [], "长度档截断出的末词前缀合法");
   assert.ok(scanHtml("<p>lore ipsum</p>", "POLYASK_PROMPT").includes("text:not_placeholder"), "只有末词允许是前缀");
   assert.ok(scanHtml("<p>OTHER_TOKEN</p>", "POLYASK_PROMPT").includes("text:not_placeholder"));
@@ -74,8 +84,8 @@ test("fixture meta is whitelisted and sanitized", () => {
   assert.deepEqual(scanMeta(good), []);
   assert.ok(scanMeta({ ...good, host: "evil.test" }).includes("meta:host"));
   assert.ok(scanMeta({ ...good, path: "/chat/0f8fad5b-d9cb-469f-a165-70867728950e" }).includes("meta:sensitive:uuid"));
-  // 会话 id 必须已换成 id-N：短的字母数字 id、纯数字 id、任意查询串都不是 sanitizeRoute 的产物
-  for (const path of ["/chat/d3k9a2m1q8r7t6y5u4i3", "/chat/1234567890", "/x?q=my-question-words", "/a/chat/s/cr9v3k2l8q0ab", "chat/id-1"]) {
+  // 会话 id / 用户路径段 / 自定义 slug 必须已换成 id-N：短的字母数字 id、纯字母 slug、纯数字 id、任意查询串都不是 sanitizeRoute 的产物
+  for (const path of ["/chat/d3k9a2m1q8r7t6y5u4i3", "/chat/abc", "/chat/acme-private-project", "/g/g-secret-bot", "/u/alice", "/chat/1234567890", "/x?q=my-question-words", "/a/chat/s/cr9v3k2l8q0ab", "chat/id-1"]) {
     assert.ok(scanMeta({ ...good, path }).includes("meta:path"), path);
   }
   for (const path of ["/", "/chat/", "/chat/naQivTmsDa", "/c/id-2", "/main/alltoolsdetail?cid=id-1"]) assert.deepEqual(scanMeta({ ...good, path }), [], path);

@@ -29,13 +29,20 @@ HTML 里用 `data-polyask-expect` 标记期望节点，取值为 `user` / `answe
 ## 脱敏规则（`scripts/lib/dom-fixture-sanitize.js`）
 
 - 标签名保留。`script`、`style`、`iframe`、`link`、`meta` 等整棵丢弃；`svg` 只留空标签，不留 path 数据。
-- 属性白名单：`class`（逐个类名过滤，含 URL 或长 id 形状的丢弃）、`id`（只留人写的语义名）、`role`、`aria-hidden`、`contenteditable`、`hidden`、`data-testid` 及 site-runtime 选择器按值匹配的角色类 `data-*`（`data-message-author-role`、`data-turn`、`data-conversation-role`、`data-markdown-text-style`、`data-message-role`、`data-author-role`、`data-role`、`data-author`、`data-sender`；值须是短标识符，否则照样换占位）。
+- 属性白名单：`class`（逐个类名过滤，含 URL 或长 id 形状的丢弃）、`id`（只留人写的语义名）、`role`、`aria-hidden`、固定枚举控制属性（`aria-expanded`、`aria-checked`、`aria-selected`、`aria-pressed`、`aria-disabled`、`aria-haspopup`、`type`、`disabled`）、`contenteditable`、`hidden`、`data-testid` 及 site-runtime 选择器按值匹配的角色类 `data-*`（`data-message-author-role`、`data-turn`、`data-conversation-role`、`data-markdown-text-style`、`data-message-role`、`data-author-role`、`data-role`、`data-author`、`data-sender`；值须是短标识符，否则照样换占位）。
 - 其它 `data-*` 只留键，值换成本 fixture 内稳定的 `id-N`：同值同占位，保住 `data-message-id` 这类 key 的相等语义；空值和 `true`/`false` 原样保留。
 - `aria-label` 换成 `label-N`；`style`、`src`、`href`、`srcset`、`alt` 等一律丢弃。
 - 活页面上 computed `display:none` 的元素补一个 `hidden`，回放时 `md.js` 的剔除逻辑才不失真。
 - 文本节点全部换成小写 lorem 占位（只用脱敏器 FILLER 词表里的词，扫描门禁逐词核对），只保留粗略长度档；与问题原文逐字相等（空白归一后）的文本节点换成 token。答案里逐字复述问题时同样会被换成 token，保留真实页面上“同文多处”的歧义。
 
-扫描门禁另外拒收：URL（`http(s)://`、`www.`、协议相对地址、`blob:`、data URI）、邮箱、≥11 位的电话形数字、UUID、≥24 位 hex、≥32 位 base64 形串、JWT、常见 API token 前缀，以及白名单外的属性、不是占位词的文本和注释。
+扫描门禁另外拒收：URL（`http(s)://`、`www.`、协议相对地址、`blob:`、data URI）、邮箱、≥11 位的电话形数字、UUID、≥24 位 hex、≥32 位 base64 形串、JWT、常见 API token 前缀、会话 Cookie 键值对、Windows/macOS/Linux 本机用户目录路径，以及白名单外的属性、不是占位词的文本和注释。
+
+若用户已通过客户端 `Alt+H` 单站详情页「导出脱敏快照」保存了 `.json` 结构快照，可直接离线转入本目录并复核扫描门禁：
+
+```bash
+cd desktop
+node scripts/capture-dom-fixture.mjs --from-snapshot /path/to/kimi-dom-snapshot.json --name kimi-case [--dry-run]
+```
 
 ## 采集
 

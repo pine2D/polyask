@@ -22,7 +22,7 @@ import { usePresence } from '../../src/renderer/presence';
 import { useComposerSession } from '../../src/renderer/use-composer-session';
 import { useSiteParticipation } from '../../src/renderer/use-site-participation';
 import { useSitePageClose } from '../../src/renderer/use-site-page-close';
-import { setShellApi } from '../../src/renderer/shell-api';
+import { setShellApi, shell } from '../../src/renderer/shell-api';
 import { formatCopy, getCopy } from '../../src/shared/copy';
 import { createSyncDiagnosticSnapshot } from '../../src/shared/sync-diagnostics';
 import type { SyncStatus } from '../../src/shared/sync';
@@ -35,6 +35,8 @@ import { SITES } from '../../src/main/sites';
 import { customProxy, proxyShellStubs, proxyStateFixture } from './proxy-state-fixture';
 import { desktopToolsShellStubs } from './desktop-tools-fixture';
 import { requestSurfaceChange } from '../../src/renderer/surface-transition';
+import { describeSiteSnapshotError } from '../../src/shared/status-copy';
+import type { SiteHealth } from '../../src/shared/site-health';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/settings.css';
 import '../../src/renderer/accessibility.css';
@@ -118,7 +120,13 @@ setShellApi({
   syncNow: async () => { await finishOperation(); return status; },
   clearHistory: async () => { await finishOperation(); const count = dataStats.history;
     dataStats = { ...dataStats, history: 0, answers: 0, reset: { ...dataStats.reset, answers: 0 } }; return count; },
-  clearRemoteSync: async () => { await finishOperation(); return status; }
+  clearRemoteSync: async () => { await finishOperation(); return status; },
+  exportSiteSnapshot: async (site: SiteKey) => {
+    if (query.has('deferSnapshot')) await finishOperation();
+    const errorCode = query.get('snapshotError');
+    if (errorCode) return { status: 'failed' as const, code: errorCode as any };
+    return { status: 'exported' as const, filePath: `polyask-${site}-snapshot-2026-11-14.json` };
+  }
 } as any);
 
 function Fixture(): React.JSX.Element {
@@ -132,7 +140,25 @@ function Fixture(): React.JSX.Element {
   const [images, setImages] = useState(query.has('details') ? previewImages : []);
   const [imagesOpen, setImagesOpen] = useState(false);
   const [selected, setSelected] = useState<readonly SiteKey[]>(SITES.slice(0, query.has('singlePage') ? 2 : 9).map(s => s.key));
-  const [panel, setPanel] = useState<OpenWorkspacePanelState | null>({ tab: 'sites', detail: null, inputMethod: 'keyboard' });
+  const initialHealthDetail = query.get('healthDetail') as SiteKey | null;
+  const [panel, setPanel] = useState<OpenWorkspacePanelState | null>(
+    initialHealthDetail ? { tab: 'health', detail: initialHealthDetail, inputMethod: 'pointer' } : { tab: 'sites', detail: null, inputMethod: 'keyboard' }
+  );
+  const [healthFeedback, setHealthFeedback] = useState('');
+  const fixtureHealth: Partial<Record<SiteKey, SiteHealth>> = initialHealthDetail ? {
+    [initialHealthDetail]: {
+      site: initialHealthDetail,
+      state: query.get('healthState') === 'error' ? 'error' : 'ready',
+      page: 'ready',
+      checkedAt: 1_790_208_000_000,
+      checks: [
+        { name: 'Composer', kind: 'control', ok: query.get('healthState') !== 'error' },
+        { name: 'Send control', kind: 'control', ok: true },
+        { name: 'Tier selector', kind: 'tier', ok: false },
+        { name: 'History capture', kind: 'capture', ok: true }
+      ]
+    }
+  } : {};
   const [notifications, setNotifications] = useState(true);
   const [sent, setSent] = useState(false);
   const [preferences, setPreferences] = useState<PreferenceSnapshot>({ deviceId: 'fixture-local',
@@ -196,10 +222,17 @@ function Fixture(): React.JSX.Element {
       onToggle={site => { void participation.toggle(site); }} onFocus={noop} onReload={noop} onBack={noop} />
     {panel && <WorkspaceDrawer copy={copy} sites={SITES} selected={new Set(selected)} participating={new Set(participation.participating)} groups={[]} statuses={{}}
       participationBusy={participation.pending || !!query.get('sending')} onCloseSitePage={site => { void pageClose.request(site); }}
-      health={{}} healthChecking={false} open state={panel} onStateChange={setPanel} onSelectionChange={next => { void participation.reorderOpened(next); }}
+      health={fixtureHealth} healthChecking={false} open state={panel} onStateChange={setPanel} onSelectionChange={next => { void participation.reorderOpened(next); }}
       onParticipationChange={next => { void participation.change(next); }}
       onSaveGroup={async () => true} onDeleteGroup={noop} onCheckHealth={noop} onFocusSite={noop}
-      onReloadSite={noop} onHardReloadSite={noop} onClearSiteData={noop} onCopyHealthReport={noop} />}
+      onReloadSite={noop} onHardReloadSite={noop} onClearSiteData={noop} onCopyHealthReport={noop}
+      healthFeedback={healthFeedback}
+      onExportSiteSnapshot={async site => {
+        const res = await shell.exportSiteSnapshot(site);
+        const label = SITES.find(item => item.key === site)?.label ?? site;
+        if (res.status === 'exported') setHealthFeedback(formatCopy(copy.healthSnapshotExported, { site: label }));
+        else if (res.status === 'failed') setHealthFeedback(describeSiteSnapshotError(copy, res.code));
+      }} />}
     {pageClose.dialog}
     <p style={{ position: 'absolute', top: 180, left: 360, color: 'var(--muted)' }}>UI fixture · 仅验证外壳，未加载 AI 站点</p>
   </div>;

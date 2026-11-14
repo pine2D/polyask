@@ -1,9 +1,10 @@
+import { useRef, useState } from "react";
 import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type { SiteStatus } from "../shared/protocol";
 import { isAdvisoryCheck, siteReloadAllowed, summarizeSiteHealth, type SiteHealth, type SiteHealthState } from "../shared/site-health";
 import { describeStatus } from "../shared/status-copy";
-import { BackIcon, ChevronDownIcon, CopyIcon, FocusIcon, ReloadIcon, TrashIcon } from "./icons";
+import { BackIcon, ChevronDownIcon, CopyIcon, DownloadIcon, FocusIcon, ReloadIcon, TrashIcon } from "./icons";
 import { siteRecoveryAdvice, SITE_RECOVERY_COPY } from "./site-health-recovery";
 import { SiteGlyph } from "./ui-primitives";
 
@@ -21,8 +22,9 @@ interface SiteHealthPanelProps {
   readonly onHardReload: (site: SiteKey) => void;
   readonly onClearData: (site: SiteKey) => void;
   readonly onCopyReport: () => void;
+  readonly onExportSnapshot?: (site: SiteKey) => void | Promise<void>;
   readonly onBack: () => void;
-  /** 最近一次站点动作（复制报告/重载/清缓存）的可见反馈；与外壳的读屏播报同一句。 */
+  /** 最近一次站点动作（复制报告/导出脱敏快照/重载/清缓存）的可见反馈；与外壳的读屏播报同一句。 */
   readonly feedback?: string;
 }
 
@@ -46,6 +48,19 @@ function recentLabel(copy: DesktopCopy, current: SiteHealth): string {
 }
 
 export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element {
+  const [exporting, setExporting] = useState<SiteKey | null>(null);
+  const exportBusyRef = useRef(false);
+  const triggerExport = (site: SiteKey): void => {
+    if (exportBusyRef.current || !props.onExportSnapshot) return;
+    exportBusyRef.current = true;
+    setExporting(site);
+    Promise.resolve(props.onExportSnapshot(site))
+      .catch(() => undefined)
+      .finally(() => {
+        exportBusyRef.current = false;
+        setExporting((current) => (current === site ? null : current));
+      });
+  };
   const items = props.sites.map((site) => props.health[site.key] ?? {
     site: site.key,
     state: "unknown" as const,
@@ -92,6 +107,7 @@ export function SiteHealthPanel(props: SiteHealthPanelProps): React.JSX.Element 
           <button type="button" disabled={props.checking} onClick={() => props.onCheck([detailSite.key])}><ReloadIcon />{props.checking ? props.copy.checkingSiteHealth : props.copy.checkAgain}</button>
           <button type="button" onClick={() => props.onFocus(detailSite.key)}><FocusIcon />{props.copy.healthFocusSite}</button>
           <button type="button" onClick={props.onCopyReport}><CopyIcon />{props.copy.healthCopyReport}</button>
+          <button type="button" data-export-snapshot={detailSite.key} disabled={exporting !== null} data-hint={props.copy.healthExportSnapshotHint} onClick={() => triggerExport(detailSite.key)}><DownloadIcon />{exporting === detailSite.key ? props.copy.healthExportingSnapshot : props.copy.healthExportSnapshot}</button>
         </div>
         <details className="health-more-recovery" key={detailSite.key}>
           <summary>{props.copy.healthRecoveryMore}</summary>

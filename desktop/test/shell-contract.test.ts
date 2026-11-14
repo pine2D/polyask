@@ -214,8 +214,12 @@ test("portable setup failures localize without calling app.getLocale before read
   const legacyBranch = setup.slice(setup.indexOf("else if (legacyDataAvailable)"), setup.indexOf("} catch"));
   const legacyLock = legacyBranch.indexOf("legacyProfileLock = app.requestSingleInstanceLock()");
   const finalize = legacyBranch.indexOf("finalizePortableDataImport(runtimeProfile)");
+  const bootstrap = legacyBranch.indexOf("preparePortableBootstrap(runtimeProfile)");
   const portablePath = legacyBranch.indexOf('app.setPath("userData"');
-  assert.ok(legacyLock >= 0 && legacyLock < finalize && finalize < portablePath);
+  assert.ok(legacyLock >= 0 && legacyLock < finalize && finalize < bootstrap && bootstrap < portablePath);
+  const freshBranch = setup.slice(setup.indexOf("} else {"), setup.indexOf("} catch"));
+  assert.ok(freshBranch.indexOf("preparePortableBootstrap(runtimeProfile)")
+    < freshBranch.indexOf('app.setPath("userData"'));
   assert.doesNotMatch(setup, /app\.getLocale\(\)/);
   assert.match(setup, /legacyDataAvailable = hasImportableLegacyData\(runtimeProfile\)/);
   assert.match(main, /app\.releaseSingleInstanceLock\(\)/);

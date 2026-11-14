@@ -1,5 +1,6 @@
 import { normalizeTierPresetResult } from "../shared/tier-presets";
 import { normalizeHistorySnapshot } from "../shared/question-capture";
+import { sampleSiteDomSnapshot } from "./site-snapshot-sampler";
 import { ipcRenderer } from "electron";
 
 import type {
@@ -149,6 +150,10 @@ function dispatch(command: SiteCommand): Promise<SiteCommandResponse> {
     catch { return Promise.resolve({ token: command.token, owned: false }); }
   }
   if (command.cmd === "generation") return Promise.resolve(readGeneration());
+  if (command.cmd === "siteSnapshot") {
+    try { return Promise.resolve(sampleSiteDomSnapshot()); }
+    catch { return Promise.resolve({ ok: false, code: "snapshot_failed" }); }
+  }
   // wasSubmitted 的每一个失败出口都是「不支持」：超时、无适配器、异常、形状不对，一律不能被读成「确认未提交」。
   const probing = command.cmd === "wasSubmitted";
   const unsupported: SiteSubmittedResponse = { supported: false, ok: false };

@@ -92,7 +92,7 @@ i18n → core → read-commands → tier → selection-match → preset-common �
 | 可重试码重投间隔 | `min(500ms, 剩余)` | `broadcast.ts` |
 | 只读提交确认窗 | 固定 `now+1.5s`，**独立于群发 deadline**（deadline 到点才收到 `submit_unconfirmed` 是常态，夹在内会归零）；单次探测 ≤300ms，无人应答（页面重挂）再问，连续 5 次明确未见判未提交 | `broadcast.ts` |
 | 回答采集（`collect`） | 每轮 8s | `collection-service.ts` |
-| 只读诊断（`diagnose`） | 2.5s | `view-manager.ts` |
+| 只读诊断（`diagnose`） / 脱敏结构快照（`siteSnapshot`） | 2.5s / 5s（快照写盘前经隔离 preload 与主进程 `verifySanitizedSnapshot` 双重校验，超 20,000 节点或检出敏感/非占位串直接阻断，不弹保存框） | `view-manager.ts`、`site-snapshot-service.ts` |
 | 生成态探针（`generation`） | 单次 2.5s，轮询 900ms，连续 5 次读不到状态才放弃 | `view-manager.ts` |
 | 生成监控观测期 | 起始 45s；**确实见到「生成中」后延长到 15 分钟** | `view-manager.ts` |
 | 提问历史副本观察期 | 提交结果就绪后固定 15 分钟；生成或正文进度不顺延，明确终止归属时提前结束 | `question-history-service.ts` |
@@ -125,7 +125,8 @@ i18n → core → read-commands → tier → selection-match → preset-common �
 | `attachment_conflict` | `attachmentConflict` | | `source_changed` | `synthesisSourceVersionChanged` |
 | `proxy_failed` | `proxyFailed` | | `proxy_auth_failed` | `proxyAuthFailed` |
 | `command_shortcut_read_failed` | `commandShortcutReadFailed` | | `command_shortcut_save_failed` | `commandShortcutSaveFailed` |
-| `command_shortcut_apply_failed` | `commandShortcutApplyFailed` | | | |
+| `command_shortcut_apply_failed` | `commandShortcutApplyFailed` | | `snapshot_privacy_blocked` | `snapshotPrivacyBlocked` |
+| `snapshot_too_large` | `snapshotTooLarge` | | `snapshot_failed` | `snapshotFailed` |
 
 采集码另走 `describeCollectionCode`：`no_answer` → `noAnswer`、`no_view` / `no_window` → `siteUnavailable`（`no_window` 是 Drive schema 1 线格式里带进来的旧码，语义与 `no_view` 相通）、`not_ready` → `siteNotReady`、`answer_truncated` → `answerTruncated`，其余落 `failed`。辅助综合发送另有 `describeSynthesisSendCode`，另处理 `target_not_selected` 与 `operation_busy`。
 

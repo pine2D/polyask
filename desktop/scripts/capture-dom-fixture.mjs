@@ -14,15 +14,18 @@ const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
 const { desktopSites } = require('./lib/desktop-anchors.js');
 const { FIXTURE_DIR, scanHtml, scanMeta } = require('./lib/dom-fixture-scan.js');
-const { PROMPT_TOKEN } = require('./lib/dom-fixture-sanitize.js');
+const { PROMPT_TOKEN, sanitizeRoute } = require('./lib/dom-fixture-sanitize.js');
+export { sanitizeRoute };
 
 function parseArgs(argv) {
-  const args = { port: 9223, root: 'main', token: 'POLYASK_PROMPT', force: false, dryRun: false };
+  const args = { port: 9223, root: 'main', token: 'POLYASK_PROMPT', force: false, dryRun: false, allowPartial: false };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i];
     const value = () => { const v = argv[++i]; if (v === undefined) throw new Error(`missing_value:${flag}`); return v; };
     if (flag === '--host') args.host = value();
     else if (flag === '--name') args.name = value();
+    else if (flag === '--from-snapshot') args.fromSnapshot = value();
+    else if (flag === '--allow-partial') args.allowPartial = true;
     else if (flag === '--prompt') args.prompt = value();
     else if (flag === '--prompt-file') args.promptFile = value();
     else if (flag === '--token') args.token = value();
@@ -36,16 +39,25 @@ function parseArgs(argv) {
   return args;
 }
 
-// 路径里看起来像会话 id 的段（含数字、过长或非纯字母）换成 id-N；只保留 chatglm 路由语义需要的 cid 参数。
-// history.js 的 route() 只看段的形状（/chat/<id>、/c/WEB:<id> 之类），占位后首页/会话页判定不变。
-export function sanitizeRoute(href) {
-  const url = new URL(href);
-  const ids = new Map();
-  const id = (value) => { if (!ids.has(value)) ids.set(value, `id-${ids.size + 1}`); return ids.get(value); };
-  let out = url.pathname.split('/').map((seg) => !seg || /^[A-Za-z_-]{1,24}$/.test(seg) ? seg : id(seg)).join('/') || '/';
-  const cid = url.searchParams.get('cid');
-  if (cid) out += `?cid=${id(cid)}`;
-  return out;
+export function importSnapshotFixture(rawSnapshot, options = {}) {
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(options.name || '')) throw new Error('invalid_fixture_name');
+  const parsed = typeof rawSnapshot === 'string' ? JSON.parse(rawSnapshot) : rawSnapshot;
+  if (!parsed || typeof parsed !== 'object' || parsed.schema !== 1 || parsed.kind !== 'polyask-site-dom-snapshot') {
+    throw new Error('invalid_snapshot_file');
+  }
+  const site = desktopSites().find((item) => item.key === parsed.site && item.host === parsed.host);
+  if (!site || !parsed.fixture || parsed.fixture.host !== site.host) throw new Error('unknown_site');
+  if (!options.allowPartial && parsed.sampling !== 'full-main') {
+    throw new Error(`snapshot_not_full_main:${String(parsed.sampling || 'unknown')}`);
+  }
+  const meta = {
+    ...parsed.fixture,
+    ...(options.note ? { note: options.note } : {})
+  };
+  const html = `${String(parsed.html || '').trim()}\n`;
+  const problems = [...scanHtml(html, meta.promptToken), ...scanMeta(meta)];
+  if (problems.length) throw new Error(`snapshot_scan_failed:${problems.join(',')}`);
+  return { html, meta };
 }
 
 export function promptTokenText(prompt, token) {
@@ -135,6 +147,17 @@ async function connect(port, host) {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.fromSnapshot) {
+    const raw = await readFile(args.fromSnapshot, 'utf8');
+    const { html, meta } = importSnapshotFixture(raw, { name: args.name, note: args.note, allowPartial: args.allowPartial });
+    console.log(JSON.stringify({ name: args.name, ...meta }, null, 2));
+    if (args.dryRun) return;
+    const flag = args.force ? 'w' : 'wx';
+    await writeFile(join(FIXTURE_DIR, `${args.name}.html`), html, { flag });
+    await writeFile(join(FIXTURE_DIR, `${args.name}.json`), `${JSON.stringify(meta, null, 2)}\n`, { flag });
+    console.log(`written: ${join(FIXTURE_DIR, args.name)}.{html,json} — review the diff before committing`);
+    return;
+  }
   const site = desktopSites().find((item) => item.host === args.host || item.key === args.host);
   if (!site) throw new Error('unknown_site');
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(args.name || '')) throw new Error('invalid_fixture_name');

@@ -130,3 +130,55 @@ test("a hung proxy-state read is abandoned after the timeout and the report stil
     else Reflect.deleteProperty(globalThis, "window");
   }
 });
+
+test("snapshot export action reports exported/failed states, stays silent on cancel, and guards concurrent clicks", async () => {
+  const notes: string[] = [];
+  let calls = 0;
+  let releaseGate: (() => void) | undefined;
+  let nextResult: any = { status: "exported", filePath: "/tmp/kimi-dom-snapshot-2026-11-14.json" };
+  setShellApi({
+    exportSiteSnapshot: async () => {
+      calls += 1;
+      if (releaseGate) await new Promise<void>((resolve) => { releaseGate = resolve; });
+      if (nextResult instanceof Error) throw nextResult;
+      return nextResult;
+    }
+  } as unknown as PolyAskDesktopApi);
+  try {
+    const copy = getCopy("zh-CN");
+    const actions = siteHealthActions({
+      copy,
+      sites: [{ key: "kimi", label: "Kimi" } as any],
+      selected: new Set(["kimi" as const]),
+      runtime: { version: "1.34.0", distribution: "installed" } as any,
+      statuses: {},
+      health: {},
+      setHealth() {},
+      noteHealth: (text) => notes.push(text)
+    });
+
+    releaseGate = () => {};
+    const first = actions.onExportSiteSnapshot("kimi");
+    await actions.onExportSiteSnapshot("kimi");
+    assert.equal(calls, 1, "导出进行中再次点击不应重复重入");
+    releaseGate();
+    releaseGate = undefined;
+    await first;
+    assert.match(notes.at(-1) ?? "", /Kimi.*脱敏结构快照/);
+
+    const countBeforeCancel = notes.length;
+    nextResult = { status: "cancelled" };
+    await actions.onExportSiteSnapshot("kimi");
+    assert.equal(notes.length, countBeforeCancel, "取消保存对话框不应报错或刷提示");
+
+    nextResult = { status: "failed", code: "snapshot_privacy_blocked" };
+    await actions.onExportSiteSnapshot("kimi");
+    assert.equal(notes.at(-1), copy.snapshotPrivacyBlocked);
+
+    nextResult = new Error("Error invoking remote method 'polyask:export-site-snapshot': Error: snapshot_too_large");
+    await actions.onExportSiteSnapshot("kimi");
+    assert.equal(notes.at(-1), copy.snapshotTooLarge);
+  } finally {
+    setShellApi(null);
+  }
+});

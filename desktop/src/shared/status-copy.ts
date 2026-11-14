@@ -11,6 +11,9 @@ const STATUS_COPY_KEY: Record<SiteCode, keyof DesktopCopy> = {
   markdown_too_large: 'markdownTooLarge',
   markdown_empty: 'markdownEmpty',
   markdown_failed: 'markdownFailed',
+  snapshot_privacy_blocked: "snapshotPrivacyBlocked",
+  snapshot_too_large: "snapshotTooLarge",
+  snapshot_failed: "snapshotFailed",
 
   command_shortcut_read_failed: "commandShortcutReadFailed",
   command_shortcut_save_failed: "commandShortcutSaveFailed",
@@ -120,4 +123,10 @@ export function errorCode(error: unknown): string {
 
 export function describeCommandPaletteShortcutError(copy: DesktopCopy, error: CommandPaletteShortcutError): string {
   return copy[STATUS_COPY_KEY[error]];
+}
+
+export function describeSiteSnapshotError(copy: DesktopCopy, code?: string): string {
+  return code && Object.hasOwn(STATUS_COPY_KEY, code)
+    ? copy[STATUS_COPY_KEY[code as SiteCode]]
+    : copy.snapshotFailed;
 }

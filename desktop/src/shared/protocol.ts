@@ -1,5 +1,6 @@
 import type { TierPreset, TierPresetAction, TierPresetResult } from "./tier-presets";
 import { MARKDOWN_EXPORT_CODES } from './markdown-export';
+import { SITE_SNAPSHOT_ERROR_CODES, type SiteDomSnapshotSample } from "./site-snapshot";
 import type { HistorySnapshot, HistorySnapshotCommand } from "./question-capture";
 import {
   SITE_KEYS,
@@ -107,7 +108,13 @@ export interface TierPresetSiteCommand {
   readonly deadline: number;
 }
 
-export type SiteCommand = TierPresetSiteCommand | TierSiteCommand | HistorySnapshotCommand | SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand;
+export interface SiteSnapshotSiteCommand {
+  readonly source: "AMS";
+  readonly cmd: "siteSnapshot";
+  readonly deadline: number;
+}
+
+export type SiteCommand = TierPresetSiteCommand | TierSiteCommand | HistorySnapshotCommand | SubmitSiteCommand | CollectSiteCommand | DiagnoseSiteCommand | GenerationSiteCommand | WasSubmittedSiteCommand | SiteSnapshotSiteCommand;
 
 export interface SiteSubmittedResponse {
   readonly supported: boolean;
@@ -158,7 +165,7 @@ export interface CollectedAnswer {
   readonly code?: string;
 }
 
-export type SiteCommandResponse = TierPresetResult | HistorySnapshot | SiteResult | SiteCollectionResult | SiteDiagnosticResponse | SiteGenerationResponse | SiteSubmittedResponse;
+export type SiteCommandResponse = TierPresetResult | HistorySnapshot | SiteResult | SiteCollectionResult | SiteDiagnosticResponse | SiteGenerationResponse | SiteSubmittedResponse | SiteDomSnapshotSample;
 
 export interface CollectionRequest {
   readonly sites: readonly SiteKey[];
@@ -182,6 +189,7 @@ export type SitePhase =
 // 反向（源码产出的码必须在这里）由 test/status-copy-coverage.test.ts 守着。
 export const SITE_CODES = [
   ...MARKDOWN_EXPORT_CODES,
+  ...SITE_SNAPSHOT_ERROR_CODES,
   "command_shortcut_read_failed",
   "command_shortcut_save_failed",
   "command_shortcut_apply_failed",

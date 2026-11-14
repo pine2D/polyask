@@ -1,14 +1,17 @@
-import { ipcMain, type IpcMainInvokeEvent } from "electron";
+import { dialog, ipcMain, type BrowserWindow, type IpcMainInvokeEvent } from "electron";
 
 import { SITE_KEYS, type SiteKey } from "../shared/contracts";
 import type { ViewManager } from "./view-manager";
 import { runtimeProcessDiagnostics } from "./runtime-process-diagnostics";
 import { captureLocateDiagnostics } from "./capture-locate-diagnostics";
 import { registerSiteInspectionIpc } from "./site-inspection-ipc";
+import { exportSiteDomSnapshot } from "./site-snapshot-service";
 
 interface SiteHealthIpcOptions {
   readonly manager: ViewManager;
   readonly trusted: (event: IpcMainInvokeEvent) => boolean;
+  readonly window?: BrowserWindow;
+  readonly appVersion?: string;
 }
 
 function siteList(value: unknown): SiteKey[] | null {
@@ -44,6 +47,23 @@ export function registerSiteHealthIpc(options: SiteHealthIpcOptions): () => void
     if (typeof value !== "string" || !SITE_KEYS.includes(value as SiteKey)) throw new Error("invalid_site");
     return options.manager.clearSiteData(value as SiteKey);
   });
+  ipcMain.handle("polyask:export-site-snapshot", async (event, value: unknown) => {
+    if (!options.trusted(event)) throw new Error("untrusted_sender");
+    if (typeof value !== "string" || !SITE_KEYS.includes(value as SiteKey)) throw new Error("invalid_site");
+    const site = value as SiteKey;
+    return exportSiteDomSnapshot({
+      site,
+      collect: (target) => options.manager.sampleSnapshot(target, options.appVersion ?? "0.0.0"),
+      choosePath: async (defaultFilename) => {
+        if (!options.window || options.window.isDestroyed()) return null;
+        const result = await dialog.showSaveDialog(options.window, {
+          defaultPath: defaultFilename,
+          filters: [{ name: "JSON", extensions: ["json"] }]
+        });
+        return result.canceled || !result.filePath ? null : result.filePath;
+      }
+    });
+  });
   return () => {
     disposeInspection();
     ipcMain.removeHandler("polyask:runtime-process-failures");
@@ -51,5 +71,6 @@ export function registerSiteHealthIpc(options: SiteHealthIpcOptions): () => void
     ipcMain.removeHandler("polyask:site-health");
     ipcMain.removeHandler("polyask:reload-site");
     ipcMain.removeHandler("polyask:clear-site-data");
+    ipcMain.removeHandler("polyask:export-site-snapshot");
   };
 }
