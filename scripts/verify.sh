@@ -33,6 +33,12 @@ for file in "${JS_FILES[@]}"; do
   [ "$lines" -le 300 ] || { echo "✗ $file: $lines 行" >&2; exit 1; }
 done
 
+echo "[size] 检查 CLAUDE.md 与 docs/verify.md 容量上限"
+claude_bytes=$(wc -c < CLAUDE.md)
+[ "$claude_bytes" -le 11264 ] || { echo "✗ CLAUDE.md: ${claude_bytes} 字节 > 11264 (11 KiB)；请先精简或外迁 docs/" >&2; exit 1; }
+verify_lines=$(wc -l < docs/verify.md)
+[ "$verify_lines" -le 300 ] || { echo "✗ docs/verify.md: ${verify_lines} 行 > 300；按日历史实测请归入 docs/verify-history.md" >&2; exit 1; }
+
 echo "[size] 检查 desktop/src 的 .ts/.tsx 单文件不超过 400 行（越界文件走棘轮：只许降不许升）"
 # 棘轮基线：2026-09-05 生成时的实际行数。要上调必须在同一 commit 里改这里并在行尾写明理由——
 # 只接受「修 bug / 补安全断言」，不接受「加新功能」；上调超过 20 行的同批给出拆分 TODO。
@@ -93,6 +99,123 @@ mapfile -t GH_REFS < <(grep -ohE '\.github/[A-Za-z0-9._/-]+\.ya?ml' CLAUDE.md RE
 for ref in "${GH_REFS[@]}"; do
   [ -s "$ref" ] || { echo "✗ 文档引用的 .github 文件失效或为空: $ref" >&2; exit 1; }
 done
+
+echo "[docs] 检查核心文档版本号与 desktop/package.json 一致"
+PKG_VERSION=$(node -p 'require("./desktop/package.json").version')
+grep -qF "desktop/package.json v${PKG_VERSION}" CLAUDE.md || {
+  echo "✗ CLAUDE.md 顶部版本标注与 desktop/package.json (v${PKG_VERSION}) 不一致" >&2
+  exit 1
+}
+grep -qF "当前源码版本 ${PKG_VERSION}" docs/README.md || {
+  echo "✗ docs/README.md 当前源码版本与 desktop/package.json (${PKG_VERSION}) 不一致" >&2
+  exit 1
+}
+grep -qF "当前源码版本 **${PKG_VERSION}**" docs/acceptance.md || {
+  echo "✗ docs/acceptance.md 当前源码版本与 desktop/package.json (${PKG_VERSION}) 不一致" >&2
+  exit 1
+}
+
+echo "[docs] 检查入库文档 Markdown 标题锚点未断链"
+mapfile -t MD_ANCHOR_SOURCES < <(git ls-files -- 'docs/*.md'; printf '%s\n' CLAUDE.md README.md)
+node - "${MD_ANCHOR_SOURCES[@]}" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+
+const files = process.argv.slice(2);
+const headingCache = new Map();
+
+function stripFences(markdown) {
+  const lines = markdown.split(/\r?\n/);
+  const out = [];
+  let fence = null;
+  for (const line of lines) {
+    const m = line.match(/^\s*(`{3,}|~{3,})/);
+    if (m) {
+      if (!fence) fence = m[1][0];
+      else if (m[1][0] === fence) fence = null;
+      out.push("");
+      continue;
+    }
+    out.push(fence ? "" : line);
+  }
+  return out.join("\n");
+}
+
+function slugify(raw) {
+  const plain = raw
+    .replace(/\s+#+\s*$/, "")
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/<[^>]+>/g, "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{M}\p{N}\-_ ]/gu, "")
+    .replace(/ /g, "-");
+  return plain;
+}
+
+function getAnchors(filePath) {
+  const resolved = path.resolve(filePath);
+  if (headingCache.has(resolved)) return headingCache.get(resolved);
+  if (!fs.existsSync(resolved)) {
+    headingCache.set(resolved, null);
+    return null;
+  }
+  const text = stripFences(fs.readFileSync(resolved, "utf8"));
+  const counts = new Map();
+  const anchors = new Set();
+  for (const line of text.split("\n")) {
+    const m = line.match(/^#{1,6}\s+(.+?)\s*$/);
+    if (!m) continue;
+    const base = slugify(m[1]);
+    if (!base) continue;
+    const seen = counts.get(base) ?? 0;
+    counts.set(base, seen + 1);
+    anchors.add(seen === 0 ? base : `${base}-${seen}`);
+  }
+  headingCache.set(resolved, anchors);
+  return anchors;
+}
+
+const errors = [];
+for (const source of files) {
+  if (!fs.existsSync(source)) continue;
+  const text = stripFences(fs.readFileSync(source, "utf8"));
+  const lines = text.split("\n");
+  const checkTarget = (rawTarget, lineNo) => {
+    if (!rawTarget || /^(?:https?:|mailto:|data:)/i.test(rawTarget)) return;
+    const hashIdx = rawTarget.indexOf("#");
+    if (hashIdx === -1) return;
+    const relFile = rawTarget.slice(0, hashIdx);
+    const rawFragment = rawTarget.slice(hashIdx + 1).replace(/\s+"[^"]*"\s*$/, "");
+    if (!rawFragment) return;
+    const targetFile = relFile ? path.resolve(path.dirname(source), relFile) : path.resolve(source);
+    if (path.extname(targetFile) !== ".md") return;
+    let fragment = rawFragment;
+    try { fragment = decodeURIComponent(rawFragment); } catch {}
+    fragment = fragment.toLowerCase();
+    const anchors = getAnchors(targetFile);
+    const relDisplay = path.relative(process.cwd(), targetFile);
+    if (!anchors) {
+      errors.push(`${source}:${lineNo}: 锚点目标文件不存在 ${relDisplay}#${fragment}`);
+    } else if (!anchors.has(fragment)) {
+      errors.push(`${source}:${lineNo}: 找不到标题锚点 ${relDisplay}#${fragment}`);
+    }
+  };
+  lines.forEach((line, index) => {
+    for (const m of line.matchAll(/\[[^\]]*\]\(([^)\s]+(?:\s+"[^"]*")?)\)/g)) {
+      checkTarget(m[1].trim(), index + 1);
+    }
+    const def = line.match(/^\s*\[[^\]]+\]:\s*(\S+)/);
+    if (def) checkTarget(def[1].trim(), index + 1);
+  });
+}
+
+if (errors.length) {
+  for (const err of errors) console.error(`✗ ${err}`);
+  process.exit(1);
+}
+NODE
 
 echo "[lint] 检查 workflow YAML 可解析"
 # YAML 错误只能在推 tag 后由 GitHub 暴露，而 tag 不可覆盖 = 烧掉一个版本号；离线先解析一遍。
