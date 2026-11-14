@@ -43,6 +43,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
         return {active:a===n,visible:n.matches(':focus-visible'),outline:s.outlineStyle,target:a.className,fit:document.querySelector('.command-bar').dataset.fit};})()`);
       assert.equal(focus.active && focus.visible && focus.outline !== 'none', true, `draft entry must expose keyboard focus: ${JSON.stringify({label,...focus})}`);
       // 150% shell zoom at a 1440px content width still exercises the supported 960px CSS viewport.
+      win.webContents.sendInputEvent({ type: 'mouseMove', x: 0, y: 0 });
       win.setContentSize(1440, 900); win.webContents.setZoomFactor(1.5); await paint();
       await assertToolbar({win,run,output,label:label+'-zoom150'});
       reports.push(label);

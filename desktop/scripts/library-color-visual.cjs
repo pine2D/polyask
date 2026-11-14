@@ -18,10 +18,13 @@ function measureColors() {
     return (Math.max(...values) + .05) / (Math.min(...values) + .05);
   };
   const current = document.querySelector('.library-content-row:has([aria-current=true])');
+  const title = current.querySelector('.library-item-title'), titleStyle = getComputedStyle(title);
+  const inactiveTitle = document.querySelector('.library-content-row:not(:has([aria-current=true])) .library-item-title');
   const style = getComputedStyle(current), outer = getComputedStyle(current.closest('.folder-content-list')).backgroundColor;
   const roles = { draft: '--muted', verify: '--warning-ink', final: '--success-ink' };
   return {
-    selection: { boundary: ratio(style.borderTopColor, outer), inner: ratio(style.borderTopColor, style.backgroundColor),
+    selection: { boundary: ratio(style.borderTopColor, outer), textRatio: ratio(titleStyle.color, style.backgroundColor),
+      titleWeight: Number(titleStyle.fontWeight), inactiveWeight: Number(getComputedStyle(inactiveTitle).fontWeight),
       background: style.backgroundColor, outer, border: style.borderTopStyle, current: !!current.querySelector('[aria-current=true]'),
       hovered: current.matches(':hover') },
     badges: [...document.querySelectorAll('.library-status-badge')].map(node => {
@@ -41,8 +44,11 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, shot }) =>
   const reports = [], simulations = [];
   const measure = () => run(`(${measureColors.toString()})()`);
   const checkSelection = metrics => {
-    assert.ok(metrics.selection.current && metrics.selection.border === 'solid' && metrics.selection.boundary >= 3 && metrics.selection.inner >= 3,
-      `current record needs a visible boundary on both surfaces: ${JSON.stringify(metrics.selection)}`);
+    const surfaceDistinct = metrics.media.forced
+      ? metrics.selection.border === 'solid' && metrics.selection.boundary >= 3
+      : metrics.selection.background !== metrics.selection.outer && metrics.selection.titleWeight > metrics.selection.inactiveWeight;
+    assert.ok(metrics.selection.current && metrics.selection.textRatio >= 4.5 && surfaceDistinct,
+      `current record stays distinct and readable across modes: ${JSON.stringify(metrics.selection)}`);
   };
   const checkBadges = metrics => {
     assert.equal(metrics.badges.length, 4, 'all three list states and the reading state retain text labels');

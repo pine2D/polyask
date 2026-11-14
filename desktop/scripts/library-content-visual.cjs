@@ -12,6 +12,10 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, shot }) =>
     await win.loadFile(join(output, 'index.html'), { query: { locale, longTitles: '1' } });
     win.webContents.setZoomFactor(zoom);
     await wait(`Math.abs(innerWidth-${width / zoom}) <= 1 && !!document.querySelector('.archive-detail h1') && document.querySelectorAll('.library-item-title').length === 9`);
+    if (await run('getComputedStyle(document.querySelector(".folder-content-list")).display === "none"')) {
+      await click('.folder-back-list');
+      await wait('document.querySelector(".library").dataset.pane === "list" && getComputedStyle(document.querySelector(".folder-content-list")).display !== "none"');
+    }
     await run('document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))');
     const list = await run(`(() => [...document.querySelectorAll('.library-content-row')].map(row => {
       const title = row.querySelector('.library-item-title'), style = getComputedStyle(title), box = title.getBoundingClientRect();
@@ -28,8 +32,9 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, shot }) =>
       assert.ok(item.length > 80 && item.complete, 'fixture retains complete long titles of both record types');
       assert.ok(item.overflow !== 'visible' && item.height <= item.lineHeight * 2 + 1,
         `title paints within two lines: ${JSON.stringify({ locale, theme, zoom, ...item })}`);
-      assert.ok((item.sourceTop ?? item.timeTop) >= item.titleBottom + 4 && item.timeTop >= (item.sourceBottom ?? item.titleBottom) + 4,
-        'source totals and time have separate visible rows below the clipped title');
+      assert.equal(item.sourceTop, undefined, 'browsing rows omit redundant source summaries');
+      assert.ok(item.timeTop >= item.titleBottom + 2,
+        `timestamp sits on a separate visible row below the clipped title: ${JSON.stringify({ locale, theme, zoom, ...item })}`);
       assert.ok(item.timeBottom <= item.buttonBottom && item.rowScroll <= item.rowWidth + 1, 'metadata remains inside its row without horizontal overflow');
     }
     if (locale === 'zh-CN') await shot(`library-long-titles-${theme}`);

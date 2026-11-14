@@ -1,4 +1,4 @@
-.markdown-preview .markdown-code { margin: 1em 0; min-width: 0; }
+.markdown-code { margin: 1em 0; min-width: 0; }
 .markdown-code figcaption { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; padding: 6px 12px; border: 1px solid var(--border); border-radius: 8px 8px 0 0; background: var(--panel); }
 .markdown-code-language { font: 600 12px/1.5 var(--font-mono, monospace); overflow-wrap: anywhere; }
 .markdown-code-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }

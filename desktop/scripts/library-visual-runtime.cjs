@@ -72,11 +72,10 @@ app.whenReady().then(async () => {
           assert.ok(box.scroll <= box.width + 2, `${locale}/${theme}/${width} overflow ${JSON.stringify(box)}`);
           assert.ok(box.right <= box.viewport + 2, `${locale}/${theme}/${width} offscreen ${JSON.stringify(box)}`);
         }
-        assert.equal(await run('(() => { const e=document.querySelector(".archive-answer-nav"); return e.scrollWidth <= e.clientWidth + 2; })()'), true, `${locale}/${theme}/${width} source navigation overflow`);
-        const sources = await run(`(() => [...document.querySelectorAll('.library-item-sources')].map(e => ({
-          count:e.querySelector('.library-source-count').textContent, preview:e.querySelector('.library-source-preview')?.textContent,
-          all:e.title, clipped:e.querySelector('.library-source-count').getBoundingClientRect().right > e.getBoundingClientRect().right + 1})))()`);
-        assert.ok(sources.length > 0 && sources.every(source => source.count.includes('9') && source.preview === 'Claude, ChatGPT' && source.all.includes('Zhipu') && !source.clipped), 'source totals stay visible while full names remain available');
+        const nav = await run(`(() => { const e=document.querySelector('.archive-answer-nav'), detail=document.querySelector('.archive-detail').getBoundingClientRect(), r=e.getBoundingClientRect();
+          return { overflowX:getComputedStyle(e).overflowX, right:r.right, detailRight:detail.right, links:[...e.querySelectorAll('a')].map(a=>a.textContent), rowSources:document.querySelectorAll('.library-item-sources').length }; })()`);
+        assert.ok(nav.overflowX === 'auto' && nav.right <= nav.detailRight + 2 && nav.links.length === 9 && nav.links[0].includes('Claude') && nav.links[8].includes('Zhipu') && nav.rowSources === 0,
+          `${locale}/${theme}/${width} source navigation stays contained with nine sources and clean list rows: ${JSON.stringify(nav)}`);
         const controls = await run(`(() => [...document.querySelectorAll('.library-selection-controls button, .library-pagination button, .library-list-summary button')]
           .filter(e => e.getClientRects().length).map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
         for (const control of controls) {
@@ -199,7 +198,7 @@ app.whenReady().then(async () => {
   await click('.archive-list [data-action=library-open-item]');
   await wait('!!document.querySelector(".decision-editor")');
   await shot('decision-reading');
-  await click('.library-decision-actions > button:nth-child(2)');
+  await click('.library-decision-actions > button:nth-of-type(2)');
   await wait('!!document.querySelector("[name=decision-title]")');
   await fill('[name=decision-conclusion]', '保留草稿，明确保存。');
   await click('.decision-meta .library-select'); await key('Down'); await key('Return');
@@ -211,7 +210,7 @@ app.whenReady().then(async () => {
   await click('.library-decision-actions .library-primary');
   await wait('!document.querySelector("[name=decision-title]")');
   // Folder dialog keeps the selection when its search hides checked rows.
-  await click('.library-decision-actions > button:first-child');
+  await click('.library-decision-actions > button:nth-of-type(1)');
   await wait('!!document.querySelector(".folder-checkboxes input")');
   await click('.folder-checkboxes input');
   await fill('[name=folder-membership-search]', 'no-match');

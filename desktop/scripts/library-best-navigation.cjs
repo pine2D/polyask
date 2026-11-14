@@ -11,9 +11,13 @@ module.exports = async ({ win, run, wait, click, key, shot, locale, theme, zoom 
       const source = document.querySelector('#archive-answer-${index}'), active = document.activeElement;
       const nav = document.querySelector('.library-reading-navigation').getBoundingClientRect();
       const pane = document.querySelector('.archive-detail-pane').getBoundingClientRect(), box = active.getBoundingClientRect();
-      const luminance = color => color.match(/[\\d.]+/g).slice(0,3).map(value => {
-        value = Number(value)/255; return value <= .04045 ? value/12.92 : ((value+.055)/1.055)**2.4;
-      }).reduce((sum,value,i) => sum+value*[.2126,.7152,.0722][i],0);
+      const canvas = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
+      const luminance = color => {
+        canvas.clearRect(0, 0, 1, 1); canvas.fillStyle = color; canvas.fillRect(0, 0, 1, 1);
+        return [...canvas.getImageData(0, 0, 1, 1).data].slice(0, 3).map(value => {
+          value /= 255; return value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4;
+        }).reduce((sum, value, i) => sum + value * [.2126, .7152, .0722][i], 0);
+      };
       const style = getComputedStyle(link), colors = [luminance(style.color),luminance(style.backgroundColor)];
       return { count:links.length, href:link.getAttribute('href'), label:link.getAttribute('aria-label'),
         expected:source.querySelector('h2').textContent.split(' · ')[0]+' · '+window.libraryTest.copy.archiveBestAnswer,

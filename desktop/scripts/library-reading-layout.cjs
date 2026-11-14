@@ -40,7 +40,7 @@ async function reading(run) {
   await paint(run);
   const problems = [];
   const type = metrics.typography;
-  if (!type.fullEnglish || !type.proseContained || type.proseWidths.some(width => width > type.measure + 1)) problems.push('prose exceeds its reading measure or loses content');
+  if (!type.fullEnglish || !type.proseContained || type.bodyWidth > 820 || type.proseWidths.some(width => Math.abs(width - type.bodyWidth) > 1)) problems.push('prose exceeds its reading measure or loses content');
   if (Math.abs(type.tableWidth - type.bodyWidth) > 1 || Math.abs(type.codeWidth - type.bodyWidth) > 1) problems.push('technical blocks lose available width');
   if (type.headingSizes.some(size => size !== '16px') || Number(type.headingWeights[0]) <= Number(type.headingWeights[1])) problems.push('deep headings lose their weight hierarchy');
   if (metrics.firstMargin !== 0 || metrics.lastMargin !== 0) problems.push('body edges add paragraph spacing');
