@@ -1,18 +1,21 @@
 name: Release watch
 
-# 模型发布情报哨兵：定时轮询官方 changelog/RSS/快照页，高信号独立提醒，API/低信号按周聚合（脚本见 scripts/watch-releases.js）。
+# 模型发布情报 + 底层安全与版本周检哨兵（分拆为独立 job，互不连坐）：
+#   - watch：每周一/四轮询官方 changelog/RSS/快照页（scripts/watch-releases.js）；
+#   - security-watch：每周一及手动触发独立检查 Electron 同大版本稳定补丁（满 72h 等待期）与生产运行时高危安全公告（scripts/watch-security.js）。
 # 注意：仓库 60 天无 push 时 GitHub 会自动停用 scheduled workflow（Actions 页会有启用横幅，重新点一下即可）。
-# 定时任务失败会触发 GitHub 的 workflow 失败邮件——情报源断链因此自暴露，不会静默失明。
+# 定时任务失败会触发 GitHub 的 workflow 失败邮件——情报源断链因此自暴露，且不会连带跳过安全周检。
 on:
   schedule:
-    - cron: "23 2 * * 1,4" # 每周一/四 UTC 02:23（北京 10:23），避开整点高峰
+    - cron: "23 2 * * 1" # 每周一 UTC 02:23（北京 10:23）：发布情报 + 安全与版本周检
+    - cron: "23 2 * * 4" # 每周四 UTC 02:23（北京 10:23）：发布情报
   workflow_dispatch:
 
 permissions:
   contents: read
-  issues: write # 开情报 issue 需要
+  issues: write # 开情报与安全提醒 issue 需要
 
-# 周报是读-改-写；同仓定时/手动运行使用同组，跨 ref 也不得同时写。
+# 周报与安全提醒是读-改-写；同仓定时/手动运行使用同组，跨 ref 也不得同时写。
 concurrency:
   group: release-watch
   cancel-in-progress: false
@@ -31,7 +34,33 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: 固定桌面端 Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: desktop/.nvmrc
+
       - name: 轮询情报源并开 issue
         env:
           GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/watch-releases.js
+
+  security-watch:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '23 2 * * 1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: 固定桌面端 Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: desktop/.nvmrc
+
+      - name: 周检 Electron 同大版本补丁与运行时安全公告
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          UPDATE_MIN_AGE_DAYS: "3"
+        run: node scripts/watch-security.js

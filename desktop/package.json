@@ -19,6 +19,7 @@
     "collect-release": "node scripts/release-artifacts.mjs",
     "prepare-portable": "node scripts/prepare-portable.mjs",
     "sync:win-preview": "node scripts/sync-windows-preview.mjs",
+    "tour": "node scripts/site-tour.mjs",
     "smoke": "node scripts/smoke.mjs",
     "soak": "node scripts/soak.mjs",
     "test": "node scripts/test-safe.mjs",

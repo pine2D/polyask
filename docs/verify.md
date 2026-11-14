@@ -14,7 +14,7 @@
 
 **两条互不重叠的日常门禁，代码改动两条都要过**：
 
-- **仓库级卫生（零 `node_modules` 依赖）**：根目录 `bash scripts/verify.sh`——检查 `.js/.mjs` 语法、JSON、`*.js` ≤300 行、`desktop/src` 的 `.ts/.tsx` ≤400 行棘轮、`docs/verify.md` ≤300 行、文档版本对齐、OAuth 凭据卫生、`docs/*.md` 与 `#anchor` 断链、`.github` 引用、workflow YAML（优先 `actionlint`，回退 PyYAML）及根 `scripts/` 六个跨端测试。
+- **仓库级卫生（零 `node_modules` 依赖）**：根目录 `bash scripts/verify.sh`——检查 `.js/.mjs` 语法、JSON、`*.js` ≤300 行、`desktop/src` 的 `.ts/.tsx` ≤400 行棘轮、`docs/verify.md` ≤300 行、文档版本对齐、OAuth 凭据卫生、`docs/*.md` 与 `#anchor` 断链、`.github` 引用、workflow YAML（优先 `actionlint`，回退 PyYAML）及根 `scripts/` 七个跨端与哨兵测试。
 - **Desktop 门禁**：`cd desktop && npm test`——统一经 `scripts/test-safe.mjs` 串行执行：先 DOM 断言静态扫描，再 `tsc --noEmit` 类型检查，随后带运行时内存保护跑 `test/**/*.test.ts(x)` 与 `scripts/*.test.{js,mjs}`（含九站适配器回放与打包脚本回归）。需要单独快速查类型时运行 `npm run typecheck`。
 - **打包与离线启动冒烟**：动主进程窗口/视图/preload/构建配置时，在 `desktop/` 运行 `npm run package && xvfb-run -a npm run smoke -- --skip-package --offline`（Windows/macOS 去掉 `xvfb-run -a`）。`--offline` 通过 Chromium 主机名解析阻断外网，验证真实打包产物启动、`shell=1`、九站挂载且视口 `> 0`、同分区及沙箱隔离。
 - **依赖审计**：`cd desktop && npm audit --omit=dev` 查应用生产依赖；`node scripts/audit-runtime.mjs` 单独审计 Electron 运行时依赖（`electron` 位于 `devDependencies`）。
@@ -97,7 +97,7 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 
 ## 真机环境（Desktop 开发态）
 
-- **真机只读巡检铁律**：日常真机实测**只允许做零打扰只读检查**（确认输入框与状态、展开菜单核对选项后恢复原模型/档位并关闭菜单、只读采集已有页面结构）；**未经用户当轮明确点头授权（须先说明目标站点、非敏感测试句与轮数），严禁向任何真实 AI 站点发送提问、上传图片或写入测试预设**。过往会话的发送授权绝不顺延。
+- **真机只读巡检铁律**：日常真机实测**只允许做零打扰只读检查**（在 `desktop/` 运行 `npm run tour` 跑九站只读 `diagnose()`，或加 `--check-menus` 在 `withPresetRestored` 保护下读取菜单并校验草稿、URL、18 项已存预设、当前档位及零残留菜单；`site-live-smoke.mjs` 须显式传入 `--confirm-live-send` 与单一 `--site <key>`，日常严禁调用）；**未经用户当轮明确点头授权（须先说明目标站点、非敏感测试句与轮数），严禁向任何真实 AI 站点发送提问、上传图片或写入测试预设**。过往会话的发送授权绝不顺延。
 - **档案隔离红线**：Linux 开发态排障默认复用用户指定的 `~/.config/PolyAsk`（启动前先查是否已有运行实例，不复制凭据、不批量按进程名强杀）。**Windows 严禁触碰正式档案**，一切 Windows 开发态或试玩版实测一律使用独立目录（如 `%LOCALAPPDATA%\PolyAsk-Preview` 或 `%LOCALAPPDATA%\PolyAsk-TestLab`）。在 `desktop/` 运行 `npm run sync:win-preview` 可一键打包 `win32-x64`、核验 `EnableCookieEncryption` 与 `OnlyLoadAppFromAsar` Fuse、更新 `%LOCALAPPDATA%\PolyAsk-Preview\App`（原样保留 `Preview Data`）并刷新 Windows 桌面「【PolyAsk 试玩版】」快捷方式。
 - **Cookie 加密 fuse 硬核验**：打开任何已有真实档案前，`EnableCookieEncryption` 必须与发行包一致（`true`）。必须通过 `cd desktop && npm start`（或 `npm run prepare:dev-runtime`）经 Forge `preStart` 准备并校验 `desktop/test-artifacts/dev-runtime/`，严禁直接用裸 Electron 打开真实档案。改动主进程、preload 或 `site-runtime` 后**必须重启 `npm start` 才生效**。
 - **只认生产 `__AMS`**：开发态启用 `--remote-debugging-port=9223`（仅监听 `127.0.0.1`）后，在目标站点主帧的 `Electron Isolated Context` 调用生产 `window.__AMS`，禁止在临时脚本里手抄正则。所有已勾选站点均保持挂载与正尺寸视口；判“掉登录”须凭可见登录按钮与缺失头像/历史强证据，不得用 `[class*=login]` 弱匹配。
@@ -119,8 +119,8 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 
 ## 哨兵与报障
 
-- **模型发布哨兵**：`scripts/watch-releases.js` + `.github/workflows/release-watch.yml` 每周一/四轮询官方源（openai RSS、claude 消费端 release notes、gemini release-notes + blog RSS、deepseek、zhipu、kimi 帮助中心 `snapshot`、阿里云百炼上线表）。`web/model` 开独立 `release-watch` issue，`api/low` 按 UTC 自然周聚合，离线由 `scripts/test-release-feed.js` 与 `scripts/test-release-watch.js` 守卫。**哨兵只是闹钟：公告型号 ≠ 网页菜单文案，严禁未经真机核对直接改适配器正则。**
-- **唯一用户报障出口**：`Alt+H`「复制诊断报告」（仅含版本/系统/缩放、阶段码、`name-kind-ok`、固定枚举计数与代理枚举行，不含对话、网址、账号、路径或代理主机），配合 `.github/ISSUE_TEMPLATE/site-breakage.yml`。
+- **模型发布与底层安全双哨兵**：`.github/workflows/release-watch.yml` 每周一/四运行 `scripts/watch-releases.js` 轮询官方源（`web/model` 独立开单，`api/low` 按周聚合）；每周一及手动触发额外运行 `scripts/watch-security.js` 检查满 72 小时（`UPDATE_MIN_AGE_DAYS=3`）的 Electron 同大版本稳定补丁及生产/Electron 运行时依赖的 `high`/`critical` 漏洞，无风险零打扰，有风险合并为单条 `[security-watch]` 提醒（离线由 `scripts/test-release-feed.js`、`scripts/test-release-watch.js`、`scripts/test-security-watch.js` 守卫）。**哨兵只是闹钟：公告型号 ≠ 网页菜单文案，严禁未经真机核对直接改适配器正则。**
+- **双通道脱敏报障入口**：① `Alt+H`「复制诊断报告」（仅含版本/系统/缩放、阶段码、`name-kind-ok`、固定枚举计数与代理枚举行）；② `Alt+H` 单站详情页「导出脱敏快照」（只读采样本站 DOM 骨架与可见浮层菜单，抹除对话正文、URL、账号、Cookie 与本机路径，经 preload 与主进程双重扫描通过后才允许保存单个 `.json` 文件，可直接用 `node scripts/capture-dom-fixture.mjs --from-snapshot <file.json> --name <name>` 转入回归夹具），配合 `.github/ISSUE_TEMPLATE/site-breakage.yml`。
 
 ## 自定义代理：本地代理验证法与技术验证结论
 
