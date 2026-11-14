@@ -16,10 +16,11 @@ interface FeedbackState {
   readonly clearNotice: (text: string) => void;
   /** 无操作反馈时底栏显示的当前状态（由命令栏按选站/失败/未确认计数提供）。 */
   readonly setIdleNotice?: (text: string | null) => void;
+  readonly setPreviewActive?: (active: boolean) => void;
 }
 const FeedbackContext = createContext<FeedbackState | null>(null);
 
-export function FeedbackProvider({ children, copy }: { children: ReactNode; copy: DesktopCopy }): React.JSX.Element {
+export function FeedbackProvider({ children, copy, preview = false }: { children: ReactNode; copy: DesktopCopy; preview?: boolean }): React.JSX.Element {
   const hintId = useId();
   const [workspaceHost, setWorkspaceHost] = useState<HTMLElement | null>(null);
   const [undoAction, setUndoAction] = useState<FeedbackAction | null>(null);
@@ -28,7 +29,9 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
   const [notice, setNotice] = useState({ text: "", seq: 0, transient: false });
   const [idleNotice, setIdleNotice] = useState<string | null>(null);
   const [idleAction, setIdleAction] = useState<FeedbackAction | null>(null);
+  const [previewActive, setPreviewActive] = useState(false);
   const [live, setLive] = useState("");
+  const isPreview = preview || previewActive;
   const hint = useControlHint(hintId, notice.seq);
   const announce = useCallback((text: string, visible = true, transient = false): void => {
     setAnnounced((current) => ({ text, seq: current.seq + 1 }));
@@ -51,10 +54,14 @@ export function FeedbackProvider({ children, copy }: { children: ReactNode; copy
     const handle = frame ? requestAnimationFrame(() => setLive(announced.text)) : setTimeout(() => setLive(announced.text), 16);
     return () => { if (frame) cancelAnimationFrame(handle as number); else clearTimeout(handle); };
   }, [announced]);
-  return <FeedbackContext.Provider value={{ workspaceHost, announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction, setNoticeAction, setIdleNotice, setIdleAction }}>
+  useEffect(() => {
+    document.title = isPreview ? copy.previewWindowTitle.replace("{title}", copy.appTitle) : copy.appTitle;
+  }, [isPreview, copy]);
+  return <FeedbackContext.Provider value={{ workspaceHost, announcement: announced.text, announcementSeq: announced.seq, announce, clearNotice, setUndoAction, setNoticeAction, setIdleNotice, setIdleAction, setPreviewActive }}>
     {children}
     <div className="sr-only" aria-live="polite" aria-atomic="true">{live}</div>
-    <footer className="feedback-bar" data-hint-visible={!!hint} data-has-notice={!!notice.text} style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
+    <footer className="feedback-bar" data-preview={isPreview || undefined} data-hint-visible={!!hint} data-has-notice={!!notice.text} style={{ height: WORKSPACE_FEEDBACK_HEIGHT }}>
+      {isPreview ? <strong className="preview-badge" title={copy.previewIsolationHint}><i aria-hidden="true" />{copy.previewBadge}</strong> : null}
       <span className="feedback-notice" hidden={!notice.text && !!hint} title={notice.text || (idleNotice ?? "")}>{notice.text || idleNotice || copy.feedbackReady}</span>
       <span className="feedback-hint" id={hintId} role={hint ? "tooltip" : undefined} hidden={!hint} title={hint}>{hint}</span>
       <div className="feedback-workspace" ref={setWorkspaceHost} />
@@ -82,6 +89,15 @@ export function useIdleAction(label: string, run: (() => void) | undefined): voi
     set?.(available ? { label, run: () => latest.current?.() } : null);
     return () => set?.(null);
   }, [set, label, available]);
+}
+
+/** 试玩版运行态激活后同步底栏醒目标签与窗口标题栏前缀；正式版不占任何空间。 */
+export function usePreviewBadge(active: boolean): void {
+  const set = useContext(FeedbackContext)?.setPreviewActive;
+  useEffect(() => {
+    set?.(active);
+    return () => set?.(false);
+  }, [set, active]);
 }
 
 export function useGlobalFeedback(): FeedbackState {

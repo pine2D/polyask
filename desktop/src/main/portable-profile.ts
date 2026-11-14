@@ -17,27 +17,48 @@ interface ResolveRuntimeProfileInput {
   readonly defaultUserDataPath: string;
   readonly version: string;
   readonly markerExists?: (path: string) => boolean;
+  readonly readMarker?: (path: string) => string | null;
+  readonly envPreview?: boolean;
+}
+
+interface PortableMarkerConfig {
+  readonly dataDirectory: string;
+  readonly preview: boolean;
 }
 
 const DATA_MARKER = ".polyask-data-v1";
 const IMPORT_STAGING = ".polyask-import-v1";
 const IMPORT_IDENTITY_MARKER = ".polyask-import-identity-v1";
 const BOOTSTRAP_MARKER = ".polyask-bootstrap-v1";
+const DEFAULT_PORTABLE_DATA_DIR = "PolyAsk Data";
+const DEFAULT_PREVIEW_DATA_DIR = "Preview Data";
+const SAFE_DATA_DIR_PATTERN = /^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$/;
 const LEGACY_DATA_ENTRIES = ["polyask.sqlite", "Local State", "Partitions", "Default"] as const;
 type PathExists = (path: string) => boolean;
 
 export function resolveRuntimeProfile(input: ResolveRuntimeProfileInput): RuntimeProfile {
+  if (!input.isPackaged) {
+    const preview = input.envPreview ?? process.env.POLYASK_PREVIEW === "1";
+    return {
+      distribution: "installed",
+      version: input.version,
+      userDataPath: input.defaultUserDataPath,
+      ...(preview ? { preview: true } : {})
+    };
+  }
   const portableRoot = dirname(dirname(input.execPath));
-  const portable = input.isPackaged && (input.markerExists ?? markerExists)(join(portableRoot, "portable.json"));
-  if (!portable) {
+  const markerPath = join(portableRoot, "portable.json");
+  const config = resolvePortableMarkerConfig(markerPath, input);
+  if (!config) {
     return { distribution: "installed", version: input.version, userDataPath: input.defaultUserDataPath };
   }
   return {
     distribution: "portable",
     version: input.version,
+    ...(config.preview ? { preview: true } : {}),
     portableRoot,
-    userDataPath: join(portableRoot, "PolyAsk Data"),
-    legacyUserDataPath: input.defaultUserDataPath
+    userDataPath: join(portableRoot, config.dataDirectory),
+    ...(config.preview ? {} : { legacyUserDataPath: input.defaultUserDataPath })
   };
 }
 
@@ -81,7 +102,16 @@ export async function initializePortableData(
   chooseImport: () => Promise<boolean>,
   legacyDataAvailable = hasImportableLegacyData(profile)
 ): Promise<"ready" | "fresh" | "import_staged"> {
-  if (profile.distribution !== "portable" || !profile.legacyUserDataPath) return "ready";
+  if (profile.distribution !== "portable") return "ready";
+  if (profile.preview) {
+    await mkdir(profile.userDataPath, { recursive: true });
+    if (await markerFileExists(join(profile.userDataPath, DATA_MARKER))) return "ready";
+    await ensureBootstrapDirectory(profile.userDataPath);
+    await writeFile(join(profile.userDataPath, DATA_MARKER), "1\n");
+    await rm(join(profile.userDataPath, BOOTSTRAP_MARKER), { force: true });
+    return "fresh";
+  }
+  if (!profile.legacyUserDataPath) return "ready";
   if (!profile.portableRoot) throw new Error("portable_root_missing");
   const staging = join(profile.portableRoot, IMPORT_STAGING);
   await mkdir(profile.userDataPath, { recursive: true });
@@ -170,6 +200,60 @@ function isBootstrapRuntimeEntry(entry: string): boolean {
 
 function isImportFinalizationEntry(entry: string): boolean {
   return entry === "Local State" || isBootstrapRuntimeEntry(entry);
+}
+
+function resolvePortableMarkerConfig(
+  markerPath: string,
+  input: ResolveRuntimeProfileInput
+): PortableMarkerConfig | null {
+  if (input.readMarker) {
+    const raw = input.readMarker(markerPath);
+    return raw === null ? null : parsePortableMarker(raw);
+  }
+  if (input.markerExists) {
+    return input.markerExists(markerPath)
+      ? { dataDirectory: DEFAULT_PORTABLE_DATA_DIR, preview: false }
+      : null;
+  }
+  const raw = readPortableMarkerFile(markerPath);
+  return raw === null ? null : parsePortableMarker(raw);
+}
+
+function readPortableMarkerFile(path: string): string | null {
+  try {
+    if (!statSync(path).isFile()) throw new Error("portable_data_unrecognized");
+    return readFileSync(path, "utf8");
+  } catch (error) {
+    if (isMissing(error)) return null;
+    throw error;
+  }
+}
+
+function parsePortableMarker(raw: string): PortableMarkerConfig {
+  let parsed: unknown;
+  try { parsed = JSON.parse(raw); }
+  catch { throw new Error("portable_data_unrecognized"); }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("portable_data_unrecognized");
+  }
+  const record = parsed as { format?: unknown; dataDirectory?: unknown; preview?: unknown };
+  if (record.format !== 1) throw new Error("portable_data_unrecognized");
+  if (record.preview !== undefined && typeof record.preview !== "boolean") {
+    throw new Error("portable_data_unrecognized");
+  }
+  const preview = record.preview === true;
+  const dataDirectory = record.dataDirectory === undefined
+    ? (preview ? DEFAULT_PREVIEW_DATA_DIR : DEFAULT_PORTABLE_DATA_DIR)
+    : record.dataDirectory;
+  if (typeof dataDirectory !== "string"
+    || !SAFE_DATA_DIR_PATTERN.test(dataDirectory)
+    || dataDirectory.includes("..")
+    || dataDirectory.endsWith(".")
+    || dataDirectory.endsWith(" ")
+    || (preview && dataDirectory === DEFAULT_PORTABLE_DATA_DIR)) {
+    throw new Error("portable_data_unrecognized");
+  }
+  return { dataDirectory, preview };
 }
 
 function markerExists(path: string): boolean {

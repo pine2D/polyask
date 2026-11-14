@@ -38,7 +38,7 @@ function feedback() {
   };
   return {
     api: () => render().props.value,
-    notice: () => render().props.children[2].props.children[0].props.title,
+    notice: () => render().props.children[2].props.children.find((node: any) => node?.props?.className === "feedback-notice").props.title,
     buttons: () => render().props.children[2].props.children.filter((node: any) => node?.type === 'button'),
     setHint: (value: string) => { hint = value; }
   };

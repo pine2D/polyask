@@ -288,3 +288,92 @@ test("starting fresh removes an incomplete import without changing the source", 
   await assert.rejects(readFile(partial, "utf8"), /ENOENT/);
   assert.equal(await readFile(join(source, "polyask.sqlite"), "utf8"), "source");
 });
+
+test("packaged preview marker isolates Preview Data and never imports formal legacy data", async () => {
+  const root = await mkdtemp(join(tmpdir(), "polyask-preview-profile-"));
+  const formalAppData = join(root, "Roaming", "PolyAsk");
+  await mkdir(formalAppData, { recursive: true });
+  await writeFile(join(formalAppData, "polyask.sqlite"), "formal-production-data");
+  await writeFile(join(root, "portable.json"), JSON.stringify({
+    format: 1,
+    dataDirectory: "Preview Data",
+    preview: true
+  }, null, 2));
+
+  const execPath = join(root, "App", process.platform === "win32" ? "polyask-desktop.exe" : "polyask-desktop");
+  const profile = resolveRuntimeProfile({
+    isPackaged: true,
+    execPath,
+    defaultUserDataPath: formalAppData,
+    version: "1.34.0"
+  });
+
+  assert.equal(profile.distribution, "portable");
+  assert.equal(profile.preview, true);
+  assert.equal(profile.portableRoot, root);
+  assert.equal(profile.userDataPath, join(root, "Preview Data"));
+  assert.equal(profile.legacyUserDataPath, undefined);
+  assert.equal(hasImportableLegacyData(profile), false);
+
+  let prompts = 0;
+  const initResult = await initializePortableData(profile, async () => {
+    prompts += 1;
+    return true;
+  }, true);
+  assert.equal(initResult, "fresh");
+  assert.equal(prompts, 0);
+  assert.equal(isPortableDataInitialized(profile), true);
+  await assert.rejects(readFile(join(profile.userDataPath, "polyask.sqlite"), "utf8"), /ENOENT/);
+  assert.equal(await readFile(join(formalAppData, "polyask.sqlite"), "utf8"), "formal-production-data");
+});
+
+test("envPreview activates preview mode only in unpackaged development runs", () => {
+  const defaultUserDataPath = join(tmpdir(), "dev", "PolyAsk");
+  const devPreview = resolveRuntimeProfile({
+    isPackaged: false,
+    execPath: join(tmpdir(), "electron"),
+    defaultUserDataPath,
+    version: "1.34.0",
+    envPreview: true
+  });
+  assert.deepEqual(devPreview, {
+    distribution: "installed",
+    version: "1.34.0",
+    userDataPath: defaultUserDataPath,
+    preview: true
+  });
+
+  const packagedFormal = resolveRuntimeProfile({
+    isPackaged: true,
+    execPath: join(tmpdir(), "PolyAsk", "App", "polyask-desktop.exe"),
+    defaultUserDataPath,
+    version: "1.34.0",
+    envPreview: true,
+    readMarker: () => null
+  });
+  assert.deepEqual(packagedFormal, {
+    distribution: "installed",
+    version: "1.34.0",
+    userDataPath: defaultUserDataPath
+  });
+});
+
+test("portable marker parser rejects path traversal, invalid formats, and preview sharing PolyAsk Data", () => {
+  const base = {
+    isPackaged: true,
+    execPath: join(tmpdir(), "PolyAsk-Preview", "App", "polyask-desktop.exe"),
+    defaultUserDataPath: join(tmpdir(), "Roaming", "PolyAsk"),
+    version: "1.34.0"
+  };
+  for (const invalid of [
+    "{not-json",
+    JSON.stringify({ format: 2, dataDirectory: "Preview Data", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "../escape", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "Preview Data.", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "Preview Data ", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "PolyAsk Data", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "Preview Data", preview: "yes" })
+  ]) {
+    assert.throws(() => resolveRuntimeProfile({ ...base, readMarker: () => invalid }), /portable_data_unrecognized/);
+  }
+});

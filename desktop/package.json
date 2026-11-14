@@ -18,6 +18,7 @@
     "configure-oauth": "node scripts/configure-oauth.mjs",
     "collect-release": "node scripts/release-artifacts.mjs",
     "prepare-portable": "node scripts/prepare-portable.mjs",
+    "sync:win-preview": "node scripts/sync-windows-preview.mjs",
     "smoke": "node scripts/smoke.mjs",
     "soak": "node scripts/soak.mjs",
     "test": "node scripts/test-safe.mjs",

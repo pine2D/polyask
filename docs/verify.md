@@ -98,7 +98,7 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 ## 真机环境（Desktop 开发态）
 
 - **真机只读巡检铁律**：日常真机实测**只允许做零打扰只读检查**（确认输入框与状态、展开菜单核对选项后恢复原模型/档位并关闭菜单、只读采集已有页面结构）；**未经用户当轮明确点头授权（须先说明目标站点、非敏感测试句与轮数），严禁向任何真实 AI 站点发送提问、上传图片或写入测试预设**。过往会话的发送授权绝不顺延。
-- **档案隔离红线**：Linux 开发态排障默认复用用户指定的 `~/.config/PolyAsk`（启动前先查是否已有运行实例，不复制凭据、不批量按进程名强杀）。**Windows 严禁触碰正式档案**，一切 Windows 开发态或试玩版实测一律使用独立目录（如 `%LOCALAPPDATA%\PolyAsk-TestLab`）。
+- **档案隔离红线**：Linux 开发态排障默认复用用户指定的 `~/.config/PolyAsk`（启动前先查是否已有运行实例，不复制凭据、不批量按进程名强杀）。**Windows 严禁触碰正式档案**，一切 Windows 开发态或试玩版实测一律使用独立目录（如 `%LOCALAPPDATA%\PolyAsk-Preview` 或 `%LOCALAPPDATA%\PolyAsk-TestLab`）。在 `desktop/` 运行 `npm run sync:win-preview` 可一键打包 `win32-x64`、核验 `EnableCookieEncryption` 与 `OnlyLoadAppFromAsar` Fuse、更新 `%LOCALAPPDATA%\PolyAsk-Preview\App`（原样保留 `Preview Data`）并刷新 Windows 桌面「【PolyAsk 试玩版】」快捷方式。
 - **Cookie 加密 fuse 硬核验**：打开任何已有真实档案前，`EnableCookieEncryption` 必须与发行包一致（`true`）。必须通过 `cd desktop && npm start`（或 `npm run prepare:dev-runtime`）经 Forge `preStart` 准备并校验 `desktop/test-artifacts/dev-runtime/`，严禁直接用裸 Electron 打开真实档案。改动主进程、preload 或 `site-runtime` 后**必须重启 `npm start` 才生效**。
 - **只认生产 `__AMS`**：开发态启用 `--remote-debugging-port=9223`（仅监听 `127.0.0.1`）后，在目标站点主帧的 `Electron Isolated Context` 调用生产 `window.__AMS`，禁止在临时脚本里手抄正则。所有已勾选站点均保持挂载与正尺寸视口；判“掉登录”须凭可见登录按钮与缺失头像/历史强证据，不得用 `[class*=login]` 弱匹配。
 - **本机复现不出时先按序四问、再猜层次**：① 界面语言与系统缩放是多少？（词表/阈值余量）② 点了什么、屏幕上出现什么？（入口是否点中）③ 输入框里是否出现待发文字？（`composer` / `inject` 分界）④ `Alt+H` 站点状态与「复制诊断报告」内容是什么？（`submit` / `state`）。

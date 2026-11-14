@@ -64,7 +64,7 @@ import { usePromptDraft } from "./use-prompt-draft";
 import { useDraftReplaceUndo } from "./use-draft-replace-undo";
 import { focusPromptForEditing, restoreWorkbenchFocus } from "./composer-activation";
 import { useWorkspaceMotion } from "./use-workspace-motion";
-import { FeedbackProvider } from "./feedback-provider";
+import { FeedbackProvider, usePreviewBadge } from "./feedback-provider";
 import { broadcastFeedback } from "./broadcast-feedback";
 import { archiveCollectionActions } from "./archive-collection-actions";
 import { useBroadcastRetryReview } from "./use-broadcast-retry-review";
@@ -171,6 +171,7 @@ function App(): React.JSX.Element {
   const [commandMode, setCommandMode] = useState<CommandPaletteMode>("commands");
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(INITIAL_SYNC);
   const [runtime, setRuntime] = useState<RuntimeInfo>(INITIAL_RUNTIME);
+  usePreviewBadge(Boolean(runtime.preview));
   const [promptLibrary, setPromptLibrary] = useState<PromptLibraryState>(INITIAL_LIBRARY);
   const templateDeletion = useTemplateDeletion(promptLibrary, setPromptLibrary, copy);
   const { announcement, announce: setAnnouncement, clearNotice, healthFeedback, noteHealth } = useFeedback();

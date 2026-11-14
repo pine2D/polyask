@@ -21,3 +21,17 @@
 .feedback-bar .feedback-hint { color: var(--muted); white-space: normal; line-height: 14px; max-height: 28px; }
 .feedback-bar[data-has-notice="true"] .feedback-hint { flex: 0 1 45%; }
 .feedback-bar > span[hidden] { display: none; }
+.preview-badge {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
+  height: 20px; padding: 0 8px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--warning) 36%, var(--border));
+  background: var(--warning-soft); color: var(--warning-ink);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.01em; line-height: 1; white-space: nowrap;
+}
+.preview-badge > i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--warning); flex: 0 0 auto;
+}
+@media (forced-colors: active) {
+  .preview-badge { border-color: ButtonText; color: ButtonText; background: Canvas; }
+  .preview-badge > i { background: Highlight; }
+}
