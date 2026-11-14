@@ -107,12 +107,15 @@ test("every navigation command a menu exposes is reachable from the renderer", (
 
 test("CI tests and packages desktop on Linux, Windows and macOS", () => {
   const workflow = readSource("../.github/workflows/ci.yml");
+  const testRunner = readSource("scripts/test-safe.mjs");
   assert.match(workflow, /npm ci/);
+  assert.match(workflow, /npm audit --omit=dev/);
   assert.match(workflow, /npm test/);
-  assert.match(workflow, /npm run typecheck/);
+  assert.match(testRunner, /typescript\/bin\/tsc.*--noEmit/);
   assert.match(workflow, /windows-latest/);
   assert.match(workflow, /macos-latest/);
   assert.match(workflow, /npm run package/);
+  assert.match(workflow, /npm run smoke -- --skip-package --offline/);
   assert.match(workflow, /archive-portable\.ps1/);
   assert.match(workflow, /chown root:root "out\/PolyAsk-linux-x64\/chrome-sandbox"/);
   assert.match(workflow, /chmod 4755 "out\/PolyAsk-linux-x64\/chrome-sandbox"/);

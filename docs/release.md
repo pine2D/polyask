@@ -9,20 +9,20 @@ Desktop 是唯一发布物：一个版本号、一个 tag、一个 GitHub Releas
 ```bash
 # 0. 「未发布」段已记录所有用户可感知变更（发版前持续维护，不要临发版补）
 bash scripts/prepare-release.sh auto   # 晋升 CHANGELOG，同步 Desktop package/lock 与比较链接（只改文件，不 commit）
-# 1. 人工审阅发版 diff，做下面的「脚本查不出的人工项」
+# 1. 人工审阅发版 diff，同步更新 CLAUDE.md / docs/README.md / docs/acceptance.md 版本标注，做下面的「脚本查不出的人工项」
 bash scripts/verify.sh
-cd desktop && npm test && npm run typecheck && npm audit --omit=dev && node scripts/audit-runtime.mjs
+cd desktop && npm test && npm audit --omit=dev && node scripts/audit-runtime.mjs
 cd .. && bash scripts/release.sh --build-only   # 本机跑 verify.sh + Release notes 提取 + CHANGELOG 三条校验
-# 2. 审阅并 commit；获明确发布授权后 push main，等待该提交 CI 成功
+# 2. 审阅并 commit；获明确发布授权后 push main，等待该提交 CI 成功（改过界面时建议同时跑通 .github/workflows/ui-regression.yml）
 # 3. 在 GitHub 手动执行 Release workflow（dry_run=true），核对全部产物后再推 tag
 bash scripts/release.sh --publish      # 推 v* tag；Release workflow 构建并发布全部资产
 ```
 
 `prepare-release.sh` 的用法是 `<auto|patch|minor|major|X.Y.Z> [--dry-run]`。`auto` 只读取当前版本 tag 之后**已经提交**的 Conventional Commits；待发布改动尚未提交时，应按 `[未发布]` 内容显式传 `patch`、`minor` 或 `major`，不要让 `auto` 猜尚未进入 Git 历史的改动。
 
-`npm test` 自身第一步就是 `tsc --noEmit`，后面单跑 `npm run typecheck` 是同一件事跑第二遍；留着只为让本机命令行与 CI 的作业名逐条对得上，不是额外覆盖面。
+`npm test` 自身第一步就是 `tsc --noEmit`；`npm run typecheck` 仅作日常开发时的独立快速检查，CI 与发版不再在 `npm test` 之后重复编译第二遍。CI 的跨平台矩阵在打包后均运行 `npm run smoke -- --skip-package --offline` 离线校验主窗口与九站视图挂载，另设 `.github/workflows/ui-regression.yml` 每周定时及按需运行 Xvfb 原生视觉与交互回归（`test:shell-ui`、`test:library-ui` 及关键 `*.check.ts`）。
 
-两条 audit 都要跑：`npm audit --omit=dev` 覆盖真正的运行时 npm 依赖（含 React、markdown-it、Mermaid），`node scripts/audit-runtime.mjs` 补上前者结构性看不到的 electron 本身（按 npm 惯例它总是 devDependency，却随每个发行包分发）。CI 的 verify 作业显式运行的是 `audit-runtime.mjs`，只对 Electron 运行时包的 high/critical 公告设门禁；它不替代 `npm audit --omit=dev`。后者仍需按上面的本机发版清单单独执行，不能把 CI 成功视作两项审计都通过。
+两条 audit 都要跑：`npm audit --omit=dev` 覆盖真正的运行时 npm 依赖（含 React、markdown-it、Mermaid），`node scripts/audit-runtime.mjs` 补上前者结构性看不到的 electron 本身（按 npm 惯例它总是 devDependency，却随每个发行包分发）。CI 的 verify 作业现已同时运行 `npm audit --omit=dev` 与 `audit-runtime.mjs`，发版前本机仍按上面清单复核一次以排除缓存与新披露公告时间差。
 
 `--build-only` 是本机与 CI 共用的那条：跑 `scripts/verify.sh`、从 `CHANGELOG.md` 抠出本版段落写进 `dist/release-notes.md`、做三条 CHANGELOG 校验（版本段确有 `- ` 条目、`[未发布]` 比较链接从本次 tag 起算、本版链接存在），最后把固定信任尾段追加进正文。`.github/workflows/ci.yml` 的 verify 作业检出源码后先用 `actions/setup-node` 钉住 `desktop/.nvmrc` 的 Node（当前 24），紧接着就跑它——所以这三条校验每个 PR 都会过一遍，不是只在发版那天才生效。
 
@@ -121,7 +121,7 @@ Release workflow 在每个 Desktop runner 上执行 `npm run configure-oauth`，
 - **模型映射逐站勾选**：拿 `docs/adapters.md` 的站点卡对着 `desktop/src/site-runtime/adapters-*.js` 的 `think()`/`fast()`/`state()` 九站过一遍（站点 A/B 灰度期要写清两条路径，不能只写新的）；README 仅保留功能概览并链接站点说明。
 - **破坏性操作、明文存储、权限范围、不可撤销后果、数据保留规则不得弱化**；按钮、确认文案与实际动作必须一致。特别是「本机重置不删 Drive 数据」「删除是 tombstone」这两条承诺语义。
 - 报障链路依赖两个 GitHub label：`release-watch` 由 `scripts/watch-releases.js` 自建；**`site-breakage` 必须在仓库里手工建过一次**（`gh label create site-breakage --color d73a4a --description "站点适配失灵"`），issue 模板引用不存在的 label 会静默丢弃、无任何报错。换仓库/fork 后要重建。
-- 更新 `CLAUDE.md` 顶部的「最后与代码核对」日期与版本。
+- 更新 `CLAUDE.md`、`docs/README.md` 与 `docs/acceptance.md` 顶部的核对日期与源码版本（`verify.sh` 会自动比对 `desktop/package.json` 版本号）。
 - 确认 `POLYASK_GOOGLE_DESKTOP_CLIENT_ID` 与 `POLYASK_GOOGLE_DESKTOP_CLIENT_SECRET` 来自同一个 Desktop 客户端，OAuth consent screen 的 Audience/测试用户或 Production 状态符合本次发布对象；凭据已打包不等于公众账号一定能完成授权。
 - 按 `docs/desktop-oauth-security.md` 检查 Google Auth Platform 与 Drive API 指标；无法由发版、用户增长或集中测试解释的异常先调查再发布。
 - 在能取得原生机器时，至少运行一次本版 Windows `.exe` 安装包和便携 ZIP，并安装 Linux `.deb` 和两种 macOS 架构包；未完成的原生验收必须写进 Release 限制，不得用 CI 构建成功替代。

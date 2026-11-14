@@ -1,0 +1,76 @@
+name: UI Regression
+
+on:
+  schedule:
+    - cron: "20 2 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  linux-native-ui:
+    name: Linux Native UI (Xvfb)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: 检出源码
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: 固定桌面端 Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: desktop/.nvmrc
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: 安装 Xvfb 与原生输入工具
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends xvfb xdotool imagemagick
+
+      - name: 安装桌面端依赖
+        working-directory: desktop
+        run: npm ci
+
+      - name: 配置 Electron Chromium 沙箱
+        working-directory: desktop
+        run: |
+          sudo chown root:root "node_modules/electron/dist/chrome-sandbox"
+          sudo chmod 4755 "node_modules/electron/dist/chrome-sandbox"
+
+      - name: 外壳与设置页视觉回归
+        working-directory: desktop
+        run: |
+          sudo systemd-run --scope --quiet -p MemoryMax=4G -p MemorySwapMax=512M \
+            --uid="$(id -u)" --gid="$(id -g)" \
+            xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:shell-ui
+
+      - name: 结果库视觉与交互回归
+        working-directory: desktop
+        run: |
+          sudo systemd-run --scope --quiet -p MemoryMax=4G -p MemorySwapMax=512M \
+            --uid="$(id -u)" --gid="$(id -g)" \
+            xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:library-ui
+
+      - name: 关键原生窗口与输入专项
+        working-directory: desktop
+        run: |
+          sudo systemd-run --scope --quiet -p MemoryMax=4G -p MemorySwapMax=512M \
+            --uid="$(id -u)" --gid="$(id -g)" \
+            xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:unit -- \
+              test/task-setup-native.check.ts \
+              test/tier-presets-native.check.ts \
+              test/form-surface-native.check.ts \
+              test/stars-native.check.ts \
+              test/site-find-native.check.ts \
+              test/proxy-native.check.ts

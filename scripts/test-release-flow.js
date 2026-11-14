@@ -4,6 +4,7 @@ const fs = require("fs");
 const desktopPackage = JSON.parse(fs.readFileSync("desktop/package.json", "utf8"));
 const workflow = fs.readFileSync(".github/workflows/release.yml", "utf8");
 const ciWorkflow = fs.readFileSync(".github/workflows/ci.yml", "utf8");
+const uiRegressionWorkflow = fs.readFileSync(".github/workflows/ui-regression.yml", "utf8");
 const releaseWatch = fs.readFileSync(".github/workflows/release-watch.yml", "utf8");
 const portableArchive = fs.readFileSync("desktop/scripts/archive-portable.ps1", "utf8");
 const prepareRelease = fs.readFileSync("scripts/prepare-release.sh", "utf8");
@@ -85,9 +86,27 @@ function sliceBetween(text, startMarker, endMarker) {
 
   const verify = sliceBetween(ciWorkflow, "\n  verify:\n", "\n  desktop-cross-platform:\n");
   assert.match(verify, /timeout-minutes:\s*\d+/, "verify 作业缺少 timeout-minutes");
+  assert.match(verify, /npm audit --omit=dev/, "verify 作业必须运行生产依赖审计 npm audit --omit=dev");
+  assert.match(verify, /node scripts\/audit-runtime\.mjs/, "verify 作业必须保留 Electron 运行时审计");
+  assert.match(verify, /npm run smoke -- --skip-package --offline/, "Linux verify 冒烟必须显式启用 --offline");
+  assert.doesNotMatch(verify, /npm run typecheck/, "npm test 已首步包含 tsc --noEmit，verify 不应重复全量编译");
 
   const desktopCross = sliceBetween(ciWorkflow, "\n  desktop-cross-platform:\n", null);
   assert.match(desktopCross, /timeout-minutes:\s*\d+/, "desktop-cross-platform 作业缺少 timeout-minutes");
+  assert.match(desktopCross, /npm run smoke -- --skip-package --offline/, "Windows/macOS 跨平台作业必须在打包后跑离线 smoke");
+  assert.doesNotMatch(desktopCross, /npm run typecheck/, "desktop-cross-platform 不应在 npm test 后重复 typecheck");
+}
+{
+  const uiTop = sliceBetween(uiRegressionWorkflow, "\npermissions:\n", "\njobs:\n");
+  assert.match(uiTop, /^\s+contents: read\s*$/m, "ui-regression.yml 顶层权限必须是 contents: read");
+  assert.match(uiTop, /cancel-in-progress:\s*true/, "ui-regression.yml 应启用 cancel-in-progress: true");
+  assert.match(uiRegressionWorkflow, /schedule:\s*\n\s+-\s*cron:/, "ui-regression.yml 必须保留每周定时触发");
+  assert.match(uiRegressionWorkflow, /workflow_dispatch:/, "ui-regression.yml 必须支持发版前手动触发");
+  const uiJob = sliceBetween(uiRegressionWorkflow, "\n  linux-native-ui:\n", null);
+  assert.match(uiJob, /timeout-minutes:\s*\d+/, "linux-native-ui 缺少 timeout-minutes");
+  assert.match(uiJob, /MemoryMax=4G -p MemorySwapMax=512M/, "linux-native-ui 必须启用 4 GiB / 512 MiB cgroup 保护");
+  assert.match(uiJob, /npm run test:shell-ui/, "ui-regression.yml 必须运行 test:shell-ui");
+  assert.match(uiJob, /npm run test:library-ui/, "ui-regression.yml 必须运行 test:library-ui");
 }
 
 // 周报读-改-写必须跨手动 ref 串行，禁止取消已开始的写入。
