@@ -49,10 +49,11 @@
   .library .archive-answer-nav .archive-answer-length { display: none; }
 }
 .library .archive-answer { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--reading-block-gap); padding: var(--reading-block-gap) 0 var(--reading-section-gap); margin: 0; border: 0; border-bottom: 1px solid var(--border); border-radius: 0; scroll-margin-top: 0; }
-.library .archive-answer > header { align-items: start; flex-wrap: wrap; gap: 12px; }
-.library .archive-answer h2 { flex: 1 1 12rem; min-width: 0; overflow-wrap: anywhere; font-size: 16px; line-height: 1.6; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.library .archive-answer > header { align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.library .archive-answer h2 { flex: 1 0 auto; max-width: 100%; min-width: 0; overflow-wrap: anywhere; font-size: 16px; line-height: 1.6; display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.library .archive-answer h2 > span { min-width: 0; }
 .library .archive-answer-glyph { width: 15px; height: 15px; }
-.archive-answer-actions { display: flex; flex-wrap: wrap; align-items: start; gap: 8px; max-width: 100%; }
+.archive-answer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; max-width: 100%; }
 .library .archive-answer > header button { min-height: 30px; height: auto; padding: 4px 8px; font-size: 12px; line-height: 1.5; }
 .library .archive-answer > .answer-capture-warning { margin: 0; }
 /* 正文仍完整挂载，屏幕外的排版/绘制交给浏览器按需执行；跳转、查找与辅助技术可展开它。 */
