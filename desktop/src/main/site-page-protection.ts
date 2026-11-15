@@ -54,6 +54,8 @@ export class CaptureReleaseGuards {
     });
   }
 
+  // 明确关页才释放资源，登录保留在持久化 session；发送、生成和答案采集结束前不关闭。
+  // 状态更新及采集落库后都会重查，不再等待下一次用户布局操作。
   reclaimUnselected(options: {
     views: Map<SiteKey, WebContentsView>;
     selected: readonly SiteKey[];

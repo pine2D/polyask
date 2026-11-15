@@ -169,6 +169,12 @@ test('production root blocks commands and direct send, tier and collection while
     await emit('open-sites');
     await emit('open-archive');
     assert.equal(surfaces.at(-1), 'archive');
+    const archiveStage = dom.window.document.querySelector('.surface-stage');
+    assert.equal(archiveStage !== null, true);
+    await emit('open-settings');
+    assert.equal(surfaces.at(-1), 'settings');
+    assert.equal(dom.window.document.querySelector('.surface-stage') === archiveStage, true,
+      'direct archive -> settings switch reuses the .surface-stage container');
     await emit('open-sites');
     await emit('new-session');
     assert.equal(dialogCount(), 1);

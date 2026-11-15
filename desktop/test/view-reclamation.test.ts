@@ -136,7 +136,7 @@ test("deselected generation is reclaimed on completion without another selection
     h.manager.markStatus({ site: "claude", phase: "complete" });
     await turn();
     assert.equal(h.contents[0].isDestroyed(), true);
-    assert.equal(h.manager.views.size, 2);
+    assert.equal(h.manager.viewTree.views.size, 2);
   } finally { h.window.emit("closed"); }
 });
 

@@ -40,32 +40,30 @@ export function ArchiveStage(props: ArchiveStageProps): React.JSX.Element {
     comparisonDrafts, librarySession, blockLibrary, archiveCapture
   } = archiveFlow;
   return (
-    <div className="surface-stage">
-      <ArchiveSurface
-        copy={copy}
-        locale={locale}
-        sites={sites}
-        synthesisSites={sites.filter((site) => selected.has(site.key))}
-        defaultTier={defaultTier}
-        comparisonId={archiveNavigation.comparisonId}
-        preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null}
-        synthesisDrafts={synthesis.drafts}
-        synthesisEditorRequest={synthesisRecovery.editorRequest}
-        onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest}
-        pendingSynthesis={synthesis.pending}
-        synthesisCandidate={synthesis.candidate}
-        synthesisSession={synthesis.session}
-        comparisonDrafts={comparisonDrafts}
-        session={librarySession}
-        navigationRevision={archiveNavigation.revision}
-        onBlockingChange={blockLibrary}
-        onClose={onClose}
-        onCapture={archiveCapture.capture}
-        onSendSynthesis={synthesisRecovery.send}
-        onCollectSynthesis={async () => { await synthesis.collect(); }}
-        onSaveSynthesis={synthesis.save}
-      />
-    </div>
+    <ArchiveSurface
+      copy={copy}
+      locale={locale}
+      sites={sites}
+      synthesisSites={sites.filter((site) => selected.has(site.key))}
+      defaultTier={defaultTier}
+      comparisonId={archiveNavigation.comparisonId}
+      preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null}
+      synthesisDrafts={synthesis.drafts}
+      synthesisEditorRequest={synthesisRecovery.editorRequest}
+      onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest}
+      pendingSynthesis={synthesis.pending}
+      synthesisCandidate={synthesis.candidate}
+      synthesisSession={synthesis.session}
+      comparisonDrafts={comparisonDrafts}
+      session={librarySession}
+      navigationRevision={archiveNavigation.revision}
+      onBlockingChange={blockLibrary}
+      onClose={onClose}
+      onCapture={archiveCapture.capture}
+      onSendSynthesis={synthesisRecovery.send}
+      onCollectSynthesis={async () => { await synthesis.collect(); }}
+      onSaveSynthesis={synthesis.save}
+    />
   );
 }
 
@@ -106,41 +104,39 @@ export function SettingsStage(props: SettingsStageProps): React.JSX.Element {
     resetComposer, clearQuestionState, onReloadBootstrap, onClose
   } = props;
   return (
-    <div className="surface-stage">
-      <SettingsWorkspace copy={copy} locale={locale} runtime={runtime} status={syncStatus} onBlockingChange={onBlockingChange} operationBusy={runState !== "idle" || auxiliaryBusy || participation.pending}
-        initialSection={settingsSection.section} sectionRequest={settingsSection.request}
-        display={display.value} onDisplayChange={display.save}
-        preferenceSync={preferences.settings}
-        completionNotifications={preferences.completionNotifications}
-        onCompletionNotificationsChange={preferences.onCompletionNotifications}
-        confirmations={preferences.confirmations}
-        onConfirmationChange={(key, enabled) => { void preferences.onConfirmation(key, enabled); }}
-        onCheckUpdates={openLatestReleasePage}
-        onOpenShortcuts={() => executeCommand("open-shortcuts", commandActions.current)}
-        onOpenGuide={() => executeCommand("open-getting-started", commandActions.current)}
-        onStatus={onSyncStatus}
-        onAnnounce={onAnnounce}
-        onLocalReset={() => {
-          void preferences.refresh();
-          workspaceFlow.invalidate();
-          pageClose.invalidate();
-          runProgress.invalidate();
-          clearQuestionState();
-          archiveFlow.resetStores();
-          participation.reset();
-          resetComposer();
-          resetLocalSession(window.localStorage, {
-            setText,
-            imageSelection,
-            broadcast,
-            archiveCapture: archiveFlow.archiveCapture,
-            synthesis: archiveFlow.synthesis
-          });
-          onReloadBootstrap();
-        }}
-        onClose={onClose}
-      />
-    </div>
+    <SettingsWorkspace copy={copy} locale={locale} runtime={runtime} status={syncStatus} onBlockingChange={onBlockingChange} operationBusy={runState !== "idle" || auxiliaryBusy || participation.pending}
+      initialSection={settingsSection.section} sectionRequest={settingsSection.request}
+      display={display.value} onDisplayChange={display.save}
+      preferenceSync={preferences.settings}
+      completionNotifications={preferences.completionNotifications}
+      onCompletionNotificationsChange={preferences.onCompletionNotifications}
+      confirmations={preferences.confirmations}
+      onConfirmationChange={(key, enabled) => { void preferences.onConfirmation(key, enabled); }}
+      onCheckUpdates={openLatestReleasePage}
+      onOpenShortcuts={() => executeCommand("open-shortcuts", commandActions.current)}
+      onOpenGuide={() => executeCommand("open-getting-started", commandActions.current)}
+      onStatus={onSyncStatus}
+      onAnnounce={onAnnounce}
+      onLocalReset={() => {
+        void preferences.refresh();
+        workspaceFlow.invalidate();
+        pageClose.invalidate();
+        runProgress.invalidate();
+        clearQuestionState();
+        archiveFlow.resetStores();
+        participation.reset();
+        resetComposer();
+        resetLocalSession(window.localStorage, {
+          setText,
+          imageSelection,
+          broadcast,
+          archiveCapture: archiveFlow.archiveCapture,
+          synthesis: archiveFlow.synthesis
+        });
+        onReloadBootstrap();
+      }}
+      onClose={onClose}
+    />
   );
 }
 
@@ -166,11 +162,16 @@ export function AppSurfaceRouter(props: AppSurfaceRouterProps): React.JSX.Elemen
       />
     );
   }
-  if (props.surface === "archive") {
-    return <ArchiveStage {...props.archive} />;
-  }
-  if (props.surface === "settings") {
-    return <SettingsStage {...props.settings} />;
+  if (props.surface === "archive" || props.surface === "settings") {
+    return (
+      <div className="surface-stage">
+        {props.surface === "archive" ? (
+          <ArchiveStage {...props.archive} />
+        ) : (
+          <SettingsStage {...props.settings} />
+        )}
+      </div>
+    );
   }
   if (props.surface === "commands") {
     return <CommandPaletteSurface {...props.commands} />;

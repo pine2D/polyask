@@ -31,6 +31,39 @@ interface Binding {
 }
 type PendingMove = { direction: -1 | 1 } | { site: SiteKey };
 
+export interface WorkspaceSiteFindOptions {
+  readonly selectedSites: () => readonly SiteKey[];
+  readonly contentsForSite: (site: SiteKey) => FindContents | undefined;
+  readonly focusedSite: () => SiteKey;
+  readonly isAllowed: () => boolean;
+  readonly focusWithoutActivating: (site: SiteKey) => void;
+  readonly relayout: () => void;
+  readonly restoreFocus: () => void;
+  readonly window: {
+    isDestroyed(): boolean;
+    readonly webContents: { send(channel: string, payload: unknown): void };
+  };
+}
+
+export function createWorkspaceSiteFind(options: WorkspaceSiteFindOptions): SiteFindController {
+  return new SiteFindController({
+    targets: () => options.selectedSites().map((site) => ({
+      site,
+      contents: options.contentsForSite(site)
+    })),
+    focused: options.focusedSite,
+    allowed: options.isAllowed,
+    focus: options.focusWithoutActivating,
+    reserve: options.relayout,
+    restoreFocus: options.restoreFocus,
+    publish: (state) => {
+      if (!options.window.isDestroyed()) {
+        options.window.webContents.send('polyask:find-state', state);
+      }
+    }
+  });
+}
+
 /** Chromium 决定匹配与导航；位置摘要只读，不经 __AMS，不触碰网页输入或会话数据。 */
 export class SiteFindController {
   private value = initialSiteFindState();

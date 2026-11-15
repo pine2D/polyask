@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { GenerationWatcher } from "../src/main/generation-watcher";
 import { SiteStatusRegistry } from "../src/main/site-status-registry";
+import { SiteViewTree } from "../src/main/site-view-tree";
 import { SiteWorkspaceState } from "../src/main/site-workspace-state";
 import type { SiteStatus } from "../src/shared/protocol";
 
@@ -104,4 +105,74 @@ test("GenerationWatcher extends deadline on first generating signal and settles 
   } finally {
     watcher.cancel();
   }
+});
+
+test("SiteViewTree reorders attached views via addChildView without detaching and cleans up on dispose", () => {
+  const events: string[] = [];
+  let nextId = 1;
+  const workspace = new SiteWorkspaceState({ selectedSites: ["claude", "chatgpt"] });
+  const statuses = new SiteStatusRegistry(() => true, () => undefined);
+  const tree = new SiteViewTree({
+    window: {
+      isDestroyed: () => false,
+      isMinimized: () => false,
+      getContentSize: () => [1600, 1000],
+      webContents: { getZoomFactor: () => 1 },
+      contentView: {
+        addChildView: (view: { siteKey: string }) => events.push(`add:${view.siteKey}`),
+        removeChildView: (view: { siteKey: string }) => events.push(`remove:${view.siteKey}`)
+      }
+    } as never,
+    siteSession: {
+      setPermissionCheckHandler() {},
+      setPermissionRequestHandler() {}
+    } as never,
+    workspace,
+    statuses,
+    siteZoom: { bind() {}, apply() {}, forSite: () => 1 } as never,
+    siteFind: { state: { open: false }, sync() {} } as never,
+    getHistoryAccess: () => ({ panelOpen: false, initialLoad() {} }) as never,
+    createSiteView: ((site: { key: string }) => {
+      const id = nextId++;
+      return {
+        siteKey: site.key,
+        setBounds() {},
+        setVisible() {},
+        webContents: {
+          id,
+          on() {},
+          isDestroyed: () => false,
+          close: () => events.push(`close:${site.key}`),
+          focus: () => events.push(`focus:${site.key}`)
+        }
+      };
+    }) as never,
+    diagnosticSitesForViews: (() => []) as never,
+    releaseUnselectedViews() {},
+    setLayout: () => true,
+    onLayout() {},
+    onRuntimeEvent() {},
+    getUiState: () => ({
+      windowBounds: { x: 0, y: 0, width: 1600, height: 1000 },
+      maximized: false,
+      layoutMode: "overview",
+      currentPage: 0,
+      focusedByPage: {},
+      siteZoom: {}
+    }),
+    webrtcPolicy: () => "default"
+  });
+
+  tree.initialize();
+  assert.equal(tree.views.size, 2);
+  assert.equal(events.some((entry) => entry.startsWith("remove:")), false, "reconcile/layout never detaches before reattaching");
+  assert.equal(tree.owns({ id: 2 } as never), "chatgpt");
+
+  tree.detachAll();
+  assert.equal(tree.attached.size, 0);
+  assert.deepEqual(events.filter((entry) => entry.startsWith("remove:")), ["remove:claude", "remove:chatgpt"]);
+
+  tree.dispose();
+  assert.equal(tree.views.size, 0);
+  assert.deepEqual(events.filter((entry) => entry.startsWith("close:")), ["close:claude", "close:chatgpt"]);
 });

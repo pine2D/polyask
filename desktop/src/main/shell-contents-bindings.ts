@@ -9,6 +9,15 @@ export interface ShellMirrorHooks {
   readonly reset: () => void;
 }
 
+interface ShellWindow {
+  readonly webContents: ShellContents;
+  on(event: string, listener: (...args: any[]) => void): unknown;
+}
+
+export interface ShellWindowLifecycleHooks extends ShellMirrorHooks {
+  readonly dispose: () => void;
+}
+
 /**
  * 外壳新文档与原生视图布局的同步；缩放和重排由 page-zoom.ts 统一处理。
  * - did-navigate 只对主帧发：外壳每提交一份新文档（首载或任何途径的重载），渲染层状态全部回到初值，
@@ -17,4 +26,11 @@ export interface ShellMirrorHooks {
  */
 export function bindShellContents(contents: ShellContents, hooks: ShellMirrorHooks): void {
   contents.on("did-navigate", () => hooks.reset());
+}
+
+export function bindShellWindowLifecycle(window: ShellWindow, hooks: ShellWindowLifecycleHooks): void {
+  window.on("resize", () => hooks.relayout());
+  window.on("restore", () => hooks.relayout());
+  bindShellContents(window.webContents, hooks);
+  window.on("closed", () => hooks.dispose());
 }

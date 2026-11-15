@@ -16,7 +16,7 @@ test("shell segmented controls expose state and site changes use a live region",
 });
 
 test("production cancel recreates only the pending site view", () => {
-  const manager = readSource("src/main/view-manager.ts");
+  const manager = readSource("src/main/view-manager.ts") + readSource("src/main/site-view-tree.ts");
   const sitePreload = readSource("src/preload/site.ts");
   assert.match(manager, /removeChildView\(/);
   assert.match(manager, /webContents\.close\(\)/);
@@ -54,13 +54,13 @@ test("application menu offers a keyboard route back to the prompt", () => {
 // 层序靠「重挂即提升」，不靠全拆重挂——后者实测会让被聚焦站点的渲染进程丢焦点（blur）。
 // 这条钉死 attach() 不得退回 detach-then-attach。
 test("view attach relies on reordering, never on a full detach-and-reattach", () => {
-  const manager = readSource("src/main/view-manager.ts");
-  const attach = manager.slice(manager.indexOf("private attach("), manager.indexOf("private detach("));
-  const reconcile = manager.slice(manager.indexOf("private reconcileViews("), manager.indexOf("private attach("));
+  const viewTree = readSource("src/main/site-view-tree.ts");
+  const attach = viewTree.slice(viewTree.indexOf("\n  attach("), viewTree.indexOf("\n  detach("));
+  const reconcile = viewTree.slice(viewTree.indexOf("\n  reconcileViews("), viewTree.indexOf("\n  attach("));
 
   assert.match(attach, /addChildView/);
   assert.ok(!/removeChildView|this\.detach\(/.test(attach), "attach() 里不得出现 detach");
-  assert.ok(!/\[\.\.\.this\.attached\]\) this\.detach/.test(reconcile),
+  assert.ok(!/\[\.\.\.this\.attached\]\) this\.detach|this\.detachAll\(/.test(reconcile),
     "reconcileViews() 不得整栈拆挂——会丢焦点，且 addChildView 本就能原地提升层序");
 });
 
@@ -134,9 +134,10 @@ test("shell navigation and IPC trust both lock to the local top frame", () => {
 
 test("site views grant an explicit permission allowlist and no more", () => {
   const manager = readSource("src/main/view-manager.ts");
-  const allowlist = manager.slice(
-    manager.indexOf("const SITE_PERMISSION_ALLOWLIST"),
-    manager.indexOf("interface ViewManagerOptions")
+  const viewTree = readSource("src/main/site-view-tree.ts");
+  const allowlist = viewTree.slice(
+    viewTree.indexOf("const SITE_PERMISSION_ALLOWLIST"),
+    viewTree.indexOf("export interface SiteViewTreeDeps")
   );
   for (const permission of ["clipboard-sanitized-write", "fullscreen", "pointerLock"]) {
     assert.match(allowlist, new RegExp(`"${permission}"`));
@@ -144,8 +145,9 @@ test("site views grant an explicit permission allowlist and no more", () => {
   for (const denied of ["media", "geolocation", "midi", "notifications", "clipboard-read", "window-management"]) {
     assert.doesNotMatch(allowlist, new RegExp(`"${denied}"`));
   }
-  assert.match(manager, /setPermissionCheckHandler\(\s*\(_contents, permission\) => SITE_PERMISSION_ALLOWLIST\.has\(permission\)/);
-  assert.match(manager, /setPermissionRequestHandler\(\(_contents, permission, callback\) =>\s*callback\(SITE_PERMISSION_ALLOWLIST\.has\(permission\)\)\)/);
+  assert.match(manager, /this\.viewTree\.initialize\(\)/);
+  assert.match(viewTree, /setPermissionCheckHandler\(\s*\(_contents, permission\) => SITE_PERMISSION_ALLOWLIST\.has\(permission\)/);
+  assert.match(viewTree, /setPermissionRequestHandler\(\(_contents, permission, callback\) =>\s*callback\(SITE_PERMISSION_ALLOWLIST\.has\(permission\)\)\)/);
 });
 
 test("site view wires split navigation guards, a commit signal and deny-only popups", () => {
@@ -345,7 +347,7 @@ test("navigation retires generation monitoring for that site only", () => {
   assert.match(manager, /invalidateGeneration: \(site\) => this\.invalidateGeneration\(site\)/);
   assert.match(navController, /deps\.invalidateGeneration\(site\)/);
   assert.doesNotMatch(navController, /cancelGenerationRun/);
-  assert.match(manager, /invalidateGeneration\(site: SiteKey\): void \{ this\.generationWatcher\.invalidate\(site\); \}/);
+  assert.match(manager, /invalidateGeneration\(site: SiteKey\): void \{\s*this\.generationWatcher\.invalidate\(site\);\s*\}/);
   assert.match(watcher, /invalidate\(site: SiteKey\): void \{\s*this\.monitor\.forget\(site\)/);
 });
 
@@ -414,14 +416,16 @@ test("assisted synthesis dispatches through its own coordinator and cancel reach
 
 test("workspace surfaces detach site views without destroying their web contents", () => {
   const manager = readSource("src/main/view-manager.ts");
+  const viewTree = readSource("src/main/site-view-tree.ts");
   const start = manager.indexOf("setSurface(");
-  const end = manager.indexOf("\n  focusRelative", start);
+  const end = manager.indexOf("\n  focusCurrentSite", start);
   const implementation = manager.slice(start, end);
-  const detach = manager.slice(manager.indexOf("private detach("), manager.indexOf("\n  private dispose"));
-  assert.match(implementation, /this\.detach/);
-  assert.match(implementation, /this\.reconcileViews/);
+  const detach = viewTree.slice(viewTree.indexOf("\n  detach("), viewTree.indexOf("\n  dispose("));
+  assert.match(implementation, /this\.viewTree\.detachAll\(\)/);
+  assert.match(implementation, /this\.viewTree\.reconcileViews\(\)/);
   assert.match(detach, /removeChildView/);
   assert.doesNotMatch(implementation, /webContents\.close/);
+  assert.doesNotMatch(detach, /webContents\.close/);
   assert.match(readSource("src/shared/protocol.ts"), /"commands"/);
   assert.match(readSource("src/main/shell-panel-ipc.ts"), /'commands'/);
 });
