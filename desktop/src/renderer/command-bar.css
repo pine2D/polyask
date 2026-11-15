@@ -172,7 +172,10 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar[data-fit~="3"] .scope-label-count { display: inline-flex; }
 .command-bar[data-fit~="3"] .tier-select { display: block; }
 .command-bar[data-fit~="3"] .uncertain-retry-trigger .review-glyph { display: inline; }
-.command-bar[data-fit~="4"] { column-gap: 3px; }
+.command-bar[data-fit~="4"] { padding-inline: var(--space-1); column-gap: 3px; }
+.command-bar[data-fit~="4"] .prompt-history-tools { gap: 3px; }
+.command-bar[data-fit~="4"] .primary-action { padding: 0 6px; gap: 3px; }
+.command-bar[data-fit~="4"] .workspace-actions { gap: 2px; padding-left: 4px; }
 .command-bar[data-fit~="4"] :is(.health-trigger, .compare-trigger) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > button:not(.layout-toggle) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > .layout-toggle { display: inline-flex; }
