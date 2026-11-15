@@ -36,15 +36,16 @@ jobs:
       - name: 安装 Xvfb 与原生输入工具
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends xvfb xdotool imagemagick
+          sudo apt-get install -y --no-install-recommends xvfb xdotool imagemagick fonts-noto-cjk
 
       - name: 安装桌面端依赖
         working-directory: desktop
         run: npm ci
 
-      - name: 配置 Electron Chromium 沙箱
+      - name: 下载开发态 Electron 并配置 Chromium 沙箱
         working-directory: desktop
         run: |
+          node node_modules/electron/install.js
           sudo chown root:root "node_modules/electron/dist/chrome-sandbox"
           sudo chmod 4755 "node_modules/electron/dist/chrome-sandbox"
 

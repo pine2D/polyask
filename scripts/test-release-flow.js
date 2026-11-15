@@ -104,6 +104,7 @@ function sliceBetween(text, startMarker, endMarker) {
   assert.match(uiRegressionWorkflow, /workflow_dispatch:/, "ui-regression.yml 必须支持发版前手动触发");
   const uiJob = sliceBetween(uiRegressionWorkflow, "\n  linux-native-ui:\n", null);
   assert.match(uiJob, /timeout-minutes:\s*\d+/, "linux-native-ui 缺少 timeout-minutes");
+  assert.match(uiJob, /node node_modules\/electron\/install\.js[\s\S]*sudo chown root:root "node_modules\/electron\/dist\/chrome-sandbox"/, "Electron 44 无 postinstall，linux-native-ui 配置 chrome-sandbox 前必须先运行 electron/install.js");
   assert.match(uiJob, /MemoryMax=4G -p MemorySwapMax=512M/, "linux-native-ui 必须启用 4 GiB / 512 MiB cgroup 保护");
   assert.match(uiJob, /env "PATH=\$PATH" xvfb-run/, "linux-native-ui 经 sudo systemd-run 时必须显式透传 setup-node 的 PATH");
   assert.match(uiJob, /npm run test:shell-ui/, "ui-regression.yml 必须运行 test:shell-ui");
