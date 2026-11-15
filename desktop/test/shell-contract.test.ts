@@ -123,7 +123,7 @@ test("CI tests and packages desktop on Linux, Windows and macOS", () => {
 });
 
 test("shell navigation and IPC trust both lock to the local top frame", () => {
-  const main = readSource("src/main/index.ts") + readSource("src/main/shell-ipc.ts");
+  const main = readSource("src/main/index.ts") + readSource("src/main/main-window.ts") + readSource("src/main/shell-ipc.ts");
   assert.match(main, /senderFrame/);
   assert.match(main, /will-navigate/);
   assert.match(main, /setWindowOpenHandler/);
@@ -583,21 +583,25 @@ test("Drive diagnostics command opens and targets the settings diagnostic sectio
 
 test("windows and linux auto-hide the native menu bar", () => {
   const main = readSource("src/main/index.ts");
-  assert.match(main, /setAutoHideMenuBar\(true\)/);
-  assert.match(main, /setMenuBarVisibility\(false\)/);
+  const mainWindow = readSource("src/main/main-window.ts");
+  assert.match(main, /createMainWindow\(/);
+  assert.match(mainWindow, /setAutoHideMenuBar\(true\)/);
+  assert.match(mainWindow, /setMenuBarVisibility\(false\)/);
 });
 
 test("desktop UI state restores before window creation and remains local to the profile", () => {
   const main = readSource("src/main/index.ts");
+  const mainWindow = readSource("src/main/main-window.ts");
   const manager = readSource("src/main/view-manager.ts");
   const store = readSource("src/main/ui-state-store.ts");
-  const load = main.indexOf("uiStateStore.load()");
-  const create = main.indexOf("new BrowserWindow");
+  const load = mainWindow.indexOf("uiStateStore.load()");
+  const create = mainWindow.indexOf("new BrowserWindow");
 
+  assert.match(main, /createMainWindow\(/);
   assert.ok(load >= 0 && load < create);
-  assert.match(main, /screen\.getAllDisplays/);
-  assert.match(main, /XDG_SESSION_TYPE/);
-  assert.match(main, /desktop-ui-state\.json/);
+  assert.match(mainWindow, /screen\.getAllDisplays/);
+  assert.match(mainWindow, /XDG_SESSION_TYPE/);
+  assert.match(mainWindow, /desktop-ui-state\.json/);
   assert.match(manager, /getUiState\(\)/);
   assert.match(manager, /initialUiState/);
   assert.match(store, /setTimeout/);

@@ -65,8 +65,10 @@ test("subframes only receive the badge policy, never site adapters or command IP
 
 test("web badging is disabled at startup before any browser context is created", () => {
   const main = readSource("src/main/index.ts");
+  const windowSource = readSource("src/main/main-window.ts");
   const call = main.indexOf("\ndisableWebBadging(app, WEB_BADGING_PRELOAD_WEBPACK_ENTRY);\n");
   assert.ok(call > 0, "apply the policy at module top level");
   assert.ok(main.indexOf("app.whenReady(") > call, "apply it before Chromium starts");
-  assert.ok(main.indexOf("new BrowserWindow(") > call, "apply it before a window exists");
+  assert.ok(main.indexOf("createMainWindow(") > call, "apply it before a window exists");
+  assert.match(windowSource, /new BrowserWindow\(/);
 });

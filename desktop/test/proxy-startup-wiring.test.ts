@@ -10,11 +10,13 @@ import { readSource } from "./fixtures";
 test("every network context starts on the blocking proxy: the switch is appended at top level before app ready", () => {
   // T18 实测：session 一实例化就下载拼写词典；外壳窗口与 applyConfig 的 clearAuthCache 都早于首次 setProxy。
   const main = readSource("src/main/index.ts");
+  const windowSource = readSource("src/main/main-window.ts");
   const call = main.indexOf("\nblockProxyUntilApplied(app.commandLine);\n");
   const ready = main.indexOf("app.whenReady(");
   assert.ok(call > 0, "called once at module top level (column 0, not inside a function)");
   assert.ok(ready > call, "appended before app.whenReady: switches read after ready have no effect");
-  assert.ok(main.indexOf("createProxyServices(") > call && main.indexOf("new BrowserWindow(") > call, "before any session exists");
+  assert.ok(main.indexOf("createProxyServices(") > call && main.indexOf("createMainWindow(") > call, "before any session exists");
+  assert.match(windowSource, /new BrowserWindow\(/);
   assert.equal(main.split("blockProxyUntilApplied(").length, 2, "exactly one call");
 });
 

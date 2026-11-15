@@ -46,7 +46,6 @@ echo "[size] 检查 desktop/src 的 .ts/.tsx 单文件不超过 400 行（越界
 declare -A TS_RATCHET=(
   [desktop/src/main/view-manager.ts]=736   # TODO 抽出 site-workspace-state / site-status-registry / generation-watcher 三块纯逻辑后压回 ≤400
   [desktop/src/renderer/index.tsx]=723     # TODO 抽出命令表（buildCommands）/ 站点健康动作 / 辅助综合流三块后压回 ≤400
-  [desktop/src/main/index.ts]=548          # TODO 抽出 createServices（数据层装配）与 createMainWindow（窗口/菜单装配）后压回 ≤400
 )
 TS_EXEMPT=("desktop/src/shared/copy.ts")
 mapfile -d '' -t TS_FILES < <(existing_files 'desktop/src/*.ts'; existing_files 'desktop/src/*.tsx')

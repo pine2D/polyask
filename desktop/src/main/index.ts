@@ -1,10 +1,8 @@
 import { dispatchAppCommand as dispatchShellCommand } from './app-command-dispatch';
-import { prepareApplicationMenu, bindApplicationCommandInput } from './application-command-routing';
-import type { CommandPaletteShortcutMode } from '../shared/command-palette-shortcut';
+import { bindApplicationCommandInput } from './application-command-routing';
 import { CommandPaletteShortcutRuntime } from './command-palette-shortcut';
 import { CommandPaletteShortcutRepository } from './command-palette-shortcut-repository';
-import { runViewMenuAction } from "./view-menu-actions";
-import { installNativeShell, initialShellBackground } from "./native-shell";
+import { createApplicationMenuController, createMainWindow } from './main-window';
 import { createWindowDataServices } from './window-data-services';
 import type { PreferenceRuntime } from './preference-runtime';
 import { mkdirSync } from "node:fs";
@@ -12,19 +10,16 @@ import { basename, join } from "node:path";
 
 import {
   app,
-  BrowserWindow,
+  type BrowserWindow,
   dialog,
   globalShortcut,
-  screen,
   shell as electronShell,
-  webContents,
 } from "electron";
 import squirrelStartup from "electron-squirrel-startup";
 
 import type { CommandId } from "../shared/commands";
-import { formatCopy, getCopy } from "../shared/copy";
-import { parseDesktopUiState } from "../shared/desktop-ui-state";
-import { DEFAULT_DISPLAY_PREFERENCES, type DisplayPreferences } from "../shared/display";
+import { getCopy } from "../shared/copy";
+import type { DisplayPreferences } from "../shared/display";
 import type { RuntimeInfo } from "../shared/runtime";
 import { captureStartupUpgradeSnapshot } from "./auto-backup-service";
 import { BroadcastCoordinator } from "./broadcast";
@@ -47,13 +42,12 @@ import { createProxyServices, type ProxyServices } from "./proxy-services";
 import { blockProxyUntilApplied } from "./proxy-startup-block";
 import { disableWebBadging } from "./web-badging";
 import { createProxyTools } from "./proxy-tools";
-import { isTrustedShellUrl, safeExternalUrl } from "./security";
+import { safeExternalUrl } from "./security";
 import { startRuntimeGates } from "./runtime-gates";
 import { registerShellIpc } from "./shell-ipc";
 import { SITES } from "./sites";
 import { runStartup } from "./startup";
 import { formatPortableDataConflict, showStartupFailure } from "./startup-failure";
-import { UiStateStore } from "./ui-state-store";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
 
@@ -168,14 +162,16 @@ function applyDisplayPreferences(
   return value;
 }
 
-function createMenu(): void { prepareMenu(paletteShortcut?.getState().mode ?? 'standard').commit(); }
-function prepareMenu(mode: CommandPaletteShortcutMode): ReturnType<typeof prepareApplicationMenu> {
-  const copy = getCopy(app.getLocale());
-  const display = viewManager?.getDisplayPreferences() ?? DEFAULT_DISPLAY_PREFERENCES;
-  return prepareApplicationMenu([process.platform, copy, display,
-    (value) => { if (preferenceRuntime) preferenceRuntime.setDisplay(value); else if (viewManager) applyDisplayPreferences(viewManager, value); }, dispatchAppCommand, app.name,
-    (action) => runViewMenuAction(action, viewManager, mainWindow?.webContents ?? null, webContents.getFocusedWebContents()), mode]);
-}
+const { createMenu, prepareMenu } = createApplicationMenuController({
+  getLocale: () => app.getLocale(),
+  getAppName: () => app.name,
+  getMode: () => paletteShortcut?.getState().mode ?? "standard",
+  getManager: () => viewManager,
+  getMainWindow: () => mainWindow,
+  getPreferences: () => preferenceRuntime,
+  dispatchAppCommand,
+  applyDisplayFallback: applyDisplayPreferences
+});
 
 async function createWindow(): Promise<void> {
   const copy = getCopy(app.getLocale());
@@ -199,49 +195,19 @@ async function createWindow(): Promise<void> {
     }
   );
   const workspaceState = workspace.getState();
-  const uiStateStore = new UiStateStore(join(app.getPath("userData"), "desktop-ui-state.json"));
-  const initialUiState = parseDesktopUiState(
-    uiStateStore.load(),
-    screen.getAllDisplays().map((display) => display.workArea),
-    workspaceState.selectedSites
-  );
-  const bounds = initialUiState.windowBounds;
-  const restorePosition = !(process.platform === "linux"
-    && process.env.XDG_SESSION_TYPE?.toLowerCase() === "wayland");
-  const windowTitle = runtimeInfo.preview ? formatCopy(copy.previewWindowTitle, { title: copy.appTitle }) : copy.appTitle;
-  const window = new BrowserWindow({
-    title: windowTitle,
-    width: bounds?.width ?? 1600,
-    height: bounds?.height ?? 1050,
-    ...(bounds && restorePosition ? { x: bounds.x, y: bounds.y } : {}),
-    minWidth: 960,
-    minHeight: 680,
-    show: false,
-    backgroundColor: initialShellBackground(),
-    webPreferences: {
-      preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
-      nodeIntegration: false,
-      contextIsolation: true,
-      sandbox: true,
-      webSecurity: true
-    }
+  const { window, uiStateStore, initialUiState, bindUiStatePersistence } = createMainWindow({
+    userDataPath: app.getPath("userData"),
+    selectedSites: workspaceState.selectedSites,
+    copy,
+    preview: Boolean(runtimeInfo.preview),
+    preloadEntry: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
+    shellEntry: MAIN_WINDOW_WEBPACK_ENTRY
   });
-  if (process.platform !== "darwin") {
-    window.setAutoHideMenuBar(true);
-    window.setMenuBarVisibility(false);
-  }
-  installNativeShell(window);
   mainWindow = window;
   let notificationQuestions: QuestionHistoryService | null = null;
   const completionNotifier = createCompletionNotifications({ window, copy,
     questions: () => notificationQuestions, publish: sendToShell });
   window.once('closed', () => completionNotifier.dispose());
-  const guardShellNavigation = (event: Electron.Event, url: string) => {
-    if (!isTrustedShellUrl(url, MAIN_WINDOW_WEBPACK_ENTRY)) event.preventDefault();
-  };
-  window.webContents.on("will-navigate", guardShellNavigation);
-  window.webContents.on("will-redirect", guardShellNavigation);
-  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   const runtimeGates = startRuntimeGates(window);
   // fail-closed：代理应用并校验（存储值损坏则进入阻断）之后才构造 ViewManager——首个站点 loadURL 就在它的构造里。
   await proxy.runtime.recomputeFromStore();
@@ -301,14 +267,7 @@ async function createWindow(): Promise<void> {
     applyDisplay: (value) => preferences.setDisplay(value),
     setCompletionNotifications: (enabled) => { preferences.set('completionNotifications', enabled); }
   });
-  window.on("move", () => uiStateStore.schedule(manager.getUiState()));
-  window.on("maximize", () => uiStateStore.schedule(manager.getUiState()));
-  window.on("unmaximize", () => uiStateStore.schedule(manager.getUiState()));
-  window.on("close", () => uiStateStore.save(manager.getUiState()));
-  window.once("ready-to-show", () => {
-    if (initialUiState.maximized) window.maximize();
-    window.show();
-  });
+  bindUiStatePersistence(() => manager.getUiState());
   await window.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
   sync.start();
   runtimeGates.writeDiagnostic(manager);
