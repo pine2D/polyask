@@ -64,6 +64,7 @@ test("history navigation is wired end to end and gated like reload", () => {
   const ipc = (readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts"));
   const preload = readSource("src/preload/shell.ts");
   const renderer = readSource("src/renderer/index.tsx");
+  const appCommands = readSource("src/renderer/app-commands.tsx");
   const body = manager.slice(manager.indexOf("navigateHistory("), manager.indexOf("\n  canNavigateHistory("));
   const history = readSource("src/main/site-history-navigation.ts");
 
@@ -73,7 +74,8 @@ test("history navigation is wired end to end and gated like reload", () => {
   assert.match(history, /canGoBack\(\)/);
   assert.match(ipc, /polyask:step-history/);
   assert.match(preload, /polyask:step-history/);
-  assert.match(renderer, /stepHistory/);
+  assert.match(renderer, /buildAppCommands\(/);
+  assert.match(appCommands, /stepHistory/);
 });
 
 // 格子头部的后退按钮：只在该站真有历史可退时出现，免得摆一个点了没反应的按钮。
@@ -85,5 +87,9 @@ test("the tile back button appears only when that site can actually go back", ()
   assert.match(frames, /onBack\(site\.key\)/);
 
   const renderer = readSource("src/renderer/index.tsx");
-  assert.match(renderer, /stepHistory\(-1, site\)/, "格子按钮要能指定站点，不能只作用于聚焦站");
+  const stages = readSource("src/renderer/surface-stages.tsx");
+  const workbench = readSource("src/renderer/workbench-stage.tsx");
+  assert.match(renderer, /<AppSurfaceRouter/);
+  assert.match(stages, /<WorkbenchMainStage/);
+  assert.match(workbench, /stepHistory\(-1, site\)/, "格子按钮要能指定站点，不能只作用于聚焦站");
 });

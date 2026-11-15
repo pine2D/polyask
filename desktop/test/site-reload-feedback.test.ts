@@ -22,9 +22,13 @@ test('frame reload reports a false result and a thrown rejection instead of stay
 });
 
 test('the shell wires the frame reload button through the feedback helper, not a bare void call', () => {
-  const source = readSource('src/renderer/index.tsx');
-  assert.equal(source.includes('void shell.reloadSite('), false);
-  assert.equal(source.includes('reloadSiteWithFeedback('), true);
+  const app = readSource('src/renderer/index.tsx');
+  const stages = readSource('src/renderer/surface-stages.tsx');
+  const workbench = readSource('src/renderer/workbench-stage.tsx');
+  assert.match(app, /<AppSurfaceRouter/);
+  assert.match(stages, /<WorkbenchMainStage/);
+  assert.equal((app + stages + workbench).includes('void shell.reloadSite('), false);
+  assert.equal(workbench.includes('reloadSiteWithFeedback('), true);
 });
 
 test('persistence failures use the generic preference-save copy, not the display-only message', () => {

@@ -1,109 +1,74 @@
-import { useTaskSetup } from './use-task-setup';
-import { TaskSetup } from './task-setup';
-import { workspaceMenuActions } from './workspace-menu-actions';
-import { tierChangeAction } from './tier-change-action';
-import { useSyncedPreferences } from './use-synced-preferences';
-import { useNotificationNavigation } from './use-notification-navigation';
-import { useCommandDiscovery } from './use-command-discovery';
-import { usePanelFocusReturn } from './use-panel-focus-return';
-import { siteStatusRunId } from '../shared/protocol';
-import { PromptDraftRecovery } from './prompt-draft-recovery';
-import { useDraftConfirmation } from './use-draft-confirmation';
-import { confirmAndStartNewSession } from './new-session-action';
-import { QuestionHistory } from "./question-history";
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-
-import { resolveCommands, type CommandId } from "../shared/commands";
 import type { LayoutMode, SiteDefinition } from "../shared/contracts";
-import type { CommandActions } from "./command-dispatcher";
 import { formatCopy, getCopy, resolveLocale } from "../shared/copy";
-import { imageSupportWarning } from './image-support-warning';
-import type { QuestionRunProgress } from '../shared/question-run-progress';
-import { useQuestionRunProgress } from './use-question-run-progress';
-import { useSiteHealthRefresh } from './use-site-health-refresh';
-import type { QuestionReadingRequest } from './question-reading-request';
-import { createComparisonDraftStore } from './comparison-draft-store';
-import { createLibrarySessionStore } from './library-session';
-import type {
-  BootstrapState,
-  DesktopSurface,
-  LayoutState,
-  MenuShortcut,
-  SiteHistoryState,
-  SiteStatus
-} from "../shared/protocol";
-import { describeStatus, errorCode } from "../shared/status-copy";
-import type { SyncStatus } from "../shared/sync";
-import type { RuntimeInfo } from "../shared/runtime";
-import type { SiteHealth } from "../shared/site-health";
-import { siteHealthActions } from "./site-health-actions";
 import type { PromptLibraryState } from "../shared/prompt-library";
-import { ArchiveSurface } from "./archive-surface";
-import { loadBootstrap, type BootstrapPhase } from "./bootstrap-model";
-import { BootstrapStateView } from "./bootstrap-state";
-import { ExclusiveActionLock } from "./broadcast-flow-state";
-import { CommandBar } from "./command-bar";
-import { ConfirmDialog } from "./confirm-dialog";
-import type { PendingSessionConfirmation } from "./session-confirmation";
-import { useCommandPaletteShortcut } from './use-command-palette-shortcut';
-import { CommandPalette, type CommandPaletteMode } from "./command-palette";
-import { executeCommand } from "./command-dispatcher";
 import {
-  applyDisplayDensity,
-  loadDisplayPreferences,
-} from "./display-preferences";
-import { useDisplayPreferences } from "./use-display-preferences";
-import { useArchiveNavigation } from "./use-archive-navigation";
-import { ImagePicker } from "./image-picker";
-import { PageTabs } from './page-tabs';
-import { WorkspaceProgress } from './workspace-progress';
-import { resetLocalSession } from "./local-data-reset";
-import { useTemplateDeletion } from "./use-template-deletion";
-import { usePromptDraft } from "./use-prompt-draft";
-import { useDraftReplaceUndo } from "./use-draft-replace-undo";
-import { focusPromptForEditing, restoreWorkbenchFocus } from "./composer-activation";
-import { useWorkspaceMotion } from "./use-workspace-motion";
-import { FeedbackProvider, usePreviewBadge } from "./feedback-provider";
+  siteStatusRunId,
+  type BootstrapState,
+  type DesktopSurface,
+  type LayoutState,
+  type MenuShortcut,
+  type SiteHistoryState,
+  type SiteStatus
+} from "../shared/protocol";
+import type { QuestionRunProgress } from "../shared/question-run-progress";
+import type { RuntimeInfo } from "../shared/runtime";
+import { describeStatus } from "../shared/status-copy";
+import type { SyncStatus } from "../shared/sync";
+import { buildAppCommands } from "./app-commands";
+import { loadBootstrap, type BootstrapPhase } from "./bootstrap-model";
 import { broadcastFeedback } from "./broadcast-feedback";
-import { archiveCollectionActions } from "./archive-collection-actions";
-import { useBroadcastRetryReview } from "./use-broadcast-retry-review";
-import { inspectBroadcastSite } from "./broadcast-site-inspection";
+import { ExclusiveActionLock } from "./broadcast-flow-state";
+import { executeCommand, type CommandActions } from "./command-dispatcher";
+import type { CommandPaletteMode } from "./command-palette";
+import { focusPromptForEditing } from "./composer-activation";
+import { applyDisplayDensity, loadDisplayPreferences } from "./display-preferences";
+import { FeedbackProvider, usePreviewBadge } from "./feedback-provider";
+import { imageSupportWarning } from "./image-support-warning";
+import { confirmAndStartNewSession } from "./new-session-action";
+import { currentPlatform, isMac } from "./platform";
+import type { QuestionReadingRequest } from "./question-reading-request";
+import type { PendingSessionConfirmation } from "./session-confirmation";
+import type { SettingsTarget } from "./settings-categories";
+import { shell } from "./shell-api";
+import { AppSurfaceRouter } from "./surface-stages";
+import { requestSurfaceChange } from "./surface-transition";
+import { tierChangeAction } from "./tier-change-action";
+import { useArchiveSynthesisFlow } from "./use-archive-synthesis-flow";
+import { useBroadcastFlow } from "./use-broadcast-flow";
+import { useCommandDiscovery } from "./use-command-discovery";
+import { useCommandPaletteShortcut } from "./use-command-palette-shortcut";
+import { useDisplayPreferences } from "./use-display-preferences";
+import { useDraftConfirmation } from "./use-draft-confirmation";
+import { useDraftReplaceUndo } from "./use-draft-replace-undo";
 import { useFeedback } from "./use-feedback";
-import { SiteFrames } from "./site-frames";
-import type { SettingsTarget } from './settings-categories';
-import { SettingsWorkspace } from "./settings-workspace";
+import { useImageSelection } from "./use-image-selection";
+import { useNotificationNavigation } from "./use-notification-navigation";
+import { usePanelFocusReturn } from "./use-panel-focus-return";
+import { usePromptDraft } from "./use-prompt-draft";
 import { useProxyPendingNotice } from "./use-proxy-state";
-import { nextSiteForStatus } from "./site-navigation";
-import { WorkspaceDrawer } from "./workspace-drawer";
+import { useQuestionRunProgress } from "./use-question-run-progress";
+import { useSiteHealthPanel } from "./use-site-health-panel";
+import { useSyncedPreferences } from "./use-synced-preferences";
+import { useSyncedSiteParticipation } from "./use-synced-site-participation";
+import { useTaskSetup } from "./use-task-setup";
+import { useTemplateDeletion } from "./use-template-deletion";
+import { useWorkbenchConfirmations } from "./use-workbench-confirmations";
+import { useWorkspaceFlow } from "./use-workspace-flow";
+import { useWorkspaceMotion } from "./use-workspace-motion";
+import { workspaceMenuActions } from "./workspace-menu-actions";
 import {
   openWorkspacePanel,
   scopeDisplayName,
-  type OpenWorkspacePanelState,
   type WorkspacePanelState,
   type WorkspacePanelTab
 } from "./workspace-panel-state";
-import { useArchiveCapture } from "./use-archive-capture";
-import { useBroadcastFlow } from "./use-broadcast-flow";
-import { useImageSelection } from "./use-image-selection";
-import { useSynthesisFlow } from "./use-synthesis-flow";
-import { useSynthesisRecovery } from "./use-synthesis-recovery";
-import { useWorkspaceFlow } from "./use-workspace-flow";
-import { useSyncedSiteParticipation } from './use-synced-site-participation';
-import { useSitePageClose } from './use-site-page-close';
-import { reloadSiteWithFeedback } from "./site-reload";
-import { shell } from "./shell-api";
-import { SiteFind } from './site-find';
-import { requestDecisionNavigation } from "./decision-navigation";
-import { requestSurfaceChange } from './surface-transition';
-import { currentPlatform, isMac } from "./platform";
 import "./styles.css";
 import "./settings.css";
 import "./accessibility.css";
 import "./feedback.css";
 
-// TODO(size-ratchet)：723 行，目标 ≤400——抽出命令表装配（buildCommands）、站点健康动作（reload/hard-reload/clear/copy-report）
-// 与辅助综合/结果库流三块；App 只留状态编排与渲染分支。
 const INITIAL_LAYOUT: LayoutState = {
   mode: "overview",
   focused: "claude",
@@ -122,7 +87,6 @@ const INITIAL_SYNC: SyncStatus = {
 };
 const INITIAL_RUNTIME: RuntimeInfo = { version: "", distribution: "installed" };
 const INITIAL_LIBRARY: PromptLibraryState = { templates: [], history: [] };
-const LATEST_RELEASE_URL = "https://github.com/pine2D/polyask/releases/latest";
 
 applyDisplayDensity(document.documentElement, INITIAL_DISPLAY);
 
@@ -138,7 +102,6 @@ function App(): React.JSX.Element {
   const actionLock = useRef<ExclusiveActionLock | null>(null);
   const commandActions = useRef<CommandActions>({});
   const draftConfirmation = useDraftConfirmation(commandActions);
-  const lastOpenPanel = useRef<OpenWorkspacePanelState>(openWorkspacePanel("sites", "pointer"));
   if (!actionLock.current) actionLock.current = new ExclusiveActionLock();
   const [bootstrapPhase, setBootstrapPhase] = useState<BootstrapPhase>("loading");
   const [sites, setSites] = useState<readonly SiteDefinition[]>([]);
@@ -149,22 +112,15 @@ function App(): React.JSX.Element {
   // 存 resolve 而不是布尔：调用方仍是 `await` 的形态，业务逻辑不必改写成回调。
   const [pendingNewSession, setPendingNewSession] = useState<PendingSessionConfirmation | null>(null);
   const [statuses, setStatuses] = useState<Record<string, SiteStatus>>({});
-  const [health, setHealth] = useState<Partial<Record<string, SiteHealth>>>({});
   const [layout, setLayout] = useState<LayoutState>(INITIAL_LAYOUT);
   const { text, setText, revision: draftRevision, clearSent, recovery: promptRecovery, flushDraft } = usePromptDraft(copy);
   const [auxiliaryWorkBusy, setAuxiliaryBusy] = useState(false);
-  const [panelState, setPanelState] = useState<WorkspacePanelState>(null);
   const [surface, setSurface] = useState<DesktopSurface>("sites");
   const [questionHistoryOpen, setQuestionHistoryOpen] = useState(false);
   const [questionReadRequest, setQuestionReadRequest] = useState<QuestionReadingRequest | null>(null);
   const [bootstrapProgress, setBootstrapProgress] = useState<QuestionRunProgress | null>(null);
-  const [comparisonDrafts] = useState(createComparisonDraftStore);
-  const [librarySession] = useState(createLibrarySessionStore);
-  const [libraryBlocking, setLibraryBlocking] = useState(false);
-  const blockLibrary = useCallback((value: boolean) => { if (value) commandActions.current = {}; setLibraryBlocking(value); }, []);
   const [questionHistoryBlocking, setQuestionHistoryBlocking] = useState(false);
   const closeQuestionHistory = (): void => { setQuestionReadRequest(null); setQuestionHistoryOpen(false); };
-  const archiveNavigation = useArchiveNavigation();
   const [settingsBlocking, setSettingsBlocking] = useState(false);
   const blockSettings = useCallback((value: boolean) => { if (value) commandActions.current = {}; setSettingsBlocking(value); }, []);
   const [settingsSection, setSettingsSection] = useState<{ section: SettingsTarget; request: number }>({ section: "appearance", request: 0 });
@@ -175,16 +131,15 @@ function App(): React.JSX.Element {
   const [promptLibrary, setPromptLibrary] = useState<PromptLibraryState>(INITIAL_LIBRARY);
   const templateDeletion = useTemplateDeletion(promptLibrary, setPromptLibrary, copy);
   const { announcement, announce: setAnnouncement, clearNotice, healthFeedback, noteHealth } = useFeedback();
-  const { checking: healthChecking, refresh: refreshSiteHealth } = useSiteHealthRefresh(setHealth, () => setAnnouncement(copy.healthRequestFailed));
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
-  const drawerOpen = panelState !== null;
-  if (panelState) lastOpenPanel.current = panelState;
   const workspaceFlow = useWorkspaceFlow(sites, copy.workspaceActionFailed, setAnnouncement);
   const { workspace, selected } = workspaceFlow;
+  const {
+    health, setHealth, healthChecking, refreshSiteHealth, healthAttention,
+    panelState, lastOpenPanel, drawerOpen, updatePanelState, drawerHealthActions
+  } = useSiteHealthPanel({ copy, sites, selected, runtime, statuses, noteHealth, onAnnounce: setAnnouncement });
   const changePanelState = (value: WorkspacePanelState): void => {
-    if (value) void shell.closeSiteFind(false).catch(() => {});
-    if (value) { setQuestionHistoryOpen(false); imageSelection.setOpen(false); }
-    setPanelState(value);
+    updatePanelState(value, () => { setQuestionHistoryOpen(false); imageSelection.setOpen(false); });
   };
   const openPanel = (tab: WorkspacePanelTab, inputMethod: "pointer" | "keyboard"): void => {
     changeSurface("sites");
@@ -194,12 +149,16 @@ function App(): React.JSX.Element {
   const changeDrawerOpen = (value: boolean): void => {
     changePanelState(value ? openWorkspacePanel("sites", "pointer") : null);
   };
-  const synthesis = useSynthesisFlow(actionLock.current!);
-  const auxiliaryBusy = auxiliaryWorkBusy || synthesis.runState !== "idle";
-  const participation = useSyncedSiteParticipation(workspaceFlow, bootstrapPhase === 'ready',
+  const participation = useSyncedSiteParticipation(workspaceFlow, bootstrapPhase === "ready",
     actionLock.current!, () => setAnnouncement(copy.workspaceActionFailed));
   const participating = useMemo(() => new Set(participation.participating), [participation.participating]);
-  const archiveCapture = useArchiveCapture({ sites, selected: participating, prompt: text });
+  const archiveFlow = useArchiveSynthesisFlow({
+    copy, sites, participating, prompt: text, actionLock: actionLock.current!, commandActions,
+    onPrepareSynthesisTarget: () => { runProgress.invalidate(); broadcast.invalidate(); changeSurface("sites"); },
+    onChangeSurface: (next) => changeSurface(next)
+  });
+  const { synthesis, archiveCapture, archiveNavigation, libraryBlocking } = archiveFlow;
+  const auxiliaryBusy = auxiliaryWorkBusy || synthesis.runState !== "idle";
   const broadcast = useBroadcastFlow(
     () => setAnnouncement(copy.failed),
     archiveCapture.remember,
@@ -210,28 +169,15 @@ function App(): React.JSX.Element {
   const runProgress = useQuestionRunProgress(broadcast.runId, bootstrapProgress);
   const display = useDisplayPreferences(INITIAL_DISPLAY, () => setAnnouncement(copy.displayPreferencesFailed));
   const preferences = useSyncedPreferences({ display: display.value, onDisplay: display.accept, onPersistenceFailure: () => setAnnouncement(copy.preferencesSaveFailed) });
-  const pageClose = useSitePageClose({ copy, sites, busy: runState !== 'idle' || auxiliaryBusy || participation.pending || draftConfirmation.blocking, api: shell,
-    lock: actionLock.current!, confirmClose: preferences.confirmations.sitePageCloseConfirm, onConfirmCloseChange: enabled => { void preferences.onConfirmation('sitePageCloseConfirm', enabled); },
-    onOpen: () => { commandActions.current = {}; changeSurface('confirmation'); },
-    onClose: () => { changeSurface('sites'); restoreWorkbenchFocus(); }, onWorkspace: workspaceFlow.accept, onAnnounce: setAnnouncement });
-  const retryReview = useBroadcastRetryReview({copy, sites, flow: broadcast, lock: actionLock.current!,
-    busy: runState !== "idle" || auxiliaryBusy || draftConfirmation.blocking, onOpen: () => { changeSurface("sites"); changeSurface("confirmation"); },
-    onClose: () => changeSurface("sites"), onInspect: (site, active) => inspectBroadcastSite(site, {
-      isSelected: key => workspaceFlow.currentSelection().includes(key), active, focus: async key => {
-        const accepted = await shell.inspectSite(key);
-        if (accepted === true && active()) { changeSurface("sites"); if (drawerOpen) changeDrawerOpen(false); }
-        return accepted;
-      },
-      unavailable: key => { changeSurface("sites"); openPanel("sites", "keyboard"); setAnnouncement(formatCopy(copy.retrySiteClosed, {site: sites.find(item => item.key === key)?.label ?? key})); }
-    })});
+  const { pageClose, retryReview } = useWorkbenchConfirmations({
+    copy, sites, broadcast, workspaceFlow, actionLock: actionLock.current!, commandActions,
+    runState, auxiliaryBusy, participationPending: participation.pending, draftBlocking: draftConfirmation.blocking,
+    sitePageCloseConfirm: preferences.confirmations.sitePageCloseConfirm,
+    onSitePageCloseConfirmChange: (enabled) => { void preferences.onConfirmation("sitePageCloseConfirm", enabled); },
+    drawerOpen, changeDrawerOpen, openPanel, changeSurface: (next) => changeSurface(next), onAnnounce: setAnnouncement
+  });
   const imageSelection = useImageSelection(copy, runState === "idle" && !auxiliaryBusy, setAnnouncement);
-  const synthesisRecovery = useSynthesisRecovery(copy, synthesis,
-    () => { runProgress.invalidate(); broadcast.invalidate(); changeSurface("sites"); },
-    () => { archiveNavigation.clear(); changeSurface("archive"); });
-  const { images, open: imageTrayOpen } = imageSelection;
-  usePanelFocusReturn(surface !== 'sites' || drawerOpen || questionHistoryOpen || (imageTrayOpen && images.length > 0));
-  const { completionNotifications, onCompletionNotifications: setCompletionNotifications } = preferences;
-  const acceptDisplayPreferences = display.accept;
+  usePanelFocusReturn(surface !== "sites" || drawerOpen || questionHistoryOpen || (imageSelection.open && imageSelection.images.length > 0));
   const acceptBootstrap = (state: BootstrapState): void => {
     setRuntime(state.runtime);
     setSites(state.sites);
@@ -287,7 +233,7 @@ function App(): React.JSX.Element {
       automaticFocus.current = !!next.automaticFocus;
       setLayout(next);
     });
-    const offDisplay = shell.onDisplayPreferences(acceptDisplayPreferences);
+    const offDisplay = shell.onDisplayPreferences(display.accept);
     const offCommand = shell.onCommand((id) => executeCommand(id, commandActions.current));
     const offWorkspace = shell.onWorkspaceState(workspaceFlow.accept);
     const offPromptLibrary = shell.onPromptLibrary(setPromptLibrary);
@@ -303,22 +249,10 @@ function App(): React.JSX.Element {
     };
   }, [copy]);
 
-  const { composer, drawerPresent } = useWorkspaceMotion(surface, drawerOpen, lastOpenPanel.current.inputMethod, imageSelection.present, { layout, density: display.value.density, covered: surface === 'confirmation' });
+  const { composer, drawerPresent } = useWorkspaceMotion(surface, drawerOpen, lastOpenPanel.current.inputMethod, imageSelection.present, { layout, density: display.value.density, covered: surface === "confirmation" });
   const replaceDraft = useDraftReplaceUndo(copy, text, setText, () => focusPromptForEditing(promptRef, composer.setExpanded));
-  const composerExpanded = composer.expanded;
-
-  const scopeLabel = useMemo(
-    () => scopeDisplayName(participation.participating, workspace.groups, copy),
-    [copy, workspace.groups, participation.participating]
-  );
-  const healthAttention = useMemo(
-    () => new Set([
-      ...Object.values(statuses).filter((status) => selected.has(status.site) && ["warning", "failed", "crashed"].includes(status.phase)).map((status) => status.site),
-      ...Object.values(health).filter((item) => item && selected.has(item.site) && ["sign-in", "error"].includes(item.state)).map((item) => item!.site)
-    ]).size,
-    [health, selected, statuses]
-  );
-  const { unsupportedSites, imageWarning } = imageSupportWarning(copy, images.length, participating, sites, navigator.language);
+  const scopeLabel = useMemo(() => scopeDisplayName(participation.participating, workspace.groups, copy), [copy, workspace.groups, participation.participating]);
+  const { unsupportedSites, imageWarning } = imageSupportWarning(copy, imageSelection.images.length, participating, sites, navigator.language);
 
   const submit = async (): Promise<void> => {
     const prompt = text.trim();
@@ -355,28 +289,22 @@ function App(): React.JSX.Element {
     surfaceChanged: draftConfirmation.surfaceChanged,
     closeHistory: () => setQuestionHistoryOpen(false), closeImages: imageSelection.invalidateAndClose,
     resetComposer: composer.reset, closeDrawer: () => { if (drawerOpen) changeDrawerOpen(false); },
-    commit: next => { setSurface(next); shell.setSurface(next); }
+    commit: (next) => { setSurface(next); shell.setSurface(next); }
   });
   const runAuxiliary = async (action: () => Promise<void>): Promise<void> => {
     if (draftConfirmation.isBlocking() || runState !== "idle") return;
     await actionLock.current!.run(async () => {
       setAuxiliaryBusy(true);
-      try {
-        await action();
-      } finally {
-        setAuxiliaryBusy(false);
-      }
+      try { await action(); } finally { setAuxiliaryBusy(false); }
     });
   };
   const changeTier = tierChangeAction({ copy, sites, run: runAuxiliary, change: workspaceFlow.changeTier, announce: setAnnouncement });
-  const taskSetup = useTaskSetup({ templates: promptLibrary.templates, groups: workspace.groups, sites, prompt: text, imageCount: images.length,
-    getIntent: () => `${draftRevision.current}:${imageSelection.intent()}`, busy: () => runState !== 'idle' || auxiliaryBusy,
+  const taskSetup = useTaskSetup({ templates: promptLibrary.templates, groups: workspace.groups, sites, prompt: text, imageCount: imageSelection.images.length,
+    getIntent: () => `${draftRevision.current}:${imageSelection.intent()}`, busy: () => runState !== "idle" || auxiliaryBusy,
     lock: actionLock.current!, participation, changeTier: workspaceFlow.changeTier, onApply: setText,
     onApplied: () => { setAnnouncement(copy.taskSetupApplied); focusPromptForEditing(promptRef, composer.setExpanded); },
     onBlockingChange: (blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface) });
-  const {collectAndCopy, collectSynthesis, collectAndCompare} = archiveCollectionActions({copy,
-    capture: archiveCapture, synthesis, runAuxiliary, announce: setAnnouncement,
-    openArchive: (id, mode) => { if (id && mode === 'read') archiveNavigation.history(id, 'read'); else archiveNavigation.collection(id); changeSurface("archive"); }});
+  const { collectAndCopy, collectSynthesis, collectAndCompare } = archiveFlow.createCollectionActions(runAuxiliary, setAnnouncement);
   const startNewSession = async (): Promise<void> => {
     if (draftConfirmation.isBlocking() || pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     if (newSessionInFlight.current || participation.pending || actionLock.current!.busy) return;
@@ -388,310 +316,67 @@ function App(): React.JSX.Element {
   };
   const {showGroupMenu, showMoreMenu} = workspaceMenuActions(workspace.groups, participation.change, commandActions, () => setAnnouncement(copy.workspaceActionFailed));
 
-  const openCommandSurface = (mode: CommandPaletteMode): void => {
-    setCommandMode(mode);
-    changeSurface("commands");
-  };
-  const showPage = (page: number): void => {
-    changeSurface("sites");
-    requestedPage.current = { page, inputMethod: "keyboard" };
-    setPageInputMethod("keyboard");
-    setAnnouncement(formatCopy(copy.sitePageChanged, { page: page + 1, total: layout.pageCount }));
-    shell.setPage(page);
-  };
-  const nextUnfinished = nextSiteForStatus(
-    workspace.selectedSites, layout.focused, statuses, "unfinished"
-  );
-  const nextFailed = nextSiteForStatus(
-    workspace.selectedSites, layout.focused, statuses, "failed"
-  );
-  const focusSite = (site: SiteDefinition["key"]): void => {
-    changeSurface("sites");
-    if (drawerOpen) changeDrawerOpen(false);
-    setMode("focus", site);
-  };
-  const activatePrompt = (): void => {
-    changeSurface('sites'); closeQuestionHistory(); changePanelState(null);
-    focusPromptForEditing(promptRef, composer.setExpanded);
-  };
-  const focusCurrentSite = (): void => {
-    changeSurface('sites'); closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false);
-    // 同一外壳按顺序解除问答/搜索覆盖，再把键盘交回当前原生视图。
-    void shell.setQuestionPanel(false).catch(() => {});
-    void shell.closeSiteFind(false).catch(() => {});
-    shell.focusCurrentSite();
-  };
-  const openLatestReleasePage = (): Promise<void> => shell.openExternal(LATEST_RELEASE_URL);
-  const openSettings = (section: typeof settingsSection.section): void => {
-    setSettingsSection(value => ({ section, request: value.request + 1 }));
+  const openCommandSurface = (mode: CommandPaletteMode): void => { setCommandMode(mode); changeSurface("commands"); };
+  const openSettings = (section: SettingsTarget): void => {
+    setSettingsSection((value) => ({ section, request: value.request + 1 }));
     changeSurface("settings");
   };
   useProxyPendingNotice(copy, () => openSettings("proxy"));
-  const checkForUpdates = (): void => {
-    changeSurface("sites");
-    void openLatestReleasePage()
-      .then(() => setAnnouncement(copy.updatePageOpened))
-      .catch(() => setAnnouncement(copy.updatePageFailed));
-  };
 
   const navigationBlocked = !!(draftConfirmation.blocking || pendingNewSession || questionHistoryBlocking || settingsBlocking || libraryBlocking || retryReview.open || pageClose.blocking || participation.pending);
-  useNotificationNavigation({ copy, blocked: () => bootstrapPhase !== 'ready' || navigationBlocked || runState !== 'idle' || auxiliaryBusy,
-    canOpenSite: target => selected.has(target.site) && siteStatusRunId(statuses[target.site]) === target.runId,
-    onOpenSite: site => { closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false); focusSite(site); },
-    onAnnounce: setAnnouncement, onOpenQuestion: target => {
-      changeSurface('sites'); changePanelState(null); imageSelection.setOpen(false); changeDrawerOpen(false);
-      setQuestionReadRequest(previous => ({ request: (previous?.request ?? 0) + 1, questionId: target.questionId, answerId: target.answerId }));
+  useNotificationNavigation({ copy, blocked: () => bootstrapPhase !== "ready" || navigationBlocked || runState !== "idle" || auxiliaryBusy,
+    canOpenSite: (target) => selected.has(target.site) && siteStatusRunId(statuses[target.site]) === target.runId,
+    onOpenSite: (site) => { closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false); changeSurface("sites"); if (drawerOpen) changeDrawerOpen(false); setMode("focus", site); },
+    onAnnounce: setAnnouncement, onOpenQuestion: (target) => {
+      changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); changeDrawerOpen(false);
+      setQuestionReadRequest((previous) => ({ request: (previous?.request ?? 0) + 1, questionId: target.questionId, answerId: target.answerId }));
       setQuestionHistoryOpen(true);
     } });
-  commandActions.current = navigationBlocked ? {} : {
-    "open-command-palette": () => openCommandSurface("commands"),
-    "open-task-setup": taskSetup.open,
-    "open-sites": () => {
-      openPanel("sites", "keyboard");
-    },
-    "open-site-health": () => {
-      openPanel("health", "keyboard");
-    },
-    ...(layout.pageCount >= 1 ? { "show-page-1": () => showPage(0) } : {}),
-    ...(layout.pageCount >= 2 ? { "show-page-2": () => showPage(1) } : {}),
-    ...(layout.pageCount >= 3 ? { "show-page-3": () => showPage(2) } : {}),
-    // 翻页/换焦点交给主进程的 ViewManager，渲染层不重算（重算必与主进程漂开）
-    ...(layout.pageCount > 1 ? {
-      "next-page": () => { changeSurface("sites"); shell.stepPage(1); },
-      "previous-page": () => { changeSurface("sites"); shell.stepPage(-1); }
-    } : {}),
-    ...(selected.size > 1 ? {
-      "next-site": () => { changeSurface("sites"); shell.stepSite(1); },
-      "previous-site": () => { changeSurface("sites"); shell.stepSite(-1); }
-    } : {}),
-    // 站内后退/前进作用于当前聚焦的站点；能不能退由主进程按真实导航历史判定。
-    ...(siteHistory[layout.focused]?.back ? { "site-back": () => { changeSurface("sites"); shell.stepHistory(-1); } } : {}),
-    ...(siteHistory[layout.focused]?.forward ? { "site-forward": () => { changeSurface("sites"); shell.stepHistory(1); } } : {}),
-    "focus-current-site": focusCurrentSite,
-    "set-layout-duel": () => { changeSurface("sites"); setMode("duel"); },
-    "edit-prompt": activatePrompt,
-    "focus-prompt": () => {
-      if (composer.expanded) { composer.setExpanded(false); focusCurrentSite(); }
-      else activatePrompt();
-    },
-    'find-page': () => {
-      changeSurface('sites'); closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false);
-      void shell.setQuestionPanel(false).then(() => shell.openSiteFind()).catch(() => setAnnouncement(copy.findFailed));
-    },
-    "set-think": () => { changeSurface("sites"); changeTier("think"); },
-    "set-fast": () => { changeSurface("sites"); changeTier("fast"); },
-    ...(participating.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
-    "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
-    "open-question-history": () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionReadRequest(null); setQuestionHistoryOpen(true); },
-    "open-archive": () => { archiveNavigation.clear(); changeSurface("archive"); },
-    ...(synthesis.pending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
-    ...(broadcast.retrySites.length > 0 ? {
-      "retry-failed": () => retryReview.request()
-    } : {}),
-    ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
-    ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
-    ...(participating.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
-    "open-settings": () => openSettings("appearance"),
-    "open-drive-diagnostics": () => openSettings("drive-diagnostics"),
-    "open-display-settings": () => openSettings("display"),
-    "open-data-settings": () => openSettings("data"),
-    "open-shortcuts": () => openCommandSurface("shortcuts"),
-    "open-getting-started": () => openCommandSurface("guide"),
-    "check-updates": checkForUpdates
-  };
-  const availableCommands = resolveCommands(paletteShortcut.state?.mode ?? 'standard').filter((command) => !!commandActions.current[command.id]);
+  commandActions.current = navigationBlocked ? {} : buildAppCommands({
+    copy, layout, selectedSites: workspace.selectedSites, selected, participating, statuses, siteHistory,
+    drawerOpen, composer, promptRef, requestedPage, setPageInputMethod, setAnnouncement, changeSurface,
+    changeDrawerOpen, changePanelState, openPanel, openCommandSurface, openTaskSetup: taskSetup.open,
+    openSettings, setMode, changeTier, closeQuestionHistory,
+    openQuestionHistory: () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionReadRequest(null); setQuestionHistoryOpen(true); },
+    closeImagePicker: () => imageSelection.setOpen(false),
+    collectAndCopy, collectAndCompare, collectSynthesis, synthesisPending: !!synthesis.pending,
+    retrySitesCount: broadcast.retrySites.length, requestRetryReview: () => retryReview.request(),
+    clearArchiveNavigation: () => archiveNavigation.clear(), startNewSession
+  });
   useCommandDiscovery({ shortcutRevision: paletteShortcut.state?.revision, focused: layout.focused, statuses, surface, setSiteHistory, setMenuShortcuts });
 
-  if (bootstrapPhase !== "ready") {
-    return (
-      <BootstrapStateView
-        copy={copy}
-        phase={bootstrapPhase}
-        announcement={announcement}
-        onRetry={() => { void bootstrap(); }}
-      />
-    );
-  }
-
-  if (surface === "archive") {
-    return <div className="surface-stage"><ArchiveSurface copy={copy} locale={navigator.language} sites={sites} synthesisSites={sites.filter((site) => selected.has(site.key))} defaultTier={workspace.tier} comparisonId={archiveNavigation.comparisonId} preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null} synthesisDrafts={synthesis.drafts} synthesisEditorRequest={synthesisRecovery.editorRequest} onSynthesisEditorOpened={synthesisRecovery.consumeEditorRequest} pendingSynthesis={synthesis.pending} synthesisCandidate={synthesis.candidate} synthesisSession={synthesis.session} comparisonDrafts={comparisonDrafts} session={librarySession} navigationRevision={archiveNavigation.revision} onBlockingChange={blockLibrary} onClose={() => changeSurface("sites")} onCapture={archiveCapture.capture} onSendSynthesis={synthesisRecovery.send} onCollectSynthesis={async () => { await synthesis.collect(); }} onSaveSynthesis={synthesis.save} /></div>;
-  }
-  if (surface === "settings") {
-    return <div className="surface-stage"><SettingsWorkspace copy={copy} locale={navigator.language} runtime={runtime} status={syncStatus} onBlockingChange={blockSettings} operationBusy={runState !== "idle" || auxiliaryBusy || participation.pending} initialSection={settingsSection.section} sectionRequest={settingsSection.request} display={display.value} onDisplayChange={display.save} preferenceSync={preferences.settings} completionNotifications={completionNotifications} onCompletionNotificationsChange={setCompletionNotifications} confirmations={preferences.confirmations} onConfirmationChange={(key, enabled) => { void preferences.onConfirmation(key, enabled); }} onCheckUpdates={openLatestReleasePage} onOpenShortcuts={() => executeCommand("open-shortcuts", commandActions.current)} onOpenGuide={() => executeCommand("open-getting-started", commandActions.current)} onStatus={setSyncStatus} onAnnounce={setAnnouncement} onLocalReset={() => { void preferences.refresh(); workspaceFlow.invalidate(); pageClose.invalidate(); runProgress.invalidate(); setBootstrapProgress(null); setQuestionReadRequest(null); comparisonDrafts.clear(); librarySession.clear(); participation.reset(); composer.reset(); synthesisRecovery.clear(); archiveNavigation.clear(); resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis }); void bootstrap(); }} onClose={() => changeSurface("sites")} /></div>;
-  }
-  if (surface === "commands") {
-    return (
-      <CommandPalette
-        copy={copy}
-        commands={availableCommands}
-        shortcutCommands={resolveCommands(paletteShortcut.state?.mode ?? 'standard')} pageCount={layout.pageCount}
-        menuShortcuts={menuShortcuts}
-        groups={workspace.groups}
-        library={templateDeletion.library}
-        draft={text}
-        isMac={isMac}
-        mode={commandMode}
-        onModeChange={setCommandMode}
-        onExecute={(id) => executeCommand(id, commandActions.current)}
-        onApplyGroup={(id) => {
-          const group = workspace.groups.find((candidate) => candidate.id === id);
-          if (!group) return;
-          void participation.change(group.sites);
-          changeSurface("sites");
-        }}
-        onInsertPrompt={(value) => { changeSurface("sites"); replaceDraft(value); }}
-        onSaveTemplate={async (input) => {
-          try {
-            const library = await shell.savePromptTemplate(input);
-            setPromptLibrary(library); setAnnouncement(copy.templateSaved, true, true);
-            return true;
-          } catch { setAnnouncement(copy.promptLibrarySaveFailed); return false; }
-        }}
-        onDeleteTemplate={templateDeletion.request}
-        onClose={() => changeSurface("sites")}
-      />
-    );
-  }
-
   return (
-    <main className={`app-shell${composer.reservedExpanded ? " is-composer-expanded" : ""}${drawerOpen ? " has-drawer" : ""}`}>
-      <CommandBar
-        copy={copy}
-        promptRef={promptRef}
-        text={text}
-        tier={workspace.tier}
-        runState={synthesis.runState !== "idle" ? synthesis.runState : runState}
-        auxiliaryBusy={auxiliaryBusy || participation.pending || draftConfirmation.blocking}
-        layoutMode={layout.mode}
-        automaticFocus={layout.automaticFocus}
-        selectedCount={participating.size}
-        onNewSession={() => executeCommand("new-session", commandActions.current)}
-        newSessionBlockedReason={navigationBlocked ? copy.newSessionBlocked : null}
-        failureCount={broadcast.failureCount}
-        cancelledCount={broadcast.cancelledCount}
-        uncertainCount={broadcast.uncertainSites.length}
-        onReviewUncertain={retryReview.reviewUncertain}
-        scopeLabel={scopeLabel}
-        healthAttention={healthAttention}
-        panelTab={panelState?.tab ?? null}
-        imageControl={(
-          <ImagePicker
-            copy={copy}
-            images={images} selectionIntent={imageSelection.intent} onPickerOpen={imageSelection.beginPick}
-            open={imageTrayOpen}
-            present={imageSelection.present}
-            disabled={runState !== "idle" || auxiliaryBusy}
-            warning={imageWarning}
-            warningCount={unsupportedSites.length}
-            error={imageSelection.error}
-            onOpenChange={(open) => {
-              if (open) { void shell.closeSiteFind(false).catch(() => {}); changeSurface("sites"); changePanelState(null); setQuestionHistoryOpen(false); }
-              imageSelection.setOpen(open);
-            }}
-            onFiles={(files) => { void imageSelection.choose(files); }}
-            onRemove={imageSelection.remove}
-            onAdjustScope={() => { imageSelection.setOpen(false); changeDrawerOpen(true); }}
-          />
-        )}
-        pageControl={layout.pageCount > 1 ? <PageTabs copy={copy} isMac={isMac} sites={sites} selectedSites={workspace.selectedSites}
-          statuses={statuses} page={layout.page} inputMethod={pageInputMethod} summaryRunId={broadcast.runId ?? runProgress.runId}
-          onPageChange={(page, inputMethod) => {
-            requestedPage.current = { page, inputMethod }; setPageInputMethod(inputMethod);
-            setAnnouncement(formatCopy(copy.sitePageChanged, { page: page + 1, total: layout.pageCount })); shell.setPage(page);
-          }}/> : null}
-        sendBlockedReason={imageWarning}
-        synthesisPending={!!synthesis.pending}
-        syncStatus={syncStatus}
-        isMac={isMac}
-        expanded={composerExpanded}
-        reservedExpanded={composer.reservedExpanded}
-        revealedExpanded={composer.revealedExpanded}
-        draftRevision={draftRevision.current} onTextChange={setText} draftRecovery={<PromptDraftRecovery recovery={promptRecovery} copy={copy} busy={runState !== 'idle' || auxiliaryBusy} onClearImages={imageSelection.clear} onBlockingChange={(blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface)} />}
-        onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
-        onSubmit={() => void submit()}
-        onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}
-        onTierChange={changeTier}
-        onLayoutChange={setMode}
-        onExpandedChange={composer.setExpanded}
-        onPanelChange={(tab) => tab ? openPanel(tab, "pointer") : changePanelState(null)}
-        onShowGroupMenu={() => { void showGroupMenu(); }}
-        onOpenMore={() => { void showMoreMenu(); }}
-        historyOpen={questionHistoryOpen}
-        onOpenHistory={() => questionHistoryOpen ? closeQuestionHistory() : executeCommand("open-question-history", commandActions.current)}
-        onOpenArchive={() => executeCommand("open-archive", commandActions.current)}
-        onRetry={() => executeCommand("retry-failed", commandActions.current)}
-        onPasteImages={(files) => { void imageSelection.choose(files, "append"); }}
-      />
-      <WorkspaceProgress copy={copy} statuses={statuses} runId={broadcast.runId ?? runProgress.runId}
-        activeSites={broadcast.runId ? broadcast.activeSites : runProgress.value?.answers.map(answer => answer.site) ?? []}
-        progress={runProgress.value} onRead={() => {
-          const progress = runProgress.value;
-          if (!progress?.questionId || !commandActions.current['open-question-history']) return;
-          executeCommand('open-question-history', commandActions.current);
-          setQuestionReadRequest(old => ({ request: (old?.request ?? 0) + 1, questionId: progress.questionId!, answerId: progress.answers.find(answer => answer.hasText)?.id }));
-        }}/>
-      {drawerPresent ? (
-        <WorkspaceDrawer
-          copy={copy}
-          sites={sites}
-          selected={selected}
-          participating={participating} participationBusy={runState !== 'idle' || auxiliaryBusy || participation.pending}
-          groups={workspace.groups}
-          statuses={statuses}
-          health={health}
-          healthChecking={healthChecking}
-          open={drawerOpen}
-          state={panelState ?? lastOpenPanel.current}
-          onStateChange={changePanelState}
-          onSelectionChange={value => { void participation.reorderOpened(value); }}
-          onParticipationChange={value => { void participation.change(value); }}
-          onCloseSitePage={site => { void pageClose.request(site); }}
-          onSaveGroup={name => workspaceFlow.saveGroup(name, participation.currentSites())}
-          onDeleteGroup={workspaceFlow.deleteGroup}
-          onCheckHealth={(keys) => { void refreshSiteHealth(keys); }}
-          onFocusSite={(site) => {
-            changePanelState(null);
-            setMode("focus", site);
-          }}
-          {...siteHealthActions({ copy, sites, selected, runtime, statuses, health, setHealth, noteHealth })}
-          healthFeedback={healthFeedback}
-        />
-      ) : null}
-      <SiteFrames
-        copy={copy}
-        sites={sites}
-        statuses={statuses}
-        layout={layout}
-        selected={selected}
-        participating={participating} participationBusy={runState !== 'idle' || auxiliaryBusy || participation.pending}
-        onToggle={site => { void participation.toggle(site); }}
-        onFocus={(site) => setMode("focus", site)}
-        onReload={(site) => { void reloadSiteWithFeedback(site, copy, sites, setAnnouncement); }}
-        retrySites={broadcast.retrySites}
-        uncertainSites={broadcast.uncertainSites}
-        retryDisabled={runState !== "idle" || auxiliaryBusy}
-        onRetry={retryReview.request}
-        history={siteHistory}
-        onBack={(site) => shell.stepHistory(-1, site)}
-      />
-      <SiteFind copy={copy} sites={sites} layout={layout} />
-      <QuestionHistory imageSyncEnabled={syncStatus.imageSyncEnabled ?? false} active={surface === 'sites'} openRequest={questionReadRequest} onBlockingChange={setQuestionHistoryBlocking} open={questionHistoryOpen} copy={copy} sites={sites} draft={text} draftIntent={() => `${draftRevision.current}:${imageSelection.intent()}`} draftImageCount={imageSelection.images.length} busy={runState !== "idle" || auxiliaryBusy} onArchiveCreated={(record, mode, selection) => { if (runState === "idle" && !auxiliaryBusy) requestDecisionNavigation(() => { archiveNavigation.history(record.id, mode); changeSurface("archive"); }); }} onOpen={() => executeCommand("open-question-history", commandActions.current)} onClose={closeQuestionHistory} onDraft={(value, images) => { imageSelection.replace(images); setText(value); focusPromptForEditing(promptRef, composer.setExpanded); }} />
-      {taskSetup.session ? <TaskSetup setup={taskSetup} copy={copy} sites={sites} templates={promptLibrary.templates} groups={workspace.groups} /> : null}
-      {retryReview.review}
-      {pageClose.dialog}
-      {pendingNewSession && (
-        <ConfirmDialog
-          copy={copy}
-          title={copy.newSessionConfirmTitle}
-          message={formatCopy(copy.newSessionConfirmMessage, { count: pendingNewSession.count })}
-          confirmLabel={copy.newSessionConfirmAction}
-          cancelLabel={copy.newSessionKeepCurrent}
-          dontAskLabel={copy.confirmDontAsk}
-          onConfirm={dontAsk => { if (dontAsk) void preferences.onConfirmation('newSessionConfirm', false); pendingNewSession.decide(true); }}
-          onCancel={() => pendingNewSession.decide(false)}
-        />
-      )}
-    </main>
+    <AppSurfaceRouter
+      bootstrapPhase={bootstrapPhase} announcement={announcement} onRetryBootstrap={() => { void bootstrap(); }} surface={surface}
+      archive={{ copy, locale: navigator.language, sites, selected, defaultTier: workspace.tier, archiveFlow, onClose: () => changeSurface("sites") }}
+      settings={{
+        copy, locale: navigator.language, runtime, syncStatus, onSyncStatus: setSyncStatus, onBlockingChange: blockSettings,
+        runState, auxiliaryBusy, participation, settingsSection, display, preferences, commandActions, onAnnounce: setAnnouncement,
+        workspaceFlow, pageClose, runProgress, archiveFlow, broadcast, imageSelection, setText, resetComposer: composer.reset,
+        clearQuestionState: () => { setBootstrapProgress(null); setQuestionReadRequest(null); },
+        onReloadBootstrap: () => { void bootstrap(); }, onClose: () => changeSurface("sites")
+      }}
+      commands={{
+        copy, shortcutMode: paletteShortcut.state?.mode ?? "standard", commandActions, pageCount: layout.pageCount,
+        menuShortcuts, groups: workspace.groups, library: templateDeletion.library, draft: text, isMac, mode: commandMode,
+        onModeChange: setCommandMode, onApplyGroup: participation.change, onReplaceDraft: replaceDraft,
+        onLibrarySaved: setPromptLibrary, onDeleteTemplate: templateDeletion.request, onAnnounce: setAnnouncement, onClose: () => changeSurface("sites")
+      }}
+      workbench={{
+        copy, isMac, sites, statuses, layout, workspace, workspaceFlow, selected, participating, participation,
+        runState, broadcast, synthesis, auxiliaryBusy, navigationBlocked, draftConfirmation, promptRef,
+        text, setText, draftRevision, promptRecovery, composer, drawerPresent, drawerOpen, panelState,
+        lastOpenPanel, scopeLabel, health, healthChecking, healthAttention, healthFeedback, drawerHealthActions,
+        imageSelection, imageWarning, unsupportedSitesCount: unsupportedSites.length, pageInputMethod, setPageInputMethod,
+        requestedPage, runProgress, syncStatus, commandActions, surface, siteHistory, questionHistoryOpen,
+        setQuestionHistoryOpen, setQuestionHistoryBlocking, questionReadRequest, setQuestionReadRequest,
+        closeQuestionHistory, templates: promptLibrary.templates, taskSetup, retryReview, pageClose,
+        pendingNewSession, onConfirmNewSessionDontAsk: () => { void preferences.onConfirmation("newSessionConfirm", false); },
+        changeSurface, changePanelState, openPanel, changeDrawerOpen, refreshSiteHealth, setAnnouncement,
+        setMode, changeTier, submit, collectAndCompare, showGroupMenu, showMoreMenu,
+        onOpenArchiveFromHistory: (recordId, mode) => archiveFlow.openFromHistory(recordId, mode)
+      }}
+    />
   );
 }
 

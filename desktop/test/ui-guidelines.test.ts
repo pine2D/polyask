@@ -68,10 +68,14 @@ test("workspace drawers retain a closing state long enough for interruptible tra
 
 test("occasional full-workspace surfaces enter without animating native site bounds", () => {
   const app = renderer("index.tsx");
+  const stages = renderer("surface-stages.tsx");
+  const workbench = renderer("workbench-stage.tsx");
   const css = renderer("styles.css");
-  assert.match(app, /className="surface-stage"/);
-  assert.match(app, /className={`app-shell\$\{/);
-  assert.doesNotMatch(app, /app-shell surface-stage/);
+  assert.match(app, /<AppSurfaceRouter/);
+  assert.match(stages, /className="surface-stage"/);
+  assert.match(stages, /<WorkbenchMainStage/);
+  assert.match(workbench, /className=\{`app-shell\$\{/);
+  assert.doesNotMatch(app + stages + workbench, /app-shell surface-stage/);
   assert.match(css, /\.surface-stage[\s\S]*transition:\s*opacity 160ms var\(--ease-out\)/);
   assert.match(css, /@starting-style\s*{\s*\.surface-stage/);
   assert.doesNotMatch(css, /webcontents|web-contents/i);
@@ -84,7 +88,10 @@ test("the high-frequency command surface opens without motion", () => {
   const rule = css.slice(start, end);
   assert.ok(start >= 0);
   assert.doesNotMatch(rule, /transition|animation|transform/);
-  assert.doesNotMatch(renderer("index.tsx"), /surface-stage[^\n]*CommandPalette/);
+  assert.doesNotMatch(
+    renderer("index.tsx") + renderer("surface-stages.tsx") + renderer("app-commands.tsx"),
+    /surface-stage[^\n]*CommandPalette/
+  );
 });
 
 test("the command surface keeps scrolling inside the result list", () => {
@@ -119,8 +126,10 @@ test("answer comparison contains long unbroken content", () => {
 test("manual update feedback stays visible on the active surface", () => {
   const settings = renderer("settings-workspace.tsx");
   const app = renderer("index.tsx");
+  const appCommands = renderer("app-commands.tsx");
   assert.match(settings, /setFeedback\("about", props\.copy\.updatePageOpened\)/);
   assert.match(settings, /setFeedback\("about", props\.copy\.updatePageFailed\)/);
-  assert.match(app, /const checkForUpdates = \(\): void => \{[\s\S]*changeSurface\("sites"\)/);
-  assert.match(app, /"check-updates": checkForUpdates/);
+  assert.match(app, /buildAppCommands\(/);
+  assert.match(appCommands, /const checkForUpdates = \(\): void => \{[\s\S]*changeSurface\("sites"\)/);
+  assert.match(appCommands, /"check-updates": checkForUpdates/);
 });

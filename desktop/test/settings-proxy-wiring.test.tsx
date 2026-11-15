@@ -163,10 +163,12 @@ test('only the settings workspace asks proxy-state to read the saved password', 
 
 test('the app routes the pending notice to the proxy settings section', () => {
   const app = readSource('src/renderer/index.tsx');
+  const stages = readSource('src/renderer/surface-stages.tsx');
   // 只比较布尔值：失败时不把整份 index.tsx 打进断言消息。
   assert.equal(/useProxyPendingNotice\(copy, \(\) => openSettings\("proxy"\)\);/.test(app), true, 'App must route the notice to the proxy section');
   assert.equal(/section: SettingsTarget/.test(app), true, 'settings sections must accept "proxy"');
-  assert.equal(/<SettingsWorkspace [^\n]*operationBusy=\{runState !== "idle" \|\| auxiliaryBusy \|\| participation\.pending\}/.test(app), true,
+  assert.equal(/<AppSurfaceRouter/.test(app) && /<SettingsStage/.test(stages), true, 'App must wire SettingsStage through AppSurfaceRouter');
+  assert.equal(/<SettingsWorkspace [^\n]*operationBusy=\{runState !== "idle" \|\| auxiliaryBusy \|\| participation\.pending\}/.test(stages), true,
     'settings must receive the shell busy state so proxy writes are disabled during a send');
 });
 

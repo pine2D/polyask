@@ -5,7 +5,9 @@ import ts from 'typescript';
 import { readSource } from './fixtures';
 
 test('Alt+Q follows expansion alone, including the history sidebar and full reader', () => {
-  const source = readSource('src/renderer/index.tsx');
+  const app = readSource('src/renderer/index.tsx');
+  assert.match(app, /buildAppCommands\(/);
+  const source = readSource('src/renderer/app-commands.tsx');
   const command = source.slice(source.indexOf('    "focus-prompt": () => {'), source.indexOf("    'find-page': () => {"));
   const script = ts.transpileModule(`const actions = { ${command} }; actions['focus-prompt']();`, {
     compilerOptions: { target: ts.ScriptTarget.ES2022 }

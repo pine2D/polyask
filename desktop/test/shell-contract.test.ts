@@ -94,13 +94,15 @@ test("every menu accelerator comes from the shared command table", () => {
 
 test("every navigation command a menu exposes is reachable from the renderer", () => {
   const renderer = readSource("src/renderer/index.tsx");
+  const appCommands = readSource("src/renderer/app-commands.tsx");
   const main = readSource("src/main/index.ts") + readSource("src/main/app-command-dispatch.ts")
     + readSource("src/main/application-command-routing.ts");
 
+  assert.match(renderer, /buildAppCommands\(/);
   // 命令面板按「渲染层是否给了动作」过滤，速查用它标记可用状态；
   // 所以纯主进程处理的命令必须同时有渲染层入口。
   for (const id of ["next-page", "previous-page", "next-site", "previous-site"]) {
-    assert.ok(renderer.includes(`"${id}"`), `${id} 缺少渲染层动作，快捷键速查会漏掉它`);
+    assert.ok(appCommands.includes(`"${id}"`), `${id} 缺少渲染层动作，快捷键速查会漏掉它`);
     assert.ok(main.includes(`"${id}"`), `${id} 缺少主进程分发`);
   }
 });
@@ -522,14 +524,16 @@ test("completion notifications are boolean-only and update checks open the offic
   const ipc = readSource("src/main/shell-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
   const renderer = readSource("src/renderer/index.tsx");
+  const appCommands = readSource("src/renderer/app-commands.tsx");
   const main = readSource("src/main/index.ts");
   assert.match(ipc, /polyask:set-completion-notifications/);
   assert.match(ipc, /typeof value !== "boolean"/);
   assert.match(preload, /setCompletionNotifications/);
   assert.match(main, /createCompletionNotifications/);
   assert.match(readSource('src/main/completion-notifications.ts'), /new CompletionNotifier/);
-  assert.match(renderer, /github\.com\/pine2D\/polyask\/releases\/latest/);
-  assert.match(renderer, /nextSiteForStatus/);
+  assert.match(renderer, /buildAppCommands\(/);
+  assert.match(appCommands, /github\.com\/pine2D\/polyask\/releases\/latest/);
+  assert.match(appCommands, /nextSiteForStatus/);
   assert.doesNotMatch(main, /autoUpdater/);
 });
 
@@ -575,10 +579,14 @@ test("Drive diagnostics use the existing trusted sync bridge", () => {
 
 test("Drive diagnostics command opens and targets the settings diagnostic section", () => {
   const renderer = readSource("src/renderer/index.tsx");
-  assert.match(renderer, /"open-drive-diagnostics": \(\) =>/);
-  assert.match(renderer, /"open-drive-diagnostics": \(\) => openSettings\("drive-diagnostics"\)/);
-  assert.match(renderer, /initialSection=\{settingsSection\.section\}/);
-  assert.match(renderer, /sectionRequest=\{settingsSection\.request\}/);
+  const appCommands = readSource("src/renderer/app-commands.tsx");
+  const stages = readSource("src/renderer/surface-stages.tsx");
+  assert.match(renderer, /buildAppCommands\(/);
+  assert.match(renderer, /<AppSurfaceRouter/);
+  assert.match(appCommands, /"open-drive-diagnostics": \(\) =>/);
+  assert.match(appCommands, /"open-drive-diagnostics": \(\) => openSettings\("drive-diagnostics"\)/);
+  assert.match(stages, /initialSection=\{settingsSection\.section\}/);
+  assert.match(stages, /sectionRequest=\{settingsSection\.request\}/);
 });
 
 test("windows and linux auto-hide the native menu bar", () => {
@@ -633,6 +641,8 @@ test("the new-session confirmation is drawn in-app, with no native dialog left b
   const preload = readSource("src/preload/shell.ts");
   const dialog = readSource("src/renderer/confirm-dialog.tsx");
   const renderer = readSource("src/renderer/index.tsx");
+  const stages = readSource("src/renderer/surface-stages.tsx");
+  const workbench = readSource("src/renderer/workbench-stage.tsx");
 
   // 旧通道必须整条拆掉，留着就还有第二条路径，两边会漂
   assert.ok(!/confirm-new-session|confirmNewSession/.test(ipc + native + preload),
@@ -645,8 +655,10 @@ test("the new-session confirmation is drawn in-app, with no native dialog left b
     "默认焦点必须落在取消上——这个动作会离开当前对话，误触代价不对称");
   assert.match(dialog, /event\.key === "Escape"/);
   assert.match(dialog, /event\.key !== "Tab"/, "焦点要圈在弹层内，Tab 跑出去就回不来");
-  assert.match(renderer, /ConfirmDialog/);
-  assert.match(renderer, /newSessionConfirmAction/);
+  assert.match(renderer, /<AppSurfaceRouter/);
+  assert.match(stages, /<WorkbenchMainStage/);
+  assert.match(workbench, /ConfirmDialog/);
+  assert.match(workbench, /newSessionConfirmAction/);
 });
 
 test("local data management crosses the trusted bridge through its own IPC module", () => {

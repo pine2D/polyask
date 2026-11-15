@@ -885,9 +885,11 @@ test("the dead polyask:focus-prompt IPC channel stays removed", () => {
   // process — the real focus path is the "focus-prompt" command in executeCommand.
   const shellPreload = readSource("src/preload/shell.ts");
   const app = readSource("src/renderer/index.tsx");
+  const appCommands = readSource("src/renderer/app-commands.tsx");
   assert.doesNotMatch(shellPreload, /focus-prompt/);
-  assert.doesNotMatch(app, /shell\.onFocusPrompt\s*\(|polyask:focus-prompt/);
-  assert.match(app, /"focus-prompt":\s*\(\)\s*=>\s*\{/);
+  assert.doesNotMatch(app + appCommands, /shell\.onFocusPrompt\s*\(|polyask:focus-prompt/);
+  assert.match(app, /buildAppCommands\(/);
+  assert.match(appCommands, /"focus-prompt":\s*\(\)\s*=>\s*\{/);
 });
 
 test("status announcements use the site label, and command-palette page jumps announce too", () => {
@@ -899,11 +901,13 @@ test("status announcements use the site label, and command-palette page jumps an
   // whenever requestedPage.current is set.
   // Windows CI 用 autocrlf checkout，源文件是 CRLF；下面的抽取标记内嵌 \n，必须先归一化换行
   const app = readSource("src/renderer/index.tsx").replace(/\r\n/g, "\n");
+  const appCommands = readSource("src/renderer/app-commands.tsx").replace(/\r\n/g, "\n");
   assert.match(app, /sitesRef\.current\.find\(\(site\) => site\.key === status\.site\)\?\.label \?\? status\.site/);
   const subscribeEffect = app.slice(app.indexOf("useEffect(() => {\n    if (!bootstrapStarted"), app.indexOf("}, [copy]);") + "}, [copy]);".length);
   assert.match(subscribeEffect, /const offStatus = shell\.onStatus/);
   assert.match(subscribeEffect, /\}, \[copy\]\);$/);
-  const showPage = app.slice(app.indexOf("const showPage = "), app.indexOf("const nextUnfinished ="));
+  assert.match(app, /buildAppCommands\(/);
+  const showPage = appCommands.slice(appCommands.indexOf("const showPage = "), appCommands.indexOf("const nextUnfinished ="));
   assert.match(showPage, /requestedPage\.current = \{ page, inputMethod: "keyboard" \};[\s\S]*setAnnouncement\(/);
 });
 
