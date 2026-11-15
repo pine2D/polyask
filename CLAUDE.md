@@ -36,7 +36,7 @@ PolyAsk 是 Electron 桌面应用：同一问题群发九站并排比较。**切
 - **新增持久化键要同时登记**：SQLite 仓库（`main/*-repository.ts`）、同步投影（`sync-repository.ts`）、本机重置（`database.ts` 的 `resetLocalData`）、线格式 fixture（`desktop/test/fixtures/` 只增不改）。漏一处，同步/重置/回填会静默失效。
 - **图片限额改任何一个数**，落点以 `scripts/test-image-limits.js` 的对账项与 `docs/adapters.md`「图片载荷」为准，别凭记忆列。
 - **加站点 / 新开适配器分卷**：登记落点见 `docs/adapters.md`（站点表 `main/sites.ts`、分卷注册键、`preload/site.ts` 的 require 顺序、issue 模板站点下拉），`scripts/test-site-selection.js` 与 `desktop/scripts/desktop-shared-runtime.test.js` 会红。
-- **行数门禁**：`.js` ≤300 行；`docs/verify.md` ≤300 行；`desktop/src` 的 `.ts/.tsx` ≤400 行（三个越界文件走 `verify.sh` 棘轮只降不升，仅豁免 `shared/copy.ts`）。超限按职责拆分，禁压行或删注释续命。
+- **行数门禁**：`.js` ≤300 行；`docs/verify.md` ≤300 行；`desktop/src` 的 `.ts/.tsx` ≤400 行（由 `scripts/verify.sh` 统一检查，仅豁免 `shared/copy.ts`）。超限按职责拆分，禁压行或删注释续命。
 - **真机只读巡检铁律，本机全绿 ≠ 用户环境可用**：适配器/切档/发送问题须重启开发态（`cd desktop && npm start`），在目标站点视图用生产 `__AMS` 验证；**日常只跑零打扰只读检查与菜单恢复巡检，未经用户当轮明确点头，严禁向真实站点发送提问或上传附件**。本机不能复现时先问现象再定层次，四问见 `docs/verify.md`。
 - **已发布 tag 不覆盖**，改内容必须升版；推任何 `v*` tag 前先在 GitHub 手动跑一次 Release workflow 的 `dry_run`。版本真源是 `desktop/package.json`；Release 从 Repository Variable 注入 `POLYASK_GOOGLE_DESKTOP_CLIENT_ID`，缺 `resources/oauth.json` 拒发；五个包均未签名、无自动更新。
 - **`desktop/` 自包含 = 构建与测试自包含**（preload 只 require `desktop/` 内文件，干净 clone 上 `npm ci && npm test` 全绿）；仓库级动作（tag、CHANGELOG、发版、跨端 6 个测试）留在根。已**否决**把 `desktop/` 扁平到仓库根。

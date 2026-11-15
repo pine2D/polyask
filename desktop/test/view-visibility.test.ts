@@ -28,22 +28,17 @@ test("commands is a supported shell surface", () => {
 
 test("unread badges are only cleared while the site surface is showing", () => {
   const manager = readSource("src/main/view-manager.ts");
-  const clear = manager.slice(
-    manager.indexOf("private clearVisibleUnread("),
-    manager.indexOf("private isSiteVisible(")
-  );
-  assert.ok(clear.length > 0);
-  assert.match(clear, /this\.surface !== "sites"[\s\S]{0,20}return;/);
+  const registry = readSource("src/main/site-status-registry.ts");
+  assert.match(manager, /this\.statuses\.clearVisibleUnread\(this\.workspace\.surface, this\.workspace\.visibleSites\(\)\)/);
+  assert.match(registry, /if \(surface !== "sites"\) return;/);
 });
 
 test("restored focus prefers the site remembered for the restored page", () => {
   const manager = readSource("src/main/view-manager.ts");
-  const constructor = manager.slice(
-    manager.indexOf("const initial = options.initialUiState;"),
-    manager.indexOf("setPermissionCheckHandler")
-  );
+  const workspace = readSource("src/main/site-workspace-state.ts");
+  assert.match(manager, /new SiteWorkspaceState\(\{\s*selectedSites: options\.selectedSites,\s*initialUiState: options\.initialUiState\s*\}\)/);
   assert.match(
-    constructor,
+    workspace,
     /resolveFocusedSite\(\s*current\.keys,\s*this\.focusedByPage\.get\(current\.page\) \?\? this\.focused,\s*this\.focused\s*\)/
   );
 });

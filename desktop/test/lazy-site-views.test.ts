@@ -16,7 +16,7 @@ const slice = (name: string): string => {
 test("views are created for the selection, never for the whole catalogue", () => {
   assert.ok(!/for \(const site of SITES\) this\.createView/.test(manager),
     "构造期不得再无条件为九站建视图——那正是「少勾也不省内存」的根因");
-  assert.match(manager, /ensureSiteViews\(this\.selected, this\.views,/);
+  assert.match(manager, /ensureSiteViews\(this\.workspace\.selected, this\.views,/);
   const created: SiteKey[] = [];
   const views = new Map<SiteKey, unknown>([["claude", {}]]);
   ensureSiteViews(["claude", "kimi"], views, site => { created.push(site.key); views.set(site.key, {}); });
@@ -29,7 +29,7 @@ test("both halves run on every reconcile so the state self-heals", () => {
   const reconcile = slice("reconcileViews");
 
   // 布局操作也执行释放检查；状态/采集完成后的自动回收另有行为回归。
-  assert.match(reconcile, /ensureSiteViews\(this\.selected, this\.views,/);
+  assert.match(reconcile, /ensureSiteViews\(this\.workspace\.selected, this\.views,/);
   assert.match(reconcile, /this\.releaseUnselectedViews\(\);/);
 });
 

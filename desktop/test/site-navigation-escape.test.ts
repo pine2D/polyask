@@ -61,14 +61,17 @@ test("in-site back and forward are registered as real commands with accelerators
 
 test("history navigation is wired end to end and gated like reload", () => {
   const manager = readSource("src/main/view-manager.ts");
+  const navController = readSource("src/main/site-navigation-controller.ts");
   const ipc = (readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts"));
   const preload = readSource("src/preload/shell.ts");
   const renderer = readSource("src/renderer/index.tsx");
   const appCommands = readSource("src/renderer/app-commands.tsx");
   const body = manager.slice(manager.indexOf("navigateHistory("), manager.indexOf("\n  canNavigateHistory("));
+  const navBody = navController.slice(navController.indexOf("navigateHistory("), navController.indexOf("\n  canNavigateHistory("));
   const history = readSource("src/main/site-history-navigation.ts");
 
-  assert.match(body, /navigateSiteHistory\(this\.views\.get\(site\), this\.canNavigateHistory\(site\)/);
+  assert.match(body, /this\.navigation\.navigateHistory\(site, offset, this\.isConfirmationActive\(\)\)/);
+  assert.match(navBody, /navigateSiteHistory\(this\.deps\.getView\(site\), this\.canNavigateHistory\(site\)/);
   assert.match(history, /siteReloadAllowed/,
     "群发/生成进行中不得动导航历史——会把正在写的回答连同页面一起丢掉");
   assert.match(history, /canGoBack\(\)/);

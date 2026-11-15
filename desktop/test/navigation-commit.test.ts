@@ -147,9 +147,11 @@ test("abandoning an uncommitted navigation stops it and pins the site as load_fa
   access.abandon("claude", 4);
   assert.deepEqual(calls, ["stop", "claude:failed"], "stop first, then mark failed so a synchronous late event cannot win");
   // sendCommand's existing guard turns the failed phase into a certain, undispatched load_failed.
-  const manager = readSource("src/main/view-manager.ts");
-  assert.match(manager, /abandoned === "failed" \? \{ site, phase: "failed", code: "load_failed" \}/);
-  assert.match(manager, /if \(phase === "failed"\) return "load_failed";/);
+  const navController = readSource("src/main/site-navigation-controller.ts");
+  const registry = readSource("src/main/site-status-registry.ts");
+  assert.match(navController, /deps\.statuses\.abandonNavigation\(site, abandoned\)/);
+  assert.match(registry, /abandoned === "failed" \? \{ site, phase: "failed", code: "load_failed" \}/);
+  assert.match(registry, /if \(phase === "failed"\) return "load_failed";/);
   assert.match(readSource("src/main/index.ts"), /abandon: \(site, contentsId, target\) => managerForWorkspace\?\.historyAccess\.abandon\(site, contentsId, target\)/);
 });
 

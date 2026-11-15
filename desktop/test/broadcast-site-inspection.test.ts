@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import ts from 'typescript';
-import vm from 'node:vm';
 import { inspectBroadcastSite } from '../src/renderer/broadcast-site-inspection';
-import { readSource } from './fixtures';
-import { resolveFocusedSite, resolveSitePage, resolveSitePageIndex } from '../src/shared/site-pages';
+import { viewManagerHarness } from './view-manager-harness';
 
 test('inspection checks current selection without silently selecting or focusing another site', async () => {
   const selected = new Set(['chatgpt']);
@@ -45,41 +42,30 @@ test('a departed inspection reply cannot change the newer surface', async () => 
 });
 
 test('ViewManager refuses a stale focus request for a site outside current selection', () => {
-  // Run the actual production method; real page resolution remains authoritative,
-  // while view I/O is counted so a fallback focus is observable without Electron.
-  const source = ts.createSourceFile('view-manager.ts', readSource('src/main/view-manager.ts'), ts.ScriptTarget.Latest, true);
-  const declaration = source.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'ViewManager') as ts.ClassDeclaration;
-  const method = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'setLayout') as ts.MethodDeclaration;
-  const body = ts.transpileModule(`function ${method.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
-  const focusMethod = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'focusCurrentSite') as ts.MethodDeclaration;
-  const focusBody = ts.transpileModule(`function ${focusMethod.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
-  let reconciles = 0, focuses = 0;
-  const manager = {window: {isDestroyed: () => false}, historyAccess: {panelOpen: false}, selected: ['chatgpt'], focused: 'chatgpt', page: 0, mode: 'overview', surface: 'sites',
-    focusOrder: ['chatgpt'], focusedByPage: new Map(), views: new Map([['chatgpt', {webContents: {isDestroyed: () => false, focus: () => { focuses++; }}}]]),
-    reconcileViews: () => { reconciles++; }, clearVisibleUnread: () => {}, layout: () => {}};
-  const accepted = vm.runInNewContext(`${body}\n${focusBody}\nmanager.focusCurrentSite = focusCurrentSite;\nsetLayout.call(manager, 'focus', 'claude');`, {manager,
-    resolveFocusedSite, resolveSitePage, resolveSitePageIndex, swapFocusedSite: (value: unknown) => value});
-  assert.equal(accepted, false);
-  assert.equal(focuses, 0);
-  assert.equal(reconciles, 0);
-  assert.equal(manager.mode, 'overview');
-  assert.equal(manager.focused, 'chatgpt');
+  const h = viewManagerHarness({ sites: ['chatgpt'] });
+  let focuses = 0;
+  h.views[0].focus = () => { focuses++; };
+  try {
+    const accepted = h.manager.setLayout('focus', 'claude');
+    assert.equal(accepted, false);
+    assert.equal(focuses, 0);
+    assert.equal(h.manager.getLayout().mode, 'overview');
+    assert.equal(h.manager.getLayout().focused, 'chatgpt');
+  } finally {
+    h.window.emit('closed');
+  }
 });
 
 test('ViewManager acknowledges only a successfully selected focus target', () => {
-  const source = ts.createSourceFile('view-manager.ts', readSource('src/main/view-manager.ts'), ts.ScriptTarget.Latest, true);
-  const declaration = source.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'ViewManager') as ts.ClassDeclaration;
-  const method = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'setLayout') as ts.MethodDeclaration;
-  const body = ts.transpileModule(`function ${method.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
-  const focusMethod = declaration.members.find(node => ts.isMethodDeclaration(node) && node.name.getText(source) === 'focusCurrentSite') as ts.MethodDeclaration;
-  const focusBody = ts.transpileModule(`function ${focusMethod.getText(source)}`, {compilerOptions: {target: ts.ScriptTarget.ES2022}}).outputText;
+  const h = viewManagerHarness({ sites: ['claude'] });
   let focuses = 0;
-  const manager = {window: {isDestroyed: () => false}, historyAccess: {panelOpen: false}, selected: ['claude'], focused: 'claude', page: 0, mode: 'overview', surface: 'sites',
-    focusOrder: ['claude'], focusedByPage: new Map(), views: new Map([['claude', {webContents: {isDestroyed: () => false, focus: () => { focuses++; }}}]]),
-    reconcileViews: () => {}, clearVisibleUnread: () => {}, layout: () => {}};
-  const accepted = vm.runInNewContext(`${body}\n${focusBody}\nmanager.focusCurrentSite = focusCurrentSite;\nsetLayout.call(manager, 'focus', 'claude');`, {manager,
-    resolveFocusedSite, resolveSitePage, resolveSitePageIndex, swapFocusedSite: (value: unknown) => value});
-  assert.equal(accepted, true);
-  assert.equal(focuses, 1);
-  assert.equal(manager.focused, 'claude');
+  h.views[0].focus = () => { focuses++; };
+  try {
+    const accepted = h.manager.setLayout('focus', 'claude');
+    assert.equal(accepted, true);
+    assert.equal(focuses, 1);
+    assert.equal(h.manager.getLayout().focused, 'claude');
+  } finally {
+    h.window.emit('closed');
+  }
 });

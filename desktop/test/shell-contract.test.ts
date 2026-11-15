@@ -252,8 +252,7 @@ test("composer expansion crosses a boolean-only trusted shell bridge", () => {
 test("workspace mutations cross the trusted shell bridge and the drawer reserves native bounds", () => {
   const main = readSource("src/main/shell-ipc.ts") + readSource("src/main/workbench-navigation-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
-  const manager = readSource("src/main/view-manager.ts");
-  const workspaceLayout = readSource("src/main/workspace-layout.ts");
+  const manager = readSource("src/main/view-manager.ts") + readSource("src/main/site-workspace-state.ts");
   for (const channel of [
     "polyask:set-selection",
     "polyask:set-tier",
@@ -267,7 +266,7 @@ test("workspace mutations cross the trusted shell bridge and the drawer reserves
   assert.match(preload, /onWorkspaceState/);
   assert.match(preload, /setDrawerOpen/);
   assert.match(manager, /computeWorkspaceLayout/);
-  assert.match(workspaceLayout, /reserveWorkspaceArea/);
+  assert.match(readSource("src/main/workspace-layout.ts"), /reserveWorkspaceArea/);
 });
 
 test("selected-site paging crosses a validated shell bridge", () => {
@@ -299,6 +298,7 @@ test("answer generation monitoring is run-scoped and never changes navigation", 
   const ipc = readSource("src/main/shell-ipc.ts");
   const result = readSource("src/main/broadcast-result.ts");
   const manager = readSource("src/main/view-manager.ts");
+  const watcher = readSource("src/main/generation-watcher.ts");
   const preload = readSource("src/preload/site.ts");
   // 重试时 flush 刚迟到确认为已发送的站已从 dispatch 剔除：监视、发送中标记与派发都只针对 dispatch。
   assert.match(ipc, /manager\.beginGenerationRun\(request\.runId, dispatch\.sites\)/);
@@ -310,14 +310,16 @@ test("answer generation monitoring is run-scoped and never changes navigation", 
   assert.equal(ipc.includes("options.questions.token(site)"), false);
   assert.match(result, /manager\.watchGeneration\(runId, result\.site\)/);
   assert.match(ipc, /cancelGenerationRun\(sites\)/);
-  assert.match(manager, /cmd: "generation"/);
+  assert.match(manager, /new GenerationWatcher\(/);
+  assert.match(watcher, /cmd: "generation"/);
   assert.match(preload, /parseGenerationState/);
-  assert.doesNotMatch(manager, /generation[\s\S]{0,500}(loadURL|reload\(|focus\()/);
+  assert.doesNotMatch(watcher, /loadURL|reload\(|focus\(/);
 });
 
 test("a retried run keeps watching the sites that are still generating", () => {
   const ipc = readSource("src/main/shell-ipc.ts");
   const manager = readSource("src/main/view-manager.ts");
+  const watcher = readSource("src/main/generation-watcher.ts");
   const collectionRun = ipc.indexOf("collection.beginRun(request.runId");
   const generationRun = ipc.indexOf("manager.beginGenerationRun(request.runId");
   assert.ok(collectionRun >= 0 && collectionRun < generationRun);
@@ -325,31 +327,37 @@ test("a retried run keeps watching the sites that are still generating", () => {
     manager.indexOf("beginGenerationRun(runId: string"),
     manager.indexOf("watchGeneration(runId: string")
   );
-  assert.match(begin, /const resumed = this\.generation\.begin\(runId, sites, submission\)/);
-  assert.match(begin, /for \(const site of sites\) this\.clearGenerationTracking\(site\)/);
+  const watcherBegin = watcher.slice(
+    watcher.indexOf("beginRun(runId: string"),
+    watcher.indexOf("watch(runId: string")
+  );
+  assert.match(begin, /this\.generationWatcher\.beginRun\(runId, sites, submission\)/);
+  assert.match(watcherBegin, /const resumed = this\.monitor\.begin\(runId, sites, submission\)/);
+  assert.match(watcherBegin, /for \(const site of sites\) this\.clearTracking\(site\)/);
   assert.doesNotMatch(begin, /cancelGenerationRun\(\)/);
+  assert.doesNotMatch(watcherBegin, /cancel\(/);
 });
 
 test("navigation retires generation monitoring for that site only", () => {
   const manager = readSource("src/main/view-manager.ts");
-  const navigate = manager.slice(
-    manager.indexOf("readonly historyAccess ="),
-    manager.indexOf("markStatus(status: SiteStatus)")
-  );
-  assert.match(navigate, /this\.invalidateGeneration\(site\)/);
-  assert.doesNotMatch(navigate, /cancelGenerationRun/);
-  assert.match(manager, /invalidateGeneration\(site: SiteKey\): void \{\s*this\.generation\.forget\(site\)/);
+  const navController = readSource("src/main/site-navigation-controller.ts");
+  const watcher = readSource("src/main/generation-watcher.ts");
+  assert.match(manager, /invalidateGeneration: \(site\) => this\.invalidateGeneration\(site\)/);
+  assert.match(navController, /deps\.invalidateGeneration\(site\)/);
+  assert.doesNotMatch(navController, /cancelGenerationRun/);
+  assert.match(manager, /invalidateGeneration\(site: SiteKey\): void \{ this\.generationWatcher\.invalidate\(site\); \}/);
+  assert.match(watcher, /invalidate\(site: SiteKey\): void \{\s*this\.monitor\.forget\(site\)/);
 });
 
 test("one unreadable generation probe never ends the watch", () => {
-  const manager = readSource("src/main/view-manager.ts");
+  const watcher = readSource("src/main/generation-watcher.ts");
   const scheduler = readSource("src/main/generation-probe-scheduler.ts");
-  const probe = manager.slice(
-    manager.indexOf("private async probeGeneration("),
-    manager.indexOf("private replaceView(")
+  const probe = watcher.slice(
+    watcher.indexOf("async probe("),
+    watcher.indexOf("\n  scheduleProbe(")
   );
-  assert.match(probe, /if \(state === null\) \{\s*this\.scheduleGenerationProbe\(runId, site, false\);/);
-  assert.match(probe, /if \(!reachable \|\| !view\) \{\s*this\.scheduleGenerationProbe\(runId, site, false\);/);
+  assert.match(probe, /if \(state === null\) \{\s*this\.scheduleProbe\(runId, site, false\);/);
+  assert.match(probe, /if \(!reachable \|\| !view\) \{\s*this\.scheduleProbe\(runId, site, false\);/);
   assert.match(probe, /if \(phase === "complete"\) return;/);
   assert.match(scheduler, /GENERATION_MISS_LIMIT/);
   assert.match(scheduler, /schedule\.misses\.get\(site\)/);
@@ -366,19 +374,25 @@ test("completion is debounced across probes and never inferred from unchanged te
 
 test("commands refuse to reach a crashed or failed page instead of guessing", () => {
   const manager = readSource("src/main/view-manager.ts");
-  const send = manager.slice(
-    manager.indexOf("sendCommand(site: SiteKey"),
-    manager.indexOf("collect(site: SiteKey")
+  const operations = readSource("src/main/site-command-operations.ts");
+  const sendHelper = readSource("src/main/site-send-command.ts");
+  const registry = readSource("src/main/site-status-registry.ts");
+  const send = operations.slice(
+    operations.indexOf("sendCommand(site: SiteKey"),
+    operations.indexOf("confirmSubmitted(site: SiteKey")
   );
-  const collect = manager.slice(
-    manager.indexOf("collect(site: SiteKey"),
-    manager.indexOf("private checkSiteHealth(")
+  const collect = operations.slice(
+    operations.indexOf("collect(site: SiteKey"),
+    operations.indexOf("switchTier(site: SiteKey")
   );
-  assert.match(send, /sendSiteCommand\(site, this\.views\.get\(site\), this\.pageFailureCode\(site\)/);
-  assert.match(readSource("src/main/site-send-command.ts"), /if \(pageFailure\) return Promise\.resolve\(\{ ok: false, code: pageFailure \}\)/);
-  assert.match(collect, /const pageFailure = this\.pageFailureCode\(site\)/);
-  assert.match(manager, /if \(phase === "crashed"\) return "renderer_crashed"/);
-  assert.match(manager, /if \(phase === "failed"\) return "load_failed"/);
+  assert.match(manager, /this\.operations\.sendCommand\(site, command, signal\)/);
+  assert.match(manager, /this\.operations\.collect\(site, deadline\)/);
+  assert.match(send, /sendSiteCommand\(\s*site,\s*this\.deps\.getView\(site\),\s*this\.deps\.statuses\.pageFailureCode\(site\)/);
+  assert.match(sendHelper, /if \(pageFailure\) return Promise\.resolve\(\{ ok: false, code: pageFailure \}\)/);
+  assert.match(collect, /collectSiteAnswer\(\s*site,\s*this\.deps\.getView\(site\),\s*this\.deps\.statuses\.pageFailureCode\(site\)/);
+  assert.match(sendHelper, /if \(pageFailure\) return Promise\.resolve\(\{ code: pageFailure \}\)/);
+  assert.match(registry, /if \(phase === "crashed"\) return "renderer_crashed"/);
+  assert.match(registry, /if \(phase === "failed"\) return "load_failed"/);
   assert.doesNotMatch(send, /reload\(/);
 });
 
@@ -417,21 +431,26 @@ test("site health and guarded reload cross the trusted typed bridge", () => {
   const preload = readSource("src/preload/shell.ts");
   const sitePreload = readSource("src/preload/site.ts");
   const manager = readSource("src/main/view-manager.ts");
+  const navController = readSource("src/main/site-navigation-controller.ts");
+  const operations = readSource("src/main/site-command-operations.ts");
   assert.match(healthIpc, /polyask:site-health/);
   assert.match(healthIpc, /polyask:reload-site/);
   assert.match(healthIpc, /options\.trusted\(event\)/);
   assert.match(preload, /checkSiteHealth/);
   assert.match(preload, /reloadSite\(site: SiteKey, ignoreCache\?: boolean\): Promise<boolean>/);
   assert.match(sitePreload, /cmd === "diagnose"/);
-  assert.match(manager, /siteReloadAllowed/);
-  assert.match(manager, /this\.pageStatus\.get\(site\)/);
-  assert.match(manager, /this\.runStatus\.get\(site\)/);
+  assert.match(manager, /this\.navigation\.reload\(site, ignoreCache\)/);
+  assert.match(manager, /this\.operations\.checkHealth\(sites\)/);
+  assert.match(navController, /siteReloadAllowed/);
+  assert.match(operations, /this\.deps\.statuses\.pageStatus\.get\(site\)/);
+  assert.match(operations, /this\.deps\.statuses\.runStatus\.get\(site\)/);
 });
 
 test("hard reload and clear-site-data self-rescue actions cross the trusted typed bridge", () => {
   const healthIpc = readSource("src/main/site-health-ipc.ts");
   const preload = readSource("src/preload/shell.ts");
   const manager = readSource("src/main/view-manager.ts");
+  const navController = readSource("src/main/site-navigation-controller.ts");
   const recovery = readSource("src/main/site-data-recovery.ts");
   assert.match(healthIpc, /polyask:clear-site-data/);
   const reloadHandler = healthIpc.slice(
@@ -453,14 +472,16 @@ test("hard reload and clear-site-data self-rescue actions cross the trusted type
   assert.match(preload, /clearSiteData\(site: SiteKey\): Promise<boolean>/);
   assert.match(preload, /\binvoke\("polyask:clear-site-data", site\)/);
   assert.match(manager, /reload\(site: SiteKey, ignoreCache = false\): boolean/);
+  assert.match(manager, /this\.navigation\.reload\(site, ignoreCache\)/);
   // The actual (cache-ignoring) reload is issued by SiteHistoryAccess.reload under the commit watch.
-  assert.match(manager, /this\.beginNavigation\(site, view\.webContents, ignoreCache\)/);
+  assert.match(navController, /this\.beginNavigation\(site, view\.webContents, ignoreCache\)/);
   assert.match(readSource("src/main/site-history-access.ts"), /if \(ignoreCache\) contents\.reloadIgnoringCache\(\);/);
-  const clearSiteData = manager.slice(
-    manager.indexOf("async clearSiteData(site: SiteKey)"),
-    manager.indexOf("checkHealth(sites: readonly SiteKey[])")
+  const clearSiteData = navController.slice(
+    navController.indexOf("clearSiteData(site: SiteKey)"),
+    navController.indexOf("async navigate(site: SiteKey")
   );
-  assert.match(clearSiteData, /siteReloadAllowed\(this\.currentStatus\(site\)\.phase\)/);
+  assert.match(manager, /this\.navigation\.clearSiteData\(site\)/);
+  assert.match(clearSiteData, /siteReloadAllowed\(this\.deps\.statuses\.current\(site\)\.phase\)/);
   assert.match(clearSiteData, /clearSiteDataAndReload\(/);
   assert.match(clearSiteData, /this\.beginNavigation\(site, contents, true\)/);
   assert.match(recovery, /clearStorageData\(\{/);

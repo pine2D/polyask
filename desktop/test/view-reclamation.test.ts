@@ -199,9 +199,9 @@ test("exhausted generation monitoring releases a deselected page after capture e
     h.manager.beginGenerationRun("first", ["claude"]);
     h.manager.markStatus({ site: "claude", phase: "submitted" });
     h.manager.setSelection(["chatgpt", "gemini"]);
-    h.manager.generationMisses.set("claude", 4);
-    h.manager.generationDeadlines.set("claude", Date.now() + 60_000);
-    h.manager.scheduleGenerationProbe("first", "claude", false);
+    h.manager.generationWatcher.misses.set("claude", 4);
+    h.manager.generationWatcher.deadlines.set("claude", Date.now() + 60_000);
+    h.manager.generationWatcher.scheduleProbe("first", "claude", false);
     assert.equal(h.contents[0].isDestroyed(), false, "answer capture still owns the page");
     capturing = false;
     h.manager.releaseUnselectedViews();
@@ -216,8 +216,8 @@ test("generation deadline exhaustion also releases a deselected page", async () 
     h.manager.beginGenerationRun("first", ["claude"]);
     h.manager.markStatus({ site: "claude", phase: "generating" });
     h.manager.setSelection(["chatgpt", "gemini"]);
-    h.manager.generationDeadlines.set("claude", Date.now() - 1);
-    h.manager.scheduleGenerationProbe("first", "claude", true);
+    h.manager.generationWatcher.deadlines.set("claude", Date.now() - 1);
+    h.manager.generationWatcher.scheduleProbe("first", "claude", true);
     await turn();
     assert.equal(h.contents[0].isDestroyed(), true);
   } finally { h.window.emit("closed"); }
@@ -258,8 +258,8 @@ test("unknown generation without capture release evidence remains open", () => {
     h.manager.beginGenerationRun("first", ["claude"]);
     h.manager.markStatus({ site: "claude", phase: "generating" });
     h.manager.setSelection(["chatgpt", "gemini"]);
-    h.manager.generationDeadlines.set("claude", Date.now() - 1);
-    h.manager.scheduleGenerationProbe("first", "claude", true);
+    h.manager.generationWatcher.deadlines.set("claude", Date.now() - 1);
+    h.manager.generationWatcher.scheduleProbe("first", "claude", true);
     assert.equal(h.contents[0].isDestroyed(), false);
     const status = h.manager.getStatuses().find((s: { site: string }) => s.site === "claude");
     assert.equal(status.phase, "warning");
@@ -275,8 +275,8 @@ test("a new generation invalidates completion evidence from the previous run", (
     h.manager.beginGenerationRun("new", ["claude"]);
     h.manager.markStatus({ site: "claude", phase: "generating" });
     h.manager.setSelection(["chatgpt", "gemini"]);
-    h.manager.generationDeadlines.set("claude", Date.now() - 1);
-    h.manager.scheduleGenerationProbe("new", "claude", true);
+    h.manager.generationWatcher.deadlines.set("claude", Date.now() - 1);
+    h.manager.generationWatcher.scheduleProbe("new", "claude", true);
     assert.equal(h.contents[0].isDestroyed(), false);
   } finally { h.window.emit("closed"); }
 });
@@ -288,7 +288,7 @@ test("local reset clears stale generation status and releases deselected pages",
     h.manager.markStatus({ site: "claude", phase: "generating" });
     h.manager.setSelection(["chatgpt", "gemini"]);
     h.manager.resetRunStatus();
-    assert.equal(h.manager.generation.accepts("old", "claude"), false);
+    assert.equal(h.manager.generationWatcher.monitor.accepts("old", "claude"), false);
     assert.notEqual(h.manager.getStatuses().find((s: { site: string }) => s.site === "claude").phase, "generating");
     assert.equal(h.contents[0].isDestroyed(), true);
   } finally { h.window.emit("closed"); }
@@ -317,13 +317,13 @@ test("a new site run preserves the deselected site's timer until capture and gen
     h.manager.setCapturePending((site: string) => site === "claude" && capturing);
     h.manager.beginGenerationRun("first", ["claude"]);
     h.manager.markStatus({ site: "claude", phase: "generating" });
-    h.manager.generation.accept("first", "claude", "generating");
-    h.manager.generationTimers.set("claude", timer);
+    h.manager.generationWatcher.monitor.accept("first", "claude", "generating");
+    h.manager.generationWatcher.timers.set("claude", timer);
     h.manager.setSelection(["chatgpt"]);
     h.manager.beginGenerationRun("second", ["chatgpt"]);
-    assert.equal(h.manager.generationTimers.get("claude"), timer);
+    assert.equal(h.manager.generationWatcher.timers.get("claude"), timer);
     for (let i = 0; i < 3; i++) {
-      const phase = h.manager.generation.accept("first", "claude", "complete");
+      const phase = h.manager.generationWatcher.monitor.accept("first", "claude", "complete");
       if (phase === "complete") h.manager.markStatus({ site: "claude", phase });
     }
     await turn();

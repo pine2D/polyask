@@ -14,7 +14,7 @@
 
 **两条互不重叠的日常门禁，代码改动两条都要过**：
 
-- **仓库级卫生（零 `node_modules` 依赖）**：根目录 `bash scripts/verify.sh`——检查 `.js/.mjs` 语法、JSON、`*.js` ≤300 行、`desktop/src` 的 `.ts/.tsx` ≤400 行棘轮、`docs/verify.md` ≤300 行、文档版本对齐、OAuth 凭据卫生、`docs/*.md` 与 `#anchor` 断链、`.github` 引用、workflow YAML（优先 `actionlint`，回退 PyYAML）及根 `scripts/` 七个跨端与哨兵测试。
+- **仓库级卫生（零 `node_modules` 依赖）**：根目录 `bash scripts/verify.sh`——检查 `.js/.mjs` 语法、JSON、`*.js` ≤300 行、`desktop/src` 的 `.ts/.tsx` ≤400 行（仅豁免 `shared/copy.ts`）、`docs/verify.md` ≤300 行、文档版本对齐、OAuth 凭据卫生、`docs/*.md` 与 `#anchor` 断链、`.github` 引用、workflow YAML（优先 `actionlint`，回退 PyYAML）及根 `scripts/` 七个跨端与哨兵测试。
 - **Desktop 门禁**：`cd desktop && npm test`——统一经 `scripts/test-safe.mjs` 串行执行：先 DOM 断言静态扫描，再 `tsc --noEmit` 类型检查，随后带运行时内存保护跑 `test/**/*.test.ts(x)` 与 `scripts/*.test.{js,mjs}`（含九站适配器回放与打包脚本回归）。需要单独快速查类型时运行 `npm run typecheck`。
 - **打包与离线启动冒烟**：动主进程窗口/视图/preload/构建配置时，在 `desktop/` 运行 `npm run package && xvfb-run -a npm run smoke -- --skip-package --offline`（Windows/macOS 去掉 `xvfb-run -a`）。`--offline` 通过 Chromium 主机名解析阻断外网，验证真实打包产物启动、`shell=1`、九站挂载且视口 `> 0`、同分区及沙箱隔离。
 - **依赖审计**：`cd desktop && npm audit --omit=dev` 查应用生产依赖；`node scripts/audit-runtime.mjs` 单独审计 Electron 运行时依赖（`electron` 位于 `devDependencies`）。
@@ -43,7 +43,7 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 - 收紧归档 `label` 上限 → fixture 校验必红并指名样本；
 - 往 `SITE_CODES` 加未映射码 → `npm run typecheck` 必红；文案表多写孤儿键 → `status-copy-coverage.test.ts` 必红；
 - 删一站 `sites.ts` 或删一条 `preload/site.ts` require → `scripts/test-site-selection.js` 必红；
-- 给越界文件多加一行 → `scripts/verify.sh` 行数棘轮必红。
+- 让任一非豁免 `desktop/src/**/*.ts(x)` 超过 400 行 → `scripts/verify.sh` 行数门禁必红。
 
 ## 外壳与设置页视觉回归
 
