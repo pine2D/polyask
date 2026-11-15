@@ -2,7 +2,7 @@
 
 PolyAsk 是 Electron 桌面应用：同一问题群发九站并排比较。**切档可报错，群发不能断。** 仅发五个未签名 Desktop 包；Chrome 扩展已停维并删除（tag `archive/extension-v0.25.1`）。
 
-<!-- 最后与代码核对：2026-11-14 · desktop/package.json v1.34.0。发版前重核并更新。
+<!-- 最后与代码核对：2026-11-15 · desktop/package.json v1.35.0。发版前重核并更新。
      本文件 ≤11 KiB；新增硬约束先精简或外迁 docs/。 -->
 
 ## 按任务读取专题文档
@@ -31,7 +31,7 @@ PolyAsk 是 Electron 桌面应用：同一问题群发九站并排比较。**切
 - **站点 UI 三条通用规则**（反例见 `docs/adapters.md`）：① 控件常下沉二级菜单，默认「顶层找不到 → 展开子菜单 → 再找」；② 同 role 列表须校验语义，防「最高档」误点末位模型；③ **每个菜单动作自己 `escMenus()` 收尾**。
 - **群发取消（epoch）**：`broadcast.ts` 的 `epoch`。新写长流程须在每个 `await` 后核对 epoch（防取消后仍往输入框打字）；`AbortSignal` 不替代 epoch 核对。
 - **站点视图内不产用户可见反馈**：site-runtime 的 `toast` 是 no-op，切档结果/失败原因走外壳状态通道与 `feedback-provider.tsx` / `bootstrap-state.tsx` 两处 sr-only `aria-live`（圆点变色对读屏不可见，这是唯一进度通道，不可删）。
-- **诊断报告是唯一报障入口**：`Alt+H`「复制诊断报告」（`shared/site-report.ts`）只含版本/系统/缩放/阶段码/`name-kind-ok`、定位与采集固定枚举计数及卡顿数、白名单进程退出码与 `proxy` 枚举行（仅枚举和布尔值，见 `docs/desktop.md`）；**不含对话、网址、账号、主机端口、路径、token 或消息 key**。
+- **脱敏报障红线**：`Alt+H`「复制诊断报告」（`shared/site-report.ts`）与单站「导出脱敏快照」（双重隐私门禁，见 `docs/desktop.md`）是仅有的对外报障出口；**严禁含对话、完整网址、账号、主机端口、路径、Cookie、token 或消息 key**。
 - **界面与交互验收三关**：① 动工前两句话向用户确认入口归属位置与视觉风格；② 严禁裸用浏览器默认简陋控件，须沿用设计令牌并接入完整验证夹具，在原生环境自查明暗主题、150%/200% 缩放、最小窗口（`960×680`）与空态/报错实拍图；③ 交付时附关键实拍截图，并同步刷新本地隔离【Windows 试玩版】（详见 `docs/verify.md`）。
 - **新增持久化键要同时登记**：SQLite 仓库（`main/*-repository.ts`）、同步投影（`sync-repository.ts`）、本机重置（`database.ts` 的 `resetLocalData`）、线格式 fixture（`desktop/test/fixtures/` 只增不改）。漏一处，同步/重置/回填会静默失效。
 - **图片限额改任何一个数**，落点以 `scripts/test-image-limits.js` 的对账项与 `docs/adapters.md`「图片载荷」为准，别凭记忆列。
@@ -54,7 +54,7 @@ bash scripts/release.sh --publish    # 推 tag 发布五包；--build-only 仅�
 
 ## 架构入口
 
-- **主进程**：`desktop/src/main/index.ts` → `view-manager.ts`（视图）、`broadcast.ts`（群发）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts`（IPC，全部过 `trustedShell`）。
+- **主进程**：`desktop/src/main/index.ts` → `view-manager.ts`（视图）、`broadcast.ts`（群发）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts` / `auto-backup-ipc.ts`（IPC，全部过 `trustedShell`）。
 - **站点适配**：`desktop/src/site-runtime/`：core/tier 编排、selection-match 候选匹配、send/upload 提交与附件；intl/intl2/intl3/cn/cn2/cn3/cn4 按站分卷；注入顺序以 `preload/site.ts` 为准，classic script/`__AMS`；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
 - **数据与同步**：`main/database.ts`（SQLite）、`*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata）；schema 1–7（提问4/原图5/观测及多依据6/星标7；草稿1/2）见 `docs/desktop.md`、`desktop/test/fixtures/`。本机管理/备份v6由 `data-admin-service.ts` / `backup-service.ts` 负责；代理由 `proxy-runtime.ts` 负责，`proxy-preference-store.ts` 是唯一写入口，持久化、同步与备份边界见 `docs/desktop.md` §13。
 - **渲染层**：`desktop/src/renderer/`，所有 IPC 只经 `shell-api.ts` 的 `shell`（测试用 `setShellApi` 注入桩）。
