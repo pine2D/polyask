@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { lstatSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
-import { dirname, join, relative, sep } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 
 import type { RuntimeInfo } from "../shared/runtime";
 
@@ -56,7 +56,9 @@ export function resolveRuntimeProfile(input: ResolveRuntimeProfileInput): Runtim
     return {
       distribution: "installed",
       version: input.version,
-      userDataPath: input.defaultUserDataPath,
+      userDataPath: preview
+        ? join(dirname(input.defaultUserDataPath), `${basename(input.defaultUserDataPath)}-Preview`)
+        : input.defaultUserDataPath,
       ...(preview ? { preview: true } : {})
     };
   }
@@ -290,12 +292,14 @@ function parsePortableMarker(raw: string): PortableMarkerConfig {
   const dataDirectory = record.dataDirectory === undefined
     ? (preview ? DEFAULT_PREVIEW_DATA_DIR : DEFAULT_PORTABLE_DATA_DIR)
     : record.dataDirectory;
+  const normalizedDataDir = typeof dataDirectory === "string" ? dataDirectory.trim().toLowerCase() : "";
   if (typeof dataDirectory !== "string"
     || !SAFE_DATA_DIR_PATTERN.test(dataDirectory)
     || dataDirectory.includes("..")
     || dataDirectory.endsWith(".")
     || dataDirectory.endsWith(" ")
-    || (preview && dataDirectory === DEFAULT_PORTABLE_DATA_DIR)) {
+    || normalizedDataDir === "app"
+    || (preview && normalizedDataDir === DEFAULT_PORTABLE_DATA_DIR.toLowerCase())) {
     throw new Error("portable_data_unrecognized");
   }
   return { dataDirectory, preview };

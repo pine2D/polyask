@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import test from "node:test";
 
 import {
@@ -9,7 +10,9 @@ import {
   CURRENT_PROTECTED_SYNC_SCHEMA,
   MAX_AUTO_BACKUPS,
   captureStartupUpgradeSnapshot,
-  compareSemver
+  commitPreUpgradeSnapshotState,
+  compareSemver,
+  preparePreUpgradeSnapshot
 } from "../src/main/auto-backup-service";
 import { BackupService } from "../src/main/backup-service";
 import { DataAdminService } from "../src/main/data-admin-service";
@@ -191,6 +194,125 @@ test("capture fails open on disk write error without advancing lastProtectedRunt
   } finally {
     backup.dispose();
     db.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("preparePreUpgradeSnapshot captures WAL-consistent data before open/migration and leaves no temp files", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "polyask-pre-migration-snap-"));
+  const dbPath = join(dir, "polyask.sqlite");
+  try {
+    // 1. Fresh non-existent DB: creates no auto-backups dir, commits runtime state after open
+    const freshReceipt = await preparePreUpgradeSnapshot(dbPath, {
+      userDataPath: dir,
+      currentVersion: "1.34.0"
+    });
+    assert.equal(freshReceipt.summary, null);
+    assert.equal(freshReceipt.shouldRecordRuntime, true);
+    await assert.rejects(stat(join(dir, "auto-backups")), /ENOENT/);
+
+    const initialDb = DesktopDatabase.open(dbPath);
+    commitPreUpgradeSnapshotState(initialDb, freshReceipt, { currentVersion: "1.34.0" });
+    assert.equal(initialDb.meta.get<{ version: string }>("lastProtectedRuntime")?.version, "1.34.0");
+    seedTemplate(initialDb, "tpl-pre-migrate", "Safe pre-migration v1.34 text");
+    initialDb.close();
+
+    // Simulate older schema version in header before opening 1.35.0
+    const rawPre = new DatabaseSync(dbPath);
+    rawPre.exec(`PRAGMA user_version = ${LOCAL_DB_SCHEMA_VERSION - 1}`);
+    rawPre.close();
+
+    // 2. Pre-upgrade snapshot runs BEFORE DesktopDatabase.open(dbPath)
+    const upgradeReceipt = await preparePreUpgradeSnapshot(dbPath, {
+      userDataPath: dir,
+      currentVersion: "1.35.0"
+    });
+    assert.equal(upgradeReceipt.summary !== null, true);
+    assert.equal(upgradeReceipt.summary?.fromVersion, "1.34.0");
+    assert.equal(upgradeReceipt.summary?.toVersion, "1.35.0");
+    assert.equal(upgradeReceipt.summary?.fromDbSchema, LOCAL_DB_SCHEMA_VERSION - 1);
+    assert.equal(upgradeReceipt.summary?.toDbSchema, LOCAL_DB_SCHEMA_VERSION);
+
+    const dirEntries = await readdir(dir);
+    assert.equal(dirEntries.some((entry) => entry.includes(".sqlite.tmp")), false);
+
+    // Simulate a faulty migration mutating rows before user notices
+    const mutatedDb = DesktopDatabase.open(dbPath);
+    try {
+      commitPreUpgradeSnapshotState(mutatedDb, upgradeReceipt, { currentVersion: "1.35.0" });
+      assert.equal(mutatedDb.meta.get<{ version: string }>("lastProtectedRuntime")?.version, "1.35.0");
+      seedTemplate(mutatedDb, "tpl-pre-migrate", "Corrupted by post-snapshot migration");
+
+      const backup = new BackupService(mutatedDb, { deviceId: () => "dev-1" });
+      const service = new AutoBackupService(mutatedDb, backup, { userDataPath: dir });
+      try {
+        const preview = await service.preview(upgradeReceipt.summary!.id);
+        backup.apply(preview.token, ["template:tpl-pre-migrate"]);
+        assert.equal(
+          mutatedDb.state.get<{ text: string }>("template:tpl-pre-migrate")?.text,
+          "Safe pre-migration v1.34 text"
+        );
+      } finally {
+        backup.dispose();
+      }
+    } finally {
+      mutatedDb.close();
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("malformed tombstone JSON never crashes startup on upgrade or same-version restart", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "polyask-auto-backup-corrupt-tombstone-"));
+  const dbPath = join(dir, "polyask.sqlite");
+  try {
+    const setupDb = DesktopDatabase.open(dbPath);
+    setupDb.close();
+
+    const raw = new DatabaseSync(dbPath);
+    raw.prepare("INSERT INTO archives (id, body, sort_time, deleted_at) VALUES (?, ?, ?, ?)").run(
+      "arch-corrupt-tombstone",
+      "{not-valid-json",
+      100,
+      200
+    );
+    raw.close();
+
+    // Upgrade path with corrupt tombstone: fails open (returns null, does not throw)
+    const upgradeReceipt = await preparePreUpgradeSnapshot(dbPath, {
+      userDataPath: dir,
+      currentVersion: "1.35.0"
+    });
+    assert.equal(upgradeReceipt.summary, null);
+    assert.equal(upgradeReceipt.shouldRecordRuntime, false);
+
+    const db = DesktopDatabase.open(dbPath);
+    try {
+      const captured = await captureStartupUpgradeSnapshot(db, {
+        userDataPath: dir,
+        currentVersion: "1.35.0"
+      });
+      assert.equal(captured, null);
+      assert.equal(db.meta.get("lastProtectedRuntime"), null);
+
+      // Same-version restart path with corrupt tombstone: skips table scan cleanly
+      db.meta.put("lastProtectedRuntime", {
+        version: "1.35.0",
+        dbSchema: LOCAL_DB_SCHEMA_VERSION,
+        syncSchema: CURRENT_PROTECTED_SYNC_SCHEMA,
+        updatedAt: 1_790_300_000_000
+      });
+    } finally {
+      db.close();
+    }
+
+    const restartReceipt = await preparePreUpgradeSnapshot(dbPath, {
+      userDataPath: dir,
+      currentVersion: "1.35.0"
+    });
+    assert.deepEqual(restartReceipt, { summary: null, shouldRecordRuntime: false });
+  } finally {
     await rm(dir, { recursive: true, force: true });
   }
 });

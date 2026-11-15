@@ -1,11 +1,12 @@
 import { randomUUID } from "node:crypto";
+import { existsSync } from "node:fs";
 import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import type { AutoBackupSummary, BackupPreview } from "../shared/backup";
 import type { BackupGuard } from "./backup-container";
 import { BackupService } from "./backup-service";
-import { LOCAL_DB_SCHEMA_VERSION, type DesktopDatabase } from "./database";
+import { DesktopDatabase, LOCAL_DB_SCHEMA_VERSION, peekProtectedSqliteState } from "./database";
 
 export const MAX_AUTO_BACKUPS = 5;
 export const CURRENT_PROTECTED_SYNC_SCHEMA = 7;
@@ -66,40 +67,32 @@ export class AutoBackupService {
 
   async captureIfUpgrading(input: CaptureUpgradeInput): Promise<AutoBackupSummary | null> {
     if (!this.dir) return null;
-    const currentDbSchema = input.currentDbSchema ?? LOCAL_DB_SCHEMA_VERSION;
-    const currentSyncSchema = input.currentSyncSchema ?? CURRENT_PROTECTED_SYNC_SCHEMA;
-    const saved = readProtectedRuntime(this.database.meta.get<unknown>(PROTECTED_RUNTIME_META_KEY));
-    const effectiveFromDbSchema = resolvePreviousDbSchema(saved?.dbSchema ?? null, input.preOpenDbSchema ?? null);
+    let tempPolyask: string | null = null;
+    let tempMeta: string | null = null;
+    try {
+      const currentDbSchema = input.currentDbSchema ?? LOCAL_DB_SCHEMA_VERSION;
+      const currentSyncSchema = input.currentSyncSchema ?? CURRENT_PROTECTED_SYNC_SCHEMA;
+      const saved = readProtectedRuntime(this.database.meta.get<unknown>(PROTECTED_RUNTIME_META_KEY));
+      const effectiveFromDbSchema = resolvePreviousDbSchema(saved?.dbSchema ?? null, input.preOpenDbSchema ?? null);
+      if (!isUpgradeNeeded(saved, input.preOpenDbSchema ?? null, input)) return null;
 
-    if (!hasProtectedUserData(this.database)) {
-      if (!saved
-        || compareSemver(input.currentVersion, saved.version) > 0
-        || currentDbSchema > saved.dbSchema
-        || currentSyncSchema > saved.syncSchema) {
+      if (!this.database.hasUserRecords()) {
         this.database.meta.put(PROTECTED_RUNTIME_META_KEY, {
           version: input.currentVersion,
           dbSchema: currentDbSchema,
           syncSchema: currentSyncSchema,
           updatedAt: this.now()
         } satisfies ProtectedRuntimeState);
+        return null;
       }
-      return null;
-    }
 
-    const upgraded = !saved
-      || compareSemver(input.currentVersion, saved.version) > 0
-      || (effectiveFromDbSchema !== null && currentDbSchema > effectiveFromDbSchema)
-      || currentSyncSchema > saved.syncSchema;
-    if (!upgraded) return null;
+      const timestamp = this.now();
+      const id = formatAutoBackupId(timestamp, this.createId());
+      tempPolyask = join(this.dir, `${id}.polyask.tmp`);
+      tempMeta = join(this.dir, `${id}.json.tmp`);
+      const finalPolyask = join(this.dir, `${id}.polyask`);
+      const finalMeta = join(this.dir, `${id}.json`);
 
-    const timestamp = this.now();
-    const id = formatAutoBackupId(timestamp, this.createId());
-    const tempPolyask = join(this.dir, `${id}.polyask.tmp`);
-    const tempMeta = join(this.dir, `${id}.json.tmp`);
-    const finalPolyask = join(this.dir, `${id}.polyask`);
-    const finalMeta = join(this.dir, `${id}.json`);
-
-    try {
       await mkdir(this.dir, { recursive: true });
       const guard = this.backup.beginOperation();
       const missing = await this.backup.missingOriginals(guard);
@@ -132,8 +125,8 @@ export class AutoBackupService {
       await this.pruneExcessSnapshots();
       return { ...meta, sizeBytes: info.size };
     } catch {
-      await rm(tempPolyask, { force: true }).catch(() => undefined);
-      await rm(tempMeta, { force: true }).catch(() => undefined);
+      if (tempPolyask) await rm(tempPolyask, { force: true }).catch(() => undefined);
+      if (tempMeta) await rm(tempMeta, { force: true }).catch(() => undefined);
       console.warn("auto_backup_capture_failed");
       return null;
     }
@@ -240,17 +233,18 @@ export class AutoBackupService {
   }
 }
 
-function hasProtectedUserData(database: DesktopDatabase): boolean {
-  const rows = database.businessSnapshot();
-  const hasMeaningfulBusiness = rows.some((row) => {
-    if (row.table === "state_items" && row.id === "workspace") {
-      return Number((row.body as { updatedAt?: unknown })?.updatedAt) > 0;
-    }
-    return true;
-  });
-  if (hasMeaningfulBusiness) return true;
-  if (database.questionAttachments.all().length > 0) return true;
-  return database.state.entries("preference:").length > 0 || database.state.entries("draft:").length > 0;
+function isUpgradeNeeded(
+  saved: ProtectedRuntimeState | null,
+  preOpenDbSchema: number | null,
+  input: CaptureUpgradeInput
+): boolean {
+  const currentDbSchema = input.currentDbSchema ?? LOCAL_DB_SCHEMA_VERSION;
+  const currentSyncSchema = input.currentSyncSchema ?? CURRENT_PROTECTED_SYNC_SCHEMA;
+  const effectiveFromDbSchema = resolvePreviousDbSchema(saved?.dbSchema ?? null, preOpenDbSchema);
+  return !saved
+    || compareSemver(input.currentVersion, saved.version) > 0
+    || (effectiveFromDbSchema !== null && currentDbSchema > effectiveFromDbSchema)
+    || currentSyncSchema > saved.syncSchema;
 }
 
 function readProtectedRuntime(value: unknown): ProtectedRuntimeState | null {
@@ -309,19 +303,90 @@ function buildDisplayFilename(fromVersion: string | null, toVersion: string, tim
   return `polyask-auto-${fromSlug}v${sanitizeVersionSlug(toVersion)}-${date}.polyask`;
 }
 
+export interface PreUpgradeSnapshotReceipt {
+  readonly summary: AutoBackupSummary | null;
+  readonly shouldRecordRuntime: boolean;
+}
+
 export async function captureStartupUpgradeSnapshot(
   database: DesktopDatabase,
   input: CaptureUpgradeInput & { readonly userDataPath: string }
 ): Promise<AutoBackupSummary | null> {
-  const deviceId = (): string => {
-    const stored = database.meta.get<unknown>("deviceId");
-    return typeof stored === "string" && stored ? stored : database.meta.put("deviceId", randomUUID());
-  };
-  const backup = new BackupService(database, { deviceId });
   try {
-    const service = new AutoBackupService(database, backup, { userDataPath: input.userDataPath });
-    return await service.captureIfUpgrading(input);
+    const deviceId = (): string => {
+      const stored = database.meta.get<unknown>("deviceId");
+      return typeof stored === "string" && stored ? stored : database.meta.put("deviceId", randomUUID());
+    };
+    const backup = new BackupService(database, { deviceId });
+    try {
+      const service = new AutoBackupService(database, backup, { userDataPath: input.userDataPath });
+      return await service.captureIfUpgrading(input);
+    } finally {
+      backup.dispose();
+    }
+  } catch {
+    console.warn("auto_backup_capture_failed");
+    return null;
+  }
+}
+
+export async function preparePreUpgradeSnapshot(
+  dbPath: string,
+  input: CaptureUpgradeInput & { readonly userDataPath: string }
+): Promise<PreUpgradeSnapshotReceipt> {
+  if (dbPath === ":memory:") return { summary: null, shouldRecordRuntime: false };
+  if (!existsSync(dbPath)) return { summary: null, shouldRecordRuntime: true };
+
+  const preState = peekProtectedSqliteState(dbPath, PROTECTED_RUNTIME_META_KEY);
+  if (preState) {
+    const saved = readProtectedRuntime(preState.metaValue);
+    if (!isUpgradeNeeded(saved, preState.userVersion, input)) {
+      return { summary: null, shouldRecordRuntime: false };
+    }
+  }
+
+  const tempClonePath = join(input.userDataPath, `.polyask-pre-upgrade-${randomUUID()}.sqlite.tmp`);
+  let cloned: ReturnType<typeof DesktopDatabase.cloneBeforeMigration> = null;
+  try {
+    cloned = DesktopDatabase.cloneBeforeMigration(dbPath, tempClonePath);
+    if (!cloned) return { summary: null, shouldRecordRuntime: false };
+    if (!cloned.database.hasUserRecords()) {
+      const saved = readProtectedRuntime(cloned.database.meta.get<unknown>(PROTECTED_RUNTIME_META_KEY));
+      return { summary: null, shouldRecordRuntime: isUpgradeNeeded(saved, cloned.preOpenDbSchema, input) };
+    }
+    const summary = await captureStartupUpgradeSnapshot(cloned.database, {
+      ...input,
+      preOpenDbSchema: cloned.preOpenDbSchema
+    });
+    return { summary, shouldRecordRuntime: summary !== null };
+  } catch {
+    console.warn("auto_backup_capture_failed");
+    return { summary: null, shouldRecordRuntime: false };
   } finally {
-    backup.dispose();
+    try { cloned?.database.close(); } catch { /* ignore temp clone close error */ }
+    await Promise.all([
+      rm(tempClonePath, { force: true }).catch(() => undefined),
+      rm(`${tempClonePath}-wal`, { force: true }).catch(() => undefined),
+      rm(`${tempClonePath}-shm`, { force: true }).catch(() => undefined)
+    ]);
+  }
+}
+
+export function commitPreUpgradeSnapshotState(
+  database: DesktopDatabase,
+  receipt: PreUpgradeSnapshotReceipt,
+  input: CaptureUpgradeInput & { readonly now?: () => number }
+): void {
+  if (!receipt.shouldRecordRuntime) return;
+  try {
+    if (receipt.summary === null && database.hasUserRecords()) return;
+    database.meta.put(PROTECTED_RUNTIME_META_KEY, {
+      version: input.currentVersion,
+      dbSchema: input.currentDbSchema ?? LOCAL_DB_SCHEMA_VERSION,
+      syncSchema: input.currentSyncSchema ?? CURRENT_PROTECTED_SYNC_SCHEMA,
+      updatedAt: receipt.summary?.createdAt ?? (input.now ?? Date.now)()
+    } satisfies ProtectedRuntimeState);
+  } catch {
+    console.warn("auto_backup_commit_failed");
   }
 }

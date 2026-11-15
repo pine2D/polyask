@@ -21,14 +21,14 @@ import type { CommandId } from "../shared/commands";
 import { getCopy } from "../shared/copy";
 import type { DisplayPreferences } from "../shared/display";
 import type { RuntimeInfo } from "../shared/runtime";
-import { captureStartupUpgradeSnapshot } from "./auto-backup-service";
+import { commitPreUpgradeSnapshotState, preparePreUpgradeSnapshot } from "./auto-backup-service";
 import { BroadcastCoordinator } from "./broadcast";
 import { CollectionService } from "./collection-service";
 import { createCompletionNotifications } from './completion-notifications';
 import { GlobalPromptShortcutRuntime } from './global-prompt-shortcut';
 import { GlobalPromptShortcutRepository } from './global-prompt-shortcut-repository';
 import type { QuestionHistoryService } from './question-history-service';
-import { DesktopDatabase, peekSqliteUserVersion } from "./database";
+import { DesktopDatabase } from "./database";
 import {
   applyPortableImportIdentity,
   finalizePortableDataImport,
@@ -118,6 +118,17 @@ if (runtimeProfile.distribution === "portable") {
           ? [copy.portableLegacyInUseTitle, copy.portableLegacyInUseMessage]
           : [copy.portableStorageFailedTitle, copy.portableStorageFailedMessage];
     dialog.showErrorBox(failure[0], failure[1]);
+    app.quit();
+  }
+} else if (runtimeProfile.preview) {
+  try {
+    mkdirSync(runtimeProfile.userDataPath, { recursive: true });
+    app.setPath("userData", runtimeProfile.userDataPath);
+    app.setPath("sessionData", runtimeProfile.userDataPath);
+  } catch {
+    profileReady = false;
+    const copy = getCopy(startupLocale());
+    dialog.showErrorBox(copy.portableStorageFailedTitle, copy.portableStorageFailedMessage);
     app.quit();
   }
 }
@@ -335,15 +346,16 @@ else {
     }
     const userDataPath = app.getPath("userData");
     const dbPath = join(userDataPath, "polyask.sqlite");
-    const preOpenDbSchema = peekSqliteUserVersion(dbPath);
+    const preUpgradeReceipt = await preparePreUpgradeSnapshot(dbPath, {
+      userDataPath,
+      currentVersion: runtimeInfo.version
+    });
     desktopDatabase = DesktopDatabase.open(dbPath);
     applyPortableImportIdentity(runtimeProfile, (deviceId) => {
       desktopDatabase!.adoptImportedProfile(deviceId);
     });
-    await captureStartupUpgradeSnapshot(desktopDatabase, {
-      userDataPath,
-      currentVersion: runtimeInfo.version,
-      preOpenDbSchema
+    commitPreUpgradeSnapshotState(desktopDatabase, preUpgradeReceipt, {
+      currentVersion: runtimeInfo.version
     });
     proxyServices = createProxyServices(desktopDatabase);
     promptShortcut = new GlobalPromptShortcutRuntime({ shortcuts: globalShortcut,

@@ -230,9 +230,10 @@ async function main() {
 
   const desktopRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
   if (!skipPackage) {
+    const forgeCli = join(desktopRoot, "node_modules", "@electron-forge", "cli", "dist", "electron-forge.js");
     execFileSync(
-      process.platform === "win32" ? "npx.cmd" : "npx",
-      ["electron-forge", "package", "--platform=win32", "--arch=x64"],
+      process.execPath,
+      [forgeCli, "package", "--platform=win32", "--arch=x64"],
       { cwd: desktopRoot, stdio: "inherit" }
     );
   }

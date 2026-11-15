@@ -19,12 +19,27 @@ export const LOCAL_DB_SCHEMA_VERSION = 5;
 const SCHEMA_VERSION = LOCAL_DB_SCHEMA_VERSION;
 
 export function peekSqliteUserVersion(path: string): number | null {
+  return peekProtectedSqliteState(path)?.userVersion ?? null;
+}
+
+export function peekProtectedSqliteState(
+  path: string,
+  metaKey = "lastProtectedRuntime"
+): { readonly userVersion: number; readonly metaValue: unknown } | null {
   if (path === ":memory:" || !existsSync(path)) return null;
   let database: DatabaseSync | null = null;
   try {
     database = new DatabaseSync(path, { readOnly: true });
     const row = database.prepare("PRAGMA user_version").get() as { user_version?: unknown } | undefined;
-    return Number(row?.user_version) || 0;
+    const userVersion = Number(row?.user_version) || 0;
+    let metaValue: unknown = null;
+    try {
+      const metaRow = database.prepare("SELECT body FROM meta WHERE key = ?").get(metaKey) as { body?: unknown } | undefined;
+      if (metaRow?.body !== undefined) metaValue = JSON.parse(String(metaRow.body));
+    } catch {
+      metaValue = null;
+    }
+    return { userVersion, metaValue };
   } catch {
     return null;
   } finally {
@@ -32,9 +47,7 @@ export function peekSqliteUserVersion(path: string): number | null {
   }
 }
 
-function migrate(database: DatabaseSync): void {
-  database.exec("PRAGMA foreign_keys = ON");
-  database.exec("PRAGMA journal_mode = WAL");
+function ensureBaseTables(database: DatabaseSync): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS questions (id TEXT PRIMARY KEY, body TEXT NOT NULL, sort_time INTEGER NOT NULL, deleted_at INTEGER);
     CREATE INDEX IF NOT EXISTS question_sort ON questions(sort_time DESC, id);
@@ -102,8 +115,14 @@ function migrate(database: DatabaseSync): void {
     );
     CREATE INDEX IF NOT EXISTS drive_logical_key ON drive_files(logical_key);
     CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, body TEXT NOT NULL);
-    PRAGMA user_version = ${SCHEMA_VERSION};
   `);
+}
+
+function migrate(database: DatabaseSync): void {
+  database.exec("PRAGMA foreign_keys = ON");
+  database.exec("PRAGMA journal_mode = WAL");
+  ensureBaseTables(database);
+  database.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
 }
 
 export class DesktopDatabase {
@@ -137,6 +156,48 @@ export class DesktopDatabase {
     const database = new DatabaseSync(path);
     migrate(database);
     return new DesktopDatabase(database);
+  }
+
+  static cloneBeforeMigration(
+    sourcePath: string,
+    destinationPath: string
+  ): { readonly preOpenDbSchema: number; readonly database: DesktopDatabase } | null {
+    if (sourcePath === ":memory:" || !existsSync(sourcePath)) return null;
+    mkdirSync(dirname(destinationPath), { recursive: true });
+    let source: DatabaseSync | null = null;
+    let preOpenDbSchema = 0;
+    try {
+      source = new DatabaseSync(sourcePath);
+      const row = source.prepare("PRAGMA user_version").get() as { user_version?: unknown } | undefined;
+      preOpenDbSchema = Number(row?.user_version) || 0;
+      const escaped = destinationPath.replace(/'/g, "''");
+      source.exec(`VACUUM INTO '${escaped}'`);
+    } finally {
+      try { source?.close(); } catch { /* ignore source close failure */ }
+    }
+    const clone = new DatabaseSync(destinationPath);
+    clone.exec("PRAGMA foreign_keys = ON");
+    ensureBaseTables(clone);
+    return { preOpenDbSchema, database: new DesktopDatabase(clone) };
+  }
+
+  hasUserRecords(): boolean {
+    const row = this.database.prepare(`SELECT
+      EXISTS(SELECT 1 FROM questions LIMIT 1) OR
+      EXISTS(SELECT 1 FROM question_answers LIMIT 1) OR
+      EXISTS(SELECT 1 FROM question_attachment_sets LIMIT 1) OR
+      EXISTS(SELECT 1 FROM history LIMIT 1) OR
+      EXISTS(SELECT 1 FROM archives LIMIT 1) OR
+      EXISTS(SELECT 1 FROM decisions LIMIT 1) OR
+      EXISTS(SELECT 1 FROM folders LIMIT 1) OR
+      EXISTS(SELECT 1 FROM folder_memberships LIMIT 1) OR
+      EXISTS(SELECT 1 FROM state_items WHERE key <> 'workspace' LIMIT 1) AS present
+    `).get() as { present?: unknown } | undefined;
+    if (Number(row?.present) === 1) return true;
+    const ws = this.database.prepare("SELECT body FROM state_items WHERE key = 'workspace'").get() as { body?: unknown } | undefined;
+    if (!ws?.body) return false;
+    try { return Number((JSON.parse(String(ws.body)) as { updatedAt?: unknown })?.updatedAt) > 0; }
+    catch { return false; }
   }
 
   transaction<T>(action: () => T): T { return inTransaction(this.database, action); }

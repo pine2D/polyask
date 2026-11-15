@@ -340,7 +340,7 @@ test("envPreview activates preview mode only in unpackaged development runs", ()
   assert.deepEqual(devPreview, {
     distribution: "installed",
     version: "1.34.0",
-    userDataPath: defaultUserDataPath,
+    userDataPath: join(tmpdir(), "dev", "PolyAsk-Preview"),
     preview: true
   });
 
@@ -373,6 +373,10 @@ test("portable marker parser rejects path traversal, invalid formats, and previe
     JSON.stringify({ format: 1, dataDirectory: "Preview Data.", preview: true }),
     JSON.stringify({ format: 1, dataDirectory: "Preview Data ", preview: true }),
     JSON.stringify({ format: 1, dataDirectory: "PolyAsk Data", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "polyask data", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "POLYASK DATA", preview: true }),
+    JSON.stringify({ format: 1, dataDirectory: "App", preview: false }),
+    JSON.stringify({ format: 1, dataDirectory: "app", preview: true }),
     JSON.stringify({ format: 1, dataDirectory: "Preview Data", preview: "yes" })
   ]) {
     assert.throws(() => resolveRuntimeProfile({ ...base, readMarker: () => invalid }), /portable_data_unrecognized/);

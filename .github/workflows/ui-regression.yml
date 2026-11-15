@@ -53,21 +53,21 @@ jobs:
         run: |
           sudo systemd-run --scope --quiet -p MemoryMax=4G -p MemorySwapMax=512M \
             --uid="$(id -u)" --gid="$(id -g)" \
-            xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:shell-ui
+            env "PATH=$PATH" xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:shell-ui
 
       - name: 结果库视觉与交互回归
         working-directory: desktop
         run: |
           sudo systemd-run --scope --quiet -p MemoryMax=4G -p MemorySwapMax=512M \
             --uid="$(id -u)" --gid="$(id -g)" \
-            xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:library-ui
+            env "PATH=$PATH" xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:library-ui
 
       - name: 关键原生窗口与输入专项
         working-directory: desktop
         run: |
           sudo systemd-run --scope --quiet -p MemoryMax=4G -p MemorySwapMax=512M \
             --uid="$(id -u)" --gid="$(id -g)" \
-            xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:unit -- \
+            env "PATH=$PATH" xvfb-run -a -s "-screen 0 1920x1200x24" npm run test:unit -- \
               test/task-setup-native.check.ts \
               test/tier-presets-native.check.ts \
               test/form-surface-native.check.ts \

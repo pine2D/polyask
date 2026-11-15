@@ -105,6 +105,7 @@ function sliceBetween(text, startMarker, endMarker) {
   const uiJob = sliceBetween(uiRegressionWorkflow, "\n  linux-native-ui:\n", null);
   assert.match(uiJob, /timeout-minutes:\s*\d+/, "linux-native-ui 缺少 timeout-minutes");
   assert.match(uiJob, /MemoryMax=4G -p MemorySwapMax=512M/, "linux-native-ui 必须启用 4 GiB / 512 MiB cgroup 保护");
+  assert.match(uiJob, /env "PATH=\$PATH" xvfb-run/, "linux-native-ui 经 sudo systemd-run 时必须显式透传 setup-node 的 PATH");
   assert.match(uiJob, /npm run test:shell-ui/, "ui-regression.yml 必须运行 test:shell-ui");
   assert.match(uiJob, /npm run test:library-ui/, "ui-regression.yml 必须运行 test:library-ui");
 }
