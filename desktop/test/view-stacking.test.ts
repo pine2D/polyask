@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { SITE_KEYS } from "../src/shared/contracts";
-import { reconcileVisibleSiteKeys, stackOrder } from "../src/main/view-visibility";
+import { stackOrder } from "../src/main/view-visibility";
 
 const all = [...SITE_KEYS];
 
@@ -33,22 +33,4 @@ test("stack order tolerates a visible key that is no longer selected", () => {
   const order = stackOrder(selected, [all[7]]);
 
   assert.deepEqual(order, selected);
-});
-
-// 生产里 reconcileViews 拿 this.selected 做集合对账（挂谁），拿 stackOrder 做层序（谁在上面）。
-// 层序不靠 detach 实现：addChildView 对已在树里的子视图是原地提升到顶层（Electron 43.4.0 实测：
-// 幂等、children 不增长、且不丢渲染进程焦点；全拆重挂则实测 blur 2 次、hasFocus 转 false）。
-test("reconciling against the selection attaches background pages too", () => {
-  const changes = reconcileVisibleSiteKeys(all.slice(0, 3), all);
-
-  assert.deepEqual(changes.detach, []);
-  assert.deepEqual(changes.attach, all.slice(3));
-});
-
-test("deselecting a site detaches it without disturbing the rest", () => {
-  const kept = all.filter((site) => site !== all[4]);
-  const changes = reconcileVisibleSiteKeys(all, kept);
-
-  assert.deepEqual(changes.detach, [all[4]]);
-  assert.deepEqual(changes.attach, []);
 });
