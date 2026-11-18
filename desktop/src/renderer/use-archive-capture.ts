@@ -14,7 +14,7 @@ interface ArchiveCaptureInput {
 export function useArchiveCapture(input: ArchiveCaptureInput): {
   readonly remember: (run: BroadcastRun) => void;
   readonly invalidate: () => void;
-  readonly capture: () => Promise<ArchiveRecord>;
+  readonly capture: (completedSites?: readonly SiteKey[]) => Promise<ArchiveRecord>;
 } {
   const lastRun = useRef<BroadcastRun | null>(null);
   const remember = (run: BroadcastRun) => {
@@ -22,10 +22,11 @@ export function useArchiveCapture(input: ArchiveCaptureInput): {
     lastRun.current = run;
   };
   const invalidate = (): void => { lastRun.current = null; };
-  const capture = async (): Promise<ArchiveRecord> => {
-    const captureSites = input.sites.filter((site) => input.participatingSites.has(site.key));
-    if (!captureSites.length) throw new Error("no_selected_sites");
-    const captureKeys = captureSites.map((site) => site.key);
+  const capture = async (completedSites?: readonly SiteKey[]): Promise<ArchiveRecord> => {
+    // 手动采集覆盖全部参与站；比较只读触发它的那批已完成回答。
+    const captureKeys = input.sites.map(site => site.key)
+      .filter(site => input.participatingSites.has(site) && (!completedSites || completedSites.includes(site)));
+    if (!captureKeys.length) throw new Error("no_selected_sites");
     const matchingRun = lastRun.current && runCoversSites(lastRun.current, captureKeys)
       ? lastRun.current
       : null;

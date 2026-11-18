@@ -299,8 +299,10 @@ function App(): React.JSX.Element {
     onBlockingChange: (blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface) });
   const { collectAndCopy, collectSynthesis, collectAndCompare: captureComparison } = archiveFlow.createCollectionActions(runAuxiliary, setAnnouncement);
   const operationBusy = runState !== "idle" || auxiliaryBusy || participation.pending;
-  const completedParticipants = participation.participating.filter(site => statuses[site]?.phase === "complete");
-  const collectAndCompare = !operationBusy && completedParticipants.length >= 2 ? captureComparison : undefined;
+  const completedParticipants = participation.participating.filter(site => statuses[site]?.phase === "complete"
+    && (!broadcast.runId || siteStatusRunId(statuses[site]) === broadcast.runId));
+  const collectAndCompare = !operationBusy && completedParticipants.length >= 2
+    ? () => captureComparison(completedParticipants) : undefined;
   const startNewSession = async (): Promise<void> => {
     if (draftConfirmation.isBlocking() || pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     if (newSessionInFlight.current || participation.pending || actionLock.current!.busy) return;
@@ -349,7 +351,7 @@ function App(): React.JSX.Element {
     openSettings, setMode, changeTier, closeQuestionHistory,
     openQuestionHistory: () => { changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); setQuestionReadRequest(null); setQuestionHistoryOpen(true); },
     closeImagePicker: () => imageSelection.setOpen(false),
-    collectAndCopy, collectAndCompare, collectSynthesis, synthesisPending: !!synthesis.pending,
+    collectAndCopy: operationBusy ? undefined : collectAndCopy, collectAndCompare, collectSynthesis, synthesisPending: !!synthesis.pending,
     retrySitesCount: broadcast.retrySites.length, requestRetryReview: () => retryReview.request(),
     clearArchiveNavigation: () => archiveNavigation.clear(), startNewSession
   });

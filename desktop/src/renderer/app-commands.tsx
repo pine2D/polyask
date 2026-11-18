@@ -49,7 +49,7 @@ export interface BuildAppCommandsOptions {
   readonly closeQuestionHistory: () => void;
   readonly openQuestionHistory: () => void;
   readonly closeImagePicker: () => void;
-  readonly collectAndCopy: () => Promise<void>;
+  readonly collectAndCopy: (() => Promise<void>) | undefined;
   readonly collectAndCompare: (() => Promise<void>) | undefined;
   readonly collectSynthesis: () => Promise<void>;
   readonly synthesisPending: boolean;
@@ -177,7 +177,7 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
     },
     "set-think": () => { changeSurface("sites"); changeTier("think"); },
     "set-fast": () => { changeSurface("sites"); changeTier("fast"); },
-    ...(participatingSites.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
+    ...(participatingSites.size > 0 && collectAndCopy ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
     ...(collectAndCompare ? { "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); } } : {}),
     "open-question-history": openQuestionHistory,
     "open-archive": () => { clearArchiveNavigation(); changeSurface("archive"); },

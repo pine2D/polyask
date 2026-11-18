@@ -1,5 +1,6 @@
 import { type DesktopCopy } from '../shared/copy';
 import type { ArchiveRecord } from '../shared/archive';
+import type { SiteKey } from '../shared/contracts';
 import type { useArchiveCapture } from './use-archive-capture';
 import type { useSynthesisFlow } from './use-synthesis-flow';
 import { shell } from './shell-api';
@@ -23,9 +24,9 @@ export function archiveCollectionActions(options: {
     try { const id = await options.synthesis.collect(); options.openArchive(id, 'read'); }
     catch { options.announce(options.copy.synthesisCollectFailed); }
   });
-  const collectAndCompare = () => options.runAuxiliary(async () => {
+  const collectAndCompare = (completedSites: readonly SiteKey[]) => options.runAuxiliary(async () => {
     try {
-      const record: ArchiveRecord = await options.capture.capture();
+      const record: ArchiveRecord = await options.capture.capture(completedSites);
       options.openArchive(record.id);
       options.announce(record.results.filter(answer => answer.text?.trim()).length >= 2
         ? options.copy.archiveSaved : options.copy.captureNeedsTwoAnswers);

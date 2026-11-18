@@ -168,7 +168,8 @@ test('the app routes the pending notice to the proxy settings section', () => {
   assert.equal(/useProxyPendingNotice\(copy, \(\) => openSettings\("proxy"\)\);/.test(app), true, 'App must route the notice to the proxy section');
   assert.equal(/section: SettingsTarget/.test(app), true, 'settings sections must accept "proxy"');
   assert.equal(/<AppSurfaceRouter/.test(app) && /<SettingsStage/.test(stages), true, 'App must wire SettingsStage through AppSurfaceRouter');
-  assert.equal(/<SettingsWorkspace [^\n]*operationBusy=\{runState !== "idle" \|\| auxiliaryBusy \|\| participation\.pending\}/.test(stages), true,
+  assert.equal(/const operationBusy = runState !== "idle" \|\| auxiliaryBusy \|\| participation\.pending/.test(app)
+    && /settings=\{\{[^}]*operationBusy/.test(app) && /operationBusy=\{operationBusy\}/.test(stages), true,
     'settings must receive the shell busy state so proxy writes are disabled during a send');
 });
 

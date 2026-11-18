@@ -32,7 +32,10 @@ test('production root gates toolbar and commands on unfinished actions and site 
   let publishWorkspace: (state: object) => void = () => {};
   let publishStatus: (state: object) => void = () => {};
   const capturedSites: string[][] = [];
+  const capturedRuns: (string | null)[] = [];
   const archiveSizes: number[] = [];
+  const archivePrompts: string[] = [];
+  let sentRun = '';
   let siteFocus = 0;
   let newSessions = 0, broadcasts = 0, removedDrafts = 0, tierChanges = 0, collections = 0;
   const status = { state: 'idle', connected: false, pending: 0, errorCount: 0, readOnly: false,
@@ -60,19 +63,21 @@ test('production root gates toolbar and commands on unfinished actions and site 
     listArchiveTags: async () => [], getArchive: async () => null, siteHistoryState: async () => ({}),
     syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
     newSession: async () => { newSessions++; return [{ site: 'claude', ok: true }]; },
-    broadcast: async () => { broadcasts++; return []; },
+    broadcast: async (request: { runId: string; sites: string[] }) => {
+      broadcasts++; sentRun = request.runId; return request.sites.map(site => ({ site, ok: true }));
+    },
     applyTier: async (tier: string | null) => {
       tierChanges++;
       await new Promise<void>(resolve => { finishTier = resolve; });
       return { workspace: { selectedSites: ['claude'], groups: [], tier },
         results: tier ? [{ site: 'claude', ok: true, selection: { requested: tier, outcome: 'mode_only', observed: tier } }] : [] };
     },
-    collectAnswers: async ({ sites }: { sites: string[] }) => {
-      collections++; capturedSites.push(sites);
+    collectAnswers: async ({ sites, runId }: { sites: string[]; runId: string | null }) => {
+      collections++; capturedSites.push(sites); capturedRuns.push(runId);
       return sites.map(site => ({ host: site, label: site, text: 'Synthetic answer' }));
     },
-    addArchive: async (entry: { results: unknown[] }) => {
-      archiveSizes.push(entry.results.length); return { ...entry, id: 'synthetic-archive' };
+    addArchive: async (entry: { results: unknown[]; text: string }) => {
+      archiveSizes.push(entry.results.length); archivePrompts.push(entry.text); return { ...entry, id: 'synthetic-archive' };
     },
     getPreferences: undefined, seedPreferences: undefined, onPreferences: undefined
   }, { get(target, key) {
@@ -111,7 +116,7 @@ test('production root gates toolbar and commands on unfinished actions and site 
     assert.equal(dom.window.document.querySelector('.settings-workspace') === null, false,
       'baseline: settings is reachable without a draft dialog');
     await emit('open-sites');
-    const prompt = dom.window.document.querySelector('textarea[name="prompt"]') as HTMLTextAreaElement;
+    let prompt = dom.window.document.querySelector('textarea[name="prompt"]') as HTMLTextAreaElement;
     await act(async () => {
       Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value')!.set!.call(prompt, 'Synthetic active question');
       prompt.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
@@ -124,6 +129,12 @@ test('production root gates toolbar and commands on unfinished actions and site 
     await click('.send');
     assert.equal(tierChanges, 1, 'mode shortcuts share the in-flight lock');
     assert.equal(newSessions, 0); assert.equal(broadcasts, 0);
+    await emit('open-settings');
+    await emit('collect-answers'); await emit('collect-compare');
+    assert.equal(surfaces.at(-1), 'settings', 'busy collection commands also leave navigation alone');
+    assert.equal(collections, 0);
+    await emit('open-sites');
+    prompt = document.querySelector<HTMLTextAreaElement>('textarea[name=prompt]')!;
     await act(async () => { finishTier!(); });
     assert.equal(document.querySelector<HTMLButtonElement>('.send')?.disabled, false);
     assert.equal(document.querySelector('[data-tier-icon=think]')?.getAttribute('aria-pressed'), 'true');
@@ -224,6 +235,34 @@ test('production root gates toolbar and commands on unfinished actions and site 
       await click('.compare-trigger');
       assert.deepEqual(capturedSites, [['claude'], opened, opened]);
       assert.deepEqual(archiveSizes, [1, 2, 2]);
+
+      await emit('open-sites');
+      await click('.send');
+      assert.ok(sentRun);
+      const composer = document.querySelector<HTMLTextAreaElement>('textarea[name=prompt]')!;
+      assert.equal(composer.value, '', 'a successful broadcast cleared its draft');
+      const three = [...opened, 'chatgpt'];
+      await scope(three, three);
+      await act(async () => {
+        for (const site of opened) publishStatus({ site, phase: 'complete', generation: { runId: sentRun, state: 'complete' } });
+      });
+      for (const phase of ['ready', 'failed', 'complete']) {
+        await act(async () => publishStatus({ site: 'chatgpt', phase,
+          ...(phase === 'complete' ? { generation: { runId: 'previous-question', state: 'complete' } } : {}) }));
+        assert.equal(disabled(), 'false', 'two completed participants are enough');
+        const previous: number = capturedSites.length;
+        if (phase === 'failed') await act(async () => {
+          const next = document.querySelector<HTMLTextAreaElement>('textarea[name=prompt]')!;
+          Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value')!.set!.call(next, 'Next draft');
+          next.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+        });
+        if (phase === 'ready') await emit('collect-compare'); else await click('.compare-trigger');
+        assert.equal(capturedSites.length, previous + 1, 'new or failed participants cannot discard the last run');
+        assert.deepEqual(capturedSites.at(-1), opened);
+        assert.equal(capturedRuns.at(-1), sentRun);
+        assert.equal(archivePrompts.at(-1), 'Synthetic active question');
+        await emit('open-sites');
+      }
     });
   } finally {
     await act(async () => root?.unmount());

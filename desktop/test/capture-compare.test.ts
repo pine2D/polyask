@@ -20,7 +20,7 @@ test("capture-and-compare opens the newly saved record, or keeps the current vie
       openArchive: id => { events.push(id ?? "", "archive"); },
       announce: value => { events.push(value); }
     });
-    await actions.collectAndCompare();
+    await actions.collectAndCompare(["claude", "kimi"]);
     if (outcome === "failure") assert.deepEqual(events, [copy.archiveCollectFailed]);
     else assert.deepEqual(events, ["new", "archive", outcome === "complete" ? copy.archiveSaved : copy.captureNeedsTwoAnswers]);
   }
