@@ -87,7 +87,7 @@ function defaultCase(options = {}) {
     }
     return null;
   };
-  for (const file of ["selection-match.js", "adapters-intl2.js", "chatgpt-default.js", "tier.js"]) {
+  for (const file of ["selection-match.js", "adapters-chatgpt.js", "chatgpt-default.js", "tier.js"]) {
     if (fs.existsSync(path.join(__dirname, "../../src/site-runtime", file))) load(file);
   }
   // core 的闭包等待仍保持真实实现；入口与页面事件边界使用上述可控时钟。

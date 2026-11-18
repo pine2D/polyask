@@ -27,7 +27,7 @@ function harness({ accept = 'image/*,video/*', existing = false, fail = false, e
     File: dom.window.File, Uint8Array, atob: value => Buffer.from(value, 'base64').toString('binary'),
     createImageBitmap: async () => ({ close() {} }), getComputedStyle: dom.window.getComputedStyle,
     location: { href: 'https://gemini.google.com/app' } };
-  vm.runInNewContext(source('adapters-intl3.js'), context);
+  vm.runInNewContext(source('adapters-gemini.js'), context);
   return { adapter: S.adapters['gemini.google.com'], composer, received, clicks,
     open: () => button.getAttribute('aria-expanded') === 'true', close: () => dom.window.close(),
     upload: async () => {

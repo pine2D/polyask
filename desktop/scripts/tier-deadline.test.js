@@ -6,20 +6,20 @@ const vm = require("node:vm");
 const path = require("node:path");
 
 function runtime(host, document) {
-  let now = 1000, listener;
+  let now = 1000;
   const events = [];
   class Event { constructor(type, init) { this.type = type; Object.assign(this, init); } }
   const context = vm.createContext({
     window: {}, document: { body: { dispatchEvent: e => events.push(e.type) },
       querySelectorAll: () => [], querySelector: () => null, dispatchEvent() {}, ...document },
     location: { hostname: host }, innerHeight: 1000, innerWidth: 1000,
-    chrome: { runtime: { onMessage: { addListener: fn => { listener = fn; } } } },
+
     t: key => key, console: { debug() {} }, MouseEvent: Event, KeyboardEvent: Event, CustomEvent: Event,
     Date: { now: () => now }, setTimeout: (fn, ms) => { now += ms; fn(); },
   });
-  for (const file of ["core.js", "tier.js", "selection-match.js", "adapters-intl.js", "adapters-intl2.js", "adapters-intl3.js", "adapters-cn.js", "adapters-cn2.js", "adapters-cn3.js", "adapters-cn4.js"])
+  for (const file of ["core.js", "tier.js", "selection-match.js", "adapters-claude.js", "adapters-chatgpt.js", "adapters-gemini.js", "adapters-cn.js", "adapters-cn2.js", "adapters-yuanbao.js", "adapters-qianwen.js"])
     vm.runInContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8"), context);
-  return { S: context.window.__AMS, now: () => now, events, dispatch: msg => new Promise(resolve => listener({ source: "AMS", ...msg }, {}, resolve)) };
+  return { S: context.window.__AMS, now: () => now, events, dispatch: msg => new Promise(resolve => context.window.__AMS.handleCommand({ source: "AMS", ...msg }, resolve)) };
 }
 
 test("expired runMode never calls an adapter or focuses the composer", async () => {

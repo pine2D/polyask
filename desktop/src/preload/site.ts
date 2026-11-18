@@ -20,29 +20,7 @@ import { normalizeDiagnosticChecks } from "../shared/site-health";
 import { normalizeSelectionMetadata } from "../shared/selection";
 
 type SendResponse = (response: unknown) => void;
-type RuntimeListener = (
-  message: unknown,
-  sender: Record<string, never>,
-  sendResponse: SendResponse
-) => unknown;
-
-const listeners: RuntimeListener[] = [];
-// 站点运行时只用到 chrome.runtime.onMessage 这一条 API（core.js 用它收命令）。语言不再经 chrome.i18n /
-// storage 让 i18n.js 自己猜，而是下面 require 完成后由外壳单向注入——locale 解析全应用只有 shared/locale.ts 一份。
-const chromeShim = {
-  runtime: {
-    onMessage: {
-      addListener: (listener: RuntimeListener) => { listeners.push(listener); }
-    }
-  }
-};
-
-Object.defineProperty(globalThis, "chrome", {
-  value: chromeShim,
-  configurable: false,
-  enumerable: false,
-  writable: false
-});
+type RuntimeCommandHandler = (message: unknown, respond: SendResponse) => true | undefined;
 
 require("../site-runtime/i18n.js");
 require("../site-runtime/core.js");
@@ -57,14 +35,14 @@ require("../site-runtime/md-head.js");
 require("../site-runtime/md-diagram.js");
 require("../site-runtime/md.js");
 require("../site-runtime/prompt-markup.js");
-require("../site-runtime/adapters-intl.js");
+require("../site-runtime/adapters-claude.js");
 require("../site-runtime/claude-presets.js");
 require("../site-runtime/preset-command.js");
-require("../site-runtime/adapters-intl2.js");
+require("../site-runtime/adapters-chatgpt.js");
 require("../site-runtime/chatgpt-default.js");
 require("../site-runtime/chatgpt-preset-slider.js");
 require("../site-runtime/chatgpt-presets.js");
-require("../site-runtime/adapters-intl3.js");
+require("../site-runtime/adapters-gemini.js");
 require("../site-runtime/gemini-presets.js");
 require("../site-runtime/adapters-cn.js");
 require("../site-runtime/deepseek-presets.js");
@@ -72,9 +50,9 @@ require("../site-runtime/doubao-presets.js");
 require("../site-runtime/adapters-cn2.js");
 require("../site-runtime/kimi-presets.js");
 require("../site-runtime/chatglm-presets.js");
-require("../site-runtime/adapters-cn3.js");
+require("../site-runtime/adapters-yuanbao.js");
 require("../site-runtime/yuanbao-presets.js");
-require("../site-runtime/adapters-cn4.js");
+require("../site-runtime/adapters-qianwen.js");
 require("../site-runtime/qianwen-presets.js");
 require("../site-runtime/generation.js");
 require("../site-runtime/history-route.js");
@@ -157,7 +135,8 @@ function dispatch(command: SiteCommand): Promise<SiteCommandResponse> {
   // wasSubmitted 的每一个失败出口都是「不支持」：超时、无适配器、异常、形状不对，一律不能被读成「确认未提交」。
   const probing = command.cmd === "wasSubmitted";
   const unsupported: SiteSubmittedResponse = { supported: false, ok: false };
-  if (!listeners.length) return Promise.resolve(probing ? unsupported : { ok: false, code: "adapter_unavailable" });
+  const handler = (globalThis as typeof globalThis & { __AMS?: { handleCommand?: RuntimeCommandHandler } }).__AMS?.handleCommand;
+  if (typeof handler !== "function") return Promise.resolve(probing ? unsupported : { ok: false, code: "adapter_unavailable" });
   const remaining = Math.max(0, command.deadline - Date.now());
   if (remaining === 0) return Promise.resolve(probing ? unsupported : { ok: false, code: "timeout" });
 
@@ -183,10 +162,7 @@ function dispatch(command: SiteCommand): Promise<SiteCommandResponse> {
       const message = command.cmd === "collect"
         ? { source: "AMS", cmd: "collectAnswer" }
         : command.cmd === "diagnose" ? { source: "AMS", cmd: "diagnose" } : command;
-      // 逐个分发：某个监听器返回 true（会异步 sendResponse）或已同步作答就停；没有任何监听器接手才判 invalid_response。
-      // 「有且只有一个监听器」由 desktop/scripts/desktop-shared-runtime.test.js 离线数 addListener 调用点守着，
-      // 绝不在这里硬断言——模块作用域一抛，下面的 site-command 监听就注册不上，九站整链失守。
-      const claimed = listeners.some((listener) => listener(message, {}, finish) === true || settled);
+      const claimed = handler(message, finish) === true;
       if (!claimed && !settled) finish(probing ? unsupported : { ok: false, code: "invalid_response" });
     } catch {
       finish(probing ? unsupported : { ok: false, code: "error" });

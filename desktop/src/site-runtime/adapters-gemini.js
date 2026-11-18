@@ -1,4 +1,4 @@
-// desktop/src/site-runtime/adapters-intl3.js — 国际站点适配器·续（Gemini）。
+// Gemini 站点适配器。
 // 按站分卷以遵守 300 行上限；思考等级须复读，所有菜单动作自行收尾。
 (function () {
   "use strict";

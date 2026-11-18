@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-// site-runtime/adapters-cn2.js（智谱 / Kimi）与 adapters-cn3.js（元宝）的档位回归。2026-08-31 真机改版：
+// site-runtime/adapters-cn2.js（智谱 / Kimi）与 adapters-yuanbao.js（元宝）的档位回归。2026-08-31 真机改版：
 // 智谱弹层多出「模型段 + 极致档」、元宝多出 Models 子菜单、Kimi 的 escMenus 收不掉根菜单。
 // scripts/cn2-send-runtime.test.js 只管这两卷的发送/附件语义，档位放这里，两边不重叠。
 const assert = require("node:assert/strict");
@@ -118,7 +118,7 @@ function yuanbaoCase(init, hooks) {
     querySelectorAll: (selector) => selector === '[role="menuitemradio"]' ? (state.modelsOpen ? models : []).concat(modes())
       : selector === '[role="menuitem"]' ? [entry] : [],
   };
-  const S = runtime(document, hooks ? { hooks } : undefined, "adapters-cn3.js");
+  const S = runtime(document, hooks ? { hooks } : undefined, "adapters-yuanbao.js");
   S.presetDom = { visible: () => true, enabled: () => true,
     firstText: el => el.textContent.replace(/(Handle|Recommended|Suitable|Hy4 的).*$/, "").trim() };
   return { adapter: S.adapters["yuanbao.tencent.com"], S, clicked, state };

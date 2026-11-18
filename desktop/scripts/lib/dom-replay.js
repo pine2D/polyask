@@ -55,9 +55,6 @@ function replayHtml(html, { host, path: pathname = "/", files, lang = "en" } = {
     { url: `https://${host}${pathname}`, runScripts: "outside-only", pretendToBeVisual: true });
   const { window } = dom;
   polyfill(window);
-  const listeners = [];
-  // core.js 的消息入口：收集监听器，send() 按 preload 的分发方式调用（同步回包或 Promise）。
-  window.chrome = { runtime: { onMessage: { addListener: (fn) => listeners.push(fn) } } };
   const context = dom.getInternalVMContext();
   for (const file of files || preloadRequires()) {
     const source = fs.readFileSync(path.join(ROOT, file), "utf8");
@@ -68,9 +65,7 @@ function replayHtml(html, { host, path: pathname = "/", files, lang = "en" } = {
   const S = window.__AMS;
   const adapter = Object.entries(S?.adapters || {}).find(([key]) => host === key || host.endsWith(`.${key}`))?.[1] || null;
   const send = (msg) => new Promise((resolve) => {
-    let async = false;
-    for (const fn of listeners) if (fn(msg, {}, resolve) === true) async = true;
-    if (!async) setTimeout(() => resolve(undefined), 0);
+    if (S?.handleCommand?.(msg, resolve) !== true) resolve(undefined);
   });
   // history.begin 会挂 16 分钟定时器与 MutationObserver：测试结束务必 close()，否则 node --test 不退出。
   const close = () => window.close();

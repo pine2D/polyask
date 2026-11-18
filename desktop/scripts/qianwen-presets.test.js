@@ -3,7 +3,7 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const { page, plain } = require('./lib/site-preset-harness');
 function setup(options = {}) {
   const f = page('www.qianwen.com', '<div role="tab" aria-selected="true">日常</div><button id="mode" aria-haspopup="menu" aria-label="快速">快速</button>' +
-    (options.models ? '<div class="desktop-no-drag"><button id="models" aria-haspopup="dialog" aria-controls="model-dialog"><span>Qwen3.7-千问</span></button></div>' : ''), ['adapters-cn4', 'qianwen-presets']);
+    (options.models ? '<div class="desktop-no-drag"><button id="models" aria-haspopup="dialog" aria-controls="model-dialog"><span>Qwen3.7-千问</span></button></div>' : ''), ['adapters-qianwen', 'qianwen-presets']);
   const layout = f.d.createElement('div'); layout.setAttribute('data-chat-input-layout', 'true'); f.d.body.append(layout);
   layout.append(f.d.getElementById('mode'), f.d.querySelector('textarea'));
   layout.insertAdjacentHTML('beforeend', '<button aria-haspopup="menu" aria-label="添加附件"></button><button aria-haspopup="menu" aria-label="更多" data-capsule-layout="follow-parent">更多</button>');

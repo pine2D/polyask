@@ -21,7 +21,7 @@ function fixture(t, html = inputs, outside = '') {
     return true;
   } });
   context.Date = { now: () => 1000 };
-  vm.runInNewContext(source('adapters-intl2.js'), context);
+  vm.runInNewContext(source('adapters-chatgpt.js'), context);
   return { adapter: context.window.__AMS.adapters['chatgpt.com'], document, calls,
     composer: document.querySelector('[contenteditable]') };
 }
@@ -74,7 +74,7 @@ test('ChatGPT forwards upload failure without switching input or uploading twice
   h.document.getElementById('photos').id = 'upload-photos';
   const calls = [];
   const context = helpers(h.document, { setInputFiles: async input => { calls.push(input.id); return false; } });
-  vm.runInNewContext(source('adapters-intl2.js'), context);
+  vm.runInNewContext(source('adapters-chatgpt.js'), context);
   assert.equal(await context.window.__AMS.adapters['chatgpt.com'].attach([{}], h.composer, Date.now() + 1000), false);
   assert.deepEqual(calls, ['upload-photos']);
 });

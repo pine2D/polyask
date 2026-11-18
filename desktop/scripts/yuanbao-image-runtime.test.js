@@ -25,7 +25,7 @@ function fixture(missingItem = false, expires = false, existing = false) {
   const S = { adapters: {}, waitFor: async fn => fn(), sleep: async ms => { now += ms; }, escMenus: () => { escaped = true; },
     dropFiles: async () => false, setInputFiles: async n => n === field && pickerPrevented,
     findByText: (selector, re) => document.querySelectorAll(selector).find(n => re.test(n.textContent)) };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/site-runtime/adapters-cn3.js'), 'utf8'), {
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/site-runtime/adapters-yuanbao.js'), 'utf8'), {
     window: { __AMS: S }, document, Date: { now: () => now }, globalThis: { __AMS_I18N__: { t: x => x } }
   });
   return { a: S.adapters['yuanbao.tencent.com'], state: () => ({ listener, escaped, pickerPrevented }) };

@@ -2,7 +2,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { page, plain } = require('./lib/site-preset-harness');
 function setup(options = {}) {
-  const f = page('yuanbao.tencent.com', '<button id="trigger" aria-label="Switch model">Instant</button>', ['adapters-cn3', 'yuanbao-presets']);
+  const f = page('yuanbao.tencent.com', '<button id="trigger" aria-label="Switch model">Instant</button>', ['adapters-yuanbao', 'yuanbao-presets']);
   const state = { model: 'Hy3', effort: 'Instant' }, clicks = [], button = f.d.querySelector('button');
   const choices = { Hy3: ['Instant', 'Thinking', 'Expert'], Hy4: ['Expert'], 'Future model': ['Instant', 'Thinking'] };
   if (options.modern) { choices.Hy4 = ['Instant', 'Thinking', 'Expert']; choices['Hy4 flash'] = ['Instant']; }

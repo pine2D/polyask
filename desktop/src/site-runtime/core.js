@@ -250,46 +250,43 @@
     return [{ name: t("diag_tierReadable"), ok: getState() != null, kind: "tier" }];
   }
 
-  // Desktop preload 通过隔离世界的监听器分发站点命令。
-  // 守卫：主世界注入测试时 chrome.runtime.onMessage 不存在，跳过监听不影响其余能力。
-  try {
-    chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-      if (!msg || msg.source !== "AMS") return;
-      // 只读命令（wasSubmitted / collectAnswer / diagnose）在 read-commands.js；返回 true = 异步回包。
-      if (window.__AMS.readCommand?.(msg, sendResponse)) return true;
-      if (window.__AMS.presetCommand?.(msg, sendResponse, serializeInteraction)) return true;
-      if (window.__AMS.tierCommand?.(msg, sendResponse, serializeInteraction)) return true;
-      if (msg.cmd === "submitPrompt") {
-        serializeInteraction(async () => {
-          try {
-            const deadline = Number(msg.deadline) || 0;
-            if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
-            // 新开页面若立即 runMode 会因模型切换器未渲染而切换失败：先等输入框出现
-            //（页面交互就绪的代理，切换器此时通常已就位），再切档位、提交。未就绪则返回
-            // composer_not_found 可在预算内重试；切档未确认仍提交并保留警示。
-            const waitMs = deadline ? Math.max(0, Math.min(4000, deadline - Date.now())) : 4000;
-            if (!(await waitFor(() => findComposer(), waitMs))) return { host: location.hostname, ok: false, code: "composer_not_found" };
-            if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
-            let selection, tier = msg.tier, images = msg.images || [];
-            const a = pickAdapter(), imageMode = images.length && a && (a.thinkImage || a.fastImage);
-            if (imageMode && tier !== "think" && tier !== "fast") tier = getState() || "fast";
-            if (tier === "think" || tier === "fast") {
-              const tierDeadline = Math.min(deadline || Infinity, Date.now() + 10000);
-              selection = await resolveTier(tier, tierDeadline, !!imageMode, msg.preset); await sleep(deadline ? Math.min(200, Math.max(0, deadline - Date.now())) : 200);
-            }
-            if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout", ...(selection ? { selection } : {}) };
-            try { window.__AMS.history?.begin(msg.historyToken, msg.text, deadline, { images: images.length }); } catch (_) {}
-            window.__AMS.armGeneration?.(); // 本次提交的停止键锁存（generation.js）：短回答在两次 900ms 探测之间就结束时的正向证据
-            const r = await submitPromptNow(msg.text || "", deadline, images, msg.historyToken);
-            if (selection) r.selection = selection;
-            if (r.ok && selection?.outcome === "unconfirmed") r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿
-            return Object.assign({ host: location.hostname }, r);
-          } catch (e) { return { host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }; }
-        }).then(sendResponse, (e) => sendResponse({ host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }));
-        return true; // 异步 sendResponse
-      }
-    });
-  } catch (e) {}
+  // preload 传入单次回包函数。返回 true 表示该命令已接手，可在稍后回包。
+  function handleCommand(msg, sendResponse) {
+    if (!msg || msg.source !== "AMS") return;
+    // 只读命令（wasSubmitted / collectAnswer / diagnose）在 read-commands.js；返回 true = 异步回包。
+    if (window.__AMS.readCommand?.(msg, sendResponse)) return true;
+    if (window.__AMS.presetCommand?.(msg, sendResponse, serializeInteraction)) return true;
+    if (window.__AMS.tierCommand?.(msg, sendResponse, serializeInteraction)) return true;
+    if (msg.cmd === "submitPrompt") {
+      serializeInteraction(async () => {
+        try {
+          const deadline = Number(msg.deadline) || 0;
+          if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
+          // 新开页面若立即 runMode 会因模型切换器未渲染而切换失败：先等输入框出现
+          //（页面交互就绪的代理，切换器此时通常已就位），再切档位、提交。未就绪则返回
+          // composer_not_found 可在预算内重试；切档未确认仍提交并保留警示。
+          const waitMs = deadline ? Math.max(0, Math.min(4000, deadline - Date.now())) : 4000;
+          if (!(await waitFor(() => findComposer(), waitMs))) return { host: location.hostname, ok: false, code: "composer_not_found" };
+          if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout" };
+          let selection, tier = msg.tier, images = msg.images || [];
+          const a = pickAdapter(), imageMode = images.length && a && (a.thinkImage || a.fastImage);
+          if (imageMode && tier !== "think" && tier !== "fast") tier = getState() || "fast";
+          if (tier === "think" || tier === "fast") {
+            const tierDeadline = Math.min(deadline || Infinity, Date.now() + 10000);
+            selection = await resolveTier(tier, tierDeadline, !!imageMode, msg.preset); await sleep(deadline ? Math.min(200, Math.max(0, deadline - Date.now())) : 200);
+          }
+          if (deadline && Date.now() >= deadline) return { host: location.hostname, ok: false, code: "timeout", ...(selection ? { selection } : {}) };
+          try { window.__AMS.history?.begin(msg.historyToken, msg.text, deadline, { images: images.length }); } catch (_) {}
+          window.__AMS.armGeneration?.(); // 本次提交的停止键锁存（generation.js）：短回答在两次 900ms 探测之间就结束时的正向证据
+          const r = await submitPromptNow(msg.text || "", deadline, images, msg.historyToken);
+          if (selection) r.selection = selection;
+          if (r.ok && selection?.outcome === "unconfirmed") r.code = "tier_unconfirmed"; // 提交成功但档位未确认：console 绿点带警示，不再谎报全绿
+          return Object.assign({ host: location.hostname }, r);
+        } catch (e) { return { host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }; }
+      }).then(sendResponse, (e) => sendResponse({ host: location.hostname, ok: false, code: "error", reason: String((e && e.message) || e) }));
+      return true; // 异步 sendResponse
+    }
+  }
 
-  window.__AMS = { runMode, runModeAction: runModeNow, pickAdapter, adapters, waitFor, findByText, openMenu, clickEl, sleep, checkDeadline, tierAction, escMenus, toast, getState, diagnose, findComposer, submitPrompt, visText };
+  window.__AMS = { handleCommand, runMode, runModeAction: runModeNow, pickAdapter, adapters, waitFor, findByText, openMenu, clickEl, sleep, checkDeadline, tierAction, escMenus, toast, getState, diagnose, findComposer, submitPrompt, visText };
 })();

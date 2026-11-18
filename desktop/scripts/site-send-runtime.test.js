@@ -25,7 +25,7 @@ function coreWithTextarea(rollback) {
   };
   const context = {
     window: {}, document, location: { hostname: "example.com" }, innerHeight: 800, innerWidth: 900,
-    chrome: { runtime: { onMessage: { addListener() {} } } }, t: (key) => key, console,
+    t: (key) => key, console,
     HTMLTextAreaElement: Textarea, HTMLInputElement: class {},
     Event: FakeEvent, InputEvent: FakeEvent, KeyboardEvent: FakeEvent, MouseEvent: FakeEvent, CustomEvent: FakeEvent,
     getSelection: () => ({ removeAllRanges() {}, addRange() {} }), matchMedia: () => ({ matches: true }),
@@ -110,7 +110,7 @@ function coreWithAdapter(adapter) {
       dispatchEvent() {}, createElement: () => ({ setAttribute() {}, style: {} }), // 无 animate：toast 自带 try/catch，追加后即止，不留 2.4s 退场定时器
       querySelectorAll: (selector) => (selector.startsWith("textarea") ? [composer] : []), querySelector: () => null,
     },
-    chrome: { runtime: { onMessage: { addListener(fn) { context.listener = fn; } } } }, t: (key) => key,
+    t: (key) => key,
     Event: FakeEvent, InputEvent: FakeEvent, KeyboardEvent: FakeEvent, MouseEvent: FakeEvent, CustomEvent: FakeEvent,
     matchMedia: () => ({ matches: true }), setTimeout, clearTimeout, Date,
     getSelection: () => { throw new Error("no selection"); },
@@ -118,7 +118,7 @@ function coreWithAdapter(adapter) {
   for (const file of ["core.js", "tier.js"]) vm.runInNewContext(source(file), context);
   context.window.__AMS.adapters["example.com"] = adapter;
   return { S: context.window.__AMS, seq, toasts, debug, send: (message) => new Promise((resolve) =>
-    context.listener(Object.assign({ source: "AMS", cmd: "submitPrompt" }, message), null, resolve)) };
+    context.window.__AMS.handleCommand(Object.assign({ source: "AMS", cmd: "submitPrompt" }, message), resolve)) };
 }
 
 test("切档失败不在站点视图内弹横幅，原因降级进控制台，并在最后一次失败后收尾菜单", async () => {
@@ -160,7 +160,7 @@ test("千问新模式按钮可读，think 与 fast 使用当前可用模型，�
     return [];
   } };
   const context = helpers(document, { escMenus() { escCount++; } });
-  for (const file of ["selection-match.js", "adapters-cn4.js"]) vm.runInNewContext(source(file), context);
+  for (const file of ["selection-match.js", "adapters-qianwen.js"]) vm.runInNewContext(source(file), context);
   const qwen = context.window.__AMS.adapters["qianwen.com"];
   assert.equal(qwen.state(), "fast");
   await qwen.think();
@@ -190,7 +190,7 @@ test("千问 _setThink 选项缺失或点击被吞时仍收尾 escMenus，且抛
       return [];
     } };
     const context = helpers(document, { escMenus() { escCount++; } });
-    for (const file of ["selection-match.js", "adapters-cn4.js"]) vm.runInNewContext(source(file), context);
+    for (const file of ["selection-match.js", "adapters-qianwen.js"]) vm.runInNewContext(source(file), context);
     return { qwen: context.window.__AMS.adapters["qianwen.com"], esc: () => escCount };
   }
   const missing = run("missing");

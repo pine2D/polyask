@@ -6,13 +6,13 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 function runtime(adapter, options = {}) {
-  let now = 1000, listener, submissions = 0, owned = !!options.alreadyOwned;
+  let now = 1000, submissions = 0, owned = !!options.alreadyOwned;
   const composer = { tagName: "DIV", textContent: "", focus() {},
     getBoundingClientRect: () => ({ left: 0, right: 200, top: 0, bottom: 40, width: 200, height: 40 }) };
   class Event { constructor(type, init) { this.type = type; Object.assign(this, init); } }
   const context = vm.createContext({ window: {}, location: { hostname: "test.invalid" },
     document: { body: { dispatchEvent() {} }, dispatchEvent() {}, querySelectorAll: sel => sel.includes("textarea") ? [composer] : [] },
-    chrome: { runtime: { onMessage: { addListener(fn) { listener = fn; } } } },
+
     innerWidth: 1000, innerHeight: 1000, t: key => key, console: { debug() {} },
     KeyboardEvent: Event, MouseEvent: Event, CustomEvent: Event,
     Date: { now: () => now }, setTimeout(fn, ms) { now += ms; queueMicrotask(fn); },
@@ -29,8 +29,8 @@ function runtime(adapter, options = {}) {
   };
   S.history = { begin() {}, submitted: token => token === "current" && owned };
   return { S, now: () => now, submissions: () => submissions,
-    dispatch: (extra = {}) => new Promise(resolve => listener({ source: "AMS", cmd: "submitPrompt", text: "fixture",
-      historyToken: "current", deadline: 20000, images: [], tier: "think", ...extra }, {}, resolve)) };
+    dispatch: (extra = {}) => new Promise(resolve => context.window.__AMS.handleCommand({ source: "AMS", cmd: "submitPrompt", text: "fixture",
+      historyToken: "current", deadline: 20000, images: [], tier: "think", ...extra }, resolve)) };
 }
 
 test("无异常但状态不可读不能报告切档成功，也不能重复点击猜结果", async () => {

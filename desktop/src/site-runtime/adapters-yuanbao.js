@@ -1,4 +1,4 @@
-// desktop/src/site-runtime/adapters-cn3.js — 国内站点适配器·三（元宝）。
+// 腾讯元宝 站点适配器。
 // adapters-cn2.js 贴着 300 行上限，元宝要加模型子菜单逻辑时按站拆出；契约与注意事项同 adapters-cn.js / CLAUDE.md。
 (function () {
   "use strict";

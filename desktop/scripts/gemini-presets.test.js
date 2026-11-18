@@ -2,7 +2,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { page, plain } = require('./lib/site-preset-harness');
 function setup(options = {}) {
-  const f = page('gemini.google.com', '<button aria-label="Open mode picker, currently Gemini Flash"></button>', ['adapters-intl3', 'gemini-presets']);
+  const f = page('gemini.google.com', '<button aria-label="Open mode picker, currently Gemini Flash"></button>', ['adapters-gemini', 'gemini-presets']);
   const state = { model: options.initialModel || (options.modern ? '4 Carbon' : '3.8 Flash'), effort: 'Low' }, clicks = [];
   const choices = { '3.8 Flash': ['Low', 'Medium', 'High'], '4 Argon': ['Low', 'High'], 'Future Lite': [] };
   if (options.modern) { delete choices['Future Lite']; choices['3.5 Flash-Lite'] = []; choices['4 Carbon'] = ['Low', 'Medium', 'High']; }

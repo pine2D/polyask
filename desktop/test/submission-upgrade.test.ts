@@ -359,5 +359,5 @@ test("the late-confirmation path has no way to send: no dispatch, confirm probe 
       /sendCommand|confirmSubmitted|dispatch|wasSubmitted|coordinator|\.send\(/, file);
   }
   // Claude 没有、也不能有只读 submitted()：broadcast.ts 的重发闸门按「实现了 submitted()」放行，不分站点。
-  assert.doesNotMatch(readSource("src/site-runtime/adapters-intl.js"), /submitted\s*\(/);
+  assert.doesNotMatch(readSource("src/site-runtime/adapters-claude.js"), /submitted\s*\(/);
 });

@@ -20,7 +20,7 @@ function twentyPixelComposerMustBeFound() {
       querySelector: () => null, dispatchEvent() {}, createElement: () => ({}),
     },
     location: { hostname: "claude.ai" }, innerHeight: 800, innerWidth: 900,
-    chrome: { runtime: { onMessage: { addListener() {} } } }, t: (key) => key,
+    t: (key) => key,
     Event: FakeEvent, InputEvent: FakeEvent, KeyboardEvent: FakeEvent, MouseEvent: FakeEvent, CustomEvent: FakeEvent,
     matchMedia: () => ({ matches: true }), setTimeout, clearTimeout, Date,
   };
@@ -48,7 +48,7 @@ function claudeModelInMoreMenuMustBeSelected() {
     },
   };
   const S = fakeRuntime(document, clicked, (el) => { if (el === more) expanded = true; });
-  vm.runInNewContext(source("adapters-intl.js"), { window: { __AMS: S }, t: (key) => key, document, console });
+  vm.runInNewContext(source("adapters-claude.js"), { window: { __AMS: S }, t: (key) => key, document, console });
   return S.adapters["claude.ai"]._selectModel(/fable\s*5/i).then(() => {
     assert.ok(clicked.includes(fable), "Claude 深度思考模型必须能从 More models 子菜单选中");
     assert.ok(S.escCount >= 1, "选中模型的成功路径必须 escMenus 收尾");
@@ -79,7 +79,7 @@ function geminiCase(build) {
   // 真机 2026-08-31：Escape / backdrop 都关不掉 Gemini 的 mode picker（escMenus 故意不改 open），
   // 只有再点一次触发器才收 —— 假对象照抄这个语义，否则 _close 的兜底分支永远测不到。
   S.clickEl = (el) => { clicked.push(el); if (el === button) open = false; return true; };
-  vm.runInNewContext(source("adapters-intl3.js"), { window: { __AMS: S }, t: (key) => key, document, console });
+  vm.runInNewContext(source("adapters-gemini.js"), { window: { __AMS: S }, t: (key) => key, document, console });
   return { adapter: S.adapters["gemini.google.com"], S, clicked, items, state, button, isOpen: () => open };
 }
 
@@ -186,7 +186,7 @@ async function uncertainClickMustNotFallBackToEnter() {
       querySelector: (selector) => selector.includes("send") ? sidebarDecoy : null,
       execCommand: (command, _ui, value) => { if (command === "insertText") composerText = value; return true; },
     },
-    chrome: { runtime: { onMessage: { addListener() {} } } }, t: (key) => key,
+    t: (key) => key,
     Event: FakeEvent, InputEvent: FakeEvent, KeyboardEvent: FakeEvent, MouseEvent: FakeEvent, CustomEvent: FakeEvent,
     matchMedia: () => ({ matches: true }), setTimeout, clearTimeout, Date, getSelection: () => { throw new Error("no selection"); },
   };

@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 function fixture(modern, legacy = []) {
   const S = { adapters: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/site-runtime/adapters-intl.js'), 'utf8'), {
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/site-runtime/adapters-claude.js'), 'utf8'), {
     window: { __AMS: S }, document: { querySelectorAll: selector =>
       selector === '[data-testid="assistant-message"]' ? modern : selector === '.font-claude-response' ? legacy : [] }
   });

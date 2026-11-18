@@ -10,11 +10,11 @@ const vm = require("node:vm");
 const source = (file) => fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8");
 
 function runtime(submitted, { paints = true, transition = null } = {}) {
-  let listener = null;
+
   const context = {
     window: {}, location: { hostname: "kimi.com" }, Date, setTimeout, clearTimeout, console,
     document: { activeViewTransition: transition },
-    chrome: { runtime: { onMessage: { addListener(fn) { listener = fn; } } } },
+
     // 停帧的视图：rAF 永不回调（被遮挡后跨文档导航，2026-10-04 真机）
     requestAnimationFrame: paints ? (fn) => setTimeout(fn, 5) : () => 0,
   };
@@ -23,7 +23,7 @@ function runtime(submitted, { paints = true, transition = null } = {}) {
   context.window.__AMS.adapters["kimi.com"] = submitted === undefined ? { state: () => null } : { state: () => null, submitted };
   return (deadline = Date.now() + 300) => new Promise((resolve) => {
     const respond = (value) => resolve(JSON.parse(JSON.stringify(value))); // vm 跨 realm：按值比较
-    const async = listener({ source: "AMS", cmd: "wasSubmitted", text: "question", deadline }, {}, respond);
+    const async = context.window.__AMS.handleCommand({ source: "AMS", cmd: "wasSubmitted", text: "question", deadline }, respond);
     if (async !== true) setTimeout(() => resolve({ unanswered: true }), 0);
   });
 }

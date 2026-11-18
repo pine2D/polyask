@@ -65,7 +65,7 @@ function fixture(options = {}) {
   };
   const context = { document, window: { __AMS: S }, t: key => key,
     MouseEvent: class { constructor(type) { this.type = type; } } };
-  for (const file of ["selection-match.js", "adapters-cn4.js"])
+  for (const file of ["selection-match.js", "adapters-qianwen.js"])
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/site-runtime", file), "utf8"), context);
   return { adapter: S.adapters["qianwen.com"], state, trigger };
 }

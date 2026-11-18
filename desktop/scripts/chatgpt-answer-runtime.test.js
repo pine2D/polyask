@@ -7,7 +7,7 @@ const path = require('node:path');
 const modern = '[data-content-search-unit-key]:has([data-conversation-role="assistant"]) [data-markdown-text-style="assistant-message"]';
 function setup(matches) {
   const S = { adapters: {} };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/site-runtime/adapters-intl2.js'), 'utf8'), {
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/site-runtime/adapters-chatgpt.js'), 'utf8'), {
     window: { __AMS: S }, document: { querySelectorAll: selector => matches[selector] || [] }
   });
   return S.adapters['chatgpt.com'];

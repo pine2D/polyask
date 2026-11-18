@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
-// site-runtime/adapters-intl2.js（ChatGPT）的离线回归。2026-08-31 改版把档位从「Effort 子菜单里的
+// site-runtime/adapters-chatgpt.js（ChatGPT）的离线回归。2026-08-31 改版把档位从「Effort 子菜单里的
 // menuitemradio 列表」换成「Power 项上的一根 5 格滑块」，键盘驱动；这里把出事那天的 DOM 做成假对象。
 const assert = require("node:assert/strict");
 const vm = require("node:vm");
@@ -118,7 +118,7 @@ function newTurnMustBeCollected() {
   const context = { window: { __AMS: S }, t: (key) => key, console,
     document: { querySelector: () => null,
       querySelectorAll: (s) => s === '[data-turn="assistant"]' ? turns : [] } };
-  vm.runInNewContext(source("adapters-intl2.js"), context);
+  vm.runInNewContext(source("adapters-chatgpt.js"), context);
   assert.equal((S.adapters["chatgpt.com"].answer()) === (markdown), true, "ChatGPT 新版 data-turn 回答必须可被汇总复制");
 }
 

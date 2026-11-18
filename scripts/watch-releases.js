@@ -40,7 +40,7 @@ const SOURCES = [
   { key: "openai", name: "OpenAI / ChatGPT", url: "https://openai.com/news/rss.xml", kind: "rss",
     filter: /gpt|chatgpt|model|\bo[0-9]\b|release|introducing/i,
     highSignal: /\b(gpt[-\s]?[0-9][\w.\-]*|o[0-9]+(?:-\w+)?|new model|model release|now available in chatgpt|rolling out.*model)\b/i,
-    adapter: "desktop/src/site-runtime/adapters-intl2.js" },
+    adapter: "desktop/src/site-runtime/adapters-chatgpt.js" },
   // claude 源 2026-08 纠偏：原 platform.claude.com 是开发者 Console/API/SDK changelog，窗口内 5 条
   // issue 全是 API 基建噪音、零命中消费端变化；换成 support.claude.com 的消费端 release notes（Intercom
   // 文章页，服务端渲染，实测可直接 GET）。日期是「月份大标题（H2）+ 日期小标题（H3）」两级结构，
@@ -49,14 +49,14 @@ const SOURCES = [
   { key: "claude", name: "Anthropic / Claude（消费端）", url: "https://support.claude.com/en/articles/12138966-release-notes", kind: "datedSections", surface: "web",
     filter: /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+\d{1,2},\s*20\d\d$/i,
     groupHeaderRe: /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+20\d\d$/i,
-    adapter: "desktop/src/site-runtime/adapters-intl.js" },
+    adapter: "desktop/src/site-runtime/adapters-claude.js" },
   { key: "gemini", name: "Google / Gemini", url: "https://gemini.google/release-notes/", kind: "datedSections", surface: "web",
-    filter: /^20\d\d[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/, adapter: "desktop/src/site-runtime/adapters-intl3.js" },
+    filter: /^20\d\d[.\-\/]\d{1,2}[.\-\/]\d{1,2}$/, adapter: "desktop/src/site-runtime/adapters-gemini.js" },
   // gemini 官方 release notes（上面那条）2026-08 被实证漏记 3.7 Flash 换档这类选择器级变化——真正
   // 发模型公告的是 blog.google 的 Gemini Models 专栏，且该栏目自带 /rss/（各 blog.google 栏目通用
   // 惯例，实测可直接 GET）。key 用 "gemini-blog" 而非复用 "gemini"，两源独立去重、互不影响。
   { key: "gemini-blog", name: "Google / Gemini 官方博客", url: "https://blog.google/innovation-and-ai/models-and-research/gemini-models/rss/", kind: "rss",
-    filter: /gemini|flash|pro|model/i, highSignal: /\bintroducing\b/i, adapter: "desktop/src/site-runtime/adapters-intl3.js" },
+    filter: /gemini|flash|pro|model/i, highSignal: /\bintroducing\b/i, adapter: "desktop/src/site-runtime/adapters-gemini.js" },
   { key: "deepseek", name: "DeepSeek", url: "https://api-docs.deepseek.com/updates/", kind: "datedSections", surface: "api",
     filter: /20\d\d-\d{1,2}-\d{1,2}/, adapter: "desktop/src/site-runtime/adapters-cn.js" },
   { key: "zhipu", name: "智谱 / chatglm", url: "https://docs.bigmodel.cn/cn/update/new-releases", kind: "zhipu", surface: "api",
@@ -76,7 +76,7 @@ const SOURCES = [
   { key: "bailian", name: "阿里云百炼·模型上线表（跨厂商）", url: "https://help.aliyun.com/en/model-studio/newly-released-models", kind: "bailian", surface: "api",
     filter: /^20\d\d-\d{1,2}-\d{1,2}$/, highSignal: NEVER_HIGH_SIGNAL,
     lowSignalNote: "低信号条目：阿里云百炼是跨厂商 API 上线表（Qwen/GLM/Kimi 等厂商模型经百炼平台上线），只代表 API 侧已可调用，不代表对应网页产品（qianwen.com / chatglm.cn / kimi.com 等）的模型选择器已同步这个模型——需要按条目里的厂商真机核对具体站点才能确认 UI 是否变化。",
-    adapter: "按行内 Model type 对应厂商站点定，例如 Qwen 系→desktop/src/site-runtime/adapters-cn4.js，GLM/Kimi 系→desktop/src/site-runtime/adapters-cn2.js" },
+    adapter: "按行内 Model type 对应厂商站点定，例如 Qwen 系→desktop/src/site-runtime/adapters-qianwen.js，GLM/Kimi 系→desktop/src/site-runtime/adapters-cn2.js" },
 ];
 
 async function fetchText(url, retry = 1) {

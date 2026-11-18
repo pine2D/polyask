@@ -18,7 +18,7 @@ function fixture(t, { outsideForm = false } = {}) {
   w.clearTimeout = () => {};
   w.createImageBitmap = async () => ({ close() {} });
   w.t = key => key;
-  w.chrome = { runtime: { onMessage: { addListener() {} } } };
+
   w.eval(source('core.js')); w.eval(source('upload.js'));
   const S = w.__AMS;
   S.sendBtn = () => ({ disabled: false, click() { clicks++; composer.value = ''; } });

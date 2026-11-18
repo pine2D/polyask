@@ -37,7 +37,7 @@ function runtime({ kind = "textarea", rollback, initial = "OLD QUESTION", render
     window: {}, document: { querySelectorAll: () => [composer] },
     location: { hostname: "fixture.invalid" }, innerWidth: 1000, innerHeight: 1000,
     HTMLTextAreaElement: Textarea, Event, InputEvent: Event, KeyboardEvent: Event,
-    chrome: { runtime: { onMessage: { addListener() {} } } },
+
     Date: { now: () => now }, clearTimeout() {},
     setTimeout(fn, ms) {
       now += ms;

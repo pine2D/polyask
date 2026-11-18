@@ -46,7 +46,7 @@ function claudeEffortCase(options) {
     state.label = "Model: " + state.model + " · " + state.effort;
     return true;
   };
-  vm.runInNewContext(source("adapters-intl.js"), { window: { __AMS: S }, t: (key) => key, document, console });
+  vm.runInNewContext(source("adapters-claude.js"), { window: { __AMS: S }, t: (key) => key, document, console });
   return { adapter: S.adapters["claude.ai"], S, clicked, tiers, models, state };
 }
 

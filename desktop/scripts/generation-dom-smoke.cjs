@@ -18,7 +18,7 @@ app.whenReady().then(async () => {
   await evaluate(source('core.js'));
   assert.equal(await evaluate(`(()=>{const answer=document.createElement('div');answer.setAttribute('data-chatgpt-selection-message-id','canvas');answer.innerHTML='<div contenteditable="true" style="width:384px;height:3252px">Synthetic answer</div>';document.body.append(answer);const ok=window.__AMS.findComposer()===document.querySelector('textarea');answer.remove();return ok;})()`), true);
   await evaluate(`window.__AMS={adapters:{},toMarkdown:n=>n.textContent,findComposer:()=>document.querySelector('textarea')};void 0;`);
-  for (const file of ['adapters-intl2.js', 'generation.js', 'history-adapters.js', 'history.js']) await evaluate(source(file));
+  for (const file of ['adapters-chatgpt.js', 'generation.js', 'history-adapters.js', 'history.js']) await evaluate(source(file));
   const results = await evaluate(`(async()=>{
     const S=window.__AMS,a=S.adapters['chatgpt.com'],turns=document.querySelector('#turns');
     const user=t=>'<div data-user-message-bubble>'+t+'</div>';
@@ -45,7 +45,7 @@ app.whenReady().then(async () => {
   assert.deepEqual(results, { oldRejected: true, thoughtExcluded: true, current: { text: 'New question', count: 2, answer: 'New answer', key: 'new', root: 'new', owned: true, captured: 'New answer' }, replacement: true, followupRejected: true, dedup: { count: 1, text: 'Question' } });
   await win.loadURL('https://chatgpt.com/');
   await evaluate(`window.__AMS={adapters:{},toMarkdown:n=>n.textContent};void 0;`);
-  for (const file of ['adapters-intl2.js', 'history-adapters.js', 'history.js']) await evaluate(source(file));
+  for (const file of ['adapters-chatgpt.js', 'history-adapters.js', 'history.js']) await evaluate(source(file));
   const settlement = await evaluate(`(async()=>{
     const S=window.__AMS,turns=document.querySelector('#turns');
     S.history.begin('settling','Synthetic question');
@@ -62,7 +62,7 @@ app.whenReady().then(async () => {
   assert.deepEqual(settlement, { bound: true, owned: true, text: 'Saved answer', otherRejected: true });
   await win.loadURL('https://chatgpt.com/c/streaming');
   await evaluate(`window.__AMS={adapters:{},toMarkdown:n=>n.textContent};void 0;`);
-  for (const file of ['adapters-intl2.js', 'history-adapters.js', 'history.js']) await evaluate(source(file));
+  for (const file of ['adapters-chatgpt.js', 'history-adapters.js', 'history.js']) await evaluate(source(file));
   const wrapping = await evaluate(`(async()=>{
     const S=window.__AMS,turns=document.querySelector('#turns');
     S.history.begin('wrapping','Question');

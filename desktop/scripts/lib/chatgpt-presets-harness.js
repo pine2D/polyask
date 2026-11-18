@@ -1,7 +1,7 @@
 'use strict';
 const { page } = require('./site-preset-harness');
 function chatgpt(options = {}) {
-  const f = page('chatgpt.com', '<button id="trigger" data-composer-navigation-target="reasoning" aria-haspopup="menu"></button>', ['adapters-intl2', 'chatgpt-default', 'chatgpt-preset-slider', 'chatgpt-presets']);
+  const f = page('chatgpt.com', '<button id="trigger" data-composer-navigation-target="reasoning" aria-haspopup="menu"></button>', ['adapters-chatgpt', 'chatgpt-default', 'chatgpt-preset-slider', 'chatgpt-presets']);
   const choices = options.legacy ? { '6': ['6 Instant', '6 Medium', '6 High', '6 Extra High', '6 Pro'], 'Future 8': ['Future Light', 'Future Deep'] }
     : { Default: options.defaultPresets || ['GPT-6 Luna High', 'GPT-6.1 Sol Light', 'GPT-6.1 Sol Medium', 'GPT-6 Astra Light', 'GPT-6 Astra Medium', 'GPT-6 Astra Extra High'], 'Future 8': ['Future Light', 'Future Deep'] };
   const state = { model: Object.keys(choices)[0], index: 1, open: false, pane: 'simple' }, clicks = [], keys = [], button = f.d.querySelector('button');

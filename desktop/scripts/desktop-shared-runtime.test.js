@@ -102,23 +102,12 @@ function i18nKeysMustMatchSiteRuntimeUsage() {
   for (const key of rows.keys()) assert.ok(used.has(key), `i18n.js 的 ${key} 没有任何 t("${key}") 调用点 → 死词条，删掉或把调用点写进 TERNARY_KEYS`);
 }
 
-// chrome.runtime.onMessage 监听器注册点有且只有一个（core.js）：preload 的 dispatch 是遍历分发，多一个监听器
-// 就会有两方争抢同一条命令；少一个则九站收不到任何命令。放在离线测试里数，绝不在 preload 模块作用域硬断言。
-function siteRuntimeMustRegisterExactlyOneMessageListener() {
-  let count = 0;
-  for (const file of preloadRequires()) count += (source(file).match(/onMessage\.addListener\(/g) ?? []).length;
-  assert.equal(count, 1, "site-runtime 里 chrome.runtime.onMessage.addListener 必须恰好出现一次");
-  assert.doesNotMatch(source("desktop/src/preload/site.ts"), /listeners\[0\]/, "preload 不得只取第一个监听器");
-}
-
 function coreMustResolveTranslationAcrossModuleBoundary() {
-  let listener = null;
   const context = baseContext({
     __AMS_I18N__: Object.freeze({ t: (key) => `desktop:${key}` }),
-    chrome: { runtime: { onMessage: { addListener(fn) { listener = fn; } } } },
   });
   runAsBundledModule(`${SITE_RUNTIME}/core.js`, context);
-  assert.equal(typeof listener, "function");
+  assert.equal(typeof context.window.__AMS.handleCommand, "function");
   assert.equal(context.window.__AMS.diagnose()[0].name, "desktop:cs_siteAdapter");
 }
 
@@ -147,8 +136,8 @@ function diagMustResolveTranslationAcrossModuleBoundary() {
 // 磁盘上 site-runtime 的每一个 *.js 都必须被 preload require（没有豁免：扩展专用的 pill.js 已随扩展删除）。
 // preload 注入的完整顺序链：i18n 先于一切；core 先于 send/upload/md（它们读 window.__AMS）；
 // 七卷适配器先于 generation/diag（后两者包装 __AMS.adapters）。新开一卷适配器要在这里登记位置。
-const PRELOAD_CHAIN = Object.freeze(["i18n", "core", "read-commands", "tier", "selection-match", "preset-common", "preset-dom", "send", "upload", "md-head", "md-diagram", "md", "prompt-markup", "adapters-intl", "claude-presets", "preset-command", "adapters-intl2", "chatgpt-default", "chatgpt-preset-slider", "chatgpt-presets", "adapters-intl3", "gemini-presets",
-  "adapters-cn", "deepseek-presets", "doubao-presets", "adapters-cn2", "kimi-presets", "chatglm-presets", "adapters-cn3", "yuanbao-presets", "adapters-cn4", "qianwen-presets", "generation", "history-route", "history", "history-locate", "history-adapters", "diag"].map((name) => `${SITE_RUNTIME}/${name}.js`));
+const PRELOAD_CHAIN = Object.freeze(["i18n", "core", "read-commands", "tier", "selection-match", "preset-common", "preset-dom", "send", "upload", "md-head", "md-diagram", "md", "prompt-markup", "adapters-claude", "claude-presets", "preset-command", "adapters-chatgpt", "chatgpt-default", "chatgpt-preset-slider", "chatgpt-presets", "adapters-gemini", "gemini-presets",
+  "adapters-cn", "deepseek-presets", "doubao-presets", "adapters-cn2", "kimi-presets", "chatglm-presets", "adapters-yuanbao", "yuanbao-presets", "adapters-qianwen", "qianwen-presets", "generation", "history-route", "history", "history-locate", "history-adapters", "diag"].map((name) => `${SITE_RUNTIME}/${name}.js`));
 
 // 自洽锚点：preload 的 require 列表 ↔ 磁盘上的 site-runtime/*.js 双向覆盖 + 完整顺序链。
 // 扩展已删除，这一条就是注入清单与顺序的真源。
@@ -185,14 +174,13 @@ function sendBtnMustBeExposedByTheSharedRuntime() {
 
 i18nMustExposeDesktopNamespace();
 i18nKeysMustMatchSiteRuntimeUsage();
-siteRuntimeMustRegisterExactlyOneMessageListener();
 coreMustResolveTranslationAcrossModuleBoundary();
-adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-intl.js`, "claude.ai", "diag_modelEntry");
-adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-intl2.js`, "chatgpt.com", "diag_intelEntry");
-adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-intl3.js`, "gemini.google.com", "diag_modelEntry");
+adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-claude.js`, "claude.ai", "diag_modelEntry");
+adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-chatgpt.js`, "chatgpt.com", "diag_intelEntry");
+adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-gemini.js`, "gemini.google.com", "diag_modelEntry");
 adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-cn.js`, "deepseek.com", "diag_deepThink");
 adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-cn2.js`, "kimi.com", "diag_modelEntry");
-adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-cn3.js`, "yuanbao.tencent.com", "diag_modeBtn");
+adapterMustResolveTranslation(`${SITE_RUNTIME}/adapters-yuanbao.js`, "yuanbao.tencent.com", "diag_modeBtn");
 diagMustResolveTranslationAcrossModuleBoundary();
 preloadRequiresMustCoverContentDirBothWaysInFixedOrder();
 sendBtnMustBeExposedByTheSharedRuntime();

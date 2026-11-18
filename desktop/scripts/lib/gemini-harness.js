@@ -42,7 +42,7 @@ function geminiRuntime({ models = ["3.1 Pro", "4 Argon Complex tasksNew", "3.8 F
     if (node.type === "level" && !ignoredLevel) { level = node.textContent.split(" ")[0]; open = false; expanded = false; }
     return true;
   };
-  vm.runInNewContext(source("adapters-intl3.js"), { window: { __AMS: S }, document,
+  vm.runInNewContext(source("adapters-gemini.js"), { window: { __AMS: S }, document,
     t: key => key, console, KeyboardEvent: class { constructor(type) { this.type = type; } } });
   return { adapter: S.adapters["gemini.google.com"], S, clicked, options, tiers, unrelated,
     isOpen: () => open, current: () => ({ model, level }) };

@@ -1,4 +1,4 @@
-// desktop/src/site-runtime/adapters-cn4.js — 国内站点适配器·续（千问）。
+// 千问 站点适配器。
 // 按站分卷以遵守 300 行上限；selection-match.js 在本卷之前，generation/diag 在本卷之后。
 (function () {
   "use strict";

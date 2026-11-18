@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 "use strict";
-// adapters-cn2.js（Kimi）与 adapters-cn3.js（元宝）的发送 / 附件 / 只读确认语义回归。
+// adapters-cn2.js（Kimi）与 adapters-yuanbao.js（元宝）的发送 / 附件 / 只读确认语义回归。
 // 从 site-send-runtime.test.js 拆出（那份撞 300 行）；档位语义在 cn-tier-runtime.test.js，两边不重叠。
 const assert = require("node:assert/strict");
 const test = require("node:test");
@@ -87,7 +87,7 @@ test("元宝 think 切到 Hy4 preview（站点自动落专家），并使用语�
   };
   const context = helpers(document, { openMenu: (el) => el.click(), dropFiles: () => Promise.resolve(true),
     presetDom: { visible: () => true, enabled: () => true, firstText: el => el.textContent } });
-  vm.runInNewContext(source("adapters-cn3.js"), context);
+  vm.runInNewContext(source("adapters-yuanbao.js"), context);
   const yuanbao = context.window.__AMS.adapters["yuanbao.tencent.com"];
   assert.equal(yuanbao.state(), "fast");
   await yuanbao.think();

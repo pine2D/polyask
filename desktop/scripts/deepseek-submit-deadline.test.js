@@ -22,7 +22,7 @@ function runtime({ start = 1000, readyAt = 1000, drift = 0, expiresWhileReading 
     window: {}, document: { querySelectorAll: selector => selector.includes("textarea") ? [composer] : [button] },
     location: { hostname: "chat.deepseek.com" }, innerWidth: 1000, innerHeight: 1000,
     HTMLTextAreaElement: Textarea, Event: class {},
-    chrome: { runtime: { onMessage: { addListener() {} } } },
+
     Date: { now: () => now },
     setTimeout(fn, ms) {
       now += ms + drift;

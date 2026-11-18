@@ -12,7 +12,7 @@ function presetPage(options = {}) {
   const choices = options.choices || { 'Fable 5.2': ['Low', 'Medium', 'High', 'Extra', 'Max'],
     'Opus 5.5': ['Medium', 'High', 'Max'], 'Future 8.3': ['Balanced', 'Deep'], 'Haiku 5.5': [] };
   const state = { model: 'Fable 5.2', effort: 'Medium' }, clicks = [];
-  let listener, closes = 0;
+  let closes = 0;
   const button = d.querySelector('button');
   function label() {
     button.innerHTML = `<span aria-hidden="true">icon</span><span><span>${state.model}</span>${state.effort ? `<span> ${state.effort}</span>` : ''}</span>`;
@@ -76,16 +76,16 @@ function presetPage(options = {}) {
     if (options.asyncEscape) w.setTimeout(close, 30); else close();
   } });
   w.t = key => key;
-  w.chrome = { runtime: { onMessage: { addListener: fn => { listener = fn; } } } };
-  for (const file of ['core.js', 'tier.js', 'preset-common.js', 'adapters-intl.js', 'claude-presets.js', 'preset-command.js']) {
+
+  for (const file of ['core.js', 'tier.js', 'preset-common.js', 'adapters-claude.js', 'claude-presets.js', 'preset-command.js']) {
     try { w.eval(source(file)); } catch (error) { if (error.code !== 'ENOENT') throw error; }
   }
   const S = w.__AMS;
   S.generationProbe = () => options.generating ? 'generating' : 'idle';
   return { dom, state, clicks, S, a: S.adapters['claude.ai'], closes: () => closes,
     menus: () => d.querySelectorAll('[role="menu"]').length,
-    dispatch: message => new Promise(resolve => listener({ source: 'AMS', deadline: Date.now() + 10000, ...message }, {}, resolve)),
-    command: action => new Promise(resolve => listener({ source: 'AMS', cmd: 'tierPreset', action, deadline: Date.now() + 10000 }, {}, resolve)),
+    dispatch: message => new Promise(resolve => w.__AMS.handleCommand({ source: 'AMS', deadline: Date.now() + 10000, ...message }, resolve)),
+    command: action => new Promise(resolve => w.__AMS.handleCommand({ source: 'AMS', cmd: 'tierPreset', action, deadline: Date.now() + 10000 }, resolve)),
     close: () => dom.window.close() };
 }
 module.exports = { presetPage };

@@ -58,7 +58,7 @@ function loadCore() {
   };
   const context = {
     window: {}, document, location: { hostname: "example.com" }, innerHeight: 800, innerWidth: 900,
-    chrome: { runtime: { onMessage: { addListener() {} } } }, t: (key) => key,
+    t: (key) => key,
     HTMLTextAreaElement: Textarea, HTMLInputElement: class {},
     Event: FakeEvent, InputEvent: FakeEvent, KeyboardEvent: FakeEvent, MouseEvent: FakeEvent, CustomEvent: FakeEvent,
     getSelection: () => ({ removeAllRanges() {}, addRange() {} }), matchMedia: () => ({ matches: true }),
@@ -125,7 +125,7 @@ async function geminiMissingControlsRequireAction() {
     window: { __AMS: S }, t: (key) => key, console,
     document: { querySelector: () => null, querySelectorAll: () => [] },
   };
-  vm.runInNewContext(fs.readFileSync(path.join(ROOT, "adapters-intl3.js"), "utf8"), context);
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT, "adapters-gemini.js"), "utf8"), context);
   assert.equal(await S.adapters["gemini.google.com"].attach([{}], {}, Date.now() + 500), "attachment_action_required");
 }
 

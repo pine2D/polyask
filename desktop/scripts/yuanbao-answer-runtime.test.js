@@ -1,5 +1,5 @@
 "use strict";
-// 元宝 answer()（adapters-cn3.js）与汇总复制（read-commands.js collectAnswer → md.js）在 jsdom 里跑整条 preload 链。
+// 元宝 answer()（adapters-yuanbao.js）与汇总复制（read-commands.js collectAnswer → md.js）在 jsdom 里跑整条 preload 链。
 // DOM 形状取自 2026-10-04 真机：思考段在 .agent-process-timeline 里，同样是 .hyc-common-markdown（带 -style-cot 修饰）；
 // 正文引用角标 .hyc-common-markdown__ref-list 里是 13×13、无 alt 的来源图标。
 const assert = require("node:assert/strict");
