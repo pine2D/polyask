@@ -34,7 +34,7 @@ import type { PromptLibraryState, PromptTemplate } from "../shared/prompt-librar
 import type { DisplayPreferences } from "../shared/display";
 import type {
   BootstrapState, BroadcastRequest, CollectedAnswer, CollectionRequest, DesktopSurface,
-  LayoutState, MenuShortcut, NewSessionSiteResult, SiteHistoryState, SiteRunResult, SiteStatus
+  LayoutState, MenuShortcut, NewSessionSiteResult, SiteNavigationHistoryState, SiteRunResult, SiteStatus
 } from "../shared/protocol";
 import type { WorkspaceState } from "../shared/workspace";
 import type { SyncStatus } from "../shared/sync";
@@ -149,7 +149,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   focusCurrentSite(): void;
   restorePanelFocus(restore?: boolean): Promise<boolean>;
   stepHistory(offset: -1 | 1, site?: SiteKey): void;
-  siteHistoryState(): Promise<Record<string, SiteHistoryState>>;
+  siteHistoryState(): Promise<Record<string, SiteNavigationHistoryState>>;
   setDisplayPreferences(value: DisplayPreferences): Promise<DisplayPreferences>;
   setComposerExpanded(value: boolean): void;
   setDrawerOpen(value: boolean): void;

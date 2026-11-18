@@ -85,7 +85,7 @@ export function useWorkbenchConfirmations(options: UseWorkbenchConfirmationsOpti
     },
     onClose: () => changeSurface("sites"),
     onInspect: (site, active) => inspectBroadcastSite(site, {
-      isSelected: (key) => workspaceFlow.currentSelection().includes(key),
+      isSelected: (key) => workspaceFlow.currentOpenedSites().includes(key),
       active,
       focus: async (key) => {
         const accepted = await shell.inspectSite(key);

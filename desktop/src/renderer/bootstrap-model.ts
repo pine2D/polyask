@@ -1,3 +1,13 @@
+import type { LayoutState } from "../shared/protocol";
+
+export const INITIAL_LAYOUT: LayoutState = {
+  mode: "overview",
+  focused: "claude",
+  page: 0,
+  pageCount: 1,
+  placements: []
+};
+
 export type BootstrapPhase = "loading" | "ready" | "failed";
 
 export async function loadBootstrap<State>(

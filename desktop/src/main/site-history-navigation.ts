@@ -1,12 +1,12 @@
 import type { WebContentsView } from 'electron';
-import type { SiteHistoryState, SiteStatus } from '../shared/protocol';
+import type { SiteNavigationHistoryState, SiteStatus } from '../shared/protocol';
 import { siteReloadAllowed } from '../shared/site-health';
 import { allowAppNavigationUnload } from './app-navigation-unload';
 import { RELOAD_COMMIT_CAP_MS } from './reload-commit';
 
 type HistoryContents = WebContentsView['webContents'];
 
-export function siteHistoryState(view: WebContentsView | undefined, phase: SiteStatus['phase'], navigating: boolean): SiteHistoryState {
+export function siteHistoryState(view: WebContentsView | undefined, phase: SiteStatus['phase'], navigating: boolean): SiteNavigationHistoryState {
   // 群发/生成进行中不许动历史，理由同 reload：会把正在写的回答连同页面一起丢掉。
   if (!view || view.webContents.isDestroyed() || !siteReloadAllowed(phase) || navigating) return { back: false, forward: false };
   const history = view.webContents.navigationHistory;
@@ -20,7 +20,7 @@ export interface HistoryStepHooks {
   readonly sameDocument: () => void;
 }
 
-export function navigateSiteHistory(view: WebContentsView | undefined, state: SiteHistoryState, offset: -1 | 1, hooks: HistoryStepHooks): boolean {
+export function navigateSiteHistory(view: WebContentsView | undefined, state: SiteNavigationHistoryState, offset: -1 | 1, hooks: HistoryStepHooks): boolean {
   if (!view || !(offset === -1 ? state.back : state.forward)) return false;
   const contents = view.webContents;
   const history = contents.navigationHistory;

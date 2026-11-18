@@ -29,13 +29,13 @@ test('awaitable openPages shares the optimistic request guard and accepts its ow
     await act(async () => { operation = h.flow().openPages(['claude', 'kimi', 'gemini']); });
     await act(async () => h.flow().accept({ ...h.state, selectedSites: ['claude', 'kimi', 'gemini'] }));
     await act(async () => h.flow().accept(h.state));
-    assert.deepEqual(h.flow().currentSelection(), ['claude', 'kimi', 'gemini']);
+    assert.deepEqual(h.flow().currentOpenedSites(), ['claude', 'kimi', 'gemini']);
     await act(async () => { h.calls[0].finish({ ...h.state, selectedSites: ['claude', 'kimi', 'gemini'] });
       assert.deepEqual(await operation, ['claude', 'kimi', 'gemini']); });
   } finally { await h.close(); }
 });
 
-test('reset invalidates pending open ACKs without changing currentSelection into broadcast participation', async () => {
+test('reset invalidates pending open ACKs without changing currentOpenedSites into broadcast participation', async () => {
   const h = await fixture();
   try {
     let operation!: Promise<readonly SiteKey[]>;
@@ -44,7 +44,7 @@ test('reset invalidates pending open ACKs without changing currentSelection into
     assert.equal(typeof invalidate, 'function', 'local reset needs an explicit pending-open invalidation boundary');
     await act(async () => { invalidate!(); h.flow().accept({ ...h.state, selectedSites: ['deepseek'] }); });
     await act(async () => { h.calls[0].finish({ ...h.state, selectedSites: ['claude', 'kimi', 'gemini'] }); await operation; });
-    assert.deepEqual(h.flow().currentSelection(), ['deepseek']);
+    assert.deepEqual(h.flow().currentOpenedSites(), ['deepseek']);
     assert.deepEqual(h.flow().workspace.selectedSites, ['deepseek']);
   } finally { await h.close(); }
 });
@@ -54,6 +54,6 @@ test('saving a send group uses explicit participants and keeps persisted open-pa
   try {
     await act(async () => { assert.equal(await h.flow().saveGroup('Only Claude', ['claude']), true); });
     assert.deepEqual(h.saved, [{ name: 'Only Claude', sites: ['claude'] }]);
-    assert.deepEqual(h.flow().currentSelection(), ['claude', 'kimi']);
+    assert.deepEqual(h.flow().currentOpenedSites(), ['claude', 'kimi']);
   } finally { await h.close(); }
 });

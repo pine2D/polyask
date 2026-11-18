@@ -92,7 +92,7 @@ for(const reason of ['open-failure','save-failure','tier-failure','cancel','edit
       if(['cancel','edit','new-image','busy','source-expired'].includes(reason)) {
         assert.equal(h.calls.some(call=>call.startsWith('save:')),false,'an invalid task must not start save after the open ACK');
         assert.equal(h.participation().pending,false);assert.equal(h.lock.busy,false);
-        assert.deepEqual(h.flow().currentSelection(),['claude','kimi'],'already accepted open pages are retained');
+        assert.deepEqual(h.flow().currentOpenedSites(),['claude','kimi'],'already accepted open pages are retained');
         assert.deepEqual(h.participation().currentSites(),['claude'],'accepted saved membership is retained without starting save');
       }
       await act(async()=>reason==='save-failure'?h.saving.reject(Error('offline')):h.saving.resolve(reason==='scope-mismatch'?h.state:h.accepted));

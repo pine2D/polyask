@@ -2,7 +2,7 @@ import type { SiteDefinition, SiteKey } from "../shared/contracts";
 import { formatCopy, type DesktopCopy } from "../shared/copy";
 import type {
   LayoutState,
-  SiteHistoryState,
+  SiteNavigationHistoryState,
   SiteStatus
 } from "../shared/protocol";
 import { siteReloadAllowed } from "../shared/site-health";
@@ -34,7 +34,7 @@ interface SiteFramesProps {
   readonly onToggle: (site: SiteKey) => void;
   readonly onFocus: (site: SiteKey) => void;
   readonly onReload: (site: SiteKey) => void;
-  readonly history: Record<string, SiteHistoryState>;
+  readonly history: Record<string, SiteNavigationHistoryState>;
   readonly retrySites?: readonly SiteKey[];
   readonly uncertainSites?: readonly SiteKey[];
   readonly retryDisabled?: boolean;

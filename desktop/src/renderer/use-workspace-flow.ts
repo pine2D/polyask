@@ -13,9 +13,9 @@ export function useWorkspaceFlow(
   failedMessage: string,
   announce: (value: string) => void
 ) {
-  const selectionRef = useRef<readonly SiteKey[]>([]);
-  const selectionRequest = useRef(0);
-  const pendingSelection = useRef<readonly SiteKey[] | null>(null);
+  const openedSitesRef = useRef<readonly SiteKey[]>([]);
+  const openRequest = useRef(0);
+  const pendingOpenedSites = useRef<readonly SiteKey[] | null>(null);
   const participationRequest = useRef(0);
   const pendingParticipation = useRef<readonly SiteKey[] | null>(null);
   const acceptedWorkspace = useRef<WorkspaceState>(INITIAL_WORKSPACE);
@@ -24,34 +24,34 @@ export function useWorkspaceFlow(
     const latest = acceptedWorkspace.current;
     if (compareSyncVersion(latest.participationVersion ?? {}, value.participationVersion ?? {}) > 0) value = latest;
     acceptedWorkspace.current = value;
-    const selectedSites = pendingSelection.current ?? value.selectedSites;
-    selectionRef.current = selectedSites;
+    const selectedSites = pendingOpenedSites.current ?? value.selectedSites;
+    openedSitesRef.current = selectedSites;
     setWorkspace({ ...value, selectedSites,
       ...(pendingParticipation.current ? { participatingSites: pendingParticipation.current } : {}) });
   };
   const recover = (notify = true): void => {
-    pendingSelection.current = null;
+    pendingOpenedSites.current = null;
     accept(acceptedWorkspace.current);
-    const request = ++selectionRequest.current;
+    const request = ++openRequest.current;
     if (notify) announce(failedMessage);
     void shell.bootstrap().then((state) => {
-      if (request === selectionRequest.current) accept(state.workspace);
+      if (request === openRequest.current) accept(state.workspace);
     }).catch(() => undefined);
   };
   const openPages = async (value: readonly SiteKey[], isCurrent = () => true): Promise<readonly SiteKey[]> => {
     const ordered = [...new Set(value)].filter((key) => sites.some((site) => site.key === key));
-    const request = ++selectionRequest.current;
-    pendingSelection.current = ordered;
-    selectionRef.current = ordered;
+    const request = ++openRequest.current;
+    pendingOpenedSites.current = ordered;
+    openedSitesRef.current = ordered;
     setWorkspace((current) => ({ ...current, selectedSites: ordered }));
     try {
       const state = await shell.setSelection(ordered);
-      if (request !== selectionRequest.current) return selectionRef.current;
-      pendingSelection.current = null;
+      if (request !== openRequest.current) return openedSitesRef.current;
+      pendingOpenedSites.current = null;
       accept(state);
-      return selectionRef.current;
+      return openedSitesRef.current;
     } catch (error) {
-      if (request === selectionRequest.current) recover(isCurrent());
+      if (request === openRequest.current) recover(isCurrent());
       throw error;
     }
   };
@@ -61,10 +61,10 @@ export function useWorkspaceFlow(
   return {
     workspace,
     openedSites,
-    currentSelection: () => selectionRef.current,
+    currentOpenedSites: () => openedSitesRef.current,
     accept,
     invalidate: () => {
-      selectionRequest.current++; pendingSelection.current = null;
+      openRequest.current++; pendingOpenedSites.current = null;
       participationRequest.current++; pendingParticipation.current = null;
       acceptedWorkspace.current = INITIAL_WORKSPACE;
     },
@@ -84,7 +84,7 @@ export function useWorkspaceFlow(
       }
     },
     toggleSite: (site: SiteKey) => {
-      const next = new Set(selectionRef.current);
+      const next = new Set(openedSitesRef.current);
       if (next.has(site)) next.delete(site); else next.add(site);
       changeSelection([...next]);
     },
@@ -96,7 +96,7 @@ export function useWorkspaceFlow(
         return result.results;
       } catch { recover(isCurrent()); return null; }
     },
-    saveGroup: async (name: string, participating: readonly SiteKey[] = selectionRef.current): Promise<boolean> => {
+    saveGroup: async (name: string, participating: readonly SiteKey[] = openedSitesRef.current): Promise<boolean> => {
       try {
         accept(await shell.saveGroup({ name, sites: [...participating] }));
         return true;

@@ -16,7 +16,7 @@ function createOptions(overrides: Partial<Parameters<typeof buildAppCommands>[0]
       claude: { site: "claude", phase: "generating" },
       chatgpt: { site: "chatgpt", phase: "failed", code: "load_failed" }
     },
-    siteHistory: { claude: { back: true, forward: false } },
+    siteNavigationHistory: { claude: { back: true, forward: false } },
     drawerOpen: true,
     composer: { expanded: false, setExpanded() {} },
     promptRef: { current: null },
@@ -86,7 +86,7 @@ test("buildAppCommands gates conditional commands on page count, history, partic
       openedSites: ["claude"],
       participatingSites: new Set(),
       statuses: {},
-      siteHistory: {},
+      siteNavigationHistory: {},
       retrySitesCount: 0
     }));
     assert.equal(emptyParticipation["next-page"], undefined);

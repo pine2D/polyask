@@ -7,7 +7,7 @@ import type {
   DesktopSurface,
   LayoutState,
   SiteCollectionResult,
-  SiteHistoryState,
+  SiteNavigationHistoryState,
   SiteResponseEnvelope,
   SiteResult,
   SiteStatus,
@@ -256,7 +256,7 @@ export class ViewManager {
     return this.navigation.navigateHistory(site, offset, this.isConfirmationActive());
   }
 
-  canNavigateHistory(site: SiteKey): SiteHistoryState {
+  canNavigateHistory(site: SiteKey): SiteNavigationHistoryState {
     return this.navigation.canNavigateHistory(site);
   }
 
@@ -264,7 +264,7 @@ export class ViewManager {
     return this.workspace.isConfirmationActive();
   }
 
-  historyState(): Record<string, SiteHistoryState> {
+  historyState(): Record<string, SiteNavigationHistoryState> {
     return this.navigation.historyState(this.workspace.selected);
   }
 

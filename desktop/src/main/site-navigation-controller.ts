@@ -1,7 +1,7 @@
 import type { Session, WebContents, WebContentsView } from "electron";
 
 import type { SiteKey } from "../shared/contracts";
-import type { SiteHistoryState } from "../shared/protocol";
+import type { SiteNavigationHistoryState } from "../shared/protocol";
 import { siteReloadAllowed } from "../shared/site-health";
 import type { SiteCommandChannel } from "./site-command-channel";
 import { clearSiteDataAndReload } from "./site-data-recovery";
@@ -51,7 +51,7 @@ export class SiteNavigationController {
     });
   }
 
-  canNavigateHistory(site: SiteKey): SiteHistoryState {
+  canNavigateHistory(site: SiteKey): SiteNavigationHistoryState {
     return siteHistoryState(
       this.deps.getView(site),
       this.deps.statuses.current(site).phase,
@@ -61,8 +61,8 @@ export class SiteNavigationController {
 
   // 一次给出全部已勾选站点的可用性：格子头部的后退按钮与 Alt+Left 共用同一份状态，
   // 避免两处各查一次而显示不一致。
-  historyState(selectedSites: readonly SiteKey[]): Record<string, SiteHistoryState> {
-    const state: Record<string, SiteHistoryState> = {};
+  historyState(selectedSites: readonly SiteKey[]): Record<string, SiteNavigationHistoryState> {
+    const state: Record<string, SiteNavigationHistoryState> = {};
     for (const site of selectedSites) state[site] = this.canNavigateHistory(site);
     return state;
   }

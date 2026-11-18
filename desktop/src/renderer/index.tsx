@@ -9,7 +9,7 @@ import {
   type DesktopSurface,
   type LayoutState,
   type MenuShortcut,
-  type SiteHistoryState,
+  type SiteNavigationHistoryState,
   type SiteStatus
 } from "../shared/protocol";
 import type { QuestionRunProgress } from "../shared/question-run-progress";
@@ -17,7 +17,7 @@ import type { RuntimeInfo } from "../shared/runtime";
 import { describeStatus } from "../shared/status-copy";
 import type { SyncStatus } from "../shared/sync";
 import { buildAppCommands } from "./app-commands";
-import { loadBootstrap, type BootstrapPhase } from "./bootstrap-model";
+import { INITIAL_LAYOUT, loadBootstrap, type BootstrapPhase } from "./bootstrap-model";
 import { broadcastFeedback } from "./broadcast-feedback";
 import { ExclusiveActionLock } from "./broadcast-flow-state";
 import { executeCommand, type CommandActions } from "./command-dispatcher";
@@ -26,6 +26,7 @@ import { focusPromptForEditing } from "./composer-activation";
 import { applyDisplayDensity, loadDisplayPreferences } from "./display-preferences";
 import { FeedbackProvider, usePreviewBadge } from "./feedback-provider";
 import { imageSupportWarning } from "./image-support-warning";
+import { resetLocalSession } from "./local-data-reset";
 import { confirmAndStartNewSession } from "./new-session-action";
 import { currentPlatform, isMac } from "./platform";
 import type { QuestionReadingRequest } from "./question-reading-request";
@@ -69,14 +70,6 @@ import "./settings.css";
 import "./accessibility.css";
 import "./feedback.css";
 
-const INITIAL_LAYOUT: LayoutState = {
-  mode: "overview",
-  focused: "claude",
-  page: 0,
-  pageCount: 1,
-  placements: []
-};
-
 const INITIAL_DISPLAY = loadDisplayPreferences(
   window.localStorage,
   window.matchMedia("(pointer: coarse)").matches
@@ -107,7 +100,7 @@ function App(): React.JSX.Element {
   const [sites, setSites] = useState<readonly SiteDefinition[]>([]);
   const paletteShortcut = useCommandPaletteShortcut();
   const [menuShortcuts, setMenuShortcuts] = useState<readonly MenuShortcut[]>([]);
-  const [siteHistory, setSiteHistory] = useState<Record<string, SiteHistoryState>>({});
+  const [siteNavigationHistory, setSiteNavigationHistory] = useState<Record<string, SiteNavigationHistoryState>>({});
   // Alt+N 的确认改用应用内弹层（原生 dialog.showMessageBox 与本应用外观格格不入）。
   // 存 resolve 而不是布尔：调用方仍是 `await` 的形态，业务逻辑不必改写成回调。
   const [pendingNewSession, setPendingNewSession] = useState<PendingSessionConfirmation | null>(null);
@@ -306,8 +299,8 @@ function App(): React.JSX.Element {
     onBlockingChange: (blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface) });
   const { collectAndCopy, collectSynthesis, collectAndCompare: captureComparison } = archiveFlow.createCollectionActions(runAuxiliary, setAnnouncement);
   const operationBusy = runState !== "idle" || auxiliaryBusy || participation.pending;
-  const collectAndCompare = !operationBusy && participation.participating.filter(site => statuses[site]?.phase === "complete").length >= 2
-    ? captureComparison : undefined;
+  const completedParticipants = participation.participating.filter(site => statuses[site]?.phase === "complete");
+  const collectAndCompare = !operationBusy && completedParticipants.length >= 2 ? captureComparison : undefined;
   const startNewSession = async (): Promise<void> => {
     if (draftConfirmation.isBlocking() || pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     if (newSessionInFlight.current || participation.pending || actionLock.current!.busy) return;
@@ -318,6 +311,20 @@ function App(): React.JSX.Element {
     }); } finally { newSessionInFlight.current = false; }
   };
   const {showGroupMenu, showMoreMenu} = workspaceMenuActions(workspace.groups, participation.change, commandActions, () => setAnnouncement(copy.workspaceActionFailed));
+
+  const onLocalReset = (): void => {
+    void preferences.refresh();
+    workspaceFlow.invalidate();
+    pageClose.invalidate();
+    runProgress.invalidate();
+    setBootstrapProgress(null);
+    setQuestionReadRequest(null);
+    archiveFlow.resetStores();
+    participation.reset();
+    composer.reset();
+    resetLocalSession(window.localStorage, { setText, imageSelection, broadcast, archiveCapture, synthesis });
+    void bootstrap();
+  };
 
   const openCommandSurface = (mode: CommandPaletteMode): void => { setCommandMode(mode); changeSurface("commands"); };
   const openSettings = (section: SettingsTarget): void => {
@@ -336,7 +343,7 @@ function App(): React.JSX.Element {
       setQuestionHistoryOpen(true);
     } });
   commandActions.current = navigationBlocked ? {} : buildAppCommands({
-    copy, layout, openedSites: workspace.selectedSites, participatingSites, statuses, siteHistory,
+    copy, layout, openedSites: workspace.selectedSites, participatingSites, statuses, siteNavigationHistory,
     drawerOpen, composer, promptRef, requestedPage, setPageInputMethod, setAnnouncement, changeSurface,
     changeDrawerOpen, changePanelState, openPanel, openCommandSurface, openTaskSetup: taskSetup.open,
     openSettings, setMode, changeTier, closeQuestionHistory,
@@ -346,7 +353,7 @@ function App(): React.JSX.Element {
     retrySitesCount: broadcast.retrySites.length, requestRetryReview: () => retryReview.request(),
     clearArchiveNavigation: () => archiveNavigation.clear(), startNewSession
   });
-  useCommandDiscovery({ shortcutRevision: paletteShortcut.state?.revision, focused: layout.focused, statuses, surface, setSiteHistory, setMenuShortcuts });
+  useCommandDiscovery({ shortcutRevision: paletteShortcut.state?.revision, focused: layout.focused, statuses, surface, setSiteNavigationHistory, setMenuShortcuts });
 
   return (
     <AppSurfaceRouter
@@ -354,10 +361,8 @@ function App(): React.JSX.Element {
       archive={{ copy, locale: navigator.language, sites, openedSites, defaultTier: workspace.tier, archiveFlow, onClose: () => changeSurface("sites") }}
       settings={{
         copy, locale: navigator.language, runtime, syncStatus, onSyncStatus: setSyncStatus, onBlockingChange: blockSettings,
-        runState, auxiliaryBusy, participation, settingsSection, display, preferences, commandActions, onAnnounce: setAnnouncement,
-        workspaceFlow, pageClose, runProgress, archiveFlow, broadcast, imageSelection, setText, resetComposer: composer.reset,
-        clearQuestionState: () => { setBootstrapProgress(null); setQuestionReadRequest(null); },
-        onReloadBootstrap: () => { void bootstrap(); }, onClose: () => changeSurface("sites")
+        operationBusy, settingsSection, display, preferences, commandActions, onAnnounce: setAnnouncement,
+        onLocalReset, onClose: () => changeSurface("sites")
       }}
       commands={{
         copy, shortcutMode: paletteShortcut.state?.mode ?? "standard", commandActions, pageCount: layout.pageCount,
@@ -371,7 +376,7 @@ function App(): React.JSX.Element {
         text, setText, draftRevision, promptRecovery, composer, drawerPresent, drawerOpen, panelState,
         lastOpenPanel, scopeLabel, health, healthChecking, healthAttention, healthFeedback, drawerHealthActions,
         imageSelection, imageWarning, unsupportedSitesCount: unsupportedSites.length, pageInputMethod, setPageInputMethod,
-        requestedPage, runProgress, syncStatus, commandActions, surface, siteHistory, questionHistoryOpen,
+        requestedPage, runProgress, syncStatus, commandActions, surface, siteNavigationHistory, questionHistoryOpen,
         setQuestionHistoryOpen, setQuestionHistoryBlocking, questionReadRequest, setQuestionReadRequest,
         closeQuestionHistory, templates: promptLibrary.templates, taskSetup, retryReview, pageClose,
         pendingNewSession, onConfirmNewSessionDontAsk: () => { void preferences.onConfirmation("newSessionConfirm", false); },

@@ -7,7 +7,7 @@ import type {
   DesktopSurface,
   LayoutState,
   MenuShortcut,
-  SiteHistoryState,
+  SiteNavigationHistoryState,
   SiteStatus
 } from "../shared/protocol";
 import type { ActiveWorkspaceGroup } from "../shared/workspace";
@@ -27,7 +27,7 @@ export interface BuildAppCommandsOptions {
   readonly openedSites: readonly SiteKey[];
   readonly participatingSites: ReadonlySet<SiteKey>;
   readonly statuses: Record<string, SiteStatus>;
-  readonly siteHistory: Record<string, SiteHistoryState>;
+  readonly siteNavigationHistory: Record<string, SiteNavigationHistoryState>;
   readonly drawerOpen: boolean;
   readonly composer: {
     readonly expanded: boolean;
@@ -70,7 +70,7 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
     openedSites,
     participatingSites,
     statuses,
-    siteHistory,
+    siteNavigationHistory,
     drawerOpen,
     composer,
     promptRef,
@@ -162,8 +162,8 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
       "previous-site": () => { changeSurface("sites"); shell.stepSite(-1); }
     } : {}),
     // 站内后退/前进作用于当前聚焦的站点；能不能退由主进程按真实导航历史判定。
-    ...(siteHistory[layout.focused]?.back ? { "site-back": () => { changeSurface("sites"); shell.stepHistory(-1); } } : {}),
-    ...(siteHistory[layout.focused]?.forward ? { "site-forward": () => { changeSurface("sites"); shell.stepHistory(1); } } : {}),
+    ...(siteNavigationHistory[layout.focused]?.back ? { "site-back": () => { changeSurface("sites"); shell.stepHistory(-1); } } : {}),
+    ...(siteNavigationHistory[layout.focused]?.forward ? { "site-forward": () => { changeSurface("sites"); shell.stepHistory(1); } } : {}),
     "focus-current-site": focusCurrentSite,
     "set-layout-duel": () => { changeSurface("sites"); setMode("duel"); },
     "edit-prompt": activatePrompt,

@@ -5,7 +5,7 @@ import type { PromptTemplate } from "../shared/prompt-library";
 import type {
   DesktopSurface,
   LayoutState,
-  SiteHistoryState,
+  SiteNavigationHistoryState,
   SiteStatus
 } from "../shared/protocol";
 import type { QuestionRunProgress } from "../shared/question-run-progress";
@@ -92,7 +92,7 @@ export interface WorkbenchMainStageProps {
   readonly syncStatus: SyncStatus;
   readonly commandActions: { current: CommandActions };
   readonly surface: DesktopSurface;
-  readonly siteHistory: Record<string, SiteHistoryState>;
+  readonly siteNavigationHistory: Record<string, SiteNavigationHistoryState>;
   readonly questionHistoryOpen: boolean;
   readonly setQuestionHistoryOpen: (open: boolean) => void;
   readonly setQuestionHistoryBlocking: (blocking: boolean) => void;
@@ -130,7 +130,7 @@ export function WorkbenchMainStage(props: WorkbenchMainStageProps): React.JSX.El
     drawerPresent, drawerOpen, panelState, lastOpenPanel, scopeLabel, health, healthChecking,
     healthAttention, healthFeedback, drawerHealthActions, imageSelection, imageWarning,
     unsupportedSitesCount, pageInputMethod, setPageInputMethod, requestedPage, runProgress,
-    syncStatus, commandActions, surface, siteHistory, questionHistoryOpen, setQuestionHistoryOpen,
+    syncStatus, commandActions, surface, siteNavigationHistory, questionHistoryOpen, setQuestionHistoryOpen,
     setQuestionHistoryBlocking, questionReadRequest, setQuestionReadRequest, closeQuestionHistory,
     templates, taskSetup, retryReview, pageClose, pendingNewSession, onConfirmNewSessionDontAsk,
     changeSurface, changePanelState, openPanel, changeDrawerOpen, refreshSiteHealth,
@@ -298,7 +298,7 @@ export function WorkbenchMainStage(props: WorkbenchMainStageProps): React.JSX.El
         uncertainSites={broadcast.uncertainSites}
         retryDisabled={runState !== "idle" || auxiliaryBusy}
         onRetry={retryReview.request}
-        history={siteHistory}
+        history={siteNavigationHistory}
         onBack={(site) => shell.stepHistory(-1, site)}
       />
       <SiteFind copy={copy} sites={sites} layout={layout} />
