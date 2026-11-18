@@ -11,6 +11,8 @@
 ### 修复
 
 - ChatGPT Work 的 Default 菜单升级后，快速档可切到 GPT-6.2 Sol Light，思考档可切到 GPT-6.2 Astra Extra High。修复了设置中读取这些预设时受网页隐藏文字干扰的问题。
+- Gemini 可识别网页“Everyday help”对应的 4 Hydrogen。内置快速和思考优先使用原有的 4 Argon，菜单缺少 Argon 时改用 Hydrogen 的 Low 和 High。
+- 元宝思考档支持正式版 Hy4 的专家模式，快速档会核对 Hy3 和即时模式。千问可识别新版日常模型“Qwen-快速”，切换快速和思考研究后会核对实际模型与模式。
 
 ## [1.35.0] - 2026-11-15
 

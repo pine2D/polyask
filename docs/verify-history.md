@@ -4,6 +4,20 @@
 
 **注意**：现行验证规范、日常离线/原生门禁命令、界面验收三关、真机只读纪律及尚未闭合的真机清单，一律以 `docs/verify.md` 为准；后续日常改动不要再往 `docs/verify.md` 追加日期流水账。
 
+## 2026-11-18 Gemini、元宝与千问的模型菜单
+
+在登录的 Linux/WSL 开发版读取 ChatGPT 以外八站的模型菜单。每站读完都恢复了原选择。重启最终代码后，用生产 `__AMS` 切换以下三站并重新打开网页菜单，逐项比对实际选择。
+
+| 站点 | 实际菜单与验收结果 |
+| --- | --- |
+| Gemini | 4 Argon 在场时，内置快速→思考→快速读回 Low→High→Low。Everyday help 的副标题是 4 Hydrogen，自定义组合实测 High、Medium、Low 均为 `preferred`。对 Hydrogen 单独调用内置选模型与设等级方法，分别读回 High 和 Low。账号同时有 Argon，缺席 Argon 时的自动顺序由离线回归覆盖。 |
+| 元宝 | 菜单列出 Hy4、Hy3、DeepSeek。Hy4 有 Instant、Thinking、Expert。以 Hy4 + Instant 起步，思考、快速、重复快速、思考四次均确认，分别读回 Hy4 + Expert 和 Hy3 + Instant。该菜单未单列 Hy4 flash。 |
+| 千问 | 日常页提供 Qwen-快速、Qwen3.7-Max。从 Max + 快速起步，内置快速→思考→快速三次均报告 `preferred`，读回 Qwen-快速和相应的快速／思考研究模式。该菜单未列 Qwen4-Max。 |
+
+Claude 的菜单包含 Fable 5.2，Kimi 为 K3.1 Pro / K2.8 Preview / Instant，智谱为 GLM-5.3 / GLM-5.3-Flash。DeepSeek 的常驻控件显示 DeepThink 开关，豆包提供快速、专家两种模式。每轮网址、输入框内容、18 项已保存预设均与开始时一致，结束时可见菜单为零。此次验收范围为菜单与切档，未向真实站点发送消息或上传附件。
+
+`npm test` 完成类型检查和 2,816 项应用测试后，在运行时测试收尾时收到 SIGTERM。单独执行 `npm run test:runtime`，全部 623 项通过。`bash scripts/verify.sh` 通过。Windows x64 隔离试玩版已刷新，安装目录与打包产物的 `app.asar` SHA-256 一致。
+
 ## 2026-11-18 ChatGPT Work 6.2 与普通 Chat
 
 在 1.35.0 基线修复上重启 Linux/WSL 开发版，从同一空白首页分别进入 Chat 和 Work。用生产 `__AMS.resolveTier` 切档，检查闭合按钮和重开菜单后的实际滑块读数。

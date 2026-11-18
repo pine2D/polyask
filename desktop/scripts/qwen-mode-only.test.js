@@ -25,6 +25,7 @@ function fixture(options = {}) {
   const model = { getAttribute: () => null, getBoundingClientRect: () => rect(), get textContent() { return state.model; }, children: [],
     closest: selector => selector === ".desktop-no-drag" && options.header ? {} : null };
   const document = { querySelectorAll(selector) {
+    if (selector === '[aria-haspopup="dialog"]' && options.duplicateButtons) return [model, Object.create(model)];
     if (selector === "div,button,span") return state.model ? [model] : [];
     if (selector === '[role="tab"][aria-selected="true"]') return options.unselected ? [] : [tab];
     if (selector === 'button[aria-haspopup="menu"]' || selector === "button") return options.noButton ? [] : [button];
@@ -103,6 +104,14 @@ test("日常标签切到工作后不沿用先前的模式识别", () => {
   tab.textContent = "工作";
   assert.equal(adapter.state(), null);
   assert.equal(adapter.diagnose().find(c => c.name === "diag_modelDropdown").kind, "control");
+});
+
+test("同一顶栏有两个可见模型入口时不能退为无模型日常页", async () => {
+  const { adapter, state } = fixture({ model: "Qwen-快速", header: true, duplicateButtons: true });
+  assert.equal(adapter.state(), null);
+  assert.equal(adapter.diagnose().find(c => c.name === "diag_modelDropdown").kind, "control");
+  await assert.rejects(() => adapter.think(), /模型下拉未就绪/);
+  assert.equal(state.actions, 0);
 });
 
 

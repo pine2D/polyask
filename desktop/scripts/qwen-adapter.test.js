@@ -95,6 +95,16 @@ test("真实模型候选匹配归一化标点，并在点击后复读当前入�
   assert.ok(state.closed > 0);
 });
 
+test("日常页从 Max 选择 Qwen-快速，并分别确认模型与模式", async () => {
+  const { adapter, state } = fixture({ cards: true, choices: [{ text: "Qwen4-Max" }, { text: "Qwen-快速" }] });
+  await adapter.think();
+  assert.deepEqual(state.clicks, ["trigger", "Qwen-快速"]);
+  assert.deepEqual(selection(adapter, "think"), { outcome: "preferred", observed: "think", model: "Qwen-快速" });
+  await adapter.fast();
+  assert.deepEqual(selection(adapter, "fast"), { outcome: "preferred", observed: "fast", model: "Qwen-快速" });
+  assert.equal(state.open, false);
+});
+
 for (const choices of [
   [{ text: "Qwen3.7-千问", disabled: true }], [{ text: "Qwen3.7-千问", hidden: true }],
   [{ text: "Qwen3.7-千问" }, { text: "Qwen3.7-千问" }], [{ text: "Qwen3.8-千问" }], [],

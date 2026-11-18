@@ -101,7 +101,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 
 1. **DeepSeek `_selectMode`** 找不到模式 radio → 静默跳过。radio 仅空对话首屏存在，聊天中缺失属正常态，档位真值由 DeepThink 开关兜底。
 2. **Gemini `_setThinking`** 没有直达开关、没有等级入口且 `on === false` → 静默 return（旧布局没有开关可关）；已展开并在入口后代或 `aria-labelledby` 明确关联的等级菜单读到旧 Extended、且没有 Low/Medium/High 时也保留此旧快档分支。其它菜单的 Extended 不算旧布局证据。新版有等级入口时必须选 Low 并复读，不再跳过。
-3. **Gemini `_setThinking`** Pro 旧布局找不到「thinking level / 思考等级」子菜单入口 → 静默 return（窄屏或该模型无此项，属合法缺席）。Argon 的 Low/High 均必需，入口缺失也 throw；**子菜单在但目标等级缺失必须 throw**，静默会漏设等级。
+3. **Gemini `_setThinking`** 在旧版 Pro 缺少等级子菜单时允许结束。Argon 和 Hydrogen 均须复读 Low/High。等级入口在场但目标等级缺失时抛错。
 4. **千问 `_selectModel`** 无模型入口，且可见的已选中日常标签、输入框、快速/思考研究菜单按钮同时存在 → 跳过选模型，继续 `_setThink` 并复读。只承诺模式、不承诺底层模型；工作页、未就绪页、模式按钮缺失仍抛错，目标选项缺失或点击未生效也仍抛错。
 
 **已撤销的例外**：原第 2 条「Claude `_setThinking` 连裸 Thinking 开关也缺失 → 静默结束」于 2026-08-31 删除。当时的理由是「思考控件整个缺席在旧布局属合法态」，但真机复核发现控件一直在、只是 `effort-menu-trigger` / `effort-option-*` 两个 testid 改没了；静默让 `think()` 一路假成功、上报绿而档位纹丝不动（本次事故里最难发现的一站）。现在 Claude 的 effort 入口缺失、档位为空一律 throw。**加新例外前先想清楚：它是「站点本就没有这个能力」，还是「我们的选择子过期了」——后者永远不该静默。**
@@ -249,7 +249,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 - 2026-10-27 真机：上传菜单媒体输入为 `accept="image/*,video/*"`；按逗号分隔的 MIME 项识别 `image/*`，排除 capture、disabled 和文档输入。上传菜单的 Escape 不可靠，结束时仅在触发器仍 `aria-expanded=true` 时再点击收尾；到期不得设置文件。等待入口时遇到明确到期的 `timeout` 返回 false，由上传总入口保留 `attachment_timeout`；其它异常继续抛出并按上传失败处理。
 
-- 档位：两档均优先实际菜单 `4 Argon`，think = High、fast = Low。菜单没有 Argon 时，think 保留任意版本 Pro + Extended（新版等级菜单则 High），fast 保留非 Lite 的任意版本 Flash（旧版关闭 Extended，新版 Low）。Argon 在场但禁用或同优先项重复时直接报错，不退选 Pro/Flash；`4.1 Argon` / `4 Argon-Lite` 不当已确认模型。Argon 与新版 Low/High 必须复读子菜单的 `.selected` / `aria-checked`，不靠粗档位判断冒充等级确认；Argon 本次切档复读成功后回传 `mode_only`，不缓存上轮成功。
+- 两档依次查找确切的 `4 Argon`、`4 Hydrogen`，快速选 Low，思考选 High。选到现代模型后须读回模型与等级子菜单的选中态，成功才回传本次的 `mode_only`。候选禁用或歧义时报告失败。两款均缺席时沿用旧版 Pro + Extended（或 High）和非 Lite Flash（关闭 Extended 或选 Low）。
+- 2026-11-18 英文网页的 `Everyday help` 副标题是 `4 Hydrogen`。设置菜单读取 Low、Medium、High。High 的闭合标签为 `Hydrogen High`，Medium 与省略等级的 `Gemini Hydrogen` 均返回未知档位。
 - **2026-11-03 英文菜单复验**：两档均选中 `4 Argon Complex tasks`，快速为 Low、思考为 High。Low 的闭合标签实际为 `Open mode picker, currently Gemini Argon`，没有等级，`state()` 返回 null；High 标签为 `Open mode picker, currently Argon High`。本次动作回传确认可区分两档，不能用省略等级的标签推断 High。
 - **2026-10-14 英文菜单实测**：`3.5 Flash-Lite` / `3.8 Flash` / `3.1 Pro` / `4 Argon Complex tasksNew`，Thinking level 展开后 Low / Medium / High 是入口节点的后代（`gem-menu-item` / `role=menuitem`）。等级跨模型保留，Argon High 后仅切 Flash 会变成 `currently Flash High`；选 Low 后标签省略等级、显示 `currently Gemini Flash`，所以必须重开子菜单复读选中态。High/Low 只认该入口的后代，排除同 role 的其它同名项。Gemini 拆入独立分卷为完整等级流程留出行数余量。
 - **旧菜单 Flash 回退正则必须版本无关**（2026-08-31 事故）：菜单从 `3.6 Flash` 换成 `3.7 Flash`，写死版本号的旧正则当天让整站 `fast()` 抛「未找到模型」。现按「任意版本号 + Flash、且不是 Flash-Lite」匹配，后瞻同时挡住 `Flash-Lite` 与 `Flash Lite` 两种写法——**Lite 是更弱的另一档，绝不能被当成快档选中**。think 的 Pro 备用同样版本无关，Argon 使用实测明确版本。
@@ -288,9 +289,9 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 ### 千问（`www.qianwen.com` / 键 `qianwen.com`，`desktop/src/site-runtime/adapters-cn4.js`）
 
-- 有模型入口的日常聊天预设：快速 = Qwen3.7-千问 + 快速，思考 = Qwen3.7-千问 + 思考研究；不自动切换到工作模式寻找 Qwen3.8-Max。无模型入口且确认日常页面就绪时，只切快速/思考研究，不承诺底层模型。
-- 有模型入口时，两档共用 `_MODELS` 的明确名称/别名，通过 `matchSelection` 幂等选中 Qwen3.7-千问，再分别 `_setThink(true)` / `_setThink(false)`。`state()` 共用同一匹配规则：模型命中且思考开启 → think，关闭 → fast；缺少模式按钮或非预设模型 → null。`selection(mode)` 仅在当前精确模型与目标模式均可读时返回 `preferred`，入口消失后仅返回 `mode_only`，不缓存上轮结果。
-- 模型触发器 `_trigger()`：先找 `[aria-haspopup="dialog"]` 且文本含 `Qwen3` 的节点；找不到回退在顶部 `.desktop-no-drag` 控件区按文本找最内层（文本以 Qwen3 开头、长度 ≤25、子节点 ≤3 的 div/button/span 取最后一个），排除正文同名模型——**`aria-haspopup` 由前端延迟水合**，新加载页一段时间内只有纯文本节点。
+- 2026-11-18 日常页提供 `Qwen-快速` 和 `Qwen3.7-Max`。快速和思考都选支持两种模式的 `Qwen-快速`，再切换“快速”或“思考研究”。旧菜单沿用 `Qwen3.7-千问`。页面只有模式入口时，按下述日常页条件操作。
+- 两档共用 `_MODELS` 的确切名称和别名。切模型后须读回刚点的模型，再读回所选模式。`selection(mode)` 据此报告 `preferred` 和实际模型名。其它模型对应的档位为未知。
+- 模型入口用可见的品牌文字与弹窗触发器定位。顶部的 `.desktop-no-drag` 控件区兼容新版 `Qwen-快速` 和带版本号的 Qwen 标签。延迟水合时也在顶部识别短标签，聊天正文中的模型名不参与匹配。
 - **无模型入口的页面（2026-09-28）**：用户 Windows 截图为宽版日常首页，左上没有模型选择，快速按钮仍在；该环境报告模型下拉 `control=false`、思考开关 `control=true`、档位 `tier=false`。本机已登录页正常宽度仍有入口，临时收窄至实测 `innerWidth=267` 时入口从 DOM 消失，可复现相同诊断及 `runMode=false`；恢复宽度后切档正常。这只是同类失败路径，不能据此断言远端由宽度导致，也不能确认灰度改版。旧实现先选模型再切模式，入口缺失会抛错；不得用缓存模型或仅凭快速按钮把未知模型冒充预设。经用户同意，无模型入口时新增 `_modeOnly()`：可见且已选中的 `[role="tab"]` 文本为日常/Daily、`findComposer()` 成功、可见快速/思考研究菜单按钮三者同时成立，才跳过模型选择，后续 `_setThink` 仍执行并复读确认。该分支 `state()` 仅按模式返回 think/fast；模型下拉检查保留 `ok:false`，但 `kind:tier` 只作提示。入口恢复后立即恢复模型约束，无缓存；其它缺失仍为 control 故障。远端版本仍需 Windows 真机验收。
 - **2026-09-29 真机模型卡**：模型对话框用触发器 `aria-controls` 定位；旧布局回退只接受唯一可见且有“模型/Models”标题的 `role=dialog`。模型项是普通 `div.group.cursor-pointer` 卡，精确名称在 `div.truncate` 叶节点，另有“设为默认”按钮。匹配只在该对话框内取语义选项或已证实的标签与卡片，过滤隐藏/禁用/歧义项，点击卡片后复读触发器；正文不能充当候选，不点击默认设置按钮。当前原生 `click` 或单独 PointerEvent 不打开模型菜单，改用生产 `openMenu` 的完整事件序列；先收菜单并夹取等待 500ms，避免旧关闭动画吞掉展开事件。
 - 思考按钮 `_thinkBtn()`：优先可见的 `button[aria-haspopup="menu"]` 且 aria-label/文本命中 `/^(快速|思考研究|Fast|Thinking Research)$/i`；回退到内部 span 或自身文本为 `/^(思考|Thinking)$/i` 的旧版裸按钮。`_setThink(on)` 先读后点，新版派发 pointerdown 后在可见 `[role="menuitemcheckbox"]` 里原生 click 目标项，收尾复读校验，未生效抛「千问: 思考开关未生效」；按钮缺失即抛（常驻 composer）。**三条路径（选项未找到 / 成功点击后 / 复读失败前）都各自 `escMenus()` 收尾**，残留菜单会罩住输入框让随后的注入点空。
@@ -312,7 +313,8 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 ### 元宝（`yuanbao.tencent.com`，**`desktop/src/site-runtime/adapters-cn3.js`**）
 
 - **本站单独一卷**：`adapters-cn2.js` 当时贴着 300 行上限，2026-09-15 加模型子菜单逻辑时把元宝拆到 `adapters-cn3.js`（Kimi / 智谱留在 `cn2`）。
-- 档位（用户截图 2026-09-15，中英文界面各一）：composer 的 `button[aria-label="Switch model"]`（中文 `切换模型`）菜单 = **「Models / 模型」子菜单入口 + 模式项**。模式项在 Hy3 下是 Instant / Thinking / Expert（中文「快速回答 / 深度思考 / 专家模式」），**选中 Hy4 preview 时只剩 Expert**（模型描述写明 "Expert mode only"）。**新会话默认模型是 Hy4 preview**。映射 **think = 模型 Hy4 preview**（站点强制专家，无独立思考项；`_set(true)` 选完模型复读按钮到 Expert 才算成功）、**fast = 模型 Hy3 + Instant**（默认态菜单里没有 Instant，`_set(false)` 必须先 `_selectModel(Hy3)` 再 `_selectMode(Instant)`；按钮已是 Instant 时直接返回，不开菜单）。
+- 2026-11-18 模型菜单列出 `Hy4`、`Hy3`、`DeepSeek`。正式版 Hy4 有 Instant、Thinking、Expert 三个模式。思考选 Hy4 + Expert，快速选 Hy3 + Instant。切档时分别检查模型和模式，即使触发器已显示 Instant，也要核对模型。9 月的旧菜单仍可用 Hy4 preview，其唯一模式是 Expert。
+- 模型标题通过 `presetDom.firstText` 单独读取，排除标题后的 New 徽标和说明。目标名称须在可见模型项中唯一且可用，选中后复读 Models 入口中的完整模型名。
 - **模型子菜单**：入口是 `[role=menuitem]`，文本 = `Models`/`模型` + 当前模型名（如 `ModelsHy3`），**只在模式菜单开着时存在**，所以 `_model()` 是打开菜单后才可读；子菜单靠悬停展开：入口 `button[role=menuitem][aria-label="Select model"]` 的 React 处理器只有 `onMouseMove` / `onMouseLeave` / `onClick`（CDP 真机 2026-09-16），**只有合成 `mousemove`（带 clientX/Y）能打开**，`mouseover` / `pointermove` / `click` / 方向键 / Enter 都打不开；`_openModels` 先 `mousemove`，没开再 `click` 兜底，一次不成重来一次。选中模型后**根菜单留着、子菜单收起、按钮立即回显**（Hy4 preview → Expert；切回 Hy3 会恢复上一次的模式）。模型项与模式项同为 `[role=menuitemradio]`、同时在 DOM，靠容器 `aria-label="Model list"`（中文候选 `模型列表`，未验证）区分：`_isMode()` 排除该容器、`_modelItems()` 只取该容器，**两层语义校验缺一不可**（只做文本校验挡不住「模型取名叫深度思考版」，只做容器校验挡不住站点把模型塞进同一层）。选完模型后**重开一次菜单复读入口尾缀**确认，不猜菜单收没收。
 - **`state()` 是粗判**：菜单关着读不到模型，只按模式判——Expert/专家 → think（Hy4 preview 强制专家；Hy3+Expert 也会读成 think，那是用户自己停的档）、Instant/即时/快速 → fast、**Thinking/思考 → null**（不再是预设档，同 Kimi Instant / 千问 Qwen3.7+快速）。`resolveTier` 每次仍跑一遍幂等适配器，粗判只影响圆点与巡检。
 - 旧版 `[class*="ThinkSelector"]` 深度思考 toggle 仍作为 A/B 回退（只有新版模式按钮整个不存在时才走），开态判据为 className 含 `ThinkSelector_selected`；点击后**同样复读 `_isOn()`**，未生效抛「元宝: 深度思考未生效」——新版分支本就有复读，旧版此前是全站唯一遗漏的静默成功路径。新版发送键是非 button 的 `[aria-label="Send"]`（中文回退 `[aria-label="发送"]`），disabled 时返回 false；旧 `.icon-send` 已下线。

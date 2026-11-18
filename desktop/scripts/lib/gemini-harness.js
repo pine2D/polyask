@@ -6,8 +6,8 @@ const { source, fakeRuntime } = require("./intl-harness");
 function geminiRuntime({ models = ["3.1 Pro", "4 Argon Complex tasksNew", "3.8 Flash"],
   levels = ["Low Quick and efficient", "Medium Balanced depth", "High Extra thorough"],
   thinkingEntry = true, ignoredLevel = false, disabled = [], hidden = [], decoys = [], initialLevel = "Low",
-  expandedDecoys = [], detachedLevels = false, omitLowLabel = false, ignoredModel = false } = {}) {
-  let open = false, expanded = false, model = "3.8 Flash", level = initialLevel;
+  expandedDecoys = [], detachedLevels = false, omitLowLabel = false, ignoredModel = false, initialModel = "3.8 Flash" } = {}) {
+  let open = false, expanded = false, model = initialModel, level = initialLevel;
   const clicked = [];
   const item = (text, type) => ({ textContent: text, type,
     getBoundingClientRect: () => ({ width: hidden.includes(text) ? 0 : 200, height: 40 }),
@@ -23,7 +23,7 @@ function geminiRuntime({ models = ["3.1 Pro", "4 Argon Complex tasksNew", "3.8 F
     contains: node => !detachedLevels && tiers.includes(node) };
   for (const tier of tiers) tier.closest = () => ({ getAttribute: name => name === "aria-labelledby" ? trigger.id : null });
   const button = { getAttribute: name => name === "aria-label"
-    ? "Open mode picker, currently " + (/Argon/.test(model) ? "Argon" + (omitLowLabel && level === "Low" ? "" : " " + level) : model)
+    ? "Open mode picker, currently " + (/^4 (Argon|Hydrogen)$/.test(model) ? model.slice(2) + (omitLowLabel && level === "Low" ? "" : " " + level) : model)
     : name === "aria-expanded" ? String(open) : null };
   const document = {
     querySelector: selector => selector.includes("input-area-swi") ? button : null,

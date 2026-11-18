@@ -6,6 +6,7 @@
   const S = window.__AMS;
   if (!S) return;
   const { waitFor, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
+  const levelModels = [/^4\s+argon(?:\s|$)/i, /^4\s+hydrogen(?:\s|$)/i];
   Object.assign(S.adapters, {
     "gemini.google.com": {
       attach: async function (files, el, deadline) {
@@ -99,7 +100,7 @@
       _openLevel: async function (re, deadline, required, allowLegacy = false) {
         const trig = await waitFor(() => this._find(/thinking level|思考(等级|程度)?/i), 3500, 120, deadline);
         if (!trig && required) throw new Error("Gemini: 思考等级入口未找到");
-        if (!trig) return null; // Pro 旧布局可没有等级菜单；Argon 不允许缺席。
+        if (!trig) return null; // Pro 旧布局可没有等级菜单。
         const patterns = Array.isArray(re) ? re : [re];
         const inLevelMenu = node => {
           if (trig.contains?.(node)) return true;
@@ -131,10 +132,17 @@
         return lvl;
       },
       // 旧 Extended 是直达开关；新版跨模型记忆 Low/Medium/High，快档必须重置 Low。
-      _setThinking: async function (re, on = true, deadline, required = false) {
+      _setThinking: async function (re, on = true, deadline, expectedModel) {
+        const confirmModel = () => {
+          if (!expectedModel) return;
+          const rows = this._items().filter(el => expectedModel.test(this._modelLabel(el)));
+          if (rows.length !== 1 || !this._selected(rows[0])) throw new Error("Gemini: 模型未生效");
+        };
         try {
           checkDeadline(deadline);
           await this._openModelMenu(deadline);
+          confirmModel();
+          let required = !!expectedModel;
           const directRe = Array.isArray(re) ? re[0] : re;
           const direct = required ? null : this._items().find(el => {
             const text = (el.textContent || "").trim();
@@ -148,8 +156,6 @@
           if (!on) {
             if (!this._find(/thinking level|思考(等级|程度)?/i)) return;
             re = /^(low\b|低)/i; required = true;
-          } else if (required && !/\bargon(?:\s|$)/i.test(this._modelBtn()?.getAttribute("aria-label") || "")) {
-            throw new Error("Gemini: Argon 模型未生效");
           }
           const lvl = await this._openLevel(re, deadline, required, !on);
           if (!lvl) return;
@@ -162,6 +168,7 @@
           // Low 的闭合标签省略等级，不能仅靠标签证明；重开真实子菜单复读 selected。
           if (required || /^(high\b|高)/i.test((lvl.textContent || "").trim())) {
             await this._openModelMenu(deadline);
+            confirmModel();
             const applied = await this._openLevel(re, deadline, true);
             if (!this._selected(applied)) throw new Error("Gemini: 思考等级未生效");
           }
@@ -173,11 +180,11 @@
           { name: t("diag_tierReadable"), ok: this.state() != null, kind: "tier" },
         ];
       },
-      // Argon 与 Carbon 均按明确等级判断；省略 Low 时不靠模型名猜成 think。
+      // 明确显示等级才判档；这三个模型的 Low 均可能在闭合按钮上省略。
       // 实际等级确认由本次动作复读子菜单并回传，state 始终只读、不开菜单。
       state: function () {
         const t = this._modelBtn()?.getAttribute("aria-label") || "";
-        if (/\b(?:argon|carbon)(?:\s|$)/i.test(t)) {
+        if (/\b(?:argon|carbon|hydrogen)(?:\s|$)/i.test(t)) {
           const low = /\blow\b|低/i.test(t), high = /\bhigh\b|高/i.test(t);
           return low !== high ? (low ? "fast" : "think") : null;
         }
@@ -190,23 +197,21 @@
         const el = els[els.length - 1];
         return el.querySelector(".markdown") || el;
       },
-      // 真机 2026-10-14：优先 4 Argon + High；账号未上线 Argon 时仍选版本无关 Pro + Extended。
-      think: async function (deadline) {
+      // 保留两档的 Argon 首选；缺席时用 Hydrogen 同一等级，再兼容旧 Pro/Flash 菜单。
+      _setTier: async function (mode, deadline) {
         checkDeadline(deadline);
-        const model = await this._selectModel([/^4\s+argon(?:\s|$)/i, /\b\d+(?:\.\d+)?\s*pro\b/i], deadline);
-        const argon = /^4\s+argon(?:\s|$)/i.test(model);
-        await this._setThinking(argon ? /^(high\b|高)/i : [/^(extended|扩展)/i, /^(high\b|高)/i], true, deadline, argon);
-        if (argon) return { outcome: "mode_only", observed: "think" };
+        const think = mode === "think", high = /^(high\b|高)/i, extended = /^(extended|扩展)/i;
+        const legacy = think ? /\b\d+(?:\.\d+)?\s*pro\b/i : /\b\d+(?:\.\d+)?\s*flash\b(?!\s*-?\s*lite)/i;
+        const label = await this._selectModel([...levelModels, legacy], deadline);
+        const modern = levelModels.find(pattern => pattern.test(label));
+        if (modern) {
+          await this._setThinking(think ? high : /^(low\b|低)/i, true, deadline, modern);
+          return { outcome: "mode_only", observed: mode };
+        }
+        await this._setThinking(think ? [extended, high] : extended, think, deadline);
       },
-      // 两档都优先 Argon：fast = Low；未上线 Argon 的旧菜单保留非 Lite Flash 回退。
-      // 旧 Flash 正则仍须版本无关，同时排除 Flash-Lite / Flash Lite。
-      fast: async function (deadline) {
-        checkDeadline(deadline);
-        const model = await this._selectModel([/^4\s+argon(?:\s|$)/i, /\b\d+(?:\.\d+)?\s*flash\b(?!\s*-?\s*lite)/i], deadline);
-        const argon = /^4\s+argon(?:\s|$)/i.test(model);
-        await this._setThinking(argon ? /^(low\b|低)/i : /^(extended|扩展)/i, argon, deadline, argon);
-        if (argon) return { outcome: "mode_only", observed: "fast" };
-      },
+      think: function (deadline) { return this._setTier("think", deadline); },
+      fast: function (deadline) { return this._setTier("fast", deadline); },
     },
 
   });

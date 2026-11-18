@@ -140,9 +140,32 @@ async function argonLowConfirmationSurvivesOmittedLabelWithoutCaching() {
 
 async function argonModelMustActuallyApplyBeforeLow() {
   const c = geminiRuntime({ ignoredModel: true });
-  await assert.rejects(() => c.adapter.fast(), /Argon/, "Flash 已是快速也不能冒充 Argon Low");
+  await assert.rejects(() => c.adapter.fast(), /模型未生效/, "Flash 已是快速也不能冒充 Argon Low");
   assert.equal(c.current().model, "3.8 Flash");
   assert.equal(c.isOpen(), false);
+}
+
+async function hydrogenFillsMissingArgonWithVerifiedLevels() {
+  const hydrogen = "4 Hydrogen", argon = "4 Argon";
+  const c = geminiRuntime({ models: ["3.8 Flash", hydrogen, "3.1 Pro"], omitLowLabel: true });
+  for (const mode of ["fast", "think", "fast"]) {
+    const result = await c.adapter[mode]();
+    assert.equal(result.observed, mode);
+    assert.equal(c.current().model, hydrogen);
+    assert.equal(c.current().level, mode === "fast" ? "Low" : "High");
+    assert.equal(c.isOpen(), false);
+  }
+  const both = geminiRuntime({ models: [hydrogen, argon] });
+  await both.adapter.fast();
+  assert.equal(both.current().model, argon, "两者都有时保留已有首选");
+  for (const options of [{ disabled: [hydrogen] }, { ignoredModel: true }, { levels: ["Low"] }]) {
+    const bad = geminiRuntime({ models: [hydrogen, "3.1 Pro"], ...options });
+    await assert.rejects(() => bad.adapter.think());
+    assert.equal(bad.isOpen(), false);
+  }
+  const wrong = geminiRuntime({ models: [hydrogen, "4.1 Hydrogen"], initialModel: "4.1 Hydrogen", initialLevel: "High", ignoredModel: true });
+  await assert.rejects(() => wrong.adapter.fast(), /模型未生效/);
+  assert.equal(wrong.current().level, "High", "同名不同版本时不改动对方的强度");
 }
 
 async function unrelatedExtendedCannotHideMissingModernLow() {
@@ -160,10 +183,10 @@ async function unrelatedExtendedCannotHideMissingModernLow() {
     argonMissingOrDisabledHighFails, unrelatedHighCannotBeSelectedAsThinkingLevel,
     deadlineExpiryDoesNotStartModelSelection, argonLowMustBeAvailableAndApplied,
     legacyNestedExtendedAllowsFastWithoutLow, unrelatedExtendedCannotHideMissingModernLow,
-    argonLowConfirmationSurvivesOmittedLabelWithoutCaching, argonModelMustActuallyApplyBeforeLow]) {
+    argonLowConfirmationSurvivesOmittedLabelWithoutCaching, argonModelMustActuallyApplyBeforeLow, hydrogenFillsMissingArgonWithVerifiedLevels]) {
     try { await test(); }
     catch (error) { failed++; console.error(test.name + ": " + error.message); }
   }
   if (failed) process.exitCode = 1;
-  else console.log("✓ Gemini Argon High/Low、旧版回退与本次确认边界（13 组）");
+  else console.log("✓ Gemini Argon/Hydrogen High/Low、旧版回退与本次确认边界");
 })();

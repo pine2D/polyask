@@ -5,6 +5,7 @@ function setup(options = {}) {
   const f = page('yuanbao.tencent.com', '<button id="trigger" aria-label="Switch model">Instant</button>', ['adapters-cn3', 'yuanbao-presets']);
   const state = { model: 'Hy3', effort: 'Instant' }, clicks = [], button = f.d.querySelector('button');
   const choices = { Hy3: ['Instant', 'Thinking', 'Expert'], Hy4: ['Expert'], 'Future model': ['Instant', 'Thinking'] };
+  if (options.modern) { choices.Hy4 = ['Instant', 'Thinking', 'Expert']; choices['Hy4 flash'] = ['Instant']; }
   let rootReady = true;
   const close = () => { button.setAttribute('aria-expanded', 'false'); if (!options.lingering) f.d.querySelectorAll('[role="menu"]').forEach(el => el.remove()); };
   function item(name, kind) {
@@ -60,5 +61,18 @@ test('Yuanbao dismisses the submenu before closing its newly active parent', asy
   const f = setup({ layered: true }); try {
     assert.equal((await f.command({ kind: 'options', model: 'Hy4' })).ok, true);
     assert.deepEqual(f.state, { model: 'Hy3', effort: 'Instant' }); assert.equal(f.menus(), 0);
+  } finally { f.close(); }
+});
+
+test('Hy4 正式版的模型和专家模式须分别选中，快速从 Hy4 即时也须返回 Hy3', async () => {
+  const f = setup({ modern: true }); try {
+    await f.a.think(Date.now() + 10000);
+    assert.deepEqual(f.state, { model: 'Hy4', effort: 'Expert' });
+    assert.equal(f.menus(), 0);
+    await f.a.applyPreset({ model: 'Hy4', effort: 'Instant' }, Date.now() + 10000);
+    await f.a.fast(Date.now() + 10000);
+    assert.deepEqual(f.state, { model: 'Hy3', effort: 'Instant' });
+    assert.equal(f.clicks.includes('model:Hy4 flash'), false);
+    assert.equal(f.menus(), 0);
   } finally { f.close(); }
 });

@@ -8,9 +8,7 @@
   const { waitFor, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
 
   Object.assign(S.adapters, {
-    // 元宝（真机 2026-09-15）：模式菜单 = 「模型/Models」子菜单入口 + 模式项（即时/思考/专家；Hy4 preview 下只剩专家）。
-    // think = 模型 Hy4 preview（站点强制专家模式，没有独立的思考项）；fast = 模型 Hy3 + 即时。
-    // 新会话默认模型是 Hy4 preview，所以 fast 必须先把模型切回 Hy3，否则「即时」项根本不在菜单里。
+    // 元宝：Hy4 正式版有即时/思考/专家，旧 Hy4 preview 只有专家。快速沿用 Hy3 + 即时。
     // 旧版 Deep Thinking toggle 作为 A/B 回退。
     "yuanbao.tencent.com": {
       _modeBtn: function () { return document.querySelector('button[aria-label="Switch model"], button[aria-label="切换模型"]'); },
@@ -57,9 +55,6 @@
           if (!await waitFor(() => re.test(this._mode()) || null, 2000, 120, deadline)) throw new Error("元宝: 目标模式未生效");
         } finally { escMenus(); }
       },
-      // —— 模型子菜单（真机 2026-09-15）——
-      _THINK_MODEL: /^hy4\s*preview/i,
-      _FAST_MODEL: /^hy3(?![\d.])/i,
       // 入口是 [role=menuitem]，文本 = 「模型」/「Models」+ 当前模型名（如 ModelsHy3），只在模式菜单开着时存在——
       // 所以 state() 读不到模型，菜单关着时只能按模式粗判（见 state 注释）。
       _modelsEntry: function () {
@@ -87,35 +82,37 @@
         }
         if (!this._modelItems().length) { escMenus(); throw new Error("元宝: 模型子菜单未展开"); }
       },
-      _selectModel: async function (re, deadline) {
+      _selectModel: async function (names, deadline) {
         try {
           checkDeadline(deadline);
           const b = this._modeBtn();
           if (!b) throw new Error("元宝: 模式按钮未找到");
           await this._openModes(b, deadline);
-          if (re.test(this._model())) return;
+          const current = () => this._model().toLowerCase();
+          if (current() === names[0].toLowerCase()) return;
           await this._openModels(b, deadline);
-          const item = this._modelItems().find((el) => re.test((el.textContent || "").trim()));
-          if (!item) { escMenus(); throw new Error("元宝: 目标模型未找到"); }
-          tierAction(deadline, () => item.click()); await sleep(300, deadline);
-          await this._openModes(b, deadline); // 真机 2026-09-16：选完模型根菜单留着、子菜单收起、按钮即时回显；仍重开一次兜底，不猜
-          if (!await waitFor(() => re.test(this._model()) || null, 2000, 120, deadline)) { escMenus(); throw new Error("元宝: 目标模型未生效"); }
+          const P = S.presetDom, items = this._modelItems().filter(P.visible);
+          for (const name of names) {
+            const target = name.toLowerCase();
+            // 标题、New 徽标和用途说明在不同文本节点。只有完整标题可以证明模型。
+            const matches = items.filter(el => P.firstText(el).toLowerCase() === target);
+            if (!matches.length) continue;
+            if (matches.length !== 1 || !P.enabled(matches[0])) throw new Error("元宝: 模型不可用或选项歧义");
+            if (current() === target) return;
+            tierAction(deadline, () => matches[0].click()); await sleep(300, deadline);
+            await this._openModes(b, deadline);
+            if (!await waitFor(() => current() === target, 2000, 120, deadline)) throw new Error("元宝: 目标模型未生效");
+            return;
+          }
+          throw new Error("元宝: 目标模型未找到");
         } finally { escMenus(); }
       },
       _set: async function (on, deadline) {
         try {
           checkDeadline(deadline);
           if (this._modeBtn()) {
-            if (on) {
-              await this._selectModel(this._THINK_MODEL, deadline); escMenus();
-              // Hy4 preview 只提供专家模式，站点自动落到专家；复读到位才算成功
-              if (!await waitFor(() => /^(Expert|专家)/i.test(this._mode()) || null, 2000, 120, deadline)) throw new Error("元宝: 目标模式未生效");
-              return;
-            }
-            if (/^(Instant|即时|快速)/i.test(this._mode())) return; // 已是即时 → 模型必不是 Hy4 preview，免开菜单
-            await this._selectModel(this._FAST_MODEL, deadline);
-            await this._selectMode(/^(Instant|即时|快速)/i, deadline);
-            escMenus(); // 切回 Hy3 时站点会自动恢复上一次的模式（CDP 真机 2026-09-16），_selectMode 可能直接命中返回而菜单还开着
+            await this._selectModel(on ? ["Hy4", "Hy4 preview"] : ["Hy3"], deadline);
+            await this._selectMode(on ? /^(Expert|专家)/i : /^(Instant|即时|快速)/i, deadline);
             return;
           }
           const t = this._toggle();

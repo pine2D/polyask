@@ -7,7 +7,7 @@
   if (!S) return;
   const { waitFor, openMenu, sleep, escMenus, checkDeadline, tierAction } = S;
   Object.assign(S.adapters, {
-    // 千问：think=Qwen3.7-千问+思考研究，fast=Qwen3.7-千问+快速；兼容旧版裸思考按钮。
+    // 日常模型在新旧菜单分别叫 Qwen-快速、Qwen3.7-千问，两者均可再切快速或思考研究。
     "qianwen.com": {
       attach: async function (files, el, deadline) {
         if (Date.now() >= deadline) return false;
@@ -31,15 +31,26 @@
       },
       // 模型下拉触发器：aria-haspopup 属性由前端延迟水合，新加载页面一段时间内只有纯文本节点，
       // 先按 aria 找，水合期文字回退限定顶部控件区，不能把聊天正文中的模型名当成入口。
-      _trigger: function () {
-        const byAria = [...document.querySelectorAll('[aria-haspopup="dialog"]')].find((x) => /Qwen3/.test(x.textContent || ""));
-        if (byAria) return byAria;
+      _modelTriggers: function () {
+        const brand = /^Qwen(?:\d|[-\s]|$)/i;
+        const buttons = [...document.querySelectorAll('[aria-haspopup="dialog"]')].filter(el =>
+          brand.test((el.textContent || "").trim()) && this._candidateInfo(el).visible);
+        const header = buttons.filter(el => el.closest?.(".desktop-no-drag"));
+        if (header.length) return header;
+        // 旧版入口本身有 dialog 语义，未必有新版顶栏容器。
+        const legacy = buttons.filter(el => /^Qwen3(?:\.|\b)/i.test((el.textContent || "").trim()));
+        if (legacy.length) return legacy;
         return [...document.querySelectorAll("div,button,span")].filter((e) => {
           const t = (e.textContent || "").trim();
-          return /^Qwen3/.test(t) && t.length <= 25 && e.children.length <= 3 && e.closest(".desktop-no-drag");
-        }).pop() || null;
+          return brand.test(t) && t.length <= 25 && e.children.length <= 3 && e.closest(".desktop-no-drag") &&
+            !e.closest('[aria-haspopup="dialog"]') && this._candidateInfo(e).visible;
+        }).slice(-1);
       },
-      _MODELS: [{ model: "Qwen3.7-千问", aliases: ["Qwen3.7-千问"] }],
+      _trigger: function () {
+        const entries = this._modelTriggers();
+        return entries.length === 1 ? entries[0] : null;
+      },
+      _MODELS: [{ model: "Qwen-快速", aliases: ["Qwen-快速"] }, { model: "Qwen3.7-千问", aliases: ["Qwen3.7-千问"] }],
       _candidateInfo: function (node) {
         const r = node.getBoundingClientRect();
         const style = typeof getComputedStyle === "function" ? getComputedStyle(node) : null;
@@ -101,7 +112,7 @@
           await sleep(500, deadline);
           escMenus();
           const after = this._trigger();
-          if (!after || !this._matchModel([after])) throw new Error("千问: 模型未生效");
+          if (!after || this._matchModel([after])?.model !== match.model) throw new Error("千问: 模型未生效");
         } finally { escMenus(); }
       },
       _thinkBtn: function () {
@@ -125,7 +136,7 @@
           return r.width > 0 && r.height > 0 && /^(日常|Daily)$/i.test((e.textContent || "").trim());
         });
         const b = this._thinkBtn();
-        return daily && !!S.findComposer() && !!b && b.getAttribute("aria-haspopup") === "menu";
+        return daily && !!S.findComposer() && !!b && b.getAttribute("aria-haspopup") === "menu" && !this._modelTriggers().length;
       },
       _setThink: async function (on, deadline) {
         try {

@@ -119,6 +119,8 @@ function yuanbaoCase(init, hooks) {
       : selector === '[role="menuitem"]' ? [entry] : [],
   };
   const S = runtime(document, hooks ? { hooks } : undefined, "adapters-cn3.js");
+  S.presetDom = { visible: () => true, enabled: () => true,
+    firstText: el => el.textContent.replace(/(Handle|Recommended|Suitable|Hy4 的).*$/, "").trim() };
   return { adapter: S.adapters["yuanbao.tencent.com"], S, clicked, state };
 }
 
@@ -139,7 +141,7 @@ async function yuanbaoFastMustLeaveHy4PreviewFirst() {
   await c.adapter.fast();
   assert.deepEqual(c.clicked, ["Models:hover", "Hy3Recommended for daily use", "InstantInstant answers for everyday tasks"]);
   assert.equal(c.adapter.state(), "fast");
-  // 已在即时：不开菜单、不点任何东西
+  // 确认当前是 Hy3 + 即时后，不再点击模型或模式选项。
   c.clicked.length = 0;
   await c.adapter.fast();
   assert.deepEqual(c.clicked, []);
@@ -147,13 +149,13 @@ async function yuanbaoFastMustLeaveHy4PreviewFirst() {
 
 // openMenu 是切换语义：菜单已开时再点就把它关掉。真机 2026-09-01 实测，关闭动画期间
 // menuitemradio 仍在 DOM，于是 waitFor 照样找得到项、click 却点在正在消失的节点上 →
-// 落空 → 抛「目标模式未生效」。已是 Hy4 preview 时 think 只读入口尾缀，不再点任何项。
+// 落空 → 抛「目标模式未生效」。当前是 preview 时核对正式版是否在场。
 async function yuanbaoMustNotToggleAnAlreadyOpenMenu() {
   let opens = 0;
   const c = yuanbaoCase({}, { openMenu: () => { opens += 1; } });  // 桩里菜单恒可见 = 已经开着
   await c.adapter.think();
   assert.equal(opens, 0, "菜单已展开时不得再点触发器——那一点会把它关掉");
-  assert.deepEqual(c.clicked, [], "模型已是 Hy4 preview：不点入口也不点模型项");
+  assert.deepEqual(c.clicked, ["Models:hover"], "只展开子菜单核对正式版，保留已选中的 preview");
   assert.equal(c.adapter.state(), "think");
 }
 

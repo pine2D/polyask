@@ -85,7 +85,8 @@ test("元宝 think 切到 Hy4 preview（站点自动落专家），并使用语�
       return selector === '[role="menuitem"]' && menuOpen ? [entry] : [];
     },
   };
-  const context = helpers(document, { openMenu: (el) => el.click(), dropFiles: () => Promise.resolve(true) });
+  const context = helpers(document, { openMenu: (el) => el.click(), dropFiles: () => Promise.resolve(true),
+    presetDom: { visible: () => true, enabled: () => true, firstText: el => el.textContent } });
   vm.runInNewContext(source("adapters-cn3.js"), context);
   const yuanbao = context.window.__AMS.adapters["yuanbao.tencent.com"];
   assert.equal(yuanbao.state(), "fast");
