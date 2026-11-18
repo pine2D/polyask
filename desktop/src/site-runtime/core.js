@@ -209,7 +209,6 @@
         checkDeadline(deadline);
         if (!silent) toast(t(mode === "think" ? "cs_switchedThink" : "cs_switchedFast"), true);
         focusComposer();
-        try { document.dispatchEvent(new CustomEvent("ams:switched")); } catch (e) {}
         return { selection };
       } catch (e) {
         escMenus(); try { console.debug("[PolyAsk] switch:", (e && e.message) || e); } catch (e2) {} if (attempt && !silent) toast(t("cs_switchFailGeneric"), false); // 最后一次失败后也必须收尾，残留菜单会罩住输入框让随后的注入点空；适配器抛的是硬编码中文，只降级进控制台，不进用户可见文案
@@ -251,13 +250,12 @@
     return [{ name: t("diag_tierReadable"), ok: getState() != null, kind: "tier" }];
   }
 
-  // 快捷键/弹窗入口：runtime 消息只来自本扩展，无需 origin 校验。
+  // Desktop preload 通过隔离世界的监听器分发站点命令。
   // 守卫：主世界注入测试时 chrome.runtime.onMessage 不存在，跳过监听不影响其余能力。
   try {
     chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       if (!msg || msg.source !== "AMS") return;
-      if (msg.mode === "think" || msg.mode === "fast") runMode(msg.mode, false, Number(msg.deadline) || undefined);
-      // 只读命令（getState / wasSubmitted / collectAnswer / diagnose）在 read-commands.js；返回 true = 异步回包。
+      // 只读命令（wasSubmitted / collectAnswer / diagnose）在 read-commands.js；返回 true = 异步回包。
       if (window.__AMS.readCommand?.(msg, sendResponse)) return true;
       if (window.__AMS.presetCommand?.(msg, sendResponse, serializeInteraction)) return true;
       if (window.__AMS.tierCommand?.(msg, sendResponse, serializeInteraction)) return true;

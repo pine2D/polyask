@@ -1,4 +1,4 @@
-// desktop/src/site-runtime/read-commands.js — 只读命令回包：getState / wasSubmitted / collectAnswer / diagnose。
+// desktop/src/site-runtime/read-commands.js — 只读命令回包：wasSubmitted / collectAnswer / diagnose。
 // 监听器仍只在 core.js 注册一次（desktop-shared-runtime.test.js 数着），它把命令交给这里的 readCommand；
 // 返回 true 表示异步回包（preload 的 dispatch 据此等待）。本文件不开菜单、不改 DOM、不产用户可见文案。
 (function () {
@@ -49,7 +49,6 @@
   }
 
   S.readCommand = function (msg, respond) {
-    if (msg.cmd === "getState") { const a = S.pickAdapter(); respond({ state: S.getState(), canConfirm: !!(a && a.submitted) }); }
     if (msg.cmd === "wasSubmitted") return wasSubmitted(msg, respond);
     if (msg.cmd === "collectAnswer") collectAnswer(respond);
     if (msg.cmd === "diagnose") respond({ checks: S.diagnose(), host: location.hostname });
