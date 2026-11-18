@@ -2,6 +2,7 @@
 const test = require('node:test'), assert = require('node:assert/strict');
 const { plain } = require('./lib/site-preset-harness');
 const { chatgpt } = require('./lib/chatgpt-presets-harness');
+const { WORK_62 } = require('./lib/chatgpt-default-harness');
 test('ChatGPT Default discovers actual joint labels, not a fabricated model-effort product', async () => {
   const f = chatgpt(); try {
     const r = plain(await f.command({ kind: 'options' })); assert.equal(r.ok, true);
@@ -9,6 +10,18 @@ test('ChatGPT Default discovers actual joint labels, not a fabricated model-effo
     assert.equal(f.state.model, 'Default'); assert.equal(f.state.index, 1);
     assert.equal((await f.command({ kind: 'verify', preset: { model: 'Default', effort: 'GPT-6 Astra Extra High' } })).ok, true);
     assert.equal(f.state.model, 'Default'); assert.equal(f.state.index, 1); assert.equal(f.state.open, false);
+  } finally { f.close(); }
+});
+test('Work 6.2 lists only the visible joint labels and restores the original preset after verification', async () => {
+  const f = chatgpt({ defaultPresets: WORK_62, measureEfforts: true });
+  try {
+    const catalog = plain(await f.command({ kind: 'options' }));
+    assert.equal(catalog.ok, true); assert.deepEqual(catalog.catalog.efforts, WORK_62);
+    const verify = effort => f.command({ kind: 'verify', preset: { model: 'Default', effort } });
+    assert.equal((await verify('GPT-6.2 Astra Extra High')).ok, true);
+    assert.equal((await verify('GPT-6 Astra Extra High')).ok, false);
+    assert.deepEqual(plain((await f.command({ kind: 'current' })).current), { model: 'Default', effort: 'GPT-6.2 Sol Light' });
+    assert.equal(f.state.open, false);
   } finally { f.close(); }
 });
 test('ChatGPT legacy and future models use their own actual slider range and labels', async () => {

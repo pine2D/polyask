@@ -3,13 +3,19 @@ const { page } = require('./site-preset-harness');
 function chatgpt(options = {}) {
   const f = page('chatgpt.com', '<button id="trigger" data-composer-navigation-target="reasoning" aria-haspopup="menu"></button>', ['adapters-intl2', 'chatgpt-default', 'chatgpt-preset-slider', 'chatgpt-presets']);
   const choices = options.legacy ? { '6': ['6 Instant', '6 Medium', '6 High', '6 Extra High', '6 Pro'], 'Future 8': ['Future Light', 'Future Deep'] }
-    : { Default: ['GPT-6 Luna High', 'GPT-6.1 Sol Light', 'GPT-6.1 Sol Medium', 'GPT-6 Astra Light', 'GPT-6 Astra Medium', 'GPT-6 Astra Extra High'], 'Future 8': ['Future Light', 'Future Deep'] };
+    : { Default: options.defaultPresets || ['GPT-6 Luna High', 'GPT-6.1 Sol Light', 'GPT-6.1 Sol Medium', 'GPT-6 Astra Light', 'GPT-6 Astra Medium', 'GPT-6 Astra Extra High'], 'Future 8': ['Future Light', 'Future Deep'] };
   const state = { model: Object.keys(choices)[0], index: 1, open: false, pane: 'simple' }, clicks = [], keys = [], button = f.d.querySelector('button');
   function render() {
     f.d.getElementById('picker')?.remove(); button.setAttribute('aria-expanded', String(state.open)); button.setAttribute('aria-controls', 'picker');
     button.setAttribute('data-state', state.open ? 'open' : 'closed');
     button.textContent = state.open ? 'Thinking effort' : choices[state.model][state.index];
-    Object.defineProperty(button, 'innerText', { configurable: true, value: state.open ? 'Thinking effort' : 'Thinking effort\n' + choices[state.model][state.index] });
+    let innerText = state.open ? 'Thinking effort' : 'Thinking effort\n' + choices[state.model][state.index];
+    if (options.measureEfforts && !state.open) {
+      const measure = f.d.createElement('span'); measure.setAttribute('aria-hidden', 'true');
+      measure.textContent = 'None Minimal Light Medium High Extra High Max Ultra Persistent';
+      button.append(measure); innerText += '\n' + measure.textContent;
+    }
+    Object.defineProperty(button, 'innerText', { configurable: true, value: innerText });
     if (!state.open) return;
     const root = f.d.createElement('div'); root.id = 'picker'; root.setAttribute('role', 'menu'); root.setAttribute('aria-labelledby', options.wrongOwner ? 'wrong' : 'trigger');
     root.setAttribute('data-testid', 'composer-intelligence-picker-content');

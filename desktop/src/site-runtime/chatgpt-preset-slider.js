@@ -19,17 +19,8 @@
     if (v.now !== target) S.presetFail();
   }
   function closedLabel(adapter) {
-    const anchor = adapter._anchor(); if (!P.visible(anchor) || anchor.getAttribute('aria-expanded') === 'true') S.presetFail();
-    let value = anchor.innerText;
-    if (typeof value !== 'string') {
-      const walker = document.createTreeWalker(anchor, 4), parts = [];
-      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-        if (P.visible(node.parentElement)) parts.push(node.nodeValue);
-      }
-      value = parts.join(' ');
-    }
-    value = value.replace(/^(Thinking effort|Select model|思考强度|选择模型)[ \t]*[\r\n]+/i, '').replace(/\s+/g, ' ').trim();
-    if (!S.presetName(value, 24) || /^(Thinking effort|Select model|思考强度|选择模型)$/i.test(value)) S.presetFail();
+    const value = S.chatGptDefault.closedLabel(adapter);
+    if (!P.visible(adapter._anchor()) || !S.presetName(value, 24)) S.presetFail();
     return value;
   }
   S.presetSlider = { value, move, closedLabel };

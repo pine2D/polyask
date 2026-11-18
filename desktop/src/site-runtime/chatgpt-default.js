@@ -7,11 +7,12 @@
   const normalize = value => String(value || "").replace(/[\u200b-\u200d\u2060\ufeff]/g, "")
     .replace(/[\u2010-\u2015\u2212]/g, "-").replace(/\s+/g, "").toLowerCase();
   const targets = {
-    fast: { index: 1, model: "GPT-6.1 Sol", label: /^(?:gpt-?)?6\.1sollight$/ },
-    think: { index: 5, model: "GPT-6 Astra", label: /^(?:gpt-?)?6astraextrahigh$/ },
+    fast: { index: 1, effort: "Light", models: ["GPT-6.2 Sol", "GPT-6.1 Sol"] },
+    think: { index: 5, effort: "Extra High", models: ["GPT-6.2 Astra", "GPT-6 Astra"] },
   };
+  const jointLabel = value => normalize(value).replace(/^gpt-?/, "");
   const defaults = [{ model: "Default", aliases: ["Default", "Default Recommended set of models"] }];
-  const expanded = /^(?:default(?:recommendedsetofmodels)?|gpt-6(?:\.1)?(?:sol|terra|astra|luna))$/;
+  const expanded = /^(?:default(?:recommendedsetofmodels)?|gpt-6(?:\.1)?(?:sol|terra|astra|luna)|gpt-6\.2(?:sol|astra))$/;
   const legacy = /^(?:gpt-?6|6|gpt-5\.6sol|gpt-5\.[345]|latest|最新)$/;
   function hasPresets(adapter) {
     const root = adapter._root();
@@ -20,9 +21,9 @@
   }
 
   // 只读闭合按钮；排除隐藏测量文案，不使用可能滞后的 effort data 属性。
-  function current(adapter) {
+  function closedLabel(adapter) {
     const a = adapter._anchor();
-    if (!a || a.getAttribute("aria-expanded") === "true") return null;
+    if (!a || a.getAttribute("aria-expanded") === "true") return "";
     let text = a.innerText != null ? a.innerText : a.textContent;
     if (a.nodeType === 1 && a.ownerDocument?.createTreeWalker) {
       const parts = [], walker = a.ownerDocument.createTreeWalker(a, 4);
@@ -30,17 +31,22 @@
         let hidden = false;
         for (let p = node.parentElement; p; p = p.parentElement) {
           const style = getComputedStyle(p);
-          if (p.getAttribute("aria-hidden") === "true" || style.display === "none" || /hidden|collapse/.test(style.visibility)) { hidden = true; break; }
+          if (p.hidden || p.getAttribute("aria-hidden") === "true" || style.display === "none" || /hidden|collapse/.test(style.visibility)) { hidden = true; break; }
           if (p === a) break;
         }
         if (!hidden) parts.push(node.nodeValue);
       }
       text = parts.join(" ");
     }
-    const label = normalize(text).replace(/^(thinkingeffort|selectmodel|思考强度|选择模型)/, "");
-    const mode = Object.keys(targets).find(key => targets[key].label.test(label));
-    if (mode) return { observed: mode, model: targets[mode].model };
-    return /^(?:gpt-?)?6(?:\.\d+)?(?:sol|terra|astra|luna)/.test(label) ? { observed: null } : null;
+    return (text || "").replace(/\s+/g, " ").trim().replace(/^(?:Thinking effort|Select model|思考强度|选择模型)(?: |$)/i, "");
+  }
+  function current(adapter) {
+    const label = jointLabel(closedLabel(adapter));
+    for (const [observed, { models, effort }] of Object.entries(targets)) {
+      const model = models.find(name => jointLabel(name + effort) === label);
+      if (model) return { observed, model };
+    }
+    return /^6(?:\.\d+)?(?:sol|terra|astra|luna)/.test(label) ? { observed: null } : null;
   }
   function level(adapter) {
     if (!adapter._controlledMenu()) throw new Error("ChatGPT: 菜单关联未确认");
@@ -91,11 +97,11 @@
       escMenus();
       const confirmed = await waitFor(() => {
         const actual = current(adapter);
-        return actual?.observed === mode && actual.model === target.model ? actual : null;
+        return actual?.observed === mode ? actual : null;
       }, 1500, 120, deadline);
       if (!confirmed) throw new Error("ChatGPT: Default 模型与强度未确认");
       return { outcome: "preferred", ...confirmed };
     } finally { escMenus(); }
   }
-  S.chatGptDefault = { apply, current, hasPresets };
+  S.chatGptDefault = { apply, current, hasPresets, closedLabel };
 })();

@@ -7,6 +7,9 @@ const { JSDOM } = require("jsdom");
 // React 的模型点击/重绘由小型状态机代替；适配器、core 与 tier 均加载生产源码。
 const PRESETS = ["GPT-6 Luna High", "GPT-6.1 Sol Light", "GPT-6.1 Sol Medium",
   "GPT-6 Astra Light", "GPT-6 Astra Medium", "GPT-6 Astra Extra High"];
+// 2026-11-18 Work 的 Default 目录，来自生产 getTierPresets 的逐格读数。
+const WORK_62 = ["GPT-6 Luna High", "GPT-6.2 Sol Light", "GPT-6.2 Sol Medium",
+  "GPT-6.2 Astra Light", "GPT-6.2 Astra Medium", "GPT-6.2 Astra Extra High"];
 function defaultCase(options = {}) {
   const dom = new JSDOM('<body><textarea>existing draft</textarea></body>', { url: "https://chatgpt.com/", runScripts: "outside-only" });
   const w = dom.window, d = w.document;
@@ -30,7 +33,8 @@ function defaultCase(options = {}) {
     trigger.setAttribute("aria-expanded", String(state.open));
     trigger.setAttribute("data-state", state.open ? "open" : "closed");
     const legacyLabel = state.selected + " " + (state.index === 0 ? "Instant" : state.index === 4 ? "Pro" : "High");
-    trigger.textContent = state.open ? "Select model" : options.label || (options.legacy ? legacyLabel : PRESETS[state.index]) || "Unknown";
+    const presets = options.presets || PRESETS;
+    trigger.textContent = state.open ? "Select model" : options.label || (options.legacy ? legacyLabel : presets[state.index]) || "Unknown";
     if (!state.open) { trigger.removeAttribute("aria-controls"); return; }
     trigger.setAttribute("aria-controls", "picker");
     const root = d.createElement("div"); root.id = "picker";
@@ -90,4 +94,4 @@ function defaultCase(options = {}) {
   return { dom, w, S, state, adapter: S.adapters["chatgpt.com"],
     render, close: () => dom.window.close() };
 }
-module.exports = { defaultCase };
+module.exports = { defaultCase, WORK_62 };

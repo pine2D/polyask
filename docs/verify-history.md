@@ -4,6 +4,19 @@
 
 **注意**：现行验证规范、日常离线/原生门禁命令、界面验收三关、真机只读纪律及尚未闭合的真机清单，一律以 `docs/verify.md` 为准；后续日常改动不要再往 `docs/verify.md` 追加日期流水账。
 
+## 2026-11-18 ChatGPT Work 6.2 与普通 Chat
+
+在 1.35.0 基线修复上重启 Linux/WSL 开发版，从同一空白首页分别进入 Chat 和 Work。用生产 `__AMS.resolveTier` 切档，检查闭合按钮和重开菜单后的实际滑块读数。
+
+| 页面 | 快速 | 思考 | 恢复核验 |
+| --- | --- | --- | --- |
+| Chat | 6 Instant，0/4 | 6 Pro，4/4 | 回到原 6 Pro，两次回执均为 `mode_only` |
+| Work · Default | GPT-6.2 Sol Light，1/5 | GPT-6.2 Astra Extra High，5/5 | 快速→思考→快速三次均返回 `preferred` 和对应模型名，回到原 Sol Light |
+
+设置 IPC 在 Work 读取 11 个模型和 Default 的 6 个完整组合，普通 Chat 读取 2 个模型和 5 个强度。两个页面的菜单巡检均通过，输入框、网址、18 项已存预设与检查前一致，可见残留菜单为 0。全程未发送问题、上传附件或保存测试预设。用户提供的 Windows 脱敏快照记录了入口正常、档位未识别；其中无模型标签或滑块读数。以上切换读数均取自 Linux/WSL 真机。
+
+将新增回归放到改动前的 `2720057` 源码上，分别复现了推荐档位未确认、自定义目录读取失败、隐藏菜单被计为残留三项故障。修复后 `npm test` 通过 2,816 项应用测试与 620 项运行时测试，`bash scripts/verify.sh` 通过。Windows x64 隔离试玩版已同步，其 `app.asar` 的 SHA-256 与本轮构建一致，站点 preload 含两款 6.2 模型。Windows 网页切档未在本轮实测。
+
 ## 2026-11-12 Gemini 新菜单与 Carbon 预设
 
 本轮为 1.33.1 基线上的未发布修复。Linux/WSL 真实菜单中，模型与强度均为 `menuitemradio`；模型主标题改为用途，副标题为 `4 Argon` / `4 Carbon`。旧内置思考返回 `unconfirmed`，没有改变原 Carbon Low，原因是选择器漏掉模型项、整行开头也不再是模型名。自定义预设原本支持 radio，并按主标题保存，实际 Carbon 主标题为 `Most complex work`；用户反馈自定义保存后能正常切换，本轮保留这些既有标识，不迁移配置、不把 Carbon 自动设为内置推荐。

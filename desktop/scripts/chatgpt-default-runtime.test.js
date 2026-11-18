@@ -2,7 +2,24 @@
 const tests = [];
 const test = (name, run) => tests.push({ name, run });
 const assert = require("node:assert/strict");
-const { defaultCase } = require("./lib/chatgpt-default-harness");
+const { defaultCase, WORK_62 } = require("./lib/chatgpt-default-harness");
+
+test("Work Default confirms the actual 6.2 model after each switch, preserving the draft", async () => {
+  const c = defaultCase({ labels: ["Default", "GPT-6.2 Astra", "GPT-6.2 Sol", "GPT-6 Astra", "GPT-6.1 Sol"],
+    presets: WORK_62, index: 0 });
+  try {
+    for (const [mode, index, model] of [["fast", 1, "GPT-6.2 Sol"], ["think", 5, "GPT-6.2 Astra"], ["fast", 1, "GPT-6.2 Sol"]]) {
+      const result = await c.S.resolveTier(mode, 11000);
+      assert.equal(result.outcome, "preferred");
+      assert.equal(result.model, model);
+      assert.equal(c.state.index, index);
+      assert.equal(c.adapter.state(), mode);
+      assert.equal(c.adapter.selection(mode).model, model);
+      assert.equal(c.state.open, false);
+    }
+    assert.equal(c.w.document.querySelector("textarea").value, "existing draft");
+  } finally { c.close(); }
+});
 
 test("Default fast chooses the second preset Sol Light, not Luna High or legacy 5.6", async () => {
   const c = defaultCase({ index: 5 });
@@ -33,7 +50,10 @@ test("Default think starts from the active model list and confirms Astra Extra H
 test("closed Default preset labels produce exact read-only evidence; Luna and middle presets do not", () => {
   for (const [label, mode, model] of [["GPT-6.1 Sol Light", "fast", "GPT-6.1 Sol"],
     ["GPT-6 Astra Extra High", "think", "GPT-6 Astra"], ["GPT-6 Luna High", null],
-    ["GPT-6.1 Sol Medium", null], ["GPT-6 Astra Medium", null], ["GPT-6 Astra High", null]]) {
+    ["GPT-6.1 Sol Medium", null], ["GPT-6 Astra Medium", null], ["GPT-6 Astra High", null],
+    ["6.2 Sol Light", "fast", "GPT-6.2 Sol"], ["6.2 Astra Extra High", "think", "GPT-6.2 Astra"],
+    ["GPT-6.2 Sol Medium", null], ["GPT-6.2 Astra Light", null], ["GPT-6.2 Astra Medium", null],
+    ["GPT-6.2 Astra High", null], ["GPT-6.3 Sol Light", null], ["GPT-6.1 Astra Extra High", null]]) {
     const c = defaultCase({ label });
     try {
       assert.equal(c.adapter.state(), mode, label);
