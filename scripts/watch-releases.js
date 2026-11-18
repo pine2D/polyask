@@ -146,12 +146,15 @@ async function runWatch(options) {
       const updates = planUpdates(src, entries, issues, now, warn);
       for (const update of updates) {
         const { number, ...body } = update;
-        if (dryRun) { log(`[dry-run] would ${number ? "update" : "open"}: ${body.title}`); continue; }
+        const current = number && issues.find((row) => row.number === number);
+        const [planned, performed] = !number ? ["open", "opened"]
+          : current.state === "closed" ? ["reopen", "reopened"] : ["update", "updated"];
+        if (dryRun) { log(`[dry-run] would ${planned}: ${body.title}`); continue; }
         const saved = await github(number ? "PATCH" : "POST", `/repos/${REPO}/issues${number ? `/${number}` : ""}`, { ...body, ...(!number ? { labels: [LABEL] } : {}) });
         if (!saved?.number) throw new Error(`issue ${number ? "更新" : "创建"}失败 ${body.title}`);
-        if (number) Object.assign(issues.find((row) => row.number === number), saved, body);
+        if (number) Object.assign(current, saved, body);
         else issues.push({ ...saved, ...body });
-        log(`${number ? "updated" : "opened"}: #${saved.number} ${body.title}`);
+        log(`${performed}: #${saved.number} ${body.title}`);
       }
       if (!updates.length) log(`${src.key}: 无新条目`);
     } catch (e) { failures.push(`${src.key}: ${e.message}`); }

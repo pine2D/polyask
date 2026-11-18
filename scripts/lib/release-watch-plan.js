@@ -78,7 +78,8 @@ function planUpdates(src, entries, issues, now, warn = console.warn) {
       const matches = issues.filter((issue) => issue.title === title);
       if (matches.length > 1) throw new Error(`周报标题重复：${title}`);
       const existing = matches[0];
-      update = { ...(existing ? { number: existing.number } : {}), title,
+      // 仅命中新条目才到这里。正文与开启状态同次 PATCH，避免新情报留在已关闭列表。
+      update = { ...(existing ? { number: existing.number, state: "open" } : {}), title,
         body: existing?.body || `情报源：${src.name} — ${src.url}\n自然周：${time.week} 起（UTC 周一）。API 与低信号聚合；不证明网页 UI 已变。\n` };
       updates.push(update);
     }

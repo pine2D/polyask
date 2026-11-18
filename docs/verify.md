@@ -121,6 +121,7 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 
 - **模型发布与底层安全双哨兵**：`.github/workflows/release-watch.yml` 每周一/四运行 `scripts/watch-releases.js` 轮询官方源（`web/model` 独立开单，`api/low` 按周聚合）；每周一及手动触发额外运行 `scripts/watch-security.js` 检查满 72 小时（`UPDATE_MIN_AGE_DAYS=3`）的 Electron 同大版本稳定补丁及生产/Electron 运行时依赖的 `high`/`critical` 漏洞，无风险零打扰，有风险合并为单条 `[security-watch]` 提醒（离线由 `scripts/test-release-feed.js`、`scripts/test-release-watch.js`、`scripts/test-security-watch.js` 守卫）。**哨兵只是闹钟：公告型号 ≠ 网页菜单文案，严禁未经真机核对直接改适配器正则。**
   - 百炼按发布日期合并各地区的模型记录，跨地区同日出现的同一模型只记一次。旧表格继续沿用原来的条目标识。
+  - 已关闭的周报收到同周的新条目时，在原 issue 中追加并重开。重复条目不会触发写入。
 - **双通道脱敏报障入口**：① `Alt+H`「复制诊断报告」（仅含版本/系统/缩放、阶段码、`name-kind-ok`、固定枚举计数与代理枚举行）；② `Alt+H` 单站详情页「导出脱敏快照」（只读采样本站 DOM 骨架与可见浮层菜单，抹除对话正文、URL、账号、Cookie 与本机路径，经 preload 与主进程双重扫描通过后才允许保存单个 `.json` 文件，可直接用 `node scripts/capture-dom-fixture.mjs --from-snapshot <file.json> --name <name>` 转入回归夹具），配合 `.github/ISSUE_TEMPLATE/site-breakage.yml`。
 
 ## 自定义代理：本地代理验证法与技术验证结论

@@ -79,6 +79,36 @@ test("同周增量保留已移出feed的旧条目；重复与跨周观察不重�
   assert.strictEqual(h.rows[1].title, "[release-watch] openai/weekly: 2026-11-09");
 });
 
+test("已关闭周报收到同周新条目时原单重开，重复巡检和预演不改变状态", async () => {
+  const h = harness(source("openai"));
+  const first = ["How Acme uses GPT-6", "Mon, 02 Nov 2026 12:00:00 GMT"];
+  const late = ["How Bravo uses GPT-6", "Fri, 06 Nov 2026 12:00:00 GMT"];
+  await h.run([first]);
+  const issue = h.rows[0];
+  issue.state = "closed";
+  issue.body += "\n人工核查记录";
+  const original = issue.body;
+  const laterWeek = { now: new Date("2026-11-10T12:00:00Z") };
+  await h.run([first], laterWeek);
+  await h.run([late, first], { ...laterWeek, dryRun: true });
+  assert.strictEqual(h.writes.length, 1);
+  assert.strictEqual(issue.state, "closed");
+  assert.strictEqual(issue.body, original);
+  assert.ok(h.logs.some(line => line.includes("would reopen")));
+  await h.run([late, first], laterWeek);
+  assert.strictEqual(h.rows.length, 1);
+  assert.strictEqual(h.writes[1].method, "PATCH");
+  assert.ok(h.writes[1].path.endsWith(`/issues/${issue.number}`));
+  assert.strictEqual(h.writes[1].body.state, "open");
+  assert.strictEqual(issue.state, "open");
+  assert.ok(issue.body.startsWith(original));
+  assert.match(issue.body, /How Bravo/);
+  issue.state = "closed";
+  await h.run([late, first], laterWeek);
+  assert.strictEqual(h.writes.length, 2);
+  assert.strictEqual(issue.state, "closed");
+});
+
 test("百炼新版按日期汇总各地区的模型，跨区去重后取最新条目并兼容旧标题", async () => {
   const src = source("bailian");
   const card = (date, models) => `<div class="rkb-update"><div class="rkb-update-heading"><h3>${date}</h3></div>
