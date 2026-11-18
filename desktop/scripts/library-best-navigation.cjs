@@ -35,7 +35,8 @@ module.exports = async ({ win, run, wait, click, key, shot, locale, theme, zoom 
     return metrics;
   };
   const navigate = async index => {
-    await click(`.archive-answer-nav a[href="#archive-answer-${index}"]`); await key('Tab');
+    // The source bar is already sticky. Scrolling the article here would change the active source before the click.
+    await click(`.archive-answer-nav a[href="#archive-answer-${index}"]`, 'nearest'); await key('Tab');
     assert.equal(await run('document.activeElement?.dataset.action'), 'archive-answer-export');
     await key('Tab');
     assert.equal(await run(`document.activeElement === document.querySelector('#archive-answer-${index} .archive-answer-actions button[aria-pressed]')`), true);

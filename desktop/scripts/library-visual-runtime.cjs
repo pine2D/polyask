@@ -17,8 +17,15 @@ app.whenReady().then(async () => {
     while (Date.now() < deadline) { if (await run(source)) return; await pause(30); }
     throw new Error(`UI wait timed out: ${source}`);
   };
-  const click = async selector => {
-    const center = await run(`(() => { const e=document.querySelector(${JSON.stringify(selector)}); e.scrollIntoView({block:'center',inline:'nearest'}); const r=e.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
+  const click = async (selector, container = 'all') => {
+    const center = await run(`(async () => {
+      const element = document.querySelector(${JSON.stringify(selector)});
+      element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant', container: ${JSON.stringify(container)} });
+      // Native input uses the compositor's scroll position, including horizontal source navigation.
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const box = element.getBoundingClientRect();
+      return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    })()`);
     const scale = win.webContents.getZoomFactor();
     const box = { x: Math.round(center.x * scale), y: Math.round(center.y * scale) };
     win.webContents.sendInputEvent({ type: 'mouseDown', ...box, button: 'left', clickCount: 1 });
@@ -249,8 +256,9 @@ app.whenReady().then(async () => {
   await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 8');
   assert.equal(await run('document.querySelector(".library").dataset.focused'), 'false');
   const hardening = await require('./library-hardening-visual.cjs')({ win, nativeTheme, output, run, wait, click, fill, key, shot });
+  const searchFeedback = await require('./library-search-visual.cjs')({ win, nativeTheme, output, run, wait, shot });
   assert.deepEqual(errors, []);
-  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, tableAccessibility, critiqueFixes, readingContext, comparisonViewport, sourceLocation, contentLayout, copyStates, colors, anchorLayouts, comparisonLayout, hardening, interactions: 'passed', consoleErrors: errors }, null, 2));
+  writeFileSync(join(output, 'report.json'), JSON.stringify({ matrix: reports, searchFeedback, tableAccessibility, critiqueFixes, readingContext, comparisonViewport, sourceLocation, contentLayout, copyStates, colors, anchorLayouts, comparisonLayout, hardening, interactions: 'passed', consoleErrors: errors }, null, 2));
   console.log(`Library UI passed: ${reports.length} layout variants, four folder IME cases and keyboard/editing flows.`);
   app.quit();
 }).catch(error => { console.error(error); app.exit(1); });

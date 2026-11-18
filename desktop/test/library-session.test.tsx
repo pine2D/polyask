@@ -18,6 +18,60 @@ function api(search: (filters: FolderFilters) => Promise<readonly FolderContent[
     }, getArchive: async (id: string) => records.get(id) ?? null }) as any);
 }
 
+test('typing keeps the previous rows until search starts and disables stale record actions', async () => {
+  const queries: string[] = [];
+  let finish!: (items: readonly FolderContent[]) => void;
+  api(async filters => {
+    queries.push(filters.query ?? '');
+    return filters.query ? new Promise(resolve => { finish = resolve; }) : [content];
+  });
+  const h = await mountDom(workspace({ preferredId: null }));
+  try {
+    await waitForInitial();
+    await h.click(button(h.document, '[data-action="library-multi-select"]'));
+    await h.click(h.document.querySelector<HTMLInputElement>('.library-row-check input')!);
+    const row = () => h.document.querySelector<HTMLButtonElement>('[data-action="library-open-item"]');
+    const search = h.document.querySelector<HTMLInputElement>('[name="library-search"]')!;
+    assert.equal(row()?.disabled, false);
+    await h.input(search, 's');
+    await h.input(search, 'sky');
+    assert.deepEqual(queries, ['']);
+    assert.equal(row()?.disabled, true, 'previous rows stay visible and inert during debounce');
+    assert.equal(h.document.querySelector<HTMLInputElement>('.library-row-check input')?.disabled, true);
+    assert.equal(button(h.document, '[data-action="library-bulk-export"]').disabled, true);
+    assert.equal(search.disabled, false);
+    assert.equal(h.document.querySelector('.archive-list [role="status"]') === null, true);
+    await waitForQuery();
+    assert.deepEqual(queries, ['', 'sky']);
+    assert.equal(h.document.querySelector('.archive-list [role="status"]')?.textContent, copy.archiveLoading);
+    await act(async () => finish([content]));
+    assert.equal(row()?.disabled, false);
+    assert.equal(button(h.document, '[data-action="library-bulk-export"]').disabled, false);
+  } finally { await h.close(); setShellApi(null); }
+});
+
+test('a new search clears the previous load error immediately and retains the last empty scope', async () => {
+  api(async filters => {
+    if (filters.query === 'old') throw Error('fixture_search_failed');
+    return [];
+  });
+  const h = await mountDom(workspace({ preferredId: null }));
+  try {
+    await waitForInitial();
+    const search = h.document.querySelector<HTMLInputElement>('[name="library-search"]')!;
+    const initialEmpty = h.document.querySelector('.archive-list .library-empty')?.textContent;
+    const initialTitle = h.document.querySelector('.library-welcome h1')?.textContent;
+    await h.input(search, 'old'); await waitForQuery();
+    assert.ok(h.document.querySelector('.archive-status')?.textContent?.includes(copy.folderLoadFailed));
+    await h.input(search, 'new');
+    assert.equal(h.document.querySelector('.archive-status') === null, true);
+    assert.equal(h.document.querySelector('.archive-list .library-empty')?.textContent, initialEmpty);
+    assert.equal(h.document.querySelector('.library-welcome h1')?.textContent, initialTitle);
+    await waitForQuery();
+    assert.equal(h.document.querySelector('.library-welcome h1')?.textContent, copy.libraryNoMatchesTitle);
+  } finally { await h.close(); setShellApi(null); }
+});
+
 test('matching query keeps the reader during the request and applies the newest record', async () => {
   let finish: ((items: readonly FolderContent[]) => void) | undefined;
   api(filters => filters.query ? new Promise(resolve => { finish = resolve; }) : Promise.resolve([content]));
@@ -116,5 +170,25 @@ test('an explicit repeated same-ID navigation revision wins over the previous qu
     assert.equal(h.document.querySelector<HTMLInputElement>('[name="library-search"]')?.value, '');
     assert.equal(readerTitle(h.document), record.task);
     assert.equal(h.document.querySelector('.library')?.getAttribute('data-pane'), 'detail');
+  } finally { await h.close(); setShellApi(null); }
+});
+
+test('a detail action finishing after a filter change refreshes the current query', async () => {
+  const queries: string[] = [];
+  api(async filters => { queries.push(filters.query ?? ''); return [content]; });
+  let oldRefresh: (() => void) | undefined;
+  const h = await mountDom(workspace({ renderArchive: (value, changed) => {
+    oldRefresh ??= changed;
+    return <span>{value.task}</span>;
+  } }));
+  try {
+    await waitForInitial();
+    assert.equal(typeof oldRefresh, 'function');
+    const search = h.document.querySelector<HTMLInputElement>('[name="library-search"]')!;
+    await h.input(search, 'sky'); await waitForQuery();
+    const count = queries.length;
+    await act(async () => oldRefresh!()); await waitForQuery();
+    assert.deepEqual(queries.slice(count), ['sky']);
+    assert.equal(search.value, 'sky');
   } finally { await h.close(); setShellApi(null); }
 });

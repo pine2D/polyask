@@ -65,14 +65,15 @@ export function sessionFixture(initial: Partial<SessionState> = {}) {
 export function workspace(extra: Partial<ArchiveSurfaceProps> & {
   session?: ReturnType<typeof sessionFixture>; navigationRevision?: number;
   onBlockingChange?: (value: boolean) => void;
+  renderArchive?: React.ComponentProps<typeof FolderWorkspace>['renderArchive'];
 } = {}) {
   return <FolderWorkspace copy={copy} locale="en" preferredId={record.id} onClose={() => {}}
     onCapture={async () => record} sites={[]} synthesisSites={[]} defaultTier={null}
     pendingSynthesis={null} synthesisCandidate={null} onSendSynthesis={async () => {}}
-    onCollectSynthesis={async () => {}} onSaveSynthesis={async () => record} {...extra}
+    onCollectSynthesis={async () => {}} onSaveSynthesis={async () => record}
     renderArchive={value => <ArchiveDetail copy={copy} locale="en" record={value} busy={false}
       onPatch={() => {}} onOpenSource={() => {}} pendingSynthesis={null} synthesisCandidate={null}
-      onSynthesize={() => {}} onCollectSynthesis={() => {}} onSaveSynthesis={() => {}} />} />;
+      onSynthesize={() => {}} onCollectSynthesis={() => {}} onSaveSynthesis={() => {}} />} {...extra} />;
 }
 export function ContentListHost({ items, page: initialPage = 0, loading = false, failed = false }: {
   items: readonly FolderContent[]; page?: number; loading?: boolean; failed?: boolean;

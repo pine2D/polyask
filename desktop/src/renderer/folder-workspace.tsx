@@ -52,9 +52,12 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const [membership, setMembership] = useState<(FolderTarget & { title: string; afterSaved?: () => void }) | null>(null);
   const [tags, setTags] = useState<readonly string[]>([]);
   const [revision, setRevision] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const loadingRef = useRef(loading); loadingRef.current = loading;
-  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadState, setLoadState] = useState<'debouncing' | 'loading' | 'ready' | 'failed'>('loading');
+  const loading = loadState === 'loading', loadFailed = loadState === 'failed';
+  const pending = loading || loadState === 'debouncing';
+  const pendingRef = useRef(pending); pendingRef.current = pending;
+  const lastResultFilters = useRef<FolderFilters | undefined>(undefined);
+  const previousFilters = loadState === 'debouncing' ? lastResultFilters.current : undefined;
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<LibraryFailure | null>(null);
   const message = failure === 'capture' ? copy.archiveCollectFailed : failure === 'load' ? copy.folderLoadFailed : '';
@@ -126,9 +129,9 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   useEffect(() => {
     const request = ++epoch.current;
     const requestIntent = intent.current;
-    const quiet = starRefresh.current; starRefresh.current = false;
+    const quiet = starRefresh.current && !filterChanged.current; starRefresh.current = false;
     const timer = setTimeout(() => {
-      if (!quiet) setLoading(true);
+      if (!quiet) setLoadState('loading');
       const target = targetFromContentKey(selectedRef.current ? contentKey(selectedRef.current) : restoringKey.current);
       const selection = selectedKeysRef.current.flatMap(key => targetFromContentKey(key) ?? []);
       const fresh = loadedRevision.current !== revision;
@@ -145,10 +148,11 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
         if (nextFolders) setFolders(nextFolders);
         if (nextTags) setTags(nextTags);
         loadedRevision.current = revision;
+        lastResultFilters.current = filters;
         setItems(contents.items.map(currentStar).filter(item => !filters.favorite || item.record.favorite)); setTotal(contents.total); setPage(contents.page);
         const live = new Set(contents.selectedTargets.map(target => `${target.kind}:${target.id}`));
         setSelectedKeys(current => current.filter(key => live.has(key)));
-        setLoading(false); setLoadFailed(false);
+        setLoadState('ready');
         setFailure(current => current === 'capture' ? current : detailFailed ? 'load' : null);
         const key = target ? `${target.kind}:${target.id}` : null;
         restoringKey.current = null;
@@ -167,7 +171,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
           listScroll.current = 0;
           filterChanged.current = false;
         }
-      }).catch(() => { if (request === epoch.current) { setLoading(false); setLoadFailed(true); reportLoadFailure(); } });
+      }).catch(() => { if (request === epoch.current) { setLoadState('failed'); reportLoadFailure(); } });
     }, filters.query ? 180 : 0);
     return () => { clearTimeout(timer); epoch.current++; };
   }, [filters, revision, page, sort, props.locale, copy.folderLoadFailed]);
@@ -186,12 +190,14 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
     return () => { active = false; };
   }, [props.preferredId, props.navigationRevision]);
   const change = (patch: Partial<FolderFilters>) => navigate(() => {
-    epoch.current++; filterChanged.current = true; setLoading(true); setLoadFailed(false);
+    epoch.current++; filterChanged.current = true;
+    setLoadState(patch.query && lastResultFilters.current ? 'debouncing' : 'loading');
+    setFailure(current => current === 'load' ? null : current);
     setFilters(current => changeFolderFilters(current, patch)); setNewSource(null);
     if (!selected) setPane('list');
   });
   const changeSort = (value: LibrarySort) => navigate(() => {
-    filterChanged.current = true; setLoading(true); setSort(value); listScroll.current = 0;
+    filterChanged.current = true; setLoadState('loading'); setSort(value); listScroll.current = 0;
   });
   const openArchive = (record?: ArchiveRecord) => navigate(() => { setNewSource(null); if (record) setFilters({ folderId: '' }); setSelected(record ? { kind: 'archive', record } : null); setPane(record ? 'detail' : 'list'); });
   const changed = (deleted = false, starredRecord?: ArchiveRecord) => { if (starredRecord) { starred({ kind: 'archive', record: starredRecord }); return; } if (deleted) { setSelected(null); setFocused(false); setPane('list'); } refresh(); };
@@ -214,7 +220,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       setSelectedKeys(current => current.filter(value => value !== key));
       setTotal(current => Math.max(0, current - 1));
       epoch.current++; starRefresh.current = true; refresh();
-    } else if (loadingRef.current) { epoch.current++; starRefresh.current = true; refresh(); }
+    } else if (pendingRef.current) { epoch.current++; starRefresh.current = true; refresh(); }
   };
   const favoriteItem = async (item: FolderContentSummary) => {
     if (busyRef.current) return;
@@ -248,12 +254,12 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
   const folderName = folders.find(folder => folder.id === filters.folderId)?.name
     ?? (filters.folderId === '__unfiled__' ? copy.folderUnfiled : copy.folderAll);
   const welcomeTitle = loading ? copy.archiveLoading : loadFailed ? copy.folderLoadFailed
-    : items.length ? copy.libraryPick : libraryEmptyTitle(copy, filters);
-  const welcomeHint = loading || loadFailed ? '' : items.length ? copy.libraryPickHint : libraryEmptyHint(copy, filters);
+    : items.length ? copy.libraryPick : libraryEmptyTitle(copy, previousFilters ?? filters);
+  const welcomeHint = loading || loadFailed ? '' : items.length ? copy.libraryPickHint : libraryEmptyHint(copy, previousFilters ?? filters);
   const targets = selectedKeys.flatMap(key => targetFromContentKey(key) ?? []);
-  const unavailable = busy || loading || loadFailed || !targets.length;
+  const unavailable = busy || loadState !== 'ready' || !targets.length;
   const startBulk = (action: BulkRequest['action'], favorite?: boolean, folderIds?: readonly string[]) => navigate(() => {
-    if (loading || loadFailed || !targets.length) return;
+    if (unavailable) return;
     setBulkFolders(false); bulk.start({ action, favorite, folderIds, targets, locale: props.locale });
   });
   const visibleKeys = new Set(items.map(item => `${item.kind}:${item.record.id}`));
@@ -279,7 +285,7 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       disabled={unavailable} running={bulk.running} done={bulk.done} result={bulk.result} onFavorite={value => startBulk('favorite', value)}
       onAdd={() => navigate(() => setBulkFolders(true))} onExport={() => navigate(() => { if (!unavailable) markdown.open(targets); })} onStop={bulk.stop}
       onRetry={() => navigate(() => {
-        if (loading || loadFailed || !bulk.result) return;
+        if (loadState !== 'ready' || !bulk.result) return;
         const retryIntent = intent.current;
         shell.queryFolderContents({ ...filters, selectedTargets: bulk.result.outcome.failed }).then(result => {
           if (mounted.current && retryIntent === intent.current) bulk.retry(result.selectedTargets);
@@ -287,11 +293,11 @@ export function FolderWorkspace(props: ArchiveSurfaceProps & {
       })} />
     <div className="folder-columns">
       <FolderSidebar copy={copy} locale={props.locale} folders={folders} selected={filters.folderId ?? ''} disabled={busy} onSelect={folderId => change({ folderId })} onChanged={refresh} />
-      <LibraryContentList onFavorite={favoriteItem} copy={copy} locale={props.locale} items={items} filters={filters} tags={tags} loading={loading}
+      <LibraryContentList onFavorite={favoriteItem} copy={copy} locale={props.locale} items={items} filters={filters} previousFilters={previousFilters} tags={tags} loading={loading}
         serverPage={{ page, total }}
         failed={loadFailed} selectedKey={selected ? contentKey(selected) : null} onChange={change} onRetry={refresh}
         page={page} sort={sort} selectedKeys={selectedKeys} onSelectedKeysChange={setSelectedKeys}
-        onPageChange={value => navigate(() => { setLoading(true); setPage(value); listScroll.current = 0; })} onSortChange={changeSort}
+        onPageChange={value => navigate(() => { setLoadState('loading'); setPage(value); listScroll.current = 0; })} onSortChange={changeSort}
         listScroll={listScroll.current} onScroll={value => { listScroll.current = value; session.update({ listScroll: value }); }} disabled={busy}
         onSelect={item => {
           // Ask once, against the draft state at response time: a pre-read prompt would be answered again if the draft changed during the read.

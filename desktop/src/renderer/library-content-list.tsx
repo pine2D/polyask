@@ -24,9 +24,11 @@ export function libraryEmptyTitle(copy: DesktopCopy, filters: FolderFilters): st
   return filters.folderId || filters.kind ? copy.libraryViewEmptyTitle : copy.libraryEmptyTitle;
 }
 
-export function LibraryContentList<T extends FolderContentSummary>({ copy, locale, items, filters, tags, loading, failed, selectedKey, onChange, onSelect, onRetry,
+export function LibraryContentList<T extends FolderContentSummary>({ copy, locale, items, filters, previousFilters, tags, loading, failed, selectedKey, onChange, onSelect, onRetry,
   page: controlledPage, sort: controlledSort, selectedKeys: controlledKeys, onPageChange, onSortChange, onSelectedKeysChange, disabled = false, onScroll, listScroll = 0, serverPage, onFavorite }: {
   copy: DesktopCopy; locale: string; items: readonly T[]; filters: FolderFilters; tags: readonly string[];
+  /** A debounced search still displays the last successful page, with its record actions disabled. */
+  previousFilters?: FolderFilters;
   loading: boolean; failed: boolean; selectedKey: string | null; onChange: (patch: Partial<FolderFilters>) => void;
   onFavorite?: (item: T) => Promise<unknown>;
   onSelect: (item: T) => void; onRetry: () => void;
@@ -46,7 +48,7 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     pageCount: Math.max(1, Math.ceil(serverPage.total / LIBRARY_PAGE_SIZE)),
     start: serverPage.total ? serverPage.page * LIBRARY_PAGE_SIZE + 1 : 0,
     end: Math.min((serverPage.page + 1) * LIBRARY_PAGE_SIZE, serverPage.total) } : pageLibraryContents(sorted, page);
-  const unavailable = disabled || loading || failed;
+  const unavailable = disabled || loading || failed || previousFilters !== undefined;
   const scroller = useRef<HTMLDivElement>(null);
   // 标签/状态/排序收进「筛选」面板，多选工具只在多选时出现：列表首屏多留几条内容。
   const panelId = useId(), [filtersOpen, setFiltersOpen] = useState(false), [multi, setMulti] = useState(false);
@@ -64,7 +66,9 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     if (current.page !== page) setPage(current.page);
   }, [items, loading, failed, keys, page, current.page, setKeys, setPage, serverPage]);
   const filtered = !!(filters.query || filters.tag || filters.favorite || filters.status);
-  const emptyHint = libraryEmptyHint(copy, filters);
+  const shown = previousFilters ?? filters;
+  const emptyText = shown.favorite && !shown.query && !shown.tag && !shown.status ? copy.starredEmpty
+    : shown.query || shown.tag || shown.favorite || shown.status ? copy.archiveNoMatches : copy.folderEmpty;
   return <section className="folder-content-list" data-selecting={selecting} aria-label={copy.folderAll}>
     <div className="folder-filters">
       <div className="library-search-row"><input type="search" name="library-search" autoComplete="off" aria-label={copy.folderSearch} placeholder={`${copy.folderSearch}…`}
@@ -108,7 +112,7 @@ export function LibraryContentList<T extends FolderContentSummary>({ copy, local
     <div ref={scroller} className="archive-list" aria-busy={loading} onScroll={event => onScroll?.(event.currentTarget.scrollTop)}>
       {failed ? <div className="library-empty" role="status"><p>{copy.folderLoadFailed}</p><button onClick={onRetry}>{copy.retryShellLoad}</button></div>
         : loading ? <div className="library-empty" role="status">{copy.archiveLoading}</div>
-        : !items.length ? <div className="library-empty"><p>{filters.favorite && !filters.query && !filters.tag && !filters.status ? copy.starredEmpty : filtered ? copy.archiveNoMatches : copy.folderEmpty}</p><small>{emptyHint}</small></div>
+        : !items.length ? <div className="library-empty"><p>{emptyText}</p><small>{libraryEmptyHint(copy, shown)}</small></div>
         : current.items.map(item => {
           const key = `${item.kind}:${item.record.id}`;
           return <LibraryContentRow key={key} item={item} copy={copy} labels={labels} locale={locale}
