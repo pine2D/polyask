@@ -9,7 +9,7 @@ import type { BackupApplyResult, BackupDocument, BackupEntry, BackupKind, Backup
 import { folderMembershipId } from "../shared/task-folder";
 import type { DesktopDatabase } from "./database";
 import { comparison, inheritBackupParticipation, isBackupPreferenceKey, projectBody, validateBackup } from "./backup-validation";
-import { backupEntryKey as keyOf, activeBackupBody as active, restoredBackupId as restoredFolderId, restoredDraftId, questionRestoreSeed, planBackupRestore } from "./backup-restore-plan";
+import { backupEntryKey as keyOf, activeBackupBody as active, restoredBackupId, restoredDraftId, questionRestoreSeed, planBackupRestore } from "./backup-restore-plan";
 type Body = Record<string, any>;
 interface Plan {
   document: BackupDocument;
@@ -145,7 +145,7 @@ export class BackupService {
       if (e.kind === "folderMembership") {
         const originalFolder = snapshot.get(`folder:${backupBody.folderId}`);
         if (originalFolder && !active(originalFolder) && documentKeys.has(`folder:${backupBody.folderId}`)) {
-          backupBody.folderId = restoredFolderId(backupBody.folderId, originalFolder.deletedAt);
+          backupBody.folderId = restoredBackupId(backupBody.folderId, originalFolder.deletedAt);
           backupBody.id = folderMembershipId({ kind: backupBody.targetKind, id: backupBody.targetId }, backupBody.folderId);
           // The actual destination may have been edited or removed after an earlier restore.
           // Keep the original tombstone intent when this destination has never existed.
@@ -172,7 +172,7 @@ export class BackupService {
       }
       if (e.kind === "question" && questionRestoreSeed(e.id, document.entries, snapshot) !== null) {
         note = "question_new_identity";
-        const mapped = snapshot.get(`question:${restoredFolderId(e.id, questionRestoreSeed(e.id, document.entries, snapshot))}`);
+        const mapped = snapshot.get(`question:${restoredBackupId(e.id, questionRestoreSeed(e.id, document.entries, snapshot))}`);
         blocked = !!mapped && !active(mapped);
         reusesIdentity = active(mapped);
       }
@@ -182,7 +182,7 @@ export class BackupService {
         const seed = hasOriginals ? questionRestoreSeed(String(e.body.questionId), document.entries, snapshot) : null;
         requires = active(snapshot.get(dependency)) && status !== "deleted" && seed === null ? [] : [dependency];
         if (e.kind === 'questionAttachments' && seed !== null) {
-          const target = questionAttachmentId(restoredFolderId(String(e.body.questionId), seed));
+          const target = questionAttachmentId(restoredBackupId(String(e.body.questionId), seed));
           const mapped = snapshot.get(`questionAttachments:${target}`);
           if (mapped) {
             local = mapped;
@@ -195,7 +195,7 @@ export class BackupService {
         blocked ||= requires.length > 0 && !documentKeys.has(dependency);
       }
       if (e.kind === "folder" && status === "deleted") {
-        const mapped = snapshot.get(`folder:${restoredFolderId(e.id, local!.deletedAt)}`);
+        const mapped = snapshot.get(`folder:${restoredBackupId(e.id, local!.deletedAt)}`);
         note = active(mapped) ? "folder_reused" : "folder_new_identity";
         blocked = !!mapped && !active(mapped);
       }

@@ -2,6 +2,7 @@ import { SyncImages } from "./sync-images";
 import { createHash } from "node:crypto";
 import {
   mergeStateFragments,
+  readableSyncSchemas,
   SYNC_SCHEMA,
   SUPPORTED_SYNC_SCHEMA,
   type StateFragment
@@ -131,17 +132,16 @@ export class SyncPull {
     signal.throwIfAborted();
     const props = file.appProperties ?? {};
     if (props.app !== "polyask") return;
-    const legacySchema = props.kind === "questionAttachments" ? 5 : (props.kind === "question" || props.kind === "questionAnswer") ? 4 : (props.kind === "folder" || props.kind === "folderMembership") ? 3 : props.kind === "decision" ? 2 : SYNC_SCHEMA;
-    const expectedSchema = ["questionAnswer", "archive", "decision", "state"].includes(props.kind) ? 6 : legacySchema;
-    const supported = (schema: unknown) => Number(schema) === legacySchema || Number(schema) === expectedSchema ||
-      (Number(schema) === 7 && ['question', 'decision'].includes(props.kind));
-    if (!supported(props.schema) && Number(props.schema) > legacySchema) {
-      future.set(file.id, Number(props.schema));
+    const schemas = readableSyncSchemas(props.kind);
+    const legacySchema = schemas[0] ?? SYNC_SCHEMA;
+    const metadataSchema = Number(props.schema);
+    if (!schemas.includes(metadataSchema) && metadataSchema > legacySchema) {
+      future.set(file.id, metadataSchema);
       this.repository.deleteDriveFile(file.id);
       return;
     }
     let key = logicalKey(file);
-    if (!key || !supported(props.schema)) {
+    if (!key || !schemas.includes(metadataSchema)) {
       this.noteCorrupt(file.id);
       return;
     }
@@ -171,12 +171,13 @@ export class SyncPull {
       }
       throw error;
     }
-    if (body && typeof body === "object" && !supported((body as { schema?: unknown }).schema) && Number((body as { schema?: unknown }).schema) > legacySchema) {
-      future.set(file.id, Number((body as { schema?: unknown }).schema));
+    const bodySchema = body && typeof body === "object" ? Number((body as { schema?: unknown }).schema) : NaN;
+    if (!schemas.includes(bodySchema) && bodySchema > legacySchema) {
+      future.set(file.id, bodySchema);
       this.repository.deleteDriveFile(file.id);
       return;
     }
-    if (!body || typeof body !== "object" || (!supported((body as { schema?: unknown }).schema) || Number((body as { schema?: unknown }).schema) !== Number(props.schema))) {
+    if (!body || typeof body !== "object" || bodySchema !== metadataSchema) {
       this.noteCorrupt(file.id);
       return;
     }

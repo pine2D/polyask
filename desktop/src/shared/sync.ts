@@ -27,7 +27,23 @@ export interface HistoryTombstone {
 }
 
 export type StoredHistory = HistoryRecord | HistoryTombstone;
-export type SyncEntityKind = "history" | "archive" | "state" | "decision" | "folder" | "folderMembership" | "question" | "questionAnswer" | "questionAttachments";
+/** 每种实体的可读线格式，首项为初版。中间缺号可能属于其他实体。 */
+const ENTITY_SCHEMAS = {
+  history: [1],
+  archive: [1, 6],
+  state: [1, 6],
+  decision: [2, 6, 7],
+  folder: [3],
+  folderMembership: [3],
+  question: [4, 7],
+  questionAnswer: [4, 6],
+  questionAttachments: [5]
+} as const;
+export type SyncEntityKind = keyof typeof ENTITY_SCHEMAS;
+
+export function readableSyncSchemas(kind: string): readonly number[] {
+  return Object.hasOwn(ENTITY_SCHEMAS, kind) ? ENTITY_SCHEMAS[kind as SyncEntityKind] : [];
+}
 
 export type SyncState = "idle" | "syncing" | "offline" | "auth" | "blocked" | "waiting" | "schema" | "error";
 
