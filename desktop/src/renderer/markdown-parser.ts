@@ -7,7 +7,6 @@ parser.linkify.set({ fuzzyLink: true });
 addMathTokens(parser);
 export type MarkdownToken = MarkdownIt.Token;
 export const parseMarkdown = (value: string): MarkdownToken[] => parser.parse(value, {});
-export const parseMarkdownInline = (value: string): MarkdownToken[] => parser.parseInline(value, {})[0]?.children ?? [];
 
 /** URL-only labels may be scheme-free, but a URL followed by a caption is a title. */
 export function isMarkdownUrlLabel(value: string): boolean {

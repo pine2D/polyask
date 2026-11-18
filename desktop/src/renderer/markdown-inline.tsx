@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import { parseMarkdownInline, type MarkdownToken } from './markdown-parser';
+import type { MarkdownToken } from './markdown-parser';
 import { MarkdownLink } from './markdown-link';
 import { MarkdownMath } from './markdown-math';
 import { mathTokenValue } from '../shared/markdown-math-tokens';
@@ -39,8 +39,4 @@ export function inlineTokens(tokens: readonly MarkdownToken[], onOpenLink?: (url
     return nodes;
   }
   return read();
-}
-
-export function markdownInline(value: string, onOpenLink?: (url: string) => void): ReactNode[] {
-  return inlineTokens(parseMarkdownInline(value), onOpenLink);
 }
