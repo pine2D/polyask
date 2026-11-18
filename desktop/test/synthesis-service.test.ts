@@ -36,7 +36,7 @@ test("local reset invalidates a collected synthesis candidate", async () => {
       sites: SITES, archives, navigate: async () => undefined,
       send: async () => [{ site: "claude", ok: true }],
       collect: async () => [{ site: "claude", host: "claude.ai", label: "Claude", text: "Synthetic answer" }],
-      showTarget: () => undefined, recordHistory: () => undefined
+      showTarget: () => undefined, recordRecentPrompt: () => undefined
     });
     await service.send({ archiveId: record.id, targetSite: "claude", tier: "fast", selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "Summarize" });
     await service.collect();
@@ -63,7 +63,7 @@ test("citation report uses the existing collect/save path and exports with origi
         return [{site:"claude",ok:true}];
       },
       collect: async () => [{site:"claude",host:"claude.ai",label:"Claude",text:report,state:"think"}],
-      showTarget: () => undefined, recordHistory: () => undefined, now: () => 2_000
+      showTarget: () => undefined, recordRecentPrompt: () => undefined, now: () => 2_000
     });
     await service.send({archiveId:record.id,targetSite:"claude",tier:"think",selectedHosts:["claude.ai","chatgpt.com"],instruction});
     await service.collect();
@@ -106,7 +106,7 @@ test("synthesis reveals the focused native site before opening a new session and
       },
       collect: async () => [],
       showTarget: (site) => { events.push(`focus:${site}`); },
-      recordHistory: (text) => { events.push(`history:${text.startsWith("# Task")}`); },
+      recordRecentPrompt: (text) => { events.push(`history:${text.startsWith("# Task")}`); },
       now: () => 2_000
     });
 
@@ -142,7 +142,7 @@ test("synthesis invalidates a completed run after validation and before navigati
       send: async (): Promise<SiteRunResult[]> => { events.push("send"); return [{ site: "claude", ok: true }]; },
       collect: async () => [],
       showTarget: () => undefined,
-      recordHistory: () => undefined
+      recordRecentPrompt: () => undefined
     };
     const service = new SynthesisService(options);
     await service.send({
@@ -175,7 +175,7 @@ test("synthesis rejects a target outside the current selected-site scope", async
       send: async () => [{ site: "gemini", ok: true }],
       collect: async () => [],
       showTarget: () => undefined,
-      recordHistory: () => undefined
+      recordRecentPrompt: () => undefined
     });
     await assert.rejects(
       () => service.send({ archiveId: record.id, targetSite: "gemini", tier: null, selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "" }),
@@ -199,7 +199,7 @@ test("uncertain synthesis submit is exposed once and never creates pending state
       },
       collect: async () => [],
       showTarget: () => undefined,
-      recordHistory: () => undefined,
+      recordRecentPrompt: () => undefined,
       now: () => 2_000
     });
     const response = await service.send({
@@ -228,7 +228,7 @@ test("synthesis rejects missing archives and cancelled sends without pending sta
       send: async () => [{ site: "claude", ok: false, code: "cancelled" }],
       collect: async () => [],
       showTarget: () => undefined,
-      recordHistory: () => undefined
+      recordRecentPrompt: () => undefined
     });
     await assert.rejects(() => service.send({ archiveId: "missing", targetSite: "claude", tier: null, selectedHosts: [], instruction: "" }), /archive_not_found/);
     const response = await service.send({ archiveId: record.id, targetSite: "claude", tier: null, selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "" });
@@ -252,7 +252,7 @@ test("synthesis cancellation interrupts a pending new-session navigation", async
       send: async () => { sends += 1; return [{ site: "claude", ok: true }]; },
       collect: async () => [],
       showTarget: () => undefined,
-      recordHistory: () => undefined
+      recordRecentPrompt: () => undefined
     });
     const pending = service.send({ archiveId: record.id, targetSite: "claude", tier: null, selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "" });
     await started;
@@ -277,7 +277,7 @@ test("a local history failure cannot hide a confirmed synthesis send", async () 
       send: async () => [{ site: "claude", ok: true }],
       collect: async () => [],
       showTarget: () => { focused = true; },
-      recordHistory: () => { throw new Error("disk full"); },
+      recordRecentPrompt: () => { throw new Error("disk full"); },
       now: () => 2_000
     });
     const response = await service.send({ archiveId: record.id, targetSite: "claude", tier: null, selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "" });
@@ -300,7 +300,7 @@ test("synthesis collection requires a current answer and replacement confirmatio
       send: async () => [{ site: "claude", ok: true }],
       collect: async () => [{ site: "claude", host: "claude.ai", label: "Claude", text: answer, code: answer ? undefined : "no_answer" }],
       showTarget: () => undefined,
-      recordHistory: () => undefined,
+      recordRecentPrompt: () => undefined,
       now: () => 2_000
     });
     await service.send({ archiveId: record.id, targetSite: "claude", tier: "fast", selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "Compare" });
@@ -331,7 +331,7 @@ test("follow-up validates before navigation and sends once to one selected site,
   let accepted=false;
   try {
     const service=new SynthesisService({sites:SITES,archives,
-      navigate:async()=>{navigations++;},showTarget:()=>undefined,recordHistory:()=>undefined,
+      navigate:async()=>{navigations++;},showTarget:()=>undefined,recordRecentPrompt:()=>undefined,
       targetAvailable:site=>site==="claude",
       send:async request=>{sends.push(request);return [{site:"claude",ok:accepted,code:accepted?undefined:"submit_unconfirmed"}];},
       collect:async()=>[{site:"claude",host:"claude.ai",label:"Claude",text:"Follow-up answer"}]
@@ -367,7 +367,7 @@ test("pending synthesis keeps its page protected through collect and notifies af
   const service = new SynthesisService({
     sites: SITES, archives, navigate: async () => {}, send: async () => [{ site: "claude", ok: true }],
     collect: async () => [{ site: "claude", host: "claude.ai", label: "Claude", text: "Saved synthesis", state: "fast" }],
-    showTarget: () => {}, recordHistory: () => {},
+    showTarget: () => {}, recordRecentPrompt: () => {},
     onPendingChange: () => pendingTargets.push(service.getPending()?.targetSite)
   });
   try {

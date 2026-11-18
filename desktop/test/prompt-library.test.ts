@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DesktopDatabase } from "../src/main/database";
-import { HistoryService } from "../src/main/history-service";
+import { RecentPromptService } from "../src/main/recent-prompt-service";
 import { PromptLibraryService } from "../src/main/prompt-library-service";
 import { SyncRepository } from "../src/main/sync-repository";
 import {
@@ -26,7 +26,7 @@ test("prompt templates use the existing synchronized template bucket", () => {
 test("prompt library persists templates, tombstones and recent history", () => {
   const database = DesktopDatabase.open(":memory:");
   database.meta.put("deviceId", "device-a");
-  const history = new HistoryService(database.history, { deviceId: () => "device-a", now: () => 5 });
+  const history = new RecentPromptService(database.history, { deviceId: () => "device-a", now: () => 5 });
   history.record("Earlier question");
   let now = 10;
   const service = new PromptLibraryService(database.state, database.meta, history, {
@@ -77,7 +77,7 @@ test("prompt template ingestion accepts an unnamed or overlong-named template (F
 test("prompt library keeps a synced template with no display name (F212)", () => {
   const database = DesktopDatabase.open(":memory:");
   database.meta.put("deviceId", "desktop-device");
-  const history = new HistoryService(database.history, { deviceId: () => "desktop-device" });
+  const history = new RecentPromptService(database.history, { deviceId: () => "desktop-device" });
   const service = new PromptLibraryService(database.state, database.meta, history, {
     now: () => 10,
     createId: () => "local"
@@ -102,7 +102,7 @@ test("prompt library keeps a synced template with no display name (F212)", () =>
 test("desktop templates round-trip through the existing schema 1 templates bucket", () => {
   const database = DesktopDatabase.open(":memory:");
   database.meta.put("deviceId", "desktop-device");
-  const history = new HistoryService(database.history, { deviceId: () => "desktop-device" });
+  const history = new RecentPromptService(database.history, { deviceId: () => "desktop-device" });
   const service = new PromptLibraryService(database.state, database.meta, history, {
     now: () => 10,
     createId: () => "local"

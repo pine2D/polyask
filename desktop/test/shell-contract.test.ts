@@ -298,18 +298,19 @@ test("answer collection uses the trusted shell and the existing read-only adapte
 
 test("answer generation monitoring is run-scoped and never changes navigation", () => {
   const ipc = readSource("src/main/shell-ipc.ts");
+  const run = readSource("src/main/run-broadcast.ts");
   const result = readSource("src/main/broadcast-result.ts");
   const manager = readSource("src/main/view-manager.ts");
   const watcher = readSource("src/main/generation-watcher.ts");
   const preload = readSource("src/preload/site.ts");
   // 重试时 flush 刚迟到确认为已发送的站已从 dispatch 剔除：监视、发送中标记与派发都只针对 dispatch。
-  assert.match(ipc, /manager\.beginGenerationRun\(request\.runId, dispatch\.sites\)/);
-  assert.match(ipc, /for \(const site of dispatch\.sites\) manager\.markStatus\(statusForSending/);
-  assert.match(ipc, /coordinator\.send\(\s*dispatch,/);
-  assert.match(ipc, /prepareRun\(request, [^\n]*lateSentResult\(manager, request\.runId\)\)/);
-  assert.match(ipc, /broadcastResults\.begin\(dispatch, historyTokens\)/);
-  assert.match(ipc, /historyToken: historyTokens\.get\(site\)/);
-  assert.equal(ipc.includes("options.questions.token(site)"), false);
+  assert.match(run, /manager\.beginGenerationRun\(request\.runId, dispatch\.sites\)/);
+  assert.match(run, /for \(const site of dispatch\.sites\) manager\.markStatus\(statusForSending/);
+  assert.match(run, /coordinator\.send\(\s*dispatch,/);
+  assert.match(run, /prepareRun\(request, [^\n]*lateSentResult\(manager, request\.runId\)\)/);
+  assert.match(run, /broadcastResults\.begin\(dispatch, historyTokens\)/);
+  assert.match(run, /historyToken: historyTokens\.get\(site\)/);
+  assert.equal(run.includes("options.questions.token(site)"), false);
   assert.match(result, /manager\.watchGeneration\(runId, result\.site\)/);
   assert.match(ipc, /cancelGenerationRun\(sites\)/);
   assert.match(manager, /new GenerationWatcher\(/);
@@ -319,11 +320,11 @@ test("answer generation monitoring is run-scoped and never changes navigation", 
 });
 
 test("a retried run keeps watching the sites that are still generating", () => {
-  const ipc = readSource("src/main/shell-ipc.ts");
+  const run = readSource("src/main/run-broadcast.ts");
   const manager = readSource("src/main/view-manager.ts");
   const watcher = readSource("src/main/generation-watcher.ts");
-  const collectionRun = ipc.indexOf("collection.beginRun(request.runId");
-  const generationRun = ipc.indexOf("manager.beginGenerationRun(request.runId");
+  const collectionRun = run.indexOf("collection.beginRun(request.runId");
+  const generationRun = run.indexOf("manager.beginGenerationRun(request.runId");
   assert.ok(collectionRun >= 0 && collectionRun < generationRun);
   const begin = manager.slice(
     manager.indexOf("beginGenerationRun(runId: string"),
@@ -403,7 +404,7 @@ test("assisted synthesis dispatches through its own coordinator and cancel reach
   const ipc = readSource("src/main/shell-ipc.ts");
   assert.match(main, /const synthesisCoordinator = new BroadcastCoordinator\(\)/);
   assert.match(main, /await createWindowDataServices\(/);
-  assert.match(readSource("src/main/window-data-services.ts"), /sendTrackedSynthesis\(request, manager, synthesisCoordinator, 44_000, preferences\.snapshot\(\)\.values\)/);
+  assert.match(readSource("src/main/window-data-services.ts"), /sendTrackedSynthesis\(request, manager, synthesisCoordinator, TEXT_BROADCAST_BUDGET_MS, preferences\.snapshot\(\)\.values\)/);
   assert.match(main, /synthesisCoordinator,/);
   const cancel = ipc.slice(ipc.indexOf('ipcMain.on("polyask:cancel"'), ipc.indexOf('ipcMain.on("polyask:set-composer-expanded"'));
   assert.match(cancel, /coordinator\.cancel\(\)/);
@@ -519,12 +520,14 @@ test("archive mutations and history persistence stay behind trusted main-process
     "polyask:archive-delete",
     "polyask:archive-markdown"
   ]) assert.match(ipc, new RegExp(channel));
-  assert.match(ipc, /history\.record\(request\.text\)/);
-  assert.doesNotMatch(ipc, /historyRecorded/);
-  const record = ipc.indexOf("history.record(request.text)");
-  const dispatch = ipc.indexOf("await coordinator.send(");
+  const run = readSource("src/main/run-broadcast.ts");
   const imageGuard = ipc.indexOf("image_sites_unsupported");
-  assert.ok(imageGuard >= 0 && imageGuard < record && record < dispatch);
+  const entry = ipc.indexOf("operationGate.run(() => runBroadcast(request");
+  assert.ok(imageGuard >= 0 && imageGuard < entry);
+  const record = run.indexOf("recentPrompts.record(request.text)");
+  const dispatch = run.indexOf("await coordinator.send(");
+  assert.ok(record >= 0 && record < dispatch);
+  assert.doesNotMatch(run, /historyRecorded/);
   assert.match(preload, /searchArchives/);
   assert.match(preload, /updateArchive/);
   assert.match(preload, /archiveMarkdown/);
@@ -542,7 +545,7 @@ test("prompt templates and recent history use a trusted synchronized library bri
   assert.match(preload, /onPromptLibrary/);
   assert.match(main, /await createWindowDataServices\(/);
   assert.match(readSource("src/main/window-data-services.ts"), /createLocalDataServices\(database\b/);
-  assert.match(readSource("src/main/local-data-services.ts"), /new PromptLibraryService\(database.state, database.meta, history\)/);
+  assert.match(readSource("src/main/local-data-services.ts"), /new PromptLibraryService\(database.state, database.meta, recentPrompts\)/);
 });
 
 test("completion notifications are boolean-only and update checks open the official release page", () => {

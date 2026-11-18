@@ -2,7 +2,7 @@ import type { DisplayPreferences } from '../shared/display';
 import type { DesktopDatabase } from './database';
 import type { ViewManager } from './view-manager';
 import type { WorkspaceService } from './workspace-service';
-import type { BroadcastCoordinator } from './broadcast';
+import { TEXT_BROADCAST_BUDGET_MS, type BroadcastCoordinator } from './broadcast';
 import type { ProxyServices } from './proxy-services';
 import { createLocalDataServices } from './local-data-services';
 import { CollectionService } from './collection-service';
@@ -35,13 +35,13 @@ export async function createWindowDataServices(options: {
   const synthesis = new SynthesisService({
     sites: SITES, archives: local.archives,
     navigate: (site, url) => manager.navigate(site, url),
-    send: request => sendTrackedSynthesis(request, manager, synthesisCoordinator, 44_000, preferences.snapshot().values),
+    send: request => sendTrackedSynthesis(request, manager, synthesisCoordinator, TEXT_BROADCAST_BUDGET_MS, preferences.snapshot().values),
     onPendingChange: () => manager.releaseUnselectedViews(),
     collect: (sites, runId) => collection.collect(sites, runId),
     targetAvailable: site => workspace.getState().selectedSites.includes(site),
     beforeSend: () => collection.clearRun(),
     showTarget: site => { manager.setSurface('sites'); manager.setLayout('focus', site); },
-    recordHistory: text => local.history.record(text)
+    recordRecentPrompt: text => local.recentPrompts.record(text)
   });
   const sync = await createSyncRuntime({ database, workspace: () => workspace.getState(),
     onProxyLogin: (request, authInfo, callback) => options.proxy.auth.handleRequestLogin(request, authInfo, callback),

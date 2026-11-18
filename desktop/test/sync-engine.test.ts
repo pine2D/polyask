@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DesktopDatabase } from "../src/main/database";
-import { HistoryService } from "../src/main/history-service";
+import { RecentPromptService } from "../src/main/recent-prompt-service";
 import { SyncEngine, type SyncAuth, type SyncDrive } from "../src/main/sync-engine";
 import { SyncRepository } from "../src/main/sync-repository";
 import { describeSync } from "../src/renderer/sync-status";
@@ -333,7 +333,7 @@ test("sync pulls a remote history tombstone and never lets an old upload revisio
   const database = DesktopDatabase.open(":memory:");
   database.meta.put("deviceId", "desktop-device");
   let now = 1_000;
-  const history = new HistoryService(database.history, { deviceId: () => "desktop-device", now: () => now });
+  const history = new RecentPromptService(database.history, { deviceId: () => "desktop-device", now: () => now });
   const local = history.record("Question")!;
   const tombstone = { schema: 1 as const, id: local.id, textHash: local.id, createdAt: local.createdAt, lastUsedAt: local.lastUsedAt, updatedAt: 2_000, deletedAt: 2_000, deviceId: "remote" };
   const repository = new SyncRepository(database);

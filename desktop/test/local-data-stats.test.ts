@@ -16,7 +16,7 @@ function seeded() {
   const services = createLocalDataServices(db);
   const admin = new DataAdminService({database:db,deviceId:services.deviceId,now:()=>10000,
     sync:{disconnect:async()=>status(),status}});
-  for (let i=0;i<130;i++) services.history.record(i===0 ? questionFixture().text : `Legacy ${i}`);
+  for (let i=0;i<130;i++) services.recentPrompts.record(i===0 ? questionFixture().text : `Legacy ${i}`);
   db.questions.put(questionFixture()); db.questions.put(questionFixture('q-b'));
   db.questions.put(questionFixture('q-deleted')); db.questions.delete('q-deleted',100,'fixture');
   db.questions.putAnswer(questionAnswerFixture()); db.questions.putAnswer(questionAnswerFixture('q-a',2));

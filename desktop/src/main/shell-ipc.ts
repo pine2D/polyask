@@ -1,5 +1,5 @@
 import { registerTierPresetsIpc } from "./tier-presets-ipc";
-import { captureTierPresets } from "./tier-preset-routing";
+import { runBroadcast } from "./run-broadcast";
 import { registerTierIpc } from './tier-ipc';
 import { registerWorkbenchNavigationIpc } from './workbench-navigation-ipc';
 import { registerShellPanelIpc } from './shell-panel-ipc';
@@ -14,7 +14,7 @@ import { showSiteFindMenu } from './site-find-menu';
 import { registerSiteFindIpc } from './site-find-ipc';
 import { SitePageService } from './site-page-service';
 import { createQuestionCapture, sessionHandoff } from "./question-capture-binding";
-import { cancelSubmissions, lateSentResult } from "./submission-upgrade";
+import { cancelSubmissions } from "./submission-upgrade";
 import type { QuestionHistoryService } from "./question-history-service";
 import type { BackupService } from "./backup-service";
 import { registerBackupIpc } from "./backup-ipc";
@@ -55,7 +55,7 @@ import type { CompletionNotifications } from './completion-notifications';
 import type { CommandPaletteShortcutRuntime } from './command-palette-shortcut';
 import type { GlobalPromptShortcutRuntime } from './global-prompt-shortcut';
 import { registerProxyIpc, type ProxyIpcServices } from "./proxy-ipc";
-import { HistoryService } from "./history-service";
+import { RecentPromptService } from "./recent-prompt-service";
 import { PromptLibraryService } from "./prompt-library-service";
 import { SynthesisService } from "./synthesis-service";
 import { SyncEngine } from "./sync-engine";
@@ -65,7 +65,6 @@ import { registerSynthesisIpc } from "./synthesis-ipc";
 import { isTrustedShellUrl, safeExternalUrl } from "./security";
 import { showCommandMenu, showGroupMenu } from "./native-menus";
 import { SITES } from "./sites";
-import { statusForSending } from "./status";
 import { ViewManager } from "./view-manager";
 import { WorkspaceService } from "./workspace-service";
 
@@ -90,7 +89,7 @@ export interface ShellIpcOptions {
   readonly folders: TaskFolderService;
   readonly backup: BackupService;
   readonly autoBackup?: AutoBackupService;
-  readonly history: HistoryService;
+  readonly recentPrompts: RecentPromptService;
   readonly questions: QuestionHistoryService;
   readonly promptLibrary: PromptLibraryService;
   readonly synthesis: SynthesisService;
@@ -145,7 +144,7 @@ function strictId(value: unknown): string {
 }
 
 export function registerShellIpc(options: ShellIpcOptions): () => void {
-  const { window, manager, workspace, coordinator, synthesisCoordinator, collection, archives, history, promptLibrary, synthesis, sync } = options;
+  const { window, manager, workspace, coordinator, synthesisCoordinator, collection, archives, recentPrompts, promptLibrary, synthesis, sync } = options;
   const operationGate = new OperationGate();
   const capture = createQuestionCapture(options.questions, manager, site => synthesis.getPending()?.targetSite === site);
   const broadcastResults = new BroadcastResultReceiver(options.questions, capture, manager);
@@ -215,28 +214,9 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (request.images.length && unsupportedImageSites(request.sites, SITES).length) {
       throw new Error("image_sites_unsupported");
     }
-    return operationGate.run(async () => {
-      const preset = captureTierPresets(options.preferences?.snapshot().values);
-      // beginRun first: a stale retry throws before generation monitoring is touched.
-      collection.beginRun(request.runId, request.sites);
-      const { remaining, dispatch, settled, historyTokens } = await capture.prepareRun(request, request.images.length ? 90_000 : 44_000, lateSentResult(manager, request.runId));
-      const receiveResult = broadcastResults.begin(dispatch, historyTokens);
-      manager.beginGenerationRun(request.runId, dispatch.sites);
-      // Recorded before dispatch, matching the extension (console/console.js pushes
-      // history ahead of sendAll): a question the user actually asked belongs in the
-      // library even when every site fails.
-      try { history.record(request.text); } catch { /* History storage must not block sending. */ }
-      try { publishPromptLibrary(); } catch { /* A history read failure must not cancel dispatch. */ }
-      for (const site of dispatch.sites) manager.markStatus(statusForSending(site, request.runId));
-      const results = await coordinator.send(
-        dispatch,
-        (site, command, signal) => manager.sendCommand(site, { ...command, preset: preset(site, command.tier), historyToken: historyTokens.get(site) }, signal),
-        remaining,
-        receiveResult,
-        { confirm: (site, command, signal) => manager.confirmSubmitted(site, command, signal) }
-      );
-      return [...settled, ...results];
-    });
+    return operationGate.run(() => runBroadcast(request, {
+      collection, capture, broadcastResults, manager, coordinator, recentPrompts, publishPromptLibrary, preferences: options.preferences
+    }));
   });
   ipcMain.handle("polyask:collect", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");

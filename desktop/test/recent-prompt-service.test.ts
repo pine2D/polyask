@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { DesktopDatabase } from "../src/main/database";
-import { HistoryService } from "../src/main/history-service";
+import { RecentPromptService } from "../src/main/recent-prompt-service";
 
 test("successful broadcasts upsert one normalized history record", () => {
   const database = DesktopDatabase.open(":memory:");
   let now = 1_000;
   try {
-    const service = new HistoryService(database.history, {
+    const service = new RecentPromptService(database.history, {
       deviceId: () => "device-a",
       now: () => now
     });

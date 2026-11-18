@@ -22,7 +22,7 @@ interface SynthesisServiceOptions {
   readonly collect: (sites: readonly SiteKey[], runId: string | null) => Promise<CollectedAnswer[]>;
   readonly targetAvailable?: (site: SiteKey) => boolean;
   readonly showTarget: (site: SiteKey) => void;
-  readonly recordHistory: (text: string) => void;
+  readonly recordRecentPrompt: (text: string) => void;
   readonly beforeSend?: () => void;
   readonly onPendingChange?: () => void;
   readonly now?: () => number;
@@ -110,7 +110,7 @@ export class SynthesisService {
         ? { site: site.key, ok: false, code: "cancelled" }
         : result ?? { site: site.key, ok: false, code: "invalid_response" };
       if (!outcome.ok) return { result: outcome, pending: null };
-      try { this.options.recordHistory(text); } catch { /* A confirmed send must remain usable if local history fails. */ }
+      try { this.options.recordRecentPrompt(text); } catch { /* A confirmed send must remain usable if local history fails. */ }
       this.pending = {
         archiveId: record.id,
         targetSite: site.key,

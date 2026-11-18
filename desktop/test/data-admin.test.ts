@@ -7,7 +7,7 @@ import test from "node:test";
 
 import { DataAdminService } from "../src/main/data-admin-service";
 import { DesktopDatabase } from "../src/main/database";
-import { HistoryService } from "../src/main/history-service";
+import { RecentPromptService } from "../src/main/recent-prompt-service";
 import type { SyncStatus } from "../src/shared/sync";
 import { SecretFileStore } from "../src/main/secret-file-store";
 import { archiveFixture } from "./fixtures";
@@ -19,7 +19,7 @@ const status = (patch: Partial<SyncStatus> = {}): SyncStatus => ({
 function seeded(path: string): DesktopDatabase {
   const database = DesktopDatabase.open(path);
   database.meta.put("deviceId", "device-a");
-  const history = new HistoryService(database.history, { deviceId: () => "device-a", now: () => 1_000 });
+  const history = new RecentPromptService(database.history, { deviceId: () => "device-a", now: () => 1_000 });
   history.record("first question");
   history.record("second question");
   database.archives.put(archiveFixture());
@@ -102,7 +102,7 @@ test("local reset truncates WAL pages containing deleted answer text before retu
   const marker = "RESET_WAL_SYNTHETIC_SECRET_2026";
   const database = DesktopDatabase.open(path);
   try {
-    new HistoryService(database.history, { deviceId: () => "device-a" }).record(marker);
+    new RecentPromptService(database.history, { deviceId: () => "device-a" }).record(marker);
     assert.equal(readFileSync(`${path}-wal`).includes(marker), true);
     database.resetLocalData();
     assert.equal(database.history.list().length, 0);

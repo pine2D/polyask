@@ -16,7 +16,7 @@ function setup() {
     archives: { get: () => current } as unknown as ArchiveService,
     showTarget: () => { shown++; }, navigate: async () => { navigated++; await duringNavigation(); },
     send: async () => { sent++; duringSend(); return [{ site: 'claude', ok: true }]; }, collect: async () => [],
-    recordHistory: () => { history++; }
+    recordRecentPrompt: () => { history++; }
   });
   const request = { archiveId: record.id, sourceUpdatedAt: record.updatedAt, targetSite: 'claude', tier: null,
     selectedHosts: ['claude.ai', 'chatgpt.com'], instruction: 'Compare' };

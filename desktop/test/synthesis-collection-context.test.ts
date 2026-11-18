@@ -16,7 +16,7 @@ for (const invalidation of ["new-send", "reset"] as const) {
     let finish!: (answers: CollectedAnswer[]) => void;
     const service = new SynthesisService({ sites: SITES, archives, navigate: async () => {},
       send: async () => [{ site: "claude", ok: true }], collect: () => new Promise(resolve => { finish = resolve; }),
-      showTarget: () => {}, recordHistory: () => {} });
+      showTarget: () => {}, recordRecentPrompt: () => {} });
     const request = { targetSite: "claude" as const, tier: null, selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "Compare" };
     try {
       await service.send({ ...request, archiveId: a.id });

@@ -247,7 +247,7 @@ async function createWindow(): Promise<void> {
   );
   managerForWorkspace = manager;
   viewManager = manager;
-  const { archives, history, promptLibrary, decisions, folders, backup, autoBackup, questions, collection, preferences, synthesis, sync, dataAdmin } = await createWindowDataServices({
+  const { archives, recentPrompts, promptLibrary, decisions, folders, backup, autoBackup, questions, collection, preferences, synthesis, sync, dataAdmin } = await createWindowDataServices({
     database, manager, workspace, coordinator, synthesisCoordinator, proxy, publish: sendToShell, userDataPath: app.getPath("userData"),
     applyDisplay: value => applyDisplayPreferences(manager, value),
     setNotifications: enabled => completionNotifier.setEnabled(enabled)
@@ -267,7 +267,7 @@ async function createWindow(): Promise<void> {
     collection, questions,
     archives,
     decisions, folders, backup, autoBackup,
-    history,
+    recentPrompts,
     promptLibrary,
     synthesis,
     sync,

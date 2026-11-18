@@ -8,7 +8,7 @@ import {
   type PromptTemplate,
   type StoredPromptTemplate
 } from "../shared/prompt-library";
-import type { HistoryService } from "./history-service";
+import type { RecentPromptService } from "./recent-prompt-service";
 import { nextSyncTime } from "../shared/sync";
 import type { MetaRepository } from "./meta-repository";
 import type { StateRepository } from "./state-repository";
@@ -27,7 +27,7 @@ export class PromptLibraryService {
   constructor(
     private readonly state: StateRepository,
     private readonly meta: MetaRepository,
-    private readonly history: HistoryService,
+    private readonly recentPrompts: RecentPromptService,
     options: PromptLibraryOptions = {}
   ) {
     this.now = options.now ?? Date.now;
@@ -38,7 +38,7 @@ export class PromptLibraryService {
     const templates = this.state.list<unknown>(TEMPLATE_PREFIX)
       .filter(isStoredPromptTemplate)
       .filter((item): item is PromptTemplate => !("deletedAt" in item));
-    return { templates, history: this.history.list(30) };
+    return { templates, history: this.recentPrompts.list(30) };
   }
 
   save(value: unknown): PromptTemplate {

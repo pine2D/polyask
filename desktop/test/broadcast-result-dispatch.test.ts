@@ -5,6 +5,8 @@ import { QuestionHistoryService } from '../src/main/question-history-service';
 import { QuestionCaptureService } from '../src/main/question-capture-service';
 import { BroadcastCoordinator } from '../src/main/broadcast';
 import { BroadcastResultReceiver } from '../src/main/broadcast-result';
+import { runBroadcast } from '../src/main/run-broadcast';
+import { CollectionService } from '../src/main/collection-service';
 import { cancelSubmissions } from '../src/main/submission-upgrade';
 import { statusForSending } from '../src/main/status';
 import type { SiteStatus, SiteResult } from '../src/shared/protocol';
@@ -20,6 +22,32 @@ function setup() {
   return { db, history, capture, manager, coordinator, status: () => status, watched: () => watched,
     close: () => { capture.dispose(); db.close(); } };
 }
+
+test('a stale retry is rejected before preparation; recent-prompt failures never interrupt a valid dispatch', async () => {
+  const f = setup();
+  const collection = new CollectionService([], async () => ({}));
+  const events: string[] = [];
+  const receiver = new BroadcastResultReceiver(f.history, f.capture, f.manager);
+  const services: Parameters<typeof runBroadcast>[1] = {
+    collection, capture: f.capture, broadcastResults: receiver, coordinator: f.coordinator,
+    recentPrompts: { record() { events.push('record'); throw Error('storage'); } },
+    publishPromptLibrary() { events.push('publish'); throw Error('read'); },
+    manager: { getStatuses: () => [], markStatus: f.manager.markStatus,
+      beginGenerationRun() { events.push('generation'); },
+      sendCommand: async (_site, command) => {
+        assert.equal(command.historyToken, f.history.token('claude'));
+        events.push('dispatch'); return { ok: false, code: 'load_failed' };
+      }, confirmSubmitted: async () => null }
+  };
+  try {
+    const results = await runBroadcast(request(), services);
+    assert.deepEqual(events, ['generation', 'record', 'publish', 'dispatch']);
+    assert.equal(results[0].code, 'load_failed');
+    events.length = 0;
+    await assert.rejects(runBroadcast({ ...request(), sites: ['kimi'] }, services), /stale_run/);
+    assert.deepEqual(events, []);
+  } finally { f.close(); }
+});
 test('real cancellation closes status after cancelSubmissions removes history ownership', async () => {
   const f = setup();
   let finish!: (result: SiteResult) => void;

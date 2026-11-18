@@ -4,17 +4,17 @@ import type { PromptHistoryItem } from "../shared/prompt-library";
 import { nextSyncTime, utf8Preview, type HistoryRecord } from "../shared/sync";
 import type { HistoryRepository } from "./history-repository";
 
-interface HistoryServiceOptions {
+interface RecentPromptServiceOptions {
   readonly deviceId: () => string;
   readonly now?: () => number;
 }
 
-export class HistoryService {
+export class RecentPromptService {
   private readonly now: () => number;
 
   constructor(
     private readonly repository: HistoryRepository,
-    private readonly options: HistoryServiceOptions
+    private readonly options: RecentPromptServiceOptions
   ) {
     this.now = options.now ?? Date.now;
   }

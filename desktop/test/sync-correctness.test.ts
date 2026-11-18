@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { ArchiveService } from "../src/main/archive-service";
 import { DesktopDatabase } from "../src/main/database";
-import { HistoryService } from "../src/main/history-service";
+import { RecentPromptService } from "../src/main/recent-prompt-service";
 import { PromptLibraryService } from "../src/main/prompt-library-service";
 import { SyncRepository } from "../src/main/sync-repository";
 import { SyncEngine, type SyncDrive } from "../src/main/sync-engine";
@@ -14,7 +14,7 @@ test("legacy local edits and deletes advance past imported future versions", () 
   const db = DesktopDatabase.open(":memory:");
   db.meta.put("deviceId", "local");
   const sync = new SyncRepository(db);
-  const history = new HistoryService(db.history, { deviceId: () => "local", now: () => 100 });
+  const history = new RecentPromptService(db.history, { deviceId: () => "local", now: () => 100 });
   const archives = new ArchiveService(db.archives, { deviceId: () => "local", now: () => 100, createId: () => "archive" });
   const templates = new PromptLibraryService(db.state, db.meta, history, { now: () => 100, createId: () => "template" });
   const workspace = new WorkspaceService(db.state, db.meta, () => undefined, { now: () => 100, createId: () => "group" });
@@ -85,7 +85,7 @@ test("archive tombstone wins an exact version tie and stays deleted on repeat im
 test("template deletion survives an equal cloud version and reaches the uploaded state body", async () => {
   const db = DesktopDatabase.open(":memory:");
   db.meta.put("deviceId", "local");
-  const history = new HistoryService(db.history, { deviceId: () => "local" });
+  const history = new RecentPromptService(db.history, { deviceId: () => "local" });
   const service = new PromptLibraryService(db.state, db.meta, history, { now: () => 10, createId: () => "t" });
   const sync = new SyncRepository(db);
   const saved = service.save({ name: "Name", text: "Prompt" });
@@ -127,7 +127,7 @@ test("question and legacy history search find non-ASCII case variants", () => {
   const db = DesktopDatabase.open(":memory:");
   try {
     db.questions.put({ schema: 4, id: "q", text: "ÄPFEL", createdAt: 10, updatedAt: 10, deviceId: "local", sites: ["claude"], requestedTier: null, inputImageCount: 0 });
-    const history = new HistoryService(db.history, { deviceId: () => "local", now: () => 20 });
+    const history = new RecentPromptService(db.history, { deviceId: () => "local", now: () => 20 });
     history.record("ÄPFEL legacy");
     assert.deepEqual(db.questions.search({ query: "ÄPFEL" }).items.map((item) => item.id), ["q"]);
     assert.deepEqual(db.questions.search({ query: "äpfel" }).items.map((item) => item.id), ["q"]);
@@ -151,7 +151,7 @@ test("question search folds Turkish I variants and canonical accents without cha
     assert.deepEqual(db.questions.search({ query: "äpfel 中文", limit: 1, cursor: first.cursor }).items.map((item) => item.id), ["older"]);
     assert.deepEqual(db.questions.search({ query: "istanbul" }).items.map((item) => item.id), ["older"]);
     assert.deepEqual(db.questions.search({ query: "ığdır" }).items.map((item) => item.id), ["newer"]);
-    const history = new HistoryService(db.history, { deviceId: () => "local", now: () => 30 });
+    const history = new RecentPromptService(db.history, { deviceId: () => "local", now: () => 30 });
     history.record("İSTANBUL legacy");
     assert.deepEqual(db.questions.legacy({ query: "istanbul" }).items.map((item) => item.text), ["İSTANBUL legacy"]);
   } finally { db.close(); }

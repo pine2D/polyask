@@ -82,7 +82,7 @@ function synthesisFixture(beforeNavigate: (site: string) => Promise<void>, event
   const service = new SynthesisService({
     sites: SITES, archives, navigate: async site => { events.push(`navigate:${site}`); },
     send: async () => { events.push("send"); return [{ site: "claude", ok: true }]; },
-    collect: async () => [], showTarget: () => undefined, recordHistory: () => undefined
+    collect: async () => [], showTarget: () => undefined, recordRecentPrompt: () => undefined
   });
   service.setBeforeNavigate(async site => { events.push(`handoff:${site}`); await beforeNavigate(site); });
   const send = () => service.send({ archiveId: record.id, targetSite: "claude", tier: "fast", selectedHosts: ["claude.ai", "chatgpt.com"], instruction: "Summarize" });

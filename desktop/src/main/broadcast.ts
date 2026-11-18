@@ -11,6 +11,9 @@ import {
   type WasSubmittedSiteCommand
 } from "../shared/protocol";
 
+export const TEXT_BROADCAST_BUDGET_MS = 44_000;
+export const IMAGE_BROADCAST_BUDGET_MS = 90_000;
+
 export type SiteDispatch = (
   site: SiteKey,
   command: SubmitSiteCommand,
