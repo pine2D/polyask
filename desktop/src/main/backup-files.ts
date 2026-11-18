@@ -1,5 +1,4 @@
-import { open, rename, unlink, writeFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
+import { open } from "node:fs/promises";
 import { BACKUP_MAX_BYTES } from "../shared/backup";
 
 export async function readBackupFile(path: string): Promise<unknown> {
@@ -24,17 +23,4 @@ export async function readBackupFile(path: string): Promise<unknown> {
     if (error instanceof Error && ["backup_too_large", "backup_invalid"].includes(error.message)) throw error;
     throw new Error("backup_read_failed");
   } finally { await file?.close(); }
-}
-
-export async function writeBackupFile(path: string, document: unknown): Promise<void> {
-  const temporary = `${path}.${randomUUID()}.tmp`;
-  try {
-    const text = `${JSON.stringify(document, null, 2)}\n`;
-    if (Buffer.byteLength(text) > BACKUP_MAX_BYTES) throw new Error("backup_too_large");
-    await writeFile(temporary, text, { encoding: "utf8", flag: "wx", mode: 0o600 });
-    await rename(temporary, path);
-  } catch (error) {
-    if (error instanceof Error && error.message === "backup_too_large") throw error;
-    throw new Error("backup_write_failed");
-  } finally { await unlink(temporary).catch(() => {}); }
 }

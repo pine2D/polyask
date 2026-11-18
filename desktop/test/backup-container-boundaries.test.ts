@@ -81,6 +81,23 @@ test('late export read failure preserves destination and removes only its own te
   } finally { parsed.staging?.dispose(); }
 }));
 
+test('oversized container manifests and invalid destinations leave the original backup intact', () => fixture(async (path, dir) => {
+  const original = await readFile(path);
+  const { manifest } = parts(original);
+  const template = manifest.entries.find((entry: { kind: string }) => entry.kind === 'question');
+  const text = 'x'.repeat(32 * 1024);
+  const entries = Array.from({ length: 1024 }, (_, index) => {
+    const id = `q-${index}`;
+    return { ...template, id, body: { ...template.body, id, text, inputImageCount: 0 } };
+  });
+  const document = { ...manifest, entries, payloads: [], omissions: [] };
+  await assert.rejects(writeBackupContainer(path, document, () => []), /backup_too_large/);
+  assert.deepEqual(await readFile(path), original);
+  await assert.rejects(writeBackupContainer(join(dir, 'missing', 'out.polyask'),
+    { ...document, entries: entries.slice(0, 1) }, () => []), /backup_write_failed/);
+  assert.deepEqual(await readdir(dir), ['valid.polyask']);
+}));
+
 test('the stream completes the previous set before reading the next set', () => fixture(async (_path, dir) => {
   const db = DesktopDatabase.open(':memory:');
   const service = new BackupService(db, { deviceId: () => 'local' });

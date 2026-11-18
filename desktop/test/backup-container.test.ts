@@ -57,6 +57,18 @@ test('missing originals require explicit text-only export and preserve omission 
   assert.deepEqual(await readdir(dir), ['text.polyask']);
 }));
 
+for (const [filename, count] of [
+  ['backup-format1.json', 8], ['backup-format2.json', 2], ['backup-v3-preferences-drafts.json', 6]
+] as const) {
+  test(`file import restores frozen ${filename} into the existing device`, () => setup(async (db, service) => {
+    db.meta.put('deviceId', 'local');
+    const preview = await service.previewFile(join(__dirname, 'fixtures', filename));
+    assert.equal(preview.items.length, count);
+    assert.deepEqual(service.apply(preview.token, preview.items.map(item => item.key)), { imported: count, skipped: 0 });
+    assert.equal(db.meta.get('deviceId'), 'local');
+  }));
+}
+
 test('frozen v4 container restores a valid PNG with exact original bytes', () => setup(async (db, service) => {
   const { PNG } = await import('./lib/history-image-fixtures');
   const { createHash } = await import('node:crypto');
