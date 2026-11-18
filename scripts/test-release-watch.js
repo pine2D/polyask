@@ -79,6 +79,31 @@ test("同周增量保留已移出feed的旧条目；重复与跨周观察不重�
   assert.strictEqual(h.rows[1].title, "[release-watch] openai/weekly: 2026-11-09");
 });
 
+test("百炼新版按日期汇总各地区的模型，跨区去重后取最新条目并兼容旧标题", async () => {
+  const src = source("bailian");
+  const card = (date, models) => `<div class="rkb-update"><div class="rkb-update-heading"><h3>${date}</h3></div>
+    <div class="rkb-update-body">${models.map(id => `<h4>${id}</h4><div>说明</div>`).join("")}</div></div>`;
+  const hidden = card("2026-12-01", ["hidden"]);
+  const html = `<script>const template = '${hidden}'</script><!-- ${hidden} -->
+    <section><h4>China (Beijing)</h4><h2>2026</h2>${card("2026-11-16", ["qwen4-max", "Vendor/Model-A"])}
+    ${card("2026-11-11", ["qwen4-max-preview"])}${card("2026-10-01", Array.from({ length: 32 }, (_, i) => "old-" + i))}</section>
+    <section><h4>Singapore</h4><h2>2026</h2>${card("2026-11-18", ["Vendor/Model-B"])}
+    ${card("2026-11-16", ["qwen4-max"])}${card("", ["undated"])}</section>
+    <footer><h3>2026-12-02</h3><h4>Navigation</h4></footer>`;
+  const entries = feed.parseBailian(html, src.url);
+  assert.deepStrictEqual(feed.parseBailian(`<script>${hidden}</script>${card("", ["undated"])}`, src.url), []);
+  assert.strictEqual(entries.length, 30);
+  assert.deepStrictEqual(entries.slice(0, 4).map(e => e.title), [
+    "2026-11-18 Vendor/Model-B", "2026-11-16 qwen4-max", "2026-11-16 Vendor/Model-A", "2026-11-11 qwen4-max-preview",
+  ]);
+  const h = harness(src, [{ number: 1, state: "closed", title: "[release-watch] bailian/low: 2026-11-11 qwen4-max-preview", body: "" }]);
+  await h.run([], { read: async () => html });
+  assert.strictEqual(h.rows[1].title, "[release-watch] bailian/weekly: 2026-11-16");
+  assert.strictEqual((h.rows[1].body.match(/^- \[api\]/gm) || []).length, 3);
+  await h.run([], { read: async () => html });
+  assert.strictEqual(h.writes.length, 1);
+});
+
 test("发布日期归周优先于观察日，缺日期明确标观察，周日与周一分开", async () => {
   const h = harness(source("openai"), [{ number: 10, title: "[release-watch] openai: Introducing GPT-5", body: "" }]);
   await h.run([["How A uses GPT-6", "Mon, 02 Nov 2026 00:00:00 GMT"], ["How B uses GPT-6", "Sun, 01 Nov 2026 23:59:59 GMT"], ["Introducing GPT-5"]]);

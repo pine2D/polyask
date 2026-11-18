@@ -177,14 +177,38 @@ function parseSnapshot(html, pageUrl, anchorRe) {
   return [{ title: text.slice(start, start + 160), url: pageUrl }];
 }
 
-// kind "bailian"（阿里云百炼「模型上线表」，跨厂商 API 上线信号：Qwen/GLM/Kimi 等经百炼平台上线的
-// 型号）：<table><thead><tr><th>…</th></tr></thead><tbody><tr><td>Model type</td><td>Date</td>
-// <td>Model ID</td><td>Description</td></tr>…</tbody></table>，表格本身已按日期倒序（2026-08 实测）。
-// 表头行是 <th>，本函数只认 <td>，天然跳过不必单独判断。entry.title 是「日期 模型ID」，entry.date
-// 单独存日期原文供 src.filter 校验格式——用法与 datedSections 的 date 字段一致，watch-releases.js
-// 主循环 `entry.date ?? entry.title` 那行不用为这个 kind 加分支。
+// 百炼按地区分栏，每个 rkb-update 内是一个日期 h3 和一组模型 h4。
+// 只在更新块内取标题，避免把相邻地区的 Singapore 等栏目名接到上一天。
+function bailianUpdates(html, pageUrl) {
+  const entries = [];
+  const tags = /<div\b([^>]*)>|<\/div\s*>|<h([34])\b[^>]*>([\s\S]*?)<\/h\2\s*>/gi;
+  let cardDepth = 0, date = "";
+  for (const [, attrs, level, content] of html.matchAll(tags)) {
+    if (attrs !== undefined) {
+      const classes = attrs.match(/\sclass\s*=\s*["']([^"']*)["']/i)?.[1] || "";
+      if (cardDepth || classes.split(/\s+/).includes("rkb-update")) cardDepth++;
+      continue;
+    }
+    if (!cardDepth) continue;
+    if (!level) {
+      cardDepth--;
+      if (!cardDepth) date = "";
+      continue;
+    }
+    const label = stripTags(content);
+    if (level === "3") date = /^20\d\d-\d\d-\d\d$/.test(label) ? label : "";
+    else if (date && label) entries.push({ title: `${date} ${label}`, date, url: pageUrl });
+  }
+  // 各地区独立倒序，同日同模型可能重复；合并后才截取最近的 30 个条目。
+  return dedupe(entries).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 30);
+}
+
 function parseBailian(html, pageUrl) {
-  const table = html.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
+  // 页面同时在脚本内嵌了一份渲染用 HTML。两种版式共用「日期 模型ID」历史键。
+  const page = html.replace(/<!--[\s\S]*?-->|<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, "");
+  const updates = bailianUpdates(page, pageUrl);
+  if (updates.length) return updates;
+  const table = page.match(/<table[^>]*>([\s\S]*?)<\/table>/i);
   if (!table) return [];
   const out = [];
   for (const row of table[1].matchAll(/<tr>([\s\S]*?)<\/tr>/g)) {

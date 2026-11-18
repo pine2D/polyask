@@ -69,7 +69,7 @@ const SOURCES = [
   { key: "kimi", name: "Kimi 帮助中心·模型与模式怎么选", url: "https://www.kimi.com/zh-cn/help/others/model-mode-selection", kind: "snapshot",
     filter: /./, anchor: /模型\s*思考强度|三档模型/, adapter: "desktop/src/site-runtime/adapters-cn2.js" },
   // 阿里云百炼「模型上线表」是跨厂商 API 上线信号（Qwen/GLM/Kimi 等经百炼平台上线的型号，不是任何
-  // 单一网页产品的 changelog），表格服务端渲染、按日期倒序，实测可直接 GET。用 NEVER_HIGH_SIGNAL 让
+  // 单一网页产品的 changelog），服务端按地区输出日期和模型，旧页使用表格。用 NEVER_HIGH_SIGNAL 让
   // 旧版整源标 /low；新版 surface:"api" 按周聚合：API 侧上线不代表网页选择器已同步，
   // 不能沿用 openai 那句「多半是营销/案例文」（这源里没有营销文，只是信号层级不同）。adapter 字段在
   // 这里没有单一文件可指——不同型号分属不同厂商适配器，写清楚怎么按行内 Model type 去对应。
