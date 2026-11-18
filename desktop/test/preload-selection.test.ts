@@ -8,29 +8,39 @@ import { readSource } from "./fixtures";
 import type { SiteCommandEnvelope, SiteResponseEnvelope } from "../src/shared/protocol";
 
 type Handler = (message: unknown, respond: (value: unknown) => void) => true | void;
-async function dispatchFor(handler?: Handler, cmd: "submitPrompt" | "wasSubmitted" = "submitPrompt",
+async function dispatchFor(handler?: Handler | "core", cmd: "submitPrompt" | "wasSubmitted" | "collect" | "diagnose" = "submitPrompt",
   budget = 1_000): Promise<SiteResponseEnvelope["result"]> {
   let receive!: (event: unknown, envelope: SiteCommandEnvelope) => Promise<void>;
   let sent!: SiteResponseEnvelope;
   const realRequire = createRequire(path.join(__dirname, "../src/preload/site.ts"));
   const context = vm.createContext({
-    exports: {}, navigator: { language: "en" }, setTimeout, clearTimeout,
+    exports: {}, navigator: { language: "en" }, location: { hostname: "fixture.test" }, document: {}, setTimeout, clearTimeout,
     require(name: string) {
       if (name === "electron") return { ipcRenderer: {
-        on(_channel: string, handler: typeof receive) { receive = handler; },
+        on(channel: string, handler: typeof receive) { if (channel === "polyask:site-command") receive = handler; },
         send(_channel: string, envelope: SiteResponseEnvelope) { sent = envelope; }
       } };
-      if (name.startsWith("../site-runtime/")) return {};
+      if (name.startsWith("../site-runtime/")) {
+        if (handler === "core" && (name.endsWith("/core.js") || name.endsWith("/read-commands.js"))) {
+          vm.runInContext(readSource("src/site-runtime/" + path.basename(name)), context);
+        }
+        return {};
+      }
       return realRequire(name);
     }, __AMS: handler ? { handleCommand: handler } : {}
   });
+  vm.runInContext("globalThis.window = globalThis", context);
   vm.runInContext(ts.transpileModule(readSource("src/preload/site.ts"), {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }
   }).outputText, context);
-  const deadline = Date.now() + budget;
-  await receive(null, { requestId: "request", command: cmd === "wasSubmitted"
-    ? { source: "AMS", cmd, text: "question", deadline }
-    : { source: "AMS", cmd, text: "question", tier: "think", images: [], deadline } });
+  if (handler === "core") vm.runInContext(`__AMS.adapters["fixture.test"] = {
+    submitted: text => text === "question", answer: () => "synthetic answer", state: () => "fast",
+    diagnose: () => [{ name: "fixture control", kind: "control", ok: true }]
+  }`, context);
+  const base = { source: "AMS" as const, deadline: Date.now() + budget };
+  const command = cmd === "submitPrompt" ? { ...base, cmd, text: "question", tier: "think" as const, images: [] }
+    : cmd === "wasSubmitted" ? { ...base, cmd, text: "question" } : { ...base, cmd };
+  await receive(null, { requestId: "request", command });
   return JSON.parse(JSON.stringify(sent.result));
 }
 
@@ -63,4 +73,12 @@ test("the isolated command bridge settles once and preserves uncertain submissio
   }
   assert.deepEqual(await dispatchFor((_message, respond) => respond({ supported: true, ok: false }), "wasSubmitted"),
     { supported: true, ok: false });
+});
+
+test("production preload and classic-script core exchange only the intended read-only responses", async () => {
+  assert.deepEqual(await dispatchFor("core", "wasSubmitted"), { supported: true, ok: true });
+  assert.deepEqual(await dispatchFor("core", "collect"), { text: "synthetic answer", state: "fast" });
+  assert.deepEqual(await dispatchFor("core", "diagnose"), { checks: [{ name: "fixture control", ok: true, kind: "control" }] });
+  assert.deepEqual(await dispatchFor("core", "wasSubmitted", 0), { supported: false, ok: false });
+  assert.deepEqual(await dispatchFor("core", "submitPrompt", 0), { ok: false, code: "timeout" });
 });

@@ -1,3 +1,4 @@
+/** 初版线格式，也是未知实体的保护基线。各实体可读的具体版本见 ENTITY_SCHEMAS。 */
 export const SYNC_SCHEMA = 1;
 /** Observations and extended evidence/draft fragments use 6; images 5, questions 4, folders 3, legacy decisions 2. */
 export const SUPPORTED_SYNC_SCHEMA = 7;

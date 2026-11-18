@@ -1,5 +1,5 @@
 "use strict";
-// wasSubmitted 只读确认（core.js 监听器 → read-commands.js）：{supported:true, ok:false} 是唯一会触发自动重发的组合，
+// wasSubmitted 只读确认（core.js 的 handleCommand → read-commands.js）：{supported:true, ok:false} 是唯一可供重发判定的组合，
 // 只能由「适配器同步返回 false + 页面在出帧 + 无进行中的视图过渡」产生，其余一律 fail-closed 成不支持。
 const assert = require("node:assert/strict");
 const fs = require("node:fs");

@@ -18,13 +18,14 @@ interface BroadcastServices {
   coordinator: Pick<BroadcastCoordinator, "send">;
   recentPrompts: Pick<RecentPromptService, "record">;
   publishPromptLibrary: () => void;
-  preferences?: Pick<PreferenceRuntime, "snapshot">;
+  preferences: Pick<PreferenceRuntime, "snapshot"> | undefined;
 }
 
 /** 调用方已校验请求并持有操作锁。旧轮或已迟到确认的站不能再次派发。 */
 export async function runBroadcast(request: BroadcastRequest, services: BroadcastServices): Promise<SiteRunResult[]> {
   const { collection, capture, broadcastResults, manager, coordinator, recentPrompts, publishPromptLibrary } = services;
   const preset = captureTierPresets(services.preferences?.snapshot().values);
+  // 重试须先核对原轮参与范围。准备期间迟到确认为已发的站仍属于本轮，仅跳过再次派发。
   collection.beginRun(request.runId, request.sites);
   const budget = request.images.length ? IMAGE_BROADCAST_BUDGET_MS : TEXT_BROADCAST_BUDGET_MS;
   const { remaining, dispatch, settled, historyTokens } = await capture.prepareRun(request, budget, lateSentResult(manager, request.runId));

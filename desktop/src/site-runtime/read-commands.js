@@ -1,6 +1,5 @@
 // desktop/src/site-runtime/read-commands.js — 只读命令回包：wasSubmitted / collectAnswer / diagnose。
-// 监听器仍只在 core.js 注册一次（desktop-shared-runtime.test.js 数着），它把命令交给这里的 readCommand；
-// 返回 true 表示异步回包（preload 的 dispatch 据此等待）。本文件不开菜单、不改 DOM、不产用户可见文案。
+// core.js 的 handleCommand 委托给 readCommand。同步读取可直接回包，返回 true 时 preload 会等待异步回包。
 (function () {
   "use strict";
   const S = window.__AMS;

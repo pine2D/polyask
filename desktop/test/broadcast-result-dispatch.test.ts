@@ -29,7 +29,7 @@ test('a stale retry is rejected before preparation; recent-prompt failures never
   const events: string[] = [];
   const receiver = new BroadcastResultReceiver(f.history, f.capture, f.manager);
   const services: Parameters<typeof runBroadcast>[1] = {
-    collection, capture: f.capture, broadcastResults: receiver, coordinator: f.coordinator,
+    collection, capture: f.capture, broadcastResults: receiver, coordinator: f.coordinator, preferences: undefined,
     recentPrompts: { record() { events.push('record'); throw Error('storage'); } },
     publishPromptLibrary() { events.push('publish'); throw Error('read'); },
     manager: { getStatuses: () => [], markStatus: f.manager.markStatus,
