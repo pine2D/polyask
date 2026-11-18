@@ -7,7 +7,7 @@
 ## 加新站点
 
 1. **站点登记三处**：`desktop/src/main/sites.ts` 的 `SITES`（`{key,host,label,url,authHosts,transitHosts?,image,intl}`——`image` 决定图片群发可用性，**必须与适配器是否实现 `attach` 一致**；`intl` 决定「国外/国内」的分组语义）、`desktop/src/shared/contracts.ts` 的 `SITE_KEYS`（**两者顺序必须一致**，否则 `desktop/src/main/diagnostics.ts` 判 `site_order`——它要求上报的站点序列仍是 `SITE_KEYS` 的子序列）、`desktop/src/site-runtime/generation.js` 的停止键表（键就是**适配器注册键**；不补 = 永远观测不到该站的「生成中/已完成」，卡片停在「已提交」）。
-2. 适配器：`desktop/src/site-runtime/adapters-intl.js` / `adapters-intl2.js` / `adapters-intl3.js`（国际）或 `adapters-cn.js` / `adapters-cn2.js` / `adapters-cn3.js` / `adapters-cn4.js`（国内）。**分卷只因 300 行上限而存在，按站切，不按职责切**：当前 `intl` = Claude、`intl2` = ChatGPT、`intl3` = Gemini、`cn` = DeepSeek + 豆包、`cn2` = Kimi + 智谱、`cn3` = 元宝、`cn4` = 千问。
+2. 站点主实现位于 `desktop/src/site-runtime/`。五个单站卷按站点命名，分别是 `adapters-claude.js`、`adapters-chatgpt.js`、`adapters-gemini.js`、`adapters-yuanbao.js`、`adapters-qianwen.js`。两个合卷按原注册顺序保留：`adapters-cn.js` 为 DeepSeek、豆包，`adapters-cn2.js` 为 Kimi、智谱清言。各站预设和公共工具见下方站点卡。
    **新开一卷要登记三处**（漏哪处都是静默失效）：① 分卷文件本身；② `desktop/src/preload/site.ts` 的 `require` 列表——**排在其它适配器之后、`generation.js` 与 `diag.js` 之前**（这两份按「已填充的注册表」统一包装，注册晚于包装就静默拿不到通用检查与生成态）；③ `desktop/scripts/desktop-shared-runtime.test.js` 的 `PRELOAD_CHAIN`（与 require 列表逐项等值对账，只改一边就红），顺手在文末补一行 `adapterMustResolveTranslation(<新卷>, <某 host>, <某 diag key>)`。**`scripts/test-site-selection.js` 的适配器清单是从 `site.ts` 的 require 列表派生的**：新开一卷只写文件、不 require 进 preload，九站对账当场红——没有「挂上就自动纳入」的旁路。
 3. `.github/ISSUE_TEMPLATE/site-breakage.yml` 的「哪个站点」下拉：`标签 (host)` 两项都要与站点表对上，站点名不一致也红。
 4. 按下方契约表补可选钩子。不补 = 该能力静默降级，不是报错。
@@ -45,7 +45,7 @@
 
 **能力由钩子决定，不由清单决定**：`answer()` 决定该站能否进「汇总复制」（九站全实现）；`attach()` 决定能否收图（九站均实现，与 `main/sites.ts` 的 `image: true` 对账）。各站使用聊天附件专用 input 和 `S.setInputFiles` 的只读完成判据；元宝保留旧版拖放回退。2026-09-22 复核 Gemini / 千问 / 智谱：之前“拒绝合成事件”的结论已过时，根因分别是菜单延迟创建图片输入、Radix 要求 PointerEvent、误用失效的旧图片输入。
 
-**巡检通用检查（`desktop/src/site-runtime/diag.js`）**：在全部适配器分卷之后注入，按已填充的注册表统一包装每站 `diagnose()`，前置两条只读检查——「输入框」（`findComposer()`，九站全部）与「发送键」（仅声明了 `sendSel` 的站）。新站/新分卷自动获得，无需自己写这两条；**有意不做全站发送键检查**：ChatGPT 等站空输入框时发送键被语音键替换，通用检查会在巡检（输入框常为空）时恒红误报。新开适配器分卷（如 `adapters-cn3.js`）在 `desktop/src/preload/site.ts` 里 require 时**必须排在 `desktop/src/site-runtime/diag.js` 之前**，否则该卷站点拿不到通用检查（注册晚于包装，静默缺席不报错）。
+**巡检通用检查（`desktop/src/site-runtime/diag.js`）**：在全部适配器分卷之后注入，按已填充的注册表统一包装每站 `diagnose()`，前置两条只读检查——「输入框」（`findComposer()`，九站全部）与「发送键」（仅声明了 `sendSel` 的站）。新站/新分卷自动获得，无需自己写这两条；**有意不做全站发送键检查**：ChatGPT 等站空输入框时发送键被语音键替换，通用检查会在巡检（输入框常为空）时恒红误报。新开适配器分卷（如 `adapters-yuanbao.js`）在 `desktop/src/preload/site.ts` 里 require 时**必须排在 `desktop/src/site-runtime/diag.js` 之前**，否则该卷站点拿不到通用检查（注册晚于包装，静默缺席不报错）。
 
 ### 检查项的 `kind`（机器字段，不产用户可见文案）
 
@@ -203,7 +203,7 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 ## 站点卡（改某站只读这一张）
 
-### Claude（`claude.ai`，`desktop/src/site-runtime/adapters-intl.js`）
+### Claude（`claude.ai`，`desktop/src/site-runtime/adapters-claude.js`）
 
 - 档位：think = `_selectModel(/fable\s*5\.2(?![\d.])/i)` + `_setEffort("top")`（**Fable 5.2 + 在场最高档**，当前是 Max，复读实际所选 rank；模型缺席时抛错，不误选旧版本或 5.20 / 5.2.1）；fast = `_selectModel(/opus\s*5\.5(?![\d.])/i)` + `_setEffort("default")`（**Medium，即站点默认档**，`_EFFORT` 词表里 rank 1；不在场则抛错，不退到 Low/Max；同样复读所选 rank）。**effort 是站点级记忆，换模型不重置**：1.0.1 之前 fast 只换模型不压档，think 过一次后快档会以「Sonnet 5 · Max」发出去（用户真机 2026-09-16）。`state()`：sonnet/haiku 带 `_THINK` 命中的高档 effort 判 null（不是预设档），否则 fast；Opus 5.5 的 Medium / 中判 fast（不扩展到旧 Opus 或 Fable 的 Medium）；Fable/Opus 其余按 effort 后缀判。
 - **2026-09-23 菜单实测**：模型项文本为 `Opus 5.5For complex tasks`，版本后不用词边界，改用负向数字/小数点检查，兼容紧连说明且不误选 5.50。Effort 已平铺为 `[role="group"][aria-labelledby]`，关联标题为 `Effort`；标题必须在该 group 内，档位最近的带标签 group / menu 必须指回该标题 id，再按 `_EFFORT` 过滤。旧版子菜单仍兼容；两种结构都不放宽为仅按档位文本选择。
@@ -220,9 +220,9 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - 精确标签合并完整的强度文本节点，排除 SVG、`role=img` 用量图标及隐藏文本；仅剥离已确认的 usage 说明，Extra High 不能冒充 Extra。每个菜单动作向所属菜单发送 Escape 并等待其异步关闭，再继续下一步；等待最多 500ms 且夹取绝对 deadline，已选中的组合也必须收菜单。
 - 即时切档、群发（含同轮重试）与辅助发送均采用开始操作时冻结的组合。目标不可用返回未确认，不能偷偷选推荐模型；群发仍按原提交链继续一次，不新增自动重发。目录最多 50 个模型、每模型 12 个强度，名称长度与控制字符过滤由运行时、preload 和共享契约共同校验。
 
-### ChatGPT（`chatgpt.com`，**`desktop/src/site-runtime/adapters-intl2.js`**）
+### ChatGPT（`chatgpt.com`，**`desktop/src/site-runtime/adapters-chatgpt.js`**）
 
-- **本站主卷**为 `adapters-intl2.js`，Default 组合与确认拆到 `chatgpt-default.js`，在 preload 中紧随主卷加载；Claude 在 `adapters-intl.js`、Gemini 在 `adapters-intl3.js`。分卷登记见本文「加新站点」。
+- **本站主卷**为 `adapters-chatgpt.js`，Default 组合与确认拆到 `chatgpt-default.js`，在 preload 中紧随主卷加载；Claude 在 `adapters-claude.js`、Gemini 在 `adapters-gemini.js`。分卷登记见本文「加新站点」。
 - **旧菜单策略保留**：think = `_selectModel()`（显式优先 GPT-6，账号未提供时使用已知备用 GPT-5.6 Sol） + `_pickEdge(true)`（当前滑块最高可用端点）；fast = 同模型 + `_pickEdge(false)`（最低端点）。不把 GPT-6.1 Sol/Astra 加为旧 GPT-6 的别名；重复、未知或不可用候选不得猜测点击。
 - **Work 的 Default 六格**（2026-11-18 Linux/WSL 真机）。依次为 GPT-6 Luna High、GPT-6.2 Sol Light、GPT-6.2 Sol Medium、GPT-6.2 Astra Light、GPT-6.2 Astra Medium、GPT-6.2 Astra Extra High。快速取第二格 **1/5**，思考取最右 **5/5**。11 月 3 日用户页面的同一位置分别为 GPT-6.1 Sol Light 和 GPT-6 Astra Extra High，两种目录均按闭合标签报告实际版本。切换须选中唯一可用的 Default，再核对 0..5 范围、目标位置与闭合后的完整组合。缺项、歧义或组合不符均报未确认。
 - **双面板归属**：先以入口 `aria-controls`、菜单 `aria-labelledby` 双向关联定位；`data-active=false` / `aria-hidden=true` 祖先内的控件不参与动作。模型列表展开后，非活动 Power 仍可能有矩形尺寸且带 disabled，根菜单不能依赖可操作 Power 才定位。新版 Power 挂 `data-reasoning-slider`，内层为 `data-model-picker-power-slider`；滑块内部 thumb 的 `aria-hidden=true` 不阻止只读数值，交互仍聚焦外层 Power。活动模型项复读后可重选已确认模型以返回滑块，未知控件不得尝试。
@@ -243,7 +243,7 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 - **2026-10-22 首问预览**：首页无逐消息 key 的 `[data-user-message-bubble]` 先出现，真实带 `[data-content-search-unit-key]` 的消息插入时，临时泡仍 connected、藏在 `display:none` 的另一 workspace。带图和纯文字均可触发；新式泡必须有逐消息身份才计数，临时泡不进入原文锚点兜底，也不能提供提交正向证据。旧角色壳仍计一次，多个真实用户轮次及不同 key 仍拒绝归属。
 
-### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-intl3.js`）
+### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-gemini.js`）
 
 - **2026-11-12 新菜单**：模型项和等级项使用 `role=menuitemradio`，也保留旧 `menuitem` / Material 按钮。模型项 `.label` 为用途（如 `Code & analysis` / `Most complex work`），`.sublabel` 才是 `4 Argon` / `4 Carbon`；内置推荐通过 `_modelLabel` 从主副标题辨认版本开头的模型名，兼容旧菜单的相反排列，不用整行起始文本匹配。内置两档仍为 Argon Low/High，不因 Ultra 或 Carbon 可用而自动升级。自定义预设仍按实际可见主标签精确读写，保留已经保存的用途标签组合；Carbon 的 Low/Medium/High 走同一套动态预设，无需把它硬编码为默认模型。闭合 Carbon 标签明确 Low/High 时分别为 fast/think，省略等级或 Medium 时仍为 null。
 
@@ -287,7 +287,7 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - `answer()` 从 `[data-message-id]` 中过滤掉自身或子节点带 `justify-end` 的用户消息（AI 消息无右对齐），取末条 → 不在思考块里的第一个 `.md-box-root`。思考块认三种标记（只在本条消息内）：插件节点 `data-plugin-identifier="block_type:10040 | thinking_block.scene:N"`（正文块是 `block_type:10000`）、思考进度区 `data-message-selection-module="thinking_progress"`、类名含 think（`think-collapse-block-<hash>` 等）。思考中展开的步骤标题同样用 MdBox 渲染成 `.md-box-root`，2026-10-04 第 4 轮快照里中途的副本是「正在思考\n\n规划说明结构」。现在没有正文、只有思考块时返回 null（同千问/Kimi），空占位消息仍返回消息本身；思考块折叠常驻而终态不是 MdBox（繁忙/违规提示、卡片、图片）时，取最后一个最外层思考块之后（逐层向上到消息为止）第一个自身不含思考块、有字或有图的兄弟，副本不带思考步骤（回归 `capture-chrome-regress.test.js`）。标记取自豆包前端包与真机 `data-plugin-identifier` 属性；思考中的真机 DOM 尚未直接采到。`attach` 走 `input[type="file"][accept*="png"]`。
 - 渲染会**在中英文与数字之间插空格**——marker 匹配先去空白再比。
 
-### 千问（`www.qianwen.com` / 键 `qianwen.com`，`desktop/src/site-runtime/adapters-cn4.js`）
+### 千问（`www.qianwen.com` / 键 `qianwen.com`，`desktop/src/site-runtime/adapters-qianwen.js`）
 
 - 2026-11-18 日常页提供 `Qwen-快速` 和 `Qwen3.7-Max`。快速和思考都选支持两种模式的 `Qwen-快速`，再切换“快速”或“思考研究”。旧菜单沿用 `Qwen3.7-千问`。页面只有模式入口时，按下述日常页条件操作。
 - 两档共用 `_MODELS` 的确切名称和别名。切模型后须读回刚点的模型，再读回所选模式。`selection(mode)` 据此报告 `preferred` 和实际模型名。其它模型对应的档位为未知。
@@ -310,9 +310,9 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 - **`escMenus()` 只收得掉 effort 子菜单，收不掉模型根菜单**（2026-08-31 真机：Escape 后 `.model-item` 仍可见、入口仍带 `.active`），**再点一次入口才整体关掉**。收尾统一走 `_close()`：`escMenus()` → 入口仍带 `.active` → 再 `click()` 一次入口。`_select` / `_setEffort` / `attach` 的每条出口（含 throw 前）都已改走它。
 - 唯一实现 `submitted(text)` 的站（比对末条 `.chat-content-item-user` 的 `.user-content`，去零宽 + 折叠空白后与原文等值）——Kimi 发送后会重挂页面并断开消息端口。消费端是 `desktop/src/main/broadcast.ts`：`submit_unconfirmed` 时只读探 `wasSubmitted`（固定 1.5s 窗口、独立于群发 deadline——deadline 到点才收到不确定是常态；单次探测 ≤300ms，无应答再问，连续 5 次明确没见到才判「未提交」），**确认「未提交」后是否自动重发一次由模块常量 `POLYASK_KIMI_RESUBMIT` 决定，当前 `false`**——它是模块常量不是设置项，两条真机硬用例（新会话空态、末条是上一轮内容）通过前一律保持关闭，届时也随同一次发版改。`answer()` 取末个 `.chat-content-item-assistant` 内、排除 `.thinking-container` 后的最后一个 `.markdown`；只有思考段、正文 `.markdown` 还没出现时返回 null（曾退回整条消息，思考阶段的推理文本被当正文写进副本，2026-10-03 真机）。后台视图不出帧时（2026-10-04 Linux 开发态实测 rAF=0），发送后输入框已清空、路由与消息却要等首次绘制才出现；服务端记录显示问题在提交当时就已送达（会话 createTime 与群发同秒），只是渲染被推迟，故 `composer` 证据在这种情况下是真的。此时 `submitted(text)` 读不到末条用户消息、会判「未提交」。已处理的部分：`read-commands.js` 的 `wasSubmitted` 在页面不出帧或视图过渡未结束（Windows 真机 Kimi 过渡挂 3 分钟以上、服务端已建会话）时回「不支持」，不再给出可触发重发的否定；主进程 `paint-recovery.ts` 在主帧提交与窗口恢复/显示时重申 `setBackgroundThrottling(false)` 把停帧视图救回。剩余前提：**`POLYASK_KIMI_RESUBMIT` 打开前仍须过 F067 两条真机硬用例**，且须真机确认「出帧 + 无过渡 + 末条不是本次」不会在已送达时出现。`attach` 用 `input.hidden-input[type="file"]`，没有就先点 `.toolkit-trigger-btn`，再按 deadline 剩余预算夹取等待（`Math.min(1500, deadline-now)`），**无论取到与否都经 `_close()` 收尾（含 `escMenus()` 和根菜单关闭）**。**动 Kimi 图片路径前先真机跑一次 `attach`**——最近一次验证时间未记录，别默认它还能用。
 
-### 元宝（`yuanbao.tencent.com`，**`desktop/src/site-runtime/adapters-cn3.js`**）
+### 元宝（`yuanbao.tencent.com`，**`desktop/src/site-runtime/adapters-yuanbao.js`**）
 
-- **本站单独一卷**：`adapters-cn2.js` 当时贴着 300 行上限，2026-09-15 加模型子菜单逻辑时把元宝拆到 `adapters-cn3.js`（Kimi / 智谱留在 `cn2`）。
+- **本站单独一卷**：`adapters-cn2.js` 当时贴着 300 行上限，2026-09-15 加模型子菜单逻辑时拆出元宝，现名 `adapters-yuanbao.js`（Kimi / 智谱留在 `cn2`）。
 - 2026-11-18 模型菜单列出 `Hy4`、`Hy3`、`DeepSeek`。正式版 Hy4 有 Instant、Thinking、Expert 三个模式。思考选 Hy4 + Expert，快速选 Hy3 + Instant。切档时分别检查模型和模式，即使触发器已显示 Instant，也要核对模型。9 月的旧菜单仍可用 Hy4 preview，其唯一模式是 Expert。
 - 模型标题通过 `presetDom.firstText` 单独读取，排除标题后的 New 徽标和说明。目标名称须在可见模型项中唯一且可用，选中后复读 Models 入口中的完整模型名。
 - **模型子菜单**：入口是 `[role=menuitem]`，文本 = `Models`/`模型` + 当前模型名（如 `ModelsHy3`），**只在模式菜单开着时存在**，所以 `_model()` 是打开菜单后才可读；子菜单靠悬停展开：入口 `button[role=menuitem][aria-label="Select model"]` 的 React 处理器只有 `onMouseMove` / `onMouseLeave` / `onClick`（CDP 真机 2026-09-16），**只有合成 `mousemove`（带 clientX/Y）能打开**，`mouseover` / `pointermove` / `click` / 方向键 / Enter 都打不开；`_openModels` 先 `mousemove`，没开再 `click` 兜底，一次不成重来一次。选中模型后**根菜单留着、子菜单收起、按钮立即回显**（Hy4 preview → Expert；切回 Hy3 会恢复上一次的模式）。模型项与模式项同为 `[role=menuitemradio]`、同时在 DOM，靠容器 `aria-label="Model list"`（中文候选 `模型列表`，未验证）区分：`_isMode()` 排除该容器、`_modelItems()` 只取该容器，**两层语义校验缺一不可**（只做文本校验挡不住「模型取名叫深度思考版」，只做容器校验挡不住站点把模型塞进同一层）。选完模型后**重开一次菜单复读入口尾缀**确认，不猜菜单收没收。

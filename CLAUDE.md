@@ -22,8 +22,8 @@ PolyAsk 是 Electron 桌面应用：同一问题群发九站并排比较。**切
 - **提交不确定 ≠ 可以重发**：命令超时、无回包、`submit_unconfirmed` 一律原样交给用户点 retry。**只有**实现了只读 `adapter.submitted(text)` 的站（目前仅 Kimi）、且 `wasSubmitted` 回包 `supported:true, ok:false` 明确确认「末条用户消息不是本次内容」，才允许自动重发一次；这条分支由 `broadcast.ts` 的常量 `POLYASK_KIMI_RESUBMIT` 拦着，**默认 `false`，F067 两条真机硬用例通过前不得打开**。回包形状不对按不支持处理（`normalizeSubmitted` fail-closed）；无 `submitted()` 的站严禁自动重发。
 - **删除一律 tombstone**：写 `deletedAt` + 入 outbox，不物理删；清空历史/结果库也要留标记。草稿墓碑仅在超 30 天且所有已知 fragment 均无该活草稿后回收（`draft-retention.ts`，见 `docs/desktop.md`），其余实体不得照搬。**唯一例外「重置全部本机数据」**：先断开 Drive，再物理清空本机库并保留 `deviceId`（否则新墓碑重连后会覆盖云端）。本机重置不删 Drive 数据；要改先改承诺文案。
 - **实测阈值留 ≥20% 余量**：`findComposer` 高度用 `>=16`，不用 `>=20`；标称 20px 在缩放机器上实测 19.999998px。
-- **`deadline` 是绝对时间戳、全链路透传**：`shell-ipc.ts` 的群发入口（44s / 带图 90s）→ `broadcast.ts` → `site-command-channel.ts` → `preload/site.ts` → site-runtime `submitPrompt` → `adapter.submit`/`attach` → `confirmSubmitted`。**循环等待与 ≥1s 固定等待一律夹取** `Math.min(x, Math.max(0, deadline - Date.now()))`；例外仅 ≤500ms 渲染跟进（禁叠成秒级）与提交后 1.5s 只读确认窗。切档 `think`/`fast` 同样收绝对 deadline（群发内取总截止与 10s 上限较早者），超时仅收菜单。
-- **群发预算只有一个真源**：`shell-ipc.ts` 群发入口的 44s/90s；`main/window-data-services.ts` 辅助发送回调的 44s 必须跟随（硬编码、无带图分支）。改预算先改那一处，再改 `docs/desktop.md` 的预算表。
+- **`deadline` 是绝对时间戳、全链路透传**：`shell-ipc.ts` 的群发入口 → `run-broadcast.ts`（含准备时间，44s / 带图 90s）→ `broadcast.ts` → `site-command-channel.ts` → `preload/site.ts` → site-runtime `submitPrompt` → `adapter.submit`/`attach` → `confirmSubmitted`。**循环等待与 ≥1s 固定等待一律夹取** `Math.min(x, Math.max(0, deadline - Date.now()))`；例外仅 ≤500ms 渲染跟进（禁叠成秒级）与提交后 1.5s 只读确认窗。切档 `think`/`fast` 同样收绝对 deadline（群发内取总截止与 10s 上限较早者），超时仅收菜单。
+- **群发预算只有一个真源**：`main/broadcast.ts` 的纯文字 44s / 带图 90s 常量。普通群发按请求选预算，`window-data-services.ts` 的辅助综合固定取纯文字预算。改数值同步 `docs/desktop.md` 预算表。
 - **只产 `code`，不产用户可见文案**：site-runtime / preload / 主进程返回错误码，渲染层翻译；轮询认 `r.code`，**绝不正则匹配文案**。新增可见码三处落点：`shared/protocol.ts` 的 `SITE_CODES`、`shared/status-copy.ts` 的 `STATUS_COPY_KEY`（漏映射 typecheck 红）、`shared/copy.ts` 三语；`desktop/test/status-copy-coverage.test.ts` 双向对账。IPC 抛出的裸码经 `shared/ipc-error.ts` 剥掉 Electron 前缀后才到渲染层。
 - **`diagnose()` 每条检查必须带 `kind`**（`reach`/`control`/`tier`/`probe`/`capture`）。仅 **`tier`、`capture` 之外**的红项影响可用性（`shared/site-health.ts` 的 `isAdvisoryCheck`）。`state()` 是偏函数，合法非预设档位返回 null 不算故障；`capture` 仅在会话路由检查第 ① 级定位，红了仍可群发。漏标按 `control` 误报；各站例子见 `docs/adapters.md`，回归在 `diag-runtime.test.js`。
 - **适配器协议**：每站必需 `{think, fast, state, diagnose}` 四项，其余钩子可选、不实现 = 该能力静默降级。`state`/`selection`/`diagnose`/`answer`/`submitted` **只读同步，不得开菜单**。`return false` = 落回 core 通用链；`throw` = 通用链对本站不安全，core 直接失败**不回退**。全表与九站映射见 `docs/adapters.md`。
@@ -54,8 +54,8 @@ bash scripts/release.sh --publish    # 推 tag 发布五包；--build-only 仅�
 
 ## 架构入口
 
-- **主进程**：`desktop/src/main/index.ts` → `view-manager.ts`（视图）、`broadcast.ts`（群发）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts` / `auto-backup-ipc.ts`（IPC，全部过 `trustedShell`）。
-- **站点适配**：`desktop/src/site-runtime/`：core/tier 编排、selection-match 候选匹配、send/upload 提交与附件；intl/intl2/intl3/cn/cn2/cn3/cn4 按站分卷；注入顺序以 `preload/site.ts` 为准，classic script/`__AMS`；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
+- **主进程**：`desktop/src/main/index.ts` → `view-manager.ts`（视图）、`run-broadcast.ts`（群发准备及回执）→ `broadcast.ts`（逐站派发）、`shell-ipc.ts` + `sync-ipc.ts` / `site-health-ipc.ts` / `data-admin-ipc.ts` / `proxy-ipc.ts` / `auto-backup-ipc.ts`（IPC，全部过 `trustedShell`）。
+- **站点适配**：`desktop/src/site-runtime/`：core/tier 编排、selection-match 候选匹配、send/upload 提交与附件；单站卷按站名命名，adapters-cn 为 DeepSeek/豆包，adapters-cn2 为 Kimi/智谱；注入顺序以 `preload/site.ts` 为准，classic script/`__AMS`；语言由 `shared/locale.ts` 解析后 `setLang` 注入。
 - **数据与同步**：`main/database.ts`（SQLite）、`*-repository.ts`、`sync-engine.ts` / `sync-pull.ts` / `drive-client.ts`（Drive appdata）；schema 1–7（提问4/原图5/观测及多依据6/星标7；草稿1/2）见 `docs/desktop.md`、`desktop/test/fixtures/`。本机管理/备份v6由 `data-admin-service.ts` / `backup-service.ts` 负责；代理由 `proxy-runtime.ts` 负责，`proxy-preference-store.ts` 是唯一写入口，持久化、同步与备份边界见 `docs/desktop.md` §13。
 - **渲染层**：`desktop/src/renderer/`，所有 IPC 只经 `shell-api.ts` 的 `shell`（测试用 `setShellApi` 注入桩）。
 - **共享契约**：`desktop/src/shared/`（protocol、copy、locale、site-report、ipc-error）。

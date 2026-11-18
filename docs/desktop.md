@@ -46,17 +46,12 @@
 
 ## 3. 站点运行时注入
 
-`desktop/src/preload/site.ts` 在隔离世界按**固定顺序**同步 require 19 条：
+`desktop/src/preload/site.ts` 中的静态 `require` 列表给出完整注入顺序。`core.js` 建立隔离世界的 `__AMS`，然后加载命令处理、发送及附件工具、适配器与各站预设。最后的 `generation.js` 和 `diag.js` 遍历已经登记的站点。`desktop-shared-runtime.test.js` 核对文件覆盖和顺序。
 
-```
-i18n → core → read-commands → tier → selection-match → preset-common → preset-dom → send → upload → md-head → md-diagram → md → prompt-markup → adapters-intl → claude-presets → preset-command → adapters-intl2 → chatgpt-default → chatgpt-preset-slider → chatgpt-presets → adapters-intl3 → gemini-presets → adapters-cn → deepseek-presets → doubao-presets → adapters-cn2 → kimi-presets → chatglm-presets → adapters-cn3 → yuanbao-presets → adapters-cn4 → qianwen-presets → generation → history-route → history → history-locate → history-adapters → diag
-```
-
-- `read-commands.js` 承载只读命令 `wasSubmitted`/`collectAnswer`/`diagnose`，挂 `__AMS.readCommand`。同步读档函数 `__AMS.getState()` 供站点运行时与开发态巡检调用；消息监听器仍只在 `core.js` 注册一次并委托给它（`desktop-shared-runtime.test.js` 数着），所以它必须紧跟 `core.js`。`tier.js`、`selection-match.js`、`send.js` 读 `window.__AMS`，必须排在 `core.js` 之后；候选匹配模块排在适配器之前；`generation.js` 与 `diag.js` 必须排在**全部适配器之后**——两者都按已填充的注册表逐 host 挂实现/包装，早了就静默缺席。
-- **chrome shim 只剩 `runtime.onMessage.addListener`** 一条（`core.js` 用它收命令），以不可写不可配置的属性装在 `globalThis.chrome` 上。
+- preload 直接调用 `__AMS.handleCommand`。`read-commands.js` 处理 `wasSubmitted`、`collectAnswer` 和 `diagnose`，预设、切档和提交共用站点交互队列。巡检也可以同步读取 `__AMS.getState()`。
 - **locale 单向注入**：require 完成后由外壳调 `__AMS_I18N__.setLang(resolveLocale(navigator.language))`。全应用只有 `shared/locale.ts` 一份解析（`en` / `zhCN` / `zhTW`，前缀匹配，未命中的 `zh-*` 之外一律 `en`）；运行时不再自己猜语言。
 - 命令通道：main 用 `contents.send("polyask:site-command", {requestId, command})`，preload 回 `polyask:site-response`。**两端都只认主帧**——`shell-ipc.ts` 的接收侧显式判 `event.senderFrame?.parent !== null` 就丢弃，再由 `manager.owns(sender)` 校验来源视图；`SiteCommandChannel.receive` 还要求 `pending.contentsId === sender.id`。
-- `dispatch` 逐个遍历监听器：某个监听器返回 `true`（会异步 `sendResponse`）或已同步作答就停；没有任何监听器接手才判 `invalid_response`；无监听器时判 `adapter_unavailable`。**不在这里硬断言「有且只有一个监听器」**——模块作用域一抛，`site-command` 监听就注册不上，九站整链失守；监听器数量由离线测试 `desktop/scripts/desktop-shared-runtime.test.js` 数 `addListener` 调用点守着。
+- 处理函数可同步回包，或返回 `true` 后异步回包。preload 只接受第一次结果。缺少入口返回 `adapter_unavailable`，未接手返回 `invalid_response`；提交已交给运行时却等不到结果返回 `submit_unconfirmed`。
 - `wasSubmitted` 的每一个失败出口都是「不支持」：超时、无适配器、异常、形状不对，一律不能被读成「确认未提交」。
 - 采集正文码点上限 `TEXT_LIMIT = 1_000_000`（`site.ts`），超限不静默丢弃，改带 `answer_truncated` 码。
 
@@ -67,11 +62,11 @@ i18n → core → read-commands → tier → selection-match → preset-common �
 
 - 普通群发、辅助综合发送、新建会话共享主进程 `OperationGate`；上一个操作未结算时拒绝新操作（IPC `operation_busy`），取消后也须等旧请求结算才能释放。渲染层辅助综合同时占用外壳操作锁并显示取消状态。取消分两条通道：群发取消 `polyask:cancel`（`shell-ipc.ts`）同时停综合派发，并作废「提交未确认」站的迟到确认；辅助综合取消 `polyask:synthesis-cancel`（`synthesis-ipc.ts`）只停综合协调器与综合导航，不碰群发状态与上一轮的迟到确认。
 
-`renderer` → `polyask:broadcast`（`shell-ipc.ts`）→ `BroadcastCoordinator.send`（`broadcast.ts`）→ `ViewManager.sendCommand` → `SiteCommandChannel` → site preload → 站点运行时。
+`renderer` → `polyask:broadcast`（`shell-ipc.ts`）→ `runBroadcast`（`run-broadcast.ts`）→ `BroadcastCoordinator.send`（`broadcast.ts`）→ `ViewManager.sendCommand` → `SiteCommandChannel` → site preload → 站点运行时。
 
 - **`deadline` 是绝对时间戳**，在 `broadcast.ts` 一次算出（`now() + max(1, timeoutMs)`）并原样放进每站命令，全链路透传、只读不重算。循环等待与 ≥1s 的固定等待一律夹取。
 - 辅助综合通过独立的 `synthesis-` 本轮标识建立页内提交确认，完成监控不改群发计数。
-- **群发预算只有 `shell-ipc.ts` 一个真源**：`request.images.length ? 90_000 : 44_000`。**辅助综合走的是 `window-data-services.ts` 里另一处硬编码的 `44_000`，且没有带图分支**——改群发预算必须同批跟进这一处，否则带图辅助综合按纯文本预算跑。
+- `main/broadcast.ts` 定义纯文本和带图预算。`runBroadcast` 按图片数量选取总预算，`prepareRun` 扣除旧轮采集时间后将剩余预算交给派发。辅助综合只引用纯文本预算，并使用自己的协调器。
 - **epoch 取消**：`BroadcastCoordinator` 每次 `send` 自增 `epoch` 并换一个 `AbortController`；`cancel()` 自增 epoch 并 abort。每个 `await` 之后都核对 epoch，不一致立刻返回 `cancelled`。新写的长流程照此办理。
 - **可重试码只有两个**：`RETRIABLE = {composer_not_found, not_ready}`——只有它们代表「还没开始提交」，可在同一 deadline 内等 `min(500, 剩余)` 后重投。其它任何码（含新增的）默认不可重试。
 - **提交不确定 ≠ 可以重发**：`submit_unconfirmed` 走只读确认窗（下表），确认「已提交」返回成功；确认「未提交」也**只有在开关打开时**才允许自动重发一次。开关 `POLYASK_KIMI_RESUBMIT` 是 `broadcast.ts` 的模块常量，**当前为 `false`**，不是设置项——用户不该有能力打开一条尚未真机验证的自动重发路径。测试必须显式传 `resubmit`。
@@ -79,8 +74,8 @@ i18n → core → read-commands → tier → selection-match → preset-common �
 
 | 场景 | 值 | 落点 |
 | --- | --- | --- |
-| 群发绝对 deadline | 纯文本 44s / 带图 90s | `shell-ipc.ts` |
-| 辅助综合发送 | 44s，**硬编码、无带图分支** | `window-data-services.ts` |
+| 群发绝对 deadline | 纯文本 44s / 带图 90s | `broadcast.ts`、`run-broadcast.ts` |
+| 辅助综合发送 | 共用纯文本 44s | `window-data-services.ts` |
 | 辅助综合等新会话 | 22s | `synthesis-service.ts` |
 | 新会话 / 辅助综合导航前保存旧回答 | 总计 6s：读一次（≤2.5s），确认完成的候选只差静默复读时等它（≤3.05s）再读，到点不阻塞导航；随后结束这些站的采集。在辅助综合 22s 计时之前、新会话主帧计时之前 | `question-capture-binding.ts`（`SESSION_HANDOFF_MS`）、`question-capture-service.ts`（`handoff`） |
 | 新会话占 OperationGate 等主帧提交 | 等 `did-navigate` 而非 `did-finish-load`（旧文档的 `did-finish-load`/ERR_ABORTED 会让 `loadURL` 提前落地，提交模式下都不算数）。单站硬上限 20s：Windows 18 次实测 96–3557ms，慢网下带 Cookie 的 HTML 约 13s（原 10s 把慢页面判成失败），取约 1.5 倍。到点先 `historyAccess.abandon` 中止未提交导航并钉 `load_failed`（`stop()` 只产生被 `PageLifecycle` 忽略的 ERR_ABORTED，不钉住会停在 loading、群发打进旧会话），再报 `not_ready` 放门，外壳显示「N 站失败」（`newSessionPartial`），重载即恢复；旧文档就是首页时保留并按成功返回（见下行「中止后保留旧文档」）。辅助综合导航后立刻发送，仍等 `did-finish-load`（`ViewManager.navigate` 默认 `"load"`）。真机：到点收口与「延迟 15/18s 后放行照常 ready」的正负对照均已验证（docs/verify-history.md 2026-10-05 第 7 轮、10-05/06 后续核对） | `workspace-service.ts`（`NEW_SESSION_COMMIT_CAP_MS`）、`navigation-commit.ts` |
@@ -216,9 +211,23 @@ i18n → core → read-commands → tier → selection-match → preset-common �
 - 加密 refresh token 经 `main/secret-file-store.ts` 写入（`TokenStore` 是它的薄包装）：先写同目录独占临时文件（0600），完成写入、同步与关闭后原子替换；失败清理临时文件，保留原令牌文件。无安全加密后端时仍仅保留进程内令牌；明确保存替代令牌时，在同一串行队列内清除旧密文，清除失败报 `token_store_failed`，防止重启使用被替换的账号。单纯读取失败仍不删文件。启动前的可用性查询同样限时 10s，超时按不可用继续初始化。钥匙环阶段（读、写、可用性查询）各限时 10s：写盘超时不建临时文件、不动旧文件，首次连接报 `token_store_failed`（以前钥匙环挂起时连接会一直挂着），令牌轮换路径保留内存令牌、不报错；读盘超时与解密失败同样处理（`load()` 返回 null，不删令牌文件，下次再读）。
 - 网络代理的持久化（`preference:proxy`、本机 meta 键 `proxyOverride` / `proxyFollowing` / `proxyAccepted`、加密的 `proxy-secret.bin`）、备份排除与本机重置顺序见 §13「数据边界」。
 - 结果库过滤在 SQLite 执行，保持既有 searchText 的大小写与字面搜索语义；标签独立查询，不再为标签加载全部回答。历史每页批量读取尝试摘要，正文仍只随选中详情返回；不新增数据库字段或同步格式。
+**Drive 实体可读版本**（`shared/sync.ts` 的 `readableSyncSchemas`）
+
+| 实体 | 可读 schema |
+| --- | --- |
+| 最近提问 `history` | 1 |
+| 归档 `archive`、设备片段 `state` | 1、6 |
+| 决策 `decision` | 2、6、7 |
+| 文件夹 `folder`、成员 `folderMembership` | 3 |
+| 逐次提问 `question` | 4、7 |
+| 单次回答 `questionAnswer` | 4、6 |
+| 提问原图 `questionAttachments` | 5 |
+
+拉取先查 Drive 元数据，再核对正文版本和实体内容。高于该实体初版且未列出的版本触发只读保护，即使数字小于 7。未知实体沿用初版 1 的分界。元数据缺版本会记为损坏；当元数据、正文的版本各自可读却不一致，也记为损坏。旧客户端与冻结样本见 `desktop/test/fixtures/README.md`。
+
 - **schema 1 的线格式冻结在 `desktop/test/fixtures/schema1-*.json`**（每个文件 `{file, body}`，出自扩展时代的真实实现，代码保留在 tag `archive/extension-v0.25.1`）。**不要重新生成、不要按新校验「修正」它们**：`schema1-wire-format.test.ts` 把全部样本喂进下行链路并要求逐条接收，任何一次校验收紧命中存量形状会先红在那里，而不是在用户的结果库里静默少几条。新增决策卡 schema 2 另增 `schema2-decision*.json`，文件夹及关联 schema 3 另增 `schema3-folder*.json`；旧实体仍为 schema 1，冻结样本不变。
 - **两条跨端不变量**（跨设备记录要能互认，改一端就是让另一端拒收）：
-  1. **提问在派发之前无条件入库**——`shell-ipc.ts` 的 `history.record(request.text)` 先于 `coordinator.send`。请求校验、图片站点支持检查、操作互斥及 `collection.beginRun` 的过期轮次检查都在记录之前，被这些检查拒绝的请求不入库；**全部站点都失败的提问照样留记录**，这是有意的（用户要能重发）。
+  1. **派发前尝试写入最近提问**——`run-broadcast.ts` 的 `recentPrompts.record(request.text)` 先于 `coordinator.send`。请求校验、图片站点支持检查、操作互斥及 `collection.beginRun` 的过期轮次检查都在记录之前，被这些检查拒绝的请求不入库；最近提问写入成功后，即使全部站点发送失败也可从库中取回。库写入或读取失败仍继续派发。
   2. **结果库字段上限按码点计、两端一致**（`shared/archive.ts`）：`title` 512、`instruction` 4000、`note` 4000、`host`/`label`/`winnerHost` 256、预览 `text` 320、`state`/`code` 64、单个 `tag` 32、`tags` 数组 20 项。`title` 与预览**截断**，其余**超限即 throw**。新增字段必须同时进这张表，否则表现为「某台设备的记录同步不过来」。
 - 上传图片不再自动打开管理区；只保留顶栏数量入口，警告以同一入口圆点及提示显示。点击后临时使用工作台侧栏宽度，关闭即归还；与工作台、历史入口互斥，输入框展开仅由编辑状态决定。保留完整缩略图、文件名与独立删除按钮，更换为整批替换，关闭后焦点返回入口。
 - 待发图片属于本次提问：`useImageSelection.prepareSend` 捕获图片批次及清理闭包，`useBroadcastFlow` 在同一 runId 首次有任一站成功时调用一次，覆盖首次回包、主动重试和迟到确认。全部失败、取消且无成功、结果未确认或 IPC 异常均保留。文字与图片分别按自己的修订清理；后续文字编辑不保留已发旧图，新图落地后不被旧结果清除，切换表面不算改图。消费旧图不中断较新的读取/文件框；追加读取完成后基于当前批次组合，防止旧图被重新加入；取消选图或选到无效文件也不保留已发旧图。重试始终使用原请求的图片快照，历史原图保留不受影响。
@@ -391,7 +400,7 @@ npm run soak -- --minutes=60
 
 每条提问最多一份不可变原图集：`shared/question-attachments.ts` 的 `QUESTION_ATTACHMENTS_SCHEMA = 5` 定义身份、元数据及独立 JSON/base64 线格式，提问为 schema 4/7、旧回答为 schema 4，新回答为 schema 6。ID 是 `SHA256(JSON.stringify(['questionAttachments', questionId]))`。SQLite `question_attachment_sets` 仅存身份、图片名称/类型/字节数/SHA-256；`question_attachment_items` 按 set_id/image_index 存原始 BLOB，保留顺序、重复、字节与 EXIF，无全局去重。最多 4 张 PNG/JPEG，合计 10 MiB，名称限 128 码点且仅接受叶文件名。`get`/`forQuestion`/`all` 不读 BLOB；`readImage`/`readAll`/备份用 `readBytes` 需要活动父提问，并核对图片数量、创建时间、MIME 签名与哈希；`project` 允许同步中的孤立子记录，但存在父记录时仍核对归属。损坏或缺失原图抛错，不降级为空数组；同版本、同不可变元数据且字节校验通过的 wire 可修复本机 BLOB。
 
-`history.begin` 先提交提问和本次尝试，再独立保存原图；附件事务失败不撤销文字记录、token 或发送流程。保存失败通过 `onAttachmentSaveFailure` / `setAttachmentSaveFailureHandler` 单独回报，不触发文字历史失败状态；外壳通过独立原图保存失败事件提示。同 run 重试共享原图集，只有与最初请求图片完全相同的重试才能补存此前失败的附件，新 run 使用新身份。保存消耗现有 prepareRun 的绝对截止时间，不重开 44s/90s 预算。父/附件删除同事务写终态墓碑和 outbox，并移除 BLOB；迟到活附件遇父/附件墓碑不能复活。重置先清两张原图表，再清其它本机数据和 meta，仅保留 deviceId；不执行附件墓碑定期回收。
+`QuestionHistoryService.begin` 先提交提问和本次尝试，再独立保存原图；附件事务失败不撤销文字记录、token 或发送流程。保存失败通过 `onAttachmentSaveFailure` / `setAttachmentSaveFailureHandler` 单独回报，不触发文字历史失败状态；外壳通过独立原图保存失败事件提示。同 run 重试共享原图集，只有与最初请求图片完全相同的重试才能补存此前失败的附件，新 run 使用新身份。保存消耗现有 prepareRun 的绝对截止时间，不重开 44s/90s 预算。父/附件删除同事务写终态墓碑和 outbox，并移除 BLOB；迟到活附件遇父/附件墓碑不能复活。重置先清两张原图表，再清其它本机数据和 meta，仅保留 deviceId；不执行附件墓碑定期回收。
 
 原图 outbox kind 为 `questionAttachments`，`SyncRepository.questionAttachments(id)` 提供严格 schema 5 投影。`questionImageSyncEnabled`（默认 false）和 `questionImageSyncAcknowledged`（首次确认开启置 true，关闭不撤销）仅存 SQLite meta，不进入同步偏好、state fragment 或业务备份；重置清除两键。设置开启须确认原图、文件名、EXIF、本机与 Drive 空间及全部设备升级影响；旧客户端遇 schema 5 后全局停止上传。`sync-images` 受信 IPC 只接收 boolean 和开启确认，`SyncStatus.imageSyncEnabled` 连接实际历史界面。
 

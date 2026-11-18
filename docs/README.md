@@ -21,6 +21,16 @@
 
 README 的项目介绍图保存在 `assets/polyask-overview.png`，用途、文字与生成提示词见 [素材说明](../assets/README.md)。图片为功能示意，涉及的能力与站点名单变化时应同步更新。
 
+## 新维护者可以跟读的三条路径
+
+| 从一个具体问题入手 | 按调用顺序阅读 | 用什么验证判断 |
+| --- | --- | --- |
+| 两个页面都开着，为何只能采集一个？ | `renderer/index.tsx` 从工作区的 `selectedSites` 取得打开的页面，从 `participatingSites` 取得参与范围，交给 `use-archive-capture.ts` 采集。比较还要求其中至少两站完成。 | `test/prompt-draft-confirmation-root.test.tsx` 用工具栏与命令分别采集 |
+| 某站提交不确定，重试前会发生什么？ | `main/shell-ipc.ts` 校验并持锁，`run-broadcast.ts` 准备轮次，`question-capture-service.ts` 先采集旧轮并剔除已确认提交的站点，再由 `broadcast.ts` 派发。 | `test/broadcast-result-dispatch.test.ts`、`test/submission-upgrade.test.ts` |
+| 同一问题发两次，保存了几条记录？ | `main/recent-prompt-service.ts` 按文本去重；`question-history-service.ts` 按轮次、站点和尝试留副本；手动采集另存 `archive`。浏览器前进、后退状态在 `site-navigation-controller.ts`。 | `test/recent-prompt-service.test.ts`、`test/question-capture-service.test.ts` 与上方桌面文档的 Drive 实体表 |
+
+上表中的源码位于 `desktop/src/`，测试路径以 `desktop/` 为起点。
+
 ## 本地设计记录
 
 产品调研、设计与实施计划、布局预览及资源采样仅保留在本机，受 `.gitignore` 忽略，不随仓库分发。它们用于本地追溯，不作为公开文档的必需依赖。已落实的行为、数据与兼容规则必须同步维护到上面的当前契约；真实环境验收缺口维护在验证文档中。
