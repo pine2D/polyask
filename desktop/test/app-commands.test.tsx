@@ -10,9 +10,8 @@ function createOptions(overrides: Partial<Parameters<typeof buildAppCommands>[0]
   return {
     copy,
     layout: { mode: "overview", focused: "claude", page: 0, pageCount: 2, placements: [] },
-    selectedSites: ["claude", "chatgpt"],
-    selected: new Set(["claude", "chatgpt"]),
-    participating: new Set(["claude"]),
+    openedSites: ["claude", "chatgpt"],
+    participatingSites: new Set(["claude"]),
     statuses: {
       claude: { site: "claude", phase: "generating" },
       chatgpt: { site: "chatgpt", phase: "failed", code: "load_failed" }
@@ -84,8 +83,8 @@ test("buildAppCommands gates conditional commands on page count, history, partic
 
     const emptyParticipation = buildAppCommands(createOptions({
       layout: { mode: "overview", focused: "claude", page: 0, pageCount: 1, placements: [] },
-      selected: new Set(["claude"]),
-      participating: new Set(),
+      openedSites: ["claude"],
+      participatingSites: new Set(),
       statuses: {},
       siteHistory: {},
       retrySitesCount: 0

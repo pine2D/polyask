@@ -48,7 +48,7 @@ app.whenReady().then(async () => {
   for (const view of views) await view.webContents.loadURL('data:text/html,<input placeholder="local page">');
   const sync = { state: 'idle', connected: false, pending: 0, errorCount: 0, readOnly: false, oauthConfigured: false, secureTokenStorage: true };
   ipcMain.handle('polyask:bootstrap', () => ({ runtime: { version: 'native-check', distribution: 'installed' }, sites: SITES,
-    statuses: [], layout: manager.getLayout(), display: manager.getDisplayPreferences(), workspace: workspace.getState(),
+    statuses: ['claude', 'kimi'].map(site => ({ site, phase: 'complete' })), layout: manager.getLayout(), display: manager.getDisplayPreferences(), workspace: workspace.getState(),
     promptLibrary: { templates: [], history: [] }, pendingSynthesis: null, questionRunProgress: null, sync }));
   ipcMain.handle('polyask:set-display', (_event, value) => { manager.setDisplayPreferences(value); return value; });
   ipcMain.handle('polyask:site-history-state', () => ({}));
@@ -72,6 +72,8 @@ app.whenReady().then(async () => {
   };
   if (phase === 'write') {
     await count(2);
+    await wait(`document.querySelector('.compare-trigger')?.getAttribute('aria-disabled') === 'false'`);
+    fs.writeFileSync(join(output, 'compare-two-participants.png'), (await win.webContents.capturePage()).toPNG());
     await run(`window.nativeClicks=[];for(const type of ['click','change'])document.addEventListener(type, e => nativeClicks.push({type,trusted:e.isTrusted,
       tag:e.target.tagName,cls:e.target.className,value:e.target.value}),true)`);
     const point = await run(`(() => { const r = document.querySelector('.tile-header input[value=claude]').closest('label').getBoundingClientRect();
@@ -81,6 +83,8 @@ app.whenReady().then(async () => {
     for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type,
       x: Math.round(point.x * zoom), y: Math.round(point.y * zoom), button: 'left', clickCount: 1 });
     await count(1); check('native uncheck saved', ['kimi']);
+    await wait(`document.querySelector('.compare-trigger')?.getAttribute('aria-disabled') === 'true'`);
+    fs.writeFileSync(join(output, 'compare-one-participant.png'), (await win.webContents.capturePage()).toPNG());
     assert.equal(await run(`nativeClicks.some(event => event.type === 'change' && event.trusted && event.value === 'claude')`), true, 'trusted native checkbox change');
     assert.equal(database.state.get('workspace').participation.sites.join(','), 'kimi');
   } else {

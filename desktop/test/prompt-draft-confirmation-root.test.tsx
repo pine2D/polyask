@@ -12,7 +12,7 @@ const { getCopy } = req(`${base}/src/shared/copy.ts`);
 const { initialSiteFindState } = req(`${base}/src/shared/site-find.ts`);
 const { createSyncDiagnosticSnapshot } = req(`${base}/src/shared/sync-diagnostics.ts`);
 
-test('production root blocks commands and direct send, tier and collection while prompt drafts cover native views', async () => {
+test('production root gates toolbar and commands on unfinished actions and site participation', async (t) => {
   const copy = getCopy('en');
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'https://polyask.test/' });
   const document = dom.window.document as Document;
@@ -29,6 +29,10 @@ test('production root blocks commands and direct send, tier and collection while
   }
   const surfaces: string[] = [];
   let command: (id: string) => void = () => {};
+  let publishWorkspace: (state: object) => void = () => {};
+  let publishStatus: (state: object) => void = () => {};
+  const capturedSites: string[][] = [];
+  const archiveSizes: number[] = [];
   let siteFocus = 0;
   let newSessions = 0, broadcasts = 0, removedDrafts = 0, tierChanges = 0, collections = 0;
   const status = { state: 'idle', connected: false, pending: 0, errorCount: 0, readOnly: false,
@@ -43,6 +47,8 @@ test('production root blocks commands and direct send, tier and collection while
       workspace: { selectedSites: ['claude'], groups: [], tier: null },
       promptLibrary: { templates: [], history: [] }, pendingSynthesis: null, sync: status }),
     onCommand: (listener: typeof command) => { command = listener; return () => {}; },
+    onWorkspaceState: (listener: typeof publishWorkspace) => { publishWorkspace = listener; return () => {}; },
+    onStatus: (listener: typeof publishStatus) => { publishStatus = listener; return () => {}; },
     listQuestions: async () => ({ items: [], cursor: null }),
     getSiteFind: async () => initialSiteFindState(), closeSiteFind: async () => initialSiteFindState(),
     setSurface: (value: string) => { surfaces.push(value); },
@@ -51,7 +57,7 @@ test('production root blocks commands and direct send, tier and collection while
     removeDraft: async () => { removedDrafts++; return true; },
     listFolders: async () => [], searchFolderContents: async () => [],
     queryFolderContents: async () => ({ items: [], total: 0, page: 0, selected: null, selectedPage: null, selectedTargets: [] }),
-    listArchiveTags: async () => [], siteHistoryState: async () => ({}),
+    listArchiveTags: async () => [], getArchive: async () => null, siteHistoryState: async () => ({}),
     syncDiagnostics: async () => createSyncDiagnosticSnapshot(status, runtime),
     newSession: async () => { newSessions++; return [{ site: 'claude', ok: true }]; },
     broadcast: async () => { broadcasts++; return []; },
@@ -61,7 +67,13 @@ test('production root blocks commands and direct send, tier and collection while
       return { workspace: { selectedSites: ['claude'], groups: [], tier },
         results: tier ? [{ site: 'claude', ok: true, selection: { requested: tier, outcome: 'mode_only', observed: tier } }] : [] };
     },
-    collect: async () => { collections++; return []; },
+    collectAnswers: async ({ sites }: { sites: string[] }) => {
+      collections++; capturedSites.push(sites);
+      return sites.map(site => ({ host: site, label: site, text: 'Synthetic answer' }));
+    },
+    addArchive: async (entry: { results: unknown[] }) => {
+      archiveSizes.push(entry.results.length); return { ...entry, id: 'synthetic-archive' };
+    },
     getPreferences: undefined, seedPreferences: undefined, onPreferences: undefined
   }, { get(target, key) {
     if (key in target) return Reflect.get(target, key);
@@ -181,6 +193,38 @@ test('production root blocks commands and direct send, tier and collection while
     assert.equal(dom.window.document.querySelector('#confirm-title')?.textContent, copy.newSessionConfirmTitle);
     await act(async () => dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
     assert.equal(dialogCount(), 0); assert.equal(newSessions, 0); assert.equal(removedDrafts, 0);
+    await t.test('comparison requires two completed participants through both entry points', async () => {
+      const opened = ['claude', 'kimi'];
+      const scope = async (selectedSites: string[], participatingSites: string[]) => {
+        await act(async () => publishWorkspace({ selectedSites, participatingSites, groups: [], tier: null }));
+      };
+      const disabled = () => document.querySelector('.compare-trigger')?.getAttribute('aria-disabled');
+      await act(async () => {
+        for (const site of opened) publishStatus({ site, phase: 'complete' });
+      });
+      for (const pages of [['claude'], opened]) {
+        await scope(pages, ['claude']);
+        await emit('collect-compare');
+        assert.deepEqual(capturedSites, [], 'the command must ignore a single completed participant');
+        assert.equal(disabled(), 'true');
+        await click('.compare-trigger');
+        assert.deepEqual(capturedSites, [], 'the toolbar must ignore a single completed participant');
+      }
+      await emit('collect-answers');
+      assert.deepEqual(capturedSites, [['claude']], 'manual collection still accepts a single participant');
+      await scope(opened, opened);
+      await act(async () => publishStatus({ site: 'kimi', phase: 'generating' }));
+      assert.equal(disabled(), 'true');
+      await emit('collect-compare');
+      assert.equal(capturedSites.length, 1);
+      await act(async () => publishStatus({ site: 'kimi', phase: 'complete' }));
+      assert.equal(disabled(), 'false');
+      await emit('collect-compare');
+      await emit('open-sites');
+      await click('.compare-trigger');
+      assert.deepEqual(capturedSites, [['claude'], opened, opened]);
+      assert.deepEqual(archiveSizes, [1, 2, 2]);
+    });
   } finally {
     await act(async () => root?.unmount());
     setShellApi(null); client.createRoot = createRoot;

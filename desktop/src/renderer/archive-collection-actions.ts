@@ -28,7 +28,7 @@ export function archiveCollectionActions(options: {
       const record: ArchiveRecord = await options.capture.capture();
       options.openArchive(record.id);
       options.announce(record.results.filter(answer => answer.text?.trim()).length >= 2
-        ? options.copy.archiveSaved : options.copy.compareNeedsAnswers);
+        ? options.copy.archiveSaved : options.copy.captureNeedsTwoAnswers);
     } catch { options.announce(options.copy.archiveCollectFailed); }
   });
   return { collectAndCopy, collectSynthesis, collectAndCompare };

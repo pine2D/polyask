@@ -133,11 +133,11 @@ function App(): React.JSX.Element {
   const { announcement, announce: setAnnouncement, clearNotice, healthFeedback, noteHealth } = useFeedback();
   const [pageInputMethod, setPageInputMethod] = useState<"keyboard" | "pointer">("pointer");
   const workspaceFlow = useWorkspaceFlow(sites, copy.workspaceActionFailed, setAnnouncement);
-  const { workspace, selected } = workspaceFlow;
+  const { workspace, openedSites } = workspaceFlow;
   const {
     health, setHealth, healthChecking, refreshSiteHealth, healthAttention,
     panelState, lastOpenPanel, drawerOpen, updatePanelState, drawerHealthActions
-  } = useSiteHealthPanel({ copy, sites, selected, runtime, statuses, noteHealth, onAnnounce: setAnnouncement });
+  } = useSiteHealthPanel({ copy, sites, selected: openedSites, runtime, statuses, noteHealth, onAnnounce: setAnnouncement });
   const changePanelState = (value: WorkspacePanelState): void => {
     updatePanelState(value, () => { setQuestionHistoryOpen(false); imageSelection.setOpen(false); });
   };
@@ -151,9 +151,9 @@ function App(): React.JSX.Element {
   };
   const participation = useSyncedSiteParticipation(workspaceFlow, bootstrapPhase === "ready",
     actionLock.current!, () => setAnnouncement(copy.workspaceActionFailed));
-  const participating = useMemo(() => new Set(participation.participating), [participation.participating]);
+  const participatingSites = useMemo(() => new Set(participation.participating), [participation.participating]);
   const archiveFlow = useArchiveSynthesisFlow({
-    copy, sites, participating, prompt: text, actionLock: actionLock.current!, commandActions,
+    copy, sites, participatingSites, prompt: text, actionLock: actionLock.current!, commandActions,
     onPrepareSynthesisTarget: () => { runProgress.invalidate(); broadcast.invalidate(); changeSurface("sites"); },
     onChangeSurface: (next) => changeSurface(next)
   });
@@ -252,7 +252,7 @@ function App(): React.JSX.Element {
   const { composer, drawerPresent } = useWorkspaceMotion(surface, drawerOpen, lastOpenPanel.current.inputMethod, imageSelection.present, { layout, density: display.value.density, covered: surface === "confirmation" });
   const replaceDraft = useDraftReplaceUndo(copy, text, setText, () => focusPromptForEditing(promptRef, composer.setExpanded));
   const scopeLabel = useMemo(() => scopeDisplayName(participation.participating, workspace.groups, copy), [copy, workspace.groups, participation.participating]);
-  const { unsupportedSites, imageWarning } = imageSupportWarning(copy, imageSelection.images.length, participating, sites, navigator.language);
+  const { unsupportedSites, imageWarning } = imageSupportWarning(copy, imageSelection.images.length, participatingSites, sites, navigator.language);
 
   const submit = async (): Promise<void> => {
     const prompt = text.trim();
@@ -304,7 +304,10 @@ function App(): React.JSX.Element {
     lock: actionLock.current!, participation, changeTier: workspaceFlow.changeTier, onApply: setText,
     onApplied: () => { setAnnouncement(copy.taskSetupApplied); focusPromptForEditing(promptRef, composer.setExpanded); },
     onBlockingChange: (blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface) });
-  const { collectAndCopy, collectSynthesis, collectAndCompare } = archiveFlow.createCollectionActions(runAuxiliary, setAnnouncement);
+  const { collectAndCopy, collectSynthesis, collectAndCompare: captureComparison } = archiveFlow.createCollectionActions(runAuxiliary, setAnnouncement);
+  const operationBusy = runState !== "idle" || auxiliaryBusy || participation.pending;
+  const collectAndCompare = !operationBusy && participation.participating.filter(site => statuses[site]?.phase === "complete").length >= 2
+    ? captureComparison : undefined;
   const startNewSession = async (): Promise<void> => {
     if (draftConfirmation.isBlocking() || pendingNewSession || auxiliaryBusy || runState !== "idle") return;
     if (newSessionInFlight.current || participation.pending || actionLock.current!.busy) return;
@@ -325,7 +328,7 @@ function App(): React.JSX.Element {
 
   const navigationBlocked = !!(draftConfirmation.blocking || pendingNewSession || questionHistoryBlocking || settingsBlocking || libraryBlocking || retryReview.open || pageClose.blocking || participation.pending);
   useNotificationNavigation({ copy, blocked: () => bootstrapPhase !== "ready" || navigationBlocked || runState !== "idle" || auxiliaryBusy,
-    canOpenSite: (target) => selected.has(target.site) && siteStatusRunId(statuses[target.site]) === target.runId,
+    canOpenSite: (target) => openedSites.has(target.site) && siteStatusRunId(statuses[target.site]) === target.runId,
     onOpenSite: (site) => { closeQuestionHistory(); changePanelState(null); imageSelection.setOpen(false); changeSurface("sites"); if (drawerOpen) changeDrawerOpen(false); setMode("focus", site); },
     onAnnounce: setAnnouncement, onOpenQuestion: (target) => {
       changeSurface("sites"); changePanelState(null); imageSelection.setOpen(false); changeDrawerOpen(false);
@@ -333,7 +336,7 @@ function App(): React.JSX.Element {
       setQuestionHistoryOpen(true);
     } });
   commandActions.current = navigationBlocked ? {} : buildAppCommands({
-    copy, layout, selectedSites: workspace.selectedSites, selected, participating, statuses, siteHistory,
+    copy, layout, openedSites: workspace.selectedSites, participatingSites, statuses, siteHistory,
     drawerOpen, composer, promptRef, requestedPage, setPageInputMethod, setAnnouncement, changeSurface,
     changeDrawerOpen, changePanelState, openPanel, openCommandSurface, openTaskSetup: taskSetup.open,
     openSettings, setMode, changeTier, closeQuestionHistory,
@@ -348,7 +351,7 @@ function App(): React.JSX.Element {
   return (
     <AppSurfaceRouter
       bootstrapPhase={bootstrapPhase} announcement={announcement} onRetryBootstrap={() => { void bootstrap(); }} surface={surface}
-      archive={{ copy, locale: navigator.language, sites, selected, defaultTier: workspace.tier, archiveFlow, onClose: () => changeSurface("sites") }}
+      archive={{ copy, locale: navigator.language, sites, openedSites, defaultTier: workspace.tier, archiveFlow, onClose: () => changeSurface("sites") }}
       settings={{
         copy, locale: navigator.language, runtime, syncStatus, onSyncStatus: setSyncStatus, onBlockingChange: blockSettings,
         runState, auxiliaryBusy, participation, settingsSection, display, preferences, commandActions, onAnnounce: setAnnouncement,
@@ -363,7 +366,7 @@ function App(): React.JSX.Element {
         onLibrarySaved: setPromptLibrary, onDeleteTemplate: templateDeletion.request, onAnnounce: setAnnouncement, onClose: () => changeSurface("sites")
       }}
       workbench={{
-        copy, isMac, sites, statuses, layout, workspace, workspaceFlow, selected, participating, participation,
+        copy, isMac, sites, statuses, layout, workspace, workspaceFlow, openedSites, participatingSites, participation,
         runState, broadcast, synthesis, auxiliaryBusy, navigationBlocked, draftConfirmation, promptRef,
         text, setText, draftRevision, promptRecovery, composer, drawerPresent, drawerOpen, panelState,
         lastOpenPanel, scopeLabel, health, healthChecking, healthAttention, healthFeedback, drawerHealthActions,

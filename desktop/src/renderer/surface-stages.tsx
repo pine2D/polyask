@@ -27,14 +27,14 @@ export interface ArchiveStageProps {
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly sites: readonly SiteDefinition[];
-  readonly selected: ReadonlySet<SiteKey>;
+  readonly openedSites: ReadonlySet<SiteKey>;
   readonly defaultTier: WorkspaceState["tier"];
   readonly archiveFlow: ReturnType<typeof useArchiveSynthesisFlow>;
   readonly onClose: () => void;
 }
 
 export function ArchiveStage(props: ArchiveStageProps): React.JSX.Element {
-  const { copy, locale, sites, selected, defaultTier, archiveFlow, onClose } = props;
+  const { copy, locale, sites, openedSites, defaultTier, archiveFlow, onClose } = props;
   const {
     archiveNavigation, synthesis, synthesisRecovery,
     comparisonDrafts, librarySession, blockLibrary, archiveCapture
@@ -44,7 +44,7 @@ export function ArchiveStage(props: ArchiveStageProps): React.JSX.Element {
       copy={copy}
       locale={locale}
       sites={sites}
-      synthesisSites={sites.filter((site) => selected.has(site.key))}
+      synthesisSites={sites.filter((site) => openedSites.has(site.key))}
       defaultTier={defaultTier}
       comparisonId={archiveNavigation.comparisonId}
       preferredId={synthesisRecovery.editorRequest?.archiveId ?? archiveNavigation.preferredId ?? synthesis.pending?.archiveId ?? null}

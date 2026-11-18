@@ -1,7 +1,7 @@
 export const WORKSPACE_COPY = {
   en: {
     retryCompact: "Retry",
-    compareNeedsAnswers: "Wait for at least two selected sites to finish answering before comparing.",
+    compareNeedsAnswers: "Wait for at least two participating sites to finish answering before comparing.",
     archiveBusy: "Wait for the current operation to finish before opening the result library. Saved question copies remain available in history.",
     compareBusy: "Comparison is unavailable while another operation is running.",
     selectedSummary: "{selected} / {total} selected",
@@ -97,7 +97,7 @@ export const WORKSPACE_COPY = {
   },
   zhCN: {
     retryCompact: "重试",
-    compareNeedsAnswers: "至少两个已选站点完成回答后，才能采集并比较。",
+    compareNeedsAnswers: "至少两个参与站点完成回答后，才能采集并比较。",
     compareBusy: "当前操作进行中，暂时无法采集并比较。",
     selectedSummary: "已选择 {selected} / {total}",
     sendingSummary: "正在向 {count} 个站点发送",
@@ -193,7 +193,7 @@ export const WORKSPACE_COPY = {
   },
   zhTW: {
     retryCompact: "重試",
-    compareNeedsAnswers: "至少兩個已選網站完成回答後，才能擷取並比較。",
+    compareNeedsAnswers: "至少兩個參與網站完成回答後，才能擷取並比較。",
     compareBusy: "目前操作進行中，暫時無法擷取並比較。",
     selectedSummary: "已選取 {selected} / {total}",
     sendingSummary: "正在傳送到 {count} 個網站",

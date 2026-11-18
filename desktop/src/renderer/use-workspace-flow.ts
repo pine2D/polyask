@@ -57,10 +57,10 @@ export function useWorkspaceFlow(
   };
   // Existing callers intentionally do not await deferred IPC acknowledgements.
   const changeSelection = (value: readonly SiteKey[]): void => { void openPages(value).catch(() => undefined); };
-  const selected = useMemo(() => new Set(workspace.selectedSites), [workspace.selectedSites]);
+  const openedSites = useMemo(() => new Set(workspace.selectedSites), [workspace.selectedSites]);
   return {
     workspace,
-    selected,
+    openedSites,
     currentSelection: () => selectionRef.current,
     accept,
     invalidate: () => {

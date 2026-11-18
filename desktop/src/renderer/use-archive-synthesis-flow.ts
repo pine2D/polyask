@@ -15,7 +15,7 @@ import { useSynthesisRecovery } from "./use-synthesis-recovery";
 export interface UseArchiveSynthesisFlowOptions {
   readonly copy: DesktopCopy;
   readonly sites: readonly SiteDefinition[];
-  readonly participating: ReadonlySet<SiteKey>;
+  readonly participatingSites: ReadonlySet<SiteKey>;
   readonly prompt: string;
   readonly actionLock: ExclusiveActionLock;
   readonly commandActions: { current: CommandActions };
@@ -27,7 +27,7 @@ export function useArchiveSynthesisFlow(options: UseArchiveSynthesisFlowOptions)
   const {
     copy,
     sites,
-    participating,
+    participatingSites,
     prompt,
     actionLock,
     commandActions,
@@ -43,7 +43,7 @@ export function useArchiveSynthesisFlow(options: UseArchiveSynthesisFlowOptions)
   }, [commandActions]);
   const archiveNavigation = useArchiveNavigation();
   const synthesis = useSynthesisFlow(actionLock);
-  const archiveCapture = useArchiveCapture({ sites, selected: participating, prompt });
+  const archiveCapture = useArchiveCapture({ sites, participatingSites, prompt });
   const synthesisRecovery = useSynthesisRecovery(
     copy,
     synthesis,

@@ -57,8 +57,8 @@ export interface WorkbenchMainStageProps {
   readonly layout: LayoutState;
   readonly workspace: WorkspaceState;
   readonly workspaceFlow: ReturnType<typeof useWorkspaceFlow>;
-  readonly selected: ReadonlySet<SiteKey>;
-  readonly participating: ReadonlySet<SiteKey>;
+  readonly openedSites: ReadonlySet<SiteKey>;
+  readonly participatingSites: ReadonlySet<SiteKey>;
   readonly participation: ReturnType<typeof useSyncedSiteParticipation>;
   readonly runState: ReturnType<typeof useBroadcastFlow>["runState"];
   readonly broadcast: ReturnType<typeof useBroadcastFlow>;
@@ -116,7 +116,7 @@ export interface WorkbenchMainStageProps {
   readonly setMode: (mode: LayoutMode, focused?: SiteKey) => void;
   readonly changeTier: (tier: WorkspaceState["tier"]) => void;
   readonly submit: () => Promise<void>;
-  readonly collectAndCompare: () => Promise<void>;
+  readonly collectAndCompare: (() => Promise<void>) | undefined;
   readonly showGroupMenu: () => Promise<void>;
   readonly showMoreMenu: () => Promise<void>;
   readonly onOpenArchiveFromHistory: (recordId: string, mode: "read" | "compare") => void;
@@ -124,7 +124,7 @@ export interface WorkbenchMainStageProps {
 
 export function WorkbenchMainStage(props: WorkbenchMainStageProps): React.JSX.Element {
   const {
-    copy, isMac, sites, statuses, layout, workspace, workspaceFlow, selected, participating,
+    copy, isMac, sites, statuses, layout, workspace, workspaceFlow, openedSites, participatingSites,
     participation, runState, broadcast, synthesis, auxiliaryBusy, navigationBlocked,
     draftConfirmation, promptRef, text, setText, draftRevision, promptRecovery, composer,
     drawerPresent, drawerOpen, panelState, lastOpenPanel, scopeLabel, health, healthChecking,
@@ -169,7 +169,7 @@ export function WorkbenchMainStage(props: WorkbenchMainStageProps): React.JSX.El
         auxiliaryBusy={auxiliaryBusy || participation.pending || draftConfirmation.blocking}
         layoutMode={layout.mode}
         automaticFocus={layout.automaticFocus}
-        selectedCount={participating.size}
+        selectedCount={participatingSites.size}
         onNewSession={() => executeCommand("new-session", commandActions.current)}
         newSessionBlockedReason={navigationBlocked ? copy.newSessionBlocked : null}
         failureCount={broadcast.failureCount}
@@ -224,7 +224,7 @@ export function WorkbenchMainStage(props: WorkbenchMainStageProps): React.JSX.El
             onBlockingChange={(blocking, owner) => draftConfirmation.change(blocking, owner, changeSurface)}
           />
         )}
-        onCompare={workspace.selectedSites.filter((site) => statuses[site]?.phase === "complete").length >= 2 ? () => { void collectAndCompare(); } : undefined}
+        onCompare={collectAndCompare}
         onSubmit={() => void submit()}
         onCancel={synthesis.runState !== "idle" ? synthesis.cancel : broadcast.cancel}
         onTierChange={changeTier}
@@ -259,8 +259,8 @@ export function WorkbenchMainStage(props: WorkbenchMainStageProps): React.JSX.El
         <WorkspaceDrawer
           copy={copy}
           sites={sites}
-          selected={selected}
-          participating={participating}
+          selected={openedSites}
+          participating={participatingSites}
           participationBusy={runState !== "idle" || auxiliaryBusy || participation.pending}
           groups={workspace.groups}
           statuses={statuses}
@@ -288,8 +288,8 @@ export function WorkbenchMainStage(props: WorkbenchMainStageProps): React.JSX.El
         sites={sites}
         statuses={statuses}
         layout={layout}
-        selected={selected}
-        participating={participating}
+        selected={openedSites}
+        participating={participatingSites}
         participationBusy={runState !== "idle" || auxiliaryBusy || participation.pending}
         onToggle={(site) => { void participation.toggle(site); }}
         onFocus={(site) => setMode("focus", site)}

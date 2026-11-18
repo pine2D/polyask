@@ -4,7 +4,7 @@ export const ARCHIVE_COPY = {
     onlyDifferences: "Only show different paragraphs",
     syncComparisonScroll: "Scroll both answers together",
     noDifferentParagraphs: "No different paragraphs in this answer.",
-    compareNeedsAnswers: "Saved the capture. At least two answers with text are needed to compare.",
+    captureNeedsTwoAnswers: "Saved the capture. At least two answers with text are needed to compare.",
 
     archiveQuestion: "Question",
     archiveSource: "Source",
@@ -65,7 +65,7 @@ export const ARCHIVE_COPY = {
     onlyDifferences: "只看不同段落",
     syncComparisonScroll: "左右同步滚动",
     noDifferentParagraphs: "这份回答没有不同段落。",
-    compareNeedsAnswers: "已保存采集结果，至少需要两份有正文的回答才能比较。",
+    captureNeedsTwoAnswers: "已保存采集结果，至少需要两份有正文的回答才能比较。",
 
     archiveQuestion: "问题",
     archiveSource: "来源",
@@ -126,7 +126,7 @@ export const ARCHIVE_COPY = {
     onlyDifferences: "只看不同段落",
     syncComparisonScroll: "左右同步捲動",
     noDifferentParagraphs: "這份回答沒有不同段落。",
-    compareNeedsAnswers: "已儲存擷取結果，至少需要兩份有正文的回答才能比較。",
+    captureNeedsTwoAnswers: "已儲存擷取結果，至少需要兩份有正文的回答才能比較。",
 
     archiveQuestion: "問題",
     archiveSource: "來源",

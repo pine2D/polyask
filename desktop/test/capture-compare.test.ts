@@ -8,16 +8,20 @@ test("capture-and-compare opens the newly saved record, or keeps the current vie
   const record = { ...archiveFixture(), id: "new",
     results: [{host: "claude.ai", label: "Claude", text: "A"}, {host: "www.kimi.com", label: "Kimi", text: "B"}] };
   const copy = getCopy("en");
-  for (const succeeds of [true, false]) {
+  for (const outcome of ["complete", "missing-text", "failure"]) {
     const events: string[] = [];
     const actions = archiveCollectionActions({ copy,
       runAuxiliary: task => task(),
-      capture: {capture: async () => { if (!succeeds) throw new Error("no answer"); return record; }},
+      capture: {capture: async () => {
+        if (outcome === "failure") throw new Error("no answer");
+        return outcome === "complete" ? record : { ...record, results: record.results.slice(0, 1) };
+      }},
       synthesis: { collect: async () => record.id },
       openArchive: id => { events.push(id ?? "", "archive"); },
       announce: value => { events.push(value); }
     });
     await actions.collectAndCompare();
-    assert.deepEqual(events, succeeds ? ["new", "archive", copy.archiveSaved] : [copy.archiveCollectFailed]);
+    if (outcome === "failure") assert.deepEqual(events, [copy.archiveCollectFailed]);
+    else assert.deepEqual(events, ["new", "archive", outcome === "complete" ? copy.archiveSaved : copy.captureNeedsTwoAnswers]);
   }
 });

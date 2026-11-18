@@ -7,7 +7,7 @@ import { shell } from "./shell-api";
 
 interface ArchiveCaptureInput {
   readonly sites: readonly SiteDefinition[];
-  readonly selected: ReadonlySet<SiteKey>;
+  readonly participatingSites: ReadonlySet<SiteKey>;
   readonly prompt: string;
 }
 
@@ -23,16 +23,16 @@ export function useArchiveCapture(input: ArchiveCaptureInput): {
   };
   const invalidate = (): void => { lastRun.current = null; };
   const capture = async (): Promise<ArchiveRecord> => {
-    const selectedSites = input.sites.filter((site) => input.selected.has(site.key));
-    if (!selectedSites.length) throw new Error("no_selected_sites");
-    const selectedKeys = selectedSites.map((site) => site.key);
-    const matchingRun = lastRun.current && runCoversSites(lastRun.current, selectedKeys)
+    const captureSites = input.sites.filter((site) => input.participatingSites.has(site.key));
+    if (!captureSites.length) throw new Error("no_selected_sites");
+    const captureKeys = captureSites.map((site) => site.key);
+    const matchingRun = lastRun.current && runCoversSites(lastRun.current, captureKeys)
       ? lastRun.current
       : null;
     const text = matchingRun?.request.text || input.prompt.trim();
     if (!text) throw new Error("no_prompt");
     const answers = await shell.collectAnswers({
-      sites: selectedKeys,
+      sites: captureKeys,
       runId: matchingRun?.request.runId ?? null
     });
     const entry: ArchiveInput = {

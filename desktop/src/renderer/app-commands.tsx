@@ -24,9 +24,8 @@ export const LATEST_RELEASE_URL = "https://github.com/pine2D/polyask/releases/la
 export interface BuildAppCommandsOptions {
   readonly copy: DesktopCopy;
   readonly layout: LayoutState;
-  readonly selectedSites: readonly SiteKey[];
-  readonly selected: ReadonlySet<SiteKey>;
-  readonly participating: ReadonlySet<SiteKey>;
+  readonly openedSites: readonly SiteKey[];
+  readonly participatingSites: ReadonlySet<SiteKey>;
   readonly statuses: Record<string, SiteStatus>;
   readonly siteHistory: Record<string, SiteHistoryState>;
   readonly drawerOpen: boolean;
@@ -51,7 +50,7 @@ export interface BuildAppCommandsOptions {
   readonly openQuestionHistory: () => void;
   readonly closeImagePicker: () => void;
   readonly collectAndCopy: () => Promise<void>;
-  readonly collectAndCompare: () => Promise<void>;
+  readonly collectAndCompare: (() => Promise<void>) | undefined;
   readonly collectSynthesis: () => Promise<void>;
   readonly synthesisPending: boolean;
   readonly retrySitesCount: number;
@@ -68,9 +67,8 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
   const {
     copy,
     layout,
-    selectedSites,
-    selected,
-    participating,
+    openedSites,
+    participatingSites,
     statuses,
     siteHistory,
     drawerOpen,
@@ -109,10 +107,10 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
     shell.setPage(page);
   };
   const nextUnfinished = nextSiteForStatus(
-    selectedSites, layout.focused, statuses, "unfinished"
+    openedSites, layout.focused, statuses, "unfinished"
   );
   const nextFailed = nextSiteForStatus(
-    selectedSites, layout.focused, statuses, "failed"
+    openedSites, layout.focused, statuses, "failed"
   );
   const focusSite = (site: SiteDefinition["key"]): void => {
     changeSurface("sites");
@@ -159,7 +157,7 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
       "next-page": () => { changeSurface("sites"); shell.stepPage(1); },
       "previous-page": () => { changeSurface("sites"); shell.stepPage(-1); }
     } : {}),
-    ...(selected.size > 1 ? {
+    ...(openedSites.length > 1 ? {
       "next-site": () => { changeSurface("sites"); shell.stepSite(1); },
       "previous-site": () => { changeSurface("sites"); shell.stepSite(-1); }
     } : {}),
@@ -179,8 +177,8 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
     },
     "set-think": () => { changeSurface("sites"); changeTier("think"); },
     "set-fast": () => { changeSurface("sites"); changeTier("fast"); },
-    ...(participating.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
-    "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); },
+    ...(participatingSites.size > 0 ? { "collect-answers": () => { changeSurface("sites"); void collectAndCopy(); } } : {}),
+    ...(collectAndCompare ? { "collect-compare": () => { changeSurface("sites"); void collectAndCompare(); } } : {}),
     "open-question-history": openQuestionHistory,
     "open-archive": () => { clearArchiveNavigation(); changeSurface("archive"); },
     ...(synthesisPending ? { "collect-synthesis": () => { changeSurface("sites"); void collectSynthesis(); } } : {}),
@@ -189,7 +187,7 @@ export function buildAppCommands(options: BuildAppCommandsOptions): CommandActio
     } : {}),
     ...(nextUnfinished ? { "next-unfinished": () => focusSite(nextUnfinished) } : {}),
     ...(nextFailed ? { "next-failed": () => focusSite(nextFailed) } : {}),
-    ...(participating.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
+    ...(participatingSites.size > 0 ? { "new-session": () => { void startNewSession(); } } : {}),
     "open-settings": () => openSettings("appearance"),
     "open-drive-diagnostics": () => openSettings("drive-diagnostics"),
     "open-display-settings": () => openSettings("display"),
