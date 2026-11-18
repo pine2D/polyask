@@ -56,11 +56,8 @@ const ISOLATED_SNAPSHOT_HELPERS = `
     const val = 'value' in el && typeof el.value === 'string' ? el.value : (el.textContent || '');
     return hashText(val);
   };
-  const countOpenMenus = () => [...document.querySelectorAll('[role="menu"], [role="listbox"]')].filter((el) => {
-    if (el.hasAttribute('hidden') || el.getAttribute('aria-hidden') === 'true') return false;
-    const style = window.getComputedStyle(el);
-    return style.display !== 'none' && style.visibility !== 'hidden';
-  }).length;
+  const countOpenMenus = () => [...document.querySelectorAll('[role="menu"], [role="listbox"]')]
+    .filter(S.presetDom.visible).length;
 `;
 
 export const ISOLATED_TOUR_EXPRESSION = () => `(() => {

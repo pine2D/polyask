@@ -71,6 +71,8 @@ test('isolated tour + production presetCommand route menu checks through seriali
         <div contenteditable="true" role="textbox" style="height:40px;width:400px">${secretDraft}</div>
         <button type="button" aria-label="Send">Send</button>
       </div>
+      <div aria-hidden="true"><div role="menu"></div></div>
+      <div hidden><div role="menu"></div></div>
     </main>
   `;
   const live = replayHtml(page, { host: 'www.kimi.com', path: '/chat/secret-uuid-9999?token=sk-abcdefghijklmnop' });
@@ -124,6 +126,8 @@ test('isolated tour + production presetCommand route menu checks through seriali
     };
 
     const ctx = live.dom.getInternalVMContext();
+    // 隐藏祖先下的常驻菜单可以有布局；可见的残留菜单仍须报错。
+    for (const el of live.document.querySelectorAll('[role="menu"]')) el.getClientRects = () => [{ width: 200, height: 40 }];
     const probe = JSON.parse(JSON.stringify(vm.runInContext(ISOLATED_TOUR_EXPRESSION(), ctx)));
     assert.equal(probe.ok, true);
     assert.equal(probe.presetSupported, true);
@@ -167,6 +171,10 @@ test('isolated tour + production presetCommand route menu checks through seriali
     assert.equal(invariants.urlUnchanged, true);
     assert.equal(invariants.composerUnchanged, true);
     assert.equal(invariants.menusClosed, true);
+    const leftover = live.document.createElement('div'); leftover.setAttribute('role', 'listbox');
+    leftover.getClientRects = () => [{ width: 200, height: 40 }]; live.document.body.append(leftover);
+    const dirty = vm.runInContext(ISOLATED_AFTER_MENU_EXPRESSION(probe.baseline, false), ctx);
+    assert.equal(dirty.afterMenus, 1); assert.equal(dirty.menusClosed, false);
     assert.doesNotMatch(JSON.stringify({ probe, menuTour, invariants }), /secret-draft|corp\.example|sk-abcdef/);
   } finally {
     live.close();
