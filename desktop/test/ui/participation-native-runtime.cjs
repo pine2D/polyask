@@ -6,7 +6,7 @@ const output = process.argv[2], phase = process.argv[3];
 app.setPath('userData', join(output, 'profile'));
 app.commandLine.appendSwitch('lang', 'zh-CN');
 app.whenReady().then(async () => {
-  const { DesktopDatabase, WorkspaceService, SyncRepository, registerWorkspaceSelectionIpc, SITES } = require(join(output, 'services.cjs'));
+  const { DesktopDatabase, WorkspaceService, SyncRepository, registerWorkspaceSelectionIpc, SITES, DEFAULT_PREFERENCE_VALUES } = require(join(output, 'services.cjs'));
   const database = DesktopDatabase.open(join(output, 'profile', 'polyask.sqlite'));
   database.meta.put('deviceId', 'local');
   const workspace = new WorkspaceService(database.state, database.meta, () => {});
@@ -53,6 +53,10 @@ app.whenReady().then(async () => {
   ipcMain.handle('polyask:set-display', (_event, value) => { manager.setDisplayPreferences(value); return value; });
   ipcMain.handle('polyask:site-history-state', () => ({}));
   ipcMain.handle('polyask:menu-shortcuts', () => []);
+  const preferences = () => ({ deviceId: 'local', values: DEFAULT_PREFERENCE_VALUES,
+    following: { display: false, layout: false, siteZoom: false, proxy: false }, draftSync: false, initialized: [], versions: {} });
+  ipcMain.handle('polyask:preferences', preferences);
+  ipcMain.handle('polyask:preferences-seed', preferences);
   const publish = () => {
     const state = workspace.getState(); publications++; manager.setSelection(state.selectedSites);
     win.webContents.send('polyask:workspace-state', state); return state;
@@ -63,6 +67,10 @@ app.whenReady().then(async () => {
     ['set-drawer-open', value => manager.setDrawerOpen(value)], ['set-surface', value => manager.setSurface(value)]
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (event.sender === win.webContents) action(value); });
   const count = value => wait(`document.querySelector('.send-count')?.textContent === '${value}'`);
+  const screenshot = async name => {
+    await run('document.fonts.ready.then(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))))');
+    fs.writeFileSync(join(output, name), (await win.webContents.capturePage()).toPNG());
+  };
   await win.loadFile(join(output, 'index.html')); win.focus(); win.webContents.focus();
   await wait('document.querySelector(".tile-header input[value=claude]") !== null');
   const check = (name, expected) => {
@@ -73,7 +81,7 @@ app.whenReady().then(async () => {
   if (phase === 'write') {
     await count(2);
     await wait(`document.querySelector('.compare-trigger')?.getAttribute('aria-disabled') === 'false'`);
-    fs.writeFileSync(join(output, 'compare-two-participants.png'), (await win.webContents.capturePage()).toPNG());
+    await screenshot('compare-two-participants.png');
     await run(`window.nativeClicks=[];for(const type of ['click','change'])document.addEventListener(type, e => nativeClicks.push({type,trusted:e.isTrusted,
       tag:e.target.tagName,cls:e.target.className,value:e.target.value}),true)`);
     const point = await run(`(() => { const r = document.querySelector('.tile-header input[value=claude]').closest('label').getBoundingClientRect();
@@ -84,7 +92,7 @@ app.whenReady().then(async () => {
       x: Math.round(point.x * zoom), y: Math.round(point.y * zoom), button: 'left', clickCount: 1 });
     await count(1); check('native uncheck saved', ['kimi']);
     await wait(`document.querySelector('.compare-trigger')?.getAttribute('aria-disabled') === 'true'`);
-    fs.writeFileSync(join(output, 'compare-one-participant.png'), (await win.webContents.capturePage()).toPNG());
+    await screenshot('compare-one-participant.png');
     assert.equal(await run(`nativeClicks.some(event => event.type === 'change' && event.trusted && event.value === 'claude')`), true, 'trusted native checkbox change');
     assert.equal(database.state.get('workspace').participation.sites.join(','), 'kimi');
   } else {
