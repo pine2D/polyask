@@ -25,7 +25,6 @@ export interface ArchiveReaderState {
   readonly synthesisScroll: number;
   readonly layout?: ReadingLayoutMemory;
 }
-export type ArchiveDetailView = ArchiveReaderState['view'];
 
 export interface ArchiveReaderBinding {
   readonly state: ArchiveReaderState;

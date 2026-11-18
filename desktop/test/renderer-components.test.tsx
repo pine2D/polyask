@@ -3,7 +3,6 @@ import React, { createRef } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import test from "node:test";
 
-import * as archiveSurface from "../src/renderer/archive-surface";
 import { ArchiveWorkspace } from "../src/renderer/archive-workspace";
 import { BootstrapStateView } from "../src/renderer/bootstrap-state";
 import { CommandBar } from "../src/renderer/command-bar";
@@ -740,47 +739,6 @@ test("page tabs stay hidden while selected-site state catches up with layout sta
     />
   );
   assert.equal(html, "");
-});
-
-test("archive filter refresh consumes a preferred id exactly once", () => {
-  // F167: props.preferredId (a just-sent synthesis' archive id) must only pull the
-  // selection back on the render where it first appears — not on every later filter
-  // change while the pending synthesis stays outstanding.
-  const first = archiveSurface.resolveFilterRefreshTarget("archive-a", null);
-  assert.deepEqual(first, { target: "archive-a", consumed: "archive-a" });
-
-  const repeatedFilterChange = archiveSurface.resolveFilterRefreshTarget("archive-a", "archive-a");
-  assert.deepEqual(repeatedFilterChange, { target: undefined, consumed: "archive-a" });
-
-  const pendingCleared = archiveSurface.resolveFilterRefreshTarget(null, "archive-a");
-  assert.deepEqual(pendingCleared, { target: undefined, consumed: "archive-a" });
-
-  const newPending = archiveSurface.resolveFilterRefreshTarget("archive-b", "archive-a");
-  assert.deepEqual(newPending, { target: "archive-b", consumed: "archive-b" });
-});
-
-test("archive filter intent invalidates and clears status without flipping loading on every keystroke", () => {
-  // F168 (root cause half): loading must not flip synchronously per keystroke — it is
-  // owned by createArchiveRefresh once the debounced search actually starts, so a fast
-  // typist does not see the whole body flash to a loading placeholder on every key.
-  const requestEpoch = archiveSurface.createArchiveRequestEpoch();
-  let loading = false;
-  let status = "stale error";
-  let invalidated = false;
-  const originalInvalidate = requestEpoch.invalidate;
-  requestEpoch.invalidate = () => { invalidated = true; originalInvalidate(); };
-
-  archiveSurface.startArchiveFilterIntent(
-    requestEpoch,
-    () => undefined,
-    "B",
-    (value) => { loading = value; },
-    (value) => { status = value; }
-  );
-
-  assert.equal(invalidated, true);
-  assert.equal(status, "");
-  assert.equal(loading, false);
 });
 
 function renderArchiveWorkspace(overrides: Partial<React.ComponentProps<typeof ArchiveWorkspace>> = {}): string {

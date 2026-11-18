@@ -223,9 +223,6 @@ button { cursor: default; }
 .archive-compare { margin: 8px 0; padding: 10px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--panel); }
 .archive-compare > header h2 { margin: 0; font-size: 14px; }
 .archive-compare > header p { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
-.archive-compare-selectors { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.archive-compare-selectors label { display: grid; gap: 3px; color: var(--muted); font-size: 12px; }
-.archive-compare-selectors select { min-width: 0; height: 30px; padding: 0 7px; border: 1px solid var(--field-border); border-radius: 6px; color: inherit; background: var(--field); }
 .archive-compare-grid { margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .archive-compare-column { min-width: 0; }
 .archive-compare-column h3 { margin: 0 0 5px; font-size: 13px; }
@@ -295,7 +292,7 @@ button { cursor: default; }
 @media (max-width: 1400px) { .summary { display: none; } }
 @media (max-width: 600px) { .command-results > button { flex-wrap: wrap; } }
 @media (max-width: 860px) {
-  .archive-compare-selectors, .archive-compare-grid { grid-template-columns: 1fr; }
+  .archive-compare-grid { grid-template-columns: 1fr; }
 }
 
 .prompt-library [hidden] { display: none; }

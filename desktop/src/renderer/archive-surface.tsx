@@ -21,16 +21,14 @@ import { useExcerptActions } from './use-excerpt-actions';
 import type { SynthesisSession } from './synthesis-session';
 import { createComparisonDraftStore, type ComparisonDraftStore } from './comparison-draft-store';
 import { createLibrarySessionStore, type LibrarySessionStore } from './library-session';
-import { useArchiveReader, type ArchiveDetailView } from './archive-reader-session';
+import { useArchiveReader } from './archive-reader-session';
 import { useMarkdownExport } from './use-markdown-export';
 import { useReportExport } from './use-report-export';
-export type { ArchiveDetailView } from './archive-reader-session';
 
 export interface ArchiveSurfaceProps {
   readonly session?: LibrarySessionStore;
   readonly navigationRevision?: number;
   readonly onBlockingChange?: (blocked: boolean) => void;
-  readonly onArchiveEntered?: (archiveId: string, mode: ArchiveDetailView) => void;
   readonly copy: DesktopCopy;
   readonly locale: string;
   readonly onClose: () => void;
@@ -50,86 +48,6 @@ export interface ArchiveSurfaceProps {
   readonly synthesisDrafts?: SynthesisDraftStore;
   readonly synthesisEditorRequest?: SynthesisEditorRequest | null;
   readonly onSynthesisEditorOpened?: () => void;
-}
-
-interface ArchiveRequestEpoch {
-  begin: () => number;
-  invalidate: () => void;
-  applyLatest: (epoch: number, apply: () => void) => void;
-}
-
-export interface ArchiveFilters {
-  readonly query: string;
-  readonly favorite: boolean;
-  readonly tag: string;
-}
-
-interface ArchiveSearchResult {
-  readonly items: readonly ArchiveRecord[];
-  readonly tags: readonly string[];
-}
-
-interface ArchiveRefreshEffects {
-  readonly search: (filters: ArchiveFilters) => Promise<ArchiveSearchResult>;
-  readonly setLoading: (value: boolean) => void;
-  readonly apply: (result: ArchiveSearchResult, preferredId?: string) => void;
-  readonly fail: () => void;
-}
-
-export function createArchiveRequestEpoch(): ArchiveRequestEpoch {
-  let current = 0;
-  return {
-    begin: () => ++current,
-    invalidate: () => { current += 1; },
-    applyLatest: (epoch, apply) => {
-      if (epoch === current) apply();
-    }
-  };
-}
-
-export function createArchiveRefresh(
-  requestEpoch: ArchiveRequestEpoch,
-  readFilters: () => ArchiveFilters,
-  effects: ArchiveRefreshEffects
-): (preferredId?: string) => Promise<void> {
-  return async (preferredId?: string): Promise<void> => {
-    const epoch = requestEpoch.begin();
-    effects.setLoading(true);
-    try {
-      const result = await effects.search(readFilters());
-      requestEpoch.applyLatest(epoch, () => effects.apply(result, preferredId));
-    } catch {
-      requestEpoch.applyLatest(epoch, effects.fail);
-    }
-  };
-}
-
-// preferredId 只在它第一次出现时应该抢占选中项（比如刚发出的综合任务落库）；
-// 之后每次筛选变化重跑同一个 effect 都会把它带上,若不加消费标记会一直把选中项拉回该记录,
-// 用户在筛出别的记录后仍会被拽回去。lastConsumed 记录"已经用掉的那个 preferredId"。
-export function resolveFilterRefreshTarget(
-  preferredId: string | null,
-  lastConsumed: string | null
-): { readonly target: string | undefined; readonly consumed: string | null } {
-  if (preferredId !== null && preferredId !== lastConsumed) {
-    return { target: preferredId, consumed: preferredId };
-  }
-  return { target: undefined, consumed: lastConsumed };
-}
-
-export function startArchiveFilterIntent<T>(
-  requestEpoch: ArchiveRequestEpoch,
-  setFilter: (value: T) => void,
-  value: T,
-  setLoading: (value: boolean) => void,
-  setStatus: (value: string) => void
-): void {
-  // 只作废在途请求、清空旧状态文案；不在按键当下置 loading——那会让整个防抖窗口里
-  // 结果区反复闪成占位态。真正的 loading 由 createArchiveRefresh 在实际发起搜索时置位。
-  void setLoading;
-  requestEpoch.invalidate();
-  setStatus("");
-  setFilter(value);
 }
 
 export function ArchiveSurface(props: ArchiveSurfaceProps): React.JSX.Element {
@@ -152,13 +70,6 @@ function ArchiveRecordSurface(props: ArchiveSurfaceProps & { embeddedRecord: Arc
   const [followUpHost, setFollowUpHost] = useState<string | undefined>(undefined);
   const [synthesisId, setSynthesisId] = useState<string | null>(null);
   const [editorFocusOrigin, setEditorFocusOrigin] = useState<string | null>(null);
-  const entered = useRef<string | null>(null);
-  useEffect(() => {
-    if (synthesisId || reader.state.archiveId !== selected.id || selected.id !== props.embeddedRecord.id) { entered.current = null; return; }
-    const key = `${selected.id}:${reader.state.view}`;
-    if (entered.current === key || !props.onArchiveEntered) return;
-    entered.current = key; props.onArchiveEntered(selected.id, reader.state.view);
-  }, [selected.id, props.embeddedRecord.id, reader.state.view, synthesisId, props.onArchiveEntered]);
   const [synthesisSeed, setSynthesisSeed] = useState<(SynthesisDraft & { sourceChanged: boolean }) | null>(null);
   const excerpts = useExcerptActions({ copy: props.copy, busy, defaultTier: props.defaultTier, drafts: props.synthesisDrafts,
     onStatus: setStatus, onDecision: props.onCreateDecision,

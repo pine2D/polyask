@@ -21,7 +21,7 @@ export async function comparisonWait(predicate: () => unknown) {
     await act(async () => new Promise(resolve => setTimeout(resolve, 10))); }
 }
 
-export async function comparisonMount(options: { api?: Record<string, unknown>; synthesisDrafts?: SynthesisDraftStore; onArchiveEntered?: (id: string, mode: string) => void;
+export async function comparisonMount(options: { api?: Record<string, unknown>; synthesisDrafts?: SynthesisDraftStore;
   pendingSynthesis?: PendingSynthesis;
   detailWidth?: number; startInRead?: boolean; session?: LibrarySessionStore; configure?: Parameters<typeof mountDom>[1] } = {}) {
   const css = require.extensions['.css']; require.extensions['.css'] = () => {};
@@ -42,11 +42,11 @@ export async function comparisonMount(options: { api?: Record<string, unknown>; 
     }, ...options.api
   }) as any);
   let pendingSynthesis = options.pendingSynthesis ?? null;
+  let preferredId = comparisonRecord.id;
   const surface = () => <StrictMode><ArchiveSurface copy={comparisonCopy} locale="en" sites={SITES} synthesisSites={SITES}
-    defaultTier={null} preferredId={comparisonRecord.id} comparisonId={options.startInRead ? null : comparisonRecord.id}
+    defaultTier={null} preferredId={preferredId} comparisonId={options.startInRead ? null : comparisonRecord.id}
     synthesisDrafts={options.synthesisDrafts}
     session={options.session}
-    {...{ onArchiveEntered: options.onArchiveEntered }}
     pendingSynthesis={pendingSynthesis} synthesisCandidate={null} onClose={() => {}} onCapture={async () => comparisonRecord}
     onSendSynthesis={async () => {}} onCollectSynthesis={async () => {}} onSaveSynthesis={async () => comparisonRecord} /></StrictMode>;
   const h = await mountDom(surface(), window => {
@@ -66,6 +66,7 @@ export async function comparisonMount(options: { api?: Record<string, unknown>; 
   const button = (label: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')]
     .find(node => node.textContent === label || node.getAttribute('aria-label') === label);
   return { ...h, button, get writes() { return writes; }, get decisionWrites() { return decisionWrites; },
+    async navigateTo(id: string) { preferredId = id; await h.render(surface()); },
     async setPending(value: PendingSynthesis | null) { pendingSynthesis = value; await h.render(surface()); },
     readWith(handler: ((id: string) => Promise<ArchiveRecord | null>) | null) { read = handler; },
     replace(record: ArchiveRecord) { records = records.map(current => current.id === record.id ? record : current); },

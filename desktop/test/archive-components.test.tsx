@@ -3,8 +3,6 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import test from "node:test";
 
-import { deleteConfirmationRemaining, deleteIntent } from "../src/renderer/archive-delete";
-import * as archiveSurface from "../src/renderer/archive-surface";
 import { ArchiveWorkspace } from "../src/renderer/archive-workspace";
 import { MarkdownPreview } from "../src/renderer/markdown-preview";
 import { getCopy } from "../src/shared/copy";
@@ -165,111 +163,6 @@ test("archive workspace disables close while a serial action is busy", () => {
   assert.match(html, /aria-current="true" disabled=""/);
 });
 
-test("archive filter intent invalidates the in-flight request before committing the new filter", () => {
-  type RequestEpoch = {
-    begin: () => number;
-    applyLatest: (epoch: number, apply: () => void) => void;
-  };
-  type StartFilterIntent = (
-    requestEpoch: RequestEpoch,
-    setFilter: (value: string) => void,
-    value: string,
-    setLoading: (value: boolean) => void,
-    setStatus: (value: string) => void
-  ) => void;
-  const module = archiveSurface as typeof archiveSurface & {
-    createArchiveRequestEpoch?: () => RequestEpoch;
-    startArchiveFilterIntent?: StartFilterIntent;
-  };
-  const createRequestEpoch = module.createArchiveRequestEpoch;
-  const startFilterIntent = module.startArchiveFilterIntent;
-  assert.equal(typeof createRequestEpoch, "function");
-  assert.equal(typeof startFilterIntent, "function");
-  const requestEpoch = createRequestEpoch!();
-  let state = { items: ["result-a"], loading: false, status: "Previous load failed", query: "A" };
-  let stateWhenFilterCommitted: typeof state | null = null;
-  const first = requestEpoch.begin();
-
-  startFilterIntent!(
-    requestEpoch,
-    (query) => {
-      stateWhenFilterCommitted = { ...state, query };
-      state = { ...state, query };
-      requestEpoch.applyLatest(first, () => {
-        state = { items: ["stale-success"], loading: false, status: "", query };
-      });
-    },
-    "B",
-    (loading) => { state = { ...state, loading }; },
-    (status) => { state = { ...state, status }; }
-  );
-
-  assert.deepEqual(stateWhenFilterCommitted, {
-    items: ["result-a"],
-    loading: false,
-    status: "",
-    query: "B"
-  });
-  assert.deepEqual(state, stateWhenFilterCommitted);
-
-  requestEpoch.applyLatest(first, () => {
-    state = { items: ["result-a"], loading: false, status: "Late success", query: "B" };
-  });
-  requestEpoch.applyLatest(first, () => {
-    state = { ...state, loading: false, status: "Late failure" };
-  });
-  assert.deepEqual(state, stateWhenFilterCommitted);
-
-  const second = requestEpoch.begin();
-  requestEpoch.applyLatest(second, () => {
-    state = { items: ["result-b"], loading: false, status: "", query: "B" };
-  });
-
-  assert.deepEqual(state, { items: ["result-b"], loading: false, status: "", query: "B" });
-});
-
-test("a resumed archive action refreshes the latest completed filter instead of its old render", async () => {
-  type Filters = { readonly query: string; readonly favorite: boolean; readonly tag: string };
-  const searched: Filters[] = [];
-  const applied: Array<{ readonly query: string; readonly preferredId?: string }> = [];
-  let filters: Filters = { query: "A", favorite: false, tag: "" };
-  const refresh = archiveSurface.createArchiveRefresh(
-    archiveSurface.createArchiveRequestEpoch(),
-    () => filters,
-    {
-      search: async (snapshot) => {
-        searched.push(snapshot);
-        return { items: [], tags: [snapshot.query] };
-      },
-      setLoading: () => undefined,
-      apply: (result, preferredId) => {
-        applied.push({ query: result.tags[0], preferredId });
-      },
-      fail: () => assert.fail("refresh should not fail")
-    }
-  );
-  let releaseAction!: () => void;
-  const actionBlocker = new Promise<void>((resolve) => { releaseAction = resolve; });
-  const actionA = (async () => {
-    await actionBlocker;
-    await refresh("archive-a");
-  })();
-
-  filters = { query: "B", favorite: true, tag: "work" };
-  await refresh();
-  releaseAction();
-  await actionA;
-
-  assert.deepEqual(searched, [
-    { query: "B", favorite: true, tag: "work" },
-    { query: "B", favorite: true, tag: "work" }
-  ]);
-  assert.deepEqual(applied, [
-    { query: "B", preferredId: undefined },
-    { query: "B", preferredId: "archive-a" }
-  ]);
-});
-
 test("archive workspace exposes dense search, filters, actions and answer metadata", () => {
   const record = {
     ...archiveFixture(),
@@ -331,18 +224,6 @@ test("archive workspace exposes dense search, filters, actions and answer metada
   assert.match(html, /No answer/);
   assert.match(html, /class="archive-source"/);
   assert.match(html, /Reference/);
-});
-
-test("archive deletion confirmation remains bound to one record id", () => {
-  assert.deepEqual(deleteIntent(null, "archive-a", 1_000), {
-    action: "arm",
-    armed: { id: "archive-a", until: 4_000 }
-  });
-  assert.equal(deleteIntent({ id: "archive-a", until: 4_000 }, "archive-a", 3_000).action, "delete");
-  assert.equal(deleteIntent({ id: "archive-a", until: 4_000 }, "archive-b", 3_000).action, "arm");
-  assert.equal(deleteIntent({ id: "archive-a", until: 2_000 }, "archive-a", 3_000).action, "arm");
-  assert.equal(deleteConfirmationRemaining({ id: "archive-a", until: 4_000 }, 3_250), 750);
-  assert.equal(deleteConfirmationRemaining({ id: "archive-a", until: 4_000 }, 4_500), 0);
 });
 
 test("saved answers keep a visible truncation warning alongside their text", () => {
