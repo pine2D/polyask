@@ -1,5 +1,6 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { BrowserWindow, screen, webContents } from "electron";
+import { app, BrowserWindow, screen, webContents } from "electron";
 
 import type { CommandPaletteShortcutMode } from "../shared/command-palette-shortcut";
 import type { CommandId } from "../shared/commands";
@@ -83,6 +84,19 @@ export interface CreatedMainWindow {
   readonly bindUiStatePersistence: (getUiState: () => DesktopUiState) => void;
 }
 
+function resolveMainWindowIcon(platform: NodeJS.Platform): string | undefined {
+  if (platform === "darwin") return undefined;
+  const fileName = platform === "win32" ? "icon.ico" : "icon.png";
+  const baseDir = app?.isPackaged
+    ? process.resourcesPath
+    : typeof app?.getAppPath === "function"
+      ? join(app.getAppPath(), "resources")
+      : null;
+  if (!baseDir) return undefined;
+  const candidate = join(baseDir, fileName);
+  return existsSync(candidate) ? candidate : undefined;
+}
+
 export function createMainWindow(options: CreateMainWindowOptions): CreatedMainWindow {
   const uiStateStore = new UiStateStore(join(options.userDataPath, "desktop-ui-state.json"));
   const initialUiState = parseDesktopUiState(
@@ -96,8 +110,10 @@ export function createMainWindow(options: CreateMainWindowOptions): CreatedMainW
   const windowTitle = options.preview
     ? formatCopy(options.copy.previewWindowTitle, { title: options.copy.appTitle })
     : options.copy.appTitle;
+  const windowIcon = resolveMainWindowIcon(process.platform);
   const window = new BrowserWindow({
     title: windowTitle,
+    ...(windowIcon ? { icon: windowIcon } : {}),
     width: bounds?.width ?? 1600,
     height: bounds?.height ?? 1050,
     ...(bounds && restorePosition ? { x: bounds.x, y: bounds.y } : {}),

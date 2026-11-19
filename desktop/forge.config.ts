@@ -10,7 +10,16 @@ import { WebpackPlugin } from "@electron-forge/plugin-webpack";
 import { mainConfig } from "./webpack.main.config";
 import { rendererConfig } from "./webpack.renderer.config";
 
-const oauthResource = join(__dirname, "resources", "oauth.json");
+const resourcesDir = join(__dirname, "resources");
+const iconBase = join(resourcesDir, "icon");
+const iconIco = join(resourcesDir, "icon.ico");
+const iconPng = join(resourcesDir, "icon.png");
+const oauthResource = join(resourcesDir, "oauth.json");
+const extraResources = [
+  iconIco,
+  iconPng,
+  ...(existsSync(oauthResource) ? [oauthResource] : [])
+];
 
 const config: ForgeConfig = {
   hooks: { preStart: async () => { await prepareDevelopmentStart(); } },
@@ -19,7 +28,8 @@ const config: ForgeConfig = {
     appBundleId: "com.pine2d.polyask",
     appCategoryType: "public.app-category.productivity",
     executableName: "polyask-desktop",
-    ...(existsSync(oauthResource) ? { extraResource: [oauthResource] } : {})
+    icon: iconBase,
+    extraResource: extraResources
   },
   makers: [
     {
@@ -28,7 +38,9 @@ const config: ForgeConfig = {
       config: {
         name: "PolyAsk",
         authors: "pine2D",
-        description: "Compare answers from nine live AI sites in one window"
+        description: "Compare answers from nine live AI sites in one window",
+        setupIcon: iconIco,
+        iconUrl: "https://raw.githubusercontent.com/pine2D/polyask/main/desktop/resources/icon.ico"
       }
     },
     {
@@ -37,7 +49,8 @@ const config: ForgeConfig = {
       config: {
         options: {
           maintainer: "pine2D",
-          homepage: "https://github.com/pine2D/polyask"
+          homepage: "https://github.com/pine2D/polyask",
+          icon: iconPng
         }
       }
     },

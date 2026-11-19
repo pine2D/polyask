@@ -84,6 +84,10 @@ function loadMainWindowModule(options: {
     require: (specifier: string) => {
       if (specifier === "electron") {
         return {
+          app: {
+            isPackaged: false,
+            getAppPath: () => resolve(__dirname, "..")
+          },
           BrowserWindow: FakeBrowserWindow,
           screen: {
             getAllDisplays: () => (options.workAreas ?? [{ x: 0, y: 0, width: 1920, height: 1080 }])
@@ -149,6 +153,7 @@ test("createMainWindow hardens webPreferences, skips Wayland coordinates, and pe
   assert.equal(winRecord.options.width, 1440);
   assert.equal(winRecord.options.height, 900);
   assert.equal(winRecord.options.frame, false, "Platinum custom titlebar uses frameless window");
+  assert.equal(winRecord.options.icon, resolve(__dirname, "../resources/icon.png"));
   assert.match(String(winRecord.options.title), /试玩/);
   assert.deepEqual(winRecord.autoHide, [true]);
   assert.deepEqual(winRecord.menuVisible, [false]);
@@ -200,9 +205,21 @@ test("createMainWindow restores window position on non-Wayland and omits menu au
   const winRecord = darwin.createdWindows[0]!;
   assert.equal(winRecord.options.x, 100);
   assert.equal(winRecord.options.y, 60);
+  assert.equal(winRecord.options.icon, undefined, "macOS uses app bundle icns rather than BrowserWindow icon");
   assert.equal(winRecord.options.title, copy.appTitle);
   assert.deepEqual(winRecord.autoHide, []);
   assert.deepEqual(winRecord.menuVisible, []);
+
+  const win32 = loadMainWindowModule({ platform: "win32" });
+  win32.mod.createMainWindow({
+    userDataPath: "/tmp/polyask-win",
+    selectedSites: ["chatgpt"],
+    copy,
+    preview: false,
+    preloadEntry: "file:///app/preload.js",
+    shellEntry: "file:///app/index.html"
+  });
+  assert.equal(win32.createdWindows[0]!.options.icon, resolve(__dirname, "../resources/icon.ico"));
 });
 
 test("createApplicationMenuController routes display updates to PreferenceRuntime before manager fallback", () => {
