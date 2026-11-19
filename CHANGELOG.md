@@ -8,6 +8,12 @@
 
 ## [未发布]
 
+## [1.36.0] - 2026-11-19
+
+验收范围：Linux/WSL 下通过 2,824 项应用/UI 测试、623 项运行时测试、类型检查、依赖审计、仓库门禁、外壳与结果库原生视觉及跨层同帧运动回归、Linux 打包及离线包内九站冒烟；Windows 隔离试玩版完成 Platinum 界面、跨视图立体菜单、提问框同帧收展及多图层像素图标实机同步与 WIC/GDI+ 图层解码核验。
+
+验收限制：本轮未完成 Windows 正式安装包安装、macOS 实机、读屏、真实 AI 站点提问发送/图片上传或 Drive 双设备同步验收。详见[验收记录](https://github.com/pine2D/polyask/blob/v1.36.0/docs/acceptance.md#2026-11-19-platinum-工作台界面改版与代码简化验收)。
+
 ### 改进
 
 - 桌面界面全面更新为经典 Mac OS 9 Platinum 机械工作台风格（亮色银灰 / 暗色深炭黑金属双模跟随系统）：采用无边框自绘 22px 细横纹标题栏与 13×13 立体窗口按钮（Windows/Linux 居右、macOS 居左，窗口失焦时横纹自动退隐），各 AI 站点网页嵌入独立带阴影立体小窗并仅在当前聚焦站点展示标题横纹；核心“发送”及主确认动作采用经典双环外框按钮，顶栏分组菜单、右上角“更多”菜单、页内查找溢出菜单与外壳输入右键菜单全面统一为跨视图 Platinum 立体方框菜单，滚动条、下拉选择框、复选/单选框与折叠三角栏（含全部独立弹窗）统一为立体金属部件，高频按钮与页签改为 0ms 干脆瞬切，结果库与提问历史收紧为 13.5px 高密度文档排版、1px 硬线表格与带迷你顶栏的代码小窗。
@@ -1800,7 +1806,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.35.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.36.0...HEAD
+[1.36.0]: https://github.com/pine2D/polyask/compare/v1.35.1...v1.36.0
 [1.35.1]: https://github.com/pine2D/polyask/compare/v1.35.0...v1.35.1
 [1.35.0]: https://github.com/pine2D/polyask/compare/v1.34.0...v1.35.0
 [1.34.0]: https://github.com/pine2D/polyask/compare/v1.33.1...v1.34.0
