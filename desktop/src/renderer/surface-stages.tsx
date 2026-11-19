@@ -15,6 +15,7 @@ import type { useArchiveSynthesisFlow } from "./use-archive-synthesis-flow";
 import type { useDisplayPreferences } from "./use-display-preferences";
 import type { useSyncedPreferences } from "./use-synced-preferences";
 import { WorkbenchMainStage, type WorkbenchMainStageProps } from "./workbench-stage";
+import { WindowTitleBar } from "./window-titlebar";
 
 export interface ArchiveStageProps {
   readonly copy: DesktopCopy;
@@ -114,29 +115,52 @@ export interface AppSurfaceRouterProps {
 }
 
 export function AppSurfaceRouter(props: AppSurfaceRouterProps): React.JSX.Element {
+  const titleBar = (
+    <WindowTitleBar
+      copy={props.workbench.copy}
+      isMac={props.workbench.isMac}
+      preview={Boolean(props.settings.runtime.preview)}
+    />
+  );
   if (props.bootstrapPhase !== "ready") {
     return (
-      <BootstrapStateView
-        copy={props.workbench.copy}
-        phase={props.bootstrapPhase}
-        announcement={props.announcement}
-        onRetry={props.onRetryBootstrap}
-      />
+      <>
+        {titleBar}
+        <BootstrapStateView
+          copy={props.workbench.copy}
+          phase={props.bootstrapPhase}
+          announcement={props.announcement}
+          onRetry={props.onRetryBootstrap}
+        />
+      </>
     );
   }
   if (props.surface === "archive" || props.surface === "settings") {
     return (
-      <div className="surface-stage">
-        {props.surface === "archive" ? (
-          <ArchiveStage {...props.archive} />
-        ) : (
-          <SettingsStage {...props.settings} />
-        )}
-      </div>
+      <>
+        {titleBar}
+        <div className="surface-stage">
+          {props.surface === "archive" ? (
+            <ArchiveStage {...props.archive} />
+          ) : (
+            <SettingsStage {...props.settings} />
+          )}
+        </div>
+      </>
     );
   }
   if (props.surface === "commands") {
-    return <CommandPaletteSurface {...props.commands} />;
+    return (
+      <>
+        {titleBar}
+        <CommandPaletteSurface {...props.commands} />
+      </>
+    );
   }
-  return <WorkbenchMainStage {...props.workbench} />;
+  return (
+    <>
+      {titleBar}
+      <WorkbenchMainStage {...props.workbench} />
+    </>
+  );
 }

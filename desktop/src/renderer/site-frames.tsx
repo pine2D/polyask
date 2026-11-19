@@ -68,6 +68,7 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
           const reloadBlocked = !siteReloadAllowed(status.phase);
           const uncertain = props.uncertainSites?.includes(site.key);
           const isUncertain = Boolean(uncertain || status.code === "submit_unconfirmed");
+          const isFocused = layout.focused === site.key;
           const badge = siteSelectionBadge(copy, status);
           // 提交未确认：卡片给出下一步——先看原站页面，没看到问题才重试；任何路径都不自动重发。
           const nextStep = isUncertain ? copy.retryUnconfirmed : null;
@@ -77,6 +78,7 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
             <article
               className={`tile-frame phase-${status.phase}`}
               data-uncertain={isUncertain ? "true" : undefined}
+              data-focused={isFocused ? "true" : undefined}
               key={site.key}
               style={{
                 left: placement.bounds.x,
@@ -92,6 +94,7 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
                   <SelectionMark /><SiteGlyph site={site.key} /><span className="site-name">{site.label}</span>
                 </label>
                 {badge && <span className="site-model-badge priority-p1" data-tier-mode={badge.mode} data-selection-outcome={badge.outcome} data-hint={statusText} aria-hidden="true">{badge.label}</span>}
+                <span className="tile-stripe" aria-hidden="true" onClick={() => onFocus(site.key)} />
                 <span className="site-status-dot priority-p0" data-hint={stateHint} aria-hidden="true" />
                 <span className="tile-status-sr sr-only">{stateHint}</span>
                 {attentionText && <span className="site-state priority-p0" data-hint={stateHint}>{attentionText}</span>}
@@ -108,6 +111,7 @@ export function SiteFrames(props: SiteFramesProps): React.JSX.Element {
                   <button type="button" disabled={reloadBlocked} data-hint={reloadBlocked ? copy.healthReloadBlocked : formatCopy(copy.reloadSite, { site: site.label })} aria-label={formatCopy(copy.reloadSite, { site: site.label })} onClick={() => onReload(site.key)}><ReloadIcon /></button>
                 </span>
               </div>
+              <div className="tile-well" aria-hidden="true" />
               {loading && <div className="site-load-progress" role="progressbar" aria-label={`${site.label} · ${copy.loading}`}><span /></div>}
             </article>
           );

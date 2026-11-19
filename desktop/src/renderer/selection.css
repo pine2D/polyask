@@ -1,8 +1,28 @@
-.selection-mark { width: 16px; height: 16px; flex-shrink: 0; border: 1px solid var(--border); border-radius: 50%; fill: none; }
-.selection-mark path { stroke: transparent; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-[data-selected="true"] > .selection-mark { border-color: var(--accent); background: var(--accent); }
-[data-selected="true"] > .selection-mark path { stroke: var(--on-accent); }
+/* Mac OS 9 Platinum square beveled checkbox mark for site tiles & checklists. */
+.selection-mark {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  border: 1px solid var(--plat-ink);
+  border-radius: 0;
+  background: var(--plat-g300);
+  box-shadow: inset 1px 1px 0 var(--plat-hi), inset -1px -1px 0 var(--plat-dark-bevel);
+  fill: none;
+}
+.selection-mark path {
+  stroke: transparent;
+  stroke-width: 2.2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+}
+[data-selected="true"] > .selection-mark {
+  border-color: var(--plat-ink);
+  background: var(--plat-g300);
+}
+[data-selected="true"] > .selection-mark path {
+  stroke: var(--text);
+}
 @media (forced-colors: active) {
-  [data-selected="true"] > .selection-mark { forced-color-adjust: none; background: Highlight; border-color: Highlight; }
+  [data-selected="true"] > .selection-mark { forced-color-adjust: none; background: Highlight; border-color: Highlight; box-shadow: none; }
   [data-selected="true"] > .selection-mark path { stroke: HighlightText; }
 }

@@ -1,26 +1,28 @@
-/* 保留品牌与几何，只在有平台习惯或系统偏好时覆盖。 */
+/* Platform font overrides + 0ms mechanical Platinum press feedback. */
 :root[data-platform="win32"] {
-  --font-ui: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  --font-ui: "Segoe UI", "Microsoft YaHei UI", "Lucida Grande", system-ui, sans-serif;
 }
 :root[data-platform="darwin"] {
-  --font-ui: -apple-system, BlinkMacSystemFont, "PingFang SC", system-ui, sans-serif;
+  --font-ui: "Charcoal", "Lucida Grande", -apple-system, "PingFang SC", system-ui, sans-serif;
 }
 :root[data-platform="linux"] {
-  --font-ui: system-ui, "Noto Sans", "Noto Sans CJK SC", sans-serif;
+  --font-ui: "DejaVu Sans", "Noto Sans", "Noto Sans CJK SC", system-ui, sans-serif;
 }
-button, [role="tab"], .tile-header, .command-bar label, .command-tabs {
+button, [role="tab"], .tile-header, .command-bar label, .command-tabs, .window-titlebar {
   user-select: none;
   -webkit-user-select: none;
 }
-/* 正文、诊断信息与输入内容保持可选中复制。 */
 input, textarea, [contenteditable="true"] { user-select: text; }
-/* 高频工具动作只给静态反馈；aria-disabled 仍可聚焦读原因，但不能像已接受点击。 */
-button:not(:disabled, [aria-disabled="true"]):active { filter: brightness(.92); }
+
+/* 0ms instant mechanical press: no blur/filter, no animation delay. */
+button { transition: none; }
+
 @media (prefers-contrast: more) {
-  :root { --border: var(--muted); --field-border: var(--muted); }
+  :root { --border: var(--plat-ink); --field-border: var(--plat-ink); }
 }
 @media (forced-colors: active) {
   :root {
+    --plat-ink: ButtonText;
     --text: CanvasText; --muted: CanvasText;
     --canvas: Canvas; --panel: Canvas; --panel-muted: Canvas; --field: Canvas;
     --border: ButtonText; --field-border: CanvasText; --accent: Highlight; --on-accent: HighlightText;
@@ -31,7 +33,6 @@ button:not(:disabled, [aria-disabled="true"]):active { filter: brightness(.92); 
     outline-color: Highlight;
   }
   button:disabled { color: GrayText; }
-  /* 已用 Highlight/HighlightText 配对；关闭 Chromium 文字背板，避免黑字落在黑背板上。 */
   :root button:is(.primary, .send) { forced-color-adjust: none; }
   button:not(:disabled, [aria-disabled="true"]):active { filter: none; outline: 1px solid Highlight; }
   :root ::selection { color: HighlightText; background: Highlight; }

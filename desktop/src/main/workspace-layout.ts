@@ -2,6 +2,8 @@ import type { WebContentsView } from "electron";
 
 import type { LayoutMode, SiteKey, ViewBounds, ViewPlacement } from "../shared/contracts";
 import {
+  TILE_FRAME_INSET,
+  WINDOW_TITLEBAR_HEIGHT,
   WORKSPACE_FEEDBACK_HEIGHT,
   metricsForDensity,
   shellHeightForComposer,
@@ -19,6 +21,7 @@ interface WorkspaceLayoutInput {
   readonly width: number;
   readonly toolbarWidth?: number;
   readonly height: number;
+  readonly windowTitlebarHeight?: number;
   readonly density: Density;
   readonly composerExpanded: boolean;
   readonly findOpen?: boolean;
@@ -65,12 +68,13 @@ export function reserveWorkspaceArea(area: ViewBounds, drawerWidth: number): Vie
 export function computeWorkspaceLayout(input: WorkspaceLayoutInput): WorkspaceLayoutResult {
   const metrics = metricsForDensity(input.density);
   const toolbar = toolbarLayoutForWidth(input.toolbarWidth ?? input.width);
-  const shellHeight = shellHeightForComposer(input.density, input.composerExpanded, toolbar) + (input.findOpen ? SITE_FIND_HEIGHT : 0);
+  const titlebar = input.windowTitlebarHeight ?? WINDOW_TITLEBAR_HEIGHT;
+  const topChrome = titlebar + shellHeightForComposer(input.density, input.composerExpanded, toolbar) + (input.findOpen ? SITE_FIND_HEIGHT : 0);
   const baseArea = {
     x: metrics.edgeGap,
-    y: shellHeight,
+    y: topChrome,
     width: Math.max(1, input.width - metrics.edgeGap * 2),
-    height: Math.max(1, input.height - shellHeight - metrics.edgeGap - WORKSPACE_FEEDBACK_HEIGHT)
+    height: Math.max(1, input.height - topChrome - metrics.edgeGap - WORKSPACE_FEEDBACK_HEIGHT)
   };
   const area = reserveWorkspaceArea(
     baseArea,
@@ -93,10 +97,10 @@ export function applyWorkspaceLayout(input: ApplyWorkspaceLayoutInput, findOpen 
     const view = input.views.get(placement.key);
     if (!view) continue;
     view.setBounds(scaleBounds({
-      x: placement.bounds.x + 1,
+      x: placement.bounds.x + TILE_FRAME_INSET,
       y: placement.bounds.y + input.metrics.tileHeaderHeight,
-      width: Math.max(1, placement.bounds.width - 2 - (findOpen ? SITE_FIND_MARKER_WIDTH : 0)),
-      height: Math.max(1, placement.bounds.height - input.metrics.tileHeaderHeight - 1)
+      width: Math.max(1, placement.bounds.width - TILE_FRAME_INSET * 2 - (findOpen ? SITE_FIND_MARKER_WIDTH : 0)),
+      height: Math.max(1, placement.bounds.height - input.metrics.tileHeaderHeight - TILE_FRAME_INSET)
     }, input.zoom));
     const siteZoom = zoomForSite(
       input.display,

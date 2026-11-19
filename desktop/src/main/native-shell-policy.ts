@@ -2,7 +2,7 @@ import type { EventEmitter } from 'node:events';
 import type { ContextMenuParams, MenuItemConstructorOptions } from 'electron';
 
 export function shellBackground(theme: { readonly shouldUseDarkColors: boolean }): string {
-  return theme.shouldUseDarkColors ? '#17171c' : '#f4f5f8';
+  return theme.shouldUseDarkColors ? '#18181c' : '#bfbfbf';
 }
 
 export function bindShellTheme(

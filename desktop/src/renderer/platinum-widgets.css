@@ -1,0 +1,137 @@
+/* Mac OS 9 Platinum classic native widgets: 3-ridge scrollbars, popup.css selects, beveled checkboxes & radios. */
+:is(#root *, .library-popover, .library-popover *) {
+  scrollbar-width: auto;
+}
+
+:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
+}
+
+:is(.reading-source-list, .archive-answer-nav, .library-view-switch)::-webkit-scrollbar {
+  height: 8px;
+}
+
+:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-track {
+  background: var(--plat-scroll-track);
+  border-left: 1px solid var(--plat-ink);
+  border-top: 1px solid var(--plat-ink);
+  box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.28), inset -1px -1px 0 rgba(255, 255, 255, 0.22);
+}
+
+:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb {
+  background-color: var(--plat-scroll-thumb);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7' viewBox='0 0 7 7'%3E%3Cpath d='M0 1h7M0 3h7M0 5h7' stroke='%23ffffff' stroke-opacity='.75' stroke-width='1'/%3E%3Cpath d='M0 2h7M0 4h7M0 6h7' stroke='%23262626' stroke-opacity='.55' stroke-width='1'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  border: 1px solid var(--plat-ink);
+  box-shadow: inset 1px 1px 0 var(--plat-scroll-thumb-hi), inset -1px -1px 0 var(--plat-scroll-thumb-lo);
+}
+
+:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb:active {
+  background-color: var(--accent);
+}
+
+:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-corner {
+  background: var(--plat-g400);
+  border-left: 1px solid var(--plat-ink);
+  border-top: 1px solid var(--plat-ink);
+}
+
+/* Platinum pop-up menu button (HIG fig. 2-7 / livid/exe-stats popup.css): beveled face + right 20px double-arrow well. */
+#root select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--plat-ink);
+  border-radius: 3px;
+  padding-inline: 7px 25px;
+  color: var(--text);
+  background-color: var(--plat-g300);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='11' viewBox='0 0 9 11'%3E%3Cpath d='M4.5 1 8 4.5H1ZM4.5 10 1 6.5h7Z' fill='%23262626'/%3E%3C/svg%3E"),
+    linear-gradient(to right, transparent calc(100% - 20px), var(--plat-mid-dark) calc(100% - 20px), var(--plat-mid-dark) calc(100% - 19px), var(--plat-hi) calc(100% - 19px), var(--plat-hi) calc(100% - 18px), var(--plat-g300) calc(100% - 18px));
+  background-repeat: no-repeat;
+  background-position: right 5px center, 0 0;
+  box-shadow: var(--plat-btn-bevel);
+}
+
+@media (prefers-color-scheme: dark) {
+  #root select {
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='11' viewBox='0 0 9 11'%3E%3Cpath d='M4.5 1 8 4.5H1ZM4.5 10 1 6.5h7Z' fill='%23ededf2'/%3E%3C/svg%3E"),
+      linear-gradient(to right, transparent calc(100% - 20px), var(--plat-dark-bevel) calc(100% - 20px), var(--plat-dark-bevel) calc(100% - 19px), var(--plat-hi) calc(100% - 19px), var(--plat-hi) calc(100% - 18px), var(--plat-g300) calc(100% - 18px));
+  }
+}
+
+#root select:active:not(:disabled) {
+  background-color: var(--plat-pressed-bg);
+  color: var(--plat-pressed-fg);
+  box-shadow: var(--plat-btn-bevel-pressed);
+}
+
+/* Classic Platinum beveled square checkbox & circular radio. */
+:is(#root, .library-popover) input[type="checkbox"]:not(.sr-only) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  min-height: 13px;
+  margin: 0;
+  border: 1px solid var(--plat-ink);
+  border-radius: 0;
+  background-color: var(--plat-g300);
+  box-shadow: inset 1px 1px 0 var(--plat-hi), inset -1px -1px 0 var(--plat-dark-bevel);
+  display: inline-grid;
+  place-content: center;
+  vertical-align: -2px;
+}
+
+:is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked {
+  background-color: var(--plat-g300);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11'%3E%3Cpath d='M1.5 5.5 4.2 8.4 9.6 2' fill='none' stroke='%23262626' stroke-width='1.8' stroke-linecap='square'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+:is(#root, .library-popover) input[type="radio"]:not(.sr-only) {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  min-width: 13px;
+  min-height: 13px;
+  margin: 0;
+  border: 1px solid var(--plat-ink);
+  border-radius: 50%;
+  background-color: var(--plat-g300);
+  box-shadow: inset 1px 1px 0 var(--plat-hi), inset -1px -1px 0 var(--plat-dark-bevel);
+  display: inline-grid;
+  place-content: center;
+  vertical-align: -2px;
+}
+
+:is(#root, .library-popover) input[type="radio"]:not(.sr-only):checked::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11'%3E%3Cpath d='M1.5 5.5 4.2 8.4 9.6 2' fill='none' stroke='%23ededf2' stroke-width='1.8' stroke-linecap='square'/%3E%3C/svg%3E");
+  }
+}
+
+@media (forced-colors: active) {
+  #root select,
+  :is(#root, .library-popover) input[type="checkbox"]:not(.sr-only),
+  :is(#root, .library-popover) input[type="radio"]:not(.sr-only) {
+    appearance: auto;
+    -webkit-appearance: auto;
+    background-image: none;
+    box-shadow: none;
+  }
+}

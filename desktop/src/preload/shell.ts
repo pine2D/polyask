@@ -43,8 +43,12 @@ import type { SiteHealth } from "../shared/site-health";
 import type { SiteSnapshotExportResult } from "../shared/site-snapshot";
 import type { SynthesisCandidate, SynthesisSendRequest, SynthesisSendResponse } from "../shared/synthesis";
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
+import { WINDOW_CHROME_CHANNELS, type WindowChromeState, type WindowControlAction } from "../shared/window-chrome";
 
 export interface PolyAskDesktopApi extends NotificationApi {
+  getWindowChromeState(): Promise<WindowChromeState>;
+  windowControl(action: WindowControlAction): Promise<WindowChromeState>;
+  onWindowChromeState(listener: (state: WindowChromeState) => void): () => void;
   getPageZoom(): Promise<number>;
   changePageZoom(action: SiteZoomAction): Promise<number>;
   onPageZoom(listener: (zoom: number) => void): () => void;
@@ -209,6 +213,9 @@ const invoke = (channel: string, ...args: unknown[]): Promise<any> =>
   ipcRenderer.invoke(channel, ...args).catch((error: unknown) => { throw new Error(ipcErrorCode(error)); });
 
 const api: PolyAskDesktopApi = Object.freeze({
+  getWindowChromeState: () => invoke(WINDOW_CHROME_CHANNELS.state),
+  windowControl: (action: WindowControlAction) => invoke(WINDOW_CHROME_CHANNELS.control, action),
+  onWindowChromeState: (listener: (state: WindowChromeState) => void) => subscribe(WINDOW_CHROME_CHANNELS.state, listener),
   getPageZoom: () => invoke('polyask:page-zoom-get'),
   changePageZoom: (action: SiteZoomAction) => invoke('polyask:page-zoom-change', action),
   onPageZoom: (listener: (zoom: number) => void) => subscribe('polyask:page-zoom-changed', listener),

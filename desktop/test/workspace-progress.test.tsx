@@ -91,7 +91,7 @@ test('page movement retains manual activation and filters old run exception badg
 test('native workspace chrome reserves only the composer; progress uses the existing footer', () => {
   for (const density of ['compact', 'comfortable'] as const) {
     assert.equal(shellHeightForComposer(density, false), metricsForDensity(density).shellHeight);
-    assert.equal(shellHeightForComposer(density, true), (density === 'compact' ? 120 : 144));
+    assert.equal(shellHeightForComposer(density, true), (density === 'compact' ? 112 : 132));
   }
 });
 

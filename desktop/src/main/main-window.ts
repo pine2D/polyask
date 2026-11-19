@@ -103,6 +103,7 @@ export function createMainWindow(options: CreateMainWindowOptions): CreatedMainW
     ...(bounds && restorePosition ? { x: bounds.x, y: bounds.y } : {}),
     minWidth: 960,
     minHeight: 680,
+    frame: false,
     show: false,
     backgroundColor: initialShellBackground(),
     webPreferences: {

@@ -1,85 +1,107 @@
+/* Mac OS 9 Platinum command strip (modeled on livid/exe-stats .strip, .seg, .btn & HIG Default Push Button). */
 .command-bar {
-  position: relative; z-index: 2; width: 100%; height: var(--shell-height); padding: var(--space-1) var(--space-2);
+  position: relative; z-index: 2; width: 100%; height: var(--shell-height); padding: 4px 8px;
   display: grid; grid-template-columns: auto auto minmax(200px, 1fr) auto auto auto auto auto;
-  align-items: center; gap: var(--space-1); border-bottom: 1px solid var(--border-subtle); background: var(--panel);
+  align-items: center; gap: 5px; border-bottom: 1px solid var(--plat-ink);
+  background: var(--plat-g300); box-shadow: var(--plat-strip-bevel);
 }
 .command-bar.has-pages { grid-template-columns: auto auto auto minmax(200px, 1fr) auto auto auto auto auto; }
-.command-bar.is-expanded { height: var(--composer-expanded-height); align-items: start; }
+.command-bar.is-expanded { height: var(--composer-expanded-height); align-items: start; padding-top: 6px; }
 .command-bar > * { min-width: 0; }
-.command-bar .mode-switch { margin-left: var(--space-1); }
-.workspace-entry { height: var(--control-height); display: flex; align-items: stretch; gap: 3px; }
-.scope-split { max-width: 172px; display: grid; grid-template-columns: minmax(0, 1fr) var(--target-size); border: 1px solid var(--border-subtle); border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel)); }
-.scope-split button, .health-trigger {
-  min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; border: 0;
-  color: var(--muted); background: transparent;
-  transition: color 120ms ease, background-color 120ms ease;
+.command-bar .mode-switch { margin-left: 2px; }
+
+.workspace-entry { height: var(--control-height); display: flex; align-items: stretch; gap: 4px; }
+.scope-split {
+  max-width: 176px; display: grid; grid-template-columns: minmax(0, 1fr) var(--target-size);
+  border: 0; border-radius: 3px; background: transparent;
 }
-.scope-main { border-radius: 6px 0 0 6px; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
-.scope-menu { border-radius: 0 6px 6px 0; padding: 0 !important; border-left: 1px solid var(--border-subtle) !important; display: grid; place-items: center; }
+.scope-split button, .health-trigger {
+  min-width: var(--target-size); min-height: var(--control-height); height: var(--control-height); padding: 0 7px;
+  border: 1px solid var(--plat-ink); color: var(--text); background: var(--plat-g300);
+  box-shadow: var(--plat-btn-bevel); font-weight: 700; transition: none;
+}
+.scope-main { border-radius: 3px 0 0 3px; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.scope-menu { margin-left: -1px; border-radius: 0 3px 3px 0; padding: 0 !important; display: grid; place-items: center; }
 .scope-label-full, .scope-label-compact { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scope-label-compact { display: none; }
-.health-trigger { position: relative; display: grid; place-items: center; border: 1px solid var(--border-subtle); border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel)); }
-.scope-split button:hover, .health-trigger:hover { color: var(--text); background: var(--panel); }
-.health-trigger.active, .scope-split:has(.scope-main[aria-expanded="true"]) { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
-.health-trigger[data-health-attention]::after {
-  position: absolute; top: 3px; right: 3px; width: 6px; height: 6px;
-  border: 1px solid var(--panel); border-radius: 50%; background: var(--danger); content: "";
+.health-trigger { position: relative; display: grid; place-items: center; border-radius: 3px; padding: 0 5px; }
+.scope-split button:hover:not(:disabled), .health-trigger:hover:not(:disabled) { background: var(--plat-g200); }
+.scope-split button:active:not(:disabled),
+.scope-main[aria-expanded="true"],
+.health-trigger:active:not(:disabled),
+.health-trigger.active {
+  position: relative; z-index: 1; color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
+.health-trigger[data-health-attention]::after {
+  position: absolute; top: 2px; right: 2px; width: 6px; height: 6px;
+  border: 1px solid var(--plat-ink); border-radius: 0; background: var(--danger); content: "";
+}
+
+/* Joined Platinum segmented controls (.seg from exe-stats). */
 .mode-switch, .tier-switch {
-  height: var(--control-height); display: flex; padding: 2px; border: 1px solid var(--border-subtle);
-  border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel));
+  height: var(--control-height); display: inline-flex; padding: 0; border: 0; background: transparent;
 }
 .mode-switch button, .tier-switch button {
-  min-width: var(--target-size); min-height: var(--target-size); padding: 0 7px; display: inline-flex;
-  align-items: center; justify-content: center; gap: 4px; border: 0; border-radius: 5px;
-  color: var(--muted); background: transparent; white-space: nowrap;
-  transition: color 120ms ease, background-color 120ms ease;
+  min-width: var(--target-size); height: var(--control-height); min-height: var(--control-height); padding: 0 7px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  border: 1px solid var(--plat-ink); border-radius: 0;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
+  font-weight: 700; white-space: nowrap; transition: none;
 }
-.mode-switch button.active, .tier-switch button.active {
-  color: var(--text); font-weight: 600; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border-subtle);
+.mode-switch > button + button, .tier-switch > button + button { margin-left: -1px; }
+.mode-switch > button:first-child { border-radius: 3px 0 0 3px; }
+.mode-switch > button:nth-child(3), .tier-switch > button[data-tier-icon="think"] { border-radius: 0 3px 3px 0; }
+.tier-switch > [data-current-tier] + button { margin-left: -1px; }
+.command-bar[data-fit~="2"] .tier-switch > button[data-tier-icon="site-setting"] { margin-left: 0; border-radius: 3px 0 0 3px; }
+.mode-switch > .layout-toggle { border-radius: 3px; margin-left: 0; display: none; }
+.mode-switch button:hover:not(.active, :disabled), .tier-switch button:hover:not(.active, :disabled) { background: var(--plat-g200); }
+.mode-switch button.active, .tier-switch button.active,
+.mode-switch button:active:not(:disabled), .tier-switch button:active:not(:disabled) {
+  position: relative; z-index: 1; color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
-.mode-switch .layout-toggle { display: none; }
+
 .command-bar textarea {
-  margin-left: var(--space-1); width: calc(100% - var(--space-1)); height: var(--control-height); resize: none; padding: 5px 10px; border: 1px solid var(--border);
-  border-radius: var(--radius-control); color: inherit; background: var(--field); line-height: 20px; font-size: var(--font-body);
+  margin-left: 2px; width: calc(100% - 2px); height: var(--control-height); resize: none; padding: 3px 8px;
+  border: 1px solid var(--plat-ink); border-radius: 0; color: inherit; background: var(--field);
+  line-height: 18px; font-size: var(--font-body);
 }
-.command-bar.is-expanded textarea { height: calc(var(--composer-field-expanded-height) - var(--space-2)); }
-.command-bar textarea:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent); }
-.mode-switch button:hover:not(.active), .tier-switch button:hover:not(.active) { color: inherit; background: var(--panel); }
+.command-bar.is-expanded textarea { height: calc(var(--composer-field-expanded-height) - 14px); }
+
 .summary { max-width: 112px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-actions {
-  height: var(--control-height); display: flex; align-items: center; gap: 4px; margin-left: 4px; padding-left: 8px;
-  border-left: 1px solid var(--border-subtle); background: transparent;
+  height: var(--control-height); display: flex; align-items: center; gap: 4px; margin-left: 2px; padding-left: 6px;
+  border-left: 1px solid var(--plat-mid-dark); box-shadow: inset 1px 0 0 var(--plat-hi); background: transparent;
 }
 .workspace-actions > button {
-  min-width: var(--target-size); height: 100%; padding: 0 6px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 3px; border: 0; border-radius: 6px; color: var(--muted); background: transparent;
-  transition: color 120ms ease, background-color 120ms ease;
+  min-width: var(--target-size); height: var(--control-height); padding: 0 7px; display: inline-flex; align-items: center;
+  justify-content: center; gap: 4px; border: 1px solid var(--plat-ink); border-radius: 3px;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
+  font-weight: 700; transition: none;
 }
-.workspace-actions > button:hover { color: var(--text); background: var(--hover-soft); }
-.workspace-actions > button.active { color: var(--accent); background: var(--selection-soft); }
-.workspace-actions > button:disabled, .workspace-actions > button[aria-disabled="true"] { opacity: .4; }
-.workspace-actions > button[aria-disabled="true"] { cursor: default; color: var(--muted); background: transparent; }
-.workspace-actions > button.retry-trigger { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 8%, var(--panel)); white-space: nowrap; }
-.workspace-actions > button.uncertain-retry-trigger { color: var(--warning-ink); background: var(--warning-soft); font-weight: 600; white-space: nowrap; }
+.workspace-actions > button:hover:not(:disabled, [aria-disabled="true"]) { background: var(--plat-g200); }
+.workspace-actions > button.active,
+.workspace-actions > button:active:not(:disabled, [aria-disabled="true"]) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
+.workspace-actions > button:disabled, .workspace-actions > button[aria-disabled="true"] {
+  opacity: .48; box-shadow: none; background: var(--plat-g300); color: var(--muted);
+}
+.workspace-actions > button[aria-disabled="true"] { cursor: default; }
+.workspace-actions > button.retry-trigger { color: var(--danger-ink); background: var(--plat-g200); white-space: nowrap; }
+.workspace-actions > button.uncertain-retry-trigger { color: var(--warning-ink); background: var(--warning-soft); white-space: nowrap; }
 .workspace-actions > button.compare-trigger:not([aria-disabled="true"]):not(:disabled) {
-  color: var(--accent); background: var(--accent-soft); font-weight: 600;
+  color: var(--accent); background: var(--accent-soft);
 }
-.workspace-actions > button.compare-trigger:not([aria-disabled="true"]):not(:disabled):hover {
-  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
-}
-.workspace-actions .summary { margin: 0 5px 0 2px; }
+.workspace-actions .summary { margin: 0 4px 0 2px; }
 .workspace-actions > button.sync-attention { position: relative; }
 .workspace-actions > button.sync-attention::after {
-  position: absolute; top: 4px; right: 3px; width: 5px; height: 5px;
-  border: 1px solid var(--panel); border-radius: 50%; background: var(--danger); content: "";
+  position: absolute; top: 2px; right: 2px; width: 5px; height: 5px;
+  border: 1px solid var(--plat-ink); border-radius: 0; background: var(--danger); content: "";
 }
-/* F166：attentionCount 曾经只落进 data-attention-count 却没有任何 CSS 消费它——补一个数字徽标；
-   sync-attention 已有单独的圆点样式，两者共用 ::after 会互相覆盖，故这里排除 .sync-attention。 */
 .workspace-actions > button.more-trigger { position: relative; }
 .workspace-actions > button.more-trigger[data-attention-count]:not(.sync-attention)::after {
-  position: absolute; top: 2px; right: 2px; min-width: 14px; height: 14px; padding: 0 3px;
-  display: flex; align-items: center; justify-content: center; border-radius: 999px;
+  position: absolute; top: -3px; right: -3px; min-width: 14px; height: 14px; padding: 0 3px;
+  display: flex; align-items: center; justify-content: center; border: 1px solid var(--plat-ink); border-radius: 0;
   background: var(--danger); color: #fff; font-size: 9px; font-weight: 700; line-height: 1;
   content: attr(data-attention-count);
 }
@@ -87,65 +109,97 @@
 .workspace-actions > button.sync-waiting::after,
 .workspace-actions > button.sync-schema::after,
 .workspace-actions > button.sync-offline::after { background: var(--warning); }
+
+/* Authentic Mac OS 9 HIG Default Push Button: double outer black bezel ring around raised Platinum face. */
 .primary-action {
-  min-width: 88px; height: var(--control-height); padding: 0 10px; display: inline-flex; align-items: center;
-  justify-content: center; gap: 6px; border: 0; border-radius: 7px; color: white; font-weight: 650;
+  position: relative; min-width: 84px; height: calc(var(--control-height) - 4px); margin-inline: 3px; padding: 0 9px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  border: 1px solid var(--plat-ink); border-radius: 3px; font-weight: 700; transition: none;
 }
-.send { color: var(--on-accent); background: var(--accent); box-shadow: var(--inner-highlight), var(--shadow-control); }
+.send {
+  color: var(--plat-ink); background: var(--plat-g300);
+  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+}
+@media (prefers-color-scheme: dark) {
+  .send { color: var(--text); }
+}
+.send::before {
+  content: ""; position: absolute; inset: -3px; border-radius: 5px; pointer-events: none;
+  box-shadow: inset 1px 1px 0 var(--plat-dark-bevel), inset -1px -1px 0 var(--plat-hi);
+}
+.send:hover:not(:disabled) { background: var(--plat-g200); }
+.send:active:not(:disabled) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg);
+  box-shadow: var(--plat-btn-bevel-pressed), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+}
+.send:active:not(:disabled) kbd { color: var(--plat-pressed-fg); }
 .send-count, .scope-label-compact, .retry-trigger > span,
 .workspace-actions > button.more-trigger::after { font-variant-numeric: tabular-nums; }
-.cancel { background: var(--danger); box-shadow: var(--shadow-control); }
-.primary-action:hover:not(:disabled) { filter: brightness(.94); }
-.send:disabled { opacity: .45; box-shadow: none; }
-.cancel:disabled { opacity: .68; box-shadow: none; }
-kbd { opacity: .7; font: 10px system-ui; }
-.send kbd { opacity: 1; color: var(--on-accent); }
+.cancel {
+  color: #ffffff; background: var(--danger);
+  box-shadow: inset 1px 1px 0 #f87171, inset -1px -1px 0 #7f1d1d, 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+}
+.send:disabled {
+  opacity: .52; color: var(--muted);
+  box-shadow: 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--border-subtle);
+}
+.send:disabled::before { display: none; }
+.cancel:disabled { opacity: .65; box-shadow: none; }
+kbd { opacity: .85; font: 10px var(--font-mono); }
+.send kbd { color: var(--accent); font-weight: 700; }
 
+/* Joined Platinum page tabs (0ms mechanical switch, no sliding pill). */
 .page-tabs {
-  position: relative; flex-shrink: 0; height: var(--control-height); padding: 2px; display: grid; grid-auto-flow: column;
-  grid-auto-columns: 1fr; border: 1px solid var(--border-subtle); border-radius: 7px; background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel));
+  position: relative; flex-shrink: 0; height: var(--control-height); padding: 0;
+  display: inline-flex; border: 0; background: transparent;
 }
+.page-tab-indicator { display: none; }
 .page-tabs button {
-  position: relative; z-index: 1; min-width: 42px; height: 100%; padding: 0 6px; display: inline-flex;
-  align-items: center; justify-content: center; gap: 3px; border: 0; border-radius: 5px;
-  color: var(--muted); background: transparent; font-size: var(--font-meta); font-variant-numeric: tabular-nums;
-  transition: color 120ms ease;
+  position: relative; min-width: 40px; height: var(--control-height); padding: 0 6px; display: inline-flex;
+  align-items: center; justify-content: center; gap: 3px; border: 1px solid var(--plat-ink); border-radius: 0;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
+  font-size: var(--font-meta); font-weight: 700; font-variant-numeric: tabular-nums; transition: none;
 }
-.page-tabs button[aria-selected="true"] { color: var(--accent); font-weight: 600; }
+.page-tabs button + button { margin-left: -1px; }
+.page-tabs button:first-of-type { border-radius: 3px 0 0 3px; }
+.page-tabs button:last-of-type { border-radius: 0 3px 3px 0; }
+.page-tabs button[aria-selected="true"],
+.page-tabs button:active {
+  z-index: 1; color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
 .page-tabs button > span { white-space: nowrap; }
-.page-tab-badges { display: inline-flex; gap: 3px; }
-.page-tab-indicator {
-  position: absolute; z-index: 0; top: 2px; bottom: 2px; left: 2px; border-radius: 5px;
-  background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border-subtle);
-  transition: transform 180ms var(--ease-in-out);
+.page-tab-badges { display: inline-flex; gap: 2px; }
+.page-tab-badge {
+  flex: 0 0 auto; min-width: 16px; height: 14px; padding: 0 3px; border: 1px solid var(--plat-ink); border-radius: 0;
+  display: inline-flex; align-items: center; justify-content: center; gap: 1px; font: 700 9px/12px var(--font-mono); font-style: normal;
 }
-.page-tabs[data-input-method="keyboard"] .page-tab-indicator { transition-duration: 0ms; }
-.page-tab-badge { flex: 0 0 auto; min-width: 20px; height: 16px; padding: 0 4px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; gap: 2px; font: 10px/16px system-ui; font-style: normal; }
 .page-tab-badge.sending { color: var(--accent); background: var(--accent-soft); }
-.page-tab-badge.sent { color: var(--success-ink); background: color-mix(in srgb, var(--success) 12%, transparent); }
-.page-tab-badge.failed { color: var(--danger-ink); background: color-mix(in srgb, var(--danger) 12%, transparent); }
-.page-tab-badge.unconfirmed { color: var(--warning-ink); background: color-mix(in srgb, var(--warning) 12%, transparent); }
-.page-tab-badge.cancelled { color: var(--muted); background: var(--panel-muted); }
+.page-tab-badge.sent { color: var(--success-ink); background: var(--success-soft); }
+.page-tab-badge.failed { color: var(--danger-ink); background: #fee2e2; }
+.page-tab-badge.unconfirmed { color: var(--warning-ink); background: var(--warning-soft); }
+.page-tab-badge.cancelled { color: var(--muted); background: var(--plat-g200); }
 
-.image-picker { position: static; height: var(--control-height); display: flex; align-items: center; gap: 2px; }
-.prompt-history-tools { height: var(--control-height); display: flex; align-items: center; gap: var(--space-1); }
+.image-picker { position: static; height: var(--control-height); display: flex; align-items: center; gap: 3px; }
+.prompt-history-tools { height: var(--control-height); display: flex; align-items: center; gap: 3px; }
 .new-session-trigger, .question-trigger, .draft-trigger, .image-trigger, .image-warning button, .image-error button {
   min-width: var(--control-height); height: var(--control-height); padding: 0; display: inline-flex;
-  align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--border-subtle); border-radius: var(--radius-control);
-  color: var(--muted); background: color-mix(in srgb, var(--panel-muted) 56%, var(--panel));
-  transition: color 120ms ease, background-color 120ms ease, border-color 120ms ease;
+  align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--plat-ink); border-radius: 3px;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700; transition: none;
 }
 .new-session-trigger { padding-inline: 6px; gap: 4px; white-space: nowrap; }
-.question-trigger[aria-expanded="true"], .draft-trigger[aria-expanded="true"], .image-trigger.active { color: var(--accent); border-color: var(--accent); background: var(--selection-soft); }
-.new-session-trigger:hover:not(:disabled), .question-trigger:hover, .draft-trigger:hover:not(:disabled), .image-trigger:hover:not(:disabled) { color: var(--text); background: var(--panel); border-color: var(--border); }
-.new-session-trigger:disabled, .draft-trigger:disabled, .image-trigger:disabled { opacity: .4; }
+.question-trigger[aria-expanded="true"], .draft-trigger[aria-expanded="true"], .image-trigger.active,
+.new-session-trigger:active:not(:disabled), .question-trigger:active, .draft-trigger:active:not(:disabled), .image-trigger:active:not(:disabled) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
+.new-session-trigger:hover:not(:disabled, :active), .question-trigger:hover:not([aria-expanded="true"], :active),
+.draft-trigger:hover:not(:disabled, [aria-expanded="true"], :active), .image-trigger:hover:not(:disabled, .active, :active) {
+  background: var(--plat-g200);
+}
+.new-session-trigger:disabled, .draft-trigger:disabled, .image-trigger:disabled { opacity: .48; box-shadow: none; color: var(--muted); }
 .image-count, .image-warning span { font-size: 10px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.image-warning button, .image-error button { min-width: var(--target-size); width: var(--target-size); border-color: var(--warning-ink); color: var(--warning-ink); background: transparent; }
-.image-error button { border-color: var(--danger-ink); color: var(--danger-ink); }
+.image-warning button { color: var(--warning-ink); background: var(--warning-soft); }
+.image-error button { color: var(--danger-ink); }
 
-/* 命令栏适配级别（toolbar-fit.ts 按实际内容逐级累加，直到输入框 ≥320px；data-fit 记为 "1 2 …"）：
-   1 = 次要文字收起；2 = 档位说明收起；3 = 历史入口进更多菜单、档位改为下拉；
-   4 = 站点状态/比较改由工作台与更多菜单承接。发送和结果库始终保留文字。 */
 .command-bar[data-fit~="1"] :is(.mode-switch .priority-p1, .workspace-actions .priority-p1, kbd, .scope-label-full, .workspace-actions .retry-label, .new-session-label) { display: none; }
 .command-bar[data-fit~="1"] .mode-switch button { padding: 0 5px; }
 .command-bar[data-fit~="1"] .scope-label-compact { display: inline; }
@@ -154,10 +208,9 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar[data-fit~="1"] .workspace-entry .scope-split { flex: 1; min-width: calc(var(--target-size) * 2 + 2px); }
 .command-bar[data-fit~="1"] > .workspace-entry { min-width: calc(var(--target-size) * 3 + 5px); }
 .command-bar[data-fit~="1"] .workspace-entry .health-trigger { flex: 0 0 var(--target-size); padding: 0; }
-.command-bar[data-fit~="1"] .page-tabs button { flex-direction: column; gap: 0; padding: 0 4px; line-height: 12px; }
+.command-bar[data-fit~="1"] .page-tabs button { flex-direction: column; gap: 0; padding: 0 4px; line-height: 11px; }
 .command-bar[data-fit~="1"] .page-tab-badges { gap: 2px; }
-.command-bar[data-fit~="1"] .page-tab-badge { min-width: 10px; height: 12px; line-height: 12px; padding: 0 2px; }
-/* 图标化后每页只留一枚徽标：最严重的状态带数字，其余状态仍在 aria-label 与悬停说明里。 */
+.command-bar[data-fit~="1"] .page-tab-badge { min-width: 10px; height: 11px; line-height: 10px; padding: 0 2px; }
 .command-bar[data-fit~="1"] .page-tab-badge:not([data-primary]) { display: none; }
 .command-bar[data-fit~="2"] .tier-switch [data-current-tier] { display: none; }
 .command-bar[data-fit~="2"] .primary-action { min-width: max-content; padding: 0 8px; gap: 4px; }
@@ -167,7 +220,7 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar.has-pages[data-fit~="3"] { grid-template-columns: auto auto auto minmax(0, 1fr) auto auto auto auto auto; }
 .command-bar[data-fit~="3"] :is(.mode-switch, .prompt-composer) { margin-left: 0; }
 .command-bar[data-fit~="3"] .workspace-actions { margin-left: 0; padding-left: var(--space-1); }
-.command-bar[data-fit~="3"] .page-tabs button { min-width: 36px; }
+.command-bar[data-fit~="3"] .page-tabs button { min-width: 34px; }
 .command-bar[data-fit~="3"] :is(.question-trigger, .tier-switch > button, .scope-label-compact, .uncertain-retry-trigger .review-label) { display: none; }
 .command-bar[data-fit~="3"] .scope-label-count { display: inline-flex; }
 .command-bar[data-fit~="3"] .tier-select { display: block; }
@@ -179,32 +232,28 @@ kbd { opacity: .7; font: 10px system-ui; }
 .command-bar[data-fit~="4"] :is(.health-trigger, .compare-trigger) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > button:not(.layout-toggle) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > .layout-toggle { display: inline-flex; }
-/* 最紧凑档将分组快捷入口交给工作台，图标保持当前密度的最小点击宽度。 */
 .command-bar[data-fit~="4"] .scope-menu { display: none; }
+.command-bar[data-fit~="4"] .scope-main { border-radius: 3px; }
 .command-bar[data-fit~="4"] .workspace-entry .scope-split { grid-template-columns: minmax(0, 1fr); min-width: calc(var(--target-size) + 2px); }
 .command-bar[data-fit~="4"] :is(.new-session-trigger, .question-trigger, .draft-trigger) { min-width: var(--target-size); }
-/* 站点状态收起后释放原按钮的保底宽度，留给常驻的结果库入口。 */
 .command-bar[data-fit~="4"] > .workspace-entry { min-width: calc(var(--target-size) + 2px); }
 .command-bar[data-fit~="4"] .scope-main { padding-inline: var(--space-1); }
 .command-bar[data-fit~="4"] .page-tabs button { min-width: var(--target-size); }
-/* 站点状态入口收起后，需关注的红点挪到工作台入口上（工作台内有「站点状态」页签）。 */
 .command-bar[data-fit~="4"] .workspace-entry:has(.health-trigger[data-health-attention]) .scope-main { position: relative; }
 .command-bar[data-fit~="4"] .workspace-entry:has(.health-trigger[data-health-attention]) .scope-main::after {
-  position: absolute; top: 3px; right: 3px; width: 6px; height: 6px;
-  border: 1px solid var(--panel); border-radius: 50%; background: var(--danger); content: "";
+  position: absolute; top: 2px; right: 2px; width: 6px; height: 6px;
+  border: 1px solid var(--plat-ink); border-radius: 0; background: var(--danger); content: "";
 }
 .scope-label-count { display: none; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; }
-.scope-label-count svg { width: 14px; height: 14px; flex: 0 0 auto; }
+.scope-label-count svg { width: 13px; height: 13px; flex: 0 0 auto; }
 .uncertain-retry-trigger .review-glyph { display: none; font-weight: 700; }
 .tier-select {
-  display: none; height: 100%; min-width: 0; padding: 0 4px; border: 0; border-radius: 5px;
-  color: inherit; background: var(--panel); box-shadow: var(--shadow-control), inset 0 0 0 1px var(--border); font-size: 12px;
+  display: none; height: var(--control-height); min-width: 0; font-size: 12px; font-weight: 700;
 }
 .tier-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-/* 高倍外壳缩放：保持 DOM / Tab 顺序，提问区独占中间一行。 */
 :root[data-toolbar-layout="stacked"] .command-bar {
-  display: flex; flex-wrap: wrap; align-content: start; align-items: center; gap: 4px;
+  display: flex; flex-wrap: wrap; align-content: start; align-items: center; gap: 4px; padding-block: 5px;
 }
 :root[data-toolbar-layout="stacked"] .command-bar > .prompt-composer {
   flex: 0 0 100%; margin-inline: 0;

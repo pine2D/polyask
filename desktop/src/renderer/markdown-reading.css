@@ -1,47 +1,89 @@
-.markdown-preview { font-size: var(--font-reading, 15px); line-height: 1.8; overflow-wrap: anywhere; }
-.markdown-preview p { margin: 12px 0; white-space: pre-wrap; }
-.markdown-preview h3 { margin: 24px 0 10px; font-size: 20px; line-height: 1.5; }
-.markdown-preview h4 { margin: 20px 0 8px; font-size: 17px; line-height: 1.6; }
-.markdown-preview h5, .markdown-preview h6 { margin: 16px 0 6px; font-size: 16px; }
+/* High-density retro technical document typography, hard-edged tables & classic blockquotes. */
+.markdown-preview { font-size: var(--font-reading, 13.5px); line-height: 1.56; overflow-wrap: anywhere; }
+.markdown-preview p { margin: 8px 0; white-space: pre-wrap; }
+.markdown-preview h3 { margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--plat-g300); font-size: 14.5px; font-weight: 700; line-height: 1.4; }
+.markdown-preview h4 { margin: 12px 0 5px; font-size: 13.5px; font-weight: 700; line-height: 1.45; }
+.markdown-preview h5, .markdown-preview h6 { margin: 10px 0 4px; font-size: 13px; line-height: 1.45; }
 .markdown-preview h5 { font-weight: 700; }
-.markdown-preview h6 { font-weight: 500; }
-.markdown-preview ul, .markdown-preview ol { padding-left: 1.6em; margin: 12px 0; }
-.markdown-preview li { margin: 6px 0; }
-.markdown-preview li > ul, .markdown-preview li > ol { margin: 4px 0; }
-.markdown-preview blockquote { margin: 16px 0; padding: 4px 0 4px 16px; border-left: 3px solid var(--border); }
-.markdown-preview blockquote p { margin: 4px 0; }
-.markdown-preview pre { max-width: 100%; overflow-x: auto; padding: 16px; margin: 16px 0; line-height: 1.7; font-size: 13px; white-space: pre; color: var(--text); background: color-mix(in srgb, var(--panel) 90%, var(--muted)); border-radius: 6px; }
-.markdown-preview code { font-family: ui-monospace, "Cascadia Code", monospace; }
-.markdown-preview :not(pre) > code { white-space: pre-wrap; }
+.markdown-preview h6 { font-weight: 600; color: var(--muted); }
+.markdown-preview ul, .markdown-preview ol { padding-left: 1.5em; margin: 8px 0; }
+.markdown-preview li { margin: 3px 0; }
+.markdown-preview li > ul, .markdown-preview li > ol { margin: 2px 0; }
+.markdown-preview blockquote {
+  margin: 10px 0; padding: 6px 10px;
+  border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  background: var(--plat-g200);
+}
+.markdown-preview blockquote p { margin: 3px 0; }
+.markdown-preview pre {
+  max-width: 100%; overflow-x: auto; padding: 10px 12px; margin: 10px 0;
+  line-height: 1.5; font-size: 12px; white-space: pre;
+  color: var(--text); background: var(--plat-g200); border: 1px solid var(--plat-ink); border-radius: 0;
+  box-shadow: var(--plat-sunken-bevel);
+}
+.markdown-preview code { font-family: var(--font-mono); }
+.markdown-preview :not(pre) > code {
+  white-space: pre-wrap; padding: 1px 4px; border: 1px solid var(--border); border-radius: 0;
+  background: var(--plat-g200); font-size: .9em;
+}
 .markdown-preview a + a, .markdown-preview a + .markdown-link-group, .markdown-preview .markdown-link-group + a, .markdown-preview .markdown-link-group + .markdown-link-group { margin-left: .35em; }
 .markdown-link-group { position: relative; display: inline; }
-.markdown-preview .markdown-link-details { display: inline-flex; align-items: center; vertical-align: middle; min-height: 24px; height: 24px; min-width: 28px; padding: 2px 4px; margin-left: 3px; border: 0; color: var(--muted); background: transparent; }
-.markdown-link-details svg { width: 14px; height: 14px; }
-.markdown-preview .markdown-link-details:hover { background: var(--accent-soft); color: var(--accent); }
-.markdown-link-popover { display: inline-flex; vertical-align: top; flex-direction: column; gap: 8px; width: min(360px, 100%); margin: 6px 0; padding: 12px; color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 16px #0002; }
-.markdown-link-popover > code { max-height: 160px; overflow: auto; overflow-wrap: anywhere; }
-.markdown-link-popover > button { display: inline-flex; align-items: center; gap: 6px; align-self: flex-start; }
-.mermaid-preview { margin: 16px 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-.mermaid-preview figcaption { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: color-mix(in srgb, var(--panel) 90%, var(--muted)); font-size: 12px; }
-.mermaid-label { font-family: var(--font-mono, monospace); color: var(--muted); }
-.mermaid-tabs, .mermaid-actions { display: flex; gap: 4px; }
+.markdown-preview .markdown-link-details {
+  display: inline-flex; align-items: center; vertical-align: middle; min-height: 18px; height: 18px; min-width: 22px;
+  padding: 0 3px; margin-left: 3px; border: 1px solid var(--plat-ink); border-radius: 2px;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
+}
+.markdown-link-details svg { width: 11px; height: 11px; }
+.markdown-link-popover {
+  display: inline-flex; vertical-align: top; flex-direction: column; gap: 6px; width: min(360px, 100%);
+  margin: 4px 0; padding: 8px 10px; color: var(--text); background: var(--plat-tip-bg);
+  border: 1px solid var(--plat-ink); border-radius: 0; box-shadow: var(--plat-window-shadow);
+}
+.markdown-link-popover > code { max-height: 140px; overflow: auto; overflow-wrap: anywhere; }
+.markdown-link-popover > button { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start; border: 1px solid var(--plat-ink); border-radius: 3px; padding: 2px 8px; background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700; }
+
+/* Platinum Mermaid diagram windowlet. */
+.mermaid-preview { margin: 10px 0; border: 1px solid var(--plat-ink); border-radius: 0; overflow: hidden; box-shadow: 1px 1px 0 var(--plat-hi); }
+.mermaid-preview figcaption {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px; padding: 4px 8px;
+  background: var(--plat-g300); border-bottom: 1px solid var(--plat-ink); box-shadow: var(--plat-strip-bevel); font-size: 11px;
+}
+.mermaid-label { font-family: var(--font-mono); font-weight: 700; color: var(--text); }
+.mermaid-tabs, .mermaid-actions { display: flex; gap: 3px; }
 .mermaid-actions { margin-left: auto; }
-.markdown-preview .mermaid-preview button { min-height: 30px; border: 0; background: transparent; border-radius: 5px; padding: 4px 8px; color: var(--muted); }
-.markdown-preview .mermaid-actions button { display: grid; place-items: center; width: 32px; padding: 0; }
-.markdown-preview .mermaid-preview button[aria-pressed="true"], .markdown-preview .mermaid-preview button:hover:not(:disabled) { color: var(--accent); background: var(--accent-soft); }
-.markdown-preview .mermaid-preview button:disabled { opacity: .4; }
-.markdown-preview .mermaid-preview pre { margin: 0; border-radius: 0; background: transparent; }
-.mermaid-canvas { overflow: auto; max-height: 640px; padding: 20px; text-align: center; background: var(--panel); }
+.markdown-preview .mermaid-preview button {
+  min-height: 20px; height: 20px; border: 1px solid var(--plat-ink); border-radius: 2px; padding: 0 7px;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-size: 11px; font-weight: 700;
+}
+.markdown-preview .mermaid-actions button { display: grid; place-items: center; width: 22px; padding: 0; }
+.markdown-preview .mermaid-preview button[aria-pressed="true"], .markdown-preview .mermaid-preview button:active:not(:disabled) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
+.markdown-preview .mermaid-preview button:disabled { opacity: .45; box-shadow: none; }
+.markdown-preview .mermaid-preview pre { margin: 0; border: 0; background: var(--plat-g200); }
+.mermaid-canvas { overflow: auto; max-height: 600px; padding: 14px; text-align: center; background: var(--panel); }
 .mermaid-canvas img { display: block; height: auto; margin: 0 auto; }
-.markdown-preview .mermaid-notice { margin: 0; padding: 12px 16px; color: var(--muted); font-size: 12px; }
+.markdown-preview .mermaid-notice { margin: 0; padding: 8px 12px; color: var(--muted); font-size: 11.5px; }
 
 .markdown-preview > :first-child { margin-top: 0; }
 .markdown-preview > :last-child { margin-bottom: 0; }
-.markdown-preview a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-.markdown-preview :not(pre) > code { padding: 2px 5px; border-radius: 4px; background: color-mix(in srgb, var(--panel) 90%, var(--muted)); font-size: .88em; }
-.markdown-table { max-width: 100%; overflow-x: auto; margin: 16px 0; overscroll-behavior: contain; border: 1px solid var(--border); border-radius: 6px; }
-.markdown-table table { width: 100%; border-collapse: collapse; font-size: .9em; }
-.markdown-table th, .markdown-table td { min-width: 100px; padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
-.markdown-table th { font-weight: 600; background: color-mix(in srgb, var(--panel) 94%, var(--muted)); }
+.markdown-preview a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
+/* Hard-edged classic Platinum data table with beveled header cells. */
+.markdown-table {
+  max-width: 100%; overflow-x: auto; margin: 10px 0; overscroll-behavior: contain;
+  border: 1px solid var(--plat-ink); border-radius: 0; background: var(--panel);
+}
+.markdown-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; line-height: 1.48; }
+.markdown-table th, .markdown-table td {
+  min-width: 88px; padding: 5px 8px;
+  border-bottom: 1px solid var(--border); border-right: 1px solid var(--plat-g200); vertical-align: top;
+}
+.markdown-table th:last-child, .markdown-table td:last-child { border-right: 0; }
+.markdown-table th {
+  font-weight: 700; text-align: left; color: var(--text);
+  background: var(--plat-g300); border-bottom: 1px solid var(--plat-ink); border-right-color: var(--border);
+  box-shadow: inset 1px 1px 0 var(--plat-hi);
+}
 .markdown-table tr:last-child td { border-bottom: 0; }
-.markdown-preview hr { margin: 24px 0; border: 0; border-top: 1px solid var(--border); }
+.markdown-preview hr { margin: 14px 0; border: 0; border-top: 1px solid var(--plat-ink); box-shadow: 0 1px 0 var(--plat-hi); }

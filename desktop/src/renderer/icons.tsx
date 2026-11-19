@@ -10,13 +10,14 @@ function Icon({ children }: IconProps): React.JSX.Element {
       aria-hidden="true"
       focusable="false"
       viewBox="0 0 24 24"
-      width="16"
-      height="16"
+      width="14"
+      height="14"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeWidth="1.9"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      shapeRendering="geometricPrecision"
     >
       {children}
     </svg>
@@ -32,7 +33,7 @@ export function FocusIcon(): React.JSX.Element {
 }
 
 export function DuelIcon(): React.JSX.Element {
-  return <Icon><rect x="3.5" y="4" width="7.2" height="16" rx="1.5" /><rect x="13.3" y="4" width="7.2" height="16" rx="1.5" /></Icon>;
+  return <Icon><rect x="3.5" y="4" width="7.2" height="16" /><rect x="13.3" y="4" width="7.2" height="16" /></Icon>;
 }
 
 export function SiteSettingIcon(): React.JSX.Element {

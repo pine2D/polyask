@@ -1,35 +1,50 @@
+/* Mac OS 9 Platinum bottom status bar (modeled on livid/exe-stats .statusbar). */
 .feedback-bar {
   position: fixed; inset: auto 0 0; z-index: 5; display: flex; align-items: center;
-  gap: 8px; padding: 0 8px; border-top: 1px solid var(--border-subtle); background: var(--panel);
-  color: inherit; font-size: 12px;
+  gap: 8px; padding: 0 8px; border-top: 1px solid var(--plat-ink);
+  background: var(--plat-g300); box-shadow: var(--plat-strip-bevel);
+  color: var(--text); font-size: 11px; line-height: 1.3;
 }
 .feedback-bar > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.feedback-bar > button { flex-shrink: 0; min-height: 24px; border: 0; border-radius: 999px; color: var(--muted); background: transparent; }
-.feedback-bar > button:hover { color: var(--accent); background: var(--accent-soft); }
-.feedback-bar .feedback-next-step {
-  padding: 1px 10px; border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
-  color: var(--accent); background: var(--accent-soft); font-weight: 600;
+.feedback-bar > button {
+  flex-shrink: 0; min-height: 19px; height: 19px; padding: 0 8px;
+  border: 1px solid var(--plat-ink); border-radius: 3px;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
+  font-size: 11px; font-weight: 700; transition: none;
 }
-.site-retry { flex-shrink: 0; min-height: 24px; padding: 0 5px; border: 0; border-radius: 4px; color: var(--accent); background: var(--accent-soft); font-size: 12px; }
+.feedback-bar > button:active:not(:disabled) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
+.feedback-bar .feedback-next-step {
+  color: var(--accent); background: var(--accent-soft);
+}
+.site-retry {
+  flex-shrink: 0; min-height: 18px; padding: 0 5px;
+  border: 1px solid var(--plat-ink); border-radius: 2px;
+  color: var(--accent); background: var(--accent-soft); font-size: 11px; font-weight: 700;
+}
 .site-retry:disabled { opacity: .5; }
-.surface-stage, .command-surface { height: calc(100% - var(--feedback-height, 32px)); }
-.workspace-drawer { bottom: var(--feedback-height, 32px); }
+.surface-stage, .command-surface { height: calc(100% - var(--feedback-height, 26px)); }
+.workspace-drawer { bottom: var(--feedback-height, 26px); }
 
-.comparison-filter { display: flex; align-items: center; gap: 6px; min-height: 28px; font-size: 12px; }
+.comparison-filter { display: flex; align-items: center; gap: 6px; min-height: 24px; font-size: 12px; }
 .compare-trigger { display: flex; align-items: center; gap: 4px; }
 
-.feedback-bar .feedback-hint { color: var(--muted); white-space: normal; line-height: 14px; max-height: 28px; }
+.feedback-bar .feedback-hint {
+  padding: 1px 6px; border: 1px solid var(--plat-ink); background: var(--plat-tip-bg);
+  color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 14px; max-height: 18px;
+}
 .feedback-bar[data-has-notice="true"] .feedback-hint { flex: 0 1 45%; }
 .feedback-bar > span[hidden] { display: none; }
 .preview-badge {
-  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px;
-  height: 20px; padding: 0 8px; border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--warning) 36%, var(--border));
-  background: var(--warning-soft); color: var(--warning-ink);
-  font-size: 11px; font-weight: 600; letter-spacing: 0.01em; line-height: 1; white-space: nowrap;
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px;
+  height: 18px; padding: 0 6px; border-radius: 0;
+  border: 1px solid var(--plat-ink);
+  background: var(--plat-tip-bg); color: var(--warning-ink);
+  font-size: 10.5px; font-weight: 700; line-height: 1; white-space: nowrap;
 }
 .preview-badge > i {
-  width: 6px; height: 6px; border-radius: 50%; background: var(--warning); flex: 0 0 auto;
+  width: 6px; height: 6px; border: 1px solid var(--plat-ink); border-radius: 0; background: var(--warning); flex: 0 0 auto;
 }
 @media (forced-colors: active) {
   .preview-badge { border-color: ButtonText; color: ButtonText; background: Canvas; }

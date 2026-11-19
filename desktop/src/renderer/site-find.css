@@ -1,56 +1,53 @@
+/* Platinum cross-site find strip (modeled on Mac OS 9 Sherlock / exe-stats find strip). */
 .site-find {
-  position: fixed; top: var(--shell-height); left: 0; right: 0; z-index: 5;
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 8px; color: var(--text); background: var(--canvas); border-bottom: 1px solid var(--border);
+  position: fixed; top: calc(var(--window-top, 0px) + var(--shell-height)); left: 0; right: 0; z-index: 5;
+  height: 48px; display: flex; align-items: center; gap: 4px;
+  padding: 4px 8px; color: var(--text); background: var(--plat-g300);
+  border-bottom: 1px solid var(--plat-ink); box-shadow: var(--plat-strip-bevel);
 }
-.app-shell.is-composer-expanded .site-find { top: var(--composer-expanded-height); }
+.app-shell.is-composer-expanded .site-find { top: calc(var(--window-top, 0px) + var(--composer-expanded-height)); }
 .site-find input {
-  flex: 0 1 250px; width: 250px; min-width: 60px; max-width: 320px; height: 32px; padding: 0 10px;
-  border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); background: var(--field);
-  box-shadow: var(--field-shadow);
+  flex: 0 1 240px; width: 240px; min-width: 60px; max-width: 320px; height: 26px; padding: 0 8px;
 }
-.site-find input:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; box-shadow: var(--field-focus-shadow); }
 .site-find-position {
   flex: 0 1 auto; min-width: 0; max-width: 120px; overflow: hidden; text-overflow: ellipsis;
-  white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 12px;
+  white-space: nowrap; color: var(--muted); font-variant-numeric: tabular-nums; font-size: 11px; font-weight: 700;
 }
 .site-find button {
   display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
-  height: 32px; width: 32px; padding: 0; border: 0;
-  border-radius: var(--radius-control); color: var(--text); background: transparent;
+  height: 26px; width: 26px; padding: 0; border: 1px solid var(--plat-ink);
+  border-radius: 3px; color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
+  font-weight: 700;
 }
 .site-find-forward svg { transform: rotate(180deg); }
 .site-find select {
-  width: auto; max-width: 180px; height: 32px; flex-shrink: 0; min-width: 0; padding: 0 6px;
-  border: 1px solid var(--border); border-radius: var(--radius-control); color: var(--text); background: var(--panel); font-size: 12px;
+  width: auto; max-width: 180px; height: 26px; flex-shrink: 0; min-width: 0; font-size: 11.5px; font-weight: 700;
 }
 .site-find-sites { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1 1 0; overflow: hidden; }
-.site-find-sites button { width: auto; gap: 6px; padding: 0 8px; font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-.site-find-sites button[aria-pressed="true"] { color: var(--accent); background: var(--selection-soft); }
-.site-find button:disabled { color: var(--muted); opacity: .65; }
-.site-find-limit { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; }
-.site-find-info { display: grid; place-items: center; flex: 0 0 24px; height: 32px; color: var(--muted); border-radius: var(--radius-control); }
+.site-find-sites button { width: auto; gap: 5px; padding: 0 8px; font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.site-find-sites button[aria-pressed="true"], .site-find button:active:not(:disabled) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
+.site-find button:disabled { color: var(--muted); opacity: .5; box-shadow: none; }
+.site-find-limit { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 11px; }
+.site-find-info { display: grid; place-items: center; flex: 0 0 22px; height: 26px; color: var(--muted); }
 .site-find[data-fit~="sites"] .site-find-sites { display: none; }
 .site-find[data-fit~="sites"] .site-find-position { margin-inline-start: auto; }
 .site-find[data-fit~="extras"] :is([name="site-find-refresh"], .site-find-info) { display: none; }
 .site-find button:focus-visible, .site-find select:focus-visible, .site-find-info:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-@media (hover: hover) and (pointer: fine) {
-  .site-find button:not(:disabled):hover { color: var(--accent); background: var(--hover-soft); }
-}
 @media (max-width: 480px) {
   .site-find { gap: 2px; }
   .site-find-position { max-width: 72px; }
-  .site-find select { max-width: 24vw; padding-inline: 2px; }
+  .site-find select { max-width: 24vw; }
   .site-find input { padding-inline: 6px; }
 }
 @media (forced-colors: active) {
   .site-find { border-color: CanvasText; }
   .site-find-sites button[aria-pressed="true"] { outline: 1px solid Highlight; outline-offset: -1px; }
 }
-/* 原生视图右缘预留区。位置为相对完整滚动内容的比例，与站点缩放无关。 */
 .site-find-markers { position: fixed; inset: 0; pointer-events: none; }
-.site-find-marker-frame { position: absolute; padding-top: var(--tile-header-height); padding-bottom: 1px; }
+.site-find-marker-frame { position: absolute; padding-top: var(--tile-header-height); padding-bottom: 3px; }
 .site-find-marker-track { position: relative; height: 100%; overflow: hidden; }
-.site-find-marker-track i { position: absolute; left: 0; width: 100%; height: 2px; background: #df8a10; transform: translateY(-1px); }
+.site-find-marker-track i { position: absolute; left: 0; width: 100%; height: 2px; background: #ff6600; transform: translateY(-1px); }
 @media (prefers-color-scheme: dark) { .site-find-marker-track i { background: #ffb84d; } }
 @media (forced-colors: active) { .site-find-marker-track i { background: Highlight; forced-color-adjust: none; } }

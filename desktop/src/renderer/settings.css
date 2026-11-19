@@ -5,8 +5,8 @@
   --settings-control-border: color-mix(in srgb, var(--border) 45%, var(--panel));
   --settings-control-fill: color-mix(in srgb, var(--muted) 7%, var(--panel));
   --settings-control-hover: color-mix(in srgb, var(--muted) 12%, var(--panel));
-  position: fixed; z-index: 10; inset: 0; display: grid;
-  grid-template-rows: 52px minmax(0, 1fr) auto; background: var(--canvas);
+  position: fixed; z-index: 10; inset: var(--window-top, 0px) 0 var(--feedback-height, 26px) 0; display: grid;
+  grid-template-rows: 44px minmax(0, 1fr) auto; background: var(--canvas);
 }
 .settings-toolbar {
   padding: 8px 20px; display: flex; align-items: center; justify-content: space-between;

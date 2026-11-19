@@ -1,6 +1,6 @@
-.question-history { position: fixed; z-index: 5; right: 0; top: var(--shell-height); bottom: var(--feedback-height, 32px); display: flex; flex-direction: column; color: var(--text); background: var(--panel); border-left: 1px solid var(--border); box-shadow: -4px 0 18px #1118270a; }
-.is-composer-expanded .question-history { top: var(--composer-expanded-height); }
-.question-history.is-full { top: 0; left: 0; width: auto; border: 0; z-index: 10; }
+.question-history { position: fixed; z-index: 5; right: 0; top: calc(var(--window-top, 0px) + var(--shell-height)); bottom: var(--feedback-height, 26px); display: flex; flex-direction: column; color: var(--text); background: var(--panel); border-left: 1px solid var(--plat-ink); box-shadow: -2px 0 0 var(--plat-shadow); }
+.is-composer-expanded .question-history { top: calc(var(--window-top, 0px) + var(--composer-expanded-height)); }
+.question-history.is-full { top: var(--window-top, 0px); left: 0; width: auto; border: 0; z-index: 10; }
 .question-header { display: flex; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--border); }
 .question-header h1 { margin: 0 auto 0 0; font-size: 15px; font-weight: 650; }
 .question-history button, .question-history summary, .question-history select { min-height: var(--target-size, 28px); cursor: pointer; }

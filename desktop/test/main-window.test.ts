@@ -148,6 +148,7 @@ test("createMainWindow hardens webPreferences, skips Wayland coordinates, and pe
   assert.equal(winRecord.options.y, undefined, "Wayland session skips y restore");
   assert.equal(winRecord.options.width, 1440);
   assert.equal(winRecord.options.height, 900);
+  assert.equal(winRecord.options.frame, false, "Platinum custom titlebar uses frameless window");
   assert.match(String(winRecord.options.title), /试玩/);
   assert.deepEqual(winRecord.autoHide, [true]);
   assert.deepEqual(winRecord.menuVisible, [false]);

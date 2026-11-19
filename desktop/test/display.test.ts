@@ -57,16 +57,16 @@ test("display preferences accept only supported density and scale", () => {
 
 test("density metrics reserve only the approved shell and tile chrome", () => {
   assert.deepEqual(metricsForDensity("compact"), {
-    shellHeight: 52,
+    shellHeight: 44,
     tileHeaderHeight: 24,
-    edgeGap: 4,
-    viewGap: 4
+    edgeGap: 6,
+    viewGap: 8
   });
   assert.deepEqual(metricsForDensity("comfortable"), {
-    shellHeight: 64,
-    tileHeaderHeight: 32,
+    shellHeight: 54,
+    tileHeaderHeight: 30,
     edgeGap: 8,
-    viewGap: 8
+    viewGap: 10
   });
 });
 
@@ -78,15 +78,15 @@ test("fit scale keeps only a focused primary at one hundred percent", () => {
 });
 
 test("composer expansion reserves only the visible toolbar in every density", () => {
-  assert.equal(shellHeightForComposer("compact", false), 52);
-  assert.equal(shellHeightForComposer("compact", true), 120);
-  assert.equal(shellHeightForComposer("comfortable", false), 64);
-  assert.equal(shellHeightForComposer("comfortable", true), 144);
+  assert.equal(shellHeightForComposer("compact", false), 44);
+  assert.equal(shellHeightForComposer("compact", true), 112);
+  assert.equal(shellHeightForComposer("comfortable", false), 54);
+  assert.equal(shellHeightForComposer("comfortable", true), 132);
 });
 
 test('narrow logical windows reserve three toolbar rows without changing inline density', () => {
   assert.deepEqual([0, 480, 959, 960].map(toolbarLayoutForWidth), ['inline', 'stacked', 'stacked', 'inline']);
-  for (const [density, collapsed, expanded] of [['compact', 120, 200], ['comfortable', 144, 240]] as const) {
+  for (const [density, collapsed, expanded] of [['compact', 104, 176], ['comfortable', 128, 212]] as const) {
     assert.equal(shellHeightForComposer(density, false, 'stacked'), collapsed);
     assert.equal(shellHeightForComposer(density, true, 'stacked'), expanded);
   }

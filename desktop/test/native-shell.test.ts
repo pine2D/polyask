@@ -10,11 +10,11 @@ test('window background tracks theme and unsubscribes on close', () => {
   const theme = Object.assign(new EventEmitter(), { shouldUseDarkColors: true });
   const colors: string[] = [];
   const win = Object.assign(new EventEmitter(), { setBackgroundColor: (color: string) => colors.push(color) });
-  assert.equal(shellBackground(theme), '#17171c');
+  assert.equal(shellBackground(theme), '#18181c');
   bindShellTheme(win, theme);
   theme.shouldUseDarkColors = false;
   theme.emit('updated');
-  assert.deepEqual(colors, ['#17171c', '#f4f5f8']);
+  assert.deepEqual(colors, ['#18181c', '#bfbfbf']);
   win.emit('closed');
   assert.equal(theme.listenerCount('updated'), 0);
 });

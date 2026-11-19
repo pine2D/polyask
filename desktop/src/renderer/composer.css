@@ -1,30 +1,31 @@
+/* Platinum sunken prompt composer well (0ms instant expand/collapse). */
 .prompt-composer {
-  position: relative; margin-left: var(--space-1); height: var(--control-height);
-  overflow: hidden; border-radius: var(--radius-control); background: var(--field);
-  transition: height 140ms cubic-bezier(.2,.8,.2,1), background-color 120ms ease, box-shadow 120ms ease;
+  position: relative; margin-left: 2px; height: var(--control-height);
+  overflow: hidden; border-radius: 0; background: var(--field);
+  transition: none;
 }
 .prompt-composer[data-expanded="true"] {
-  height: calc(var(--composer-field-expanded-height) - var(--space-2));
-  transition-duration: 180ms, 120ms, 120ms;
+  height: calc(var(--composer-field-expanded-height) - 14px);
 }
-/* 文本区让出右侧展开按钮那一列：展开后的滚动条不再压在按钮下面。 */
 .command-bar .prompt-composer textarea {
-  display: block; margin-left: 0; width: calc(100% - var(--target-size) - 6px); padding-right: 6px;
-  border-color: transparent; border-radius: inherit; background: transparent;
+  display: block; margin-left: 0; width: calc(100% - var(--target-size) - 4px); padding-right: 4px;
+  border: 0; border-radius: 0; background: transparent;
 }
-/* 收起时恰好一行：上内边距把 20px 行高居中、下内边距归零（溢出裁切在内边距框，留白会露出半行第二行），也不出现滚动条。 */
 .command-bar .prompt-composer:not([data-expanded="true"]) textarea {
-  height: calc((var(--control-height) + 22px) / 2); padding-top: calc((var(--control-height) - 22px) / 2); padding-bottom: 0; overflow: hidden;
+  height: calc((var(--control-height) + 18px) / 2); padding-top: calc((var(--control-height) - 18px) / 2); padding-bottom: 0; overflow: hidden;
 }
 .command-bar .prompt-composer textarea:focus-visible { border-color: transparent; outline: none; box-shadow: none; }
-@media (prefers-reduced-motion: reduce) { .prompt-composer { transition: none; } }
 .prompt-composer [data-composer-toggle] {
-  position: absolute; right: 3px; top: 3px; width: var(--target-size); height: var(--target-size);
-  display: grid; place-items: center; border: 0; border-radius: 5px;
-  color: var(--muted); background: transparent;
+  position: absolute; right: 2px; top: 2px; width: calc(var(--control-height) - 6px); height: calc(var(--control-height) - 6px);
+  display: grid; place-items: center; border: 1px solid var(--plat-ink); border-radius: 2px;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
 }
-.prompt-composer [data-composer-toggle]:hover { color: inherit; background: var(--hover-soft); }
+.prompt-composer [data-composer-toggle]:hover { background: var(--plat-g200); }
+.prompt-composer [data-composer-toggle]:active { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .prompt-composer [data-composer-toggle]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .prompt-composer [data-composer-toggle][aria-expanded="true"] svg { transform: rotate(180deg); }
-.prompt-composer [data-composer-toggle] svg { transition: transform 140ms var(--ease-out); }
-.tier-switch [data-current-tier] { width: 38px; display: grid; place-items: center; font-size: 12px; white-space: nowrap; }
+.tier-switch [data-current-tier] {
+  padding: 0 6px; display: grid; place-items: center; font-size: 11px; font-weight: 700; white-space: nowrap;
+  border: 1px solid var(--plat-ink); border-radius: 3px 0 0 3px;
+  background: var(--plat-g200); color: var(--muted); box-shadow: inset 1px 1px 0 var(--plat-hi);
+}

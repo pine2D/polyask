@@ -1,7 +1,9 @@
 import type { LayoutMode } from "./contracts";
 
 export const MIN_SITE_COLUMN_WIDTH = 380;
-export const WORKSPACE_FEEDBACK_HEIGHT = 32;
+export const WINDOW_TITLEBAR_HEIGHT = 22;
+export const WORKSPACE_FEEDBACK_HEIGHT = 26;
+export const TILE_FRAME_INSET = 3;
 
 export type Density = "compact" | "comfortable";
 export type ToolbarLayout = 'inline' | 'stacked';
@@ -39,14 +41,13 @@ export function parseDisplayPreferences(value: unknown): DisplayPreferences | nu
 
 export function metricsForDensity(density: Density): DisplayMetrics {
   return density === "compact"
-    ? { shellHeight: 52, tileHeaderHeight: 24, edgeGap: 4, viewGap: 4 }
-    : { shellHeight: 64, tileHeaderHeight: 32, edgeGap: 8, viewGap: 8 };
+    ? { shellHeight: 44, tileHeaderHeight: 24, edgeGap: 6, viewGap: 8 }
+    : { shellHeight: 54, tileHeaderHeight: 30, edgeGap: 8, viewGap: 10 };
 }
 
 export function shellHeightForComposer(density: Density, expanded: boolean, layout: ToolbarLayout = 'inline'): number {
-  if (layout === 'stacked') return density === 'compact' ? expanded ? 200 : 120 : expanded ? 240 : 144;
-  const composer = expanded ? density === "compact" ? 120 : 144 : metricsForDensity(density).shellHeight;
-  return composer;
+  if (layout === 'stacked') return density === 'compact' ? expanded ? 176 : 104 : expanded ? 212 : 128;
+  return expanded ? density === "compact" ? 112 : 132 : metricsForDensity(density).shellHeight;
 }
 
 export function zoomForSite(

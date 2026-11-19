@@ -1,90 +1,128 @@
+/* Mac OS 9 Platinum independent site windows on desk: 1px black frame + 2px hard shadow + focused stripes. */
 .tile-layer { position: fixed; inset: 0; pointer-events: none; }
 .tile-frame {
-  position: absolute; pointer-events: none; overflow: hidden;
-  border: 1px solid var(--border-subtle); border-radius: var(--radius-toolbar) var(--radius-toolbar) 2px 2px; background: var(--panel);
-  box-shadow: 0 1px 2px rgb(17 24 39 / .04);
+  container: tile-frame / inline-size;
+  position: absolute; pointer-events: none; overflow: visible;
+  border: 1px solid var(--plat-ink); border-radius: 0; background: var(--plat-g400);
+  box-shadow: var(--plat-window-bevel), var(--plat-window-shadow);
 }
 .tile-header {
-  position: relative; height: calc(var(--tile-header-height) - 1px); padding: 0 5px;
-  display: flex; align-items: center; gap: 5px; pointer-events: auto;
-  box-shadow: inset 0 -1px 0 var(--border-subtle);
+  position: relative; height: calc(var(--tile-header-height) - 1px); padding: 0 4px;
+  display: flex; align-items: center; gap: 4px; pointer-events: auto; overflow: hidden;
+  background: var(--plat-g300); color: var(--muted);
+  border-bottom: 1px solid var(--plat-ink);
+  box-shadow: inset 0 1px 0 var(--plat-hi);
+}
+.tile-frame[data-focused="true"] .tile-header {
+  background: var(--plat-g400);
+  color: var(--plat-ink);
+}
+.tile-well {
+  position: absolute;
+  top: calc(var(--tile-header-height) - 1px);
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  pointer-events: none;
+  border: 1px solid var(--plat-ink);
+  box-shadow: -1px -1px 0 var(--plat-mid-dark), 1px 1px 0 var(--plat-hi);
 }
 .site-select {
-  position: relative; display: inline-flex; align-items: center; gap: 5px;
-  min-width: 0; max-width: 44%; height: var(--target-size); padding: 0 6px;
-  border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer;
-  color: var(--muted); flex-shrink: 0; isolation: isolate;
+  position: relative; display: inline-flex; align-items: center; gap: 4px;
+  min-width: 0; max-width: 44%; height: calc(var(--tile-header-height) - 4px); padding: 0 4px;
+  border-radius: 0; font-size: 12px; font-weight: 700; cursor: pointer;
+  color: inherit; flex-shrink: 0; background: inherit;
 }
-.site-select::before { content: ""; position: absolute; inset: 3px 0; z-index: -1; border-radius: 5px; }
-.site-select[data-selected="true"] { color: inherit; }
-.site-select[data-selected="true"]::before { background: var(--selection-soft); }
+.site-select[data-selected="false"] { opacity: 0.72; }
 .site-select .selection-mark { width: 12px; height: 12px; }
 .site-select .site-glyph { width: 13px; height: 13px; flex: 0 0 13px; }
 .site-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .site-select:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+/* Horizontal 2px Platinum stripes appear ONLY on the currently focused site window. */
+.tile-stripe {
+  flex: 1 1 8px;
+  height: 12px;
+  min-width: 6px;
+  position: relative;
+  visibility: hidden;
+  cursor: default;
+}
+.tile-frame[data-focused="true"] .tile-stripe {
+  visibility: visible;
+  background-color: var(--plat-g300);
+  background-image: var(--plat-stripe-pattern);
+  background-size: 100% 2px;
+  background-repeat: repeat;
+}
+.tile-frame[data-focused="true"] .tile-stripe::before,
+.tile-frame[data-focused="true"] .tile-stripe::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 1px;
+}
+.tile-frame[data-focused="true"] .tile-stripe::before { left: 0; background: var(--plat-hi); }
+.tile-frame[data-focused="true"] .tile-stripe::after { right: 0; background: var(--plat-mid-dark); }
+
 .site-model-badge {
-  min-width: 0; max-width: 112px; flex: 0 1 auto; padding: 1px 6px;
-  overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 999px;
-  color: var(--muted); background: color-mix(in srgb, var(--panel-muted) 64%, var(--panel));
-  font-size: 11px; line-height: 15px; font-variant-numeric: tabular-nums;
+  min-width: 0; max-width: 116px; flex: 0 1 auto; padding: 0 5px;
+  overflow: hidden; border: 1px solid var(--plat-ink); border-radius: 0;
+  color: var(--text); background: var(--plat-g200);
+  font-size: 10.5px; line-height: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
   text-overflow: ellipsis; white-space: nowrap;
 }
 .site-model-badge[data-tier-mode="think"] {
-  color: var(--accent); border-color: color-mix(in srgb, var(--accent) 24%, var(--border-subtle)); background: var(--selection-soft);
+  color: var(--accent); background: var(--accent-soft);
 }
 .site-status-dot {
-  width: 6px; height: 6px; flex: 0 0 auto; margin-left: auto; border-radius: 50%; background: var(--muted);
+  width: 7px; height: 7px; flex: 0 0 auto; border: 1px solid var(--plat-ink); border-radius: 0; background: var(--muted);
 }
 .site-state {
-  min-width: 0; max-width: 164px; overflow: hidden; color: var(--muted); font-size: 12px;
-  text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0; max-width: 164px; overflow: hidden; color: var(--muted); font-size: 11px; font-weight: 600;
+  text-overflow: ellipsis; white-space: nowrap; padding: 0 3px; background: inherit;
 }
 .tile-header button {
-  width: var(--target-size); height: var(--target-size); padding: 0;
-  display: grid; place-items: center; flex-shrink: 0; border: 0; border-radius: 4px;
-  color: var(--muted); background: transparent;
-  transition: color 120ms ease, background-color 120ms ease;
+  width: 17px; height: 17px; min-width: 17px; min-height: 17px; padding: 0;
+  display: grid; place-items: center; flex-shrink: 0;
+  border: 1px solid var(--plat-ink); border-radius: 0;
+  color: var(--text); background: var(--plat-g300);
+  box-shadow: inset 1px 1px 0 var(--plat-hi), inset -1px -1px 0 var(--plat-dark-bevel);
+  transition: none;
 }
-.tile-actions { display: flex; flex: 0 0 auto; gap: 0; }
-.tile-header .site-retry { width: auto; padding: 0 7px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+:root[data-density="comfortable"] .tile-header button { width: 20px; height: 20px; min-width: 20px; min-height: 20px; }
+.tile-header button svg { width: 11px; height: 11px; }
+.tile-actions { display: flex; flex: 0 0 auto; gap: 3px; }
+.tile-header button:hover:not(:disabled) { background: var(--plat-g200); color: var(--accent); }
+.tile-header button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: inset 1px 1px 0 #333, inset -1px -1px 0 #888; }
+.tile-header button:disabled { opacity: .42; box-shadow: none; }
+.tile-header .site-retry { width: auto; padding: 0 6px; border-radius: 2px; font-size: 11px; font-weight: 700; }
+
 .phase-loading .site-status-dot, .phase-sending .site-status-dot,
 .phase-generating .site-status-dot { background: var(--accent); }
-.phase-generating { border-color: color-mix(in srgb, var(--accent) 34%, var(--border-subtle)); }
 .phase-submitted .site-status-dot, .phase-complete .site-status-dot { background: var(--success); }
 .phase-warning .site-status-dot { background: var(--warning); }
 .phase-warning .site-state { color: var(--warning-ink); }
 .phase-failed .site-status-dot, .phase-crashed .site-status-dot { background: var(--danger); }
 .phase-failed .site-state, .phase-crashed .site-state { color: var(--danger-ink); }
-.tile-frame[data-uncertain="true"] { border-color: color-mix(in srgb, var(--warning) 48%, var(--border-subtle)); }
-.tile-frame[data-uncertain="true"] .tile-header {
-  background: color-mix(in srgb, var(--warning-soft) 50%, var(--panel));
-  box-shadow: inset 0 -1px 0 color-mix(in srgb, var(--warning) 30%, var(--border-subtle));
-}
-.tile-frame[data-uncertain="true"] .site-status-dot {
-  background: var(--warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 20%, transparent);
-}
-.tile-frame[data-uncertain="true"] .site-state { color: var(--warning-ink); font-weight: 500; }
-.tile-frame[data-uncertain="true"] .site-retry {
-  color: var(--warning-ink); background: var(--warning-soft);
-  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent); font-weight: 600;
-}
+.tile-frame[data-uncertain="true"] .tile-header { background: var(--warning-soft); }
+.tile-frame[data-uncertain="true"] .site-status-dot { background: var(--warning); }
+.tile-frame[data-uncertain="true"] .site-state { color: var(--warning-ink); font-weight: 700; }
+.tile-frame[data-uncertain="true"] .site-retry { color: var(--warning-ink); background: var(--warning-soft); }
+
+/* Barber-pole / crisp Platinum loading bar along bottom of tile header. */
 .site-load-progress {
-  position: absolute; top: calc(var(--tile-header-height) - 3px); left: 0; right: 0;
-  height: 2px; overflow: hidden; background: var(--selection-soft);
+  position: absolute; top: calc(var(--tile-header-height) - 3px); left: 2px; right: 2px;
+  height: 3px; overflow: hidden; border-top: 1px solid var(--plat-ink); background: var(--plat-g200);
 }
 .site-load-progress > span {
-  display: block; width: 40%; height: 100%; background: var(--accent);
-  animation: site-load-travel 1.2s linear infinite;
+  display: block; width: 42%; height: 100%;
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 4px, var(--accent-soft) 4px 8px);
+  animation: site-load-travel 1s linear infinite;
 }
 @keyframes site-load-travel { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
-@media (hover: hover) and (pointer: fine) {
-  .site-select:hover { color: var(--accent); }
-  .site-select:hover::before, .tile-header button:not(:disabled):hover { background: var(--hover-soft); }
-  .tile-header button:not(:disabled):hover { color: var(--accent); }
-}
 @media (prefers-reduced-motion: reduce) {
-  .site-load-progress > span { animation: none; width: 100%; opacity: .65; }
+  .site-load-progress > span { animation: none; width: 100%; }
 }
-
-/* 标题条与按钮同高，向内绘制焦点以免被视图边界裁掉。 */
-.tile-header button:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+@container tile-frame (max-width: 240px) {
+  .site-model-badge, .site-state, .tile-stripe { display: none; }
+  .site-select { max-width: none; flex: 1 1 0; }
+}
+.tile-header button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }

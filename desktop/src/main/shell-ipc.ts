@@ -3,6 +3,7 @@ import { runBroadcast } from "./run-broadcast";
 import { registerTierIpc } from './tier-ipc';
 import { registerWorkbenchNavigationIpc } from './workbench-navigation-ipc';
 import { registerShellPanelIpc } from './shell-panel-ipc';
+import { registerWindowChromeIpc } from './window-chrome-ipc';
 import { registerQuestionAttachmentIpc } from './question-attachment-ipc';
 import type { PreferenceRuntime } from './preference-runtime';
 import { registerPreferencesDraftsIpc } from './preferences-drafts-ipc';
@@ -182,6 +183,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   const publishDrafts = () => { if (!window.isDestroyed()) window.webContents.send('polyask:drafts-changed'); };
   const disposeNavigation = registerWorkbenchNavigationIpc(ipcMain, manager, trustedShell, mode => options.preferences?.set('layoutMode', mode));
   const disposePanels = registerShellPanelIpc(ipcMain, window, manager, trustedShell);
+  const disposeWindowChrome = registerWindowChromeIpc(ipcMain, window, trustedShell);
   const disposeSiteFind = registerSiteFindIpc(ipcMain, manager.siteFind, trustedShell, window.webContents,
     state => showSiteFindMenu(window, state, SITES, options.copy));
   const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
@@ -329,6 +331,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     disposeTier();
     disposeTierPresets();
     disposePanels();
+    disposeWindowChrome();
     disposeSiteFind();
     disposePreferences();
     disposeSitePageIpc();

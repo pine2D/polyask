@@ -40,16 +40,14 @@ test("desktop focus, reduced motion and Windows high contrast remain explicit", 
   assert.match(css, /touch-action:\s*manipulation/);
 });
 
-test("desktop motion uses shared curves, explicit properties, and input-aware page feedback", () => {
-  const css = renderer("styles.css") + renderer("command-bar.css") + renderer("settings.css") + renderer("accessibility.css");
+test("desktop motion uses shared curves, 120ms drawer slide, and 0ms mechanical snap elsewhere", () => {
+  const css = renderer("styles.css") + renderer("command-bar.css") + renderer("panel-motion.css") + renderer("settings.css") + renderer("accessibility.css");
   assert.match(css, /--ease-out:\s*cubic-bezier\(0\.23,\s*1,\s*0\.32,\s*1\)/);
   assert.match(css, /--ease-in-out:\s*cubic-bezier\(0\.77,\s*0,\s*0\.175,\s*1\)/);
   assert.match(css, /--ease-drawer:\s*cubic-bezier\(0\.32,\s*0\.72,\s*0,\s*1\)/);
-  assert.match(css, /\.page-tab-indicator[\s\S]*transition:\s*transform 180ms var\(--ease-in-out\)/);
-  assert.match(css, /\.page-tabs\[data-input-method="keyboard"\] \.page-tab-indicator[\s\S]*transition-duration:\s*0ms/);
+  assert.match(css, /\.workspace-drawer\[data-state\][\s\S]*transition:\s*transform 120ms var\(--ease-drawer\)/);
+  assert.match(css, /\.page-tab-indicator\s*\{\s*display:\s*none;\s*\}/);
   assert.match(renderer("index.tsx"), /requestedPage\.current\?\.page === next\.page[\s\S]*request\?\.inputMethod \?\? "keyboard"/);
-  assert.match(css, /@media \(hover:\s*hover\) and \(pointer:\s*fine\)/);
-  assert.doesNotMatch(css, /button,\s*\.tile-actions\s*\{\s*transition:\s*none/);
 });
 
 test("main-menu page changes are announced while renderer-requested changes stay deduplicated", () => {
@@ -76,8 +74,7 @@ test("occasional full-workspace surfaces enter without animating native site bou
   assert.match(stages, /<WorkbenchMainStage/);
   assert.match(workbench, /className=\{`app-shell\$\{/);
   assert.doesNotMatch(app + stages + workbench, /app-shell surface-stage/);
-  assert.match(css, /\.surface-stage[\s\S]*transition:\s*opacity 160ms var\(--ease-out\)/);
-  assert.match(css, /@starting-style\s*{\s*\.surface-stage/);
+  assert.match(css, /\.surface-stage[\s\S]*transition:\s*none/);
   assert.doesNotMatch(css, /webcontents|web-contents/i);
 });
 
