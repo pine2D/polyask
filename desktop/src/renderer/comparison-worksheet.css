@@ -1,49 +1,59 @@
-.library .manual-comparison { margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--border); }
-.manual-comparison > summary { min-height: 36px; padding: 8px 0; cursor: pointer; font-size: 15px; font-weight: 600; }
-.manual-comparison > p { font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
-.manual-comparison-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 16px 0; }
+/* Platinum Manual Comparison Worksheet & Evidence Dock. */
+.library .manual-comparison { margin-top: 16px; padding: 10px; border: 1px solid var(--plat-ink); background: var(--plat-g200); }
+.manual-comparison > summary { min-height: 28px; padding: 4px 0; font-size: 13.5px; font-weight: 700; }
+.manual-comparison > p { font-size: 12.5px; line-height: 1.56; overflow-wrap: anywhere; color: var(--muted); }
+.manual-comparison-sources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 12px 0; }
 .manual-comparison-source { min-width: 0; }
-.manual-comparison-source h3 { margin: 0 0 12px; font-size: 14px; overflow-wrap: anywhere; }
-.manual-comparison label { display: flex; gap: 8px; align-items: center; font-size: 13px; line-height: 1.6; }
-.manual-comparison-source > label, .manual-comparison > label { display: grid; gap: 8px; margin: 16px 0; }
-.manual-comparison textarea { width: 100%; min-height: 80px; resize: vertical; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--field); color: inherit; font: inherit; font-size: 14px; line-height: 1.7; }
-.manual-category { margin: 16px 0; }
-.manual-category > summary { min-height: 32px; padding: 6px 0; cursor: pointer; font-size: 13px; font-weight: 600; }
-.manual-category > label { margin-top: 8px; }
-.manual-category textarea { margin-top: 8px; }
-.manual-category input { width: 16px; height: 16px; accent-color: var(--accent); }
-.manual-comparison > button { min-height: 36px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; color: var(--accent); background: var(--panel); }
-.manual-comparison > button:disabled { opacity: .55; }
-.manual-source-changed { color: var(--warning-ink); }
-.library [data-excerpt-preview] h3 { margin: 12px 0 6px; font-size: 13px; }
-.library [data-excerpt-preview] pre { max-height: 22vh; overflow: auto; padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
-.manual-invalid-quotes { padding-left: 20px; font-size: 13px; }
-.manual-invalid-quotes li { margin: 8px 0; overflow-wrap: anywhere; }
-.manual-comparison-source > button, .manual-invalid-quotes button { min-height: 32px; padding: 6px 10px; margin-left: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: inherit; }
-@container library-detail (max-width: 760px) {
-  .manual-comparison-sources { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.manual-comparison-source h3 { margin: 0 0 8px; font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+.manual-comparison label { display: flex; gap: 8px; align-items: center; font-size: 12.5px; line-height: 1.5; }
+.manual-comparison-source > label, .manual-comparison > label { display: grid; gap: 6px; margin: 12px 0; font-weight: 700; }
+.manual-comparison textarea { width: 100%; min-height: 76px; resize: vertical; padding: 8px; border: 1px solid var(--plat-ink); border-radius: 0; background: var(--field); color: inherit; font: inherit; font-size: 13px; line-height: 1.56; }
+.manual-category { margin: 10px 0; padding: 6px 8px; border: 1px solid var(--plat-ink); background: var(--panel); }
+.manual-category > summary { min-height: 26px; padding: 2px 0; font-size: 12.5px; font-weight: 700; }
+.manual-category > label { margin-top: 6px; }
+.manual-category textarea { margin-top: 6px; }
+.manual-comparison > button, .manual-comparison-source > button, .manual-invalid-quotes button, .manual-quote button, .evidence-overview button {
+  min-height: 28px; padding: 4px 10px;
+  border: 1px solid var(--plat-ink); border-radius: var(--radius-control);
+  background: var(--plat-g300); color: var(--text); box-shadow: var(--plat-btn-bevel);
+  font-weight: 700;
 }
-.manual-quote { margin: 14px 0; padding: 12px; border: 1px solid var(--border); border-radius: 6px; }
-.manual-quote label { display: grid; margin-bottom: 8px; }
-.manual-quote input { min-width: 0; width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--field); color: inherit; font: inherit; }
-.manual-quote button, .evidence-overview button { min-height: 32px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel); color: inherit; }
-.evidence-overview { margin: 20px 0; min-width: 0; overflow-wrap: anywhere; }
-.evidence-overview h3, .evidence-overview h4 { margin: 12px 0; }
-.evidence-overview-item { margin: 12px 0; padding: 12px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; }
-.evidence-overview blockquote { white-space: pre-wrap; overflow-wrap: anywhere; margin: 10px 0; padding-left: 12px; border-left: 3px solid var(--accent); line-height: 1.65; }
-[name=evidence-review-original] { width: 100%; min-height: 220px; resize: vertical; font: inherit; line-height: 1.65; }
+.manual-comparison > button:hover:not(:disabled), .manual-comparison-source > button:hover:not(:disabled),
+.manual-invalid-quotes button:hover:not(:disabled), .manual-quote button:hover:not(:disabled), .evidence-overview button:hover:not(:disabled) {
+  background: var(--plat-g200);
+}
+.manual-comparison > button:active:not(:disabled), .manual-comparison-source > button:active:not(:disabled),
+.manual-invalid-quotes button:active:not(:disabled), .manual-quote button:active:not(:disabled), .evidence-overview button:active:not(:disabled) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
+.manual-comparison > button { box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink); }
+.manual-comparison > button:disabled { opacity: .48; box-shadow: none; color: var(--muted); }
+.manual-comparison-source > button, .manual-invalid-quotes button { margin-left: 8px; }
+.manual-source-changed { color: var(--warning-ink); }
+.library [data-excerpt-preview] h3 { margin: 10px 0 5px; font-size: 12.5px; font-weight: 700; }
+.library [data-excerpt-preview] pre { max-height: 22vh; overflow: auto; padding: 8px; white-space: pre-wrap; overflow-wrap: anywhere; border: 1px solid var(--plat-ink); border-radius: 0; background: var(--panel); box-shadow: var(--plat-sunken-bevel); font: inherit; }
+.manual-invalid-quotes { padding-left: 20px; font-size: 12.5px; }
+.manual-invalid-quotes li { margin: 6px 0; overflow-wrap: anywhere; }
+@container library-detail (max-width: 760px) {
+  .manual-comparison-sources { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+}
+.manual-quote { margin: 10px 0; padding: 10px; border: 1px solid var(--plat-ink); border-radius: 0; background: var(--panel); }
+.manual-quote label { display: grid; margin-bottom: 6px; font-weight: 700; }
+.manual-quote input { min-width: 0; width: 100%; padding: 6px 8px; border: 1px solid var(--plat-ink); border-radius: 0; background: var(--field); color: inherit; font: inherit; }
+.evidence-overview { margin: 16px 0; min-width: 0; overflow-wrap: anywhere; }
+.evidence-overview h3, .evidence-overview h4 { margin: 10px 0; font-weight: 700; }
+.evidence-overview-item { margin: 10px 0; padding: 10px; background: var(--panel); border: 1px solid var(--plat-ink); border-radius: 0; }
+.evidence-overview blockquote { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; padding-left: 10px; border-left: 3px solid var(--plat-mid-dark); line-height: 1.56; }
+[name=evidence-review-original] { width: 100%; min-height: 200px; resize: vertical; font: inherit; line-height: 1.56; }
 @container library-detail (min-width: 1080px) {
   .library .archive-compare[data-evidence-dock="true"] > .manual-comparison {
-    padding: 12px 14px 16px; border: 1px solid var(--border); border-radius: var(--radius-surface, 10px);
-    background: var(--surface-sunken, var(--panel-muted)); box-shadow: var(--shadow-card);
+    padding: 12px 14px 14px; border: 1px solid var(--plat-ink); border-radius: 0;
+    background: var(--plat-g300); box-shadow: 1px 1px 0 var(--plat-hi);
   }
-  .library .archive-compare[data-evidence-dock="true"] .manual-comparison-sources { grid-template-columns: minmax(0, 1fr); gap: 14px; margin: 12px 0; }
-  .library .archive-compare[data-evidence-dock="true"] .manual-quote { margin: 10px 0; padding: 10px; background: var(--panel); }
-  .library .archive-compare[data-evidence-dock="true"] .manual-comparison textarea { min-height: 68px; font-size: 13px; }
+  .library .archive-compare[data-evidence-dock="true"] .manual-comparison-sources { grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 10px 0; }
+  .library .archive-compare[data-evidence-dock="true"] .manual-quote { margin: 8px 0; padding: 8px; background: var(--panel); }
+  .library .archive-compare[data-evidence-dock="true"] .manual-comparison textarea { min-height: 64px; font-size: 12.5px; }
   .library .archive-compare[data-evidence-dock="true"] .manual-comparison > button[data-decision-origin="manual"] {
-    width: 100%; font-weight: 600; color: var(--on-accent); background: var(--accent); border-color: var(--accent);
-  }
-  .library .archive-compare[data-evidence-dock="true"] .manual-comparison > button[data-decision-origin="manual"]:disabled {
-    color: var(--muted); background: var(--panel); border-color: var(--border);
+    width: 100%; font-weight: 700;
   }
 }

@@ -63,7 +63,8 @@
 }
 .site-choice:last-child { border-bottom: 0; }
 .site-choice:hover { background: var(--hover-soft); }
-.site-choice[data-selected="true"] { color: var(--text); background: var(--selection-soft); }
+.site-choice[data-selected="true"] { color: var(--text); background: transparent; }
+.site-choice[data-selected="true"]:hover { background: var(--hover-soft); }
 .site-choice[data-dragging="true"] { opacity: .5; }
 .site-choice[data-drop]::after { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: var(--accent); pointer-events: none; }
 .site-choice[data-drop="before"]::after { top: -1px; }

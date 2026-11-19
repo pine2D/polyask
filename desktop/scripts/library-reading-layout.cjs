@@ -42,7 +42,7 @@ async function reading(run) {
   const type = metrics.typography;
   if (!type.fullEnglish || !type.proseContained || type.bodyWidth > 820 || type.proseWidths.some(width => Math.abs(width - type.bodyWidth) > 1)) problems.push('prose exceeds its reading measure or loses content');
   if (Math.abs(type.tableWidth - type.bodyWidth) > 1 || Math.abs(type.codeWidth - type.bodyWidth) > 1) problems.push('technical blocks lose available width');
-  if (type.headingSizes.some(size => size !== '16px') || Number(type.headingWeights[0]) <= Number(type.headingWeights[1])) problems.push('deep headings lose their weight hierarchy');
+  if (type.headingSizes.some(size => size !== '13px') || Number(type.headingWeights[0]) <= Number(type.headingWeights[1])) problems.push('deep headings lose their weight hierarchy');
   if (metrics.firstMargin !== 0 || metrics.lastMargin !== 0) problems.push('body edges add paragraph spacing');
   if (metrics.leading < 12 || metrics.leading > 20) problems.push('source actions and body lose their reading rhythm');
   if (metrics.actionSpread > 1) problems.push('related source actions occupy separate rows despite available room');

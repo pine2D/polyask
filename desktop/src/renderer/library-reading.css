@@ -69,14 +69,14 @@
   border: 1px solid var(--plat-ink); border-radius: 2px; background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
   color: var(--text); font-size: 11px; font-weight: 700; text-decoration: none;
 }
-.library .archive-answer-nav a:hover { background: var(--plat-g200); }
-.library .archive-answer-nav a[data-best=true] { color: var(--accent); background: var(--accent-soft); }
+.library .archive-answer-nav a:hover:not([aria-current=location]) { background: var(--plat-g200); }
+.library .archive-answer-nav a[data-best=true]:not([aria-current=location]) { color: var(--text); background: var(--plat-g200); }
 .library .archive-answer-nav a[aria-current=location] {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
-  text-decoration: none;
+  text-decoration: underline; text-underline-offset: 2px;
 }
-.library .archive-answer-best { display: inline-flex; width: 11px; height: 11px; flex-shrink: 0; }
-.library .archive-answer-best svg { width: 11px; height: 11px; }
+.library .archive-answer-best { display: inline-flex; width: 12px; height: 12px; flex-shrink: 0; }
+.library .archive-answer-best svg { width: 12px; height: 12px; }
 @container library-detail (max-width: 1120px) {
   .library .archive-answer-nav .site-dot-mark,
   .library .archive-answer-nav .archive-answer-length { display: none; }
@@ -142,9 +142,9 @@
   font-size: 12.5px; font-weight: 700; z-index: 1; display: flex; align-items: center; gap: 5px;
 }
 .library .archive-compare-glyph { width: 13px; height: 13px; }
-.library .archive-compare-paragraph { padding: 7px 9px 7px 11px; margin: 5px 0; border: 1px solid var(--plat-g200); border-radius: 0; }
+.library .archive-compare-paragraph { padding: 7px 9px 7px 11px; margin: 5px 0; border: 0; border-radius: 0; }
 .library .archive-compare-column[data-defer-layout=true] .archive-compare-paragraph { content-visibility: auto; contain-intrinsic-size: auto 150px; }
-.library .archive-compare-paragraph.unique { background: var(--selection-soft); border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.library .archive-compare-paragraph.unique { background: var(--selection-soft); box-shadow: inset 3px 0 0 var(--accent); }
 .library .archive-compare-paragraph.shared { background: var(--plat-g200); color: var(--muted); padding: 6px 9px 6px 11px; box-shadow: inset 2px 0 0 var(--border-strong); }
 .library .comparison-options { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 0 4px; }
 .library .comparison-options .comparison-filter { margin: 0; }
@@ -156,13 +156,13 @@
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
 .library .archive-compare > [hidden] { display: none; }
-.library .archive-compare > .manual-comparison { max-height: var(--comparison-reading-height, 70vh); overflow: auto; overscroll-behavior: contain; margin-top: 10px; padding-top: 0; border-top: 0; }
+.library .archive-compare > .manual-comparison { max-height: var(--manual-comparison-height, var(--comparison-reading-height, 70vh)); overflow: auto; overscroll-behavior: contain; margin-top: 10px; padding-top: 0; border-top: 0; }
 @container library-detail (min-width: 1080px) {
   .library .archive-compare[data-evidence-dock="true"] { display: grid; grid-template-columns: minmax(0, 1fr) 304px; column-gap: 12px; align-items: start; }
   .library .archive-compare[data-evidence-dock="true"] > header,
   .library .archive-compare[data-evidence-dock="true"] > .comparison-options { grid-column: 1 / -1; }
   .library .archive-compare[data-evidence-dock="true"] > .archive-compare-grid { grid-column: 1; min-width: 0; }
-  .library .archive-compare[data-evidence-dock="true"] > .manual-comparison { grid-column: 2; margin-top: 8px; min-width: 0; }
+  .library .archive-compare[data-evidence-dock="true"] > .manual-comparison { grid-column: 2; margin-top: 8px; min-width: 0; max-height: var(--comparison-reading-height, 70vh); }
 }
 .comparison-legend { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 11.5px; }
 .comparison-legend-item { display: inline-flex; align-items: center; gap: 5px; }

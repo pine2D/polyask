@@ -1,47 +1,72 @@
-.decision-tabs { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-.decision-tabs button, .decision-toolbar > button, .decision-detail-actions button, .decision-editor button, .decision-source-conflict button, .decision-confirm button, .decision-create { border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; color: inherit; background: var(--panel); }
-.decision-tabs button[aria-current], .decision-detail-actions button:first-child, .decision-create { color: var(--accent); background: var(--accent-soft); }
-.decision-create { margin-top: 12px; }
+/* Platinum Decision Cards Reader & Editor. */
+.decision-tabs { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.decision-tabs button, .decision-toolbar > button, .decision-detail-actions button, .decision-editor button, .decision-source-conflict button, .decision-confirm button, .decision-create {
+  border: 1px solid var(--plat-ink); border-radius: var(--radius-control); padding: 4px 10px;
+  color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700;
+}
+.decision-tabs button:hover:not(:disabled, [aria-current]), .decision-toolbar > button:hover:not(:disabled),
+.decision-detail-actions button:hover:not(:disabled), .decision-editor button:hover:not(:disabled),
+.decision-source-conflict button:hover:not(:disabled), .decision-confirm button:hover:not(:disabled), .decision-create:hover:not(:disabled) {
+  background: var(--plat-g200);
+}
+.decision-tabs button[aria-current], .decision-tabs button:active:not(:disabled),
+.decision-detail-actions button:active:not(:disabled), .decision-editor button:active:not(:disabled),
+.decision-source-conflict button:active:not(:disabled), .decision-confirm button:active:not(:disabled) {
+  color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
+}
+.decision-detail-actions .library-primary, .decision-create {
+  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+}
+.decision-create { margin-top: 10px; }
 .decision-toolbar { grid-template-columns: auto minmax(180px, 1fr) auto; }
 .decision-filters { min-width: 0; display: grid; grid-template-columns: minmax(100px, 1fr) auto; gap: 6px; }
-.decision-filters input, .decision-filters select, .decision-editor input, .decision-editor textarea, .decision-editor select { width: 100%; min-width: 0; color: inherit; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; font: inherit; }
-.decision-detail-actions { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 10px 20px; border-bottom: 1px solid var(--border); background: var(--panel); }
-.decision-detail-actions span { color: var(--muted); font-size: 12px; }
-.decision-editor { max-width: 920px; margin: auto; padding: 24px 28px 48px; }
-/* 草稿入口与下方字段同一内容列，左缘对齐。 */
-.decision-workspace .draft-recovery-entry { max-width: 920px; margin: 16px auto 0; padding: 0 28px; border-top: 0; }
-.decision-source-conflict { max-width: var(--reading-page-width, 920px); margin: 16px auto 0; padding-inline: 28px; font-size: var(--font-control); }
-.decision-source-conflict p { line-height: 1.65; overflow-wrap: anywhere; }
-.decision-editor h1 { font-size: 24px; margin: 0 0 20px; overflow-wrap: anywhere; }
-.decision-editor h2 { font-size: 15px; margin: 0 0 10px; }
-.decision-editor label { display: grid; gap: 7px; font-size: 13px; }
-.decision-editor textarea { resize: vertical; line-height: 1.65; }
-.decision-field { display: grid; gap: 7px; min-width: 0; }
-.decision-field-hints { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; font-size: 12px; }
+.decision-filters input, .decision-filters select, .decision-editor input, .decision-editor textarea, .decision-editor select {
+  width: 100%; min-width: 0; color: inherit; background: var(--field);
+  border: 1px solid var(--plat-ink); border-radius: 0; padding: 6px 8px; font: inherit;
+}
+.decision-filters select, .decision-editor select { border-radius: 3px; background-color: var(--plat-g300); padding-inline-end: 26px; font-weight: 700; }
+.decision-detail-actions {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 8px; padding: 6px 16px;
+  border-bottom: 1px solid var(--plat-ink); background: var(--plat-g300); box-shadow: var(--plat-strip-bevel);
+}
+.decision-detail-actions span { color: var(--muted); font-size: 11.5px; }
+.decision-editor { max-width: var(--reading-page-width, 820px); margin: auto; padding: 18px 24px 44px; }
+.decision-workspace .draft-recovery-entry { max-width: var(--reading-page-width, 820px); margin: 14px auto 0; }
+.decision-source-conflict { max-width: var(--reading-page-width, 820px); margin: 14px auto 0; padding-inline: 24px; font-size: var(--font-control); }
+.decision-source-conflict p { line-height: 1.56; overflow-wrap: anywhere; }
+.decision-editor h1 { font-size: 18px; font-weight: 700; margin: 0 0 14px; overflow-wrap: anywhere; }
+.decision-editor h2 { font-size: 14px; font-weight: 700; margin: 0 0 8px; }
+.decision-editor label { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; }
+.decision-editor textarea { resize: vertical; line-height: 1.56; font-weight: 400; }
+.decision-field { display: grid; gap: 5px; min-width: 0; }
+.decision-field-hints { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 12px; flex-wrap: wrap; font-size: 11.5px; }
 .decision-count { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.decision-field-error { color: var(--danger-ink); font-size: 12px; margin: 0; overflow-wrap: anywhere; }
+.decision-field-error { color: var(--danger-ink); font-size: 11.5px; margin: 0; overflow-wrap: anywhere; }
 .decision-field-hints .decision-field-error { flex: 1 1 200px; }
 .decision-editor input[aria-invalid="true"], .decision-editor textarea[aria-invalid="true"], .decision-excerpt blockquote[aria-invalid="true"] { border-color: var(--danger-ink); }
-/* 说明与状态值（只读文字或下拉）同一基线，不再悬在「状态」标签与值两行之间。 */
-.decision-meta { display: flex; flex-wrap: wrap; align-items: last baseline; gap: 6px 20px; margin: 20px 0; }
+.decision-meta { display: flex; flex-wrap: wrap; align-items: last baseline; gap: 6px 16px; margin: 14px 0; }
 .decision-meta label { min-width: 120px; }
 .decision-meta p { margin: 0; color: var(--muted); font-size: 12px; }
-.decision-source { padding: 14px 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
-.decision-source p { margin: 8px 0; overflow-wrap: anywhere; }
-.decision-fields { display: grid; gap: 22px; margin: 24px 0; }
+.decision-source { padding: 10px 12px; background: var(--plat-g200); border: 1px solid var(--plat-ink); border-radius: 0; }
+.decision-source p { margin: 6px 0; overflow-wrap: anywhere; }
+.decision-fields { display: grid; gap: 16px; margin: 18px 0; }
 .decision-fields > section { min-width: 0; }
-.decision-excerpt { padding: 14px; margin: 12px 0; border: 1px solid var(--border); background: var(--panel); border-radius: 8px; }
-.decision-excerpt header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.decision-excerpt blockquote { margin: 10px 0; padding-left: 14px; border-left: 3px solid var(--accent); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; }
-.decision-answer { padding: 12px 0; border-bottom: 1px solid var(--border); }
-.decision-answer pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-height: 280px; overflow: auto; padding: 12px; background: var(--panel); line-height: 1.65; user-select: text; }
-.decision-placeholder { padding: 40px; color: var(--muted); }
-.decision-workspace button:disabled { opacity: .45; }
+.decision-excerpt { padding: 10px 12px; margin: 10px 0; border: 1px solid var(--plat-ink); background: var(--plat-g200); border-radius: 0; }
+.decision-excerpt header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.decision-excerpt blockquote { margin: 8px 0; padding-left: 12px; border-left: 3px solid var(--plat-mid-dark); white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.56; }
+.decision-answer { padding: 8px 0; border-bottom: 1px solid var(--plat-g200); }
+.decision-answer pre {
+  white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; max-height: 280px; overflow: auto;
+  margin-top: 6px; padding: 10px; border: 1px solid var(--plat-ink); background: var(--panel); box-shadow: var(--plat-sunken-bevel);
+  line-height: 1.56; user-select: text;
+}
+.decision-placeholder { padding: 32px; color: var(--muted); }
+.decision-workspace button:disabled { opacity: .45; box-shadow: none; }
 @media (max-width: 760px) {
   .decision-workspace .archive-body { grid-template-columns: minmax(150px, 30%) minmax(0, 1fr); }
-  .decision-editor { padding: 16px; }
-  .decision-workspace .draft-recovery-entry { padding-inline: 16px; }
-  .decision-source-conflict { padding-inline: 20px; }
+  .decision-editor { padding: 14px; }
+  .decision-workspace .draft-recovery-entry { margin-inline: 14px; }
+  .decision-source-conflict { padding-inline: 14px; }
   .decision-tabs { gap: 4px; }
-  .decision-tabs button, .decision-toolbar > button { padding: 6px; }
+  .decision-tabs button, .decision-toolbar > button { padding: 5px; }
 }

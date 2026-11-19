@@ -118,8 +118,8 @@
     white-space: nowrap;
   }
   .ui-pill[data-tone="accent"] {
-    color: var(--accent);
-    background: var(--accent-soft);
+    color: var(--text);
+    background: var(--plat-g200);
   }
   .ui-pill[data-tone="success"] {
     color: var(--success-ink);

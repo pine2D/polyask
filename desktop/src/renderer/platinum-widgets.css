@@ -21,11 +21,33 @@
 
 :is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb {
   background-color: var(--plat-scroll-thumb);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='7' viewBox='0 0 7 7'%3E%3Cpath d='M0 1h7M0 3h7M0 5h7' stroke='%23ffffff' stroke-opacity='.75' stroke-width='1'/%3E%3Cpath d='M0 2h7M0 4h7M0 6h7' stroke='%23262626' stroke-opacity='.55' stroke-width='1'/%3E%3C/svg%3E");
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.78) 0 1px,
+    rgba(38, 38, 38, 0.58) 1px 2px,
+    rgba(255, 255, 255, 0.78) 2px 3px,
+    rgba(38, 38, 38, 0.58) 3px 4px,
+    rgba(255, 255, 255, 0.78) 4px 5px,
+    rgba(38, 38, 38, 0.58) 5px 6px
+  );
+  background-size: 7px 6px;
   background-repeat: no-repeat;
   background-position: center;
   border: 1px solid var(--plat-ink);
   box-shadow: inset 1px 1px 0 var(--plat-scroll-thumb-hi), inset -1px -1px 0 var(--plat-scroll-thumb-lo);
+}
+
+:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb:horizontal {
+  background-image: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0.78) 0 1px,
+    rgba(38, 38, 38, 0.58) 1px 2px,
+    rgba(255, 255, 255, 0.78) 2px 3px,
+    rgba(38, 38, 38, 0.58) 3px 4px,
+    rgba(255, 255, 255, 0.78) 4px 5px,
+    rgba(38, 38, 38, 0.58) 5px 6px
+  );
+  background-size: 6px 5px;
 }
 
 :is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb:active {
@@ -48,28 +70,26 @@
   color: var(--text);
   background-color: var(--plat-g300);
   background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='11' viewBox='0 0 9 11'%3E%3Cpath d='M4.5 1 8 4.5H1ZM4.5 10 1 6.5h7Z' fill='%23262626'/%3E%3C/svg%3E"),
+    conic-gradient(from 135deg at 50% 0%, var(--text) 0 90deg, transparent 0),
+    conic-gradient(from -45deg at 50% 100%, var(--text) 0 90deg, transparent 0),
     linear-gradient(to right, transparent calc(100% - 20px), var(--plat-mid-dark) calc(100% - 20px), var(--plat-mid-dark) calc(100% - 19px), var(--plat-hi) calc(100% - 19px), var(--plat-hi) calc(100% - 18px), var(--plat-g300) calc(100% - 18px));
+  background-size: 7px 3.5px, 7px 3.5px, 100% 100%;
   background-repeat: no-repeat;
-  background-position: right 5px center, 0 0;
+  background-position: right 6px top calc(50% - 3px), right 6px top calc(50% + 3px), 0 0;
   box-shadow: var(--plat-btn-bevel);
-}
-
-@media (prefers-color-scheme: dark) {
-  #root select {
-    background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='9' height='11' viewBox='0 0 9 11'%3E%3Cpath d='M4.5 1 8 4.5H1ZM4.5 10 1 6.5h7Z' fill='%23ededf2'/%3E%3C/svg%3E"),
-      linear-gradient(to right, transparent calc(100% - 20px), var(--plat-dark-bevel) calc(100% - 20px), var(--plat-dark-bevel) calc(100% - 19px), var(--plat-hi) calc(100% - 19px), var(--plat-hi) calc(100% - 18px), var(--plat-g300) calc(100% - 18px));
-  }
 }
 
 #root select:active:not(:disabled) {
   background-color: var(--plat-pressed-bg);
   color: var(--plat-pressed-fg);
+  background-image:
+    conic-gradient(from 135deg at 50% 0%, var(--plat-pressed-fg) 0 90deg, transparent 0),
+    conic-gradient(from -45deg at 50% 100%, var(--plat-pressed-fg) 0 90deg, transparent 0),
+    linear-gradient(to right, transparent calc(100% - 20px), var(--plat-dark-bevel) calc(100% - 20px), var(--plat-dark-bevel) calc(100% - 19px), var(--plat-pressed-bg) calc(100% - 19px));
   box-shadow: var(--plat-btn-bevel-pressed);
 }
 
-/* Classic Platinum beveled square checkbox & circular radio. */
+/* Classic Platinum beveled square checkbox & circular radio (pure CSS, CSP img-src 'none' safe). */
 :is(#root, .library-popover) input[type="checkbox"]:not(.sr-only) {
   appearance: none;
   -webkit-appearance: none;
@@ -87,11 +107,13 @@
   vertical-align: -2px;
 }
 
-:is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked {
-  background-color: var(--plat-g300);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11'%3E%3Cpath d='M1.5 5.5 4.2 8.4 9.6 2' fill='none' stroke='%23262626' stroke-width='1.8' stroke-linecap='square'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: center;
+:is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked::before {
+  content: "";
+  width: 7px;
+  height: 4px;
+  border-left: 2px solid var(--text);
+  border-bottom: 2px solid var(--text);
+  transform: translateY(-1px) rotate(-45deg);
 }
 
 :is(#root, .library-popover) input[type="radio"]:not(.sr-only) {
@@ -119,10 +141,41 @@
   background: var(--text);
 }
 
-@media (prefers-color-scheme: dark) {
-  :is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 11 11'%3E%3Cpath d='M1.5 5.5 4.2 8.4 9.6 2' fill='none' stroke='%23ededf2' stroke-width='1.8' stroke-linecap='square'/%3E%3C/svg%3E");
-  }
+/* Classic Mac OS 9 Platinum beveled metallic disclosure triangle (0ms instant mechanical rotate). */
+#root details > summary {
+  list-style: none;
+}
+#root details > summary::-webkit-details-marker {
+  display: none;
+}
+#root details > summary::marker {
+  content: "";
+}
+#root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden]) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+#root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  flex: 0 0 10px;
+  clip-path: polygon(1px 1px, 9px 5px, 1px 9px);
+  background:
+    linear-gradient(to right, transparent 0 1px, var(--plat-ink) 1px 2px, var(--plat-hi) 2px 3px, transparent 3px),
+    linear-gradient(206.57deg, transparent 0 4.9px, var(--plat-ink) 4.9px 5.9px, var(--plat-hi) 5.9px 6.9px, transparent 6.9px),
+    linear-gradient(333.43deg, transparent 0 4.9px, var(--plat-ink) 4.9px 5.9px, var(--plat-dark-bevel) 5.9px 6.9px, transparent 6.9px),
+    linear-gradient(180deg, var(--plat-g200) 0%, var(--plat-mid-dark) 100%);
+}
+#root details[open]:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+  transform: rotate(90deg);
+}
+#root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden]):active::before {
+  filter: brightness(0.75);
 }
 
 @media (forced-colors: active) {
@@ -133,5 +186,20 @@
     -webkit-appearance: auto;
     background-image: none;
     box-shadow: none;
+  }
+  :is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked::before {
+    content: none;
+  }
+  #root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+    clip-path: none;
+    background: none;
+    width: auto;
+    height: auto;
+    flex: 0 0 auto;
+    content: "▸";
+  }
+  #root details[open]:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+    transform: none;
+    content: "▾";
   }
 }

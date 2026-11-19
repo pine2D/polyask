@@ -1,6 +1,6 @@
 /* Platform font overrides + 0ms mechanical Platinum press feedback. */
 :root[data-platform="win32"] {
-  --font-ui: "Segoe UI", "Microsoft YaHei UI", "Lucida Grande", system-ui, sans-serif;
+  --font-ui: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "Lucida Grande", system-ui, sans-serif;
 }
 :root[data-platform="darwin"] {
   --font-ui: "Charcoal", "Lucida Grande", -apple-system, "PingFang SC", system-ui, sans-serif;
@@ -33,7 +33,7 @@ button { transition: none; }
     outline-color: Highlight;
   }
   button:disabled { color: GrayText; }
-  :root button:is(.primary, .send) { forced-color-adjust: none; }
+  :root button:is(.primary, .send) { forced-color-adjust: none; color: HighlightText; background: Highlight; border-color: Highlight; box-shadow: none; }
   button:not(:disabled, [aria-disabled="true"]):active { filter: none; outline: 1px solid Highlight; }
   :root ::selection { color: HighlightText; background: Highlight; }
 }

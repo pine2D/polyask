@@ -87,7 +87,7 @@ app.whenReady().then(async () => {
           .filter(e => e.getClientRects().length).map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
         for (const control of controls) {
           assert.equal(control.border, 'solid', `${locale}/${theme} list controls must use the themed border`);
-          assert.ok(control.radius >= 4 && control.height >= 28, `${locale}/${theme} list controls must keep usable geometry`);
+          assert.ok(control.radius >= 2 && control.radius <= 3 && control.height >= 22, `${locale}/${theme} list controls must keep Platinum geometry: ${JSON.stringify(control)}`);
         }
         const reading = await readingLayout.reading(run);
         reports.push({ locale, theme, width, boxes, reading });

@@ -46,5 +46,5 @@
 @media (forced-colors: active) {
   .library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button { color: ButtonText; border-color: ButtonText; box-shadow: none; }
   .library :is(.library-selection-controls, .library-bulk-actions, .library-bulk-result, .library-pagination) button:disabled { color: GrayText; border-color: GrayText; }
-  .library .library-content-row:has([aria-current=true]) { outline: 1px solid Highlight; }
+  .library .library-content-row:has([aria-current=true]) { border-top: 1px solid Highlight; border-bottom: 1px solid Highlight; outline: 1px solid Highlight; }
 }

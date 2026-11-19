@@ -74,7 +74,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       await wait('document.body.dataset.archiveOpened === "true"');
       const geometry = await run(`(() => { const bar=document.querySelector('.feedback-bar'), next=bar.querySelector('.feedback-next-step'), progress=bar.querySelector('.run-progress');
         const r=next.getBoundingClientRect(), notice=bar.querySelector('.feedback-notice'); return {width:bar.clientWidth,scroll:bar.scrollWidth,left:r.left,right:r.right,progressRight:progress.getBoundingClientRect().right,height:bar.getBoundingClientRect().height,notice:notice.textContent,noticeWidth:notice.clientWidth}; })()`);
-      assert.equal(geometry.height, 32);
+      assert.equal(geometry.height, 26);
       assert.ok(geometry.scroll <= geometry.width + 2 && geometry.right <= 960 && geometry.left >= geometry.progressRight, `${locale}/${density}: guidance and progress fit the footer`);
       assert.ok(geometry.notice.length > 0 && geometry.noticeWidth >= 120, 'persistent submission summary stays visible alongside progress and the next step');
       assert.equal(await run('document.querySelector("[name=read-run-copies]").disabled'), false, 'ready copies and collection remain separate available actions');

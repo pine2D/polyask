@@ -20,13 +20,16 @@
   border: 1px solid var(--plat-ink); border-radius: 2px; background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
   color: var(--text); font: 700 11px/1 var(--font-ui); text-decoration: none;
 }
-.reading-page .reading-source-list > :is(a, button):hover { background: var(--plat-g200); }
+.reading-page .reading-source-list > :is(a, button):hover:not([aria-current=location], [aria-pressed=true]) { background: var(--plat-g200); }
 .reading-page .reading-source-list > :is([aria-current=location], [aria-pressed=true]) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
   text-decoration: none;
 }
+.reading-page .reading-source-list > [aria-current=location] {
+  text-decoration: underline; text-underline-offset: 2px;
+}
 .reading-page .reading-source-list > :is(a, button):focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-.reading-page .archive-answer-nav a[data-best=true]:not([aria-current=location]) { color: var(--accent); background: var(--accent-soft); }
+.reading-page .archive-answer-nav a[data-best=true]:not([aria-current=location]) { color: var(--text); background: var(--plat-g200); }
 .archive-answer-length, .archive-heading-length { display: inline-flex; align-items: center; flex-shrink: 0; font-family: var(--font-mono); font-size: 10px; line-height: 1.2; font-weight: 700; font-variant-numeric: tabular-nums; opacity: .82; }
 .archive-answer-length::after, .archive-heading-length::after { content: attr(data-length); }
 .archive-heading-length { padding: 1px 5px; border-radius: 0; border: 1px solid var(--plat-ink); background: var(--panel); color: var(--muted); }

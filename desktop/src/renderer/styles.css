@@ -119,9 +119,10 @@ button { cursor: default; }
 .getting-started p { margin: 6px 0 10px; line-height: 1.58; }
 .getting-started ol { margin: 12px 0; padding-left: 22px; }
 .getting-started-step { padding: 0 0 12px 6px; }
-.getting-started-step::marker { color: var(--accent); font-weight: 700; }
+.getting-started-step::marker { color: var(--text); font-weight: 700; }
 .getting-started-step h2 { margin: 0; font-size: 14px; }
 .getting-started-step button { min-height: 24px; padding: 2px 10px; border: 1px solid var(--plat-ink); border-radius: 3px; color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700; }
+.getting-started-step button:hover:not(:disabled) { background: var(--plat-g200); }
 .getting-started-step button:active { background: var(--plat-pressed-bg); color: var(--plat-pressed-fg); box-shadow: var(--plat-btn-bevel-pressed); }
 .getting-started-note { color: var(--muted); font-size: var(--font-meta); }
 .command-results { min-height: 120px; margin: 0 4px 4px; padding: 2px; overflow: auto; border: 1px solid var(--plat-ink); background: var(--panel); }
@@ -130,7 +131,10 @@ button { cursor: default; }
   justify-content: space-between; gap: 10px; text-align: left; border: 0; border-bottom: 1px solid var(--plat-g200); border-radius: 0;
   color: inherit; background: transparent;
 }
-.command-results > button:hover, .command-results > button.active { background: var(--accent-soft); }
+.command-results > button:hover:not(.active, [aria-selected="true"]) { background: var(--hover-soft); }
+.command-results > button.active, .command-results > button[aria-selected="true"] {
+  background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent);
+}
 .command-results > button[aria-disabled="true"] { color: var(--muted); cursor: default; }
 .command-results > button > span { min-width: 0; display: grid; gap: 1px; }
 .command-results strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

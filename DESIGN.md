@@ -1,92 +1,86 @@
 ---
 name: PolyAsk · AI 众答
-description: 并排的工作台：克制、清晰、紧凑的桌面界面
+description: 经典 Mac OS 9 Platinum 机械工作台：立体、紧凑、利落的并排桌面界面
 colors:
-  accent: '#4f46e5'
+  accent: '#333399'
   on-accent: '#ffffff'
-  accent-soft: '#eeedff'
-  canvas: '#f4f5f8'
-  surface-sunken: '#eceef4'
+  accent-soft: '#ccccff'
+  canvas: '#bfbfbf'
+  surface-sunken: '#cccccc'
   panel: '#ffffff'
-  surface-elevated: '#ffffff'
-  panel-muted: '#edeef3'
-  field: '#fafafd'
-  field-border: '#818394'
-  border: '#d8dae2'
-  text: '#20212b'
-  muted: '#626575'
-  success: '#16a34a'
-  warning: '#ca8a04'
-  danger: '#dc2626'
-  success-ink: '#167039'
-  warning-ink: '#875900'
-  danger-ink: '#b91c1c'
-  success-soft: '#e8f5ed'
-  warning-soft: '#fff4dc'
-  accent-dark: '#a5a0ff'
-  on-accent-dark: '#201d41'
-  accent-soft-dark: '#2d2a50'
-  canvas-dark: '#17171c'
-  surface-sunken-dark: '#131318'
-  panel-dark: '#222228'
-  surface-elevated-dark: '#26262f'
-  panel-muted-dark: '#2c2c35'
-  field-dark: '#1b1b22'
-  field-border-dark: '#79798c'
-  border-dark: '#3e3e4a'
-  text-dark: '#f0f0f5'
-  muted-dark: '#b0b0c0'
-  success-ink-dark: '#86d9a3'
-  warning-ink-dark: '#efc267'
+  surface-elevated: '#eeeeee'
+  panel-muted: '#dddddd'
+  field: '#ffffff'
+  field-border: '#262626'
+  border: '#8c8c8c'
+  text: '#222222'
+  muted: '#555555'
+  success: '#15803d'
+  warning: '#b45309'
+  danger: '#b91c1c'
+  success-ink: '#14532d'
+  warning-ink: '#78350f'
+  danger-ink: '#8f1818'
+  success-soft: '#dcfce7'
+  warning-soft: '#ffffcc'
+  accent-dark: '#9e9eff'
+  on-accent-dark: '#141428'
+  accent-soft-dark: '#32325c'
+  canvas-dark: '#18181c'
+  surface-sunken-dark: '#141418'
+  panel-dark: '#1f1f26'
+  surface-elevated-dark: '#282831'
+  panel-muted-dark: '#2d2d36'
+  field-dark: '#17171d'
+  field-border-dark: '#08080a'
+  border-dark: '#484856'
+  text-dark: '#ededf2'
+  muted-dark: '#aaaab8'
+  success-ink-dark: '#86efac'
+  warning-ink-dark: '#fde047'
   danger-ink-dark: '#fca5a5'
-  success-soft-dark: '#1e392c'
-  warning-soft-dark: '#3c3220'
+  success-soft-dark: '#1a3628'
+  warning-soft-dark: '#36331e'
 typography:
   meta:
-    fontFamily: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa
-      UI SC", sans-serif
-    fontSize: 12px
+    fontFamily: '"Charcoal", "Lucida Grande", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif'
+    fontSize: 11px
     fontWeight: 400
   control:
-    fontFamily: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa
-      UI SC", sans-serif
-    fontSize: 13px
-    fontWeight: 400
+    fontFamily: '"Charcoal", "Lucida Grande", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif'
+    fontSize: 12px
+    fontWeight: 600
   body:
-    fontFamily: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa
-      UI SC", sans-serif
-    fontSize: 14px
+    fontFamily: '"Charcoal", "Lucida Grande", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif'
+    fontSize: 13px
     fontWeight: 400
   reading:
-    fontFamily: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa
-      UI SC", sans-serif
-    fontSize: 16px
+    fontFamily: '"Charcoal", "Lucida Grande", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif'
+    fontSize: 13.5px
     fontWeight: 400
-    lineHeight: 1.8
+    lineHeight: 1.56
   title:
-    fontFamily: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa
-      UI SC", sans-serif
-    fontSize: 16px
+    fontFamily: '"Charcoal", "Lucida Grande", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif'
+    fontSize: 14.5px
     fontWeight: 700
   record-title:
-    fontFamily: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", "Sarasa
-      UI SC", sans-serif
-    fontSize: 20px
-    fontWeight: 600
-    lineHeight: 1.5
+    fontFamily: '"Charcoal", "Lucida Grande", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif'
+    fontSize: 16px
+    fontWeight: 700
+    lineHeight: 1.42
   code:
-    fontFamily: ui-monospace, "Cascadia Code", monospace
-    fontSize: 13px
-    lineHeight: 1.7
+    fontFamily: '"Monaco", "Cascadia Mono", "Consolas", ui-monospace, monospace'
+    fontSize: 12px
+    lineHeight: 1.5
 rounded:
-  control: 6px
-  panel: 8px
-  card: 10px
-  toolbar: 7px
-  inset: 5px
-  chip: 4px
-  popover: 9px
-  overlay: 12px
+  control: 3px
+  panel: 0px
+  card: 0px
+  toolbar: 3px
+  inset: 2px
+  chip: 0px
+  popover: 0px
+  overlay: 0px
 spacing:
   space-1: 4px
   space-2: 8px
@@ -99,69 +93,70 @@ spacing:
   space-16: 64px
 components:
   button-send:
-    backgroundColor: '{colors.accent}'
-    textColor: '{colors.on-accent}'
-    rounded: '{rounded.toolbar}'
-    padding: 0 10px
-    height: 32px
-  button-secondary:
+    backgroundColor: '{colors.panel-muted}'
     textColor: '{colors.text}'
     rounded: '{rounded.control}'
-    padding: 6px 12px
-  button-ghost:
-    backgroundColor: transparent
-    textColor: '{colors.muted}'
+    padding: 0 9px
+    height: 22px
+  button-secondary:
+    backgroundColor: '{colors.panel-muted}'
+    textColor: '{colors.text}'
     rounded: '{rounded.control}'
+    padding: 4px 10px
+  button-ghost:
+    backgroundColor: '{colors.panel-muted}'
+    textColor: '{colors.text}'
+    rounded: '{rounded.inset}'
     padding: '0'
-    size: 24px
+    size: 22px
   field:
     backgroundColor: '{colors.field}'
     textColor: '{colors.text}'
-    rounded: '{rounded.control}'
+    rounded: 0px
     typography: '{typography.body}'
   nav-segment:
-    backgroundColor: transparent
-    textColor: '{colors.muted}'
-    rounded: '{rounded.inset}'
-    padding: 4px
-  nav-segment-selected:
-    backgroundColor: '{colors.panel}'
-    textColor: '{colors.accent}'
-    rounded: '{rounded.inset}'
-  status-badge:
     backgroundColor: '{colors.panel-muted}'
+    textColor: '{colors.text}'
+    rounded: '{rounded.control}'
+    padding: 0 7px
+  nav-segment-selected:
+    backgroundColor: '#666666'
+    textColor: '#ffffff'
+    rounded: '{rounded.control}'
+  status-badge:
+    backgroundColor: '{colors.surface-elevated}'
     textColor: '{colors.muted}'
     rounded: '{rounded.chip}'
-    padding: 2px 6px
+    padding: 0 4px
   status-badge-verify:
     backgroundColor: '{colors.warning-soft}'
     textColor: '{colors.warning-ink}'
     rounded: '{rounded.chip}'
-    padding: 2px 6px
+    padding: 0 4px
   status-badge-final:
     backgroundColor: '{colors.success-soft}'
     textColor: '{colors.success-ink}'
     rounded: '{rounded.chip}'
-    padding: 2px 6px
+    padding: 0 4px
   settings-card:
     backgroundColor: '{colors.panel}'
     textColor: '{colors.text}'
     rounded: '{rounded.panel}'
-    padding: 20px 24px
+    padding: 16px 20px
   prompt-composer:
     backgroundColor: '{colors.field}'
     textColor: '{colors.text}'
-    rounded: '{rounded.control}'
-    height: 32px
+    rounded: 0px
+    height: 26px
   site-frame:
-    backgroundColor: '{colors.panel}'
+    backgroundColor: '{colors.surface-sunken}'
     textColor: '{colors.text}'
-    rounded: 6px 6px 2px 2px
+    rounded: 0px
   answer-section:
     backgroundColor: '{colors.panel}'
     textColor: '{colors.text}'
-    rounded: '0'
-    padding: 16px 0 24px
+    rounded: 0px
+    padding: 0 0 14px
     typography: '{typography.reading}'
 ---
 
@@ -169,312 +164,186 @@ components:
 
 ## Overview
 
-**Creative North Star: "并排的工作台"**
+**Creative North Star: "Mac OS 9 Platinum 并排机械工作台"**
 
-多个 AI 页面与整理工具各就其位。外壳保持克制、清晰、紧凑，为站点原网页和保存的回答留下主要阅读空间；高频操作集中在工具栏，站点管理按需展开，结果库为整理和长文阅读提供独立空间。
-
-现有设计以靛紫强调色和冷灰底色建立一致性。系统字体、小幅圆角、细边界和轻微阴影让控件精确、轻巧，操作反馈清楚。工具区域紧凑，阅读区域以更大的字号和行距展开；两者共享同一套主题与状态语义。
+PolyAsk 采用原汁原味的 **Mac OS 9 Platinum** 桌面视觉体系（对标 `livid/exe-stats` 与 Apple Platinum HIG）：以 `1px` 利落黑框（`#262626`）、`2px` 硬投影、四层斜角凹凸按钮（凸起银灰常态 / `#666` 深炭压下选中态 / 下凹白底内容井）与 `2px` 水平细横纹标题条组织多站并排比较与高密度长文阅读。
 
 **Key Characteristics:**
 
-- 单一靛紫强调色，配合明暗两套冷灰表面。
-- 工具控件紧凑，阅读正文舒展，按区域调整密度。
-- 平整为主，轻微阴影辅助分层。
-- 选中、焦点、禁用与异常各有明确表现，状态同时提供文字与可访问名称。
-- 保留桌面系统字体和偏好，使用同一套跨平台界面语言。
+- **双模 Platinum 金属色阶**：亮色采用正宗 `#ccc/#ddd/#eee` 银灰桌面，暗色采用配套 Kaleidoscope / NeXT 风格深炭黑金属斜面，自动跟随系统 `prefers-color-scheme`。
+- **克制的原生 Lavender 点缀**：经典蓝紫（`#333399` / `#ccccff` / `#9999ff`）严格限定在滚动条滑块、输入焦点外框、文本反白选区与列表/菜单当前选中项四处；所有按钮常态/悬停/按下与普通列表悬停一律保持纯粹中性银灰。
+- **无边框自绘横纹主窗与独立站点小窗**：主窗口启用 `frame: false` 自绘 `22px` 横纹标题栏与 `13×13px` 立体窗口方块（`.tbox`，Win/Linux 居右、macOS 居左，窗口失焦时横纹退隐）；每个 AI 站点 `WebContentsView` 内缩 `3px` 嵌入带下凹内井的独立 `.tile-frame`，仅当前聚焦站点显示横纹。
+- **干脆的 `0ms` 机械瞬切与高密度桌面排版**：按钮、分段页签与浮层全部采用 `0ms` 机械瞬切（仅工作台侧抽屉保留 `120ms` 推拉过渡）；结果库与历史详情收紧为 `13.5px / 1.56` 高密度技术文档排版。
 
-本记录提取现有实现，描述用语经用户确认。令牌表是当前默认值的快照；修改实现时同步维护本文件，不将其视为第二套独立主题。具体源码来源在各节注明。原站网页拥有自己的视觉系统，不受本文件重新着色。
+本记录为当前单一主界面的权威规范（不维护双套并行主题）；原站网页拥有各自的视觉系统，不受外壳重新着色。
 
 ## Colors
 
-靛紫承担操作和选择，冷灰承担表面与阅读层级，成功、警告和危险色各自表达状态。前置令牌保留源码名称；带 `-dark` 后缀的条目对应同一 CSS 变量在暗色主题下的值，不是需要新增到应用的变量。
+中性银灰与立体高光/暗影斜面承担全部窗口、工具栏、按钮和表单结构；克制的经典 Lavender 承担焦点与当前选中定位；成功、警告和危险色各自表达运行状态。
 
 ### Primary
 
-- **靛紫强调色**（`accent` / `accent-dark`）：发送、主要确认、活动导航、选中标记、链接和焦点。
-- **强调色上的文字**（`on-accent` / `on-accent-dark`）：与强调色成对切换，尤其是暗色主题的浅紫按钮。
-- **浅靛紫衬底**（`accent-soft` / `accent-soft-dark`）：悬停、收藏、选中导航和局部标记。
-- 弱选中底由强调色与面板混合（5%）；通用悬停底由次级文字色与面板混合（7%）。沿用源码公式，不另建近似色。
-- 结果库当前记录使用完整强调色轮廓与浅靛紫底，在悬停时保持选中反馈；可见轮廓与 `aria-current` 一同表达当前项。
+- **经典深靛蓝（`accent` / `accent-dark`）**：键盘焦点环、文本链接、菜单悬停反白底（配 `on-accent`）与列表选中左色轨。
+- **薰衣草选中底（`accent-soft` / `accent-soft-dark`）**：文本 `::selection` 反白选区，以及结果库、历史记录、设置分类、命令面板的**当前选中行**。
+- **三脊滚动条滑块（`--plat-scroll-thumb`）**：亮色 `#9999ff`、暗色 `#5c5c9e`，复刻 Mac OS 9 标志性三横脊立体滑块。
+- **禁止泛紫规则**：普通按钮（含发送、采集并比较、重试、下一步）、未选中列表行悬停（`--hover-soft: #eeeeee` / `#2a2a33`）与站点档位徽标一律使用中性 Platinum 银灰/白底，不涂浅紫衬底。
 
 ### Neutral
 
 | 语义 | 令牌 | 使用位置 |
 | --- | --- | --- |
-| 冷灰画布 | `canvas` | 工作区底面、设置页外围 |
-| 阅读面板 | `panel` | 工具栏、侧栏、设置分组、记录正文 |
-| 次级表面 | `panel-muted` | 只读内容、次级状态和层级区分 |
-| 输入底色 | `field` | 搜索框、表单、统一提问框 |
-| 输入边界 | `field-border` | 文本输入与统一提问框容器的常态细边界 |
-| 细边界 | `border` | 分隔线、轮廓、表格与面板边缘 |
-| 主文字 | `text` | 标题、正文、当前操作 |
-| 次级文字 | `muted` | 来源、时间、说明和未选中动作 |
+| 桌面画布 | `canvas` | 多站工作区灰桌面底面（亮 `#bfbfbf` / 暗 `#18181c`） |
+| 窗体表面 | `surface-sunken` / `--plat-g400` | 窗口外框、侧抽屉、设置外围、对话框底板 |
+| 工具条与按钮面 | `panel-muted` / `--plat-g300` | 命令栏、工具条、常态凸起按钮、表头与小窗顶栏 |
+| 悬停提亮面 | `surface-elevated` / `--plat-g200` | 按钮悬停、代码块内底、内嵌提示卡 |
+| 内容白井 | `panel` / `field` | 下凹列表井、正文阅读面板、文本输入框 |
+| 墨线边框 | `field-border` / `--plat-ink` | 窗口、按钮、输入框与分隔条的 `1px` 实线边界 |
+| 主文字与次级文字 | `text` / `muted` | 标题正文与来源、时间、辅助说明（保证 ≥4.5:1 对比度） |
 
-这些角色均有暗色对应值。高对比度偏好增强边界；强制配色使用系统 Canvas、CanvasText、Highlight 与 HighlightText 等角色。
+高对比度偏好强化实线边界与状态标签轮廓；强制配色模式完整回退至系统 `Canvas`、`CanvasText`、`ButtonText`、`Highlight` 与 `HighlightText`。
 
 ### Status
 
-`success`、`warning`、`danger` 用于圆点、进度和语义色块；正文使用各自的 `-ink` 令牌及暗色对应值。进度、异常与选中不能仅靠颜色区分，保留文字、图形或读屏播报。
+`success`、`warning`、`danger` 用于方形状态指示点、流转微矩阵与危险按钮；文字使用各自的 `-ink` 令牌与明暗不透明柔和衬底（其中 `warning-soft` 采用经典 Mac 淡琥珀黄 `#ffffcc`）。决策状态在列表和详情共用三态方标：草稿为 `muted` 配 `--plat-g200`，待验证为 `warning-ink / warning-soft`，定稿为 `success-ink / success-soft`。
 
-决策状态在列表和阅读详情共用配色：草稿为中性文字与次级表面，待验证用 `warning-ink / warning-soft`，定稿用 `success-ink / success-soft`。柔和状态底为明暗主题分别定义的不透明色，只用于带文字的状态标签；颜色表示用户选择的工作流状态，保留人工整理与核实说明，不代表内容已经验证。系统增加对比度时补标签轮廓，强制配色使用系统文字与画布。
-
-**The Paired Contrast Rule.** 强调底色与其文字色成对使用；状态圆点色与状态文字色分别取值。
+**The Paired Contrast Rule.** 菜单反白底色与文字色成对切换；主操作按钮（`.send`、`.primary`）采用银灰按钮面配高对比主文字色（对比度 >10:1），靠外圈双层黑框表达主次，不靠彩色填充区分。
 
 来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/native-feel.css`。
 
 ## Typography
 
-**UI and Body Font:** 使用源码的系统字体栈，由 Windows、macOS、Linux 覆盖为当地系统习惯；不加载品牌展示字体。
+**UI and Body Font:** 优先 `"Charcoal", "Lucida Grande"` 并在各平台回退至 `"Segoe UI Variable"` / `-apple-system` / `system-ui` 与对应中日韩界面字体。
 
-**Mono Font:** 代码与原文核对区域使用等宽字体，正文和界面标签继续使用系统 UI 字体。
-
-**Character:** 工具区使用小字号和适度加粗，保持命令与状态容易扫描。阅读区通过字号、行距、段落和标题建立层级，不把工具栏的密度直接套到回答正文。
+**Mono Font:** 代码小窗、快捷键 `<kbd>` 与原文核对区域使用 `"Monaco", "Cascadia Mono", "Consolas", ui-monospace`。
 
 ### Hierarchy
 
 | 角色 | 前置令牌 | 适用位置 |
 | --- | --- | --- |
-| 辅助信息 | `meta` | 时间、来源、状态说明 |
-| 控件文字 | `control` | 工具栏、表单控件和设置说明 |
-| 界面正文 | `body` | 结果库列表、输入和普通内容 |
-| 阅读正文 | `reading` | 保存回答，行高（1.8） |
-| 区块标题 | `title` | 设置卡与回答来源标题；局部权重以组件为准 |
-| 记录标题 | `record-title` | 结果库记录主标题，窄详情区使用较小变体 |
-| 代码 | `code` | 等宽代码区域；原文核对编辑器另按所在组件定字号 |
+| 辅助信息 | `meta` (`11px`) | 工具栏状态、时间戳、紧凑字数（设置页辅助说明保底 `12px`） |
+| 控件文字 | `control` (`12px`) | 立体按钮、分段开关、菜单与表单标签 |
+| 界面正文 | `body` (`13px`) | 提问输入框、列表标题与常规对话框说明 |
+| 阅读正文 | `reading` (`13.5px / 1.56`) | 结果库与提问历史保存的长回答正文 |
+| 区块标题 | `title` (`14.5px / 700`) | 设置分组卡标题与 Markdown 三级标题 |
+| 记录标题 | `record-title` (`16px / 700`) | 结果库与历史详情问题主标题 |
+| 代码 | `code` (`12px / 1.5`) | 1px 黑框等宽代码小窗与预格式化文本 |
 
-这是按用途组织的字号集合，没有固定的等比缩放比例，也没有应用中不存在的超大展示层级。正文三级标题使用（20px / 1.5），四级标题使用（17px / 1.6）；五、六级标题同为（16px），以（700 / 500）字重区分，实际字形跟随系统字体可用字重。段落间距（12px），采集与历史的问题标题统一为（20px / 600 / 1.5），600px以下窗口使用（18px）。比较正文保留（15px / 1.8），决策结论保留（18px / 1.7）。
+Markdown 正文五、六级标题同为 `13px`，以 `700 / 600` 字重与颜色区分；首尾子块零额外外边距。表格采用 `1px` 硬黑框、单元格实线分隔与 `#ddd` 斜面高光表头；代码块包裹在带迷你 Platinum 顶栏与 `20px` 立体复制按钮的小窗中。
 
-历史与结果库由共用阅读页统一控制宽度（最大 820px，左右内边距各 24px）；Markdown 段落、表格、代码和图示沿同一内容列排版，不再单独限制段落的字符宽度。比较和决策卡随各自容器缩小，长表格与代码保留局部滚动和完整内容。
-
-代码按围栏语言默认高亮，标题行只保留语言与 28px 复制图标；复制保留制表符及末尾换行，提示与可访问名称使用当前界面语言。未知语言和超出高亮限额的代码保留纯文本。结果库「全部／结果／决策卡」分类条总高 32px，按钮高 28px，文字单行居中。
-
-表格区域的可访问名称包含当前来源或字段与表格序号；比较视图补充段落定位。历史日期组使用主标题下的二级标题，沿用原有字号、字重和间距。空库标题反映当前内容范围，快捷键检索沿用命令面板的输入与列表样式。
-
-历史首次尚未取得结果时沿用读取状态，只在读取结果为空后显示空态；搜索保留防抖和已有列表。综合与追问的所选数量采用完整的三语计数标签，避免英文单条回答时的复数歧义。
-
-快捷键速查中的发送条目标明“提问框内”，按平台显示 Ctrl+Enter 或 ⌘↵；它与站点缩放、菜单参考项共用只读行为，点击或按 Enter 保留速查。检索词可兼容发送、send、Enter 与 ↵，只展示实际平台键位。
-
-来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/native-feel.css`、`desktop/src/renderer/markdown-reading.css`、`desktop/src/renderer/library-reading.css`。
+来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/markdown-reading.css`、`desktop/src/renderer/markdown-code.css`、`desktop/src/renderer/library-reading.css`。
 
 ## Layout
 
 ### Desktop Shell
 
-顶部为单行命令栏，下方为原生站点视图及其窄标题条，侧栏按需展开。工作台宽度（320px）。布局与站点矩形由主进程和共享显示契约共同决定，不能仅用 CSS 改出另一套几何。
+最顶部常驻 `22px` 自绘横纹标题栏（`WINDOW_TITLEBAR_HEIGHT = 22`），其下为单行命令栏、多站桌面画布与 `26px` 底部状态栏（`WORKSPACE_FEEDBACK_HEIGHT = 26`）。所有几何常量集中在 `desktop/src/shared/display.ts` 单一真源：
 
-| 指标 | 紧凑 | 舒适 |
+| 指标 | 紧凑（`compact`） | 舒适（`comfortable`） |
 | --- | --- | --- |
-| 外壳工具栏高度 | 52px | 64px |
-| 展开提问区的外壳高度 | 120px | 144px |
-| 站点标题条高度 | 24px | 32px |
-| 高频控件高度 | 32px | 40px |
-| 图标操作目标尺寸 | 24px | 32px |
-| 站点外边距与间隔 | 4px | 8px |
+| 主窗口横纹标题栏 | `22px` | `22px` |
+| 外壳命令栏高度 | `44px`（三行堆叠 `104px`） | `54px`（三行堆叠 `128px`） |
+| 展开提问区的命令栏高度 | `112px`（堆叠 `176px`） | `132px`（堆叠 `212px`） |
+| 站点小窗标题条高度 | `24px` | `30px` |
+| 高频控件高度 | `26px` | `32px` |
+| 图标操作最小目标尺寸 | `22px` | `26px` |
+| 桌面外边距 / 站点窗间距 | `6px` / `8px` | `8px` / `10px` |
+| `WebContentsView` 内缩（`TILE_FRAME_INSET`） | `3px` | `3px` |
 
-间距尺度在 `theme.css` 集中定义为（4px、8px、12px、16px、20px、24px、32px、48px、64px）。阅读页最大宽度、页内边距、列表宽度与内缩、内容块与章节间距使用语义变量；设置的说明/控件/分组间距复用同一尺度。工具密度与阅读密度仍按用途区分，字体基线、边框和图标的局部校正不强行取整。
-
-命令栏依据实际内容测量逐级收纳，尽量为提问框保留（320px）；先收次要文字和快捷键提示，再改变次级动作的入口；发送与结果库名称始终可见。不同语言、密度和缩放下的收纳时机不同，不用单个固定窗口宽度替代测量。
-
-提问框右侧依次提供新会话、历史和草稿入口，共用一个布局单元；新会话在第 1 级收纳文字，保留加号图标和完整提示。
-
-发送与结果库在所有收纳级别保留文字（英文工具栏短标签为 Library），级别 2 起让图标为文字让位；级别 4 将分组快捷入口交给工作台，并将新会话/草稿图标收至当前密度的最小点击宽度，将总览/聚焦收为一个切换按钮，名称与图标指向将进入的布局，收起站点状态与比较。范围按钮收紧水平留白，分页页签保留当前密度的最小交互目标。历史和比较由“更多”承接；宽窗比较入口显示动作文字。布局按钮的无障碍名称独立于可见文字，自动聚焦原因只作辅助提示。
-
-站点宫格以每格最小宽（380px）、最小高（210px）判断是否自动转入聚焦布局；除总览（最多 4 站宫格）与聚焦（主站 + 侧轨）外，支持双站对决（`duel`，当前页主站与另一站满高 50:50 并排精读，同页其余已选站点保持正尺寸压在底层保活，单栏低于 380px 或高度低于 210px 时自动退回聚焦）。页容量和排列以共享站点分页契约为准；站点原网页的缩放与外壳密度独立。底部流转条并列展示九站实时进度微矩阵与完成后的采集/阅读入口。
+命令栏按实际内容测量逐级收纳（`data-fit="1..4"`），始终保底提问输入框宽度 `>= 320px`，并保留「发送」与「结果库」可见文字。站点宫格维持单格最小 `380×210px` 自动聚焦保护，支持总览、对决（`50:50`）与聚焦三种排布。
 
 ### Library and Reading
 
-结果库与历史标题栏提供共用页面缩放：28px 放大/缩小图标，48px 等宽数字比例按钮，点击比例恢复 100%；沿用现有工具栏，不另占一行。窄窗操作按需换行，菜单、键盘和 Ctrl＋滚轮同步更新同一个比例；站点网页各自缩放独立。
-
-结果库按自身容器宽度安排“任务文件夹 / 内容列表 / 详情”。有效宽度达到（1320px）时使用三栏，列宽为（184px / 280px / 剩余宽度）；该门槛包含（820px）阅读页及（36px）滚动条与边界余量。小于（1320px）时收起文件夹栏，保留（280px）列表及任务文件夹入口；不超过（900px）时按列表或详情逐面显示，并保留返回路径。标题栏收纳同样跟随容器宽度。专注阅读可以隐藏前两栏。普通阅读不展示行首勾选框，进入多选后才显示；已选内容保留时多选状态继续可见。
-
-历史打开详情后，在至少（960px）的 CSS 视口中保留左侧（280px）记录列表，列表与正文分别滚动。当前记录用浅强调底色标识，列表搜索不卸载正文；专注按钮隐藏列表，小于（960px）时按列表/详情逐面显示。记录级复制、保存到结果库、再次提问及更多操作直接渲染在问题题头，回答级打开、复制与导出留在来源选择之后，避免动态搬移动作栏造成滚动偏移。
-
-保存结果普通阅读时，整理和更多动作与收藏一起置于记录标题区，取消独立管理行；比较上下文收起时仍保留可见的动作入口。专注阅读时，将文件夹与更多操作放入顶部工具栏的真实 DOM 插槽，取消独立记录管理行，为短窗正文回收约（55px）高度。按钮按视觉顺序参与键盘导航，窄窗按需换行保留点击尺寸；返回浏览恢复原工具栏，综合/追问编辑与决策卡保留各自布局。正文节点、来源选择和阅读位置保持。
-
-文件夹查找和当前范围搜索共用文字输入的边框、圆角、表面与（7px 8px）内边距，保留各自字号与最小高度。
-
-历史搜索采用相同内边距。两页列表的搜索文字、记录标题与日期共享文字起点；历史日期分组补偿记录行的透明边框，文件夹标题、查找文字与目录名称同样对齐。选中背景可向文字列外延伸，多选时为复选框留出独立列，不将容器外沿与内部文字强行拉齐。
-
-详情正文最大宽度（820px），常规内边距（20px 24px 64px）。双列比较基于详情容器宽度收纳，不只看窗口：容器不超过（820px）时减小间距，不超过（760px）时改为单列；来源导航始终单行横向滚动，当前来源随切换与宽度变化保持可见。
-
-阅读面切换与来源导航作为一组吸顶，模式栏承接综合与决策动作；历史来源与版本选择同样吸顶，问题和回答动作分别留在各自内容区。换行时自然增加高度，避免互相覆盖；来源跳转与键盘滚动按该组的实际高度避让。每份回答的来源标题与“导出 .md / 标为最佳 / 追问”同行，空间不足时动作组换行，组内间距（8px），与正文间距（16px）。正文首尾不叠加块级外边距，内部段落（12px）和章节（24px）的节奏保留；比较段落由外层留白组织，避免每块重新带入段前段后间距。
-
-进入比较时，详情容器不超过（1100px）则复用专注阅读展开，保留“返回浏览”；来源、筛选和阅读位置沿用当前会话。返回浏览后及单纯调整窗口大小时不再次自动展开。未保存的备注仍经过导航确认。
-
-比较默认将记录上下文收为一行问题摘要，通过“问题与记录信息”展开完整问题与时间；普通阅读与历史详情的长提问默认折叠为 2 行摘要，按需展开全文，让回答正文首屏直达。整理入口独立可达，标签备注进入正文侧的整理面板。折叠保留编辑状态，不解除未保存保护；展开状态随临时阅读会话保留，综合返回时原入口可见并恢复焦点。摘要在折叠时保留一级标题语义。
-
-双列比较以左侧（2.5px）强调色轨标示独有段落、（2px）弱色轨弱化共同段落，避免大面积浅底块干扰长文阅读；详情容器达到（1080px）时支持开启右侧（304px）同屏“证据槽”，划选回答原文即可直接停靠入槽整理依据与判词，窄容器自动回退单面切换。
-
-比较标题与返回动作并排，说明留在标题下方；详情容器不超过（480px）时回到单列顺序，保留动作文字与完整说明。
-
-比较正文栏按详情窗格的实际剩余高度设置最大高度，扣除上方控件与（16px）底部余量，下限（160px）；低于此可用高度时保留外层滚动，不裁切长问题。双栏独立滚动和位置记忆保留。工具行在回答与人工对照之间切换，同一空间每次只展示一种内容，表单和回答节点保留；切回回答恢复两栏位置，人工笔记保留。比较详情底部留白收为（16px），正常双栏无需外层滚动；人工表单使用同一剩余高度，短窗仍保留滚动退让。
-
-人工对照无摘录时提供原文选择入口，复用保存原文核对弹窗；取消回到入口，加入摘录后聚焦对应只读字段。四类笔记分别按需展开，已有笔记或分类在返回该来源时展开，独立笔记不要求先选择摘录；分类和笔记的保存含义保持不变。
-
-来源导航用（2px）下划线与（3px）偏移表示当前阅读位置，不增加链接尺寸；当前位置与人工最佳星标独立表达。滚动到底时指向末来源，末条回答较短也能正确定位；无滚动页面默认首来源。被动滚动只更新位置，不移动焦点、自动跳转或触发保存。
-
-整理面板按需覆盖正文右侧，常规宽（400px），详情容器不超过（600px）时占满详情区。所属文件夹通过独立的多选弹框保存，标签与备注显式保存；收起使用 hidden/inert 保留唯一编辑器，入口提示未保存。取消离开回到原字段，归类成功不清除标签备注草稿，同记录刷新只更新未编辑字段。
+结果库与历史详情共用 `820px` 阅读版心（内边距 `20px`）与顶部吸顶的立体分段切换 + 来源跳转条。结果库容器宽度 `>= 1320px` 时展示 `184px / 272px / 1fr` 三栏（文件夹井 / 记录列表井 / 详情阅读面），窄于 `1320px` 收起文件夹栏，窄于 `900px` 逐面切换。双列比较基于详情容器宽度响应，宽于 `1080px` 支持右侧同屏停靠证据槽。
 
 ### Settings and Overlays
 
-设置采用左侧（208px）分类导航与右侧独立滚动正文。正文最大宽（920px），外围（24px 32px），卡片内边距（20px 24px）。不超过（760px）时导航改为顶部完整标签的分类选择，外围和卡片改为（16px），行内操作移到说明下方；不超过（560px）时事实列表等进一步堆叠。
+设置工作区采用左侧 `204px` 白底列表导航井与右侧 `#cccccc` 桌面上的白底 `1px` 黑框分组卡（窄于 `760px` 切换为顶部 Platinum 双箭头下拉框）。分类标题 `18px`、卡片标题 `14.5px`、设置项 `13px`、说明与辅助信息不低于 `12px`。命令面板（最大宽 `700px`）、确认弹窗（最大宽 `420px`，带双外环模态框边）、准备任务（最大宽 `1060px`）与备份对照（最大宽 `1360px`）统一采用 `0px` 方角窗体与 `2px/4px` 硬投影。
 
-设置文字按角色区分：分类标题 20px（窄窗 18px），区块标题 16px / 600，设置项 14px / 600，说明正文 13px / 1.6，辅助信息 12px / 1.5。间距采用标题到说明 8px、说明到控件 12px、同级设置组 24px；通知测试与开关说明之间留 16px。图片同步开关占满卡片内容宽度，与其它开关共用右侧对齐线。
-
-默认布局在“外观与阅读”编辑，同步页只展示当前值、跟随方式与修改作用范围，并提供直达编辑入口。重复来源集中在默认折叠的“设置来源详情”；共享值采用规则与跨设备影响保持可见。折叠不改变偏好，不新增持久化键。
-
-命令面板默认使用 Ctrl+Shift+P（macOS 为 Cmd+Shift+P），设置可选本机 Ctrl+P / Cmd+P；仅展示当前有效键位及必要覆盖提示，不在操作界面解释选型。命令面板最大宽（720px），确认框最大宽（440px），均受当前窗口约束。页面根区域固定到窗口，滚动归各内容区域负责。
-
-重试核对弹窗保留固定标题、取消与底部确认，站点列表独立滚动。常规上下至少留（24px），逻辑高度不超过（480px）时收为（8px）；九站与200%缩放的短窗仍可逐项勾选和查看。
-
-准备任务最大宽（1040px）：左侧按任务内容、发送设置组织字段，右侧为只读最终预览；不超过（900px）时顺序堆叠，不超过（560px）时字段单列。标题、取消与应用固定，内容独立滚动。文字字段（14px / 1.6）、内边距（12px）沿用输入令牌；预览用画布底色、（16px）内边距和（1.75）行高，与可编辑字段区分。底部说明应用对草稿、参与站点、档位及附件的影响。新增表单不能只通过功能及横向溢出检查：需查看默认、长内容、失败与禁用状态的原生实图，核对内距、层级、只读区别以及短窗/放大后的操作可达性。
-
-逻辑高度不超过（420px）时，准备任务压缩上下留白并收起重复的开场说明；失败或变量未填提示与应用按钮并排，取代重复的底部说明，为正文保留空间。完整错误、取消和应用按钮始终保留，预览高度随视口收紧。最小窗口与200%缩放必须叠加验证，不能只在高窗口单测缩放。
-
-提问模板的变量填写沿用同一字段尺度：返回与模板名称固定在顶部，输入及只读预览独立滚动，底部完整保留替换说明和应用按钮。高度以实际内容区计算，不能用视口高度越过外壳底栏。未填写提示使用普通说明色，保存失败仅属于保存表单；发送组的新提示随当前表单滚入视野，不覆盖列表中的删除确认。逻辑高度不超过（420px）时，工作台标题随内容滚动，给展开提问框后所剩的极矮空间留出操作位置；Esc 关闭及滚回顶部的入口保持可用。
-
-来源：`desktop/src/shared/display.ts`、`desktop/src/main/layout.ts`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/toolbar-fit.ts`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`、`desktop/src/renderer/settings.css`。
+来源：`desktop/src/shared/display.ts`、`desktop/src/main/workspace-layout.ts`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/library.css`、`desktop/src/renderer/settings.css`。
 
 ## Elevation & Depth
 
-**平整为主，轻微阴影辅助分层。** 日常区域靠底色、细边界和留白分开；输入框用紧贴边缘的阴影和聚焦底线提示可编辑性，分段控件的选中项略微抬起。较大的阴影用于命令面板、确认框和结果库浮出菜单。长文、来源段落与比较列保持平整，避免每段再套一张浮起的卡片。
+**机械斜面凹凸 + 利落硬投影。** 摒弃现代高斯弥散阴影：容器层级靠 `1px solid #262626` 实框、内侧左上白高光 / 右下深灰暗角（`--plat-btn-bevel` / `--plat-sunken-bevel` / `--plat-window-bevel`）以及 `2px 2px 0 #262626` 硬边投影清晰表达“凸起按钮、下凹输入/列表井、浮动窗口”三层物理关系。
 
 ### Shadow Vocabulary
 
-| 角色 | 规范位置 | 用法 |
+| 角色 | 令牌 | 用法 |
 | --- | --- | --- |
-| 控件轻影 | sidecar `shadow-control` | 分段控件的当前项，明暗主题各有值 |
-| 输入常态影 | sidecar `field-shadow` | 文字输入及提问框容器 |
-| 输入聚焦影 | sidecar `field-focus-shadow` | 与输入内底线组合，明暗主题分别取值 |
-| 命令面板影 | sidecar `command-palette` | 独立命令面板 |
-| 确认框影 | sidecar `confirm-dialog` | 遮罩上的确认内容 |
-| 菜单影 | sidecar `library-popover` | 结果库浮出菜单和选择列表 |
+| 四层凸起按钮斜面 | `--plat-btn-bevel` | 所有常态立体按钮、下拉触发器与分段未选中项 |
+| 四层压下内凹斜面 | `--plat-btn-bevel-pressed` | `:active` 按下态与 `[aria-pressed="true"]` / `[aria-selected="true"]` 激活分段项 |
+| 下凹内容井斜面 | `--plat-sunken-bevel` | 文本输入框、提问框、列表滚动井、代码与预览框 |
+| 工具条上下切边 | `--plat-strip-bevel` | 命令栏、面板顶栏、设置顶栏与底部状态栏 |
+| 窗口硬投影 | `--plat-window-shadow` | 站点小窗、命令面板、下拉菜单与各类模态对话框 |
 
-精确阴影值放在 `.impeccable/design.json`，不扩展前置令牌的格式。原生站点视图的层序不是 CSS 阴影或 z-index 能解决的问题，覆盖面须沿用已有视图隐藏与恢复流程。
-
-**The Flat Reading Rule.** 回答、摘录和比较段落主要用间距组织。比较块不逐块添加横线；保留原文分隔线、表格边界与共同段落标记，延续结果库已有的平整阅读面。
-
-来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/styles.css`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`。
+来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/platinum-widgets.css`。
 
 ## Shapes
 
-小幅圆角、规整矩形和细边界构成基础语言。前置圆角令牌分别记录源码中重复出现的控件、面板、工具栏组、组内项、标记、浮出菜单和覆盖层形状，不能把它们合并成一个全局圆角。
+- **窗口、面板、卡片、列表井、表格、代码块、状态方标与浮出菜单**：一律 `0px` 直角硬边。
+- **独立立体按钮与下拉框**：`3px` 微切角（小号内嵌图标按钮 `2px`）；连体分段按钮组（`.mode-switch`、`.tier-switch`、`.page-tabs`、`.library-segments`）内部 `0px` 并以 `margin-left: -1px` 共用 `1px` 分隔黑边，仅首尾两端保留 `3px` 外角。
+- **经典原生部件（`platinum-widgets.css`）**：`15px` 宽三横脊立体滚动条、右侧 `20px` 双箭头分隔井 `select`、`13×13px` 斜面方复选框 / 圆单选框，以及全局 `<details>/<summary>` 统一的 `11×11px` 金属立体折叠三角（禁用浏览器默认原始 `▶`）。
+- **图标（`icons.tsx`）**：采用 `strokeLinecap="square"` 与 `strokeLinejoin="miter"` 利落折角线条；所有方形图标按钮显式声明 `padding: 0` 确保几何严格居中。
 
-普通控件沿用 `control`，设置分组沿用 `panel`；发送与分段外框使用 `toolbar`，分段内项使用 `inset`。命令面板和确认框使用 `overlay`。站点框另有上圆下小圆的组合（6px 6px 2px 2px），保留与原网页视图的衔接。
-
-状态圆点和圆形勾选标记保留圆形。结果库标签通常是小矩形标记；不将标签、按钮和容器统一改成胶囊。图标沿用当前（16px）、线宽（1.8）的 SVG 体系，继承文字色；局部紧凑图标使用所在组件的既有尺寸。
-
-来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/command-bar.css`、`desktop/src/renderer/site-frames.css`、`desktop/src/renderer/icons.tsx`。
+来源：`desktop/src/renderer/theme.css`、`desktop/src/renderer/platinum-widgets.css`、`desktop/src/renderer/composer.css`、`desktop/src/renderer/icons.tsx`。
 
 ## Components
 
 ### Buttons
 
-精确、轻巧，操作反馈清楚。
-
-- **发送：** 强调色底配成对文字色，工具栏组圆角；常规横向内边距（10px）、字重（650），高度跟随密度，禁用时降低不透明度。所有收纳级别保留发送文字，空间紧张时隐藏快捷键提示，并从级别 2 起隐藏图标。
-- **设置次级动作：** 浅灰填充、透明细边界、控件圆角，内边距（6px 12px），最小高度取（34px）与密度控件高度较大值；悬停略加深背景。
-- **轻量动作与关闭：** 透明背景，悬停使用弱灰底；关闭按钮采用统一轮廓、（16px）图标和密度目标尺寸。
-- **资料沉淀下一步：** 可采集回答时，既有底栏使用强调色文字与浅强调底显示“采集并比较”，与普通状态摘要并列；错误恢复动作与撤销优先，只在明确点击后启动现有采集流程。
-- **焦点与禁用：** 通常用（2px）强调色轮廓，边距依组件边界调整；禁用态保留所在组件的具体规则。仅 `aria-disabled` 的动作仍可聚焦解释原因，不能绘制成已接受点击。
-
-工具栏结果库入口始终保留文字、独立的三语可访问名称与悬停提示；“采集并比较”在文字收纳后仍保留可访问名称与悬停提示，入口整体收起后可从“更多”访问。比较正文按来源编号与站名命名，作为 Tab 可到达的滚动阅读区域；焦点轮廓向内（2px）绘制，避免边界裁切，重新聚焦保留当前阅读位置。
-- **危险确认：** 使用危险色与准确动词，沿用既有确认框规则。
-
-来源：`desktop/src/renderer/command-bar.css`、`desktop/src/renderer/settings.css`、`desktop/src/renderer/panel-controls.css`、`desktop/src/renderer/styles.css`。
+- **默认主按钮（Default Push Button，`.send` / `.primary`）**：复刻 Mac OS 9 HIG 默认按钮双层黑框外环（按钮自身 `1px` 黑框 + `2px` 灰槽 + `1px` 外黑环），面色维持银灰 `#ddd` 配高对比文字。
+- **常规立体按钮**：`#ddd` 四层凸起斜面，悬停提亮至 `#eee`，按下或激活切换为 `#666` 深炭内凹配白字；禁用态降不透明度并移除凹凸阴影。
 
 ### Inputs / Fields
 
-输入底色、独立的（1px）细边界、控件圆角和紧阴影构成常态；输入边界在明暗主题下均与相邻表面保持至少3:1的对比度，不改变通用分隔线颜色。聚焦后底色混入少量强调色，内侧底线（2px）与聚焦阴影共同提供反馈。错误态用危险文字色的边界和底线，只读使用次级表面，禁用降低不透明度并去影。
-
-统一提问框由容器承载这套反馈，内部 textarea 不再叠加第二个边界或焦点框；右侧为展开按钮保留独立空间。高对比度时输入边界使用次级文字色，强制配色下回到系统 CanvasText 边界与焦点轮廓。
-
-来源：`desktop/src/renderer/fields.css`、`desktop/src/renderer/composer.css`。
+下凹白底井（`1px` 黑框 + 左上 `#808080` 内阴影 + 右下外白边高光）。聚焦时边框与 `1px` 内环切换为 `--accent`，提问框由外层 `.prompt-composer` 统一承载下凹边框与聚焦环，右侧展开按钮 `padding: 0` 居中嵌套。
 
 ### Navigation
 
-工具栏的模式和档位、工作台页签、结果库内容类型均使用分段选择，但各自保留尺寸和选中处理。工作台选中项为面板底、强调色文字和轻影；工具栏选中项用主文字、面板底和细内边界。结果库的“阅读回答 / 对比 / 综合结果”使用底线式切换，不能用同一个分段外观覆盖这些不同层级。
-
-设置分类使用浅强调底和字重标识当前项，并通过 `aria-current="location"` 表达。右侧只显示一个分类，隐藏分类同时使用 hidden/inert；点击分类聚焦分类标题，明确深链接聚焦具体控件。滚动不改变分类，同一次打开保留每类滚动位置。
-
-来源：`desktop/src/renderer/command-bar.css`、`desktop/src/renderer/workspace.css`、`desktop/src/renderer/library.css`、`desktop/src/renderer/library-reading.css`、`desktop/src/renderer/settings.css`。
+命令栏模式/档位/分页、工作台双页签、结果库分类及阅读模式切换统一采用连体 `.seg` 机械分段组，选中项以 `#666` 深底内凹白字表达。文件夹栏、记录列表与设置分类导航采用白底列表井内的薰衣草选中行 + `3px` 左侧强调色轨表达当前位置。
 
 ### Chips and Status
 
-结果库标签与状态标记使用小矩形、辅助字号和轻底色；“已定稿”使用 `success-ink / success-soft`，与决策状态的语义配色一致。标签不默认具备按钮行为。分页发送状态徽标保留各语义的文字或数字，窄栏收纳后仍通过可访问名称表达完整状态。
+站点状态点、自动备份提示签、分页状态码与决策三态徽标统一采用 `1px` 黑框 `0px` 小方标；提示浮签（`.feedback-hint` / `.preview-badge`）采用经典 Mac 气球帮助淡黄底（`#ffffcc`）。
 
 ### Cards / Containers
 
-设置分组用面板底、面板圆角和细边界，组内卡片通过分隔线衔接，保留各自的标题、说明与操作。结果列表行以背景和轮廓表达当前项；回答、摘录、比较段落主要是平整分节，不复制设置卡的容器外观。
-
-列表负责找回记录，详情负责核对内容。普通记录只保留标题与简短日期，不重复显示“结果”、来源总数、站点名单、标签或正常完成比例；来源与标签仍在详情及筛选中可达。收藏使用行内小图标，决策卡在混合列表中显示类型，并保留状态；切到决策卡分类后不重复类型。
-
-列表标题最多两行，完整标题保留在悬停提示和详情中。次要信息共用一行：今天显示时间，往日显示日期，跨年补年份，完整时间在提示中；结果库按当前创建/更新排序选择日期字段。历史仅在需要注意时显示未完整保存状态，图片数量仅在有图片时出现，恢复操作进入行菜单。单页不显示分页器；不要为稀疏的字段或重复操作预留独立空行。
+设置分组、归档回答节、折叠帮助区与「旧版文字历史」（`.question-legacy`，在列表井内保持 `10px` 水平内缩与 `#ddd` 斜面折叠头）统一采用 `1px` 黑框直边容器。
 
 ### Site Frames and Reading Sections
 
-站点标题条将选择、九站几何微标（`SiteGlyph`）、站名、已确认模型/档位轻量徽章、进度文字与少量局部动作放在一行，焦点向内绘制以免裁切；站点网页在下方保留原样。出现 `submit_unconfirmed` 时在标题条下方展示温和琥珀色核对提示条，提醒先看原站网页再决定是否手动重试，绝不向第三方网页注入样式或自动重发。结果库阅读节使用来源微标、来源标题、字数、局部动作、正文及分隔线，并维持正文的选择和复制能力。
-
-人工“标为最佳”后，同一颗星留在吸顶来源导航中，以强调色文字、不透明浅底和星形帮助找回选中的回答；吸顶来源胶囊同时展示菱形站点微标与紧凑回答字数（视口低于 1120px 时收起字数避免拥挤）。每个来源预留固定星标位置，标记、改选及取消不改变导航尺寸。来源编号、站名和锚点保持一致，可访问名称补充“最佳回答”；仅跟随已确认保存的记录，失败保留原选择，取消后移除。它表达用户的选择，不代表事实核验或当前阅读位置。
+每个打开的 AI 站点渲染为桌面上的独立 `.tile-frame` 窗口：仅当前聚焦站点（`data-focused="true"`）在标题栏展示 `2px` 水平细横纹，失焦站点退为纯银灰标题栏；容器窄于 `240px`（如 `960×680` 200% 缩放下的聚焦侧轨）自动隐藏次要徽标与横纹，保证操作按钮不裁切。
 
 ### Motion and Feedback
 
-高频动作主要用颜色、背景、明暗变化即时反馈。面板进入（180ms）、退出（140ms），位移仅（6px）；外壳页面切换为（160ms）淡入；字段反馈（120ms）。提问区展开使用（180ms）高度过渡，收起（140ms）；原生站点矩形只在相应边界更新，不逐帧追随 DOM 动画。
-
-结果库菜单沿真实触发按钮的中心与展开侧进入：指针打开使用 160ms 透明度和轻微缩放（0.97→1），选择器箭头用 140ms 旋转说明开合。键盘打开、输入或接管后立即呈现最终状态；关闭立即生效，正文和列表保持稳定。
-
-键盘打开工作台不播放位移过渡。减少动态效果时取消面板、提问框与控件过渡；加载指示保留静态可见状态。精确曲线和时长位于 sidecar 扩展。
-
-来源：`desktop/src/renderer/panel-motion.css`、`desktop/src/renderer/composer.css`、`desktop/src/renderer/library-motion.css`、`desktop/src/renderer/native-feel.css`、`desktop/src/renderer/site-frames.css`、`desktop/src/renderer/styles.css`。
+- **全面 `0ms` 机械瞬切**：按钮悬停/按下、分页切换（隐藏旧滑块指示器）、分段开关、下拉菜单、折叠三角旋转与提问框展开/收起均为 `0ms` 即时响应。
+- **唯一保留过渡**：左侧 `.workspace-drawer` 指针开合保留 `120ms` 利落推拉；键盘触发及 `prefers-reduced-motion: reduce` 下同样为 `0ms`。
 
 ### Long Reading Layout
 
-超过16000字符的回答正文、超过40段的比较列按需排版屏幕外内容，完整DOM、链接和文字仍然保留。阅读会话仅记住数值尺寸，往返视图或重开结果库时先恢复占位尺寸再恢复滚动；不建立全局正文缓存。明确跳转来源时先排版目标与前方正文，防止锚点随占位展开而偏移。
+超长回答与多段比较列继续保留 `content-visibility: auto` 按需排版、会话高度记忆与吸顶导航精确锚点避让。
 
 ### Markdown Export Selection
 
-历史页使用“选择 / 完成”进入或退出多选；选择已加载项、清空和合并导出集中在紧凑选择栏，显示已选与当前搜索隐藏的数量。结果库复用现有多选。记录标题区提供可见的“导出 .md”，每份有正文的回答也提供同名局部动作；整条与多条导出进入选择面板，单份直接进入系统保存位置。
-
-导出面板最大宽（720px），放在页面顶层，避免历史侧栏动画或阅读容器裁切。常规四周至少（24px），窄于（520px）或低于（480px）时留（8px）；面板内边距由（20px）收为（12px）。标题与底部数量/保存操作固定，中间选择区独立滚动，原列表和阅读位置保留。
-
-站点按钮用站名表达范围，独立切换该站在全部记录中的选择。全部选中使用强调色边界与浅强调底；部分选中增加虚线边界和短横标记，读屏使用 mixed。部分或未选时点击补齐本站，全选时点击清除本站；其他站点与历史回答版本保持。记录显示保存时间，复选框也有部分状态；超过三条时默认折叠，可逐条展开查看；无正文版本禁用，有正文旧版本明确显示回退提示。
-
-底部始终说明所选记录/回答数量、100 条与 64 MiB 上限，空选择时禁用导出并解释原因。取消保存框保留面板与选择，失败就地给出恢复动作；导出成功返回原页面。刷新不擅自换成新版本，已变化的采集记录要求重新核对。综合结果在缩减来源时默认取消，显式保留时说明可能引用未导出的来源。仅展示与导出决策有关的信息。
-
-来源：`desktop/src/renderer/markdown-export-panel.tsx`、`desktop/src/renderer/markdown-export-record.tsx`、`desktop/src/renderer/markdown-export.css`、`desktop/src/renderer/question-history-selection.tsx`。
+导出选择弹窗采用 Platinum 模态框、白底下凹记录选择井与 `#666` 按下态站点筛选钮，保留部分选中（`mixed`）虚线短横语义、100 条 / 64 MiB 限额提示与失败就地恢复。
 
 ### Actions and State Copy
 
-结果库用“保存”表示写入结果记录，“复制”表示写入剪贴板，“导出”表示按所选格式生成 Markdown、HTML 或 PDF 文件。HTML/PDF 动作明确标出格式，只使用已保存的文字，不包含原图；导出不改变来源记录。组合操作的名称说明完整结果；失败反馈指出对应动作，保存完成而复制失败时保留这一部分成功及库内重试指引。空列表先区分搜索或筛选无匹配，再按文件夹、决策卡或首次采集说明下一步；“未归档”不当作一个待加入的文件夹。空列表与详情欢迎区共用同一条上下文指引，三语按钮、可访问名称和指引使用相同产品术语。
+三语术语（保存 / 复制 / 导出）、空态指引与无障碍名称完全保留既有语义契约。
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** 延用现有语义变量，并同步核对明暗主题、两种密度、三语长度与缩放。
-- **Do** 保持工具区紧凑、阅读区舒展，沿用当前区域的控件与导航样式。
-- **Do** 成对使用强调底色与文字色，分别使用状态图形色和状态文字色。
-- **Do** 保留可见焦点、中文输入法合成态、键盘路径、读屏反馈和系统辅助偏好。
-- **Do** 依据实际内容测量收纳工具栏，并让详情比较响应自身容器宽度。
+- **Do** 保持按钮与工具栏纯粹中性银灰，把 Lavender 严格留给滚动条、焦点环、文本选区与当前选中列表项。
+- **Do** 方形图标按钮一律声明 `padding: 0`，折叠区域一律走 `platinum-widgets.css` 立体金属三角并留足内边距。
+- **Do** 修改顶栏、底栏、标题栏或内缩尺寸时同步更新 `shared/display.ts` 与 `main/workspace-layout.ts`。
 
 ### Don't:
 
-- **Don't** 用外壳主题重新着色第三方 AI 网页。
-- **Don't** 为每个阅读段落增加独立浮卡，或将所有控件改成同一种圆角。
-- **Don't** 只用颜色说明状态，或在提问框内部与容器上叠加两套焦点反馈。
-- **Don't** 用固定窗口断点替代工具栏实际测量，或只改 CSS 而使原生站点几何失配。
-- **Don't** 将 sidecar 预览色阶当成应用已采用的新增配色；这些色阶只用于预览。
-
-<!-- 2026-10-16 局部适配：完整外壳逻辑宽度 <960px 时工具栏按 DOM 顺序分为三行，compact 收起/展开 120/200px，comfortable 144/240px；字段展开高度与总栏高度分开。主进程与渲染层共用 shared/display.ts。 -->
+- **Don't** 向第三方 AI 站点 `WebContentsView` 注入外壳样式，或使用圆角胶囊/高斯模糊阴影破坏 Platinum 机械统一感。
+- **Don't** 在高频按钮、分页切换或菜单上添加渐变缓动动画。
+- **Don't** 裸露浏览器默认 `<summary>` 原始黑三角或未重置 `appearance` 的表单控件。
 
 ### Settings and Site Participation
 
-设置提供外观与阅读、模型与档位、操作与快捷键、同步、备份与恢复、网络代理、数据管理、关于八类入口。普通打开默认外观；旧命令及备份/代理子入口自动选择对应分类。分类切换保留代理和快捷键草稿、备份预览、异步结果和各类反馈，隐藏回包不抢焦点；离开整个设置仍确认未保存草稿。离开数据管理清空 DELETE，破坏性写入期间禁止关闭与分类跳转。
-
-模型与档位位于外观之后，使用唯一的快速/思考编辑器；原 model-presets 跳转入口仍聚焦该编辑器。已保存值与未保存标记分开呈现，每档单独验证保存；未改变时禁用保存。读取反馈靠近站点入口，操作进度和错误靠近对应档位，反馈包含结果与可执行的下一步。填入网页当前选择仅编辑草稿，与已保存值一致时明确说明无需保存。保存后按钮禁用时聚焦该档标题；隐藏分类完成操作不抢焦点。生效、恢复推荐和同步说明集中在可展开帮助中。
-
-站点参与区域将标题与排序按钮放在首行，下一行常驻“已开页数 / 发送站数”，取消勾选仍保留页面的说明直接可见。同步保存说明按需展开。关闭页面按钮与勾选标签之间增加间距与分隔线，仍使用独立的确认流程。
-
-查找条固定为单行 48px；查询框常规 250px、有上限，给范围和操作留出空间。站点计数按实际宽度折入原生菜单，随后收纳刷新与说明；始终保留查询、范围、状态、前后与关闭入口。菜单覆盖原生站点视图，关闭后返回查找焦点；查询或会话已变化时不接续旧动作。
-
-代码和公式的阅读动作使用独立的 `ReadingAction`：12px/1.5 界面文字、至少28px点击目标、1px主题边界和6px圆角；悬停、选中、焦点及禁用态由共享样式提供。Markdown 的段落、标题、列表和表格只在共用阅读样式定义，不再依赖结果库祖先选择器。
+八类设置分区、模型预设读写保护、站点参与勾选与页面关闭分离、`48px` 跨站查找条及阅读局部动作均完整保留既有键盘流、输入法合成态保护与无障碍树契约。

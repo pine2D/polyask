@@ -6,7 +6,7 @@ export function useComparisonViewport(root: RefObject<HTMLElement | null>, manua
     const column = node?.querySelector<HTMLElement>(manualOpen ? '.manual-comparison' : '.archive-compare-column');
     const view = node?.ownerDocument.defaultView;
     if (!node || !pane || !column || !view) return;
-    const property = '--comparison-reading-height';
+    const property = manualOpen ? '--manual-comparison-height' : '--comparison-reading-height';
     let frame: number | null = null;
     const measure = () => {
       frame = null;

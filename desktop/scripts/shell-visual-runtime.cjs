@@ -65,7 +65,7 @@ app.whenReady().then(async () => {
         return {height:bar.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().width,layout:document.documentElement.dataset.toolbarLayout};})()`);
       const stacked = zoom > 1;
       assert.equal(geometry.layout, stacked ? 'stacked' : 'inline');
-      assert.equal(Math.abs(geometry.height - (stacked ? 120 : 52)) < 1, true);
+      assert.equal(Math.abs(geometry.height - (stacked ? 104 : 44)) < 1, true);
       assert.equal(geometry.prompt >= 320, true);
     }
     assert.deepEqual(errors, []);
@@ -144,7 +144,7 @@ app.whenReady().then(async () => {
           if (box.selector === '.command-bar > *') check(box.top >= 0 && box.bottom <= result.height + 1, `${label}: toolbar wraps`);
         }
         for (const color of result.ratios) check(color.ratio >= 4.5, `${label}: ${color.selector} text contrast ${color.ratio.toFixed(2)}`);
-        if (surface === 'shell') check(result.height === (density === 'compact' ? 52 : 64), `${label}: native bounds mismatch`);
+        if (surface === 'shell') check(result.height === (density === 'compact' ? 44 : 54), `${label}: native bounds mismatch`);
         if (surface === 'shell') check(result.prompt >= 320, `${label}: prompt squeezed to ${result.prompt}px at fit ${result.fit}`);
         else check(result.textSize.every(size => size >= 12), `${label}: secondary text below 12px`);
         reports.push({ label, ...result });
@@ -163,7 +163,7 @@ app.whenReady().then(async () => {
   for (const type of ['keyDown', 'keyUp']) win.webContents.sendInputEvent({ type, keyCode: 'Tab' });
   await wait('document.activeElement===document.querySelector("textarea")');
   await wait('document.querySelector(".command-bar").classList.contains("is-expanded")');
-  check((await measure()).height === 120, 'expanded composer native bounds mismatch');
+  check((await measure()).height === 112, 'expanded composer native bounds mismatch');
   win.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Enter', modifiers: ['control'] });
   win.webContents.sendInputEvent({ type: 'keyUp', keyCode: 'Enter', modifiers: ['control'] });
   await wait('document.querySelector(".app-shell").dataset.sent === "true"');

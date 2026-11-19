@@ -17,10 +17,13 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   };
   const release = point => win.webContents.sendInputEvent({ type: 'mouseUp', button: 'left', clickCount: 1, ...point });
   const visualState = selector => run(`(() => { const s=getComputedStyle(document.querySelector(${JSON.stringify(selector)})); return {transform:s.transform,filter:s.filter,background:s.backgroundColor,color:s.color}; })()`);
-  const alignment = () => run(`(() => {
-    const a=document.querySelector('.page-tab-indicator').getBoundingClientRect();
-    const b=document.querySelector('.page-tabs [aria-selected=true]').getBoundingClientRect();
-    return {left:a.left-b.left,right:a.right-b.right,top:a.top-b.top,bottom:a.bottom-b.bottom};
+  const pageTabState = () => run(`(() => {
+    const active = document.querySelector('.page-tabs [aria-selected=true]');
+    const inactive = document.querySelector('.page-tabs button:not([aria-selected=true])');
+    const a = getComputedStyle(active), b = getComputedStyle(inactive);
+    return { activeBg: a.backgroundColor, inactiveBg: b.backgroundColor, activeFg: a.color, inactiveFg: b.color,
+      indicatorHidden: getComputedStyle(document.querySelector('.page-tab-indicator')).display === 'none',
+      animations: active.getAnimations().length + document.querySelector('.page-tab-indicator').getAnimations().length };
   })()`);
   win.webContents.setZoomFactor(1);
   for (const theme of ['light', 'dark']) {
@@ -83,8 +86,8 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     release(point);
     for (const page of [0, 1, 2]) {
       await run(`document.querySelector('[data-page="${page}"]').click()`); await paint(); await finish();
-      const box = await alignment(); evidence.push({ theme, page, box });
-      check(Object.values(box).every(delta => Math.abs(delta) <= 1), `${theme}: page ${page} indicator misses button bounds: ${JSON.stringify(box)}`);
+      const tabState = await pageTabState(); evidence.push({ theme, page, tabState });
+      check(tabState.indicatorHidden && tabState.animations === 0 && tabState.activeBg !== tabState.inactiveBg, `${theme}: page ${page} mechanical tab state mismatch: ${JSON.stringify(tabState)}`);
     }
     const imagePoint = await pointer('.image-trigger'); release(imagePoint);
     await wait('document.querySelectorAll(".image-preview img").length === 2');
@@ -98,24 +101,25 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     await wait('!document.querySelector(".image-tray")');
     check(await run('!document.querySelector(".image-count")'), `${theme}: empty attachment count remains`);
   }
-  // Slow the existing interruptible page transition to 10%, reverse it, then finish.
+  // Verify 0ms mechanical page tab switching stays instant under 10% playback rate and reduced motion.
   win.webContents.debugger.attach('1.3');
   try {
     await win.webContents.debugger.sendCommand('Animation.enable');
     await win.webContents.debugger.sendCommand('Animation.setPlaybackRate', { playbackRate: 0.1 });
     await run('document.querySelector("#site-page-tab-0").click()'); await paint(); await finish();
     await run('document.querySelector("#site-page-tab-2").click()'); await paint();
-    const animations = await run('document.querySelector(".page-tab-indicator").getAnimations().map(a => ({rate:a.playbackRate,property:a.transitionProperty}))');
     const { playbackRate } = await win.webContents.debugger.sendCommand('Animation.getPlaybackRate');
-    evidence.push({ slowedTransition: animations, playbackRate });
-    check(animations.some(a => a.property === 'transform') && playbackRate === 0.1, 'page transition was not inspected at 10% speed');
+    const slowed = await pageTabState();
+    evidence.push({ slowed, playbackRate });
+    check(playbackRate === 0.1 && slowed.animations === 0 && slowed.activeBg !== slowed.inactiveBg, 'Platinum mechanical page switch must remain 0ms at 10% speed');
     await shot('details-motion-slow');
     await run('document.querySelector("#site-page-tab-1").click()'); await paint(); await finish();
-    check(Object.values(await alignment()).every(delta => Math.abs(delta) <= 1), 'interrupted page indicator did not retarget');
+    const switched = await pageTabState();
+    check(switched.animations === 0 && switched.activeBg !== switched.inactiveBg, 'mechanical page switch did not update active tab');
     await win.webContents.debugger.sendCommand('Animation.setPlaybackRate', { playbackRate: 1 });
     await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
     await run('document.querySelector("#site-page-tab-0").click()'); await paint();
-    check(await run('document.querySelector(".page-tab-indicator").getAnimations().length === 0'), 'reduced motion still animates page changes');
+    check(await run('document.querySelector(".page-tabs [aria-selected=true]").getAnimations().length === 0'), 'reduced motion still animates page changes');
   } finally {
     await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [] });
     await win.webContents.debugger.sendCommand('Animation.setPlaybackRate', { playbackRate: 1 });

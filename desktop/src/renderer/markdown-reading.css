@@ -11,7 +11,7 @@
 .markdown-preview li > ul, .markdown-preview li > ol { margin: 2px 0; }
 .markdown-preview blockquote {
   margin: 10px 0; padding: 6px 10px;
-  border: 1px solid var(--border); border-left: 3px solid var(--accent);
+  border: 1px solid var(--border); border-left: 3px solid var(--plat-mid-dark);
   background: var(--plat-g200);
 }
 .markdown-preview blockquote p { margin: 3px 0; }
