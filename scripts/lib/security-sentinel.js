@@ -13,11 +13,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const SECURITY_LABEL = "security-watch";
 const MARKER_RE = /<!--\s*polyask-security-watch:\s*(\{[^\n]*?\})\s*-->/;
 
-// 与 desktop/scripts/audit-runtime.mjs 严格同口径：只在打包期跑、不进 app.asar 的 @electron/* 工具链包。
+// 与 desktop/scripts/audit-runtime.mjs 严格同口径：只在打包/签名/下载期跑、不进 app.asar 的 @electron/* 工具链包。
 const BUILD_TIME_ELECTRON_SCOPE = new Set([
-  "@electron/rebuild",
-  "@electron/packager",
-  "@electron/node-gyp"
+  "@electron/asar", "@electron/fuses", "@electron/get", "@electron/node-gyp", "@electron/notarize",
+  "@electron/osx-sign", "@electron/packager", "@electron/rebuild", "@electron/universal", "@electron/windows-sign"
 ]);
 
 function isRuntimeElectronPackage(name) {

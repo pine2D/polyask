@@ -69,6 +69,8 @@ test("依赖安全过滤仅放行生产依赖与随包 Electron 运行时的 hig
       webpack: { name: "webpack", severity: "critical", range: "*", fixAvailable: false, via: [] }
     }),
     fullAudit: emptyAudit({
+      "@electron/asar": { name: "@electron/asar", severity: "high", range: "*", fixAvailable: true, via: [] },
+      "@electron/universal": { name: "@electron/universal", severity: "high", range: "*", fixAvailable: true, via: [] },
       "@electron/rebuild": { name: "@electron/rebuild", severity: "high", range: "*", fixAvailable: false, via: [] },
       "@electron/packager": { name: "@electron/packager", severity: "critical", range: "*", fixAvailable: false, via: [] },
       electron: {

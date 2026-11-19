@@ -21,11 +21,18 @@ import path from "node:path";
 
 const DESKTOP_ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
-// 命名空间是 @electron/ 但只在构建期跑、不进 app.asar 的工具链包，见上方文件头注释。
+// 命名空间是 @electron/ 但只在构建/签名/下载期跑、不进 app.asar 的工具链包，见上方文件头注释。
 const BUILD_TIME_ELECTRON_SCOPE = new Set([
-  "@electron/rebuild",
-  "@electron/packager",
+  "@electron/asar",
+  "@electron/fuses",
+  "@electron/get",
   "@electron/node-gyp",
+  "@electron/notarize",
+  "@electron/osx-sign",
+  "@electron/packager",
+  "@electron/rebuild",
+  "@electron/universal",
+  "@electron/windows-sign",
 ]);
 
 function isRuntimeElectronPackage(name) {
