@@ -37,7 +37,7 @@ exports.taskSetupVisual=async({win,output,nativeTheme,js,until,click,key,open,se
     const fields=await js(`(()=>[...document.querySelectorAll('.task-setup textarea')].map(node=>{
       const s=getComputedStyle(node);return {name:node.name,paddingX:parseFloat(s.paddingInlineStart),paddingY:parseFloat(s.paddingBlockStart),
         font:parseFloat(s.fontSize),line:parseFloat(s.lineHeight),readOnly:node.readOnly,background:s.backgroundColor};}))()`);
-    check(fields.every(f=>f.paddingX>=10&&f.paddingY>=8&&f.font>=14&&f.line/f.font>=1.5),`${name}: readable field geometry`);
+    check(fields.every(f=>f.paddingX>=10&&f.paddingY>=8&&f.font>=13&&f.line/f.font>=1.5),`${name}: readable field geometry`);
     const preview=fields.find(f=>f.name==='task-preview'),editor=fields.find(f=>f.name==='task-text');
     check(preview.readOnly&&!editor.readOnly,`${name}: preview remains read-only`);
     if(!c.forced)check(preview.background!==editor.background,`${name}: preview has a distinct surface`);

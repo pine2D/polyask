@@ -72,6 +72,8 @@ app.whenReady().then(async () => {
   ipcMain.handle('polyask:preferences', preferences); ipcMain.handle('polyask:preferences-seed', preferences);
   ipcMain.handle('polyask:draft-list', () => ({ epoch:0, deviceId:'native', drafts:[] }));
   ipcMain.handle('polyask:proxy-state', () => services.proxyStateFixture());
+  ipcMain.handle('polyask:window-chrome-state', () => ({ focused:true, maximized:false, fullScreen:false }));
+  ipcMain.handle('polyask:page-zoom-get', () => 1);
   for (const [channel, action] of [
     ['set-composer-expanded', value => manager.setComposerExpanded(value)]
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (trusted(event)) action(value); });
@@ -237,7 +239,9 @@ app.whenReady().then(async () => {
     await run('window.polyask.setDisplayPreferences(' + JSON.stringify({ density, siteScale:0.9 }) + ')');
     for (const cssWidth of [336,480,720,960,1440]) for (const zoom of [1,2]) for (const expanded of [false,true]) {
       const width = cssWidth * zoom;
-      win.setContentSize(width, 1000); win.webContents.setZoomFactor(zoom); manager.relayout();
+      win.setContentSize(width, 1000); win.webContents.setZoomFactor(zoom);
+      await until(() => run(`window.innerWidth===${cssWidth}`), 'viewport resized');
+      manager.relayout();
       await run(`(()=>{const e=document.querySelector('[data-composer-toggle]');if(e.getAttribute('aria-expanded')!==${JSON.stringify(String(expanded))})e.click()})()`);
       await until(() => run('document.documentElement.dataset.density===' + JSON.stringify(density)), 'density applied');
       const stacked = width / zoom < 960;

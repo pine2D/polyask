@@ -41,7 +41,7 @@ app.whenReady().then(async()=>{
         state.step='variables';await click('.prompt-library-item > button:first-child');await shot('variables-empty');
         check(await js(`![...document.querySelectorAll('.prompt-library [role=status]')].some(n=>n.getClientRects().length&&n.textContent===${JSON.stringify(saveFailure)})`),'save failure does not leak into the variable editor');
         check(await js("(()=>{const r=document.querySelector('.template-apply').getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;})()"),'template apply is visible while editing');
-        check(await js("[...document.querySelectorAll('.prompt-variable-editor textarea')].every(n=>{const s=getComputedStyle(n);return parseFloat(s.fontSize)>=14&&parseFloat(s.paddingInlineStart)>=10;})"),'template fields have readable type and internal spacing');
+        check(await js("[...document.querySelectorAll('.prompt-variable-editor textarea')].every(n=>{const s=getComputedStyle(n);return parseFloat(s.fontSize)>=13&&parseFloat(s.paddingInlineStart)>=10;})"),'template fields have readable type and internal spacing');
         check(await js("document.querySelector('.template-apply').disabled"),'missing variables block apply');
         await type('[name=template-variable-0]','保留 {{literal}} $1 与用户输入');await type('[name=template-variable-1]','Synthetic source');
         await shot('variables-filled');

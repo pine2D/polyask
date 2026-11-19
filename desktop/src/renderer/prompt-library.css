@@ -41,7 +41,7 @@
 .prompt-variable-editor > .prompt-variable-hint { flex-shrink: 0; padding: 8px 14px; }
 .prompt-variable-fields { min-height: 0; padding: 0 14px 14px; overflow-y: auto; overscroll-behavior: contain; display: grid; gap: 12px; }
 .prompt-variable-editor label { min-width: 0; display: grid; gap: 5px; font-size: var(--font-control); font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
-.prompt-variable-editor textarea { width: 100%; min-height: 76px; padding: 8px; resize: vertical; font: 400 var(--font-body)/1.55 var(--font-ui); }
+.prompt-variable-editor textarea { width: 100%; min-height: 76px; padding: 8px 10px; resize: vertical; font: 400 var(--font-body)/1.55 var(--font-ui); }
 .prompt-variable-preview {
   padding: 10px; border: 1px solid var(--plat-ink); border-radius: 0; background: var(--plat-g200);
 }

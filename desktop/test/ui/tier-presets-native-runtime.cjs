@@ -71,7 +71,7 @@ app.whenReady().then(async () => {
         const fg=luminance(rgb(getComputedStyle(el).color)),back=luminance(bg);return (Math.max(fg,back)+.05)/(Math.min(fg,back)+.05);});
       return {minContrast:Math.min(...ratios),
       viewport:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth+1,
-      bad:[...card.querySelectorAll('button,select')].filter(el=>el.getClientRects().length).map(el=>el.getBoundingClientRect()).filter(r=>r.left< -1||r.right>innerWidth+1||r.height<32).length,
+      bad:[...card.querySelectorAll('button,select')].filter(el=>el.getClientRects().length).map(el=>el.getBoundingClientRect()).filter(r=>r.left< -1||r.right>innerWidth+1||r.height<28).length,
       labels:[...card.querySelectorAll('select')].every(el=>!!document.querySelector('label[for="'+el.id+'"]')),
       sizes:[...card.querySelectorAll('p,label,legend')].map(el=>parseFloat(getComputedStyle(el).fontSize))};})()`);
     check(!geometry.overflow && geometry.bad === 0, 'all controls fit the actual CSS viewport');

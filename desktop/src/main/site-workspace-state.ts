@@ -75,6 +75,7 @@ export class SiteWorkspaceState {
     return {
       mode: this.renderedMode,
       automaticFocus: this.mode !== "focus" && this.renderedMode === "focus",
+      composerExpanded: this.composerExpanded,
       focused: this.focused,
       page: this.page,
       pageCount: this.pageCount,

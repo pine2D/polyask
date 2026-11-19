@@ -18,8 +18,12 @@ export function useWorkspaceMotion(surface: DesktopSurface, drawerOpen: boolean,
   useEffect(() => shell.onComposerOutsidePointer?.(() => composer.setExpanded(false)), [composer.setExpanded]);
   const hasLivePlacements = Boolean(geometry && !geometry.covered && geometry.layout.placements.length > 0);
   const titlebar = geometry?.titlebarHeight ?? WINDOW_TITLEBAR_HEIGHT;
-  const layoutExpanded = hasLivePlacements && geometry!.layout.placements.every(
-    placement => placement.bounds.y >= titlebar + shellHeightForComposer(geometry!.density, true, toolbarLayoutForWidth(window.innerWidth))
+  const layoutExpanded = hasLivePlacements && (
+    geometry!.layout.composerExpanded !== undefined
+      ? geometry!.layout.composerExpanded
+      : geometry!.layout.placements.every(
+          placement => placement.bounds.y >= titlebar + shellHeightForComposer(geometry!.density, true, toolbarLayoutForWidth(window.innerWidth))
+        )
   );
   const syncedExpanded = active && (hasLivePlacements ? layoutExpanded : composer.reservedExpanded);
   return {

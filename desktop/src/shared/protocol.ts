@@ -263,6 +263,7 @@ export interface SiteNavigationHistoryState {
 
 export interface LayoutState {
   readonly automaticFocus?: boolean;
+  readonly composerExpanded?: boolean;
   readonly mode: LayoutMode;
   readonly focused: SiteKey;
   readonly page: number;

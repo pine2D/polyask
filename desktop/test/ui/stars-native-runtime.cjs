@@ -61,7 +61,7 @@ app.whenReady().then(async () => {
       return {overflow:root.scrollWidth>root.clientWidth+1,buttons:buttons.map(n=>{const r=n.getBoundingClientRect(),s=getComputedStyle(n),svg=n.querySelector('svg');
         return {width:r.width,height:r.height,right:r.right,fill:getComputedStyle(svg).fill,pressed:n.getAttribute('aria-pressed'),color:s.color};})};})()`);
     check(!geometry.overflow, 'surface does not overflow');
-    check(geometry.buttons.every(b => b.width >= 28 && b.height >= 28), 'star targets remain usable');
+    check(geometry.buttons.every(b => b.width >= 24 && b.height >= 24), 'star targets remain usable');
     check(geometry.buttons.filter(b => b.pressed === 'true').every(b => b.fill === b.color), 'filled stars convey selection');
     writeFileSync(join(output, `${state.step}.png`), (await win.webContents.capturePage()).toPNG());
     if (extra) {

@@ -46,12 +46,12 @@
 }
 .task-setup-preview-head h3 { margin-bottom: 3px; }
 .task-setup-preview p { overflow-wrap: anywhere; font-size: var(--font-control); color: var(--muted); }
-#root .task-setup textarea[name="task-preview"] {
+:is(#root, body) .task-setup textarea[name="task-preview"] {
   flex: 1; min-height: 210px; padding: 12px; resize: none;
   border-color: var(--plat-ink); border-radius: 0;
-  background: var(--panel); box-shadow: var(--plat-sunken-bevel); line-height: 1.65;
+  background: var(--surface-elevated); box-shadow: var(--plat-sunken-bevel); line-height: 1.65;
 }
-#root .task-setup textarea[name="task-preview"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+:is(#root, body) .task-setup textarea[name="task-preview"]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .task-setup-scope {
   padding-top: 8px; border-top: 1px solid var(--plat-ink);
 }
@@ -78,11 +78,11 @@
 }
 .task-setup-footer-actions button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .task-setup-footer-actions button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
-.task-setup .task-setup-footer-actions button:disabled { color: var(--muted); background: var(--plat-g300); opacity: .48; cursor: default; box-shadow: none; }
+.task-setup .task-setup-footer-actions button:disabled { color: var(--muted); background: var(--plat-g200); border-color: var(--border); opacity: .72; cursor: default; box-shadow: none; }
 .task-setup .task-setup-error, .task-setup .task-setup-invalid { color: var(--danger-ink); font-size: var(--font-control); }
 @media (max-width: 900px) {
   .task-setup-body { grid-template-columns: minmax(0, 1fr); }
-  #root .task-setup textarea[name="task-preview"] { flex: none; height: min(360px, 50dvh); min-height: 200px; }
+  :is(#root, body) .task-setup textarea[name="task-preview"] { flex: none; height: min(360px, 50dvh); min-height: 200px; }
 }
 @media (max-width: 560px) {
   .task-setup > header { padding-inline: 12px; }
@@ -100,12 +100,12 @@
   .task-setup-footer-actions p { flex: 1 1 0; min-width: 0; }
   .task-setup > footer:has(> .task-setup-error, > .task-setup-invalid) { grid-template-columns: minmax(0, 1fr) auto; align-items: end; }
   .task-setup > footer:has(> .task-setup-error, > .task-setup-invalid) .task-setup-footer-actions p { display: none; }
-  #root .task-setup textarea[name="task-preview"] { height: 40dvh; min-height: 120px; }
+  :is(#root, body) .task-setup textarea[name="task-preview"] { height: 40dvh; min-height: 120px; }
 }
 @media (forced-colors: active) {
   .task-setup-content, .task-setup-delivery, .task-setup-preview, .task-scope-chip { border-color: CanvasText; background: Canvas; box-shadow: none; }
   .task-setup select { border-color: CanvasText; background: Canvas; color: CanvasText; box-shadow: none; }
-  #root .task-setup textarea[name="task-preview"] { border-color: CanvasText; background: Canvas; box-shadow: none; }
-  .task-setup select:focus-visible, #root .task-setup textarea[name="task-preview"]:focus-visible { outline-color: Highlight; }
+  :is(#root, body) .task-setup textarea[name="task-preview"] { border-color: CanvasText; background: Canvas; box-shadow: none; }
+  .task-setup select:focus-visible, :is(#root, body) .task-setup textarea[name="task-preview"]:focus-visible { outline-color: Highlight; }
   .task-setup .task-setup-footer-actions button:disabled { color: GrayText; background: Canvas; border-color: GrayText; }
 }
