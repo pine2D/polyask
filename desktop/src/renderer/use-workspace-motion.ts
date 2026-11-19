@@ -15,6 +15,7 @@ export function useWorkspaceMotion(surface: DesktopSurface, drawerOpen: boolean,
   const composer = useComposerSession(surface);
   useEffect(() => shell.setDrawerOpen(active && (drawerPresent || imagePresent)), [active, drawerPresent, imagePresent]);
   useEffect(() => shell.setComposerExpanded(composer.reservedExpanded), [composer.reservedExpanded]);
+  useEffect(() => shell.onComposerOutsidePointer?.(() => composer.setExpanded(false)), [composer.setExpanded]);
   const ready = !geometry || geometry.covered || !geometry.layout.placements.length ||
     geometry.layout.placements.every(placement => placement.bounds.y >= shellHeightForComposer(geometry.density, true, toolbarLayoutForWidth(window.innerWidth)));
   return { composer: { ...composer, revealedExpanded: composer.expanded && ready }, drawerPresent };

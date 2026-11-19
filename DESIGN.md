@@ -288,14 +288,15 @@ Markdown 正文五、六级标题同为 `13px`，以 `700 / 600` 字重与颜色
 
 ## Components
 
-### Buttons
+### Buttons and Popup Menus
 
 - **默认主按钮（Default Push Button，`.send` / `.primary`）**：复刻 Mac OS 9 HIG 默认按钮双层黑框外环（按钮自身 `1px` 黑框 + `2px` 灰槽 + `1px` 外黑环），面色维持银灰 `#ddd` 配高对比文字。
-- **常规立体按钮**：`#ddd` 四层凸起斜面，悬停提亮至 `#eee`，按下或激活切换为 `#666` 深炭内凹配白字；禁用态降不透明度并移除凹凸阴影。
+- **常规立体按钮**：`#ddd` 四层凸起斜面，仅在未激活且未按下的常态下悬停提亮至 `#eee`；按下或展开/激活（`:active`、`[aria-pressed="true"]`、`[aria-expanded="true"]`、`.active`）锁定为 `#666` 深炭内凹配白字，避免悬停覆盖激活底色；禁用态降不透明度并移除凹凸阴影。
+- **跨视图 Platinum 弹出菜单（`platinum-popup-menu.ts`）**：顶栏自定义分组菜单、右上角「更多」菜单、跨站查找（`Ctrl+F`）溢出菜单与外壳输入框右键编辑菜单统一通过挂载在 `window.contentView` 最顶层的透明 `WebContentsView` 自绘（`#ddd` / `#353540` 斜面方框、双线凹槽分隔线、`#333399` / `#9e9eff` 悬停反白与纯等宽英文快捷键），既能盖住底层九个实时 AI `WebContentsView`，又不抢夺主窗口系统焦点导致标题栏横纹变灰。
 
 ### Inputs / Fields
 
-下凹白底井（`1px` 黑框 + 左上 `#808080` 内阴影 + 右下外白边高光）。聚焦时边框与 `1px` 内环切换为 `--accent`，提问框由外层 `.prompt-composer` 统一承载下凹边框与聚焦环，右侧展开按钮 `padding: 0` 居中嵌套。
+下凹白底井（`1px` 黑框 + 左上 `#808080` 内阴影 + 右下外白边高光），同步覆盖 `#root` 与挂在 `document.body` 的全部 Portal 弹层（`.library-popover`、`.confirm-scrim`、`.backup-scrim`）。聚焦时边框与 `1px` 内环切换为 `--accent`；提问框由外层 `.prompt-composer` 统一承载下凹边框与聚焦环，右侧展开按钮 `padding: 0` 居中嵌套，鼠标点击提问框以外区域（含外壳工具栏及任意 AI 站点网页视图）自动收起并完整保留草稿、选区与滚动位置（框内拖选文字滑出边界或纯键盘切焦不误收）。
 
 ### Navigation
 

@@ -136,10 +136,12 @@ test("Platinum widgets zero UA button padding on composer toggle, style disclosu
   const widgets = renderer("platinum-widgets.css");
   const history = renderer("question-history.css");
   const theme = renderer("theme.css");
+  const commandBar = renderer("command-bar.css");
   assert.match(composer, /\.prompt-composer \[data-composer-toggle\]\s*\{[^}]*padding:\s*0;/s);
-  assert.match(widgets, /#root details > summary\s*\{\s*list-style:\s*none;\s*\}/);
-  assert.match(widgets, /#root details:not\(\.question-menu\):not\(\.archive-record-context\) > summary:not\(\[hidden\]\)::before/);
+  assert.match(widgets, /:is\(#root, \.confirm-scrim, \.backup-scrim\) details > summary\s*\{\s*list-style:\s*none;\s*\}/);
+  assert.match(widgets, /:is\(#root, \.confirm-scrim, \.backup-scrim\) details:not\(\.question-menu\):not\(\.archive-record-context\) > summary:not\(\[hidden\]\)::before/);
   assert.doesNotMatch(widgets, /data:image/);
+  assert.match(commandBar, /\.scope-split button:hover:not\(:disabled, \[aria-expanded="true"\], \[aria-pressed="true"\], :active\)/);
   assert.match(history, /\.question-legacy\s*\{[^}]*margin:\s*12px 10px 16px;/s);
   assert.match(theme, /--hover-soft:\s*#eeeeee;/);
   assert.match(theme, /--hover-soft:\s*#2a2a33;/);

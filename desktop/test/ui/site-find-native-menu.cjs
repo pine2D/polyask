@@ -1,49 +1,60 @@
 const assert = require('node:assert/strict');
-const { execFileSync } = require('node:child_process');
 const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
-module.exports = async ({ win, run, until, paint, manager, menuTrace, keys, output, locale }) => {
-  if (process.platform !== 'linux') return;
-  const nativeClick = async selector => {
-    const point = await run(`(()=>{const r=document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
-    const origin = win.getContentBounds(), zoom = win.webContents.getZoomFactor();
-    execFileSync('xdotool', ['mousemove', '--sync', String(Math.round(origin.x + point.x * zoom)), String(Math.round(origin.y + point.y * zoom)), 'click', '1']);
+module.exports = async ({ win, run, until, paint, click, manager, menuTrace, keys, output, locale }) => {
+  const press = async (contents, keyCode) => {
+    for (const type of ['keyDown', 'keyUp']) contents.sendInputEvent({ type, keyCode });
+    await new Promise(resolve => setTimeout(resolve, 60));
   };
-  const press = key => execFileSync('xdotool', ['key', '--clearmodifiers', key]);
   manager.siteFind.select(keys[8]); await paint();
-  await nativeClick('[name=site-find-menu]'); await until(() => menuTrace.open, 'native popup opens');
-  await new Promise(resolve => setTimeout(resolve, 120));
-  writeFileSync(join(output, 'menu-tree-' + locale + '.txt'), execFileSync('xwininfo', ['-root', '-tree']));
-  execFileSync('import', ['-window', 'root', join(output, 'menu-' + locale + '.png')]);
-  press('Home'); press('Return');
-  await until(() => !menuTrace.open, 'native menu keyboard choice');
-  await until(() => manager.siteFind.state.activeSite === keys[0], 'native menu selected first matching site');
+  await click('[name=site-find-menu]');
+  await until(() => menuTrace.open && !!menuTrace.view, 'Platinum popup opens');
+  assert.equal(win.contentView.children.at(-1) === menuTrace.view, true, 'Platinum popup view stacks above all nine site views');
+  const popupPaint = () => menuTrace.view.webContents.executeJavaScript('new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)))');
+  await popupPaint();
+  writeFileSync(join(output, 'menu-' + locale + '.png'), (await win.capturePage()).toPNG());
+  await press(menuTrace.view.webContents, 'Home');
+  await press(menuTrace.view.webContents, 'Return');
+  await until(() => !menuTrace.open, 'Platinum menu keyboard choice');
+  await until(() => manager.siteFind.state.activeSite === keys[0], 'Platinum menu selected first matching site');
   await until(() => run('document.activeElement?.name==="site-find-query"'), 'menu restores query focus');
+
   manager.siteFind.select(keys[8]); await paint();
-  await nativeClick('[name=site-find-menu]'); await until(() => menuTrace.open, 'native pointer popup');
-  await new Promise(resolve => setTimeout(resolve, 120));
-  const tree = execFileSync('xwininfo', ['-root', '-tree'], { encoding: 'utf8' });
-  const popup = tree.split('\n').find(line => line.includes('(has no name):') && /\s\d{3,}x\d{3,}[+]/.test(line));
-  assert.equal(!!popup, true, 'native popup is a separate X11 surface above site views');
-  const id = popup.trim().split(' ')[0], info = execFileSync('xwininfo', ['-id', id], { encoding: 'utf8' });
-  const number = name => Number(info.match(new RegExp(name + ':\\s+(-?\\d+)'))[1]);
-  assert.equal(number('Width') <= 520, true, 'scope notes keep the native menu compact');
-  const x = number('Absolute upper-left X'), y = number('Absolute upper-left Y'), height = number('Height');
-  // The menu has two separators; first matching site follows the disabled scope heading.
-  const row = (height - 24) / menuTrace.items.filter(item => item.type !== 'separator').length;
-  execFileSync('xdotool', ['mousemove', '--sync', String(x + 60), String(Math.round(y + 4 + row * 1.5)), 'click', '1']);
-  await until(() => !menuTrace.open, 'native pointer choice');
-  await until(() => manager.siteFind.state.activeSite === keys[0], 'native pointer selects site');
+  await click('[name=site-find-menu]');
+  await until(() => menuTrace.open && !!menuTrace.view, 'Platinum pointer popup');
+  await popupPaint();
+  const box = await menuTrace.view.webContents.executeJavaScript(`(() => {
+    const m = document.getElementById('menu').getBoundingClientRect();
+    const first = document.querySelector('.plat-item:not([aria-disabled="true"])').getBoundingClientRect();
+    return { width: m.width, x: first.left + first.width / 2, y: first.top + first.height / 2 };
+  })()`);
+  assert.equal(box.width <= 440, true, 'scope notes keep the Platinum menu compact');
+  const zoom = menuTrace.view.webContents.getZoomFactor();
+  for (const type of ['mouseDown', 'mouseUp']) {
+    menuTrace.view.webContents.sendInputEvent({
+      type, button: 'left', clickCount: 1,
+      x: Math.round(box.x * zoom), y: Math.round(box.y * zoom)
+    });
+  }
+  await until(() => !menuTrace.open, 'Platinum pointer choice');
+  await until(() => manager.siteFind.state.activeSite === keys[0], 'Platinum pointer selects site');
   await until(() => run('document.activeElement?.name==="site-find-query"'), 'pointer menu restores query focus');
+
   const beforeRefresh = manager.siteFind.state.revision;
-  await run('document.querySelector("[name=site-find-menu]").focus()'); press('space');
-  await until(() => menuTrace.open, 'keyboard opens native menu'); press('End'); press('Return');
+  await run('document.querySelector("[name=site-find-menu]").focus()');
+  await press(win.webContents, 'Space');
+  await until(() => menuTrace.open && !!menuTrace.view, 'keyboard opens Platinum menu');
+  await press(menuTrace.view.webContents, 'End');
+  await press(menuTrace.view.webContents, 'Return');
   await until(() => !menuTrace.open && manager.siteFind.state.revision > beforeRefresh && manager.siteFind.state.sites.every(s => s.status !== 'pending'), 'keyboard refresh');
+
   const revision = manager.siteFind.state.revision;
-  await run('document.querySelector("[name=site-find-menu]").focus()'); press('space');
-  await until(() => menuTrace.open, 'native cancel popup');
-  press('Escape'); await until(() => !menuTrace.open, 'native Escape dismisses menu');
-  assert.equal(manager.siteFind.state.open, true, 'Escape dismisses only the native menu');
+  await run('document.querySelector("[name=site-find-menu]").focus()');
+  await press(win.webContents, 'Space');
+  await until(() => menuTrace.open && !!menuTrace.view, 'Platinum cancel popup');
+  await press(menuTrace.view.webContents, 'Escape');
+  await until(() => !menuTrace.open, 'Escape dismisses Platinum menu');
+  assert.equal(manager.siteFind.state.open, true, 'Escape dismisses only the popup menu');
   assert.equal(manager.siteFind.state.revision, revision, 'cancel never reruns the search');
   await until(() => run('document.activeElement?.name==="site-find-query"'), 'cancel restores query focus');
 };

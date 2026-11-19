@@ -25,7 +25,8 @@
 .scope-label-full, .scope-label-compact { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .scope-label-compact { display: none; }
 .health-trigger { position: relative; display: grid; place-items: center; border-radius: 3px; padding: 0 5px; }
-.scope-split button:hover:not(:disabled), .health-trigger:hover:not(:disabled) { background: var(--plat-g200); }
+.scope-split button:hover:not(:disabled, [aria-expanded="true"], [aria-pressed="true"], :active),
+.health-trigger:hover:not(:disabled, .active, [aria-pressed="true"], :active) { background: var(--plat-g200); }
 .scope-split button:active:not(:disabled),
 .scope-main[aria-expanded="true"],
 .health-trigger:active:not(:disabled),
@@ -54,7 +55,8 @@
 .tier-switch > [data-current-tier] + button { margin-left: -1px; }
 .command-bar[data-fit~="2"] .tier-switch > button[data-tier-icon="site-setting"] { margin-left: 0; border-radius: 3px 0 0 3px; }
 .mode-switch > .layout-toggle { border-radius: 3px; margin-left: 0; display: none; }
-.mode-switch button:hover:not(.active, :disabled), .tier-switch button:hover:not(.active, :disabled) { background: var(--plat-g200); }
+.mode-switch button:hover:not(.active, [aria-pressed="true"], :disabled, :active),
+.tier-switch button:hover:not(.active, [aria-pressed="true"], :disabled, :active) { background: var(--plat-g200); }
 .mode-switch button.active, .tier-switch button.active,
 .mode-switch button:active:not(:disabled), .tier-switch button:active:not(:disabled) {
   position: relative; z-index: 1; color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
@@ -78,7 +80,7 @@
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
   font-weight: 700; transition: none;
 }
-.workspace-actions > button:hover:not(:disabled, [aria-disabled="true"]) { background: var(--plat-g200); }
+.workspace-actions > button:hover:not(:disabled, [aria-disabled="true"], .active, [aria-expanded="true"], [aria-pressed="true"], :active) { background: var(--plat-g200); }
 .workspace-actions > button.active,
 .workspace-actions > button:active:not(:disabled, [aria-disabled="true"]) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
@@ -123,7 +125,7 @@
 @media (prefers-color-scheme: dark) {
   .send { color: var(--text); }
 }
-.send:hover:not(:disabled) { background: var(--plat-g200); }
+.send:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .send:active:not(:disabled) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg);
   box-shadow: var(--plat-btn-bevel-pressed), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
@@ -158,6 +160,7 @@ kbd { opacity: .9; font: 10px var(--font-mono); }
 .page-tabs button + button { margin-left: -1px; }
 .page-tabs button:first-of-type { border-radius: 3px 0 0 3px; }
 .page-tabs button:last-of-type { border-radius: 0 3px 3px 0; }
+.page-tabs button:hover:not([aria-selected="true"], :disabled, :active) { background: var(--plat-g200); }
 .page-tabs button[aria-selected="true"],
 .page-tabs button:active {
   z-index: 1; color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);

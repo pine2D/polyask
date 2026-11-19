@@ -15,7 +15,7 @@
 .feedback-bar > button:active:not(:disabled) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
-.feedback-bar > button:hover:not(:disabled) { background: var(--plat-g200); }
+.feedback-bar > button:hover:not(:disabled, [aria-pressed="true"], :active) { background: var(--plat-g200); }
 .feedback-bar .feedback-next-step {
   color: var(--text); background: var(--plat-g200);
 }

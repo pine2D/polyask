@@ -3,6 +3,7 @@ import type { SiteDefinition, SiteKey } from '../shared/contracts';
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { initialSiteFindState, SITE_FIND_HEIGHT, SITE_FIND_MAX_LENGTH,
   type SiteFindRequest, type SiteFindState } from '../shared/site-find';
+import { elementPopupAnchor } from '../shared/popup-anchor';
 import { BackIcon, CloseIcon, InfoIcon, MoreIcon, ReloadIcon } from './icons';
 import { shell } from './shell-api';
 import type { LayoutState } from '../shared/protocol';
@@ -82,7 +83,9 @@ export function SiteFind({ copy, sites, layout }: { readonly copy: DesktopCopy; 
     try {
       const attempt = token(); await find(); if (!valid(attempt)) return;
       const { session, revision } = current.current.state;
-      const value = await shell.showSiteFindMenu({ session, revision });
+      const trigger = bar.current?.querySelector('[name="site-find-menu"]');
+      const anchor = elementPopupAnchor(trigger, 'end', !!trigger && document.activeElement === trigger);
+      const value = await shell.showSiteFindMenu(anchor ? { session, revision, anchor } : { session, revision });
       if (!valid(attempt)) return;
       accept(value); input.current?.focus();
     } finally { menuPending.current = false; }

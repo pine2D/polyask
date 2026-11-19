@@ -90,7 +90,7 @@
 :root[data-density="comfortable"] .tile-header button { width: 20px; height: 20px; min-width: 20px; min-height: 20px; }
 .tile-header button svg { width: 11px; height: 11px; }
 .tile-actions { display: flex; flex: 0 0 auto; gap: 3px; }
-.tile-header button:hover:not(:disabled) { background: var(--plat-g200); color: var(--text); }
+.tile-header button:hover:not(:disabled, :active) { background: var(--plat-g200); color: var(--text); }
 .tile-header button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: inset 1px 1px 0 #333, inset -1px -1px 0 #888; }
 .tile-header button:disabled { opacity: .42; box-shadow: none; }
 .tile-header .site-retry { width: auto; padding: 0 6px; border-radius: 2px; font-size: 11px; font-weight: 700; }

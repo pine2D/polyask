@@ -17,6 +17,7 @@ export { DesktopDatabase } from '../../src/main/database';
 export { OperationGate } from '../../src/shared/operation-gate';
 
 export { showSiteFindMenu } from '../../src/main/site-find-menu';
+export { setPlatinumPopupObserver } from '../../src/main/platinum-popup-menu';
 export { registerShellPanelIpc } from '../../src/main/shell-panel-ipc';
 export { registerWorkbenchNavigationIpc } from '../../src/main/workbench-navigation-ipc';
 export { applicationMenuShortcuts } from '../../src/main/menu-shortcuts';

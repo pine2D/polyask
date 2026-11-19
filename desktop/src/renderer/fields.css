@@ -1,5 +1,5 @@
 /* Platinum sunken editable wells: crisp 1px black frame + inner top-left shadow, 0ms instant focus. */
-:is(#root, .library-popover) :is(textarea:not([name="prompt"]), input:where(:not([type]),
+:is(#root, .library-popover, .confirm-scrim, .backup-scrim) :is(textarea:not([name="prompt"]), input:where(:not([type]),
   [type="text"], [type="search"], [type="email"], [type="password"],
   [type="url"], [type="tel"], [type="number"])) {
   border: 1px solid var(--plat-ink);
@@ -33,7 +33,7 @@
   box-shadow: inset 0 0 0 1px var(--accent), var(--plat-sunken-bevel);
 }
 @media (forced-colors: active) {
-  :is(#root, .library-popover) :is(textarea:not([name="prompt"]), input:where(:not([type]),
+  :is(#root, .library-popover, .confirm-scrim, .backup-scrim) :is(textarea:not([name="prompt"]), input:where(:not([type]),
     [type="text"], [type="search"], [type="email"], [type="password"],
     [type="url"], [type="tel"], [type="number"])) {
     border: 1px solid CanvasText; background: Canvas; box-shadow: none;

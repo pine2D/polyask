@@ -9,7 +9,7 @@ module.exports = async ({ win, run, until, paint, manager, keys, needle, SITE_FI
   await paint();
   assert.equal(await run('document.querySelectorAll("[data-find-site]").length'), 3);
   assert.equal(await run('document.querySelector(".site-find-sites").getBoundingClientRect().width>0'), true);
-  assert.equal(await run('document.querySelector(".site-find input").getBoundingClientRect().width'), 250);
+  assert.equal(await run('document.querySelector(".site-find input").getBoundingClientRect().width'), 240);
   for (const cssWidth of [480,720,960,1440]) {
     win.webContents.setZoomFactor(2); win.setContentSize(cssWidth * 2, 1000); manager.relayout();
     await until(() => run(`innerWidth===${cssWidth}`), 'native resize delivered at 200%'); await paint();

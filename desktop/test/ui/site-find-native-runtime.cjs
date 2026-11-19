@@ -25,19 +25,21 @@ app.whenReady().then(async () => {
   manager = new services.ViewManager(win, () => {}, layout => win.webContents.send('polyask:layout', layout), () => {}, { selectedSites:keys });
   step('manager');
   const trusted = event => !win.isDestroyed() && event.sender === win.webContents && event.senderFrame?.parent === null;
-  const menuTrace = { open: false, shown: 0, items: [] };
-  const dispose = services.registerSiteFindIpc(ipcMain, manager.siteFind, trusted, win.webContents, state => {
-    const build = Menu.buildFromTemplate;
-    Menu.buildFromTemplate = template => {
-      const menu = build.call(Menu, template);
-      menuTrace.items = template;
-      menu.on('menu-will-show', () => { menuTrace.open = true; menuTrace.shown++; });
-      menu.on('menu-will-close', () => { menuTrace.open = false; });
-      return menu;
-    };
-    try { return services.showSiteFindMenu(win, state, SITES, services.getCopy(locale)); }
-    finally { Menu.buildFromTemplate = build; }
+  const menuTrace = { open: false, shown: 0, items: [], view: null };
+  services.setPlatinumPopupObserver({
+    onOpen: ({ entries, view }) => {
+      menuTrace.open = true;
+      menuTrace.shown++;
+      menuTrace.items = entries;
+      menuTrace.view = view;
+    },
+    onClose: () => {
+      menuTrace.open = false;
+      menuTrace.view = null;
+    }
   });
+  const dispose = services.registerSiteFindIpc(ipcMain, manager.siteFind, trusted, win.webContents, (state, anchor) =>
+    services.showSiteFindMenu(win, state, SITES, services.getCopy(locale), anchor));
   const pages = manager.getDiagnosticSites().map(site => ({ key:site.site,
     view:win.contentView.children.find(view => view.webContents?.id === site.webContentsId) }));
   const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -126,7 +128,7 @@ app.whenReady().then(async () => {
       await until(() => run('!!document.querySelector(".command-surface")'), 'reopen palette for pointer dismissal');
       await click('.command-search input');
       assert.equal(await run('!!document.querySelector(".command-palette")'), true, 'inside click keeps palette open');
-      for (const type of ['mouseDown','mouseUp']) win.webContents.sendInputEvent({ type, button:'left', clickCount:1, x:4, y:4 });
+      for (const type of ['mouseDown','mouseUp']) win.webContents.sendInputEvent({ type, button:'left', clickCount:1, x:8, y:30 });
       await until(() => run('!document.querySelector(".command-surface")'), 'outside click closes palette');
       contents.focus(); const after = dispatched.length;
       await contents.executeJavaScript('window.palettePassthrough=[];window.addEventListener("keydown",e=>{if(e.key.toLowerCase()==="p")window.palettePassthrough.push({prevented:e.defaultPrevented,shift:e.shiftKey})},{once:true})');
@@ -239,8 +241,8 @@ app.whenReady().then(async () => {
       await run(`(()=>{const e=document.querySelector('[data-composer-toggle]');if(e.getAttribute('aria-expanded')!==${JSON.stringify(String(expanded))})e.click()})()`);
       await until(() => run('document.documentElement.dataset.density===' + JSON.stringify(density)), 'density applied');
       const stacked = width / zoom < 960;
-      const heights = density === 'compact' ? stacked ? [120,200] : [52,120] : stacked ? [144,240] : [64,144];
-      const expectedTop = heights[Number(expanded)];
+      const heights = density === 'compact' ? stacked ? [104,176] : [44,112] : stacked ? [128,212] : [54,132];
+      const expectedTop = 22 + heights[Number(expanded)];
       await until(() => run('document.querySelector(".app-shell").classList.contains("is-composer-expanded")===' + expanded), 'composer reservation settled');
       await until(() => manager.getLayout().placements[0].bounds.y === expectedTop + SITE_FIND_HEIGHT, 'native reservation settled');
       await until(() => run(`document.querySelector('.site-find').getBoundingClientRect().top===${expectedTop}`), 'DOM reservation settled after resize');

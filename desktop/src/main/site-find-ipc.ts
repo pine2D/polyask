@@ -12,11 +12,11 @@ interface ShellContents {
 }
 export function registerSiteFindIpc(ipc: IpcRegistry, controller: SiteFindController,
   trusted: (event: any) => boolean, contents: ShellContents,
-  menu?: (state: SiteFindState) => Promise<SiteFindMenuAction>): () => void {
+  menu?: (state: SiteFindState, anchor?: unknown) => Promise<SiteFindMenuAction>): () => void {
   let active = true, menuPending = false;
   const showMenu = (value: unknown): Promise<SiteFindState> => {
     if (!value || typeof value !== 'object') throw Error('invalid_site_find_request');
-    const { session, revision } = value as Record<string, unknown>;
+    const { session, revision, anchor } = value as Record<string, unknown>;
     if (!Number.isSafeInteger(session) || !Number.isSafeInteger(revision) || (session as number) < 0 || (revision as number) < 0)
       throw Error('invalid_site_find_request');
     const snapshot = controller.state;
@@ -24,7 +24,7 @@ export function registerSiteFindIpc(ipc: IpcRegistry, controller: SiteFindContro
       controller.state.revision === snapshot.revision && controller.state.query === snapshot.query && controller.state.scope === snapshot.scope;
     if (!menu || menuPending || !snapshot.open || session !== snapshot.session || revision !== snapshot.revision) return Promise.resolve(controller.state);
     menuPending = true;
-    return menu(snapshot).then(action => {
+    return menu(snapshot, anchor).then(action => {
       if (current() && action) {
         if (action.kind === 'select') return controller.select(action.site);
         if (action.kind === 'refresh') return controller.find({ query: snapshot.query, scope: snapshot.scope });

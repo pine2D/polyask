@@ -22,7 +22,8 @@ app.whenReady().then(async () => {
   const click = async selector => {
     // During a reversal the textarea retains its final size, clipped by the animated wrapper.
     const point = await run(`(()=>{const e=document.querySelector(${JSON.stringify(selector)}),r=(e.matches('textarea')?e.parentElement:e).getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}})()`);
-    assert.equal(point.width >= 24 && point.height >= 24, true, 'native target has a usable size');
+    const minSize = selector === '[data-composer-toggle]' ? 20 : 22;
+    assert.equal(point.width >= minSize && point.height >= minSize, true, 'native target has a usable size');
     win.focus(); win.webContents.focus(); await wait('document.hasFocus()');
     const zoom = win.webContents.getZoomFactor();
     for (const type of ['mouseDown', 'mouseUp']) win.webContents.sendInputEvent({ type, button: 'left', clickCount: 1, x: Math.round(point.x * zoom), y: Math.round(point.y * zoom) });
@@ -40,7 +41,7 @@ app.whenReady().then(async () => {
     const draft = 'Long question / 长问题 / 長問題\n'.repeat(40);
     await win.webContents.insertText(draft);
     // Set up the synthetic selection only after the controlled input commit and entry settle.
-    await wait(`document.querySelector("#composer-inputs").textContent!=="0"&&document.querySelector("textarea").value.length>500&&Math.abs(document.querySelector(".prompt-composer").getBoundingClientRect().height-${density === 'compact' ? 112 : 136})<1`);
+    await wait(`document.querySelector("#composer-inputs").textContent!=="0"&&document.querySelector("textarea").value.length>500&&Math.abs(document.querySelector(".prompt-composer").getBoundingClientRect().height-${density === 'compact' ? 98 : 118})<1`);
     await paint();
     // Explicit fixture setup of selection and scroll; subsequent actions use trusted native pointer/keys.
     await run('(()=>{const e=document.querySelector("textarea");e.setSelectionRange(17,43,"backward");e.scrollTop=190})()');
@@ -49,14 +50,18 @@ app.whenReady().then(async () => {
     console.log(`Composer selection setup ${locale}/${density}: ${JSON.stringify({start:before.start,end:before.end,scroll:before.scroll})}`);
     for (const selector of ['[data-tier-icon="fast"]', '[data-tier-icon="think"]', '.image-trigger']) {
       await click(selector);
-      assert.deepEqual(await position(), before, `editing context survives trusted action: ${selector}`);
-      assert.equal(await run('document.querySelector(".command-bar").classList.contains("is-expanded")'), true);
+      await wait('!document.querySelector(".command-bar").classList.contains("is-expanded")');
+      await click('textarea');
+      await wait('document.querySelector(".command-bar").classList.contains("is-expanded")');
+      assert.deepEqual(await position(), before, `editing context survives outside click collapse and re-entry: ${selector}`);
     }
-    assert.equal(await run('JSON.parse(document.querySelector("#composer-transitions").textContent).includes(false)'), false);
+    assert.equal(await run('JSON.parse(document.querySelector("#composer-transitions").textContent).includes(false)'), true);
     const label = await run('document.querySelector("[data-current-tier]").textContent');
     assert.equal(label, locale === 'en' ? 'Think' : '深思');
     await click('.image-trigger');
-    await wait('!document.querySelector(".image-tray")');
+    await wait('!document.querySelector(".image-tray")&&!document.querySelector(".command-bar").classList.contains("is-expanded")');
+    await click('textarea');
+    await wait('document.querySelector(".command-bar").classList.contains("is-expanded")');
     const layouts = [];
     for (const width of [960, 1101, 1280, 1401, 1600]) {
       win.setContentSize(width, 900); await paint();
@@ -69,7 +74,7 @@ app.whenReady().then(async () => {
           sendVisible:s.width>=24&&s.right<=innerWidth,overflow:a.scrollWidth>a.clientWidth+1,height:a.getBoundingClientRect().height}})()`);
       const tierVisible = bounds.labelVisible || bounds.pressedVisible || bounds.selectVisible;
       assert.equal(tierVisible && bounds.sendVisible && !bounds.overflow && bounds.promptWidth >= 320, true, `toolbar stays usable: ${JSON.stringify(bounds)}`);
-      assert.equal(bounds.height, density === 'compact' ? 120 : 144);
+      assert.equal(bounds.height, density === 'compact' ? 112 : 132);
       layouts.push(bounds);
     }
     await require('./toolbar-zoom.cjs')({ win, run, paint, wait, click, position, before, density, output, locale });

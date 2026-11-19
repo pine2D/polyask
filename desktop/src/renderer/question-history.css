@@ -17,7 +17,7 @@
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
   font-weight: 700; transition: none;
 }
-:where(.question-history) button:hover:not(:disabled, [aria-disabled="true"], [aria-pressed="true"]) { background: var(--plat-g200); }
+:where(.question-history) button:hover:not(:disabled, [aria-disabled="true"], [aria-pressed="true"], [aria-expanded="true"], :active) { background: var(--plat-g200); }
 :where(.question-history) button:active:not(:disabled, [aria-disabled="true"]) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }

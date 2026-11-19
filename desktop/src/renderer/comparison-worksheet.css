@@ -18,8 +18,8 @@
   background: var(--plat-g300); color: var(--text); box-shadow: var(--plat-btn-bevel);
   font-weight: 700;
 }
-.manual-comparison > button:hover:not(:disabled), .manual-comparison-source > button:hover:not(:disabled),
-.manual-invalid-quotes button:hover:not(:disabled), .manual-quote button:hover:not(:disabled), .evidence-overview button:hover:not(:disabled) {
+.manual-comparison > button:hover:not(:disabled, :active), .manual-comparison-source > button:hover:not(:disabled, :active),
+.manual-invalid-quotes button:hover:not(:disabled, :active), .manual-quote button:hover:not(:disabled, :active), .evidence-overview button:hover:not(:disabled, :active) {
   background: var(--plat-g200);
 }
 .manual-comparison > button:active:not(:disabled), .manual-comparison-source > button:active:not(:disabled),

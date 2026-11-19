@@ -650,12 +650,13 @@ test("workspace popup menus stay in trusted native UI", () => {
   const native = readSource("src/main/native-menus.ts");
   const preload = readSource("src/preload/shell.ts");
 
-  // 分组/命令菜单是定位到指针的弹出菜单，仍走原生。
+  // 分组/命令菜单定位于触发按钮并在主进程受控 WebContentsView 中绘制 Platinum 弹出菜单。
   for (const channel of ["polyask:show-group-menu", "polyask:show-command-menu"]) {
     assert.match(ipc, new RegExp(channel));
   }
   assert.match(ipc, /trustedShell\(event\)/);
-  assert.match(native, /Menu\.buildFromTemplate/);
+  assert.match(native, /showPlatinumPopupMenu/);
+  assert.ok(!/Menu\.buildFromTemplate/.test(native), "分组与更多菜单不再使用系统原生圆角白菜单");
   assert.match(preload, /showGroupMenu/);
   assert.match(preload, /showCommandMenu/);
 });

@@ -34,7 +34,7 @@
   min-height: max(30px, var(--control-height)); padding: 4px 26px 4px 8px;
   font-weight: 700; text-overflow: ellipsis; transition: none;
 }
-.task-setup select:hover:not(:disabled) { background-color: var(--plat-g200); }
+.task-setup select:hover:not(:disabled, :active) { background-color: var(--plat-g200); }
 .task-setup select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .task-setup textarea { min-height: 84px; padding: 8px 10px; resize: vertical; }
 .task-setup textarea[name="task-text"] { min-height: 124px; }
@@ -76,7 +76,7 @@
   box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
   font-size: var(--font-control); font-weight: 700;
 }
-.task-setup-footer-actions button:hover:not(:disabled) { background: var(--plat-g200); }
+.task-setup-footer-actions button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .task-setup-footer-actions button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .task-setup .task-setup-footer-actions button:disabled { color: var(--muted); background: var(--plat-g300); opacity: .48; cursor: default; box-shadow: none; }
 .task-setup .task-setup-error, .task-setup .task-setup-invalid { color: var(--danger-ink); font-size: var(--font-control); }

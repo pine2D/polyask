@@ -122,7 +122,7 @@ button { cursor: default; }
 .getting-started-step::marker { color: var(--text); font-weight: 700; }
 .getting-started-step h2 { margin: 0; font-size: 14px; }
 .getting-started-step button { min-height: 24px; padding: 2px 10px; border: 1px solid var(--plat-ink); border-radius: 3px; color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700; }
-.getting-started-step button:hover:not(:disabled) { background: var(--plat-g200); }
+.getting-started-step button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .getting-started-step button:active { background: var(--plat-pressed-bg); color: var(--plat-pressed-fg); box-shadow: var(--plat-btn-bevel-pressed); }
 .getting-started-note { color: var(--muted); font-size: var(--font-meta); }
 .command-results { min-height: 120px; margin: 0 4px 4px; padding: 2px; overflow: auto; border: 1px solid var(--plat-ink); background: var(--panel); }

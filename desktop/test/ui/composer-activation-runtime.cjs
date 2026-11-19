@@ -106,6 +106,10 @@ app.whenReady().then(async()=>{
   assert.equal(currentView.webContents.isFocused(),true);
   await shortcut(currentView.webContents,'Q');await check('Alt+Q opens from the native site',true);
   assert.equal((await state()).focused,true);assert.equal(win.webContents.isFocused(),true);
+  for(const type of ['mouseDown','mouseUp'])currentView.webContents.sendInputEvent({type,button:'left',clickCount:1,x:24,y:24});
+  await paint();await pause(120);
+  await check('native site view click collapses composer',false);
+  await shortcut(currentView.webContents,'Q');await check('Alt+Q reopens after site click collapse',true);
   await shortcut(win.webContents,'W');await check('Alt+W no longer moves focus or changes composer state',true);
   assert.equal(win.webContents.isFocused(),true);
   dispatchAppCommand('focus-current-site',manager,win);await pause(100);
@@ -119,11 +123,11 @@ app.whenReady().then(async()=>{
     win.webContents.focus();dispatchAppCommand('edit-prompt',manager,win);await pause(100);
     dispatchAppCommand('open-question-history',manager,win);
     await wait('!!document.querySelector(".question-main")');
-    if(reader){await click('.question-main');await pause(220);}
+    if(reader){await click('.question-main');await pause(220);await check('clicking history item auto-collapses composer',false);}
     if(id==='focus-prompt')await shortcut(win.webContents,'Q');
     else dispatchAppCommand(id,manager,win);
     await pause(350);
-    if(id==='focus-prompt'){await check('history '+(reader?'reader':'list')+' preserves Alt+Q collapse',false);assert.equal(currentView.webContents.isFocused(),true);}
+    if(id==='focus-prompt'&&!reader){await check('history list preserves Alt+Q collapse',false);assert.equal(currentView.webContents.isFocused(),true);}
     else if(id==='focus-current-site')assert.equal(currentView.webContents.isFocused(),true,'history closes before returning native focus');
     else{await check('history '+(reader?'reader':'list')+' to '+id,true);assert.equal((await state()).focused,true);assert.equal(win.webContents.isFocused(),true);}
     assert.equal((await state()).value,draftBefore.value);assert.equal(await imageCount(),imagesBefore);
@@ -146,20 +150,20 @@ app.whenReady().then(async()=>{
   await check('history reask explicitly expands',true);assert.equal((await state()).value,question.text);
   await run('window.sendArea=document.querySelector("[name=prompt]")');
   for(const scenario of [
-    {name:'keyboard send collapses after success',method:'keyboard',outcome:'success',expanded:false},
-    {name:'button send collapses after partial success',method:'pointer',outcome:'partial',expanded:false},
-    {name:'failed send retains draft and expansion',method:'pointer',outcome:'inject_failed',expanded:true},
-    {name:'unconfirmed send retains draft and expansion',method:'keyboard',outcome:'submit_unconfirmed',expanded:true},
-    {name:'cancelled send retains draft and expansion',method:'pointer',outcome:'cancelled',expanded:true},
-    {name:'successful old send preserves next draft',method:'keyboard',outcome:'success',next:'Next local draft',expanded:true},
-    {name:'successful old send preserves retyped identical draft',method:'keyboard',outcome:'success',next:'Local send draft',expanded:true}
+    {name:'keyboard send collapses after success',method:'keyboard',outcome:'success',expanded:false,retainDraft:false},
+    {name:'button send collapses on outside click and clears after partial success',method:'pointer',outcome:'partial',expanded:false,retainDraft:false},
+    {name:'failed pointer send collapses on outside click while retaining draft',method:'pointer',outcome:'inject_failed',expanded:false,retainDraft:true},
+    {name:'unconfirmed keyboard send retains draft and expansion',method:'keyboard',outcome:'submit_unconfirmed',expanded:true,retainDraft:true},
+    {name:'cancelled pointer send collapses on outside click while retaining draft',method:'pointer',outcome:'cancelled',expanded:false,retainDraft:true},
+    {name:'successful old send preserves next draft',method:'keyboard',outcome:'success',next:'Next local draft',expanded:true,retainDraft:true},
+    {name:'successful old send preserves retyped identical draft',method:'keyboard',outcome:'success',next:'Local send draft',expanded:true,retainDraft:true}
   ]){
     await click('[name=prompt]');await key('A',['control']);await win.webContents.insertText('Local send draft');
     if(!await imageCount())await pasteImage();
     if(scenario.method==='keyboard')await key('Enter',['control']);else await click('.send');
     await wait('!!document.querySelector(".cancel")');assert.equal(pendingSend!==null,true,'send reaches the controlled IPC boundary');
     assert.equal(pendingSend.request.images.length,1,'the selected image reaches IPC');
-    await check(scenario.name+' while pending',true);
+    await check(scenario.name+' while pending',scenario.method==='keyboard');
     if(scenario.next){await click('[name=prompt]');await key('A',['control']);await key('Backspace');await win.webContents.insertText(scenario.next)}
     if(scenario.outcome==='cancelled')await click('.cancel');
     else{
@@ -167,7 +171,7 @@ app.whenReady().then(async()=>{
         ?{site,ok:true}:{site,ok:false,code:scenario.outcome==='partial'?'not_ready':scenario.outcome}));pendingSend=null;
     }
     await wait('!!document.querySelector(".send")');await pause(190);await check(scenario.name,scenario.expanded);
-    assert.equal((await state()).value,scenario.next||(scenario.expanded?'Local send draft':''));
+    assert.equal((await state()).value,scenario.next||(scenario.retainDraft?'Local send draft':''));
     assert.equal(await imageCount(),['success','partial'].includes(scenario.outcome)?0:1,'only submitted images leave the composer');
     assert.equal(await run('document.querySelector("[name=prompt]")===window.sendArea'),true,'send keeps the same editor');
     if(!scenario.expanded){await run('sendArea.blur();sendArea.focus()');await check(scenario.name+' focus restoration',false)}
@@ -200,9 +204,10 @@ app.whenReady().then(async()=>{
   for(const theme of ['light','dark']){
     nativeTheme.themeSource=theme;
     await run('document.querySelector("[name=prompt]").focus()');await pause(150);const reference=await focusStyle();
+    const referenceBorder=await run('getComputedStyle(document.querySelector(".prompt-composer")).borderColor');
     for(const selector of [...Array.from({length:12},(_,i)=>'[name=field-'+i+']'),'[name=portal-search]']){
       await run(`document.querySelector(${JSON.stringify(selector)}).focus()`);await pause(135);const s=await fieldStyle(selector);
-      assert.equal(s.shadow,reference,theme+' '+selector+' consistent focus');assert.equal(s.outline,'none');assert.equal(s.border,'rgba(0, 0, 0, 0)');report.fields.push({theme,selector,...s});
+      assert.equal(s.shadow,reference,theme+' '+selector+' consistent focus');assert.equal(s.outline,'none');assert.equal(s.border,referenceBorder);report.fields.push({theme,selector,...s});
     }
     await run('document.querySelector("[name=error]").focus()');await pause(135);const error=await fieldStyle('[name=error]');assert.notEqual(error.shadow,reference,'errors retain separate feedback');
     await run('document.querySelector("[name=readonly]").focus()');assert.equal(await run('document.activeElement.getAttribute("name")'),'readonly','read-only fields remain selectable');

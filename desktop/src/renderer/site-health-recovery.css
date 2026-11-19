@@ -8,7 +8,7 @@
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
   font: inherit; font-weight: 700; text-align: left; overflow-wrap: anywhere;
 }
-.health-first-step > button:hover:not(:disabled) { background: var(--plat-g200); }
+.health-first-step > button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .health-first-step > button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .health-first-step > button:disabled { color: var(--muted); opacity: .48; box-shadow: none; cursor: default; }
 .health-more-recovery { margin-top: 10px; padding: 4px 8px; border: 1px solid var(--plat-ink); background: var(--plat-g200); }

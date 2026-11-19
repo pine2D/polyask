@@ -34,21 +34,36 @@ async function composerSession() {
   return { ...h, area, transitions, focus, enter };
 }
 
-test('tier and attachment focus keep the same expanded prompt and editing position', async () => {
+test('keyboard focus keeps composer expanded, while clicking outside automatically collapses and preserves editing position', async () => {
   const h = await composerSession();
   try {
     await h.enter();
     h.area.setSelectionRange(12, 25, 'backward'); h.area.scrollTop = 72;
     for (const selector of ['[data-tier-icon="fast"]', '[data-tier-icon="think"]', '[name="attachments"]']) {
       const button = h.document.querySelector<HTMLButtonElement>(selector)!;
-      await h.focus(button); await h.click(button);
-      assert.equal(h.document.querySelector('.command-bar')!.classList.contains('is-expanded'), true);
-      assert.equal(h.document.querySelector('textarea') === h.area, true);
+      await h.focus(button);
+      assert.equal(h.document.querySelector('.command-bar')!.classList.contains('is-expanded'), true, 'keyboard focus alone keeps composer expanded');
+      await h.focus(h.area);
       assert.equal(h.area.selectionStart, 12); assert.equal(h.area.selectionEnd, 25);
       assert.equal(h.area.scrollTop, 72);
-      await h.focus(h.area);
     }
-    assert.equal(h.transitions.includes(false), false, 'focus changes must not lower the native composer reserve');
+    // Dragging a selection starting inside textarea and releasing outside must NOT collapse.
+    await act(async () => {
+      h.area.dispatchEvent(new h.window.MouseEvent('mousedown', { button: 0, bubbles: true }));
+      h.document.querySelector('.command-bar')!.dispatchEvent(new h.window.MouseEvent('mouseup', { button: 0, bubbles: true }));
+      h.document.querySelector('.command-bar')!.dispatchEvent(new h.window.MouseEvent('click', { button: 0, bubbles: true }));
+    });
+    assert.equal(h.document.querySelector('.command-bar')!.classList.contains('is-expanded'), true, 'selection drag starting inside composer stays expanded');
+
+    // Mouse click outside .prompt-composer runs the action AND collapses the composer while remembering cursor/scroll.
+    const thinkButton = h.document.querySelector<HTMLButtonElement>('[data-tier-icon="think"]')!;
+    await h.focus(thinkButton); await h.click(thinkButton);
+    assert.equal(h.document.querySelector('.command-bar')!.classList.contains('is-expanded'), false, 'clicking outside composer collapses it');
+    assert.equal(h.document.querySelector('[data-current-tier]')?.textContent, 'Think', 'outside button click still executes');
+    h.area.setSelectionRange(0, 0); h.area.scrollTop = 0;
+    await h.focus(h.area);
+    assert.equal(h.area.selectionStart, 12); assert.equal(h.area.selectionEnd, 25);
+    assert.equal(h.area.scrollTop, 72);
   } finally { await h.close(); }
 });
 

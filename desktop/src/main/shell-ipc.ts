@@ -185,7 +185,7 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
   const disposePanels = registerShellPanelIpc(ipcMain, window, manager, trustedShell);
   const disposeWindowChrome = registerWindowChromeIpc(ipcMain, window, trustedShell);
   const disposeSiteFind = registerSiteFindIpc(ipcMain, manager.siteFind, trustedShell, window.webContents,
-    state => showSiteFindMenu(window, state, SITES, options.copy));
+    (state, anchor) => showSiteFindMenu(window, state, SITES, options.copy, anchor));
   const disposePreferences = options.preferences ? registerPreferencesDraftsIpc({ runtime: options.preferences, trusted: trustedShell, publishDrafts }) : () => {};
   const disposeBackupIpc = registerBackupIpc({ window, backup: options.backup, fetchAttachments: id => options.sync.fetchQuestionAttachments(id), trusted: trustedShell, afterApply: () => { publishWorkspace(); publishPromptLibrary(); options.preferences?.refresh(); publishDrafts(); } });
   const disposeAutoBackupIpc = options.autoBackup ? registerAutoBackupIpc({ window, autoBackup: options.autoBackup, trusted: trustedShell }) : () => {};
@@ -282,14 +282,14 @@ export function registerShellIpc(options: ShellIpcOptions): () => void {
     if (options.dataAdmin.isResetting) throw new Error("operation_busy");
     return operationGate.run(() => workspace.newSession(value));
   });
-  ipcMain.handle("polyask:show-group-menu", (event) => {
+  ipcMain.handle("polyask:show-group-menu", (event, anchor?: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
     const groups = workspace.getState().groups;
-    return showGroupMenu(window, groups, options.copy);
+    return showGroupMenu(window, groups, options.copy, anchor);
   });
-  ipcMain.handle("polyask:show-command-menu", (event, value: unknown) => {
+  ipcMain.handle("polyask:show-command-menu", (event, value: unknown, anchor?: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");
-    return showCommandMenu(window, value, options.copy, options.commandPaletteShortcut?.getState().mode);
+    return showCommandMenu(window, value, options.copy, options.commandPaletteShortcut?.getState().mode, anchor);
   });
   ipcMain.handle("polyask:prompt-template-save", (event, value: unknown) => {
     if (!trustedShell(event)) throw new Error("untrusted_sender");

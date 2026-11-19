@@ -10,24 +10,32 @@ import { initialSiteFindState, type SiteFindState } from '../src/shared/site-fin
 import { registerSiteFindIpc } from '../src/main/site-find-ipc';
 
 function menuHarness() {
-  let items: any[] = [], close = () => {};
+  let items: any[] = [], settle: (id: string | null) => void = () => {};
   const exports: any = {};
   vm.runInNewContext(ts.transpileModule(readSource('src/main/site-find-menu.ts'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
   }).outputText, { exports, require: (name: string) => {
-    if (name === 'electron') return { Menu: { buildFromTemplate: (value: any[]) => {
-      items = value; return { popup: (options: any) => { close = options.callback; } };
-    } } };
+    if (name === './platinum-popup-menu') return {
+      showPlatinumPopupMenu: (_win: unknown, entries: any[]) => {
+        items = entries;
+        return new Promise<string | null>(resolve => { settle = resolve; });
+      }
+    };
     if (name === '../shared/copy') return { formatCopy };
     throw Error('unexpected import: ' + name);
   } });
   const state: SiteFindState = { ...initialSiteFindState(), open: true, session: 1, revision: 3, query: 'needle',
     sites: SITES.map((site, index) => ({ site: site.key, matches: index < 2 ? index + 1 : 0, active: 0,
       status: index === 3 ? 'pending' : index === 4 ? 'unavailable' : 'ready' })) };
-  return { state, show: (locale = 'en') => exports.showSiteFindMenu({ isDestroyed: () => false }, state, SITES, getCopy(locale)),
-    items: () => items, close: () => close() };
+  return {
+    state,
+    show: (locale = 'en') => exports.showSiteFindMenu({ isDestroyed: () => false }, state, SITES, getCopy(locale)),
+    items: () => items,
+    pick: (id: string) => settle(id),
+    close: () => settle(null)
+  };
 }
-test('native find menu uses trusted localized state for nine sites and never binds keys', async () => {
+test('Platinum find menu uses trusted localized state for nine sites and never binds keys', async () => {
   for (const locale of ['en', 'zh-CN', 'zh-TW']) {
     const h = menuHarness(), result = h.show(locale), copy = getCopy(locale);
     const sites = h.items().filter(item => item.id?.startsWith('site:'));
@@ -40,13 +48,13 @@ test('native find menu uses trusted localized state for nine sites and never bin
     assert.equal(h.items().some(item => item.label === copy.findLimitExclusions && item.enabled === false), true);
     assert.equal(h.items().some(item => item.label === copy.findLimitHint), false, "long tooltip must not stretch the popup");
     assert.equal(h.items().every(item => !item.accelerator), true);
-    sites[1].click(); h.close();
+    h.pick(sites[1].id);
     assert.equal(JSON.stringify(await result), JSON.stringify({ kind: 'select', site: SITES[1].key }));
   }
 });
-test('native find menu cancels or refreshes exactly once and empty queries cannot refresh', async () => {
+test('Platinum find menu cancels or refreshes exactly once and empty queries cannot refresh', async () => {
   const h = menuHarness(); let result = h.show(); h.close(); assert.equal(await result, null);
-  result = h.show(); h.items().find(item => item.id === 'refresh').click(); h.close();
+  result = h.show(); h.pick('refresh');
   assert.equal(JSON.stringify(await result), '{"kind":"refresh"}');
   const empty = { ...h.state, query: '' }; Object.assign(h.state, empty);
   result = h.show(); assert.equal(h.items().find(item => item.id === 'refresh').enabled, false); h.close(); await result;

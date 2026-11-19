@@ -21,7 +21,7 @@
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
 }
 .prompt-composer [data-composer-toggle] svg { width: 12px; height: 12px; display: block; }
-.prompt-composer [data-composer-toggle]:hover { background: var(--plat-g200); }
+.prompt-composer [data-composer-toggle]:hover:not(:active) { background: var(--plat-g200); }
 .prompt-composer [data-composer-toggle]:active { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .prompt-composer [data-composer-toggle]:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .prompt-composer [data-composer-toggle][aria-expanded="true"] svg { transform: rotate(180deg); }

@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, type RefObject } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, type RefObject } from "react";
 import type { DesktopCopy } from "../shared/copy";
 import { ChevronDownIcon } from "./icons";
 import { commandHint } from "./command-hint";
@@ -27,13 +27,18 @@ interface PromptComposerProps {
   readonly onPasteImages: (files: readonly File[]) => void;
 }
 
-/** 原生文件框、档位与附件只移焦点；展开由明确动作和表面会话控制。 */
+/** 鼠标点击输入框以外区域时自动收起（保留光标与滚动记忆）；键盘焦点迁移与系统切窗不误收。 */
 export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
   const id = useId();
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const takeKeyboardEntry = useComposerEntry(props.promptRef);
   const saved = useRef<ComposerSnapshot | null>(null);
   const pending = useRef<ComposerSnapshot | null>(null);
+  const onExpandedChangeRef = useRef(props.onExpandedChange);
+  onExpandedChangeRef.current = props.onExpandedChange;
   const revision = props.revision ?? props.text;
+  const revisionRef = useRef(revision);
+  revisionRef.current = revision;
   const restore = (snapshot: ComposerSnapshot, area: HTMLTextAreaElement): void => {
     area.setSelectionRange(snapshot.start, snapshot.end, snapshot.direction);
     area.scrollTop = snapshot.scroll;
@@ -44,7 +49,83 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
     const area = props.promptRef.current;
     if (snapshot?.revision === revision && area && document.activeElement === area) restore(snapshot, area);
   });
-  return <div className="prompt-composer priority-p0" data-expanded={props.revealedExpanded ?? props.expanded}>
+  useEffect(() => {
+    if (!props.expanded) return;
+    const doc = rootRef.current?.ownerDocument;
+    if (!doc) return;
+    let outsidePress = false;
+    let draggedFromInside = false;
+    let keyActivating = false;
+    let collapseTimer: ReturnType<typeof setTimeout> | null = null;
+    let resetTimer: ReturnType<typeof setTimeout> | null = null;
+    const clearCollapseTimer = (): void => {
+      if (collapseTimer !== null) { clearTimeout(collapseTimer); collapseTimer = null; }
+    };
+    const isInside = (target: EventTarget | null): boolean =>
+      target instanceof Node && !!rootRef.current?.contains(target);
+    const onPointerStart = (event: Event): void => {
+      const inside = isInside(event.target);
+      outsidePress = !inside;
+      draggedFromInside = inside;
+    };
+    const collapseFromOutside = (): void => {
+      const area = props.promptRef.current;
+      if (area) {
+        saved.current = {
+          revision: revisionRef.current,
+          start: area.selectionStart,
+          end: area.selectionEnd,
+          direction: area.selectionDirection,
+          scroll: area.scrollTop
+        };
+      }
+      onExpandedChangeRef.current(false);
+    };
+    const onPointerEnd = (): void => {
+      if (outsidePress) {
+        outsidePress = false;
+        clearCollapseTimer();
+        collapseTimer = setTimeout(() => {
+          collapseTimer = null;
+          collapseFromOutside();
+        }, 0);
+      }
+      if (draggedFromInside) {
+        if (resetTimer !== null) clearTimeout(resetTimer);
+        resetTimer = setTimeout(() => { draggedFromInside = false; resetTimer = null; }, 0);
+      }
+    };
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === "Enter" || event.key === " ") keyActivating = true;
+    };
+    const onKeyUp = (): void => { keyActivating = false; };
+    const onClick = (event: MouseEvent): void => {
+      if (isInside(event.target) || draggedFromInside) return;
+      if (keyActivating && event.detail === 0) { keyActivating = false; return; }
+      outsidePress = false;
+      clearCollapseTimer();
+      collapseFromOutside();
+    };
+    doc.addEventListener("mousedown", onPointerStart, true);
+    doc.addEventListener("touchstart", onPointerStart, true);
+    doc.addEventListener("mouseup", onPointerEnd, true);
+    doc.addEventListener("touchend", onPointerEnd, true);
+    doc.addEventListener("keydown", onKeyDown, true);
+    doc.addEventListener("keyup", onKeyUp, true);
+    doc.addEventListener("click", onClick);
+    return () => {
+      clearCollapseTimer();
+      if (resetTimer !== null) clearTimeout(resetTimer);
+      doc.removeEventListener("mousedown", onPointerStart, true);
+      doc.removeEventListener("touchstart", onPointerStart, true);
+      doc.removeEventListener("mouseup", onPointerEnd, true);
+      doc.removeEventListener("touchend", onPointerEnd, true);
+      doc.removeEventListener("keydown", onKeyDown, true);
+      doc.removeEventListener("keyup", onKeyUp, true);
+      doc.removeEventListener("click", onClick);
+    };
+  }, [props.expanded]);
+  return <div ref={rootRef} className="prompt-composer priority-p0" data-expanded={props.revealedExpanded ?? props.expanded}>
     <textarea id={id} name="prompt" autoComplete="off" ref={props.promptRef} rows={1}
       value={props.text} onChange={event => props.onTextChange(event.target.value)}
       onPaste={event => {

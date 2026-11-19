@@ -4,9 +4,9 @@
   border: 1px solid var(--plat-ink); border-radius: var(--radius-control); padding: 4px 10px;
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700;
 }
-.decision-tabs button:hover:not(:disabled, [aria-current]), .decision-toolbar > button:hover:not(:disabled),
-.decision-detail-actions button:hover:not(:disabled), .decision-editor button:hover:not(:disabled),
-.decision-source-conflict button:hover:not(:disabled), .decision-confirm button:hover:not(:disabled), .decision-create:hover:not(:disabled) {
+.decision-tabs button:hover:not(:disabled, [aria-current], :active), .decision-toolbar > button:hover:not(:disabled, :active),
+.decision-detail-actions button:hover:not(:disabled, :active), .decision-editor button:hover:not(:disabled, :active),
+.decision-source-conflict button:hover:not(:disabled, :active), .decision-confirm button:hover:not(:disabled, :active), .decision-create:hover:not(:disabled, :active) {
   background: var(--plat-g200);
 }
 .decision-tabs button[aria-current], .decision-tabs button:active:not(:disabled),

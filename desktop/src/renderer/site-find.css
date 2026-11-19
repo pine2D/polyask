@@ -25,6 +25,7 @@
 }
 .site-find-sites { display: flex; align-items: center; gap: 4px; min-width: 0; flex: 1 1 0; overflow: hidden; }
 .site-find-sites button { width: auto; gap: 5px; padding: 0 8px; font-size: 11.5px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.site-find button:hover:not(:disabled, [aria-pressed="true"], :active) { background: var(--plat-g200); }
 .site-find-sites button[aria-pressed="true"], .site-find button:active:not(:disabled) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }

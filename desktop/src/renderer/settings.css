@@ -15,7 +15,7 @@
   border: 1px solid var(--plat-ink); border-radius: 3px;
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
 }
-.settings-toolbar button:hover:not(:disabled) { background: var(--plat-g200); }
+.settings-toolbar button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .settings-toolbar button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .settings-toolbar button:disabled { opacity: .45; box-shadow: none; }
 .settings-product { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
@@ -99,7 +99,7 @@
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
   font: inherit; font-weight: 700;
 }
-.settings-card .settings-control:hover:not(:disabled, .primary) { background: var(--plat-g200); }
+.settings-card .settings-control:hover:not(:disabled, .primary, :active) { background: var(--plat-g200); }
 .settings-card .settings-control:active:not(:disabled) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
@@ -147,7 +147,7 @@
   color: var(--danger-ink); background: var(--plat-g300);
 }
 .danger-zone .settings-actions > .settings-control { margin-top: 0; }
-.settings-card.danger-zone .settings-control:hover:not(:disabled) { background: var(--plat-g200); }
+.settings-card.danger-zone .settings-control:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .preference-card { display: flex; align-items: start; justify-content: space-between; gap: 16px; cursor: default; }
 .preference-copy { display: block; }
 .preference-title { display: block; font-size: 13.5px; font-weight: 700; line-height: 1.4; }
@@ -272,7 +272,7 @@
   border: 1px solid var(--plat-ink); border-radius: var(--radius-control);
   background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); color: var(--text); font: inherit; font-weight: 700; text-align: start; overflow-wrap: anywhere;
 }
-.settings-inline-action:hover:not(:disabled) { background: var(--plat-g200); }
+.settings-inline-action:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .settings-inline-action:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .settings-inline-action:disabled { color: var(--muted); opacity: .48; box-shadow: none; cursor: default; }
 

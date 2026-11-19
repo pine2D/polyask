@@ -1,9 +1,9 @@
 /* Mac OS 9 Platinum classic native widgets: 3-ridge scrollbars, popup.css selects, beveled checkboxes & radios. */
-:is(#root *, .library-popover, .library-popover *) {
+:is(#root *, .library-popover, .library-popover *, .confirm-scrim *, .backup-scrim *) {
   scrollbar-width: auto;
 }
 
-:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar {
+:is(#root *, .library-popover, .library-popover *, .confirm-scrim *, .backup-scrim *)::-webkit-scrollbar {
   width: 15px;
   height: 15px;
 }
@@ -12,14 +12,14 @@
   height: 8px;
 }
 
-:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-track {
+:is(#root *, .library-popover, .library-popover *, .confirm-scrim *, .backup-scrim *)::-webkit-scrollbar-track {
   background: var(--plat-scroll-track);
   border-left: 1px solid var(--plat-ink);
   border-top: 1px solid var(--plat-ink);
   box-shadow: inset 1px 1px 0 rgba(0, 0, 0, 0.28), inset -1px -1px 0 rgba(255, 255, 255, 0.22);
 }
 
-:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb {
+:is(#root *, .library-popover, .library-popover *, .confirm-scrim *, .backup-scrim *)::-webkit-scrollbar-thumb {
   background-color: var(--plat-scroll-thumb);
   background-image: linear-gradient(
     to bottom,
@@ -37,7 +37,7 @@
   box-shadow: inset 1px 1px 0 var(--plat-scroll-thumb-hi), inset -1px -1px 0 var(--plat-scroll-thumb-lo);
 }
 
-:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb:horizontal {
+:is(#root *, .library-popover, .library-popover *, .confirm-scrim *, .backup-scrim *)::-webkit-scrollbar-thumb:horizontal {
   background-image: linear-gradient(
     to right,
     rgba(255, 255, 255, 0.78) 0 1px,
@@ -50,18 +50,18 @@
   background-size: 6px 5px;
 }
 
-:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-thumb:active {
+:is(#root *, .library-popover, .library-popover *, .confirm-scrim *, .backup-scrim *)::-webkit-scrollbar-thumb:active {
   background-color: var(--accent);
 }
 
-:is(#root *, .library-popover, .library-popover *)::-webkit-scrollbar-corner {
+:is(#root *, .library-popover, .library-popover *, .confirm-scrim *, .backup-scrim *)::-webkit-scrollbar-corner {
   background: var(--plat-g400);
   border-left: 1px solid var(--plat-ink);
   border-top: 1px solid var(--plat-ink);
 }
 
 /* Platinum pop-up menu button (HIG fig. 2-7 / livid/exe-stats popup.css): beveled face + right 20px double-arrow well. */
-#root select {
+:is(#root, .confirm-scrim, .backup-scrim) select {
   appearance: none;
   -webkit-appearance: none;
   border: 1px solid var(--plat-ink);
@@ -79,7 +79,7 @@
   box-shadow: var(--plat-btn-bevel);
 }
 
-#root select:active:not(:disabled) {
+:is(#root, .confirm-scrim, .backup-scrim) select:active:not(:disabled) {
   background-color: var(--plat-pressed-bg);
   color: var(--plat-pressed-fg);
   background-image:
@@ -90,7 +90,7 @@
 }
 
 /* Classic Platinum beveled square checkbox & circular radio (pure CSS, CSP img-src 'none' safe). */
-:is(#root, .library-popover) input[type="checkbox"]:not(.sr-only) {
+:is(#root, .library-popover, .confirm-scrim, .backup-scrim) input[type="checkbox"]:not(.sr-only) {
   appearance: none;
   -webkit-appearance: none;
   width: 13px;
@@ -107,7 +107,7 @@
   vertical-align: -2px;
 }
 
-:is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked::before {
+:is(#root, .library-popover, .confirm-scrim, .backup-scrim) input[type="checkbox"]:not(.sr-only):checked::before {
   content: "";
   width: 7px;
   height: 4px;
@@ -116,7 +116,7 @@
   transform: translateY(-1px) rotate(-45deg);
 }
 
-:is(#root, .library-popover) input[type="radio"]:not(.sr-only) {
+:is(#root, .library-popover, .confirm-scrim, .backup-scrim) input[type="radio"]:not(.sr-only) {
   appearance: none;
   -webkit-appearance: none;
   width: 13px;
@@ -133,7 +133,7 @@
   vertical-align: -2px;
 }
 
-:is(#root, .library-popover) input[type="radio"]:not(.sr-only):checked::before {
+:is(#root, .library-popover, .confirm-scrim, .backup-scrim) input[type="radio"]:not(.sr-only):checked::before {
   content: "";
   width: 5px;
   height: 5px;
@@ -142,16 +142,16 @@
 }
 
 /* Classic Mac OS 9 Platinum beveled metallic disclosure triangle (0ms instant mechanical rotate). */
-#root details > summary {
+:is(#root, .confirm-scrim, .backup-scrim) details > summary {
   list-style: none;
 }
-#root details > summary::-webkit-details-marker {
+:is(#root, .confirm-scrim, .backup-scrim) details > summary::-webkit-details-marker {
   display: none;
 }
-#root details > summary::marker {
+:is(#root, .confirm-scrim, .backup-scrim) details > summary::marker {
   content: "";
 }
-#root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden]) {
+:is(#root, .confirm-scrim, .backup-scrim) details:not(.question-menu):not(.archive-record-context) > summary:not([hidden]) {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -159,7 +159,7 @@
   -webkit-user-select: none;
   cursor: default;
 }
-#root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+:is(#root, .confirm-scrim, .backup-scrim) details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
   content: "";
   width: 10px;
   height: 10px;
@@ -171,26 +171,26 @@
     linear-gradient(333.43deg, transparent 0 4.9px, var(--plat-ink) 4.9px 5.9px, var(--plat-dark-bevel) 5.9px 6.9px, transparent 6.9px),
     linear-gradient(180deg, var(--plat-g200) 0%, var(--plat-mid-dark) 100%);
 }
-#root details[open]:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+:is(#root, .confirm-scrim, .backup-scrim) details[open]:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
   transform: rotate(90deg);
 }
-#root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden]):active::before {
+:is(#root, .confirm-scrim, .backup-scrim) details:not(.question-menu):not(.archive-record-context) > summary:not([hidden]):active::before {
   filter: brightness(0.75);
 }
 
 @media (forced-colors: active) {
-  #root select,
-  :is(#root, .library-popover) input[type="checkbox"]:not(.sr-only),
-  :is(#root, .library-popover) input[type="radio"]:not(.sr-only) {
+  :is(#root, .confirm-scrim, .backup-scrim) select,
+  :is(#root, .library-popover, .confirm-scrim, .backup-scrim) input[type="checkbox"]:not(.sr-only),
+  :is(#root, .library-popover, .confirm-scrim, .backup-scrim) input[type="radio"]:not(.sr-only) {
     appearance: auto;
     -webkit-appearance: auto;
     background-image: none;
     box-shadow: none;
   }
-  :is(#root, .library-popover) input[type="checkbox"]:not(.sr-only):checked::before {
+  :is(#root, .library-popover, .confirm-scrim, .backup-scrim) input[type="checkbox"]:not(.sr-only):checked::before {
     content: none;
   }
-  #root details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+  :is(#root, .confirm-scrim, .backup-scrim) details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
     clip-path: none;
     background: none;
     width: auto;
@@ -198,7 +198,7 @@
     flex: 0 0 auto;
     content: "▸";
   }
-  #root details[open]:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+  :is(#root, .confirm-scrim, .backup-scrim) details[open]:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
     transform: none;
     content: "▾";
   }

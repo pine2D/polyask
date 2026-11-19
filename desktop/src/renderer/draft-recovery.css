@@ -17,7 +17,7 @@
   color: inherit; background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
   font: inherit; font-weight: 700;
 }
-.draft-recovery button:hover:not(:disabled) { background: var(--plat-g200); }
+.draft-recovery button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .draft-recovery button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .draft-recovery button:disabled { opacity: .45; box-shadow: none; }
 .draft-recovery button.primary {

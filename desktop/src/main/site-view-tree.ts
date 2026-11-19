@@ -107,6 +107,13 @@ export class SiteViewTree {
       () => this.deps.workspace.surface === "sites" && !this.deps.getHistoryAccess().panelOpen,
       (key) => this.deps.setLayout(this.deps.workspace.mode, key, false)
     );
+    view.webContents.on("input-event", (_event, input) => {
+      if ((input.type === "mouseDown" || input.type === "touchStart") && this.deps.workspace.composerExpanded) {
+        if (!this.deps.window.isDestroyed() && !this.deps.window.webContents.isDestroyed()) {
+          this.deps.window.webContents.send("polyask:composer-outside-pointer");
+        }
+      }
+    });
     // 已勾选即挂载（不再只挂当前页）：replaceView 后重建的后台视图若不回到视图树，
     // 下一轮群发又会打进 0×0 视口。层序由调用方随后的 reconcileViews 归位。
     if (this.deps.workspace.surface === "sites" && this.deps.workspace.selected.includes(site.key)) {

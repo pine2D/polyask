@@ -8,7 +8,7 @@
   border: 1px solid var(--plat-ink); border-radius: var(--radius-control);
   background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700;
 }
-.prompt-template-save button:hover:not(:disabled) { background: var(--plat-g200); }
+.prompt-template-save button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .prompt-template-save button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .prompt-template-save button:disabled { opacity: .45; box-shadow: none; }
 .prompt-template-error { grid-column: 1 / -1; margin: 0; color: var(--danger-ink); font-size: var(--font-control); line-height: 1.5; overflow-wrap: anywhere; }
@@ -55,7 +55,7 @@
   border: 1px solid var(--plat-ink); border-radius: var(--radius-control);
   background: var(--plat-g300); color: var(--text); box-shadow: var(--plat-btn-bevel); font-weight: 700;
 }
-.prompt-variable-editor button:hover:not(:disabled) { background: var(--plat-g200); }
+.prompt-variable-editor button:hover:not(:disabled, :active) { background: var(--plat-g200); }
 .prompt-variable-editor button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .prompt-variable-editor > footer {
   flex-shrink: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;

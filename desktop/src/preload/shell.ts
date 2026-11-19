@@ -44,6 +44,7 @@ import type { SiteSnapshotExportResult } from "../shared/site-snapshot";
 import type { SynthesisCandidate, SynthesisSendRequest, SynthesisSendResponse } from "../shared/synthesis";
 import type { ProxyAcceptRequest, ProxyReloadResult, ProxySetRequest, ProxyStateRequest, ProxyStateView, ProxyTestRequest, ProxyTestResult, ProxyWriteResult } from "../shared/proxy-state";
 import { WINDOW_CHROME_CHANNELS, type WindowChromeState, type WindowControlAction } from "../shared/window-chrome";
+import type { PopupAnchor } from "../shared/popup-anchor";
 
 export interface PolyAskDesktopApi extends NotificationApi {
   getWindowChromeState(): Promise<WindowChromeState>;
@@ -60,7 +61,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   previewMarkdown(request: MarkdownPreviewRequest): Promise<MarkdownDocument[]>;
   exportMarkdown(request: MarkdownExportRequest): Promise<MarkdownExportResult>;
   exportReport(request: ReportExportRequest): Promise<ReportExportResult>;
-  showSiteFindMenu(request: { session: number; revision: number }): Promise<SiteFindState>;
+  showSiteFindMenu(request: { session: number; revision: number; anchor?: PopupAnchor }): Promise<SiteFindState>;
   openSiteFind(): Promise<SiteFindState>;
   getSiteFind(): Promise<SiteFindState>;
   findSites(request: SiteFindRequest): Promise<SiteFindState>;
@@ -156,6 +157,7 @@ export interface PolyAskDesktopApi extends NotificationApi {
   siteHistoryState(): Promise<Record<string, SiteNavigationHistoryState>>;
   setDisplayPreferences(value: DisplayPreferences): Promise<DisplayPreferences>;
   setComposerExpanded(value: boolean): void;
+  onComposerOutsidePointer?(listener: () => void): () => void;
   setDrawerOpen(value: boolean): void;
   setSurface(value: DesktopSurface): void;
   setSelection(sites: readonly SiteKey[]): Promise<WorkspaceState>;
@@ -165,8 +167,8 @@ export interface PolyAskDesktopApi extends NotificationApi {
   saveGroup(input: { readonly name: string; readonly sites: readonly SiteKey[] }): Promise<WorkspaceState>;
   deleteGroup(id: string): Promise<WorkspaceState>;
   newSession(sites: readonly SiteKey[]): Promise<NewSessionSiteResult[]>;
-  showGroupMenu(): Promise<string | null>;
-  showCommandMenu(commands: readonly CommandId[]): Promise<CommandId | null>;
+  showGroupMenu(anchor?: PopupAnchor): Promise<string | null>;
+  showCommandMenu(commands: readonly CommandId[], anchor?: PopupAnchor): Promise<CommandId | null>;
   setCompletionNotifications(enabled: boolean): void;
   savePromptTemplate(input: { readonly name: string; readonly text: string }): Promise<PromptLibraryState>;
   deletePromptTemplate(id: string): Promise<PromptLibraryState>;
@@ -231,7 +233,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   testNotification: () => invoke(NOTIFICATION_CHANNELS.test),
   onNotificationStatus: (listener: (status: NotificationStatus) => void) => subscribe(NOTIFICATION_CHANNELS.status, listener),
   onNotificationOpen: (listener: (target: NotificationTarget) => void) => subscribe(NOTIFICATION_CHANNELS.open, listener),
-  showSiteFindMenu: (request: { session: number; revision: number }) => invoke('polyask:find-menu', request),
+  showSiteFindMenu: (request: { session: number; revision: number; anchor?: PopupAnchor }) => invoke('polyask:find-menu', request),
   openSiteFind: () => invoke('polyask:find-open'),
   getSiteFind: () => invoke('polyask:find-state'),
   findSites: (request: SiteFindRequest) => invoke('polyask:find-query', request),
@@ -329,6 +331,7 @@ const api: PolyAskDesktopApi = Object.freeze({
   siteHistoryState: () => invoke("polyask:site-history-state"),
   setDisplayPreferences: (value: DisplayPreferences) => invoke("polyask:set-display", value),
   setComposerExpanded: (value: boolean) => ipcRenderer.send("polyask:set-composer-expanded", value),
+  onComposerOutsidePointer: (listener: () => void) => subscribe("polyask:composer-outside-pointer", listener),
   setDrawerOpen: (value: boolean) => ipcRenderer.send("polyask:set-drawer-open", value),
   setSurface: (value: DesktopSurface) => ipcRenderer.send("polyask:set-surface", value),
   setSelection: (sites: readonly SiteKey[]) => invoke("polyask:set-selection", sites),
@@ -339,8 +342,8 @@ const api: PolyAskDesktopApi = Object.freeze({
     invoke("polyask:save-group", input),
   deleteGroup: (id: string) => invoke("polyask:delete-group", id),
   newSession: (sites: readonly SiteKey[]) => invoke("polyask:new-session", sites),
-  showGroupMenu: () => invoke("polyask:show-group-menu"),
-  showCommandMenu: (commands: readonly CommandId[]) => invoke("polyask:show-command-menu", commands),
+  showGroupMenu: (anchor?: PopupAnchor) => invoke("polyask:show-group-menu", anchor),
+  showCommandMenu: (commands: readonly CommandId[], anchor?: PopupAnchor) => invoke("polyask:show-command-menu", commands, anchor),
   setCompletionNotifications: (enabled: boolean) =>
     ipcRenderer.send("polyask:set-completion-notifications", enabled),
   savePromptTemplate: (input: Pick<PromptTemplate, "name" | "text">) =>

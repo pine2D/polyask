@@ -19,7 +19,7 @@ module.exports = async ({ win, run, paint, wait, click, position, before, densit
     const expanded = await measure();
     assert.equal(expanded.prompt >= 320 && !expanded.overflow, true, `zoom ${zoom}: ${JSON.stringify(expanded)}`);
     assert.equal(expanded.libraryVisible, true, `library remains visible at zoom ${zoom}`);
-    assert.equal(Math.abs(expanded.height - (zoom === 1 ? (density === 'compact' ? 120 : 144) : (density === 'compact' ? 200 : 240))) < 1, true);
+    assert.equal(Math.abs(expanded.height - (zoom === 1 ? (density === 'compact' ? 112 : 132) : (density === 'compact' ? 176 : 212))) < 1, true);
     assert.equal(expanded.boxes.every(b => b.left >= -1 && b.right <= expanded.width + 1 && b.top >= 0 && b.bottom <= expanded.height + 1), true,
       `all visible controls fit at zoom ${zoom}: ${JSON.stringify(expanded.boxes)}`);
     const after = await position();
@@ -30,8 +30,8 @@ module.exports = async ({ win, run, paint, wait, click, position, before, densit
     reports.push({ zoom, ...expanded });
   }
   await click('[data-composer-toggle]');
-  await wait(`Math.abs(document.querySelector('.command-bar').getBoundingClientRect().height-${density === 'compact' ? 120 : 144})<1`);
+  await wait(`Math.abs(document.querySelector('.command-bar').getBoundingClientRect().height-${density === 'compact' ? 104 : 128})<1`);
   await click('[data-composer-toggle]');
-  await wait(`Math.abs(document.querySelector('.prompt-composer').getBoundingClientRect().height-${density === 'compact' ? 112 : 136})<1`);
+  await wait(`Math.abs(document.querySelector('.prompt-composer').getBoundingClientRect().height-${density === 'compact' ? 98 : 118})<1`);
   writeFileSync(join(output, `${locale}-${density}-zoom.json`), JSON.stringify(reports, null, 2));
 };
