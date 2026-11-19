@@ -1,4 +1,5 @@
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import type { LayoutMode, SiteDefinition } from "../shared/contracts";
 import { formatCopy, getCopy, resolveLocale } from "../shared/copy";
@@ -211,7 +212,7 @@ function App(): React.JSX.Element {
       const label = sitesRef.current.find((site) => site.key === status.site)?.label ?? status.site;
       setAnnouncement(`${label}: ${describeStatus(copy, status)}`, false);
     });
-    const offLayout = shell.onLayout((next) => {
+    const offLayout = shell.onLayout((next) => flushSync(() => {
       if (next.page !== layoutPage.current) {
         const request = requestedPage.current?.page === next.page ? requestedPage.current : null;
         setPageInputMethod(request?.inputMethod ?? "keyboard");
@@ -225,7 +226,7 @@ function App(): React.JSX.Element {
       if (!next.automaticFocus) clearNotice(copy.layoutAutoFocus);
       automaticFocus.current = !!next.automaticFocus;
       setLayout(next);
-    });
+    }));
     const offDisplay = shell.onDisplayPreferences(display.accept);
     const offCommand = shell.onCommand((id) => executeCommand(id, commandActions.current));
     const offWorkspace = shell.onWorkspaceState(workspaceFlow.accept);

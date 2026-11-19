@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { readdirSync } from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import { readSource } from "./fixtures";
 
+const DESKTOP_ROOT = path.join(__dirname, "..");
 const renderer = (file: string) => readSource(`src/renderer/${file}`);
 
 test("desktop forms expose stable names and disable browser autofill where it is noise", () => {
@@ -138,11 +141,59 @@ test("Platinum widgets zero UA button padding on composer toggle, style disclosu
   const theme = renderer("theme.css");
   const commandBar = renderer("command-bar.css");
   assert.match(composer, /\.prompt-composer \[data-composer-toggle\]\s*\{[^}]*padding:\s*0;/s);
-  assert.match(widgets, /:is\(#root, \.confirm-scrim, \.backup-scrim\) details > summary\s*\{\s*list-style:\s*none;\s*\}/);
-  assert.match(widgets, /:is\(#root, \.confirm-scrim, \.backup-scrim\) details:not\(\.question-menu\):not\(\.archive-record-context\) > summary:not\(\[hidden\]\)::before/);
+  assert.match(widgets, /:is\(#root, body\) details > summary\s*\{\s*list-style:\s*none;\s*\}/);
+  assert.match(widgets, /:is\(#root, body\) details:not\(\.question-menu\):not\(\.archive-record-context\) > summary:not\(\[hidden\]\)::before/);
   assert.doesNotMatch(widgets, /data:image/);
   assert.match(commandBar, /\.scope-split button:hover:not\(:disabled, \[aria-expanded="true"\], \[aria-pressed="true"\], :active\)/);
   assert.match(history, /\.question-legacy\s*\{[^}]*margin:\s*12px 10px 16px;/s);
   assert.match(theme, /--hover-soft:\s*#eeeeee;/);
   assert.match(theme, /--hover-soft:\s*#2a2a33;/);
+});
+
+test("cross-layer motion durations, WebContentsView geometry tokens, popups, portals, and stateful hovers stay locked", () => {
+  // 1. CSS <-> TS motion exit constants must match 1:1 (prevents 140ms zombie reserve delays).
+  const motionTs = renderer("motion.ts");
+  const panelMs = Number(motionTs.match(/PANEL_EXIT_MS\s*=\s*(\d+)/)?.[1]);
+  const composerMs = Number(motionTs.match(/COMPOSER_EXIT_MS\s*=\s*(\d+)/)?.[1]);
+  const panelCssMs = Number(renderer("panel-motion.css").match(/transition:\s*transform\s+(\d+)ms/)?.[1]);
+  const composerBlock = renderer("composer.css").match(/\.prompt-composer\s*\{([^}]*)\}/s)?.[1] ?? "";
+  const composerCssMs = /transition:\s*none/.test(composerBlock)
+    ? 0
+    : Number(composerBlock.match(/transition:[^;]*?(\d+)ms/)?.[1]);
+  assert.equal(panelMs, panelCssMs, "PANEL_EXIT_MS in motion.ts must equal panel-motion.css transition duration");
+  assert.equal(composerMs, composerCssMs, "COMPOSER_EXIT_MS in motion.ts must equal composer.css transition duration");
+
+  // 2. Shell <-> Native WebContentsView geometry gates must use shared display tokens, pre-paint layout effects, and flushSync on layout IPC.
+  const workspaceMotion = renderer("use-workspace-motion.ts");
+  assert.match(workspaceMotion, /WINDOW_TITLEBAR_HEIGHT/);
+  assert.match(workspaceMotion, /useLayoutEffect\(\(\)\s*=>\s*shell\.setComposerExpanded\(/);
+  assert.match(renderer("index.tsx"), /shell\.onLayout\(\(next\)\s*=>\s*flushSync\(/);
+  assert.match(renderer("site-find-markers.tsx"), /SITE_FIND_MARKER_WIDTH\s*-\s*TILE_FRAME_INSET/);
+
+  // 3. Zero OS-native Menu.popup() leakage across main process (all popups must use showPlatinumPopupMenu).
+  for (const file of readdirSync(path.join(DESKTOP_ROOT, "src/main")).filter((f) => f.endsWith(".ts"))) {
+    const src = readSource(`src/main/${file}`);
+    assert.doesNotMatch(src, /\.popup\s*\(/, `src/main/${file} must use showPlatinumPopupMenu instead of OS Menu.popup()`);
+  }
+
+  // 4. Shared widget/field stylesheets must scope via :is(#root, body) rather than #root-only or manual portal whitelists.
+  const widgetsCss = renderer("platinum-widgets.css");
+  const fieldsCss = renderer("fields.css");
+  assert.doesNotMatch(widgetsCss, /(?:^|\n)\s*#root\b/, "platinum-widgets.css must use :is(#root, body) so all portals inherit widgets");
+  assert.match(widgetsCss, /:is\(#root, body\) select\b/);
+  assert.match(widgetsCss, /:is\(#root, body\) input\[type="checkbox"\]/);
+  assert.match(fieldsCss, /:is\(#root, body\) :is\(textarea:not\(\[name="prompt"\]\)/);
+
+  // 5. Stateful toolbar buttons must exclude active/expanded/pressed states from :hover background brightening.
+  const barCss = renderer("command-bar.css");
+  for (const selector of [
+    /\.scope-split button:hover:not\([^)]*\[aria-expanded="true"\]/,
+    /\.health-trigger:hover:not\([^)]*\.active/,
+    /\.mode-switch button:hover:not\([^)]*\.active/,
+    /\.tier-switch button:hover:not\([^)]*\.active/,
+    /\.workspace-actions > button:hover:not\([^)]*\.active/,
+    /\.page-tabs button:hover:not\([^)]*\[aria-selected="true"\]/
+  ]) {
+    assert.match(barCss, selector);
+  }
 });

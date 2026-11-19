@@ -57,7 +57,12 @@ test('keyboard focus keeps composer expanded, while clicking outside automatical
 
     // Mouse click outside .prompt-composer runs the action AND collapses the composer while remembering cursor/scroll.
     const thinkButton = h.document.querySelector<HTMLButtonElement>('[data-tier-icon="think"]')!;
-    await h.focus(thinkButton); await h.click(thinkButton);
+    await act(async () => {
+      thinkButton.dispatchEvent(new h.window.MouseEvent('mousedown', { button: 0, bubbles: true }));
+      thinkButton.focus();
+      thinkButton.dispatchEvent(new h.window.MouseEvent('mouseup', { button: 0, bubbles: true }));
+      thinkButton.click();
+    });
     assert.equal(h.document.querySelector('.command-bar')!.classList.contains('is-expanded'), false, 'clicking outside composer collapses it');
     assert.equal(h.document.querySelector('[data-current-tier]')?.textContent, 'Think', 'outside button click still executes');
     h.area.setSelectionRange(0, 0); h.area.scrollTop = 0;

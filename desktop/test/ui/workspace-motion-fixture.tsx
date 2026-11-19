@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { useEffect, useRef, useState } from 'react';
 import { CommandBar } from '../../src/renderer/command-bar';
@@ -5,6 +6,7 @@ import { FeedbackProvider } from '../../src/renderer/feedback-provider';
 import { ImagePicker } from '../../src/renderer/image-picker';
 import { QuestionHistory } from '../../src/renderer/question-history';
 import { SiteFrames } from '../../src/renderer/site-frames';
+import { WindowTitleBar } from '../../src/renderer/window-titlebar';
 import { WorkspaceDrawer } from '../../src/renderer/workspace-drawer';
 import { usePresence } from '../../src/renderer/presence';
 import { useWorkspaceMotion } from '../../src/renderer/use-workspace-motion';
@@ -24,13 +26,13 @@ const image = { name: 'local.png', type: 'image/png' as const, size: 68,
 function Fixture() {
   const [layout, setLayout] = useState<LayoutState>({ mode: 'overview', focused: sites[0].key, page: 0, pageCount: 1, placements: [] });
   const [drawer, setDrawer] = useState(false), [tray, setTray] = useState(false), [history, setHistory] = useState(false);
-  const imagePresent = usePresence(tray, 140);
+  const imagePresent = usePresence(tray, 120);
   const { composer, drawerPresent } = useWorkspaceMotion('sites', drawer, 'pointer', imagePresent, { layout, density, covered: false });
   const [text, setText] = useState(''), [tier, setTier] = useState<Tier>(null), ref = useRef<HTMLTextAreaElement>(null);
-  useEffect(() => window.polyask.onLayout(setLayout), []);
+  useEffect(() => window.polyask.onLayout((next) => flushSync(() => setLayout(next))), []);
   useEffect(() => (window as any).motionTest.onNative((bounds: unknown) => { (window as any).motionNative = bounds; }), []);
   const openDrawer = (open: boolean) => { setDrawer(open); if (open) { setTray(false); setHistory(false); } };
-  return <main className={`app-shell${composer.reservedExpanded ? ' is-composer-expanded' : ''}`}>
+  return <><WindowTitleBar copy={copy} isMac={false} /><main className={`app-shell${composer.reservedExpanded ? ' is-composer-expanded' : ''}`}>
     <CommandBar onNewSession={() => undefined} newSessionBlockedReason={null} copy={copy} promptRef={ref} text={text} tier={tier} runState="idle" auxiliaryBusy={false}
       layoutMode={layout.mode} selectedCount={4} failureCount={0} cancelledCount={0} scopeLabel={copy.allSites}
       healthAttention={0} panelTab={drawer ? 'sites' : null} expanded={composer.expanded}
@@ -53,6 +55,6 @@ function Fixture() {
       onFocus={noop} onReload={noop} history={{}} onBack={noop} />
     <QuestionHistory copy={copy} sites={sites} draft={text} open={history} busy={false} onBlockingChange={noop}
       onClose={() => setHistory(false)} onOpen={() => setHistory(true)} onDraft={setText} />
-  </main>;
+  </main></>;
 }
 createRoot(document.getElementById('root')!).render(<FeedbackProvider copy={copy}><Fixture /></FeedbackProvider>);

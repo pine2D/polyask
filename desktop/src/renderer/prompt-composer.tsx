@@ -54,19 +54,14 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
     const doc = rootRef.current?.ownerDocument;
     if (!doc) return;
     let outsidePress = false;
-    let draggedFromInside = false;
-    let keyActivating = false;
     let collapseTimer: ReturnType<typeof setTimeout> | null = null;
-    let resetTimer: ReturnType<typeof setTimeout> | null = null;
     const clearCollapseTimer = (): void => {
       if (collapseTimer !== null) { clearTimeout(collapseTimer); collapseTimer = null; }
     };
     const isInside = (target: EventTarget | null): boolean =>
       target instanceof Node && !!rootRef.current?.contains(target);
     const onPointerStart = (event: Event): void => {
-      const inside = isInside(event.target);
-      outsidePress = !inside;
-      draggedFromInside = inside;
+      outsidePress = !isInside(event.target);
     };
     const collapseFromOutside = (): void => {
       const area = props.promptRef.current;
@@ -82,26 +77,18 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
       onExpandedChangeRef.current(false);
     };
     const onPointerEnd = (): void => {
-      if (outsidePress) {
-        outsidePress = false;
-        clearCollapseTimer();
-        collapseTimer = setTimeout(() => {
-          collapseTimer = null;
+      if (!outsidePress) return;
+      clearCollapseTimer();
+      collapseTimer = setTimeout(() => {
+        collapseTimer = null;
+        if (outsidePress) {
+          outsidePress = false;
           collapseFromOutside();
-        }, 0);
-      }
-      if (draggedFromInside) {
-        if (resetTimer !== null) clearTimeout(resetTimer);
-        resetTimer = setTimeout(() => { draggedFromInside = false; resetTimer = null; }, 0);
-      }
+        }
+      }, 0);
     };
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === "Enter" || event.key === " ") keyActivating = true;
-    };
-    const onKeyUp = (): void => { keyActivating = false; };
     const onClick = (event: MouseEvent): void => {
-      if (isInside(event.target) || draggedFromInside) return;
-      if (keyActivating && event.detail === 0) { keyActivating = false; return; }
+      if (!outsidePress || isInside(event.target)) return;
       outsidePress = false;
       clearCollapseTimer();
       collapseFromOutside();
@@ -110,18 +97,13 @@ export function PromptComposer(props: PromptComposerProps): React.JSX.Element {
     doc.addEventListener("touchstart", onPointerStart, true);
     doc.addEventListener("mouseup", onPointerEnd, true);
     doc.addEventListener("touchend", onPointerEnd, true);
-    doc.addEventListener("keydown", onKeyDown, true);
-    doc.addEventListener("keyup", onKeyUp, true);
     doc.addEventListener("click", onClick);
     return () => {
       clearCollapseTimer();
-      if (resetTimer !== null) clearTimeout(resetTimer);
       doc.removeEventListener("mousedown", onPointerStart, true);
       doc.removeEventListener("touchstart", onPointerStart, true);
       doc.removeEventListener("mouseup", onPointerEnd, true);
       doc.removeEventListener("touchend", onPointerEnd, true);
-      doc.removeEventListener("keydown", onKeyDown, true);
-      doc.removeEventListener("keyup", onKeyUp, true);
       doc.removeEventListener("click", onClick);
     };
   }, [props.expanded]);

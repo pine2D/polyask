@@ -296,7 +296,11 @@ Markdown 正文五、六级标题同为 `13px`，以 `700 / 600` 字重与颜色
 
 ### Inputs / Fields
 
-下凹白底井（`1px` 黑框 + 左上 `#808080` 内阴影 + 右下外白边高光），同步覆盖 `#root` 与挂在 `document.body` 的全部 Portal 弹层（`.library-popover`、`.confirm-scrim`、`.backup-scrim`）。聚焦时边框与 `1px` 内环切换为 `--accent`；提问框由外层 `.prompt-composer` 统一承载下凹边框与聚焦环，右侧展开按钮 `padding: 0` 居中嵌套，鼠标点击提问框以外区域（含外壳工具栏及任意 AI 站点网页视图）自动收起并完整保留草稿、选区与滚动位置（框内拖选文字滑出边界或纯键盘切焦不误收）。
+下凹白底井（`1px` 黑框 + 左上 `#808080` 内阴影 + 右下外白边高光），统一通过 `:is(#root, body)` 作用域保持 `(1,0,0)` 特异性并自动覆盖挂在 `document.body` 的全部 Portal 弹层。聚焦时边框与 `1px` 内环切换为 `--accent`；提问框由外层 `.prompt-composer` 统一承载下凹边框与聚焦环，右侧展开按钮 `padding: 0` 居中嵌套，鼠标点击提问框以外区域（含外壳工具栏及任意 AI 站点网页视图）自动收起并完整保留草稿、选区与滚动位置（框内拖选文字滑出边界或纯键盘切焦不误收）。
+
+### Motion and Synchronization
+
+展开与收起提问框均经 `useLayoutEffect` 零延迟同步通知主进程，并与 `polyask:layout` 回传的 `WebContentsView` 矩形在同一帧原子切换（`COMPOSER_EXIT_MS = 0`），消除外壳工具条与下方 AI 网页视口之间的空隙帧与遮挡帧。
 
 ### Navigation
 

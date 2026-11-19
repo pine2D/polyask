@@ -7,7 +7,7 @@
 凡涉及界面、表单、设置、菜单、布局或文案呈现的改动，必须依次通过以下三关：
 
 1. **动工前两句话对齐**：新增按钮、输入框、开关、设置项或面板前，先用两句话向用户确认：① 入口归属哪个分类或区域（为什么符合直觉）；② 沿用哪套既有卡片/表单样式。严禁未经确认把新入口塞进不相关分类。
-2. **原生自查实拍图**：严禁裸用浏览器默认简陋表单控件；所有控件须沿用 `theme.css` / `fields.css` 设计令牌与所在工作区样式，同步补入完整验证夹具（如 `test/ui/shell-fixture.tsx`），并在真实 Electron 原生环境自查三语、明暗主题、150%/200% 缩放、最小窗口（`960×680`）及空态/报错态**实拍截图**，不得仅凭测试退出码或“无横向滚动条”宣称通过。
+2. **原生自查实拍图**：严禁裸用浏览器默认简陋表单控件；所有控件须沿用 `theme.css` / `fields.css` 设计令牌与所在工作区样式（通用部件用 `:is(#root, body)` 覆盖全部 `document.body` Portal，激活态按钮 `:hover` 排除已选中/已展开态），同步补入完整验证夹具（如 `test/ui/shell-fixture.tsx`），并在真实 Electron 原生环境自查三语、明暗主题、150%/200% 缩放、最小窗口（`960×680`）及空态/报错态**实拍截图**（注意 `BrowserWindow.capturePage()` 不含子 `WebContentsView`，涉及跨视图菜单或原生视口边界须用窗口合成截屏核验），不得仅凭测试退出码或“无横向滚动条”宣称通过。
 3. **看图说话与试玩版同步**：交付时主动在对话附上最关键的 2～4 张明暗/窄窗实拍图供用户直观核验，并同步刷新本地隔离【Windows 试玩版】（独立测试数据目录，绝不触碰用户日常正式配置、登录态与历史记录）。
 
 ## 离线回归
@@ -43,7 +43,8 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 - 收紧归档 `label` 上限 → fixture 校验必红并指名样本；
 - 往 `SITE_CODES` 加未映射码 → `npm run typecheck` 必红；文案表多写孤儿键 → `status-copy-coverage.test.ts` 必红；
 - 删一站 `sites.ts` 或删一条 `preload/site.ts` require → `scripts/test-site-selection.js` 必红；
-- 让任一非豁免 `desktop/src/**/*.ts(x)` 超过 400 行 → `scripts/verify.sh` 行数门禁必红。
+- 让任一非豁免 `desktop/src/**/*.ts(x)` 超过 400 行 → `scripts/verify.sh` 行数门禁必红；
+- 让 `motion.ts` 退出时长与 `composer.css` / `panel-motion.css` 脱节，或在 `src/main/` 引入 `.popup(` → `test/ui-guidelines.test.ts` 必红。
 
 ## 外壳与设置页视觉回归
 
@@ -87,7 +88,7 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 
 - 完整多依据与决策保存：`cd desktop && npm run test:unit -- test/multi-evidence-native.check.ts`（另有焦点子集 `POLYASK_EVIDENCE_FOCUS_NATIVE=1`、来源版本冲突子集 `POLYASK_EVIDENCE_CONFLICT_NATIVE=1`）。
 - 静态与组合报告导出：`npm run test:unit -- test/report-export.check.ts test/report-combined.check.ts`（真实 Electron 内存 session 导出 HTML/A4 PDF、公式/图表与恶意输入清洗）。
-- 偏好草稿同步、输入框激活与本机重置：`node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`、`npm run test:unit -- test/composer-activation-native.check.ts test/local-data-reset-interaction.check.ts`。
+- 偏好草稿同步、提问框同帧动效/激活与本机重置：`node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`、`npm run test:unit -- test/workspace-motion-native.check.ts test/composer-session-native.check.ts test/composer-activation-native.check.ts test/local-data-reset-interaction.check.ts`。
 - SQLite/IPC 与多页资源基线：`node scripts/test-safe.mjs command node scripts/resource-baseline.mjs`（1k/5k/20k 真实磁盘库查询与 1/3/9 页挂载切换测量）。
 
 ## 会话内任务准备专项

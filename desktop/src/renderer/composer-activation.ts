@@ -32,7 +32,10 @@ export function useComposerEntry(promptRef: RefObject<HTMLTextAreaElement | null
 /** 快捷键、模板与历史回填即使已聚焦，也明确开始编辑。 */
 export function focusPromptForEditing(promptRef: RefObject<HTMLTextAreaElement | null>, expand: (value: boolean) => void): void {
   expand(true);
-  queueMicrotask(() => promptRef.current?.focus());
+  queueMicrotask(() => {
+    expand(true);
+    promptRef.current?.focus();
+  });
 }
 
 /** 对话框已恢复到存活控件时保留它，否则回到稳定的工作台入口。 */

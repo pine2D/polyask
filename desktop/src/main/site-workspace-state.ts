@@ -227,7 +227,7 @@ export class SiteWorkspaceState {
       ? this.selected.filter((site) => !placed.has(site)).map((key) => ({ key, bounds: cover.bounds }))
       : [];
     return {
-      placementsWithBackground: [...background, ...this.placements],
+      placementsWithBackground: [...this.placements, ...background],
       currentPlacements: this.placements,
       metrics: next.metrics,
       zoom: viewport.zoom,

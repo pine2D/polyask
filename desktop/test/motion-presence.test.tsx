@@ -45,7 +45,7 @@ test('reopening a closing panel cancels its removal; reducing motion finishes a 
   assert.equal(m.listeners.size, 0);
 });
 
-test('composer keeps the native space through collapse and a quick reversal retains the editing node', async () => {
+test('composer releases its standalone space in 0ms on collapse while retaining the editing node across reversals', async () => {
   const m = media();
   function Composer() {
     window.matchMedia = () => m.query as unknown as MediaQueryList;
@@ -60,16 +60,15 @@ test('composer keeps the native space through collapse and a quick reversal reta
   try {
     const area = h.document.querySelector('textarea')!;
     await h.click(h.document.querySelector('button')!);
+    assert.equal(h.document.querySelector('main')!.dataset.reserved, 'true');
     await h.click(h.document.querySelector('button')!);
     assert.equal(h.document.querySelector('output')!.textContent, 'false');
-    assert.equal(h.document.querySelector('main')!.dataset.reserved, 'true', 'collapse must finish before shrinking native pages');
+    assert.equal(h.document.querySelector('main')!.dataset.reserved, 'false', '0ms Platinum snap never holds a dead 140ms delay');
     await h.click(h.document.querySelector('button')!);
-    await act(async () => { await new Promise(resolve => setTimeout(resolve, 190)); });
     assert.equal(h.document.querySelector('textarea') === area, true);
     assert.equal(area.value, 'Original draft');
     assert.equal(h.document.querySelector('main')!.dataset.reserved, 'true');
     await h.click(h.document.querySelector('button')!);
-    await act(async () => m.set(true));
     assert.equal(h.document.querySelector('main')!.dataset.reserved, 'false');
   } finally { await h.close(); }
 });

@@ -33,13 +33,14 @@ app.whenReady().then(async()=>{
   ipcMain.handle('polyask:question-legacy',()=>({items:[],cursor:null}));
   const click=async selector=>{
     const p=await run(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('Missing target');const r=e.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2,width:r.width,height:r.height}})()`);
-    assert.equal(p.width>=24&&p.height>=24,true,'usable native pointer target');
+    const minSize=selector==='[data-composer-toggle]'||selector.endsWith('.panel-close')?20:22;
+    assert.equal(p.width>=minSize&&p.height>=minSize,true,'usable native pointer target');
     win.focus();win.webContents.focus();await wait('document.hasFocus()');
     const z=win.webContents.getZoomFactor();
     for(const type of ['mouseDown','mouseUp'])win.webContents.sendInputEvent({type,button:'left',clickCount:1,x:Math.round(p.x*z),y:Math.round(p.y*z)});
     await paint();
   };
-  const start=()=>run(`window.motionFrames=[];window.motionDone=false;requestAnimationFrame(function tick(t){const e=document.querySelector('.prompt-composer'),r=e.getBoundingClientRect(),b=document.querySelector('.command-bar').getBoundingClientRect();window.motionFrames.push({t,height:r.height,bottom:r.bottom,bar:b.height,native:(window.motionNative||[]).map(x=>x.y),reserved:b.height>80});if(window.motionFrames.length<25)requestAnimationFrame(tick);else window.motionDone=true})`);
+  const start=()=>run(`window.motionFrames=[];window.motionDone=false;requestAnimationFrame(function tick(t){const e=document.querySelector('.prompt-composer'),r=e.getBoundingClientRect(),b=document.querySelector('.command-bar').getBoundingClientRect();window.motionFrames.push({t,height:r.height,bottom:r.bottom,bar:b.height,barBottom:b.bottom,native:(window.motionNative||[]).map(x=>x.y),reserved:b.height>80});if(window.motionFrames.length<25)requestAnimationFrame(tick);else window.motionDone=true})`);
   const trace=async selector=>{await start();await click(selector);await wait('window.motionDone');return run('window.motionFrames')};
   const resizeCounts=()=>Promise.all(views.map(v=>v.webContents.executeJavaScript('window.resizeCount')));
   const position=()=>run('(()=>{const e=document.querySelector("textarea");return{start:e.selectionStart,end:e.selectionEnd,direction:e.selectionDirection,scroll:e.scrollTop,value:e.value}})()');
@@ -52,45 +53,53 @@ app.whenReady().then(async()=>{
     assert.equal(win.webContents.getZoomFactor(),zoom,'read back actual shell zoom after file navigation');
     manager.setDisplayPreferences({density,siteScale:1});manager.setLayout(reports.length%2?'focus':'overview');
     await wait('document.querySelectorAll(".tile-frame").length===4&&window.motionNative?.length===4');await pause(120);
-    const low=density==='compact'?32:40,high=density==='compact'?112:136;
+    const low=density==='compact'?26:32,high=density==='compact'?98:118,tileHeader=density==='compact'?24:30;
     const beforeEvents=events,beforeResize=await resizeCounts();
     const opening=await trace('textarea');
     writeFileSync(join(output,'opening-debug.json'),JSON.stringify({theme,density,zoom,opening,events:events-beforeEvents,
       css:await run('(()=>{const p=document.querySelector(".prompt-composer"),s=getComputedStyle(p);return{state:p.dataset.expanded,height:s.height,transition:s.transition,reduce:matchMedia("(prefers-reduced-motion:reduce)").matches,focus:document.activeElement===document.querySelector("textarea"),rect:p.getBoundingClientRect().toJSON()}})()')},null,2));
     assert.equal(Math.abs(opening.at(-1).height-high)<1,true,'composer reaches its expanded height');
-    for(const sample of opening)assert.equal(sample.native.length===4&&sample.bottom*zoom<=Math.min(...sample.native)+2,true,'input cannot overlap native pages');
+    for(const sample of opening){
+      assert.equal(sample.native.length===4&&Math.abs((sample.barBottom+tileHeader)*zoom-Math.min(...sample.native))<=2,true,`expand frame stays flush with native pages without gap or overlap: ${JSON.stringify(sample)}`);
+    }
     assert.equal(events-beforeEvents,1,'native expansion uses one layout update');
     await win.webContents.insertText('Long question / 长问题 / 長問題\n'.repeat(40));
     await run('window.motionArea=document.querySelector("textarea");motionArea.setSelectionRange(17,43,"backward");motionArea.scrollTop=170');
     const before=await position();
-    await click('[data-tier-icon="think"]');assert.deepEqual(await position(),before,'selection and scroll survive tier action');
+    await click('[data-tier-icon="think"]');
+    await wait('!document.querySelector(".command-bar").classList.contains("is-expanded")');
     await click('textarea');
+    await wait('document.querySelector(".command-bar").classList.contains("is-expanded")');
+    assert.deepEqual(await position(),before,'selection and scroll survive outside-click collapse and re-entry');
     const style=await run('(()=>{const e=document.querySelector("textarea"),s=getComputedStyle(e),p=getComputedStyle(e.parentElement);return{outline:s.outlineStyle,border:s.borderColor,shadow:p.boxShadow}})()');
     assert.equal(style.outline,'none');assert.equal(style.border,'rgba(0, 0, 0, 0)');assert.notEqual(style.shadow,'none');
     if(zoom===1){const r=await run('(()=>{const r=document.querySelector(".prompt-composer").getBoundingClientRect();return{x:Math.floor(r.x)-12,y:0,width:Math.ceil(r.width)+24,height:Math.ceil(r.bottom)+12}})()');writeFileSync(join(output,`${theme}-${density}.png`),(await win.webContents.capturePage(r)).toPNG())}
+    const beforeCloseEvents=events,beforeCloseResize=await resizeCounts();
     const closing=await trace('[data-composer-toggle]');
     assert.equal(Math.abs(closing.at(-1).height-low)<1,true,'composer reaches its collapsed height');
-    for(const sample of closing)assert.equal(sample.bottom*zoom<=Math.min(...sample.native)+2,true,'collapse retains native reserve until clear');
-    assert.equal(events-beforeEvents,2,'native reserve is released once after collapse');
-    const afterResize=await resizeCounts();assert.equal(afterResize.every((n,i)=>n-beforeResize[i]<=2),true,'webpages do not resize per animation frame');
-    await click('[data-composer-toggle]');await pause(210);await click('[data-composer-toggle]');await pause(20);await click('[data-composer-toggle]');await pause(210);
+    for(const sample of closing){
+      assert.equal(Math.abs((sample.barBottom+tileHeader)*zoom-Math.min(...sample.native))<=2,true,`collapse frame stays flush with native pages without 140ms gap or overlap: ${JSON.stringify(sample)}`);
+    }
+    assert.equal(events-beforeCloseEvents,1,'native reserve is released in one synchronous layout update');
+    const afterResize=await resizeCounts();assert.equal(afterResize.every((n,i)=>n-beforeCloseResize[i]<=1),true,'webpages resize at most once on collapse');
+    await click('[data-composer-toggle]');await pause(120);await click('[data-composer-toggle]');await pause(20);await click('[data-composer-toggle]');await pause(120);
     assert.equal(await run('document.querySelector("textarea")===window.motionArea'),true,'reversal retains textarea identity');
     assert.equal(await run('document.querySelector("[data-composer-toggle]").getAttribute("aria-expanded")'),'true');
     for(const selector of ['.scope-main','.image-trigger']){
-      await click(selector);await pause(200);
+      await click(selector);await pause(160);
       const pane=selector==='.scope-main'?'.workspace-drawer':'.image-tray';
-      const bounds=nativeBounds();await click(pane+' .panel-close');await pause(20);
+      const bounds=nativeBounds();await click(pane+' .panel-close');
       assert.equal(await run(`document.querySelector(${JSON.stringify(pane)})?.hasAttribute('inert')`),true,'closing panel is inert');
-      assert.deepEqual(nativeBounds(),bounds,'native width retained during panel exit');
+      assert.deepEqual(nativeBounds(),bounds,'native width retained during 120ms panel exit');
       await wait(`!document.querySelector(${JSON.stringify(pane)})`);
     }
-    await click('.question-trigger');await pause(200);
+    await click('.question-trigger');await pause(160);
     assert.equal(views.every(v=>v.getVisible()),true,'wide history list keeps native pages visible in reserved space');
     await wait('!!document.querySelector(".question-main")');await click('.question-main');
     await wait('document.querySelector(".question-history")?.classList.contains("is-full")');await pause(60);
     assert.equal(views.every(v=>!v.getVisible()),true,'history covers attached native views');
     for(const v of views)assert.equal(await v.webContents.executeJavaScript('innerWidth>0&&innerHeight>0'),true);
-    await click('.question-header .panel-close');await pause(20);
+    await click('.question-header .panel-close');
     assert.equal(await run('document.querySelector(".question-history")?.hasAttribute("inert")'),true);
     assert.equal(views.every(v=>!v.getVisible()),true,'native cover survives history exit');
     await wait('!document.querySelector(".question-history")');await pause(30);
@@ -98,10 +107,11 @@ app.whenReady().then(async()=>{
     reports.push({theme,density,zoom,delay,mode:manager.getLayout().mode,intermediateOpen:opening.filter(x=>x.height>low+1&&x.height<high-1).length,
       intermediateClose:closing.filter(x=>x.height>low+1&&x.height<high-1).length,resizeDeltas:afterResize.map((n,i)=>n-beforeResize[i]),style});
   }
-  assert.equal(reports.some(r=>r.intermediateOpen>0)&&reports.some(r=>r.intermediateClose>0),true,'Chromium renders measured intermediate animation frames');
+  assert.equal(reports.every(r=>r.intermediateOpen===0&&r.intermediateClose===0),true,'Platinum 0ms snap produces zero intermediate height frames');
   const debug=await win.webContents.debugger;debug.attach('1.3');
   await debug.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
-  await click('[data-composer-toggle]');await wait('document.querySelector(".command-bar").getBoundingClientRect().height===64');
+  await click('textarea');await wait('document.querySelector(".command-bar").getBoundingClientRect().height===132');
+  await click('[data-composer-toggle]');await wait('document.querySelector(".command-bar").getBoundingClientRect().height===54');
   assert.equal(await run('getComputedStyle(document.querySelector(".prompt-composer")).transitionDuration'),'0s');
   await debug.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});
   await click('textarea');await pause(220);
