@@ -29,8 +29,9 @@
 .markdown-preview a + a, .markdown-preview a + .markdown-link-group, .markdown-preview .markdown-link-group + a, .markdown-preview .markdown-link-group + .markdown-link-group { margin-left: .35em; }
 .markdown-link-group { position: relative; display: inline; }
 .markdown-preview .markdown-link-details {
-  display: inline-flex; align-items: center; vertical-align: middle; min-height: 18px; height: 18px; min-width: 22px;
-  padding: 0 3px; margin-left: 3px; border: 1px solid var(--plat-ink); border-radius: 2px;
+  display: inline-grid; place-content: center; place-items: center; vertical-align: middle;
+  width: 20px; min-width: 20px; min-height: 18px; height: 18px;
+  padding: 0; margin-left: 3px; border: 1px solid var(--plat-ink); border-radius: 2px;
   color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel);
 }
 .markdown-link-details svg { width: 11px; height: 11px; }

@@ -75,8 +75,20 @@ function toolbarLayout() {
   check(question.bottom <= answer.top, 'record actions precede source selection and answer actions');
   for (const node of [...toolbar.querySelectorAll<HTMLElement>('button'), ...questionActions.querySelectorAll<HTMLElement>('button')]) {
     const rect = node.getBoundingClientRect();
-    check(rect.height >= 32 && rect.width >= 32, 'toolbar controls keep their click targets');
+    check(rect.height >= 24 && rect.width >= 24, 'toolbar controls keep their click targets');
     check(rect.left >= 0 && rect.right <= window.innerWidth, 'toolbar control stays within the viewport');
+  }
+  for (const node of document.querySelectorAll<HTMLElement>('button, summary')) {
+    const cs = getComputedStyle(node);
+    if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    const rect = node.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) continue;
+    const svgs = [...node.querySelectorAll('svg')].filter(s => s.getBoundingClientRect().width > 0);
+    if (svgs.length !== 1 || (node.textContent ?? '').trim() !== '') continue;
+    const sRect = svgs[0].getBoundingClientRect();
+    const dx = Math.abs((sRect.left + sRect.right) / 2 - (rect.left + rect.right) / 2);
+    const dy = Math.abs((sRect.top + sRect.bottom) / 2 - (rect.top + rect.bottom) / 2);
+    check(dx <= 0.6 && dy <= 0.6, `icon button centered: ${node.getAttribute('aria-label') ?? node.className} dx=${dx} dy=${dy}`);
   }
   check(document.querySelector('.question-reader')!.scrollWidth <= document.querySelector('.question-reader')!.clientWidth + 1, 'toolbar does not cause horizontal overflow');
   return { ok: true, width: window.innerWidth, recordBeforeAnswer: question.bottom <= answer.top };

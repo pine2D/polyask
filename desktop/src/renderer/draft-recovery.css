@@ -37,7 +37,7 @@
 .draft-copy-list small { grid-column: 1; }
 .draft-copy-list time { grid-column: 1; font-variant-numeric: tabular-nums; }
 .draft-copy-list > li > button { grid-column: 2; grid-row: 1 / span 4; align-self: center; }
-.draft-copy-list > li[data-selected] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.draft-copy-list > li[data-selected] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--active-bar); }
 .draft-copy-list .draft-copy-title { font-weight: 700; }
 .draft-copy-list .draft-copy-summary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .draft-copy-list > li > .draft-preview { grid-column: 1 / -1; margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--plat-ink); }

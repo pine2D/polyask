@@ -147,7 +147,32 @@ test("Platinum widgets zero UA button padding on composer toggle, style disclosu
   assert.match(commandBar, /\.scope-split button:hover:not\(:disabled, \[aria-expanded="true"\], \[aria-pressed="true"\], :active\)/);
   assert.match(history, /\.question-legacy\s*\{[^}]*margin:\s*12px 10px 16px;/s);
   assert.match(theme, /--hover-soft:\s*#eeeeee;/);
-  assert.match(theme, /--hover-soft:\s*#2a2a33;/);
+  assert.match(theme, /--hover-soft:\s*#2a2a2a;/);
+});
+
+test("Platinum Gray Variation stays purple-free and locks atomic icon-only button centering", () => {
+  const forbiddenPurple = /#(?:9999ff|ccccff|dcdcff|333399|5c5c9e|9e9eff|32325c|2b2b4e|6666aa|8585cc|b4b4ff|282831|353540|2b2b34|1f1f26|2a2a33)\b/i;
+  for (const file of readdirSync(path.join(DESKTOP_ROOT, "src/renderer")).filter((f) => f.endsWith(".css"))) {
+    assert.doesNotMatch(renderer(file), forbiddenPurple, `src/renderer/${file} must not reintroduce lavender/purple tokens`);
+  }
+  const popupTemplate = readSource("src/main/platinum-popup-template.ts");
+  assert.doesNotMatch(popupTemplate, forbiddenPurple, "platinum-popup-template.ts must stay purple-free");
+  assert.match(popupTemplate, /--menu-active-bg:\s*#333333;/);
+  assert.match(popupTemplate, /--scroll-thumb:\s*#cccccc;/);
+
+  const theme = renderer("theme.css");
+  assert.match(theme, /--plat-scroll-thumb:\s*#cccccc;/);
+  assert.match(theme, /--accent-soft:\s*#dcdcdc;/);
+  assert.match(theme, /--selection-soft:\s*#f5f5f5;/);
+  assert.match(theme, /--menu-active-bg:\s*#333333;/);
+
+  const widgets = renderer("platinum-widgets.css");
+  assert.match(widgets, /:is\(#root, body\) :is\(button, summary\) > svg\s*\{[^}]*display:\s*block;[^}]*flex-shrink:\s*0;/s);
+  assert.match(widgets, /:is\(#root, body\) :is\([\s\S]*button\.question-icon-action[\s\S]*button\.library-menu-trigger[\s\S]*button\.markdown-link-details[\s\S]*\.question-menu > summary[\s\S]*\)\s*\{[^}]*padding:\s*0;[^}]*place-items:\s*center;/);
+
+  const historyList = renderer("question-history-list.tsx");
+  assert.match(historyList, /<details className="question-menu"><summary[^>]*><MoreIcon \/><\/summary>/);
+  assert.doesNotMatch(historyList, /···/);
 });
 
 test("cross-layer motion durations, WebContentsView geometry tokens, popups, portals, and stateful hovers stay locked", () => {

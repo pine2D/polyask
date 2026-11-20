@@ -31,8 +31,8 @@
   outline: 1px solid var(--plat-ink); outline-offset: -1px;
 }
 .image-filename { min-width: 0; flex: 1; overflow-wrap: anywhere; font-size: 11.5px; line-height: 1.45; }
-.image-preview button { width: 22px; height: 22px; flex-shrink: 0; padding: 0; }
-.image-tray-close { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; padding: 0; }
+.image-preview button { width: var(--target-size); height: var(--target-size); min-height: var(--target-size); flex-shrink: 0; padding: 0; }
+.image-tray-close { position: absolute; top: 8px; right: 8px; width: var(--target-size); height: var(--target-size); padding: 0; }
 .image-scope-notice { padding: 6px; border: 1px solid var(--plat-ink); background: var(--warning-soft); display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 6px; color: var(--warning-ink); font-size: 11.5px; }
 .image-scope-notice p { margin: 0; line-height: 1.5; }
 .image-scope-notice button { grid-column: 2; padding: 2px 8px; }

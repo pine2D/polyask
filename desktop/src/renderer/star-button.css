@@ -1,9 +1,15 @@
 .star-control { display: inline-flex; position: relative; flex: 0 0 auto; }
 :is(.library, .question-history) button.star-button {
-  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 24px;
+  display: inline-grid; place-items: center; flex: 0 0 24px;
   width: 24px; height: 24px; min-height: 24px; padding: 0; margin: 0;
   color: var(--muted); background: transparent; border: 1px solid transparent;
   border-radius: 2px; cursor: default;
+}
+.question-history button.star-button {
+  flex: 0 0 max(24px, var(--target-size));
+  width: max(24px, var(--target-size));
+  height: max(24px, var(--target-size));
+  min-height: max(24px, var(--target-size));
 }
 :is(.archive-detail-actions, .library-record-actions, .question-record-actions) button.star-button {
   color: var(--text); background: var(--plat-g300); border-color: var(--plat-ink); box-shadow: var(--plat-btn-bevel);

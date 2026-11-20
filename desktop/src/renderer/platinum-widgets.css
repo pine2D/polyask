@@ -52,7 +52,83 @@
 }
 
 :is(#root, body) *::-webkit-scrollbar-thumb:active {
-  background-color: var(--accent);
+  background-color: var(--plat-pressed-bg);
+}
+
+/* Atomic centering contract for all icon-only controls: prevents container button padding bleed and Flex SVG crushing,
+   while keeping display in :where() so responsive display:none rules always win without specificity wars. */
+:is(#root, body) :is(button, summary) > svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+:where(#root, body) :where(
+  button.panel-close,
+  button.question-icon-action,
+  button.library-menu-trigger,
+  button.library-focus,
+  button.library-favorite,
+  button.question-focus,
+  button.question-image-close,
+  button.star-button,
+  button.scope-menu,
+  button.health-trigger,
+  button.question-trigger,
+  button.draft-trigger:has(> svg),
+  button.more-trigger,
+  button.site-page-close,
+  button.site-drag-handle,
+  button.markdown-link-details,
+  .prompt-composer [data-composer-toggle],
+  .page-zoom button:not(.page-zoom-reset),
+  .tile-header button:not(.site-retry),
+  .site-find > button,
+  .mermaid-actions button,
+  .markdown-code-actions button,
+  .image-preview button,
+  .prompt-library-item > button:last-child,
+  .group-row > button:last-child,
+  .group-save button,
+  .question-menu > summary
+):where(:not([hidden])) {
+  display: inline-grid;
+}
+
+:is(#root, body) :is(
+  button.panel-close,
+  button.question-icon-action,
+  button.library-menu-trigger,
+  button.library-focus,
+  button.library-favorite,
+  button.question-focus,
+  button.question-image-close,
+  button.star-button,
+  button.scope-menu,
+  button.health-trigger,
+  button.question-trigger,
+  button.draft-trigger:has(> svg),
+  button.more-trigger,
+  button.site-page-close,
+  button.site-drag-handle,
+  button.markdown-link-details,
+  .prompt-composer [data-composer-toggle],
+  .page-zoom button:not(.page-zoom-reset),
+  .tile-header button:not(.site-retry),
+  .site-find > button,
+  .mermaid-actions button,
+  .markdown-code-actions button,
+  .image-preview button,
+  .prompt-library-item > button:last-child,
+  .group-row > button:last-child,
+  .group-save button,
+  .question-menu > summary
+) {
+  padding: 0;
+  justify-content: center;
+  align-items: center;
+  place-content: center;
+  place-items: center;
+  line-height: 0;
 }
 
 :is(#root, body) *::-webkit-scrollbar-corner {

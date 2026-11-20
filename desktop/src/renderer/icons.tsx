@@ -45,7 +45,7 @@ export function FastIcon(): React.JSX.Element {
 }
 
 export function DeepThinkIcon(): React.JSX.Element {
-  return <Icon><path d="M9.5 5a3 3 0 0 0-5.7 1.3A3 3 0 0 0 4.5 12a3.5 3.5 0 0 0 5 5V5ZM14.5 5a3 3 0 0 1 5.7 1.3 3 3 0 0 1-.7 5.7 3.5 3.5 0 0 1-5 5V5Z" /><path d="M7 9h2.5M14.5 9H17M7 14h2.5M14.5 14H17" /></Icon>;
+  return <Icon><g transform="translate(0 1.2)"><path d="M9.5 5a3 3 0 0 0-5.7 1.3A3 3 0 0 0 4.5 12a3.5 3.5 0 0 0 5 5V5ZM14.5 5a3 3 0 0 1 5.7 1.3 3 3 0 0 1-.7 5.7 3.5 3.5 0 0 1-5 5V5Z" /><path d="M7 9h2.5M14.5 9H17M7 14h2.5M14.5 14H17" /></g></Icon>;
 }
 
 export function HistoryIcon(): React.JSX.Element {
@@ -53,7 +53,7 @@ export function HistoryIcon(): React.JSX.Element {
 }
 
 export function ReloadIcon(): React.JSX.Element {
-  return <Icon><path d="M20 6v5h-5M19 11a7 7 0 1 0 .2 3" /></Icon>;
+  return <Icon><path d="M19.5 5v5h-5M18.5 10a7 7 0 1 0 .2 3" /></Icon>;
 }
 
 export function SendIcon(): React.JSX.Element {

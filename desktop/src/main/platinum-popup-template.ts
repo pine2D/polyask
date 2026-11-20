@@ -40,35 +40,35 @@ export function buildPlatinumPopupHtml<Id extends string>(
     --menu-hi: #ffffff;
     --menu-lo: #777777;
     --menu-shadow: 2px 2px 0 #262626;
-    --menu-active-bg: #333399;
+    --menu-active-bg: #333333;
     --menu-active-fg: #ffffff;
     --menu-disabled-fg: #6f6f6f;
     --menu-disabled-etch: 1px 1px 0 rgba(255, 255, 255, 0.7);
     --menu-sep-top: #848484;
     --menu-sep-bottom: #ffffff;
     --scroll-track: #aaaaaa;
-    --scroll-thumb: #9999ff;
-    --scroll-thumb-hi: #ccccff;
-    --scroll-thumb-lo: #6666aa;
+    --scroll-thumb: #cccccc;
+    --scroll-thumb-hi: #ffffff;
+    --scroll-thumb-lo: #777777;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --menu-bg: #353540;
-      --menu-fg: #ededf2;
-      --menu-border: #08080a;
-      --menu-hi: #555564;
-      --menu-lo: #141419;
-      --menu-shadow: 2px 2px 0 #050507;
-      --menu-active-bg: #9e9eff;
-      --menu-active-fg: #141428;
-      --menu-disabled-fg: #8c8c9c;
+      --menu-bg: #363636;
+      --menu-fg: #eeeeee;
+      --menu-border: #080808;
+      --menu-hi: #585858;
+      --menu-lo: #141414;
+      --menu-shadow: 2px 2px 0 #050505;
+      --menu-active-bg: #e0e0e0;
+      --menu-active-fg: #141414;
+      --menu-disabled-fg: #9a9a9a;
       --menu-disabled-etch: none;
-      --menu-sep-top: #141419;
-      --menu-sep-bottom: #4e4e5c;
-      --scroll-track: #15151a;
-      --scroll-thumb: #5c5c9e;
-      --scroll-thumb-hi: #8585cc;
-      --scroll-thumb-lo: #32325e;
+      --menu-sep-top: #141414;
+      --menu-sep-bottom: #525252;
+      --scroll-track: #161616;
+      --scroll-thumb: #4a4a4a;
+      --scroll-thumb-hi: #6e6e6e;
+      --scroll-thumb-lo: #242424;
     }
   }
   * { box-sizing: border-box; user-select: none; -webkit-user-select: none; }

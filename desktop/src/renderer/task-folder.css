@@ -94,8 +94,8 @@ p.archive-field-errors { padding-left: 0; }
 .folder-sidebar nav button:last-child { border-bottom: 0; }
 .folder-sidebar nav button:hover:not([aria-current]) { background: var(--hover-soft); }
 .folder-sidebar nav button[aria-current] {
-  color: var(--accent); background: var(--accent-soft); font-weight: 700;
-  box-shadow: inset 3px 0 0 var(--accent);
+  color: var(--text); background: var(--accent-soft); font-weight: 700;
+  box-shadow: inset 3px 0 0 var(--active-bar);
 }
 .folder-sidebar strong { padding: 2px 4px; font-size: 11px; text-transform: none; }
 .folder-sidebar > input[type=search], .folder-filters input[type=search], .folder-modal input:not([type=checkbox]) {

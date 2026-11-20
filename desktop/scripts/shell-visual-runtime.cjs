@@ -2,6 +2,7 @@ const { app, BrowserWindow, nativeTheme } = require('electron');
 const assert = require('node:assert/strict');
 const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
+const { ICON_BUTTON_PROBE_SOURCE, findIconButtonIssues } = require('./lib/icon-button-geometry.cjs');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
 const boundary = require('../test/ui/native-process-boundary.cjs').processBoundary(app, output);
@@ -138,6 +139,7 @@ app.whenReady().then(async () => {
         await wait('!!document.querySelector(".command-bar,.settings-workspace")');
         await paint(); await paint();
         const label = `${surface}/${locale}/${theme}/${density}/${width}`, result = await measure();
+        for (const issue of findIconButtonIssues(await run(ICON_BUTTON_PROBE_SOURCE), label)) check(false, issue);
         for (const box of result.boxes) {
           check(box.scroll <= box.width + 2, `${label}: overflow ${JSON.stringify(box)}`);
           check(box.left >= -1 && box.right <= result.viewport + 1, `${label}: offscreen ${JSON.stringify(box)}`);

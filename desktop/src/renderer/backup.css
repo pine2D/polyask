@@ -45,7 +45,7 @@
 .backup-list button:hover:not([aria-current="true"]) { background: var(--hover-soft); }
 .backup-list button strong { overflow-wrap: anywhere; }
 .backup-list button span, .backup-list button small { font-size: 11px; color: var(--muted); }
-.backup-list button[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent); }
+.backup-list button[aria-current="true"] { background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--active-bar); }
 .backup-comparison { padding: 16px 20px; overflow: auto; min-width: 0; background: var(--panel); }
 .backup-muted { color: var(--muted); font-size: 12px; }
 .backup-choice { padding: 10px 0; }

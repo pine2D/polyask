@@ -29,7 +29,7 @@
   :is(.site-glyph, .site-dot-mark)[data-site-glyph="kimi"] { --site-tint: #0e7490; }
   :is(.site-glyph, .site-dot-mark)[data-site-glyph="doubao"] { --site-tint: #0369a1; }
   :is(.site-glyph, .site-dot-mark)[data-site-glyph="yuanbao"] { --site-tint: #0f766e; }
-  :is(.site-glyph, .site-dot-mark)[data-site-glyph="qianwen"] { --site-tint: #333399; }
+  :is(.site-glyph, .site-dot-mark)[data-site-glyph="qianwen"] { --site-tint: #1e40af; }
   :is(.site-glyph, .site-dot-mark)[data-site-glyph="chatglm"] { --site-tint: #2563eb; }
 
   @media (prefers-color-scheme: dark) {

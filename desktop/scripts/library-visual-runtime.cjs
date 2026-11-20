@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
 const readingLayout = require('./library-reading-layout.cjs');
+const { ICON_BUTTON_PROBE_SOURCE, findIconButtonIssues } = require('./lib/icon-button-geometry.cjs');
 const output = process.argv[2];
 app.setPath('userData', join(output, 'profile'));
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -90,6 +91,7 @@ app.whenReady().then(async () => {
           assert.ok(control.radius >= 2 && control.radius <= 3 && control.height >= 22, `${locale}/${theme} list controls must keep Platinum geometry: ${JSON.stringify(control)}`);
         }
         const reading = await readingLayout.reading(run);
+        assert.deepEqual(findIconButtonIssues(await run(ICON_BUTTON_PROBE_SOURCE), `library/${locale}/${theme}/${width}`), []);
         reports.push({ locale, theme, width, boxes, reading });
         if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}`);
         if (locale === 'en' && (width === 960 || width === 1600)) {
@@ -204,6 +206,7 @@ app.whenReady().then(async () => {
   await wait('document.querySelectorAll(".archive-list [data-action=library-open-item]").length === 1');
   await click('.archive-list [data-action=library-open-item]');
   await wait('!!document.querySelector(".decision-editor")');
+  assert.deepEqual(findIconButtonIssues(await run(ICON_BUTTON_PROBE_SOURCE), 'library/decision-reading'), []);
   await shot('decision-reading');
   await click('.library-decision-actions > button:nth-of-type(2)');
   await wait('!!document.querySelector("[name=decision-title]")');

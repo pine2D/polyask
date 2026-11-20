@@ -63,7 +63,7 @@
 }
 .question-menu button:hover:not(:disabled, [aria-disabled="true"]),
 .question-menu button:focus-visible:not([aria-disabled="true"]) {
-  background: var(--accent); color: var(--on-accent); outline: none;
+  background: var(--menu-active-bg); color: var(--menu-active-fg); outline: none;
 }
 .question-empty { padding: 28px 12px; color: var(--muted); text-align: center; line-height: 1.65; }
 .question-load-more { width: calc(100% - 20px); margin: 10px; }

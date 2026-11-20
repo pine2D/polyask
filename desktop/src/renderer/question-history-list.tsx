@@ -1,6 +1,7 @@
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { dateTimeAttribute, formatDateTime, formatListDate } from '../shared/format';
 import type { QuestionSummary } from '../shared/question-history';
+import { MoreIcon } from './icons';
 import { StarButton } from './star-button';
 import { answerState, questionDay } from './question-history-model';
 export function QuestionHistoryList({ items, copy, busy, locale = 'en', currentId, selecting, selectedIds, onToggle, onExport, onRestore, onRead, onReask, onDelete, onFavorite }: {
@@ -34,7 +35,7 @@ export function QuestionHistoryList({ items, copy, busy, locale = 'en', currentI
         </button></div>
         <div className="question-card-actions">
           {onFavorite && <StarButton copy={copy} title={q.text} starred={!!q.favorite} disabled={busy} onChange={() => onFavorite(q.id, !q.favorite)} />}
-          <details className="question-menu"><summary aria-label={`${copy.questionMenu}: ${q.text}`}>···</summary><div>
+          <details className="question-menu"><summary aria-label={`${copy.questionMenu}: ${q.text}`}><MoreIcon /></summary><div>
             <button type="button" className="question-restore" aria-disabled={busy || !canRestore} data-hint={restoreHint} onClick={busy || !canRestore ? undefined : event => { event?.currentTarget.closest('details')?.removeAttribute('open'); onRestore(q.id); }}>{copy.questionRestore}</button>
             <button type="button" disabled={busy || !q.savedSites} onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); onExport?.(q.id); }}>{copy.markdownWhole}</button>
             <button type="button" disabled={busy} onClick={() => onReask(q.id, q.text, q.inputImageCount)}>{copy.questionReask}</button>

@@ -17,7 +17,7 @@
   border-bottom: 1px solid var(--plat-g200); border-radius: 0; margin-bottom: 0;
 }
 .library .library-content-row:has([aria-current=true]) {
-  background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--accent-soft); box-shadow: inset 3px 0 0 var(--active-bar);
 }
 .library .library-content-row:hover:not(:has([aria-current=true])) { background: var(--hover-soft); }
 .library-row-check { display: flex; align-items: center; justify-content: center; width: 26px; min-width: 26px; min-height: 30px; padding-top: 7px; cursor: pointer; }
