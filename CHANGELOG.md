@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.37.1] - 2026-11-22
+
+本版在 Linux/WSL 登录开发态验证了 Gemini Chat/Task 切档与旧预设读取，在隔离 Electron 环境中完成了中英繁三语工作台、设置与结果库视觉回归，并刷新了 Windows 隔离试玩版。本轮未在 Windows 实机运行正式安装版或便携版，也未实机安装 Linux DEB 或两种架构的 macOS 包；读屏、真实站点发送与上传、Drive 双设备同步沿用此前的验收记录。[验收记录](https://github.com/pine2D/polyask/blob/v1.37.1/docs/acceptance.md#2026-11-22-gemini-切档与三语文案验收)
+
 ### 改进
 
 - Gemini 的 Chat 快速档优先选 Neon Low，思考档优先选 Carbon High。Task 支持快速切到 Neon、思考切到 Carbon。遇到模型周期表时，先进入 List view 再选择模型。
@@ -1830,7 +1834,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.37.0...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.37.1...HEAD
+[1.37.1]: https://github.com/pine2D/polyask/compare/v1.37.0...v1.37.1
 [1.37.0]: https://github.com/pine2D/polyask/compare/v1.36.0...v1.37.0
 [1.36.0]: https://github.com/pine2D/polyask/compare/v1.35.1...v1.36.0
 [1.35.1]: https://github.com/pine2D/polyask/compare/v1.35.0...v1.35.1
