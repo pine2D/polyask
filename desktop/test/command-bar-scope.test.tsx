@@ -35,7 +35,7 @@ test("workbench entry exposes either open tab and its localized close action", (
 });
 
 test("send has a localized scope name even when narrow layouts hide its text", () => {
-  for (const [locale, name] of [["en", "Send to 3 sites"], ["zh-CN", "发送至 3 个站点"], ["zh-TW", "傳送至 3 個網站"]]) {
+  for (const [locale, name] of [["en", "Send to 3 sites"], ["zh-CN", "发送至 3 站"], ["zh-TW", "傳送至 3 站"]]) {
     const html = render({ copy: getCopy(locale) });
     assert.ok(html.includes(`aria-label="${name}"`));
     assert.ok(html.includes(`data-hint="${name}"`));
@@ -86,7 +86,7 @@ test("comparison stays discoverable before answers are ready and while sending",
 test("retry is available for pre-submit failures and cancellations require review", () => {
   assert.doesNotMatch(render(), /class="retry-trigger"/);
   assert.match(render({ failureCount: 2, cancelledCount: 1 }), /class="retry-trigger"[^>]*aria-label="Retry 2 failed sites"/);
-  assert.match(render({ cancelledCount: 1 }), /class="uncertain-retry-trigger"[^>]*aria-label="Review 1 uncertain sites"/);
+  assert.match(render({ cancelledCount: 1 }), /class="uncertain-retry-trigger"[^>]*aria-label="Check 1 unconfirmed sites"/);
   assert.doesNotMatch(render({ cancelledCount: 1 }), /class="retry-trigger"/);
   assert.match(render({ failureCount: 1, runState: "sending" }), /class="retry-trigger"[^>]*disabled=""/);
   assert.match(render({ cancelledCount: 1, runState: "sending" }), /class="uncertain-retry-trigger"[^>]*disabled=""/);

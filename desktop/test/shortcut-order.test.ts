@@ -20,5 +20,5 @@ test('complete reference uses the selected palette shortcut and keeps unavailabl
   const available = registered.filter(item => item.id !== 'show-page-3');
   const items = shortcutReference(available, getCopy('zh-CN'), [], false, registered, 2);
   assert.equal(items.find(item => item.id === 'open-command-palette')?.accelerator, 'CmdOrCtrl+P');
-  assert.equal(items.find(item => item.id === 'show-page-3')?.unavailable, '当前站点页数：2');
+  assert.equal(items.find(item => item.id === 'show-page-3')?.unavailable, '当前共 2 页');
 });

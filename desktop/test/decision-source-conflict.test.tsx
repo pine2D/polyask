@@ -41,7 +41,7 @@ for (const mode of ['refresh', 'failed-refresh', 'late-initial'] as const) {
       const pending=db.outbox.ready(Number.MAX_SAFE_INTEGER);
       await h.click(save());
       assert.equal(reads,2,'save conflict re-reads the source');
-      assert.match(h.document.querySelector('.archive-status')!.textContent!,/source.*changed/i);
+      assert.match(h.document.querySelector('.archive-status')!.textContent!,/Source result updated/i);
       assert.equal(field().value,'My pending judgment');
       assert.deepEqual(decisions.get(card.id),card);
       assert.deepEqual(db.outbox.ready(Number.MAX_SAFE_INTEGER),pending);

@@ -30,7 +30,7 @@ test('ready answers offer a named next step that only runs on click and clears w
   const h = await mountDom(<Fixture onCompare={() => oldCalls++} />);
   try {
     const next = () => h.document.querySelector<HTMLButtonElement>('.feedback-next-step');
-    assert.equal(next()?.textContent, 'Capture and compare');
+    assert.equal(next()?.textContent, 'Capture & compare');
     assert.equal(oldCalls, 0, 'availability never collects automatically');
     await h.render(<Fixture onCompare={() => calls++} />);
     await h.click(next()!); assert.equal(calls, 1); assert.equal(oldCalls, 0, 'the action uses the latest scope callback');
@@ -48,7 +48,7 @@ test('the persistent broadcast summary stays visible while ready answers offer t
     await h.click([...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === 'Submitted')!);
     await h.render(<Fixture />);
     assert.equal(h.document.querySelector('.feedback-notice')!.textContent, submitted);
-    assert.equal(h.document.querySelector('.feedback-next-step')?.textContent, 'Capture and compare');
+    assert.equal(h.document.querySelector('.feedback-next-step')?.textContent, 'Capture & compare');
   } finally { await h.close(); }
 });
 
@@ -61,10 +61,10 @@ test('collection guidance yields to error recovery and undo, then returns after 
     assert.equal(!!button('Recover'), true);
     assert.equal(h.document.querySelector('.feedback-notice')!.textContent, 'Save failed.');
     await h.click(button(copy.dismissFeedback));
-    assert.equal(h.document.querySelector('.feedback-next-step')?.textContent, 'Capture and compare');
+    assert.equal(h.document.querySelector('.feedback-next-step')?.textContent, 'Capture & compare');
     await h.click(button('Delete'));
     assert.equal(h.document.querySelector('.feedback-next-step') === null, true);
     await h.click(button('Undo'));
-    assert.equal(h.document.querySelector('.feedback-next-step')?.textContent, 'Capture and compare');
+    assert.equal(h.document.querySelector('.feedback-next-step')?.textContent, 'Capture & compare');
   } finally { await h.close(); }
 });

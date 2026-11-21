@@ -8,7 +8,7 @@ test('reopening a comparison respects the browsing layout saved after returning 
   const first = await comparisonMount({ detailWidth: 700, session });
   try {
     await first.choose(copy.leftAnswer, 'Kimi');
-    await first.click(first.button('Return to browsing')!);
+    await first.click(first.button('Back to list')!);
   } finally { await first.close(); }
   const restored = await comparisonMount({ detailWidth: 700, session });
   try {
@@ -24,7 +24,7 @@ test('entering comparison below the reading-width threshold expands once and ret
     try {
       assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), expected);
       if (expected === 'true') {
-        await h.click(h.button('Return to browsing')!);
+        await h.click(h.button('Back to list')!);
         assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false');
         await h.choose(copy.leftAnswer, 'Kimi');
         assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false', 'reading updates do not force expansion again');
@@ -37,7 +37,7 @@ test('entering comparison below the reading-width threshold expands once and ret
 test('leaving supplementary analysis restores a comparison without expanding a second time', async () => {
   const h = await comparisonMount({ detailWidth: 700 });
   try {
-    await h.click(h.button('Return to browsing')!);
+    await h.click(h.button('Back to list')!);
     await h.click(h.document.querySelector<HTMLElement>('.archive-record-context > summary')!);
     await comparisonWait(() => h.button(copy.synthesisAction));
     await h.click(h.button(copy.synthesisAction)!);
@@ -66,7 +66,7 @@ test('narrow comparison entry preserves browsing position and waits for unsaved 
     await h.click(h.button(copy.libraryCompare)!);
     assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'true');
     await h.choose(copy.leftAnswer, 'Kimi');
-    await h.click(h.button('Return to browsing')!);
+    await h.click(h.button('Back to list')!);
     assert.equal(list.scrollTop, 440); assert.equal(detail.scrollTop, 320);
     assert.equal(h.document.querySelector('.archive-compare-column h3')!.textContent, 'Kimi');
     assert.equal(h.writes, 0);
@@ -90,7 +90,7 @@ test('expanding comparison restores browsing and both answers without resetting 
     assert.equal(h.document.querySelector<HTMLInputElement>('.comparison-filter input')!.checked, true);
     assert.equal(columns().map(node => node.querySelector('h3')!.textContent).join(','), 'Kimi,Claude');
     await h.scroll(columns()[0], 710); await h.scroll(columns()[1], 830);
-    const back = h.button('Return to browsing'); assert.equal(!!back, true, 'expanded comparison has an explicit return');
+    const back = h.button('Back to list'); assert.equal(!!back, true, 'expanded comparison has an explicit return');
     await h.click(back!);
     assert.equal(h.document.querySelector('.folder-workspace')!.getAttribute('data-focused'), 'false');
     assert.equal(list.scrollTop, 440); assert.equal(detail.scrollTop, 320);

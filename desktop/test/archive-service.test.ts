@@ -111,8 +111,8 @@ test("archive markdown preserves missing-answer placeholders", () => {
     assert.match(markdown, /\*\*最佳回答\*\*\n\nAnswer/);
     assert.match(markdown, /## Claude · 深度思考\n\n\[S1\]/);
     assert.match(new MarkdownIt().render(markdown), /<h2>Kimi<\/h2>[\s\S]*?<blockquote>\s*<p>暂无回答<\/p>/);
-    assert.match(markdown, /## 综合结果\n\n> AI 生成的分析与引文尚未核实/);
-    assert.match(markdown, /\*\*目标 AI\*\*: ChatGPT · 快速\n\nCombined answer/);
+    assert.match(markdown, /## 补充分析\n\n> AI 归纳内容未经核实/);
+    assert.match(markdown, /\*\*交给哪家 AI\*\*: ChatGPT · 快速\n\nCombined answer/);
   } finally {
     database.close();
   }

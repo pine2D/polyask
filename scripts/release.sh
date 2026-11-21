@@ -96,21 +96,21 @@ cat >> "$NOTES" <<'TRAILER'
 
 ---
 
-### 下载后先核对校验和
+### 校验发行包（SHA-256）
 
-每个包都附同名 `.sha256`（`sha256sum -c` / `shasum -c` 可直接使用）：
+每个发行包均附同名 `.sha256` 校验文件：
 
-- Windows（PowerShell）：`Get-FileHash -Algorithm SHA256 .\<文件名>`，与 `.sha256` 文件内容逐字比对
+- Windows（PowerShell）：`Get-FileHash -Algorithm SHA256 .\<文件名>`，与 `.sha256` 内容比对
 - macOS / Linux：`shasum -a 256 -c <文件名>.sha256`
 
-### 首次启动放行
+### 首次打开放行说明
 
-五个 Desktop 包均未签名，也不提供自动更新；升级请回到 Release 页下载新包。
+五个发行包均未签名（macOS 未公证），也不内置自动更新；升级请前往 Releases 页下载新包。
 
-- Windows：SmartScreen 弹出后点「更多信息」→「仍要运行」
-- macOS：先把 `PolyAsk.app` 移到「应用程序」再打开；被拦截后到「系统设置 → 隐私与安全性」底部点「仍要打开」
+- Windows：SmartScreen 弹出提示时，点「更多信息 → 仍要运行」
+- macOS：先将 `PolyAsk.app` 拖入「应用程序」再打开；若被拦截，到「系统设置 → 隐私与安全性」底部点「仍要打开」
 
-PolyAsk 不伪装 User-Agent、不关闭网页安全机制、不复制浏览器 Cookie，只以你已登录的会话操作各站页面；Google Drive 同步只申请应用专属目录（drive.appdata）。
+PolyAsk 直接加载各站原网页，不伪装浏览器标识、不关闭网页安全隔离、不读取系统浏览器 Cookie；Google Drive 同步仅申请应用专属目录（`drive.appdata`）。
 TRAILER
 # RELEASE_TRUST_TRAILER_END
 

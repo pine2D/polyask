@@ -36,7 +36,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
   await run('document.querySelector(".confirm-actions .primary").click()');
   await wait('document.querySelector(".danger-zone .settings-actions button").textContent === "正在清空…"');
   assert.equal(await run('document.querySelector(".local-reset button").disabled'), true);
-  assert.equal(await run('document.querySelector("#cloud-clear-hint").textContent'), '有其他操作正在进行，请等待完成。');
+  assert.equal(await run('document.querySelector("#cloud-clear-hint").textContent'), '等当前操作完成后再试。');
   await run('document.dispatchEvent(new Event("fixture:finish-operation"))');
   await wait('!document.querySelector(".local-reset button").disabled');
   assert.equal(await run('document.querySelector(".danger-zone .settings-actions").contains(document.querySelector(".local-reset"))'), false);

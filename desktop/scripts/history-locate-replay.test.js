@@ -264,8 +264,8 @@ test("diagnose capture probe: level-one hits on a conversation route, advisory r
     const run = replayHtml(page(html), { host: "www.kimi.com", path });
     try { return JSON.parse(JSON.stringify(run.adapter.diagnose().filter((check) => check.kind === "capture").map(({ name, ok }) => ({ name, ok })))); } finally { run.close(); }
   };
-  assert.deepEqual(probe(healthy, "/chat/id-1"), [{ name: "Question located", ok: true }, { name: "Answer located", ok: true }]);
-  assert.deepEqual(probe(turnHtml(PROMPT, "Paris"), "/chat/id-1"), [{ name: "Question located", ok: false }, { name: "Answer located", ok: false }],
+  assert.deepEqual(probe(healthy, "/chat/id-1"), [{ name: "Prompt area", ok: true }, { name: "Answer area", ok: true }]);
+  assert.deepEqual(probe(turnHtml(PROMPT, "Paris"), "/chat/id-1"), [{ name: "Prompt area", ok: false }, { name: "Answer area", ok: false }],
     "只有 ②③ 级接得住时探针也必须记红");
   assert.deepEqual(probe("", "/"), []);
 });

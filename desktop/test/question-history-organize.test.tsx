@@ -106,7 +106,7 @@ test('changed copies require a source refresh and explicit review before retryin
   try {
     await open(h); await organize(h); await h.select(selector(h, 'claude'), a1.id);
     await h.click(action(h, 'read'));
-    assert.match(h.document.querySelector('.question-archive-picker [role="alert"]')!.textContent!, /Selected copies changed/);
+    assert.match(h.document.querySelector('.question-archive-picker [role="alert"]')!.textContent!, /Copies changed/);
     assert.equal(selector(h, 'claude').value, a1.id);
     const refresh = h.document.querySelector<HTMLButtonElement>('[data-question-archive="refresh"]');
     assert.equal(refresh !== null, true, 'changed versions provide a source refresh');

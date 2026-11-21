@@ -33,13 +33,13 @@ test("the polite live region stays mounted and re-announces repeated text after 
 test("the idle footer reflects the workspace instead of a fixed 'select sites' line (U9)", async () => {
   const copy = getCopy("zh-CN");
   const base = { copy, runState: "idle" as const, selectedCount: 9, failureCount: 0, cancelledCount: 0 };
-  assert.equal(idleFeedback(base), "就绪 · 将发送到 9 个站点");
+  assert.equal(idleFeedback(base), "就绪 · 发往 9 站");
   assert.equal(idleFeedback({ ...base, selectedCount: 0 }), copy.feedbackReady);
-  assert.equal(idleFeedback({ ...base, failureCount: 6, uncertainCount: 3 }), "6 个站点发送失败，可重试 · 3 个站点未确认发送：先查看页面再决定是否重试");
+  assert.equal(idleFeedback({ ...base, failureCount: 6, uncertainCount: 3 }), "6 站发送失败 · 可重试 · 3 站发送未确认 · 先核对原站");
   assert.equal(idleFeedback({ ...base, runState: "sending" }), copy.sending);
   const h = await mountDom(<FeedbackProvider copy={copy}><Announcer idle={idleFeedback({ ...base, failureCount: 6 })} /></FeedbackProvider>);
   try {
-    assert.equal(h.document.querySelector(".feedback-notice")!.textContent, "6 个站点发送失败，可重试");
+    assert.equal(h.document.querySelector(".feedback-notice")!.textContent, "6 站发送失败 · 可重试");
     await act(async () => announce("已复制"));
     assert.equal(h.document.querySelector(".feedback-notice")!.textContent, "已复制", "operation notices still take precedence");
   } finally { await h.close(); }

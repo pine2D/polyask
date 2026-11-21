@@ -43,7 +43,7 @@ test('a close preview uses a cancel-first modal, states page losses and performs
     await h.open();
     assert.equal(h.document.querySelector('[role="dialog"]') === null, false);
     assert.equal(h.document.activeElement === h.cancel(), true);
-    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Unsent drafts.*scroll position.*Login information.*saved answer copies/s);
+    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /unsent text.*scroll position.*Sign-in.*saved answers/s);
     assert.deepEqual(h.closes, []);
     await h.click(h.cancel());
     assert.equal(h.document.querySelector('[role="dialog"]') === null, true);
@@ -139,7 +139,7 @@ test('"don\'t ask again" is remembered only when the close is confirmed', async 
   try {
     await h.open();
     assert.equal(h.dontAsk().checked, false);
-    assert.match(h.dontAsk().closest('label')!.textContent!, /Don't ask again/);
+    assert.match(h.dontAsk().closest('label')!.textContent!, /Don’t ask again/);
     await h.click(h.dontAsk()); await h.click(h.cancel());
     assert.deepEqual(h.optOuts, []);
     await h.open();

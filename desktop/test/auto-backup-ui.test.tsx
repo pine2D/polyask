@@ -95,7 +95,7 @@ test("AutoBackupCard lists snapshots, opens BackupWorkspace for compare/restore,
     assert.equal(rows.length, 2);
     assert.equal(rows[0]?.querySelector(".auto-backup-version")?.textContent, "v1.33.1 → v1.34.0");
     assert.equal(rows[0]?.querySelector(".auto-backup-tag") === null, true);
-    assert.equal(rows[1]?.querySelector(".auto-backup-version")?.textContent, "升级至 v1.33.1 前自动留存");
+    assert.equal(rows[1]?.querySelector(".auto-backup-version")?.textContent, "升至 v1.33.1 前留存");
     assert.equal(rows[1]?.querySelector(".auto-backup-tag")?.textContent, copy.autoBackupTextOnlyTag);
 
     const exportButtons = [...h.document.querySelectorAll<HTMLButtonElement>(".auto-backup-item button")]

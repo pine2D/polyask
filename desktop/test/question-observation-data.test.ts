@@ -27,7 +27,7 @@ test('history conversion preserves structured provenance outside original answer
   assert.equal(isArchiveRecord({ ...record, schema: 1 }), false);
   const html = renderReportHtml({ kind: 'archive', archive: record });
   assert.equal(html.includes('Example &lt;Pro&gt;'), true);
-  assert.equal(html.includes('Webpage observation'), true);
+  assert.equal(html.includes('Observed on page'), true);
 });
 test('schema6 answer and archive round-trip through production pull, reset and tombstones', async () => {
   const db = DesktopDatabase.open(':memory:'), repo = new SyncRepository(db);

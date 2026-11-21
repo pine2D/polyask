@@ -35,8 +35,8 @@ test('collected analysis requires verification and allows an explicit collection
     onCollect={() => { collections++; }} onSave={() => { saves++; }} />);
   try {
     assert.equal(!!h.document.querySelector('[data-analysis-stage=collected]'), true);
-    assert.equal(h.document.querySelector('.synthesis-card.pending')!.textContent?.includes('Review before saving'), true);
-    const again = [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === 'Collect again');
+    assert.equal(h.document.querySelector('.synthesis-card.pending')!.textContent?.includes('review before saving'), true);
+    const again = [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === 'Capture again');
     assert.equal(!!again, true); await h.click(again!);
     assert.equal(collections, 1); assert.equal(saves, 0);
     assert.equal(h.document.querySelector('.synthesis-card.pending')!.textContent?.includes(copy.citationReportNotice), true);
@@ -61,7 +61,7 @@ test('legacy analysis with an empty saved request does not invent default synthe
     pending={null} candidate={null} busy={false} onCollect={noop} onSave={noop} />);
   try {
     assert.equal(!!h.document.querySelector('[data-analysis-stage=saved]'), true);
-    assert.equal(h.document.querySelector('details.analysis-requirement')?.textContent?.includes('The request was not recorded.'), true);
+    assert.equal(h.document.querySelector('details.analysis-requirement')?.textContent?.includes('Prompt not recorded.'), true);
     assert.equal(h.document.querySelector('details.analysis-requirement')?.textContent?.includes(copy.synthesisDefaultInstruction), false);
   } finally { await h.close(); }
 });

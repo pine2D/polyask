@@ -101,7 +101,7 @@ test('decision export retains its saved evidence when the source is unavailable,
   h.setWrite(async (_path, data, guard) => { guard(); html = String(data); });
   const input = { ...request, kind: 'decision', id: 'decision' } as const;
   assert.equal((await h.service.export(input)).status, 'saved');
-  assert.match(html, /Manual conclusion/); assert.match(html, /Rayleigh scattering/); assert.match(html, /title snapshot/);
+  assert.match(html, /Manual conclusion/); assert.match(html, /Rayleigh scattering/); assert.match(html, /question title stored on this card/);
   h.setArchive(archive);
   const gate = deferred<string | null>(); h.setDialog(() => gate.promise);
   const pending = h.service.export(input);

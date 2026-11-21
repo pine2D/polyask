@@ -29,7 +29,7 @@ test('creates an independent exact snapshot of explicitly selected old copies in
     assert.equal(record.source, null);
     assert.deepEqual(record.results.map(r => [r.host, r.text]), [['claude.ai', f.first.answerMarkdown], ['www.kimi.com', f.other.answerMarkdown]]);
     assert.match(record.results[0].label, /Claude.*Attempt 1/);
-    assert.match(record.results[1].label, /Send unconfirmed.*Partial answer/);
+    assert.match(record.results[1].label, /Send unconfirmed.*Partial/);
     assert.equal(record.results[1].code, 'answer_truncated'); assert.equal(record.results[0].state, undefined);
     assert.equal(record.createdAt, 300);
     f.db.questions.delete(f.question.id, 400, 'local');

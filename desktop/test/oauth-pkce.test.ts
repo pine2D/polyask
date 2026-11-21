@@ -78,16 +78,16 @@ test("packaged desktop builds ignore developer OAuth environment variables", asy
 });
 
 test("the default callback reports receipt without claiming Drive is connected", () => {
-  assert.match(OAUTH_CALLBACK_HTML, /Google Drive authorization received/i);
-  assert.match(OAUTH_CALLBACK_HTML, /return to PolyAsk to see the result/i);
+  assert.match(OAUTH_CALLBACK_HTML, /Authorization received/i);
+  assert.match(OAUTH_CALLBACK_HTML, /Return to PolyAsk to see the status/i);
   assert.doesNotMatch(OAUTH_CALLBACK_HTML, /successfully connected/i);
 });
 
 test("the callback uses one app locale and distinguishes denial without exposing callback values", async () => {
   for (const [locale, lang, receipt, denial] of [
-    ["en-GB", "en", "Google Drive authorization received", "Authorization not completed"],
-    ["zh-CN", "zh-CN", "已收到 Google Drive 授权", "未完成授权"],
-    ["zh-HK", "zh-TW", "已收到 Google Drive 授權", "尚未完成授權"]
+    ["en-GB", "en", "Authorization received", "Authorization not completed"],
+    ["zh-CN", "zh-CN", "已完成浏览器授权", "授权未完成"],
+    ["zh-HK", "zh-TW", "已完成瀏覽器授權", "授權未完成"]
   ]) {
     for (const denied of [false, true]) {
       const receiver = await listenLoopback(locale);

@@ -1,38 +1,38 @@
 export const CONFIRMATION_COPY = {
   en: {
-    confirmDontAsk: "Don't ask again",
+    confirmDontAsk: "Don’t ask again",
     confirmationsTitle: 'Confirmations',
     sitePageCloseConfirmSetting: 'Confirm before closing a site page',
-    sitePageCloseConfirmSettingHint: 'When off, closing skips the dialog. Pages that are sending, generating or saving an answer are still protected. Shared preference; applies when Google Drive sync is connected.',
-    newSessionConfirmSetting: 'Confirm before starting new sessions',
-    newSessionConfirmSettingHint: 'When off, starting new sessions opens blank conversations right away. Earlier conversations stay in each site\'s history. Shared preference; applies when Google Drive sync is connected.',
-    draftReplaced: 'Draft replaced.',
+    sitePageCloseConfirmSettingHint: 'Pages that are sending, answering, or saving stay protected (syncs via Google Drive).',
+    newSessionConfirmSetting: 'Confirm before starting new chats',
+    newSessionConfirmSettingHint: 'Past chats remain in each site’s own history (syncs via Google Drive).',
+    draftReplaced: 'Draft replaced',
     undoDraftReplace: 'Undo',
-    draftReplaceUndone: 'Previous draft restored.',
-    draftReplaceUndoStale: 'The draft was edited after replacement, so it was not restored.'
+    draftReplaceUndone: 'Previous draft restored',
+    draftReplaceUndoStale: 'Draft was edited after replacement; kept your new edits.'
   },
   zhCN: {
     confirmDontAsk: '不再提示',
     confirmationsTitle: '确认提示',
     sitePageCloseConfirmSetting: '关闭站点页面前确认',
-    sitePageCloseConfirmSettingHint: '关掉此项后，点 × 会直接关闭页面；正在发送、生成或保存回答的页面仍会被拦下。共享偏好，连接 Google Drive 同步后应用。',
-    newSessionConfirmSetting: '新建会话前确认',
-    newSessionConfirmSettingHint: '关掉此项后，新建会话会直接打开空白对话；原来的对话仍在各站历史里。共享偏好，连接 Google Drive 同步后应用。',
-    draftReplaced: '草稿已替换。',
+    sitePageCloseConfirmSettingHint: '正在发送、回答或存副本的页面仍会受保护（连接 Drive 后跨设备同步）。',
+    newSessionConfirmSetting: '开启新会话前确认',
+    newSessionConfirmSettingHint: '过往对话仍留在各站网页历史里（连接 Drive 后跨设备同步）。',
+    draftReplaced: '已替换草稿',
     undoDraftReplace: '撤销',
-    draftReplaceUndone: '已恢复之前的草稿。',
-    draftReplaceUndoStale: '替换后草稿又有改动，未恢复。'
+    draftReplaceUndone: '已恢复原草稿',
+    draftReplaceUndoStale: '草稿后来又有改动，已保留最新内容。'
   },
   zhTW: {
     confirmDontAsk: '不再提示',
     confirmationsTitle: '確認提示',
-    sitePageCloseConfirmSetting: '關閉站點頁面前確認',
-    sitePageCloseConfirmSettingHint: '關掉此項後，點 × 會直接關閉頁面；正在傳送、生成或儲存回答的頁面仍會被攔下。共用偏好，連線 Google Drive 同步後套用。',
-    newSessionConfirmSetting: '新增對話前確認',
-    newSessionConfirmSettingHint: '關掉此項後，新增對話會直接開啟空白對話；原本的對話仍在各站歷史裡。共用偏好，連線 Google Drive 同步後套用。',
-    draftReplaced: '草稿已取代。',
+    sitePageCloseConfirmSetting: '關閉網站頁面前確認',
+    sitePageCloseConfirmSettingHint: '正在傳送、回答或存副本的頁面仍會受保護（連線 Drive 後跨裝置同步）。',
+    newSessionConfirmSetting: '開啟新對話前確認',
+    newSessionConfirmSettingHint: '過往對話仍留在各網站紀錄裡（連線 Drive 後跨裝置同步）。',
+    draftReplaced: '已取代草稿',
     undoDraftReplace: '復原',
-    draftReplaceUndone: '已還原先前的草稿。',
-    draftReplaceUndoStale: '取代後草稿又有改動，未還原。'
+    draftReplaceUndone: '已還原原草稿',
+    draftReplaceUndoStale: '草稿後來又有變動，已保留最新內容。'
   }
 } as const;

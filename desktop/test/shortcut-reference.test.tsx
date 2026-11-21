@@ -101,7 +101,7 @@ test('command search and shortcut search retain independent queries when switchi
 });
 
 const sendLabels = {
-  en: 'Send prompt (in prompt field)', 'zh-CN': '发送提问（提问框内）', 'zh-TW': '傳送提問（提問框內）'
+  en: 'Send prompt (inside prompt box)', 'zh-CN': '发送提问（焦点在提问框时）', 'zh-TW': '傳送提問（焦點在提問框時）'
 } as const;
 for (const locale of ['en', 'zh-CN', 'zh-TW'] as const) for (const isMac of [false, true]) {
   test(`${locale}/${isMac ? 'Mac' : 'Ctrl'}: send reference is searchable and never executes from the palette`, async () => {

@@ -215,10 +215,10 @@ test("archive workspace exposes dense search, filters, actions and answer metada
   assert.match(html, /type="search"/);
   assert.match(html, /aria-pressed="true"/);
   assert.match(html, /aria-current="true"/);
-  assert.match(html, /Capture current answers/);
+  assert.match(html, /Capture answers/);
   assert.match(html, /aria-label="More actions"/);
   assert.match(html, /aria-haspopup="menu"/);
-  assert.equal(html.includes('13 / 4000 characters'), true);
+  assert.equal(html.includes('13 / 4,000'), true);
   assert.match(html, /aria-label="Unmark best"/);
   assert.match(html, /Rayleigh scattering/);
   assert.match(html, /No answer/);

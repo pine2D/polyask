@@ -52,7 +52,7 @@ test('counts loading disables confirmation and cancellation discards a late read
     opener.focus();
     await h.click(opener);
     assert.equal(confirm(h.document).disabled, true);
-    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Reading current counts/);
+    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Counting records/);
     assert.equal(h.document.activeElement!.textContent, copy.cancel);
     await h.click(button(h.document, copy.cancel));
     await act(async () => finish(stats()));
@@ -70,13 +70,13 @@ test('failed or malformed statistics require an explicit successful reread', asy
   try {
     await h.click(button(h.document, copy.clearHistoryAction));
     assert.equal(confirm(h.document).disabled, true);
-    assert.match(h.document.querySelector('[role="alert"]')!.textContent!, /Could not read the counts/);
-    assert.doesNotMatch(h.document.querySelector('[role="dialog"]')!.textContent!, /Prompt history: 0/);
+    assert.match(h.document.querySelector('[role="alert"]')!.textContent!, /Could not read counts/);
+    assert.doesNotMatch(h.document.querySelector('[role="dialog"]')!.textContent!, /Question history: 0/);
     await h.click(button(h.document, copy.localDataStatsRetry));
     assert.equal(confirm(h.document).disabled, true);
     await h.click(button(h.document, copy.localDataStatsRetry));
     assert.equal(confirm(h.document).disabled, false);
-    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Prompt history: 2.*Answer copies: 7/s);
+    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Question history: 2.*Answer copies: 7/s);
     assert.equal(clears, 0);
   } finally { await h.close(); setShellApi(null); }
 });
@@ -89,11 +89,11 @@ test('a changed confirmation scope stops for review, refreshes again, and report
     await h.click(button(h.document, copy.clearHistoryAction));
     await h.click(confirm(h.document));
     assert.equal(clears, 0);
-    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Counts changed.*Prompt history: 3/s);
+    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Record counts changed.*Question history: 3/s);
     await act(async () => { confirm(h.document).click(); confirm(h.document).click(); });
     assert.equal(clears, 1);
     assert.equal(reads, 3);
-    assert.deepEqual(messages, ['Cleared 4 prompt history entries']);
+    assert.deepEqual(messages, ['Cleared 4 questions']);
     assert.equal((h.document.querySelector('[role="dialog"]')) === (null), true);
   } finally { await h.close(); setShellApi(null); }
 });
@@ -106,7 +106,7 @@ test('write failure retains the confirmation and retry rechecks the scope', asyn
     await h.click(button(h.document, copy.clearHistoryAction)); await h.click(confirm(h.document));
     assert.ok(h.document.querySelector('[role="dialog"]'));
     assert.equal(confirm(h.document).disabled, false);
-    assert.match(h.document.querySelector('[role="alert"]')!.textContent!, /Could not change local data/);
+    assert.match(h.document.querySelector('[role="alert"]')!.textContent!, /Could not update local data/);
     await h.click(confirm(h.document));
     assert.equal(reads, 3); assert.equal(clears, 2);
   } finally { await h.close(); setShellApi(null); }
@@ -123,8 +123,8 @@ test('backup leaves confirmation without clearing, zero categories block but res
     await h.click(button(h.document, copy.resetLocalAction));
     assert.equal(confirm(h.document).disabled, false);
     const text = h.document.querySelector('[role="dialog"]')!.textContent!;
-    assert.match(text, /Answer copies: 8.*Folder associations: 10.*Saved templates: 6/s);
-    assert.match(text, /Google Drive is not deleted/);
+    assert.match(text, /Answer copies: 8.*Folder items: 10.*Saved templates: 6/s);
+    assert.match(text, /Cloud files on Google Drive are not deleted/);
     assert.equal(resets, 0);
   } finally { await h.close(); setShellApi(null); }
 });
@@ -138,7 +138,7 @@ test('an attached count change requires another explicit confirmation', async ()
     await h.click(button(h.document, copy.clearHistoryAction));
     await h.click(confirm(h.document));
     assert.equal(clears, 0);
-    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Counts changed.*Answer copies: 8/s);
+    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Record counts changed.*Answer copies: 8/s);
     await h.click(confirm(h.document));
     assert.equal(clears, 1);
   } finally { await h.close(); setShellApi(null); }
@@ -169,7 +169,7 @@ test('a failed reset still resynchronizes the renderer and keeps the confirmatio
     await h.click(confirm(h.document));
     assert.deepEqual(effects, ['reset'], 'main may already have wiped data: the renderer must drop its stale copy');
     assert.equal(h.document.querySelector('[role="dialog"]') === null, false);
-    assert.match(h.document.querySelector('[role="alert"]')!.textContent!, /Could not change local data/);
+    assert.match(h.document.querySelector('[role="alert"]')!.textContent!, /Could not update local data/);
   } finally { await h.close(); setShellApi(null); }
 });
 

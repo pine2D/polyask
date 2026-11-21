@@ -27,11 +27,11 @@ test('a source review is explicit and preserves the target, model tier, question
   const h = await mountDom(<SynthesisWorkspace {...props} />);
   try {
     const button = (text: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === text);
-    const review = button('Reload and review source'); assert.equal(!!review, true); await h.click(review!);
+    const review = button('Reload & review source'); assert.equal(!!review, true); await h.click(review!);
     assert.equal(!!h.document.querySelector('.source-review-dialog'), true);
     assert.equal(h.document.querySelector('.source-review-dialog pre')!.textContent === record.results[0].text, true);
     assert.equal(h.document.querySelector<HTMLButtonElement>('footer button')!.disabled, true);
-    await h.click(button('Use reviewed sources')!);
+    await h.click(button('Use reviewed text')!);
     assert.equal(h.document.querySelector<HTMLButtonElement>('footer button')!.disabled, false);
     assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=follow-up-excerpt]')!.value, draft.excerpt);
     assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=synthesis-instruction]')!.value, draft.instruction);

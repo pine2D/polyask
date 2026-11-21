@@ -47,7 +47,7 @@ test("every proxy IPC and test code has its own message and unknown codes never 
     assert.match(locale.proxySecretReenter, /\{endpoint\}/);
     assert.doesNotMatch(locale.proxyResultAuthFailed, /password|密码|密碼/i);
   }
-  assert.deepEqual(["system", "direct", "custom"].map(mode => proxyModeLabel(copy, mode as ProxyPreference["mode"])), ["跟随系统", "不使用代理", "自定义"]);
+  assert.deepEqual(["system", "direct", "custom"].map(mode => proxyModeLabel(copy, mode as ProxyPreference["mode"])), ["跟随系统", "直连（不用代理）", "自定义代理"]);
 });
 
 test("form values round-trip through the same three-step check as the IPC entry", () => {

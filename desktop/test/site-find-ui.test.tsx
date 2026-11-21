@@ -126,7 +126,7 @@ test('search shows per-site counts, global position and safe navigation controls
     await h.click(h.document.querySelector<HTMLButtonElement>('[data-find-site=claude]')!);
     assert.deepEqual(h.selections, ['claude']);
     assert.equal(h.document.querySelector<HTMLButtonElement>('[data-find-site=gemini]')!.disabled, true);
-    assert.equal(h.document.querySelector('[data-find-site=gemini]')!.getAttribute('aria-label'), 'Gemini: search unavailable');
+    assert.equal(h.document.querySelector('[data-find-site=gemini]')!.getAttribute('aria-label'), 'Gemini: unavailable');
     const input = h.document.querySelector<HTMLInputElement>('[name=site-find-query]')!;
     for (const selector of ['[name=site-find-next]','[name=site-find-previous]']) {
       const button = h.document.querySelector<HTMLButtonElement>(selector)!;

@@ -16,12 +16,12 @@ test('settings expose the built-in themes, densities and default site scales', a
     assert.deepEqual([...h.document.querySelectorAll<HTMLInputElement>('input[name="settings-site-scale"]')].map(node => node.value), ['0.9', '1']);
     assert.equal(radio(h.document, 'settings-density', 'comfortable').checked, true);
     assert.equal(radio(h.document, 'settings-site-scale', '1').checked, true);
-    assert.match(groups[0].textContent!, /PolyAsk controls and reading views/);
+    assert.match(groups[0].textContent!, /Follows system light\/dark; AI pages stay unchanged/);
     const themes = ['platinum', 'minimal', 'proof', 'pocket', 'blueprint', 'darkroom', 'solstice'];
     assert.deepEqual([...groups[0].querySelectorAll<HTMLInputElement>('input')].map(node => node.value), themes);
     assert.deepEqual([...groups[0].querySelectorAll<HTMLElement>('[aria-hidden=true][data-swatch]')].map(node => node.dataset.swatch), themes);
-    assert.match(groups[1].textContent!, /app controls and spacing/);
-    assert.match(groups[2].textContent!, /not zoomed manually.*Ctrl\+0/s);
+    assert.match(groups[1].textContent!, /toolbar and panel spacing/);
+    assert.match(groups[2].textContent!, /haven’t zoomed manually.*Ctrl\+0/s);
   } finally { await h.close(); }
 });
 
@@ -51,7 +51,7 @@ test('an unknown saved skin stays unselected until an explicit replacement succe
     onFollowingChange: async () => {}, onLayoutModeChange: async () => {}, onDraftSyncChange: async () => {}
   } });
   try {
-    assert.match(h.document.getElementById('settings-theme-hint')!.textContent!, /shows Platinum/);
+    assert.match(h.document.getElementById('settings-theme-hint')!.textContent!, /using Platinum/);
     assert.equal(h.document.querySelector('input[name=settings-theme]:checked') === null, true);
     await h.click(radio(h.document, 'settings-theme', 'platinum'));
     assert.deepEqual(intents, ['platinum']);

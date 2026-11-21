@@ -15,7 +15,7 @@ test('draft previews label decision fields and hide storage identities', async (
     const text = h.document.body.textContent ?? '';
     assert.match(text, /Conclusion.*Route A.*Rationale.*Less time/s);
     assert.match(text, /Status.*To verify/);
-    assert.match(text, /Source answer 3.*Exact source words/);
+    assert.match(text, /Source #3.*Exact source words/);
     assert.equal(text.includes('internal-archive'), false);
     assert.equal(text.includes('resultIndex'), false);
   } finally { await h.close(); }
@@ -51,7 +51,7 @@ for (const note of ['', 'Check source limits']) {
       notes: { conclusion: {}, evidence: {}, conditions: { 'claude.ai': note }, cost: {} } }} />);
     try {
       const content = h.document.body.textContent ?? '';
-      assert.match(content, /Source categories.*Claude.*Conditions.*ChatGPT.*Costs/s);
+      assert.match(content, /Categories.*Claude.*Conditions.*ChatGPT.*Costs/s);
       if (note) assert.equal(content.includes(note), true);
       assert.equal(content.includes('claude.ai'), false);
       assert.equal(content.includes('conditions'), false);

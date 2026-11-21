@@ -1,7 +1,7 @@
 # 站点报障模板：问题按 CLAUDE.md 的「四层定位法」组织（composer / inject / submit / state），
 # 让报告直接指向坏在哪一层，省掉一轮来回追问。
-name: 站点适配失灵 / Site adapter broken
-description: 某个 AI 站点发不出去、切不了档、抓不到回答（站点改版类问题）
+name: 站点适配失灵 / Site issue
+description: 某个 AI 站点发不出提问、切不了档位或采不到回答 / Sending, mode switching, or answer capture failed on an AI site
 title: "[site] "
 labels: ["site-breakage"]
 body:
@@ -25,13 +25,13 @@ body:
   - type: textarea
     id: symptoms
     attributes:
-      label: 现象四问 / Symptoms
-      description: 逐条回答，这决定了定位在哪一层
+      label: 具体现象 / What happened
+      description: 按下面四条简答，方便直接定位问题环节 / Briefly answer the 4 questions below to pinpoint the failing step
       value: |
-        ① 输入框里有没有出现文字？/ Did text appear in the composer?
-        ② 有没有真的发出去？/ Was it actually sent?
-        ③ 有没有报错文案（原文或截图）？/ Any error message (exact text or screenshot)?
-        ④ 坏在哪一步——发送、切档、汇总复制、图片？/ Which step broke — send, tier switch, summary copy, images?
+        ① 站点输入框里出现文字了吗？/ Did your text appear in the site's input box?
+        ② 问题实际发出去了吗？/ Was the question actually sent?
+        ③ 界面上有什么报错提示（原文或截图）？/ Any error message shown (text or screenshot)?
+        ④ 卡在哪一步（发送、切档位、采集回答、传图片）？/ Which step failed (send, mode switch, capture, images)?
     validations:
       required: true
   - type: textarea
@@ -39,10 +39,10 @@ body:
     attributes:
       label: 诊断报告 / Diagnostic report
       description: >-
-        `Alt+H` 打开站点状态 → 「复制诊断报告」，把文本粘贴到这里（只含版本、系统、显示缩放、各站状态与逐项检查结果，不含对话内容与网址）。
+        按 `Alt+H` 打开站点状态，点「复制报告」（点进具体站点后为「复制站点诊断报告」）粘贴到这里；如属网页改版，可在对应站点详情点「导出脱敏快照」作为附件上传（均自动剔除聊天内容、网址、账号与本机路径）。 / Press `Alt+H` → click "Copy report" (or open the site and click "Copy site diagnostic report" / "Export sanitized snapshot"). Chats, URLs, accounts, and local paths are stripped automatically.
       render: text
   - type: input
     id: env
     attributes:
-      label: 环境 / Environment
-      placeholder: "PolyAsk 版本 · 安装版或便携版 · 系统 · 显示缩放（如 125%）· 站点界面语言"
+      label: 运行环境 / Environment
+      placeholder: "PolyAsk 版本 / Version · 安装版或便携版 / Installed or Portable · 系统 / OS · 屏幕缩放 / Scale (125%) · 语言 / Locale"

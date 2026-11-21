@@ -39,7 +39,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     const sample = await run(`(() => {const first=document.querySelector('#command-results [role=option]');
       return {label:first.querySelector('strong').textContent,category:first.querySelector('small').textContent,key:first.querySelector('kbd').textContent.split(' · ')[0],total:document.querySelectorAll('#command-results [role=option]').length};})()`);
     const search = '.command-search input';
-    const sendLabels = { en: 'Send prompt (in prompt field)', 'zh-CN': '发送提问（提问框内）', 'zh-TW': '傳送提問（提問框內）' };
+    const sendLabels = { en: 'Send prompt (inside prompt box)', 'zh-CN': '发送提问（焦点在提问框时）', 'zh-TW': '傳送提問（焦點在提問框時）' };
     const sendKey = platform === 'darwin' ? '⌘↵' : 'Ctrl+Enter';
     for (const query of ['发送', 'send', 'Enter', '↵', 'Ctrl+↵', sendKey]) {
       await native.type(search, query);

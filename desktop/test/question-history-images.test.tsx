@@ -165,7 +165,7 @@ test('original viewer identifies duplicate images and switches fit and actual si
     assert.equal(title !== null, true, 'the dialog has a visible identifying title');
     assert.equal(title!.textContent!.includes(originals[2].name), true);
     assert.equal(title!.textContent!.includes('3 / 4'), true, 'sequence disambiguates repeated filenames');
-    const fit = [...panel.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Fit to window');
+    const fit = [...panel.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === 'Fit');
     const actual = [...panel.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === '100%');
     assert.equal(fit !== undefined && actual !== undefined, true, 'both size modes are available');
     assert.equal(fit!.getAttribute('aria-pressed'), 'true');

@@ -48,7 +48,7 @@ test('text-only import preview visibly explains image omissions', async () => {
   const preview: BackupPreview = { token: 'text', exportedAt: 100, items: [], omissions: missing.map(({ title, ...item }) => item) };
   setShellApi({ previewBackupSelection: async () => ({ imported: 0, skipped: 0, keys: [] }) } as any);
   const h = await mountDom(<BackupWorkspace preview={preview} copy={getCopy('en')} locale="en" onClose={() => {}} onApplied={() => {}} />);
-  try { assert.match(h.document.querySelector('[role="note"]')!.textContent!, /omits original images for 2 questions/); }
+  try { assert.match(h.document.querySelector('[role="note"]')!.textContent!, /Images for 2 questions were omitted/); }
   finally { await h.close(); setShellApi(null); }
 });
 

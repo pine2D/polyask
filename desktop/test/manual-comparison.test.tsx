@@ -10,8 +10,8 @@ async function addQuote(h: Awaited<ReturnType<typeof comparisonMount>>, value = 
   const textarea = h.document.querySelector<HTMLTextAreaElement>('[name=answer-excerpt-original]')!;
   await act(async () => { textarea.focus(); const first = textarea.value.indexOf(value);
     textarea.setSelectionRange(first, first + value.length); h.document.dispatchEvent(new h.window.Event('selectionchange')); });
-  await h.click(h.button('Use this excerpt')!);
-  const add = h.button('Add to manual comparison'); assert.equal(!!add, true, 'selected source can enter an explicit manual comparison');
+  await h.click(h.button('Use selection')!);
+  const add = h.button('Add to notes'); assert.equal(!!add, true, 'selected source can enter an explicit manual comparison');
   await h.click(add!);
 }
 const field = (h: Awaited<ReturnType<typeof comparisonMount>>, name: string) => h.document.querySelector<HTMLTextAreaElement>(`[name=${name}]`)!;
@@ -21,7 +21,7 @@ test('manual comparison starts empty, classifies literal quotes by the user and 
     const details = h.document.querySelector<HTMLDetailsElement>('details.manual-comparison');
     assert.equal(!!details, true, 'comparison has a manual worksheet disclosure'); assert.equal(details!.open, false);
     await h.click(details!.querySelector<HTMLElement>('summary')!);
-    assert.equal(details!.textContent?.includes('Not organized'), true);
+    assert.equal(details!.textContent?.includes('Empty'), true);
     assert.equal(h.document.querySelectorAll('.manual-comparison [name=manual-category]').length, 8);
     await addQuote(h);
     const category = h.document.querySelector<HTMLInputElement>('[name=manual-category][data-source-index="0"][value=evidence]')!;
@@ -39,7 +39,7 @@ test('forming a decision retains only manual judgment and notes with literal sou
     await h.input(field(h, 'comparison-next-step'), 'Check the measurement with the owner.');
     await h.input(field(h, 'comparison-note-conditions-0'), 'Only under the stated laboratory conditions.');
     await h.input(field(h, 'comparison-note-cost-0'), 'Manual estimate: two hours to verify.');
-    const form = h.button('Form decision draft'); assert.equal(!!form, true); await h.click(form!);
+    const form = h.button('Create decision draft'); assert.equal(!!form, true); await h.click(form!);
     await comparisonWait(() => h.document.querySelector('.decision-editor'));
     assert.equal(field(h, 'decision-conclusion').value, 'My decision is to validate the first option.');
     assert.equal(field(h, 'decision-uncertainties').value.includes('[S1] Claude'), true);
@@ -97,7 +97,7 @@ test('switching saved results retains the session worksheet and source revisions
     await h.click(h.document.querySelector<HTMLButtonElement>('.archive-detail-actions button')!);
     await comparisonWait(() => h.document.querySelector('.manual-source-changed'));
     assert.equal(field(h, 'comparison-judgment').value, 'Retain my session judgment.');
-    assert.equal(h.button('Form decision draft')!.disabled, true);
+    assert.equal(h.button('Create decision draft')!.disabled, true);
   } finally { await h.close(); }
 });
 
@@ -105,7 +105,7 @@ test('forming a draft keeps the existing unsaved metadata guard and cancel does 
   const h = await comparisonMount(); try {
     await addQuote(h); await h.input(field(h, 'comparison-judgment'), 'Keep my judgment too.');
     await h.input(field(h, 'archive-note'), 'Uncommitted metadata note.');
-    await h.click(h.button('Form decision draft')!);
+    await h.click(h.button('Create decision draft')!);
     await comparisonWait(() => h.document.querySelector('.confirm-dialog'));
     const cancel = [...h.document.querySelectorAll<HTMLButtonElement>('.confirm-dialog button')].find(node => node.textContent === copy.cancel)!;
     await h.click(cancel);

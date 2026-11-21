@@ -9,9 +9,9 @@ const missing = [{ questionId: 'q-originals', title: 'Missing originals', count:
 const ready = { ...settingsStatus, imageSyncEnabled: true };
 
 for (const [locale, message] of [
-  ['en', 'Could not export the backup. Try again. If saving fails, choose another save location.'],
-  ['zh-CN', '备份未能导出。请重试；若无法保存文件，可选择其他保存位置。'],
-  ['zh-TW', '備份未能匯出。請重試；若無法儲存檔案，可選擇其他儲存位置。'],
+  ['en', 'Could not export backup. Try again or pick another folder.'],
+  ['zh-CN', '导出备份失败，重试或换个保存目录。'],
+  ['zh-TW', '匯出備份失敗，重試或換個儲存資料夾。'],
 ] as const) for (const action of ['export', 'import']) test(`${locale} ${action} failure gives an operation-specific recovery`, async () => {
   const localized = getCopy(locale);
   const h = await mountSettings({ initialSection: 'backup', copy: localized, locale });
@@ -52,9 +52,9 @@ test('late export completion does not reclaim focus after the user moves elsewhe
 });
 
 for (const state of [
-  { name: 'image sync off', status: { ...ready, imageSyncEnabled: false }, label: 'Go to image sync settings', target: 'question-image-sync-title' },
-  { name: 'disconnected', status: { ...ready, connected: false }, label: 'Go to Drive connection', target: 'sync-title' },
-  { name: 'authorization expired', status: { ...ready, state: 'auth' as const }, label: 'Go to Drive connection', target: 'sync-title' },
+  { name: 'image sync off', status: { ...ready, imageSyncEnabled: false }, label: 'Image sync settings', target: 'question-image-sync-title' },
+  { name: 'disconnected', status: { ...ready, connected: false }, label: 'Drive settings', target: 'sync-title' },
+  { name: 'authorization expired', status: { ...ready, state: 'auth' as const }, label: 'Drive settings', target: 'sync-title' },
 ]) test(`missing-original recovery guides ${state.name} without enabling sync or downloading`, async () => {
   const modes: BackupExportMode[] = []; let connections = 0, enables = 0;
   const h = await mountSettings({ initialSection: 'backup', status: state.status });

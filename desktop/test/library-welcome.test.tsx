@@ -9,9 +9,9 @@ import { withFolderPages } from './ui/library-page-api';
 import { record, sessionFixture, waitForInitial, waitForQuery, workspace } from './ui/library-test-host';
 
 for (const [locale, empty, noMatches, viewEmpty] of [
-  ['en', 'No saved content yet', 'No matching content', 'No content in this view'],
-  ['zh-CN', '尚未保存内容', '没有匹配的内容', '当前范围内没有内容'],
-  ['zh-TW', '尚未儲存內容', '沒有符合的內容', '目前範圍內沒有內容']
+  ['en', 'Nothing saved yet', 'No matches', 'Nothing in this view'],
+  ['zh-CN', '结果库还是空的', '没有匹配内容', '当前分类暂无内容'],
+  ['zh-TW', '結果庫還是空的', '找不到相符內容', '目前分類尚無內容']
 ] as const) {
   test(`${locale}: library arrival distinguishes empty, filtered and unselected content`, async () => {
     const copy = getCopy(locale); let contents: readonly FolderContent[] = [];
@@ -44,7 +44,7 @@ test('pending and failed library loads never masquerade as an empty library', as
   try {
     assert.equal(title(), copy.archiveLoading);
     await waitForInitial(); await act(async () => finish!([]));
-    assert.equal(title(), 'No saved content yet');
+    assert.equal(title(), 'Nothing saved yet');
     fail = true; await h.input(h.document.querySelector<HTMLInputElement>('[name="library-search"]')!, 'fail');
     await waitForQuery(); assert.equal(title(), copy.folderLoadFailed);
   } finally { await h.close(); setShellApi(null); }

@@ -66,17 +66,17 @@ test("the proxy reasons have their own copy in every locale", () => {
   assert.deepEqual(
     [COPY.en.syncReasonDriveProxy, COPY.zhCN.syncReasonDriveProxy, COPY.zhTW.syncReasonDriveProxy],
     [
-      "PolyAsk could not reach Google Drive through the proxy. Check the proxy settings, then try again.",
-      "PolyAsk 无法通过代理连接 Google Drive。请检查代理设置后重试。",
-      "PolyAsk 無法透過代理連線至 Google Drive。請檢查代理設定後再試一次。"
+      "Could not reach Google Drive through the proxy. Check proxy settings and retry.",
+      "无法经由代理连上 Google Drive，检查代理设置后再试。",
+      "無法經由代理連上 Google Drive，檢查代理設定後再試。"
     ]
   );
   assert.deepEqual(
     [COPY.en.syncReasonOauthProxy, COPY.zhCN.syncReasonOauthProxy, COPY.zhTW.syncReasonOauthProxy],
     [
-      "Browser authorization completed, but PolyAsk could not reach Google sign-in services through the proxy. Check the proxy settings, then try again.",
-      "浏览器授权已完成，但 PolyAsk 无法通过代理连接 Google 登录服务。请检查代理设置后重试。",
-      "瀏覽器授權已完成，但 PolyAsk 無法透過代理連線至 Google 登入服務。請檢查代理設定後再試一次。"
+      "Browser authorization finished, but Google sign-in failed through the proxy. Check proxy settings and retry.",
+      "浏览器已授权，但无法经由代理连上 Google 登录服务；检查代理设置后再试。",
+      "瀏覽器已授權，但無法經由代理連上 Google 登入服務；檢查代理設定後再試。"
     ]
   );
 });

@@ -12,13 +12,13 @@ async function selectExcerpt(h: Awaited<ReturnType<typeof comparisonMount>>) {
   const textarea = h.document.querySelector<HTMLTextAreaElement>('[name=answer-excerpt-original]')!;
   await act(async () => { textarea.focus(); const start = textarea.value.indexOf(selectedText);
     textarea.setSelectionRange(start, start + selectedText.length); h.document.dispatchEvent(new h.window.Event('selectionchange')); });
-  await h.click(h.button('Use this excerpt')!);
+  await h.click(h.button('Use selection')!);
 }
 const field = (doc: Document, name: string) => doc.querySelector<HTMLTextAreaElement>(`[name=${name}]`)!;
 
 test('a confirmed comparison excerpt opens a follow-up with literal text and an unselected target', async () => {
   const h = await comparisonMount(); try {
-    await selectExcerpt(h); await h.click(h.button('Follow up on excerpt')!);
+    await selectExcerpt(h); await h.click(h.button('Ask follow-up')!);
     await comparisonWait(() => field(h.document, 'follow-up-excerpt'));
     assert.equal(field(h.document, 'follow-up-excerpt').value, selectedText);
     assert.equal(field(h.document, 'follow-up-original').value === comparisonRecord.results[0].text, true);
@@ -30,7 +30,7 @@ test('a confirmed comparison excerpt opens a follow-up with literal text and an 
 
 test('a confirmed excerpt seeds a draft decision evidence without writing a card', async () => {
   const h = await comparisonMount(); try {
-    await selectExcerpt(h); await h.click(h.button('Use as evidence')!);
+    await selectExcerpt(h); await h.click(h.button('Add as evidence')!);
     await comparisonWait(() => h.document.querySelector('.decision-editor'));
     assert.equal(h.document.querySelector<HTMLTextAreaElement>('[name=decision-evidence-0]')?.value, selectedText);
     assert.equal(h.document.querySelector('.decision-evidence')?.textContent?.includes('[S1]'), true);
@@ -42,7 +42,7 @@ test('a delayed source check cannot open an excerpt editor after selecting anoth
   const h = await comparisonMount(); let finish!: (record: ArchiveRecord | null) => void;
   try {
     await selectExcerpt(h); h.readWith(() => new Promise(resolve => { finish = resolve; }));
-    await h.click(h.button('Follow up on excerpt')!);
+    await h.click(h.button('Ask follow-up')!);
     assert.equal(!!h.document.querySelector('.synthesis-workspace'), false, 'source recheck completes before navigation');
     const other = [...h.document.querySelectorAll<HTMLButtonElement>('.folder-content-list .archive-list button')]
       .find(node => node.textContent?.includes('Other saved result'))!; await h.click(other);
@@ -56,7 +56,7 @@ test('a delayed source check cannot open an excerpt editor after selecting anoth
 test('a revised source cannot be used for a new excerpt action and preserves the selected saved result', async () => {
   const h = await comparisonMount(); try {
     await selectExcerpt(h); h.readWith(async () => ({ ...comparisonRecord, updatedAt: comparisonRecord.updatedAt + 1 }));
-    await h.click(h.button('Follow up on excerpt')!);
+    await h.click(h.button('Ask follow-up')!);
     await comparisonWait(() => h.document.querySelector('.archive-status')?.textContent?.includes(copy.synthesisSourceVersionChanged));
     assert.equal(!!h.document.querySelector('.synthesis-workspace'), false); assert.equal(h.writes + h.decisionWrites, 0);
   } finally { await h.close(); }
@@ -67,10 +67,10 @@ for (const accept of [false, true]) test(`a restored follow-up excerpt requires 
   store.save(comparisonRecord, { selectedHosts: ['claude.ai'], targetSite: 'kimi', tier: 'think',
     instruction: 'Keep my carefully written question.', excerpt: 'Claude paragraph 1.' }, 'claude.ai');
   const h = await comparisonMount({ synthesisDrafts: store }); try {
-    await selectExcerpt(h); await h.click(h.button('Follow up on excerpt')!);
+    await selectExcerpt(h); await h.click(h.button('Ask follow-up')!);
     await comparisonWait(() => h.document.querySelector('.confirm-dialog'));
     assert.equal(!!h.document.querySelector('.synthesis-workspace'), false);
-    await h.click(h.button(accept ? 'Use selected excerpt' : copy.cancel)!);
+    await h.click(h.button(accept ? 'Replace excerpt' : copy.cancel)!);
     if (accept) {
       await comparisonWait(() => field(h.document, 'follow-up-excerpt'));
       assert.equal(field(h.document, 'follow-up-excerpt').value, selectedText);

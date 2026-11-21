@@ -79,12 +79,12 @@ test("the confirm dialog renders both choices and defaults away from the destruc
 
   assert.match(html, /role="dialog"/);
   assert.match(html, /aria-modal="true"/);
-  assert.match(html, /要新建会话吗？/);
-  assert.match(html, /这会离开 9 个参与站点中的当前对话/);
-  assert.match(html, /新建会话/);
-  assert.match(html, /保留当前对话/);
+  assert.match(html, /开启新会话？/);
+  assert.match(html, /将在 9 个参与站点开启空白对话/);
+  assert.match(html, /开启新会话/);
+  assert.match(html, /留在当前对话/);
   // 破坏性的那个才带 primary；默认焦点在取消上（焦点是运行时行为，此处只钉结构）
-  assert.match(html, /class="primary"[^>]*>新建会话/);
+  assert.match(html, /class="primary"[^>]*>开启新会话/);
 });
 
 test("shortcut reference lists registered accelerators and aliases", () => {
@@ -118,13 +118,13 @@ test("shortcut reference lists registered accelerators and aliases", () => {
   assert.match(html, /Toggle Full Screen/);
   assert.match(html, /F11/);
   assert.match(html, /Copy/);
-  assert.match(html, /放大当前 AI 站点/);
-  assert.match(html, /缩小当前 AI 站点/);
-  assert.match(html, /当前 AI 站点恢复 100%/);
+  assert.match(html, /放大当前 AI 网页/);
+  assert.match(html, /缩小当前 AI 网页/);
+  assert.match(html, /当前 AI 网页恢复 100%/);
   assert.match(html, /Ctrl\+\+/);
   assert.match(html, /Ctrl\+-/);
   assert.match(html, /Ctrl\+0/);
-  assert.match(html, /Ctrl \+ 鼠标滚轮/);
+  assert.match(html, /按住 Ctrl 滚轮/);
   // CmdOrCtrl+Shift+P 在 COMMANDS 与菜单里各有一份，去重后只能出现一次
   assert.equal(html.split("<kbd>Ctrl+Shift+P</kbd>").length - 1, 1);
 });
@@ -192,11 +192,11 @@ test("site health summarizes only the selected scope and keeps detail actions ex
   assert.match(html, /页面加载失败/);
   assert.match(html, /输入框/);
   assert.match(html, /重新检查/);
-  assert.match(html, /聚焦站点/);
-  assert.match(html, /重新加载 ChatGPT/);
-  assert.match(html, /强制重新加载 ChatGPT（忽略缓存）/);
-  assert.match(html, /清除缓存并重新加载 ChatGPT/);
-  assert.match(html, /清除该站点的缓存与 Service Worker 后重新加载，登录状态会保留/);
+  assert.match(html, /切到此站/);
+  assert.match(html, /刷新 ChatGPT/);
+  assert.match(html, /强制刷新 ChatGPT（跳过缓存）/);
+  assert.match(html, /清缓存并刷新 ChatGPT/);
+  assert.match(html, /清除网页缓存后重新加载，保留登录状态/);
 });
 
 test("bootstrap loading is a polite busy state without a retry action", () => {
@@ -220,7 +220,7 @@ test("bootstrap failure exposes one alert and one consistently named retry butto
   );
 
   assert.equal([...html.matchAll(/role="alert"/g)].length, 1);
-  assert.match(html, />PolyAsk could not load the workspace\.</);
+  assert.match(html, />Could not load workspace\.</);
   assert.equal([...html.matchAll(/<button/g)].length, 1);
   assert.match(
     html,
@@ -244,7 +244,7 @@ test("bootstrap states keep non-blocking announcements available to assistive te
     assert.equal([...html.matchAll(/aria-live="polite"/g)].length, phase === "loading" ? 2 : 1);
     assert.match(
       html,
-      /<div class="sr-only" aria-live="polite">Could not apply display preferences<\/div>/
+      /<div class="sr-only" aria-live="polite">Could not apply display settings<\/div>/
     );
   }
 });
@@ -294,12 +294,12 @@ test("command bar renders one compact command surface with stateful controls", (
   assert.doesNotMatch(html, /class="brand/);
   assert.doesNotMatch(html, />PolyAsk</);
   assert.equal([...html.matchAll(/data-tier-icon=/g)].length, 3);
-  for (const label of ["Use site setting", "Fast", "Deep thinking"]) {
+  for (const label of ["Keep webpage choice", "Fast", "Deep thinking"]) {
     assert.match(html, new RegExp(`aria-label="${label}"`));
     assert.match(html, new RegExp(`data-hint="${label}[^"]*"`));
   }
   assert.match(html, /data-current-tier[^>]*>Site<\/span>/);
-  assert.match(html, /Response mode: Use site setting/);
+  assert.match(html, /Response mode: Keep webpage choice/);
   assert.match(html, /checked again before sending/);
   assert.doesNotMatch(html, /<small>AI Answers<\/small>/);
   assert.match(html, /aria-controls="workspace-panel"/);
@@ -390,7 +390,7 @@ test("command bar surfaces actionable sync state without consuming toolbar width
   );
 
   assert.match(html, /class="more-trigger sync-attention sync-auth"/);
-  assert.match(html, /aria-label="More actions: Sign in again to continue"/);
+  assert.match(html, /aria-label="More actions: Sign in again to sync"/);
   assert.match(html, /data-sync-state="auth"/);
 });
 
@@ -414,7 +414,7 @@ test("workspace actions summarize pending attention on one More entry", () => {
   assert.equal([...attentionHtml.matchAll(/aria-label="More actions/g)].length, 1, "唯一一个 More 入口不应重复渲染 aria-label");
   assert.match(idleHtml, /class="archive-trigger"[^>]*aria-label="Open result library"/);
   assert.match(attentionHtml, /aria-label="Retry 1 failed sites"/, "默认重试只包含提交前失败站点");
-  assert.match(attentionHtml, /aria-label="Review 1 uncertain sites"/, "取消项必须由用户核对");
+  assert.match(attentionHtml, /aria-label="Check 1 unconfirmed sites"/, "取消项必须由用户核对");
   assert.doesNotMatch(idleHtml, /data-attention-count/);
 });
 
@@ -433,10 +433,10 @@ test("workspace actions separate confirmed failures from cancellations needing r
   const mixed = renderToStaticMarkup(<WorkspaceActions {...base} failureCount={1} cancelledCount={2} />);
 
   assert.match(failedOnly, /aria-label="Retry 2 failed sites"/);
-  assert.match(cancelledOnly, /aria-label="Review 3 uncertain sites"/);
+  assert.match(cancelledOnly, /aria-label="Check 3 unconfirmed sites"/);
   assert.doesNotMatch(cancelledOnly, /class="retry-trigger"/);
   assert.match(mixed, /aria-label="Retry 1 failed sites"/);
-  assert.match(mixed, /aria-label="Review 2 uncertain sites"/);
+  assert.match(mixed, /aria-label="Check 2 unconfirmed sites"/);
 });
 
 test("image picker stays icon-first and exposes removable previews and scope warning", () => {
@@ -465,7 +465,7 @@ test("image picker stays icon-first and exposes removable previews and scope war
   assert.match(html, /aria-label="Remove one.png"/);
   assert.match(html, /class="image-filename"[^>]*>one.png</);
   assert.match(html, /<span>Replace images<\/span>/);
-  assert.match(html, />Adjust site scope: 1 unsupported<\/button>/);
+  assert.match(html, />Deselect 1 unsupported<\/button>/);
   assert.doesNotMatch(html, /class="image-warning"/);
   assert.match(html, /role="alert"/);
 });
@@ -521,7 +521,7 @@ test("workspace drawer exposes compact presets, continuous selection and bound g
   assert.equal([...html.matchAll(/type="checkbox"/g)].length, 9);
   assert.match(html, /aria-label="Delete Research"/);
   assert.match(html, /data-group-id="research"/);
-  assert.match(html, /Save current selection/);
+  assert.match(html, /Save selection/);
   assert.match(html, /name="group-name"/);
   assert.doesNotMatch(html, /name="group-name"[^>]*disabled/);
   assert.match(html, /group-save-hint/);
@@ -576,7 +576,7 @@ test("site reload is disabled while a send is active", () => {
     />
   );
   assert.match(html, /<button type="button" disabled=""[^>]*aria-label="Reload Claude"/);
-  assert.match(html, /data-hint="Reload is unavailable while this site is working"/);
+  assert.match(html, /data-hint="Site is busy; wait before reloading"/);
 });
 
 test("site frames render only the active selected page with accessible actions", () => {
@@ -638,11 +638,11 @@ test("site frames visibly distinguish stable failure codes and retain full contr
   assert.equal([...html.matchAll(/<article class="tile-frame/g)].length, 2);
   assert.match(
     html,
-    /<span class="site-state priority-p0" data-hint="Send not confirmed · Check this site&#x27;s page first\. Retry only if your question is not there; PolyAsk never resends automatically\.">Send not confirmed<\/span>/
+    /<span class="site-state priority-p0" data-hint="Send unconfirmed · Check the page first to avoid asking twice; PolyAsk never resends automatically\.">Send unconfirmed<\/span>/
   );
   assert.match(
     html,
-    /<span class="site-state priority-p0" data-hint="Prompt box not found">Prompt box not found<\/span>/
+    /<span class="site-state priority-p0" data-hint="Input box not found">Input box not found<\/span>/
   );
 });
 
@@ -722,9 +722,9 @@ test("site frames expose answer-generation terminal states without verbose chrom
   assert.match(html, /class="tile-frame phase-generating"/);
   assert.match(html, /class="tile-frame phase-complete"/);
   assert.match(html, /class="site-status-dot priority-p0" data-hint="Answering"/);
-  assert.match(html, /class="site-status-dot priority-p0" data-hint="Answer complete"/);
+  assert.match(html, /class="site-status-dot priority-p0" data-hint="Done"/);
   assert.match(html, /class="site-state priority-p0"[^>]*>Answering</);
-  assert.doesNotMatch(html, /class="site-state priority-p0"[^>]*>Answer complete</);
+  assert.doesNotMatch(html, /class="site-state priority-p0"[^>]*>Done</);
 });
 
 test("page tabs stay hidden while selected-site state catches up with layout state", () => {

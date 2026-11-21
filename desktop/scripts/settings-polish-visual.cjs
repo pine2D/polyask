@@ -59,7 +59,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     await category('interaction');
     const type = await run(`(() => { const size = s => parseFloat(getComputedStyle(document.querySelector(s)).fontSize);
       return {page:size('#settings-category-interaction'),section:size('#settings-confirmations-title'),
-        item:size('.settings-confirmations .preference-title'),meta:size('#notification-test-hint'),
+        item:size('.settings-confirmations .preference-title'),meta:size('[aria-labelledby=completion-notifications-title] small'),
         testGap:document.querySelector('.settings-notification-test').getBoundingClientRect().top-document.querySelector('[aria-labelledby=completion-notifications-title]>.preference-card').getBoundingClientRect().bottom}; })()`);
     assert.equal(type.page > type.section && type.section > type.item, true, `heading hierarchy ${JSON.stringify({ ...frame, type })}`);
     assert.equal(type.meta >= 12, true, 'auxiliary text must not inherit the UA small size');
@@ -105,7 +105,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
     for (const [index, pattern] of [[0, 'export|导出|匯出'], [1, 'restore|恢复|還原']]) {
       await click(`[aria-labelledby=backup-card-title]>.settings-actions>button:nth-child(${index + 1})`);
       const feedback = await run('document.querySelector(".archive-status").textContent');
-      assert.match(feedback, new RegExp(pattern), 'failure guidance follows the requested operation');
+      assert.match(feedback, new RegExp(pattern, 'i'), 'failure guidance follows the requested operation');
       assert.equal(await run('document.activeElement.matches("[aria-labelledby=backup-card-title] button")'), true, 'failed action remains available for retry');
       assert.equal(await run('document.querySelector(".archive-status").scrollWidth <= document.querySelector(".archive-status").clientWidth + 2'), true);
       if (index === 0 && zoom === 2) await shot(`settings-export-error-${locale}-${theme}`);

@@ -17,7 +17,7 @@ test('progress prioritizes uncertain submissions and expands separate counters w
     runId="a" activeSites={['claude', 'kimi']} progress={null} onRead={() => {}} /></FeedbackProvider>);
   try {
     assert.match(h.document.querySelector('.run-progress-summary')?.textContent ?? '', /Unconfirmed 1/);
-    assert.match(h.document.querySelector('[data-progress-stage]')?.textContent ?? '', /Waiting for answers/);
+    assert.match(h.document.querySelector('[data-progress-stage]')?.textContent ?? '', /Waiting for reply/);
     const toggle = h.document.querySelector<HTMLButtonElement>('[name="run-progress-details"]');
     assert.equal(toggle === null, false, 'full counters must be available through a real control');
     assert.equal(toggle!.getAttribute('aria-expanded'), 'false');

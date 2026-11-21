@@ -52,6 +52,6 @@ test("proxy site codes are registered status codes with copy in all three locale
     assert.notEqual(copy.proxyFailed, copy.loadFailed, `${locale}: the user must be pointed at the proxy, not the site`);
     assert.notEqual(copy.proxyAuthFailed, copy.proxyFailed, locale);
   }
-  assert.equal(getCopy("zh-CN").proxyFailed, "代理连接失败，请检查代理设置");
-  assert.equal(getCopy("zh-CN").proxyAuthFailed, "代理认证失败，请检查代理用户名和密码");
+  assert.equal(getCopy("zh-CN").proxyFailed, "代理连接失败");
+  assert.equal(getCopy("zh-CN").proxyAuthFailed, "代理账号或密码有误");
 });

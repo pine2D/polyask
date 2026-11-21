@@ -40,9 +40,9 @@ test('preset conflicts are named and only shown once a group name is typed', asy
     const hint = () => h.document.getElementById('group-save-hint')!.textContent;
     const save = h.document.querySelector<HTMLButtonElement>('.group-save button[type=submit]')!;
     assert.equal(hint(), '', 'no standing warning for the default "All" selection');
-    assert.equal(save.dataset.hint, '当前选择与预设“全部”相同，无需另存');
+    assert.equal(save.dataset.hint, '与内置「全选」一致，无需另存');
     await h.input(h.document.querySelector<HTMLInputElement>('input[name="group-name"]')!, '常用');
-    assert.equal(hint(), '当前选择与预设“全部”相同，无需另存');
+    assert.equal(hint(), '与内置「全选」一致，无需另存');
     assert.equal(save.disabled, true);
   } finally { await h.close(); }
 });

@@ -27,7 +27,7 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, fill, key,
     assert.equal(await run('window.libraryTest.writes'), 0, 'validation prevents an invalid save request');
     assert.equal(await run('document.activeElement.name'), 'archive-note');
     const error = await run('document.querySelector(".archive-note-field [role=alert]").textContent');
-    assert.ok(error.includes('4000'));
+    assert.match(error, /4,?000/);
     for (const box of await run(`['.archive-detail', '.archive-fields', '.archive-note-field', '[name=archive-note]'].map(selector => {
       const e=document.querySelector(selector); return {selector,width:e.clientWidth,scroll:e.scrollWidth}; })`)) {
       assert.ok(box.scroll <= box.width + 2, `${locale}/${width}: overflow in ${box.selector}`);

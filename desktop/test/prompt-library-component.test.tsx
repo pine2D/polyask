@@ -16,8 +16,8 @@ test("prompt library searches templates and history and keeps explicit actions",
     onSave={() => undefined}
     onDelete={() => undefined}
   />);
-  assert.match(html, /搜索模板和最近提问/);
-  assert.match(html, /保存当前提问/);
+  assert.match(html, /搜索模板或近期提问/);
+  assert.match(html, /存为模板/);
   assert.match(html, /代码审查/);
   assert.match(html, /Earlier question/);
   assert.match(html, /删除模板/);

@@ -25,11 +25,11 @@ test("decision editor distinguishes missing, loading, and failed sources while r
   assert.match(render(null), /Source result unavailable/);
   assert.match(render(null), /Exact source excerpt\./);
   assert.doesNotMatch(render(null), /Add excerpt/);
-  assert.match(render(undefined), /Checking source/);
+  assert.match(render(undefined), /Loading source…/);
   assert.doesNotMatch(render(undefined), /Source result unavailable/);
-  assert.match(render(undefined, true), /Could not load the source result/);
+  assert.match(render(undefined, true), /Could not load source result/);
   assert.doesNotMatch(render(undefined, true), /Source result unavailable/);
-  assert.match(render(source), /Open saved source/);
+  assert.match(render(source), /Open source result/);
 });
 
 test("draft validation requires exact source evidence and final conclusion; Unicode limits count code points", () => {
@@ -93,9 +93,9 @@ test("decision fields expose codepoint counts and specific errors through access
   assert.equal(title.getAttribute("aria-invalid"), "true");
   const descriptions = (node: Element) => node.getAttribute("aria-describedby")!.split(" ").map(id => doc.getElementById(id)!.textContent).join(" ");
   assert.match(descriptions(title), /161 \/ 160/);
-  assert.match(descriptions(title), /Title must be 160 characters or fewer/);
-  assert.match(descriptions(doc.querySelector('[name="decision-conclusion"]')!), /Final cards need a conclusion/);
-  assert.match(descriptions(doc.querySelector('[name="decision-evidence-0"]')!), /excerpt must match the source exactly/);
+  assert.match(descriptions(title), /Keep title within 160 characters/);
+  assert.match(descriptions(doc.querySelector('[name="decision-conclusion"]')!), /Add a conclusion before marking Final/);
+  assert.match(descriptions(doc.querySelector('[name="decision-evidence-0"]')!), /Excerpt does not match verbatim/);
   assert.equal(title.hasAttribute("maxlength"), false);
   assert.equal(doc.querySelectorAll('input[aria-describedby], textarea[aria-describedby]').length, 6);
 });

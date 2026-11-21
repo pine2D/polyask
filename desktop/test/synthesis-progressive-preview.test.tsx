@@ -33,7 +33,7 @@ test('configuration starts with a useful summary and the complete payload is ini
     assert.equal(panel!.open, false);
     const summary = h.document.querySelector('[data-synthesis-summary]')?.textContent ?? '';
     assert.equal(summary.includes('2'), true); assert.equal(summary.includes(copy.synthesisTargetMissing), true);
-    assert.equal(summary.includes('new conversation'), true);
+    assert.equal(summary.includes('new chat'), true);
     assert.equal(h.document.querySelector<HTMLButtonElement>('footer button')!.disabled, true);
     assert.equal(sends, 0);
     assert.equal(preview(h.document).value.includes(record.results[0].text!), true, 'collapsed contents retain the complete saved body');

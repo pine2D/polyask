@@ -44,7 +44,7 @@ test('created sorting uses createdAt and preserves all input records', async () 
   try {
     assert.equal(h.document.querySelector('[name="library-sort"]') !== null, true);
     await h.click(button(h.document, '[name="library-sort"]'));
-    const created = [...h.document.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent?.includes('Created, newest first'));
+    const created = [...h.document.querySelectorAll<HTMLElement>('[role="option"]')].find(node => node.textContent?.includes('Recently created'));
     assert.equal(created !== undefined, true); await h.click(created!);
     assert.equal(h.document.querySelector('.library-item-title')?.textContent, 'Result 0002');
     assert.equal(items.map(item => item.record.id).join(','), ids);

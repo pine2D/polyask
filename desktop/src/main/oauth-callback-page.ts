@@ -2,22 +2,22 @@ import { resolveLocale } from '../shared/locale';
 
 const COPY = {
   en: {
-    lang: 'en', service: 'Google Drive sync', received: 'Google Drive authorization received',
-    verifying: 'PolyAsk is verifying the connection. Return to PolyAsk to see the result.',
-    denied: 'Authorization not completed', retry: 'Return to PolyAsk and connect Google Drive again when you are ready.',
-    next: 'Return to PolyAsk', close: 'You can close this page after returning to the app.'
+    lang: 'en', service: 'Google Drive sync', received: 'Authorization received',
+    verifying: 'Finishing connection check in the app.',
+    denied: 'Authorization not completed', retry: 'Not connected. You can reconnect anytime in Settings.',
+    next: 'Return to PolyAsk to see the status', close: 'You can close this tab.'
   },
   zhCN: {
-    lang: 'zh-CN', service: 'Google Drive 同步', received: '已收到 Google Drive 授权',
-    verifying: 'PolyAsk 正在验证连接，请返回应用查看结果。',
-    denied: '未完成授权', retry: '请返回 PolyAsk，需要同步时可重新连接 Google Drive。',
-    next: '返回 PolyAsk 查看结果', close: '返回应用后，可以关闭此页面。'
+    lang: 'zh-CN', service: 'Google Drive 同步', received: '已完成浏览器授权',
+    verifying: '正在应用内完成连接校验。',
+    denied: '授权未完成', retry: '本次未连接，需要时可在应用设置内重连。',
+    next: '切回 PolyAsk 查看连接状态', close: '可关闭此浏览器标签页'
   },
   zhTW: {
-    lang: 'zh-TW', service: 'Google Drive 同步', received: '已收到 Google Drive 授權',
-    verifying: 'PolyAsk 正在驗證連線，請返回應用程式查看結果。',
-    denied: '尚未完成授權', retry: '請返回 PolyAsk，需要同步時可重新連接 Google Drive。',
-    next: '返回 PolyAsk 查看結果', close: '返回應用程式後，即可關閉此頁面。'
+    lang: 'zh-TW', service: 'Google Drive 同步', received: '已完成瀏覽器授權',
+    verifying: '正在應用程式內完成連線檢查。',
+    denied: '授權未完成', retry: '本次未連線，需要時可在應用程式設定內重連。',
+    next: '切回 PolyAsk 查看連線狀態', close: '可關閉此瀏覽器分頁'
   }
 } as const;
 

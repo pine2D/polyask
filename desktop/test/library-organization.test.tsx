@@ -29,7 +29,7 @@ test('metadata identifies oversized and excess tags before saving, and correctio
     assert.deepEqual(submitted, [], 'invalid tags never reach the save API');
     assert.equal(tags.getAttribute('aria-invalid'), 'true');
     assert.equal((h.document.activeElement) === (tags), true);
-    assert.match(fieldDescription(h.document, tags), /Tag 1.*32 characters/);
+    assert.match(fieldDescription(h.document, tags), /Tag #1 exceeds 32 characters/);
     assert.match(h.document.querySelector('.archive-tag-counts')!.textContent!, /33 \/ 32/);
     await h.input(tags, Array(21).fill('same').join(', '));
     assert.match(fieldDescription(h.document, tags), /21.*20/);
@@ -38,7 +38,7 @@ test('metadata identifies oversized and excess tags before saving, and correctio
     await h.click(h.document.querySelector<HTMLButtonElement>('button[type="submit"]')!);
     assert.deepEqual(submitted, [{ tags: ['😀'.repeat(32), 'work'], note: 'Keep these notes.' }]);
     assert.equal(note.value, 'Keep these notes.'); assert.equal(tags.value, '😀'.repeat(32) + '， work');
-    assert.match(h.document.querySelector('[role="status"]')!.textContent!, /edits are retained/);
+    assert.match(h.document.querySelector('[role="status"]')!.textContent!, /edits are kept/);
   } finally { await h.close(); }
 });
 
@@ -83,7 +83,7 @@ test('membership creation retains failed input, prevents repeats, and waits for 
     const create = h.document.querySelector<HTMLButtonElement>('[data-action="create-folder"]')!;
     await h.click(create);
     assert.equal(name.value, 'Research 😀');
-    assert.match(h.document.querySelector('[role="status"]')!.textContent!, /edits are retained/);
+    assert.match(h.document.querySelector('[role="status"]')!.textContent!, /Could not save folder change/);
     await act(async () => { create.click(); create.click(); });
     assert.equal(creates, 2, 'same-tick duplicate does not create a third folder');
     await act(async () => finish!(folder));

@@ -23,8 +23,8 @@ test('each preference group names the accepted value, current source and edit sc
     assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-current]')!.textContent!, /Compact.*90%.*Minimal/);
     assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-scope]')!.textContent!, /this device/i);
     assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-current]')!.textContent!, /Focus/);
-    assert.match(h.document.querySelector('[data-preference-source="layout"]')!.textContent!, /shared/i);
-    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-scope]')!.textContent!, /other devices following/i);
+    assert.match(h.document.querySelector('[data-preference-source="layout"]')!.textContent!, /synced/i);
+    assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-scope]')!.textContent!, /all synced devices/i);
     // The follow explanation is stated once for the section, not repeated per group; value cells carry no sentence period.
     const text = h.document.body.textContent!;
     assert.equal(text.split(getCopy('en').preferenceSyncFollowHint).length - 1, 1);
@@ -92,6 +92,6 @@ test('settings workspace includes shared preferences and describes notifications
     preferenceSync: { snapshot: state, onFollowingChange: async () => {}, onLayoutModeChange: async () => {}, onDraftSyncChange: async () => {} } });
   try {
     assert.equal(h.document.getElementById('settings-preference-sync-title') === null, false);
-    assert.match(h.document.querySelector('label.preference-card small')!.textContent!, /shared/i);
+    assert.match(h.document.querySelector('label.preference-card small')!.textContent!, /syncs when Google Drive is connected/i);
   } finally { await h.close(); }
 });

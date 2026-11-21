@@ -9,7 +9,7 @@ import { searchCommands } from "../src/renderer/command-search";
 
 const noop = () => undefined;
 test("on-demand guide is searchable in all three languages", () => {
-  for (const [locale, query] of [["en", "Getting started"], ["zh-CN", "开始使用"], ["zh-TW", "開始使用"]]) {
+  for (const [locale, query] of [["en", "Getting started"], ["zh-CN", "快速上手"], ["zh-TW", "快速上手"]]) {
     assert.deepEqual(searchCommands(query, COMMANDS, getCopy(locale)).map(item => item.id), ["open-getting-started"]);
   }
 });
@@ -24,11 +24,11 @@ test("opening the guide renders four steps without executing commands or editing
     onInsertPrompt={text => effects.push(text)} onSaveTemplate={() => { effects.push("save"); }}
     onDeleteTemplate={id => effects.push(id)} onClose={noop}
   />);
-  assert.match(html, /aria-label="开始使用"/);
+  assert.match(html, /aria-label="快速上手"/);
   assert.match(html, /id="getting-started-panel"[^>]*role="tabpanel"/);
   assert.equal((html.match(/class="getting-started-step"/g) ?? []).length, 4);
   assert.match(html, /aria-controls="getting-started-panel"/);
-  assert.match(html, /不会自动更改站点选择或发送问题/);
+  assert.match(html, /勾选常用的 AI 站点，一次提问并排对照/);
   assert.doesNotMatch(html, /role="listbox"|role="combobox"/);
   assert.deepEqual(effects, []);
 });

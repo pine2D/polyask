@@ -74,8 +74,8 @@ test('split evidence dock keeps both answer columns visible alongside the worksh
       textarea.setSelectionRange(first, first + quote.length);
       h.document.dispatchEvent(new h.window.Event('selectionchange'));
     });
-    await h.click(h.button('Use this excerpt')!);
-    await h.click(h.button('Add to manual comparison')!);
+    await h.click(h.button('Use selection')!);
+    await h.click(h.button('Add to notes')!);
     assert.equal(compare().getAttribute('data-evidence-dock'), 'true');
     assert.equal(details.open, true);
     assert.equal(grid.hidden, false);

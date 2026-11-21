@@ -47,7 +47,7 @@ test('HTML report preserves useful text and tables without executable markup, im
     assert.match(doc.querySelector('main')?.textContent ?? '', /truncat/i);
     assert.equal(doc.querySelector('main h3')?.textContent, 'Saved heading');
     assert.equal(doc.querySelector('meta[http-equiv]')?.getAttribute('content')?.includes("default-src 'none'"), true);
-    assert.match(doc.body.textContent ?? '', /Original question images/);
+    assert.match(doc.body.textContent ?? '', /Question attachments and inline images are omitted/);
     assert.doesNotMatch(doc.querySelector('style')?.textContent ?? '', /url\s*\(|@import/i);
   } finally { dom.window.close(); }
 });
@@ -62,8 +62,8 @@ test('report shows every source number, missing or unverified content, notes and
     const doc = dom.window.document, text = doc.body.textContent ?? '';
     assert.equal(doc.documentElement.lang, 'zh-CN');
     assert.match(text, /\[S1\] Claude/); assert.match(text, /\[S2\] ChatGPT/);
-    assert.match(text, /完整性未验证/); assert.match(text, /未保存回答正文/);
-    assert.match(text, /由你选为最佳回答/); assert.match(text, /My manual note/);
+    assert.match(text, /完整性未验证/); assert.match(text, /无回答正文/);
+    assert.match(text, /已标为最佳回答/); assert.match(text, /My manual note/);
     assert.match(text, /Saved synthesis/); assert.match(text, /Compare carefully/);
     assert.equal(doc.querySelectorAll('table tbody tr').length, 1);
     assert.match(doc.querySelector('style')?.textContent ?? '', /table-header-group/);
@@ -81,9 +81,9 @@ test('independent decision report retains exact excerpts and identifies unavaila
     try {
       const doc = dom.window.document, text = doc.body.textContent ?? '';
       assert.equal(doc.querySelector('blockquote.excerpt')?.textContent, '**Exact** <source>');
-      assert.match(text, /已核對來源版本/); assert.match(text, /Choose one/); assert.match(text, /Because/); assert.match(text, /To check/); assert.match(text, /Verify/);
-      assert.match(text, /修改狀態不會自動驗證內容/);
-      assert.match(text, available ? /與目前可讀取的來源不一致/ : /問題標題快照/);
+      assert.match(text, /核對時的來源版本/); assert.match(text, /Choose one/); assert.match(text, /Because/); assert.match(text, /To check/); assert.match(text, /Verify/);
+      assert.match(text, /人工判斷紀錄，標為「已定稿」不代表事實已查證/);
+      assert.match(text, available ? /來源內文在摘錄後有過更動/ : /僅顯示決策卡內記錄的問題標題/);
       assert.equal(text.includes('Rayleigh scattering.'), !!available);
     } finally { dom.window.close(); }
   }

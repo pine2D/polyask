@@ -164,7 +164,7 @@ test("snapshot export action reports exported/failed states, stays silent on can
     releaseGate();
     releaseGate = undefined;
     await first;
-    assert.match(notes.at(-1) ?? "", /Kimi.*脱敏结构快照/);
+    assert.match(notes.at(-1) ?? "", /已导出 Kimi 脱敏快照/);
 
     const countBeforeCancel = notes.length;
     nextResult = { status: "cancelled" };

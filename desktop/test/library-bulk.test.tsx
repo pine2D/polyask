@@ -35,7 +35,7 @@ test('bulk favorite reports blocking synchronously, suppresses repeats and relea
     await act(async () => finish!());
     assert.equal(writes.join(','), 'result-0000,result-0001'); assert.equal(blocking.at(-1), false);
     assert.equal(h.document.querySelector<HTMLButtonElement>('.library-close')?.disabled, false);
-    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('2 succeeded'), true);
+    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('2 done'), true);
   } finally { await h.close(); setShellApi(null); }
 });
 
@@ -80,11 +80,11 @@ test('partial failure is reported and manual retry touches only failed targets',
   try {
     await selectPage(h); await h.click(button(h.document, '[data-action="library-bulk-favorite"]'));
     assert.equal(blocking.at(-1), false);
-    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('1 succeeded'), true);
+    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('1 done'), true);
     assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('1 failed'), true);
     await h.click(button(h.document, '[data-action="library-bulk-retry-failed"]'));
     assert.equal(writes.join(','), 'result-0000,result-0001,result-0000');
-    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('2 succeeded'), true);
+    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('2 done'), true);
     assert.equal(h.document.querySelector<HTMLButtonElement>('.library-close')?.disabled, false);
   } finally { await h.close(); setShellApi(null); }
 });
@@ -98,7 +98,7 @@ test('stop lets the current write settle and prevents all later snapshot targets
     await h.click(button(h.document, '[data-action="library-bulk-stop"]'));
     assert.equal(h.document.querySelector<HTMLButtonElement>('.library-close')?.disabled, true);
     await act(async () => finish!()); assert.equal(writes.join(','), 'result-0000');
-    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('1 succeeded'), true);
+    assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('1 done'), true);
     assert.equal(h.document.querySelector('.library-bulk-result')?.textContent?.includes('2 stopped'), true);
     assert.equal(h.document.querySelector<HTMLButtonElement>('.library-close')?.disabled, false);
   } finally { await h.close(); setShellApi(null); }

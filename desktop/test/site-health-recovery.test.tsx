@@ -98,7 +98,7 @@ test('tier and capture advice preserves advisory status and unconfirmed advice h
     assert.equal(h.document.querySelector('.health-checks li')!.getAttribute('data-ok'), 'advisory');
     assert.equal(h.document.querySelector('.health-state')!.getAttribute('data-health-state'), 'ready');
     await h.render(element(health(), status({ phase: 'warning', code: 'submit_unconfirmed' })));
-    assert.match(h.document.querySelector('.health-first-step')!.textContent!, /unconfirmed.*current conversation/s);
+    assert.match(h.document.querySelector('.health-first-step')!.textContent!, /unconfirmed.*Check the chat on the page first/s);
     assert.equal(h.document.querySelector('[data-recovery-action="resend"]') === null, true);
   } finally { await h.close(); }
 });

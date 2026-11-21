@@ -43,7 +43,7 @@ test('history keeps hidden selections through search, excludes later loaded item
     assert.equal(h.document.querySelectorAll('.question-card-select:checked').length, 1);
     await h.input(h.document.querySelector<HTMLInputElement>('.question-search input')!, 'Next');
     await waitFor(() => h.document.querySelectorAll('.question-card-select').length === 1 && h.document.querySelector('.question-title')?.textContent === 'Next question');
-    assert.equal(h.document.querySelector('.question-selection')?.textContent?.includes('1 outside the current results'), true);
+    assert.equal(h.document.querySelector('.question-selection')?.textContent?.includes('1 hidden by filter'), true);
     await h.click(h.button(copy.markdownMerge));
     assert.deepEqual(previews[0].targets, [{ kind: 'history', id: q.id }]);
     await h.click(h.button(copy.cancel)); await h.click(h.button(copy.markdownFinish));

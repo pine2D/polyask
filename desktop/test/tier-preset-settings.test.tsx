@@ -163,7 +163,7 @@ test('save progress and a failed result stay next to the affected tier and prese
     assert.match(notice()?.textContent ?? '', /sav/i);
     assert.doesNotMatch(notice()?.textContent ?? '', /read or verify/i);
     assert.equal((h.document.getElementById('claude-think-effort') as HTMLSelectElement).value, 'Extra');
-    assert.match(h.document.querySelector('[data-preset-saved=think]')!.textContent!, /recommendation/i);
+    assert.match(h.document.querySelector('[data-preset-saved=think]')!.textContent!, /Built-in default/i);
     assert.match(announcements.at(-1) ?? '', /Think/);
     assert.equal(button(h, 'save', 'think').disabled, false);
   } finally { await h.close(); setShellApi(null); }

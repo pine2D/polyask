@@ -71,13 +71,13 @@ function i18nMustExposeDesktopNamespace() {
   const i18n = context.__AMS_I18N__;
   assert.equal(typeof i18n?.t, "function", "i18n 必须向隔离的 desktop preload 模块暴露翻译函数");
   assert.equal(typeof i18n?.setLang, "function", "i18n 必须暴露 setLang 供外壳注入语言");
-  assert.equal(i18n.t("cs_siteAdapter"), "Site adapter", "未注入语言前一律 en");
+  assert.equal(i18n.t("cs_siteAdapter"), "Page support", "未注入语言前一律 en");
   i18n.setLang("zh_TW");
   assert.equal(i18n.t("diag_composer"), "輸入框");
   i18n.setLang("zhCN");
   assert.equal(i18n.t("diag_composer"), "输入框", "必须接受 locale.ts 的 zhCN 写法");
   i18n.setLang("fr");
-  assert.equal(i18n.t("diag_composer"), "Composer", "未知语言落 en");
+  assert.equal(i18n.t("diag_composer"), "Input box", "未知语言落 en");
   assert.equal(i18n.t("no_such_key"), "no_such_key", "缺词条时返回 key 本身，别抛");
   assert.doesNotMatch(source(`${SITE_RUNTIME}/i18n.js`), /chrome\.|localStorage|applyI18n|_resolveAuto/, "i18n.js 不得再读 chrome.* / localStorage，也不得自己解析 locale");
 }

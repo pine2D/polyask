@@ -294,7 +294,7 @@ test('draft clearing confirmation keeps data on cancel and rechecks changed coun
     db.state.put('draft:second', draft('second'), 10, false);
     await h.click(confirm());
     assert.equal(writes, 0);
-    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Counts changed.*Saved drafts: 2/s);
+    assert.match(h.document.querySelector('[role="dialog"]')!.textContent!, /Record counts changed.*Saved drafts: 2/s);
     await h.click(confirm());
     assert.equal(writes, 1);
     assert.equal(admin.stats().drafts, 0);
@@ -323,7 +323,7 @@ test('backup review localizes shared preference names and explains terminal dele
     const h = await mountDom(React.createElement(BackupComparison, { item: deleted.items[0], copy: getCopy('en'),
       selected: false, onSelect: () => {} }));
     try {
-      assert.match(h.document.querySelector('[role="status"]')!.textContent!, /backup draft was deleted/);
+      assert.match(h.document.querySelector('[role="status"]')!.textContent!, /Previously imported and deleted/);
       assert.equal(h.document.querySelector('input[type="checkbox"]') === null, true);
     } finally { await h.close(); }
   } finally { db.close(); }

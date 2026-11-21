@@ -18,7 +18,7 @@ test("status text distinguishes model confirmation from mode-only confirmation i
     assert.ok(alternative.includes("Known model"));
     const mode = describeStatus(copy, { site: "claude", phase: "submitted", selection: { requested: "fast", outcome: "mode_only", observed: "fast" } });
     assert.ok(mode.includes(copy.fast));
-    assert.match(mode, /model not confirmed|模型未确认|模型未確認/);
+    assert.match(mode, /model unconfirmed|模型未确认|模型未確認/);
   }
 });
 
@@ -41,8 +41,8 @@ test("unconfirmed mode and submission evidence express the actual confirmation l
     const status = { site: "claude", phase: "warning", code: "tier_unconfirmed", selection: { requested: "think", outcome: "unconfirmed" } } as const;
     const message = describeStatus(copy, { ...status, submissionEvidence: "message" });
     const composer = describeStatus(copy, { ...status, submissionEvidence: "composer" });
-    assert.match(message, /Current message seen|已看到本轮消息|已看到本輪訊息/);
-    assert.match(composer, /Composer changed; message not confirmed|输入框已变化，消息未确认|輸入框已變更，訊息未確認/);
+    assert.match(message, /Message visible on page|页面已出现本轮提问|頁面已出現本輪提問/);
+    assert.match(composer, /Input changed; message unconfirmed|输入框已变化，消息未确认|輸入框已變更，訊息未確認/);
     assert.notEqual(message, composer);
     assert.doesNotMatch(message, /unchanged|保持不变|保持不變/);
   }
@@ -55,9 +55,9 @@ test("page tooltip includes evidence without needing a warning code and retains 
     const status: SiteStatus = { site: "claude", phase, submission };
     const text = pageSiteDetail("Claude", status, copy);
     assert.ok(text.includes("Known model"));
-    assert.ok(text.includes("已看到本轮消息"));
+    assert.ok(text.includes("页面已出现本轮提问"));
     assert.equal(text.split("Known model").length - 1, 1);
-    assert.equal(text.split("已看到本轮消息").length - 1, 1);
+    assert.equal(text.split("页面已出现本轮提问").length - 1, 1);
     if (phase === "crashed") assert.ok(text.includes(copy.crashed));
   }
 });
@@ -70,7 +70,7 @@ test("live page tooltip shows each confirmation once after generation updates", 
   };
   const text = pageSiteDetail("Claude", status, copy);
   assert.equal(text.split("Known model").length - 1, 1);
-  assert.equal(text.split("已看到本轮消息").length - 1, 1);
+  assert.equal(text.split("页面已出现本轮提问").length - 1, 1);
   assert.equal(text.split(copy.submitted).length - 1, 1);
   assert.ok(text.includes(copy.answerComplete));
 });

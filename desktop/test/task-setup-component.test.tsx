@@ -49,7 +49,7 @@ test('real native-cover transition snapshots image intent after acquisition and 
     await h.input(h.document.querySelector('[name=task-dimensions]')!,'My custom dimensions');
     await h.input(h.document.querySelector('[name=task-output]')!,'My custom output');
     const preview=h.document.querySelector<HTMLTextAreaElement>('[name=task-preview]')!.value;
-    assert.equal(preview,'Review {{literal}} $1\n\nComparison dimensions\nMy custom dimensions\n\nExpected output\nMy custom output');
+    assert.equal(preview,'Review {{literal}} $1\n\nCriteria\nMy custom dimensions\n\nOutput format\nMy custom output');
     assert.equal(h.document.querySelector('[data-task-scope]')!.textContent,'Claude · Kimi');
     await h.click(h.document.querySelector('[data-task-apply]')!);
     assert.equal(prompt,'Original draft');assert.equal(selections.length,0);

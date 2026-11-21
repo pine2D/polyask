@@ -42,6 +42,6 @@ test("comparison and More share one toolbar grid cell", async () => {
   const props = { copy:getCopy("en"),disabled:false,failureCount:0,cancelledCount:0,synthesisPending:false,syncStatus:{state:"idle",connected:false,pending:0,errorCount:0,readOnly:false,oauthConfigured:false,secureTokenStorage:true},onOpenMore:()=>{},onCompare:()=>{} };
   const html = renderToStaticMarkup(React.createElement(WorkspaceActions as React.ComponentType<any>,props));
   assert.match(html, /^<div class="workspace-actions priority-p0"><button[^>]*class="compare-trigger"/);
-  assert.match(html, /aria-label="Capture and compare"/);
+  assert.match(html, /aria-label="Capture &amp; compare"/);
   assert.match(html, /aria-label="More actions"/);
 });

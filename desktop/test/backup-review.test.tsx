@@ -62,8 +62,8 @@ test('a selected source that cannot restore is still explained as unavailable', 
   const item = previewItem('decision:d', 'decision', 'new', { source: { key: source.key, title: 'Saved original', available: false } });
   const html = renderToStaticMarkup(<BackupDependencies item={item} items={[item, source]} selected={new Set([item.key, source.key])}
     copy={getCopy('en')} onAdd={() => {}} onLocate={() => {}} />);
-  assert.ok(html.includes('Saved excerpts remain'), 'missing-source allowance is explained even if an unavailable source was selected');
-  assert.ok(!html.includes('Source is selected for import'));
+  assert.ok(html.includes('Excerpts stay intact'), 'missing-source allowance is explained even if an unavailable source was selected');
+  assert.ok(!html.includes('Source selected for import'));
   assert.deepEqual([...eligibleBackupSelection([item, source], new Set([item.key, source.key]))], [item.key]);
 });
 
@@ -78,8 +78,8 @@ test('a reused folder dependency explains the available mapping instead of waiti
   const item = previewItem('folderMembership:link', 'folderMembership', 'new', { requires: [folder.key] });
   const html = renderToStaticMarkup(<BackupDependencies item={item} items={[item, folder]} selected={new Set([item.key, folder.key])}
     copy={getCopy('en')} onAdd={() => {}} onLocate={() => {}} />);
-  assert.ok(html.includes('Use the previously restored folder'));
-  assert.ok(!html.includes('Selected · required items missing'));
+  assert.ok(html.includes('Reuse earlier restored folder'));
+  assert.ok(!html.includes('Selected · missing linked item'));
 });
 
 test('a reused question dependency explains its available identity without counting another parent write', () => {
@@ -89,8 +89,8 @@ test('a reused question dependency explains its available identity without count
   assert.deepEqual([...eligibleBackupSelection([item, parent], selected)], [item.key]);
   const html = renderToStaticMarkup(<BackupDependencies item={item} items={[item, parent]} selected={selected}
     copy={getCopy('en')} onAdd={() => {}} onLocate={() => {}} />);
-  assert.ok(html.includes('Use the previously restored question'));
-  assert.ok(!html.includes('Selected · required items missing'));
+  assert.ok(html.includes('Reuse earlier restored question'));
+  assert.ok(!html.includes('Selected · missing linked item'));
 });
 
 test('backup import counts exclude identical records and records whose selected dependency is blocked', () => {
@@ -107,7 +107,7 @@ test('backup ignores late selection counts and keeps final confirmation disabled
   try {
     const next = () => h.document.querySelector<HTMLButtonElement>('.backup-footer button')!;
     assert.equal(next().disabled, true, 'initial authoritative count is pending');
-    await h.click([...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === 'Use backup for 1 visible items')!);
+    await h.click([...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === 'Import 1 shown')!);
     assert.equal(pending.length, 2);
     assert.equal(next().disabled, true);
     await act(async () => pending[1].resolve({ imported: 1, skipped: 0, keys: ['archive:a'] }));
@@ -130,12 +130,12 @@ test('backup conflict bulk choices stay in the visible type and never restore de
     onOpenQuestion: () => { navigated++; }, onOpenSite: () => { navigated++; }, onAnnounce: () => {} });
   const button = (label: string) => [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === label);
   try {
-    const type = h.document.querySelector<HTMLSelectElement>('select[aria-label="Item type"]');
+    const type = h.document.querySelector<HTMLSelectElement>('select[aria-label="Category"]');
     assert.ok(type, 'type and status can be filtered independently');
     await act(async () => { type.value = 'archive'; type.dispatchEvent(new h.window.Event('change', { bubbles: true })); });
     await h.click(button('Conflicts only')!);
     assert.equal(h.document.querySelectorAll('.backup-list button').length, 2);
-    await h.click(button('Use backup for 2 visible items')!);
+    await h.click(button('Import 2 shown')!);
     assert.equal(applied, null, 'bulk choices only edit the preview');
     assert.match(h.document.querySelector('.backup-footer strong')!.textContent!, /Import 2/);
     await h.click(button('Review & import')!);
@@ -148,7 +148,7 @@ test('backup conflict bulk choices stay in the visible type and never restore de
     });
     assert.equal(closed, 0, 'external navigation cannot discard the pending import confirmation');
     assert.equal(navigated, 0);
-    await h.click(button('Confirm import')!);
+    await h.click(button('Import selected')!);
     assert.deepEqual(applied, ['archive:a', 'archive:b']);
   } finally { navigation.dispose(); await h.close(); setShellApi(null); }
 });

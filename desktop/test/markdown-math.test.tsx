@@ -11,7 +11,7 @@ test('block math stays source-first and a user request renders real MathML nodes
     assert.equal(formulaSource(h.document), '$$\n\\frac{1}{2}\n$$');
     assert.equal(h.document.querySelector('math') === null, true);
     assert.equal(h.jobs.length, 0);
-    await h.click(technicalButton(h.document, 'Preview formula'));
+    await h.click(technicalButton(h.document, 'Render formula'));
     assert.equal(h.document.querySelector('math mfrac mn')?.textContent, '1');
     assert.equal(h.document.querySelectorAll('math mfrac mn').length, 2);
     assert.equal(h.document.querySelector('math annotation') === null, true, 'source annotation is not inserted as active content');
@@ -22,7 +22,7 @@ test('block math stays source-first and a user request renders real MathML nodes
 test('bad math syntax falls back to exact literal source with an explicit explanation', async () => {
   const h = await mountTechnical('$$\n\\frac{\n$$');
   try {
-    await h.click(technicalButton(h.document, 'Preview formula'));
+    await h.click(technicalButton(h.document, 'Render formula'));
     assert.equal(h.document.querySelector('math') === null, true);
     assert.equal(formulaSource(h.document), '$$\n\\frac{\n$$');
     assert.equal(h.document.querySelector('.markdown-math [role="status"]')?.textContent?.includes('Could not render') === true, true);
@@ -35,7 +35,7 @@ test('a modest oversized formula is kept as source without starting expensive ma
   try {
     assert.equal(formulaSource(h.document), source);
     assert.equal(h.document.querySelector('math') === null, true);
-    assert.equal(h.document.querySelector('.markdown-math [role="status"]')?.textContent?.includes('preview limit') === true, true);
+    assert.equal(h.document.querySelector('.markdown-math [role="status"]')?.textContent?.includes('too large to render') === true, true);
     assert.equal(h.jobs.length, 0);
   } finally { await h.close(); }
 });
@@ -46,7 +46,7 @@ for (const source of ['\\href{https://evil.example}{x}', '\\htmlClass{evil}{x}',
     const h = await mountTechnical(value);
     try {
       assert.equal(h.document.querySelector('.markdown-math') !== null, true);
-      const preview = [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === 'Preview formula');
+      const preview = [...h.document.querySelectorAll<HTMLButtonElement>('button')].find(node => node.textContent === 'Render formula');
       if (preview && !preview.disabled) await h.click(preview);
       assert.equal(formulaSource(h.document), value);
       assert.equal(h.document.querySelector('math, .markdown-math a, .markdown-math img') === null, true);
@@ -60,7 +60,7 @@ test('malicious Worker output cannot become HTML, SVG or external MathML links',
   const h = await mountTechnical('$x$', { reply: () => ({ ok: true,
     mathml: '<math xmlns="http://www.w3.org/1998/Math/MathML"><mrow href="https://evil.example"><mi>x</mi><svg xmlns="http://www.w3.org/2000/svg"><script>bad</script></svg></mrow></math>' }) });
   try {
-    await h.click(technicalButton(h.document, 'Preview formula'));
+    await h.click(technicalButton(h.document, 'Render formula'));
     assert.equal(h.document.querySelector('script, svg, [href]') === null, true);
     assert.equal(h.document.querySelector('math') === null, true);
     assert.equal(formulaSource(h.document), '$x$');
@@ -82,9 +82,9 @@ test('changing formula aborts old work and a late reply cannot replace the new f
   const h = await mountTechnical('$x$', { reply: job => job.source === 'x' ? new Promise(resolve => { oldReply = resolve; }) :
     { ok: true, mathml: '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi>y</mi></math>' } });
   try {
-    await h.click(technicalButton(h.document, 'Preview formula'));
+    await h.click(technicalButton(h.document, 'Render formula'));
     await h.render(<MarkdownPreview value="$y$" />);
-    await h.click(technicalButton(h.document, 'Preview formula'));
+    await h.click(technicalButton(h.document, 'Render formula'));
     assert.equal(h.document.querySelector('math')?.textContent, 'y');
     await act(async () => oldReply({ ok: true, mathml: fractionMathml }));
     assert.equal(h.document.querySelector('math')?.textContent, 'y');
@@ -95,13 +95,13 @@ test('changing formula aborts old work and a late reply cannot replace the new f
 test('a stalled Worker times out to source and leaves the preview control usable', async () => {
   const h = await mountTechnical('$x$', { reply: () => new Promise(() => {}) });
   try {
-    await h.click(technicalButton(h.document, 'Preview formula'));
-    assert.equal(technicalButton(h.document, 'Preview formula').disabled, true);
+    await h.click(technicalButton(h.document, 'Render formula'));
+    assert.equal(technicalButton(h.document, 'Render formula').disabled, true);
     await act(async () => { await new Promise(resolve => setTimeout(resolve, 800)); });
-    assert.equal(technicalButton(h.document, 'Preview formula').disabled, false);
+    assert.equal(technicalButton(h.document, 'Render formula').disabled, false);
     assert.equal(h.document.querySelector('math') === null, true);
     assert.equal(formulaSource(h.document), '$x$');
-    assert.equal(h.document.querySelector('.markdown-math [role="status"]')?.textContent?.includes('too long') === true, true);
+    assert.equal(h.document.querySelector('.markdown-math [role="status"]')?.textContent?.includes('timed out') === true, true);
   } finally { await h.close(); }
 });
 
@@ -110,11 +110,11 @@ test('a second formula gets an explicit busy result and needs a manual retry', a
   const h = await mountTechnical('$x$ and $y$', { reply: job => job.source === 'x' ? new Promise(resolve => { firstReply = resolve; }) :
     { ok: true, mathml: '<math xmlns="http://www.w3.org/1998/Math/MathML"><mi>y</mi></math>' } });
   try {
-    const previews = [...h.document.querySelectorAll<HTMLButtonElement>('button')].filter(node => node.textContent === 'Preview formula');
+    const previews = [...h.document.querySelectorAll<HTMLButtonElement>('button')].filter(node => node.textContent === 'Render formula');
     assert.equal(previews.length, 2);
     await h.click(previews[0]); await h.click(previews[1]);
     assert.equal(h.jobs.length, 1);
-    assert.equal(h.document.querySelectorAll('.markdown-math [role="status"]')[1].textContent?.includes('Another formula') === true, true);
+    assert.equal(h.document.querySelectorAll('.markdown-math [role="status"]')[1].textContent?.includes('Rendering another formula') === true, true);
     await act(async () => firstReply({ ok: true, mathml: fractionMathml }));
     assert.equal(h.jobs.length, 1, 'settling the first formula does not automatically replay the busy request');
     await h.click(previews[1]);

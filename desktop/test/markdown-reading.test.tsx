@@ -86,7 +86,7 @@ test('Mermaid fences expose preview controls and preserve source; ordinary code 
   const source = 'flowchart LR\n  A --> B\n\n\n  B --> C';
   const html = render('```mermaid\n' + source + '\n```');
   assert.match(html, /class="mermaid-preview"/);
-  assert.match(html, /aria-label="Copy diagram source"/);
+  assert.match(html, /aria-label="Copy diagram code"/);
   assert.ok(html.includes('<code>' + source.replace(/>/g, '&gt;') + '</code>'));
   assert.doesNotMatch(render('```js\nconsole.log(1)\n```'), /mermaid-preview/);
 });
