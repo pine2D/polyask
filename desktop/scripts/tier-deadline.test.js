@@ -141,12 +141,22 @@ test("GLM timeout closes the visible tooltip without selecting any tier", async 
 
 test("Gemini timeout closes its model menu when Escape is ignored", async () => {
   let active = false;
-  const button = { getAttribute: name => name === "aria-expanded" ? String(active) : "mode picker",
-    dispatchEvent: e => { if (e.type === "click") active = !active; } };
+  const clicks = [];
+  const button = {
+    getAttribute: name => name === "aria-expanded" ? String(active) : "mode picker",
+    dispatchEvent(event) {
+      if (event.type !== "click") return;
+      active = !active;
+      clicks.push(active ? "open" : "close");
+    }
+  };
   const item = { textContent: "unavailable tier", getBoundingClientRect: () => ({ width: 100, height: active ? 30 : 0 }) };
-  const r = runtime("gemini.google.com", { querySelector: () => button,
-    querySelectorAll: selector => selector === "button" ? [button] : [item] });
+  const r = runtime("gemini.google.com", { querySelectorAll: selector => {
+    if (selector === "button") return [button];
+    return selector.includes("[role=menuitem]") ? [item] : [];
+  } });
   await assert.rejects(r.S.adapters["gemini.google.com"]._selectModel(/Pro/, 1200), /timeout/);
   assert.equal(active, false);
+  assert.deepEqual(clicks, ["open", "close"]);
   assert.equal(r.now(), 1200);
 });

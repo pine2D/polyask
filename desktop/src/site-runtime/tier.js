@@ -44,10 +44,13 @@
       const a = S.pickAdapter();
       try {
         if (!S.presetValid?.(preset) || !a?.applyPreset) return unconfirmed;
-        await a.applyPreset(preset, deadline, image);
-        if (!S.presetSame(await S.readPreset(a, deadline), preset)) return unconfirmed;
-        return { requested: mode, observed: mode, outcome: 'preferred',
-          model: preset.effort ? `${preset.model} · ${preset.effort}` : preset.model };
+        // Gemini 的用途标签会改名，Task 也可能只提供模型。按实际目标复读再报告。
+        const target = a.presetForTier ? await a.presetForTier(preset, deadline) : preset;
+        if (!S.presetValid(target)) return unconfirmed;
+        await a.applyPreset(target, deadline, image);
+        if (!S.presetSame(await S.readPreset(a, deadline), target)) return unconfirmed;
+        return { requested: mode, observed: mode, outcome: target.effort === preset.effort ? 'preferred' : 'alternative',
+          model: target.effort ? `${target.model} · ${target.effort}` : target.model };
       } catch (_) { return unconfirmed; }
     }
     // 专用适配器失败只走其既有两次尝试，不把“不安全”异常转给别的点击策略。

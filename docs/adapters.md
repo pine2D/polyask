@@ -28,6 +28,7 @@
 | `selection(mode)` | | 同步只读 | 返回 `{outcome, observed?, model?}`；`preferred`/`alternative` 需精确模型及目标模式证据，`mode_only` 只证明模式，其他为 `unconfirmed`。不得开菜单或复用上轮缓存；未实现时由 `state()` 提供模式证据 |
 | `currentPreset()` | | 同步只读 | 九站精确 `{model, effort}` 或 null；model 可表示实际模式/功能，effort=null 表示无第二维；不得打开菜单 |
 | `readPreset(deadline)` | | `async` | 显式预设交互中按需开菜单取得精确当前选择，随后关闭；不能由普通状态/巡检调用 |
+| `presetForTier(preset, deadline)` | | `async` | Gemini 即时切档和群发时将旧模型标签对应到当前行。Task 仅有模型时可省略强度，复读后回传 `alternative`。设置保存仍要求精确组合 |
 | `presetOptions(model?, deadline)` | | `async` | 按需读取可见模型与指定模型的强度目录，成功或失败均尝试恢复原组合；未恢复不得返回成功 |
 | `applyPreset(preset, deadline)` | | `async` | 九站自定义组合，精确匹配网页两维标签并复读，不按排序或粗档位代替；缺失/歧义/禁用一律抛错 |
 | `diagnose()` | ✓ | 同步 | 锚点命中报告，供巡检标芯片。只列**常驻**控件，会随对话阶段消失的控件不许列（否则巡检恒红误报）。**每条检查必须带 `kind`**，见下方「检查项的 `kind`」 |
@@ -128,7 +129,7 @@ Claude / ChatGPT / Gemini / 千问 究竟命中通用链的哪一步（原生点
 | --- | --- |
 | Claude | 模型 + Effort；More models、平铺/子菜单两种强度；Extra 和 Max 分开 |
 | ChatGPT | 模型入口 + 每格实际闭合标签；Default 格子代表模型与强度的联合选择，不由位置或重复的 Light 描述拼出模型。旧版模型也遍历各自滑块范围；最多 12 格，键盘移动必须逐格复读成功 |
-| Gemini | 模型 + 对应 Thinking level；模型列表与所属强度子菜单分开校验 |
+| Gemini | Chat 读模型及对应 Thinking level。Task 读模型，强度为 null。周期表先进入 List view |
 | DeepSeek | 常驻 DeepThink 功能 + On/Off；旧首屏有模式 radio 时使用实际模式 + 开关。搜索状态保持原样；图片与非 Vision 自定义模式冲突时不擅自改选 |
 | 豆包 | 所属模式菜单里的完整标签，仅一维；直接选中标记与菜单内部图标分开 |
 | 千问 | 所属模型卡 + 输入区模式/旧思考开关；只认品牌入口并校验实际卡片，不点“设为默认”。确认日常页但无模型入口时仅保存实际模式；输入区排除附件及 More，不固定新模式词表。菜单可能列出网页实际不支持的组合，必须通过验证才保存 |
@@ -245,11 +246,15 @@ Claude 新助手根的 `data-is-streaming="true"` 也可提供生成中正向证
 
 ### Gemini（`gemini.google.com`，`desktop/src/site-runtime/adapters-gemini.js`）
 
+- **2026-11-21 当前菜单**。Chat 内置快速优先选 4 Neon Low，思考优先选 4 Carbon High。选完重开列表，分别核对模型行和 Thinking level 子菜单的选中项。若首选缺席，沿用下方旧版候选顺序。Task 由 `chat-spark-toggle` 的选中按钮或 `chat-window.is-remy-mode` 识别，快速为 4 Neon，思考为 4 Carbon；两者都复读唯一选中行，缺少目标模型就报告未确认。
+- Windows 正式版截图中的 `The Periodic Table of Gemini` 会高亮正在预览的元素，底部另有 `Use Carbon`。从该浮层的 `List view` 进入模型列表，再选具体的模型行。Linux 开发态和 Windows 隔离实例实测均直接提供列表。列表的 Carbon 主标签已改为 `Code & complex work`；只有当前行的模型名确为 `4 Carbon` 时才接受旧预设 `Most complex work`。Task 使用带强度的 Chat 预设时回读实际模型，报告替代结果；单模型预设可精确确认。
+- 同一账号的窄屏等级项位于 Thinking level 入口内，宽屏则另开一个 `gem-menu`，入口仅通过 `aria-controls` 指向它。两种布局均须从该入口所属的菜单确认 Low 或 High。
+
 - **2026-11-12 新菜单**：模型项和等级项使用 `role=menuitemradio`，也保留旧 `menuitem` / Material 按钮。模型项 `.label` 为用途（如 `Code & analysis` / `Most complex work`），`.sublabel` 才是 `4 Argon` / `4 Carbon`；内置推荐通过 `_modelLabel` 从主副标题辨认版本开头的模型名，兼容旧菜单的相反排列，不用整行起始文本匹配。内置两档仍为 Argon Low/High，不因 Ultra 或 Carbon 可用而自动升级。自定义预设仍按实际可见主标签精确读写，保留已经保存的用途标签组合；Carbon 的 Low/Medium/High 走同一套动态预设，无需把它硬编码为默认模型。闭合 Carbon 标签明确 Low/High 时分别为 fast/think，省略等级或 Medium 时仍为 null。
 
 - 2026-10-27 真机：上传菜单媒体输入为 `accept="image/*,video/*"`；按逗号分隔的 MIME 项识别 `image/*`，排除 capture、disabled 和文档输入。上传菜单的 Escape 不可靠，结束时仅在触发器仍 `aria-expanded=true` 时再点击收尾；到期不得设置文件。等待入口时遇到明确到期的 `timeout` 返回 false，由上传总入口保留 `attachment_timeout`；其它异常继续抛出并按上传失败处理。
 
-- 两档依次查找确切的 `4 Argon`、`4 Hydrogen`，快速选 Low，思考选 High。选到现代模型后须读回模型与等级子菜单的选中态，成功才回传本次的 `mode_only`。候选禁用或歧义时报告失败。两款均缺席时沿用旧版 Pro + Extended（或 High）和非 Lite Flash（关闭 Extended 或选 Low）。
+- Chat 首选模型缺席时，依次查找确切的 `4 Argon`、`4 Hydrogen`，快速选 Low，思考选 High。选到现代模型后须读回模型与等级子菜单的选中态，成功才回传本次的 `mode_only`。候选禁用或歧义时报告失败。两款均缺席时沿用旧版 Pro + Extended（或 High）和非 Lite Flash（关闭 Extended 或选 Low）。
 - 2026-11-18 英文网页的 `Everyday help` 副标题是 `4 Hydrogen`。设置菜单读取 Low、Medium、High。High 的闭合标签为 `Hydrogen High`，Medium 与省略等级的 `Gemini Hydrogen` 均返回未知档位。
 - **2026-11-03 英文菜单复验**：两档均选中 `4 Argon Complex tasks`，快速为 Low、思考为 High。Low 的闭合标签实际为 `Open mode picker, currently Gemini Argon`，没有等级，`state()` 返回 null；High 标签为 `Open mode picker, currently Argon High`。本次动作回传确认可区分两档，不能用省略等级的标签推断 High。
 - **2026-10-14 英文菜单实测**：`3.5 Flash-Lite` / `3.8 Flash` / `3.1 Pro` / `4 Argon Complex tasksNew`，Thinking level 展开后 Low / Medium / High 是入口节点的后代（`gem-menu-item` / `role=menuitem`）。等级跨模型保留，Argon High 后仅切 Flash 会变成 `currently Flash High`；选 Low 后标签省略等级、显示 `currently Gemini Flash`，所以必须重开子菜单复读选中态。High/Low 只认该入口的后代，排除同 role 的其它同名项。Gemini 拆入独立分卷为完整等级流程留出行数余量。

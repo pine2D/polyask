@@ -8,6 +8,11 @@
 
 ## [未发布]
 
+### 改进
+
+- Gemini 的 Chat 快速档优先选 Neon Low，思考档优先选 Carbon High。Task 支持快速切到 Neon、思考切到 Carbon。遇到模型周期表时，先进入 List view 再选择模型。
+- Gemini 网页更新 Carbon 的用途标签后，已保存的 Carbon 预设仍可读取和切换。在 Task 使用带思考等级的预设时，回执会显示实际选中的模型。
+
 ## [1.37.0] - 2026-11-21
 
 本版在 Linux/WSL 的 Electron 应用中验证了七款主题，并刷新了 Windows 隔离试玩版。本轮未在 Windows 实机运行正式安装版或便携版，也未实机安装 Linux DEB 或两种架构的 macOS 包。读屏、真实站点发送与上传、Drive 双设备同步沿用此前的验收记录。[验收记录](https://github.com/pine2D/polyask/blob/v1.37.0/docs/acceptance.md#2026-11-21-七款内置主题验收)

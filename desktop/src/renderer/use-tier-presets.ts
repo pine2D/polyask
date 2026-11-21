@@ -92,13 +92,15 @@ export function useTierPresets(props: TierPresetSettingsProps, site: SiteKey = '
     const next = new Map<string, TierPresetCatalog>([[first.model, first]]);
     const selected = new Set(MODES.map(mode => draftRef.current[mode]?.model).filter((value): value is string => !!value));
     for (const model of selected) {
-      if (!first.models.includes(model) || next.has(model)) continue;
+      const missing = !first.models.includes(model);
+      if (next.has(model) || (missing && site !== 'gemini')) continue;
       try {
         const result = await shell.getTierPresets(site, model); if (!current(ticket)) return;
         next.set(model, result);
       } catch (error) {
         if (!current(ticket)) return;
-        if (ipcErrorCode(error) !== 'preset_model_switch_required') throw error;
+        const code = ipcErrorCode(error);
+        if (code !== 'preset_model_switch_required' && !(missing && code === 'preset_unavailable')) throw error;
       }
     }
     setModels(first.models); setCatalogs(next);
@@ -143,7 +145,8 @@ export function useTierPresets(props: TierPresetSettingsProps, site: SiteKey = '
   const cancel = (mode?: PresetMode) => {
     setDrafts(draft => mode ? { ...draft, [mode]: savedRef.current[mode] } : savedRef.current); setNotice(null);
   };
-  const available = (draft: PresetDraft | null) => !!draft && !!models?.includes(draft.model) &&
+  const modelAvailable = (model: string) => !!models && (models.includes(model) || site === 'gemini' && catalogs.has(model));
+  const available = (draft: PresetDraft | null) => !!draft && modelAvailable(draft.model) &&
     (draft.effort === null ? catalogs.get(draft.model)?.efforts.length === 0 : typeof draft.effort === 'string' && catalogs.get(draft.model)?.efforts.includes(draft.effort));
-  return { saved, drafts, models, catalogs, pending, notice, refresh, chooseModel, chooseEffort, useCurrent, save, cancel, available };
+  return { saved, drafts, models, catalogs, pending, notice, refresh, chooseModel, chooseEffort, useCurrent, save, cancel, available, modelAvailable };
 }

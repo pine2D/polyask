@@ -103,3 +103,24 @@ test('Kimi refresh retains the current catalog when a saved other-model preset n
     assert.equal(h.document.querySelector('[data-preset-mode=think] [data-preset-feedback]')!.textContent, copy.presetModelSwitchRequired);
   } finally { await h.close(); setShellApi(null); }
 });
+
+test('Gemini settings refresh checks a saved label that disappeared and keeps only verified aliases available', async () => {
+  const initial = snapshot(), state = { ...initial, values: { ...initial.values,
+    geminiThinkPreset: { model: 'Most complex work', effort: 'High' }, geminiFastPreset: { model: 'Gone', effort: 'Low' } } };
+  const models = ['Everyday help', 'Code & complex work'];
+  setShellApi({ getTierPresets: async (_site: SiteKey, model?: string) => {
+    if (model === 'Gone') throw Error('preset_unavailable');
+    return { model: model ?? models[0], models: model ? [models[0], model] : models, efforts: ['Low', 'High'],
+      current: { model: models[0], effort: 'Low' } };
+  } } as any);
+  const h = await mountDom(<TierPresetSettings copy={copy} snapshot={state} />);
+  try {
+    await select(h, 'tier-preset-site', 'gemini'); await h.click(button(h, 'refresh'));
+    const field = (id: string) => h.document.getElementById(id) as HTMLSelectElement;
+    assert.equal(field('gemini-fast-model').getAttribute('aria-invalid'), 'true');
+    assert.equal(field('gemini-think-model').getAttribute('aria-invalid'), null);
+    assert.equal(field('gemini-think-model').value, 'Most complex work');
+    await select(h, 'gemini-think-effort', 'Low');
+    assert.equal(button(h, 'save', 'think').disabled, false);
+  } finally { await h.close(); setShellApi(null); }
+});

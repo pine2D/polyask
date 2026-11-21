@@ -7,6 +7,7 @@
   if (!S) return;
   const { waitFor, openMenu, clickEl, sleep, escMenus, checkDeadline, tierAction } = S;
   const levelModels = [/^4\s+argon(?:\s|$)/i, /^4\s+hydrogen(?:\s|$)/i];
+  const neon = /^4\s+neon$/i, carbon = /^4\s+carbon$/i;
   Object.assign(S.adapters, {
     "gemini.google.com": {
       attach: async function (files, el, deadline) {
@@ -41,7 +42,15 @@
       // [role=menuitem]），拿它当「菜单已展开」会让模型按钮永远不被点开（真机 2026-08-14）。
       _items: function () { return [...document.querySelectorAll(this._MI)]
         .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; }); },
-      _find: function (re) { return this._items().find((el) => re.test((el.textContent || "").trim())) || null; },
+      _find: function (re) {
+        const list = this._listRoot?.();
+        const items = list ? [...list.querySelectorAll(this._MI)].filter(S.presetDom.visible) : this._items();
+        return items.find(el => re.test((el.querySelector?.(".label")?.textContent || el.textContent || "").trim())) || null;
+      },
+      _modelRows: function () {
+        const rows = this._listRoot?.()?.querySelectorAll('[data-test-id^="bard-mode-option-"]');
+        return rows?.length ? [...rows].filter(S.presetDom.visible) : this._items();
+      },
       // 新菜单把用途放在 label、模型名放在 sublabel；旧菜单顺序相反。
       // 内置推荐只在这两处文本中辨认版本开头的模型名，不依赖用途说明。
       _modelLabel: function (el) {
@@ -50,22 +59,36 @@
         if (models.length > 1) throw new Error("Gemini: 模型标签歧义");
         return models[0] || labels[0] || (el.textContent || "").trim();
       },
-      _modelBtn: function () { return [...document.querySelectorAll("button")]
+      _modelBtn: function () {
+        const marked = [...document.querySelectorAll('button[data-test-id="bard-mode-menu-button"],[data-test-id="bard-mode-menu-button"] button')]
+          .filter(el => el.getBoundingClientRect().height > 0);
+        if (marked.length) return marked.length === 1 ? marked[0] : null;
+        return [...document.querySelectorAll("button")]
         .find((b) => /mode picker/i.test(b.getAttribute("aria-label") || "")) ||
         document.querySelector('button[class*="input-area-swi"]'); },
+      _taskMode: function () {
+        const selected = [...document.querySelectorAll('chat-spark-toggle button[aria-pressed="true"]')]
+          .filter(el => el.getBoundingClientRect().height > 0);
+        if (selected.length) return selected.length === 1 && /^(task|任务|任務)$/i.test(selected[0].textContent.trim());
+        return !!document.querySelector("chat-window.is-remy-mode")?.getBoundingClientRect().height;
+      },
       _openModelMenu: async function (deadline) {
         checkDeadline(deadline);
+        if (this._listPicker?.()) return this._openList(deadline, S.presetContext());
         const btn = this._modelBtn();
         if (!btn) throw new Error("Gemini: 模型按钮未找到");
         if (btn.getAttribute("aria-expanded") !== "true" || !this._items().length) tierAction(deadline, () => openMenu(btn));
-        let ok = await waitFor(() => this._items().length, 1500, 120, deadline);
-        if (!ok) { tierAction(deadline, () => openMenu(btn)); ok = await waitFor(() => this._items().length, 3500, 120, deadline); }
+        const opened = () => this._items().length || this._periodicTable?.();
+        let ok = await waitFor(opened, 1500, 120, deadline);
+        if (!ok) { tierAction(deadline, () => openMenu(btn)); ok = await waitFor(opened, 3500, 120, deadline); }
         if (!ok) throw new Error("Gemini: 模型菜单未展开");
+        if (this._periodicTable?.()) await this._openList(deadline, S.presetContext());
       },
       // 收尾：**escMenus 对 Gemini 无效**（真机 2026-08-31：Escape 与点 cdk backdrop 都关不掉，
       // aria-expanded 一直是 true），只有再点一次触发器才收 → 先 Escape 再兜底点触发器。
       // 菜单不关会罩住输入框，让随后的注入点空。
       _close: async function (deadline) {
+        if (this._listPicker?.()) return this._closeList(deadline);
         // 清理允许到期后关闭已开的菜单；不选项、不启动新等待。
         escMenus();
         if (!this._items().length) return;
@@ -80,19 +103,21 @@
           const patterns = Array.isArray(re) ? re : [re];
           const match = await waitFor(() => {
             for (const pattern of patterns) {
-              const matches = this._items().filter(el => pattern.test(this._modelLabel(el)));
+              const matches = this._modelRows().filter(el => pattern.test(this._modelLabel(el)));
               if (!matches.length) continue;
               const el = matches[0];
               return { el, invalid: matches.length !== 1 || el.disabled || el.getAttribute("aria-disabled") === "true" };
             }
             return null;
           }, 3500, 120, deadline);
-          if (!match) { await this._close(deadline); throw new Error("Gemini: 未找到模型 " + re); }
+          if (!match) throw new Error("Gemini: 未找到模型 " + re);
           // waitFor 会捕获回调异常；校验在外面做，禁用/歧义立即失败且不退选 Pro。
           if (match.invalid) throw new Error("Gemini: 模型不可用或选项歧义");
           const item = match.el;
           const model = this._modelLabel(item);
-          tierAction(deadline, () => clickEl(item)); await sleep(700, deadline); await this._close(deadline); // 收尾：不依赖后续 _setThinking 替它关菜单
+          if (!this._selected(item)) {
+            tierAction(deadline, () => clickEl(item)); await sleep(700, deadline);
+          }
           return model;
         } finally { await this._close(deadline); }
       },
@@ -105,7 +130,8 @@
         const inLevelMenu = node => {
           if (trig.contains?.(node)) return true;
           const menu = node.closest?.('[role="menu"]');
-          return !!trig.id && (menu?.getAttribute("aria-labelledby") || "").split(/\s+/).includes(trig.id);
+          return (!!menu?.id && (trig.getAttribute("aria-controls") || "").split(/\s+/).includes(menu.id)) ||
+            (!!trig.id && (menu?.getAttribute("aria-labelledby") || "").split(/\s+/).includes(trig.id));
         };
         const findLevel = () => {
           for (const pattern of patterns) {
@@ -135,7 +161,7 @@
       _setThinking: async function (re, on = true, deadline, expectedModel) {
         const confirmModel = () => {
           if (!expectedModel) return;
-          const rows = this._items().filter(el => expectedModel.test(this._modelLabel(el)));
+          const rows = this._modelRows().filter(el => expectedModel.test(this._modelLabel(el)));
           if (rows.length !== 1 || !this._selected(rows[0])) throw new Error("Gemini: 模型未生效");
         };
         try {
@@ -180,11 +206,12 @@
           { name: t("diag_tierReadable"), ok: this.state() != null, kind: "tier" },
         ];
       },
-      // 明确显示等级才判档；这三个模型的 Low 均可能在闭合按钮上省略。
+      // Chat 的 Low 可在闭合按钮上省略；Task 的选项只有模型。
       // 实际等级确认由本次动作复读子菜单并回传，state 始终只读、不开菜单。
       state: function () {
         const t = this._modelBtn()?.getAttribute("aria-label") || "";
-        if (/\b(?:argon|carbon|hydrogen)(?:\s|$)/i.test(t)) {
+        if (this._taskMode()) return /\bneon$/i.test(t) ? "fast" : /\bcarbon$/i.test(t) ? "think" : null;
+        if (/\b(?:neon|argon|carbon|hydrogen)(?:\s|$)/i.test(t)) {
           const low = /\blow\b|低/i.test(t), high = /\bhigh\b|高/i.test(t);
           return low !== high ? (low ? "fast" : "think") : null;
         }
@@ -197,13 +224,24 @@
         const el = els[els.length - 1];
         return el.querySelector(".markdown") || el;
       },
-      // 保留两档的 Argon 首选；缺席时用 Hydrogen 同一等级，再兼容旧 Pro/Flash 菜单。
       _setTier: async function (mode, deadline) {
         checkDeadline(deadline);
         const think = mode === "think", high = /^(high\b|高)/i, extended = /^(extended|扩展)/i;
+        if (this._taskMode()) {
+          const target = think ? carbon : neon;
+          await this._selectModel(target, deadline);
+          try {
+            await this._openModelMenu(deadline);
+            const selected = this._modelRows().filter(el => this._selected(el));
+            if (!this._taskMode() || selected.length !== 1 || !target.test(this._modelLabel(selected[0])))
+              throw new Error("Gemini: Task 模型未生效");
+            return { outcome: "mode_only", observed: mode };
+          } finally { await this._close(deadline); }
+        }
+        const preferred = [think ? carbon : neon, ...levelModels];
         const legacy = think ? /\b\d+(?:\.\d+)?\s*pro\b/i : /\b\d+(?:\.\d+)?\s*flash\b(?!\s*-?\s*lite)/i;
-        const label = await this._selectModel([...levelModels, legacy], deadline);
-        const modern = levelModels.find(pattern => pattern.test(label));
+        const label = await this._selectModel([...preferred, legacy], deadline);
+        const modern = preferred.find(pattern => pattern.test(label));
         if (modern) {
           await this._setThinking(think ? high : /^(low\b|低)/i, true, deadline, modern);
           return { outcome: "mode_only", observed: mode };

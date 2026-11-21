@@ -52,7 +52,7 @@ export function TierPresetSettings(props: TierPresetSettingsProps): React.JSX.El
       const primary = !catalog ? copy.presetChoice : catalog.primary === 'mode' ? copy.presetMode : catalog.primary === 'feature' ? copy.presetFeature : copy.presetModel;
       const secondary = catalog?.secondary === 'toggle' ? copy.presetToggle : catalog?.secondary === 'mode' ? copy.presetMode : copy.presetEffort;
       const effortLabel = (value: string) => catalog?.secondary === 'toggle' ? value === 'On' ? copy.presetOn : value === 'Off' ? copy.presetOff : value : value;
-      const missingModel = !!draft && !!form.models && !form.models.includes(draft.model);
+      const missingModel = !!draft && !!form.models && !form.modelAvailable(draft.model);
       const missingEffort = !!draft?.effort && !!choices && !choices.includes(draft.effort);
       const names = form.models ?? [], id = `${site}-${mode}`;
       const changed = !sameDraft(draft, saved), pending = form.pending?.mode === mode ? form.pending.kind : null;
