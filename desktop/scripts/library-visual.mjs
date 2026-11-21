@@ -22,7 +22,7 @@ await new Promise((resolve, reject) => {
 });
 await writeFile(join(output, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; img-src \'none\'; connect-src \'none\'"><title>Result library UI test</title></head><body><div id="root"></div><script src="bundle.js"></script></body></html>');
 const child = spawn(require('electron'), [join(root, 'scripts/library-visual-runtime.cjs'), output], { stdio: 'inherit' });
-const timer = setTimeout(() => child.kill('SIGTERM'), 120_000);
+const timer = setTimeout(() => child.kill('SIGTERM'), 210_000);
 const status = await new Promise(resolve => child.on('exit', resolve));
 clearTimeout(timer);
 console.log(`UI report and screenshots: ${output}`);

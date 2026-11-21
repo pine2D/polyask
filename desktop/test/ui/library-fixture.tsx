@@ -6,9 +6,10 @@ import { setShellApi } from '../../src/renderer/shell-api';
 import { getCopy } from '../../src/shared/copy';
 import { createArchiveRecord } from '../../src/shared/archive';
 import { applyUiTheme } from '../../src/renderer/ui-theme';
+import { UI_THEME_IDS } from '../../src/shared/ui-theme';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/accessibility.css';
-const state = { failSave: false, failLoad: false, failMarkdown: false, failExternal: false, writes: 0, folderWrites: 0, links: [] as string[] };
+const state = { themes: UI_THEME_IDS, failSave: false, failLoad: false, failMarkdown: false, failExternal: false, writes: 0, folderWrites: 0, links: [] as string[] };
 (window as any).libraryTest = state;
 const typography = [
   'A saved answer should remain comfortable to read when the workspace grows wider. Compare the evidence, assumptions, and limitations before recording a decision. Keep the complete source available so that another reading can check the reasoning. Clear paragraphs make it easier to return to the next line without losing your place.',
@@ -16,7 +17,20 @@ const typography = [
   '#### 验证细节 · Validation', '检查三语换行、窄窗阅读、缩放和长代码。'
 ].join('\n\n');
 const text = '# 方案建议\n\n优先改善结果阅读体验，保留已确认的文件夹与决策卡能力。**可读性**比装饰更重要。\n\n| 方案 | 成本 | 结论 |\n| --- | --- | --- |\n| 修补样式 | 低 | 局部改善 |\n| 整理工作区 | 中 | 推荐 |\n\n1. 统一布局和控件\n2. 完善正文渲染\n   - 保留列表层级\n   - 支持安全链接\n\n> 比较不同回答，保留来源与证据。\n\n```ts\nconst result = await compare(answers);\n```\n\n[参考文档](https://example.com/docs)' + '\n\n' + typography;
-let records = Array.from({length: 8}, (_, i) => createArchiveRecord({ id: `result-${i}`, task: i ? `产品优化调研 ${i}：在信息密度与阅读舒适度之间取得平衡` : '如何改善 AI 多模型结果库的阅读与比较体验？', text: '请比较优化方案', results: ['Claude', 'ChatGPT', 'Gemini', 'DeepSeek', 'Kimi', 'Doubao', 'Qianwen', 'Yuanbao', 'Zhipu'].map((label, j) => ({ host: `${label.toLowerCase()}.com`, label, text: text + (j ? '\n\n另一份独有的建议。' : ''), state: 'think' })), tags: ['产品设计', '待讨论', '长标签用于验证布局不能溢出容器'], note: '保留原有数据契约。', favorite: i === 0, ts: Date.now() - i * 86400000, createdAt: Date.now(), updatedAt: Date.now(), deviceId: 'fixture' }, {id: `result-${i}`, now: Date.now(), deviceId: 'fixture'}));
+// Fixed, distinct timestamps keep every theme on the same record and list order in comparison shots.
+const fixtureTime = Date.UTC(2026, 8, 16, 4);
+const sources = ['Claude', 'ChatGPT', 'Gemini', 'DeepSeek', 'Kimi', 'Doubao', 'Qianwen', 'Yuanbao', 'Zhipu'];
+let records = Array.from({ length: 8 }, (_, i) => {
+  const id = `result-${i}`, now = fixtureTime - i * 86400000;
+  return createArchiveRecord({
+    id, task: i ? `产品优化调研 ${i}：在信息密度与阅读舒适度之间取得平衡` : '如何改善 AI 多模型结果库的阅读与比较体验？',
+    text: '请比较优化方案',
+    results: sources.map((label, j) => ({ host: `${label.toLowerCase()}.com`, label,
+      text: text + (j ? '\n\n另一份独有的建议。' : ''), state: 'think' })),
+    tags: ['产品设计', '待讨论', '长标签用于验证布局不能溢出容器'], note: '保留原有数据契约。',
+    favorite: i === 0, ts: now, createdAt: now, updatedAt: now, deviceId: 'fixture'
+  }, { id, now, deviceId: 'fixture' });
+});
 if (new URLSearchParams(location.search).has('longCode')) records = records.map(record => ({ ...record,
   results: record.results.map(result => ({ ...result, text: `${result.text}\n\n\`\`\`text\n${'unbroken_'.repeat(250)}\n\`\`\`` })) }));
 records=records.map(r=>({...r,tags:['产品设计','待讨论'], note:'保留原有数据契约。',favorite:true}));
@@ -33,7 +47,7 @@ if (new URLSearchParams(location.search).has('invalidTime')) records = records.m
 if (new URLSearchParams(location.search).has('shortLast')) records = records.map(record => ({ ...record,
   results: record.results.map((result, index) => index === record.results.length - 1 ? { ...result, text: 'A brief final answer.' } : result) }));
 const folders = [{ id: 'work', name: '产品设计与体验改进', createdAt: 1, updatedAt: 1, deviceId: 'fixture', schema: 3 }];
-let cards = [{ id: 'card-1', archiveId: records[0].id, title: '结果库体验优化决策', conclusion: '采用阅读优先的三栏布局。', rationale: '统一组件，减少重复操作。', uncertainties: '不同系统缩放下的效果待核实。', nextStep: '完成浏览器与 Electron 验证。', status: 'draft', evidence: [], sourceTitle: records[0].task, createdAt: Date.now(), updatedAt: Date.now(), deviceId: 'fixture', schema: 2 }];
+let cards = [{ id: 'card-1', archiveId: records[0].id, title: '结果库体验优化决策', conclusion: '采用阅读优先的三栏布局。', rationale: '统一组件，减少重复操作。', uncertainties: '不同系统缩放下的效果待核实。', nextStep: '完成浏览器与 Electron 验证。', status: 'draft', evidence: [], sourceTitle: records[0].task, createdAt: fixtureTime + 1, updatedAt: fixtureTime + 1, deviceId: 'fixture', schema: 2 }];
 if (longTitles) cards = cards.map(card => ({ ...card, title: '一份需要完整保存并在列表中安全裁切的长标题决策卡。'.repeat(5) }));
 if (new URLSearchParams(location.search).has('colorStates')) cards = ['draft', 'verify', 'final'].map((status, i) => ({
   ...cards[0], id: `card-${i + 1}`, title: `${cards[0].title} · ${status}`, status }));

@@ -119,10 +119,11 @@ app.whenReady().then(async () => {
   const copy = getCopy(locale);
   const openSettings = async () => { await click('.more-trigger'); await wait('!!document.querySelector(".settings-workspace")'); };
   const closeSettings = async () => { await click('.settings-toolbar .panel-close'); await wait('!!document.querySelector("textarea[name=prompt]")'); };
+  const restartTheme = { 'zh-CN': 'proof', 'zh-TW': 'blueprint', en: 'solstice' }[locale];
   if (phase === 'write') {
     await openSettings();
-    await click('input[name=settings-theme][value=minimal]');
-    await wait('document.documentElement.dataset.uiTheme==="minimal"');
+    await click('input[name=settings-theme][value=' + restartTheme + ']');
+    await wait('document.documentElement.dataset.uiTheme===' + JSON.stringify(restartTheme));
     await click('[data-settings-section=sync]');
     for (const group of ['display', 'layout', 'siteZoom']) for (const value of ['shared', 'local', 'shared']) {
       await click(`input[name="settings-follow-${group}"][value="${value}"]`);
@@ -180,7 +181,7 @@ app.whenReady().then(async () => {
       if (Date.now() >= persisted) throw Error('Restored prompt did not persist'); await pause(30);
     }
   } else {
-    assert.equal(await run('document.documentElement.dataset.uiTheme'), 'minimal', 'stored skin survives restart');
+    assert.equal(await run('document.documentElement.dataset.uiTheme'), restartTheme, 'stored skin survives restart');
     await wait('document.documentElement.dataset.density==="comfortable"');
     assert.deepEqual(manager.getDisplayPreferences(), { density: 'comfortable', siteScale: 0.9 });
     for (const key of ['density', 'siteScale']) assert.deepEqual(database.state.get('preference:' + key), coldSharedDisplay[key],

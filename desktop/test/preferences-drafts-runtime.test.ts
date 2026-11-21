@@ -133,8 +133,10 @@ test('theme IPC accepts an explicit built-in choice without reapplying site disp
     const displays = s.displays.length, layouts = s.layouts.length;
     assert.throws(() => seed(true, { uiTheme: 'platinum' }), /invalid_preference/);
     assert.throws(() => set(true, { key: 'uiTheme', value: 'future-paper' }), /invalid_preference/);
-    assert.equal(set(true, { key: 'uiTheme', value: 'minimal' }).values.uiTheme, 'minimal');
-    assert.equal(s.published.at(-1)?.values.uiTheme, 'minimal');
+    for (const value of themeContract.UI_THEME_IDS) {
+      assert.equal(set(true, { key: 'uiTheme', value }).values.uiTheme, value);
+      assert.equal(s.published.at(-1)?.values.uiTheme, value);
+    }
     assert.equal(s.displays.length, displays);
     assert.equal(s.layouts.length, layouts);
     assert.equal(s.db.outbox.count(), 0);

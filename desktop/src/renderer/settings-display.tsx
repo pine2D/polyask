@@ -42,7 +42,7 @@ export function SettingsDisplay({ copy, display = DEFAULT_DISPLAY_PREFERENCES, b
         {UI_THEME_IDS.map(id => <label key={id}>
           <input type="radio" name="settings-theme" value={id} checked={theme === id}
             onChange={() => { if (onThemeChange) void save(() => onThemeChange(id)); }} />
-          <span>{copy[UI_THEMES[id].label]}</span>
+          <span className="theme-option"><i className="theme-swatch" data-swatch={id} aria-hidden="true" />{copy[UI_THEMES[id].label]}</span>
         </label>)}
       </div>
     </fieldset>

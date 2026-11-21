@@ -1,5 +1,6 @@
 import { webContents, WebContentsView, type BrowserWindow } from "electron";
 import { normalizePopupAnchor, type PopupAnchor } from "../shared/popup-anchor";
+import { uiThemeDataset } from "../shared/ui-theme";
 import { buildPlatinumPopupHtml, type PlatinumPopupEntry } from "./platinum-popup-template";
 import { onWindowUiTheme, windowUiTheme } from "./native-shell-policy";
 
@@ -59,8 +60,8 @@ export function showPlatinumPopupMenu<Id extends string>(
     const initialTheme = windowUiTheme(window);
     const updateTheme = (): void => {
       if (!loaded || view.webContents.isDestroyed()) return;
-      const theme = windowUiTheme(window);
-      void view.webContents.executeJavaScript(`document.documentElement.dataset.uiTheme = ${JSON.stringify(theme)}`).catch(cancel);
+      const data = uiThemeDataset(windowUiTheme(window));
+      void view.webContents.executeJavaScript(`Object.assign(document.documentElement.dataset, ${JSON.stringify(data)}); true`).catch(cancel);
     };
 
     const finish = (value: Id | null, closedByBlur = false): void => {

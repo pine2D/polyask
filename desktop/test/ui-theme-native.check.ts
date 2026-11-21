@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildPreferencesShell, runPreferencesShell } from './ui/preferences-drafts-native-build';
 
-test('switch both built-in skins on live views, open menus and reading surfaces', { timeout: 100000 }, async () => {
+test('switch every built-in skin on live views, open menus and reading surfaces', { timeout: 200000 }, async () => {
   const output = mkdtempSync(join(tmpdir(), 'polyask-ui-theme-'));
   mkdirSync(join(output, 'zh-CN'));
   await buildPreferencesShell(output);

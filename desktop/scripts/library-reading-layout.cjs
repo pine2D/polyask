@@ -111,4 +111,34 @@ async function anchors({ win, nativeTheme, output, run, wait, click, key, shot }
   return reports;
 }
 
-module.exports = { reading, comparison, anchors };
+async function themeDetails(run, skin) {
+  const styles = await run(`(() => {
+    const style = selector => getComputedStyle(document.querySelector(selector));
+    const source = style('.archive-answer-nav [aria-current=location]');
+    return {
+      title: style('.archive-question-prompt h1').fontFamily, prose: style('.markdown-preview p').fontFamily,
+      sourceFont: source.fontFamily, mono: style('.markdown-code code').fontFamily,
+      sourceLabel: style('.reading-source-label').fontFamily, sourceShadow: source.boxShadow,
+      sourceLink: source.textDecorationLine, readingGrid: style('.reading-page').backgroundImage,
+      tableGrid: style('.markdown-table').backgroundImage, quote: style('.markdown-preview blockquote').backgroundColor,
+      code: style('.markdown-code pre').backgroundColor, paper: style('.archive-answer').backgroundColor
+    };
+  })()`);
+  if (skin === 'proof') {
+    assert.match(styles.title, /, serif$/); assert.notEqual(styles.title, styles.prose);
+    assert.match(styles.sourceShadow, /0px -2px .*inset/);
+  } else if (skin === 'pocket') {
+    assert.equal(styles.sourceFont, styles.mono); assert.notEqual(styles.prose, styles.mono);
+  } else if (skin === 'blueprint') {
+    assert.equal(styles.sourceLabel, styles.mono);
+    assert.equal(styles.readingGrid, 'none'); assert.equal(styles.tableGrid, 'none');
+  } else if (skin === 'darkroom') {
+    assert.match(styles.sourceShadow, /3px 0px .*inset/);
+  } else if (skin === 'solstice') {
+    assert.equal(styles.sourceLink, 'underline');
+    assert.equal(new Set([styles.quote, styles.code, styles.paper]).size, 3, 'prose, quotations and code have distinct surfaces');
+  }
+  return styles;
+}
+
+module.exports = { reading, comparison, anchors, themeDetails };

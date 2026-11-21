@@ -1,5 +1,5 @@
 import type { PopupAnchor } from "../shared/popup-anchor";
-import { DEFAULT_UI_THEME, resolveUiTheme, UI_THEME_PALETTE_CSS, type UiTheme } from "../shared/ui-theme";
+import { DEFAULT_UI_THEME, uiThemeDataset, UI_THEME_PALETTE_CSS, type UiTheme } from "../shared/ui-theme";
 
 export type PlatinumPopupEntry<Id extends string = string> =
   | { readonly type: "separator" }
@@ -25,8 +25,9 @@ export function buildPlatinumPopupHtml<Id extends string>(
 ): string {
   const checkColumn = entries.some((entry) => entry.type !== "separator" && (entry.checkable || entry.checked !== undefined));
   const payload = escapeJsonForScript({ entries, anchor, checkColumn });
+  const { uiTheme, uiMaterial } = uiThemeDataset(theme);
   return `<!doctype html>
-<html data-platform="${platform}" data-ui-theme="${resolveUiTheme(theme)}">
+<html data-platform="${platform}" data-ui-theme="${uiTheme}" data-ui-material="${uiMaterial}">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
@@ -132,18 +133,21 @@ export function buildPlatinumPopupHtml<Id extends string>(
   }
   .plat-item[data-active="true"] .plat-accel { opacity: 1; }
   @media not (forced-colors: active) {
-    :root[data-ui-theme="minimal"] {
+    :root[data-ui-material="flat"] {
       --font-ui: system-ui, "Microsoft YaHei UI", sans-serif;
       --menu-bg: var(--skin-panel); --menu-fg: var(--skin-text); --menu-border: var(--skin-line);
       --menu-active-bg: var(--skin-selection); --menu-active-fg: var(--skin-text);
       --menu-disabled-fg: var(--skin-muted); --menu-disabled-etch: none;
     }
-    [data-ui-theme="minimal"] #menu {
+    [data-ui-material="flat"] #menu {
       border-radius: 6px; box-shadow: 0 3px 12px rgb(0 0 0 / .16);
       scrollbar-color: var(--skin-control) transparent;
     }
-    [data-ui-theme="minimal"] .plat-item { border-radius: 3px; font-weight: 500; }
-    [data-ui-theme="minimal"] .plat-sep { background: var(--skin-line); height: 1px; }
+    [data-ui-material="flat"] .plat-item { border-radius: 3px; font-weight: 500; }
+    [data-ui-material="flat"] .plat-sep { background: var(--skin-line); height: 1px; }
+    [data-ui-theme="pocket"] .plat-item { font-family: var(--font-mono); border-radius: 0; }
+    [data-ui-theme="blueprint"] #menu { border-color: var(--skin-control); border-radius: 2px; }
+    [data-ui-theme="darkroom"] .plat-item[data-active="true"] { box-shadow: inset 3px 0 var(--skin-accent); }
   }
   @media (forced-colors: active) {
     #menu { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; }

@@ -180,6 +180,15 @@
 .settings-display-options { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .settings-display-options label { min-height: 26px; display: inline-flex; align-items: center; gap: 6px; font-size: var(--font-control); font-weight: 500; }
 .settings-display-options input { margin: 0; }
+.theme-option { display: inline-flex; align-items: center; gap: 5px; }
+.theme-swatch {
+  display: inline-block; width: 21px; height: 14px; flex: none; border-radius: 2px;
+  border: 1px solid var(--skin-text); background: var(--skin-canvas); position: relative;
+}
+.theme-swatch::before, .theme-swatch::after { content: ""; position: absolute; left: 3px; }
+.theme-swatch::before { top: 3px; width: 9px; height: 2px; background: var(--skin-text); }
+.theme-swatch::after { bottom: 2px; width: 13px; height: 3px; background: var(--skin-accent); }
+@media (forced-colors: active) { .theme-swatch { display: none; } }
 .settings-display-options input:disabled + span { color: var(--muted); }
 .settings-display > h2:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .settings-advanced > summary {

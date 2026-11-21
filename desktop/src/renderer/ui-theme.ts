@@ -1,4 +1,4 @@
-import { resolveUiTheme, UI_THEME_PALETTE_CSS } from '../shared/ui-theme';
+import { uiThemeDataset, UI_THEME_PALETTE_CSS } from '../shared/ui-theme';
 import { shell } from './shell-api';
 
 export function applyUiTheme(document: Document, value: unknown): void {
@@ -8,7 +8,7 @@ export function applyUiTheme(document: Document, value: unknown): void {
     palette.textContent = UI_THEME_PALETTE_CSS;
     document.head.append(palette);
   }
-  document.documentElement.dataset.uiTheme = resolveUiTheme(value);
+  Object.assign(document.documentElement.dataset, uiThemeDataset(value));
 }
 
 /** SQLite is authoritative even after a restore or reset. Paint the first surface in its accepted skin. */

@@ -1,7 +1,6 @@
-/* The same controls, portals and native view bounds serve both skins.
-   Keep system high-contrast overrides authoritative. */
+/* Shared flat controls keep the same layout and native view bounds as Platinum. */
 @media not (forced-colors: active) {
-  :root[data-ui-theme="minimal"] {
+  :root[data-ui-material="flat"] {
     --font-ui: system-ui, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
     --canvas: var(--skin-canvas);
     --panel: var(--skin-panel);
@@ -59,7 +58,7 @@
     --plat-window-shadow: var(--flat-shadow);
   }
 
-  @scope (:root[data-ui-theme="minimal"]) {
+  @scope (:root[data-ui-material="flat"]) {
     .window-titlebar, .window-titlebar[data-window-focused="false"] {
       color: var(--text); background: var(--skin-chrome); box-shadow: none;
     }
@@ -129,6 +128,6 @@
     .preference-switch input:checked + span::after { background: var(--on-accent); }
   }
   @media (prefers-contrast: more) {
-    :root[data-ui-theme="minimal"] { --border: var(--skin-control); --field-border: var(--text); }
+    :root[data-ui-material="flat"] { --border: var(--skin-control); --field-border: var(--text); }
   }
 }

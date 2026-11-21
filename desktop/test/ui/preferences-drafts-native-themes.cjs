@@ -2,23 +2,53 @@ const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const { writeFileSync } = require('node:fs');
 const { join } = require('node:path');
+const { nativeImage } = require('electron');
 
 // Runs only in the preferences harness's isolated, network-blocked profile.
 module.exports = async ({ services, database, preferences, handle, win, views, manager, tools, dispatch, locale, output, nativeTheme }) => {
   const { run, wait, click, type, pause } = tools;
   const copy = services.getCopy(locale);
+  const skins = services.UI_THEME_IDS;
   const sampleProcesses = require('./native-process-boundary.cjs').processBoundary(require('electron').app, output);
   const paint = () => run('new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))');
-  const capture = async name => {
+  const capture = async (name, menu) => {
     await paint();
-    const path = join(output, 'theme-' + name + '.png');
-    if (process.platform === 'linux') {
-      // Xvfb window composition includes the two site views and the independent topmost menu.
-      const id = win.getNativeWindowHandle().readUInt32LE();
-      execFileSync('import', ['-window', String(id), path], { timeout: 5000 });
-    } else writeFileSync(path, (await win.capturePage()).toPNG());
+    const viewportWidth = await run('innerWidth'), probes = [];
+    // X11 may still be showing the previous theme after Chromium has resolved its CSS.
+    // Sample the plain inset of the title bar and, when present, the open menu's active row.
+    const probe = (selector, menuRow) => {
+      const e = document.querySelector(selector), r = e.getBoundingClientRect();
+      const ctx = document.createElement('canvas').getContext('2d');
+      ctx.fillStyle = getComputedStyle(e).backgroundColor;
+      return { x: menuRow ? r.right - 7 : r.left + 2, y: menuRow ? r.top + 3 : r.top + 2, color: ctx.fillStyle };
+    };
+    probes.push(await run(`(${probe})(".window-titlebar", false)`));
+    if (menu && process.platform === 'linux') probes.push(await menu.executeJavaScript(`(${probe})(".plat-item[data-active=true]", true)`));
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const png = process.platform === 'linux'
+        ? execFileSync('import', ['-window', String(win.getNativeWindowHandle().readUInt32LE()), 'png:-'], { timeout: 5000, maxBuffer: 8 * 1024 * 1024 })
+        : (await win.capturePage()).toPNG();
+      const frame = nativeImage.createFromBuffer(png);
+      const scale = frame.getSize().width / viewportWidth;
+      const matches = probes.every(({ x, y, color }) => {
+        const pixel = frame.crop({ x: Math.round(x * scale), y: Math.round(y * scale), width: 1, height: 1 }).toBitmap();
+        return pixel.readUIntLE(0, 3) === parseInt(color.slice(1), 16);
+      });
+      if (matches) { writeFileSync(join(output, 'theme-' + name + '.png'), png); return; }
+      await paint();
+    }
+    throw Error('Composited pixels did not match the current theme: ' + name + ' ' + JSON.stringify(probes));
   };
   const themeIs = id => wait('document.documentElement.dataset.uiTheme===' + JSON.stringify(id));
+  const captureScene = async (skin, scene, menu) => {
+    await capture(skin + '-' + scene, menu);
+    nativeTheme.themeSource = 'dark';
+    await wait('matchMedia("(prefers-color-scheme: dark)").matches');
+    if (menu) await menu.executeJavaScript('new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))');
+    await capture(skin + '-' + scene + '-dark', menu);
+    nativeTheme.themeSource = 'light';
+    await wait('matchMedia("(prefers-color-scheme: light)").matches');
+  };
   const settings = async () => { dispatch('open-settings'); await wait('!!document.querySelector(".settings-workspace")'); };
   const choose = async id => {
     const selector = 'input[name=settings-theme][value=' + id + ']';
@@ -90,9 +120,11 @@ module.exports = async ({ services, database, preferences, handle, win, views, m
   await type('textarea[name=prompt]', question);
   await run('window.themeRun = window.polyask.broadcast({runId:"theme-native",text:"local fixture",sites:["claude","kimi"],images:[],tier:null}); true');
   await run('window.themeInput = document.activeElement; window.themeInput.setSelectionRange(1, 4)');
-  preferences.set('uiTheme', 'minimal');
-  await themeIs('minimal');
-  assert.equal(await run('document.activeElement===window.themeInput && themeInput.selectionStart===1 && themeInput.selectionEnd===4'), true);
+  for (const skin of skins) {
+    preferences.set('uiTheme', skin);
+    await themeIs(skin);
+    assert.equal(await run('document.activeElement===window.themeInput && themeInput.selectionStart===1 && themeInput.selectionEnd===4'), true);
+  }
   pending.resolve();
   assert.deepEqual((await run('window.themeRun')).map(r => r.ok), [true, true]);
   assert.equal(dispatches, 2);
@@ -101,12 +133,13 @@ module.exports = async ({ services, database, preferences, handle, win, views, m
   await run('document.querySelector("textarea[name=prompt]").blur()');
 
   const detail = services.savedDetail;
-  for (const skin of ['platinum', 'minimal']) {
+  for (const [index, skin] of skins.entries()) {
+    const flat = services.UI_THEMES[skin].material === 'flat';
     await settings(); await choose(skin); await sites();
     assert.equal(await run('document.querySelector(".compare-trigger").getAttribute("aria-disabled")'), 'true');
-    assert.equal(await run('getComputedStyle(document.querySelector(".window-stripe")).visibility'), skin === 'minimal' ? 'hidden' : 'visible');
-    await capture(skin + '-workspace');
-    if (skin === 'minimal') {
+    assert.equal(await run('getComputedStyle(document.querySelector(".window-stripe")).visibility'), flat ? 'hidden' : 'visible');
+    await captureScene(skin, 'workspace');
+    if (flat) {
       await checkPressed('.command-bar .send', '--on-accent');
       await checkPressed('.window-tbox:not(.is-close)', '--text');
     }
@@ -116,18 +149,21 @@ module.exports = async ({ services, database, preferences, handle, win, views, m
     assert.equal(win.contentView.children.at(-1) === popup, true);
     const menu = popup.webContents;
     assert.equal(await menu.executeJavaScript('document.documentElement.dataset.uiTheme'), skin);
-    assert.equal(await menu.executeJavaScript('getComputedStyle(document.querySelector("#menu")).borderRadius'), skin === 'minimal' ? '6px' : '0px');
+    assert.equal(await menu.executeJavaScript('parseFloat(getComputedStyle(document.querySelector("#menu")).borderRadius)>0'), flat);
     const activeItem = () => menu.executeJavaScript('document.querySelector("[data-active=true]")?.textContent');
     const active = await menu.executeJavaScript('Array.from(document.querySelectorAll(".plat-item:not([aria-disabled=true])")).at(-1).textContent');
     for (const type of ['keyDown', 'keyUp']) menu.sendInputEvent({ type, keyCode: 'End' });
     for (let tries = 0; tries < 80 && await activeItem() !== active; tries++) await pause(15);
     assert.equal(await activeItem(), active, 'native keyboard selection settled before switching skins');
     sampleProcesses();
-    await capture(skin + '-menu');
-    const other = skin === 'minimal' ? 'platinum' : 'minimal';
+    await captureScene(skin, 'menu', menu);
+    const other = skins[(index + 1) % skins.length];
     preferences.set('uiTheme', other);
     await themeIs(other);
-    assert.equal(await menu.executeJavaScript('document.documentElement.dataset.uiTheme'), other);
+    const menuTheme = () => menu.executeJavaScript('document.documentElement.dataset.uiTheme');
+    for (let tries = 0; tries < 80 && await menuTheme() !== other; tries++) await pause(15);
+    assert.equal(await menuTheme(), other);
+    assert.equal(await menu.executeJavaScript('document.documentElement.dataset.uiMaterial'), services.UI_THEMES[other].material);
     assert.equal(await activeItem(), active);
     menu.sendInputEvent({ type: 'keyDown', keyCode: 'Escape' });
     for (let tries = 0; tries < 80 && popup; tries++) await pause(25);
@@ -136,13 +172,14 @@ module.exports = async ({ services, database, preferences, handle, win, views, m
 
     dispatch('open-question-history');
     await wait('!!document.querySelector(".question-history")');
-    if (skin === 'platinum') {
+    if (index === 0) {
       await wait('!!document.querySelector(".question-empty") && !document.querySelector(".question-scroll[aria-busy=true]")');
-      for (const id of ['minimal', 'platinum']) {
+      for (const id of skins) {
         preferences.set('uiTheme', id); await themeIs(id);
         assert.equal(await run('!!document.querySelector(".question-empty")'), true);
         await capture(id + '-history-empty');
       }
+      preferences.set('uiTheme', skin); await themeIs(skin);
       database.questions.put({ ...detail.question, text: question });
       for (const [i, answer] of detail.answers.entries()) database.questions.putAnswer({ ...answer,
         id: services.questionAnswerId(answer.questionId, answer.site, answer.attempt),
@@ -154,14 +191,14 @@ module.exports = async ({ services, database, preferences, handle, win, views, m
     await wait('!!document.querySelector(".question-main")');
     await click('.question-main');
     await wait('!!document.querySelector(".question-answer .markdown-preview")');
-    await capture(skin + '-history');
+    await captureScene(skin, 'history');
     await click('.question-header .panel-close');
     await wait('!document.querySelector(".question-history")');
   }
   historyError = true;
   dispatch('open-question-history');
   await wait('!!document.querySelector(".question-notice[role=alert]")');
-  for (const id of ['platinum', 'minimal']) {
+  for (const id of skins) {
     preferences.set('uiTheme', id); await themeIs(id);
     assert.equal(await run('!!document.querySelector(".question-notice[role=alert]")'), true);
     await capture(id + '-history-error');
@@ -172,7 +209,7 @@ module.exports = async ({ services, database, preferences, handle, win, views, m
   const matrix = [];
   await settings();
   win.setContentSize(960, 680);
-  for (const skin of ['minimal', 'platinum']) {
+  for (const skin of skins) {
     await choose(skin);
     for (const scheme of ['light', 'dark']) for (const density of ['compact', 'comfortable']) for (const zoom of [1, 1.5, 2]) {
       nativeTheme.themeSource = scheme;
@@ -194,21 +231,24 @@ module.exports = async ({ services, database, preferences, handle, win, views, m
       })()`);
       assert.equal(metrics.id, skin); assert.equal(metrics.focused, true);
       assert.equal(metrics.visible, true); assert.ok(metrics.overflow <= 1);
-      assert.equal(metrics.radioShadow === 'none', skin === 'minimal');
-      assert.equal(metrics.scrollColor !== 'auto', skin === 'minimal');
+      const flat = services.UI_THEMES[skin].material === 'flat';
+      assert.equal(metrics.radioShadow === 'none', flat);
+      assert.equal(metrics.scrollColor !== 'auto', flat);
+      assert.equal(win.getBackgroundColor().toLowerCase(), services.UI_THEMES[skin].palette.canvas[scheme === 'dark' ? 1 : 0]);
       matrix.push({ skin, scheme, density, zoom, ...metrics });
       if (zoom > 1 && density === 'comfortable') await capture([skin, scheme, 'settings-' + zoom * 100].join('-'));
     }
   }
-  assert.equal(matrix.length, 24);
+  assert.equal(matrix.length, skins.length * 2 * 2 * 3);
   writeFileSync(join(output, 'theme-matrix.json'), JSON.stringify(matrix, null, 2));
   win.webContents.debugger.attach();
   try {
     await win.webContents.debugger.sendCommand('Emulation.setEmulatedMedia', { features: [{ name: 'forced-colors', value: 'active' }] });
     await wait("matchMedia('(forced-colors: active)').matches");
-    for (const skin of ['minimal', 'platinum']) {
+    for (const skin of skins) {
       await choose(skin);
       assert.equal(await run('getComputedStyle(document.querySelector("input[name=settings-theme]:checked")).appearance'), 'auto');
+      assert.equal(await run('getComputedStyle(document.querySelector(".theme-swatch")).display'), 'none');
     }
   } finally { win.webContents.debugger.detach(); }
   services.setPlatinumPopupObserver(null);

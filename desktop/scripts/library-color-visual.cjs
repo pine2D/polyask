@@ -21,9 +21,13 @@ function measureColors() {
   const title = current.querySelector('.library-item-title'), titleStyle = getComputedStyle(title);
   const inactiveTitle = document.querySelector('.library-content-row:not(:has([aria-current=true])) .library-item-title');
   const style = getComputedStyle(current), outer = getComputedStyle(current.closest('.folder-content-list')).backgroundColor;
+  const meta = getComputedStyle(current.querySelector('.library-item-meta'));
+  const hovered = document.querySelector('.library-content-row:hover:not(:has([aria-current=true]))');
   const roles = { draft: '--muted', verify: '--warning-ink', final: '--success-ink' };
   return {
+    hoverMetaRatio: hovered ? ratio(getComputedStyle(hovered.querySelector('.library-item-meta')).color, getComputedStyle(hovered).backgroundColor) : null,
     selection: { boundary: ratio(style.borderTopColor, outer), textRatio: ratio(titleStyle.color, style.backgroundColor),
+      metaRatio: ratio(meta.color, style.backgroundColor),
       titleWeight: Number(titleStyle.fontWeight), inactiveWeight: Number(getComputedStyle(inactiveTitle).fontWeight),
       background: style.backgroundColor, outer, border: style.borderTopStyle, current: !!current.querySelector('[aria-current=true]'),
       hovered: current.matches(':hover') },
@@ -41,13 +45,13 @@ function measureColors() {
 }
 
 module.exports = async ({ win, nativeTheme, output, run, wait, click, shot }) => {
-  const reports = [], simulations = [];
+  const reports = [], simulations = [], skinSelections = [];
   const measure = () => run(`(${measureColors.toString()})()`);
   const checkSelection = metrics => {
     const surfaceDistinct = metrics.media.forced
       ? metrics.selection.border === 'solid' && metrics.selection.boundary >= 3
       : metrics.selection.background !== metrics.selection.outer && metrics.selection.titleWeight > metrics.selection.inactiveWeight;
-    assert.ok(metrics.selection.current && metrics.selection.textRatio >= 4.5 && surfaceDistinct,
+    assert.ok(metrics.selection.current && metrics.selection.textRatio >= 4.5 && metrics.selection.metaRatio >= 4.5 && surfaceDistinct,
       `current record stays distinct and readable across modes: ${JSON.stringify(metrics.selection)}`);
   };
   const checkBadges = metrics => {
@@ -61,6 +65,26 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, shot }) =>
     await win.loadFile(join(output, 'index.html'), { query: { locale, colorStates: '1' } });
     await wait('!!document.querySelector(".archive-detail h1") && !!document.querySelector(".archive-list[aria-busy=false] [aria-current=true]")');
     checkSelection(await measure());
+    if (locale === 'en') {
+      const skins = await run('window.libraryTest.themes');
+      for (const skin of skins) {
+        await win.loadFile(join(output, 'index.html'), { query: { locale, skin, colorStates: '1' } });
+        await wait('!!document.querySelector(".archive-detail h1") && !!document.querySelector(".archive-list[aria-busy=false] [aria-current=true]")');
+        const metrics = await measure();
+        checkSelection(metrics);
+        const point = await run(`(() => {
+          const row = document.querySelector('.library-content-row:not(:has([aria-current=true]))').getBoundingClientRect();
+          return { x: Math.round(row.x + row.width / 2), y: Math.round(row.y + row.height / 2) };
+        })()`);
+        win.webContents.sendInputEvent({ type: 'mouseMove', ...point });
+        await wait('!!document.querySelector(".library-content-row:hover:not(:has([aria-current=true]))")');
+        const { hoverMetaRatio } = await measure();
+        assert.ok(hoverMetaRatio >= 4.5, `${skin}/${theme} hovered metadata contrast: ${hoverMetaRatio}`);
+        skinSelections.push({ skin, theme, ...metrics.selection, hoverMetaRatio });
+      }
+      await win.loadFile(join(output, 'index.html'), { query: { locale, colorStates: '1' } });
+      await wait('!!document.querySelector(".archive-detail h1")');
+    }
     await click('.library-segments button:nth-child(3)');
     await wait('document.querySelectorAll(".archive-list .library-status-badge").length === 3');
     const states = [], modes = [];
@@ -101,6 +125,6 @@ module.exports = async ({ win, nativeTheme, output, run, wait, click, shot }) =>
     reports.push({ locale, theme, states, modes });
   }
   console.log(`Library colors passed: ${reports.length} theme/language groups, three workflow states, contrast modes and ${simulations.length} vision simulations.`);
-  writeFileSync(join(output, 'color-report.json'), JSON.stringify({ reports, simulations }, null, 2));
-  return { reports, simulations };
+  writeFileSync(join(output, 'color-report.json'), JSON.stringify({ reports, simulations, skinSelections }, null, 2));
+  return { reports, simulations, skinSelections };
 };

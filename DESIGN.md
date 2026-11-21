@@ -2,9 +2,9 @@
 name: PolyAsk · AI 众答
 description: 经典 Mac OS 9 Platinum 机械工作台：立体、紧凑、利落的并排桌面界面
 colors:
-  accent: '#333399'
+  accent: '#1e40af'
   on-accent: '#ffffff'
-  accent-soft: '#ccccff'
+  accent-soft: '#dcdcdc'
   canvas: '#bfbfbf'
   surface-sunken: '#cccccc'
   panel: '#ffffff'
@@ -23,19 +23,19 @@ colors:
   danger-ink: '#8f1818'
   success-soft: '#dcfce7'
   warning-soft: '#ffffcc'
-  accent-dark: '#9e9eff'
-  on-accent-dark: '#141428'
-  accent-soft-dark: '#32325c'
-  canvas-dark: '#18181c'
-  surface-sunken-dark: '#141418'
-  panel-dark: '#1f1f26'
-  surface-elevated-dark: '#282831'
-  panel-muted-dark: '#2d2d36'
-  field-dark: '#17171d'
-  field-border-dark: '#08080a'
-  border-dark: '#484856'
-  text-dark: '#ededf2'
-  muted-dark: '#aaaab8'
+  accent-dark: '#7cb4ff'
+  on-accent-dark: '#101828'
+  accent-soft-dark: '#383838'
+  canvas-dark: '#181818'
+  surface-sunken-dark: '#141414'
+  panel-dark: '#1f1f1f'
+  surface-elevated-dark: '#292929'
+  panel-muted-dark: '#2e2e2e'
+  field-dark: '#171717'
+  field-border-dark: '#080808'
+  border-dark: '#4a4a4a'
+  text-dark: '#eeeeee'
+  muted-dark: '#b0b0b0'
   success-ink-dark: '#86efac'
   warning-ink-dark: '#fde047'
   danger-ink-dark: '#fca5a5'
@@ -166,35 +166,47 @@ components:
 
 **Creative North Star: "Mac OS 9 Platinum 并排机械工作台"**
 
-PolyAsk 采用原汁原味的 **Mac OS 9 Platinum** 桌面视觉体系（对标 `livid/exe-stats` 与 Apple Platinum HIG）：以 `1px` 利落黑框（`#262626`）、`2px` 硬投影、四层斜角凹凸按钮（凸起银灰常态 / `#666` 深炭压下选中态 / 下凹白底内容井）与 `2px` 水平细横纹标题条组织多站并排比较与高密度长文阅读。
+PolyAsk 的默认主题采用 **Mac OS 9 Platinum** 桌面视觉体系（对标 `livid/exe-stats` 与 Apple Platinum HIG）：以 `1px` 利落黑框（`#262626`）、`2px` 硬投影、四层斜角凹凸按钮（凸起银灰常态 / `#666` 深炭压下选中态 / 下凹白底内容井）与 `2px` 水平细横纹标题条组织多站并排比较与高密度长文阅读。
 
 **Key Characteristics:**
 
 - **双模 Platinum 金属色阶**：亮色采用正宗 `#ccc/#ddd/#eee` 银灰桌面，暗色采用配套 Kaleidoscope / NeXT 风格深炭黑金属斜面，自动跟随系统 `prefers-color-scheme`。
-- **克制的原生 Lavender 点缀**：经典蓝紫（`#333399` / `#ccccff` / `#9999ff`）严格限定在滚动条滑块、输入焦点外框、文本反白选区与列表/菜单当前选中项四处；所有按钮常态/悬停/按下与普通列表悬停一律保持纯粹中性银灰。
+- 键盘焦点和链接使用蓝色，当前列表行使用灰底与左侧标记，滚动条延续银灰材质。
 - **无边框自绘横纹主窗与独立站点小窗**：主窗口启用 `frame: false` 自绘 `22px` 横纹标题栏与 `13×13px` 立体窗口方块（`.tbox`，Win/Linux 居右、macOS 居左，窗口失焦时横纹退隐）；每个 AI 站点 `WebContentsView` 内缩 `3px` 嵌入带下凹内井的独立 `.tile-frame`，仅当前聚焦站点显示横纹。
 - **干脆的 `0ms` 机械瞬切与高密度桌面排版**：按钮、分段页签与浮层全部采用 `0ms` 机械瞬切（仅工作台侧抽屉保留 `120ms` 推拉过渡）；结果库与历史详情收紧为 `13.5px / 1.56` 高密度技术文档排版。
 
-下文记录默认主题 Platinum 的视觉规范。设置中的「简约」使用系统字体、中性阅读底色、单线边框和蓝色焦点，沿用同一布局、交互和控件尺寸。两款内置主题都跟随系统明暗，仅覆盖 PolyAsk 自有界面。
+### 内置主题
 
-内置主题登记在 `desktop/src/shared/ui-theme.ts`。新增主题需提供稳定标识、三语名称、窗口与独立菜单共用的明暗色板，以及外壳控件样式。标识最长 64 位，由小写英文字母开头，后续可含数字和连字符。`desktop/src/renderer/minimal.css` 给出完整的第二套外观，跨视图菜单在 `platinum-popup-template.ts` 使用同一色板。
+「设置 → 外观与阅读」按以下顺序显示主题。工作台、历史、结果库和跨视图菜单共享选择，明暗跟随系统。第三方站点自行绘制页面。
+
+| 主题 | 工作台与阅读细节 |
+| --- | --- |
+| Platinum | 默认主题。银灰或炭黑斜面、横纹标题栏、立体控件。 |
+| 简约 · Minimal | 中性底色和单线控件，蓝色标记焦点。 |
+| 校样室 · Proof | 暖白纸或深炭纸。提问与正文标题使用衬线字体，当前来源下方有朱砂校样线。 |
+| 掌机 · Pocket | 芥黄标题栏和菜单选区、等宽短标签。站点标题与大块阅读面保持中性。 |
+| 蓝图 · Blueprint | 蓝灰或普鲁士蓝工作台。聚焦站点有角标，来源编号和数字等宽，细格纹仅出现在空态。 |
+| 暗房 · Darkroom | 银灰灯箱或石墨面板。中灰站框衔接网页，聚焦站点与当前来源共用琥珀竖线。 |
+| 日晷 · Solstice | 沙色蓝墨或深青暖灰。正文、引用与代码各有可辨认的底色和边界。 |
+
+内置主题登记在 `desktop/src/shared/ui-theme.ts`。新增主题需提供稳定标识、三语名称、材质和明暗色板。标识最长 64 位，由小写英文字母开头，后续可含数字和连字符。平面控件共用 `renderer/flat-themes.css`，各款的阅读和聚焦细节在 `renderer/theme-variants.css`。窗口底色、设置色样和独立菜单均读取同一登记项。下文记录默认主题 Platinum 的视觉规范。
 
 ## Colors
 
-中性银灰与立体高光/暗影斜面承担全部窗口、工具栏、按钮和表单结构；克制的经典 Lavender 承担焦点与当前选中定位；成功、警告和危险色各自表达运行状态。
+窗口、工具栏、按钮与表单使用中性银灰和立体斜面。蓝色指示焦点与链接，成功、警告和错误沿用各自的状态色。
 
 ### Primary
 
-- **经典深靛蓝（`accent` / `accent-dark`）**：键盘焦点环、文本链接、菜单悬停反白底（配 `on-accent`）与列表选中左色轨。
-- **薰衣草选中底（`accent-soft` / `accent-soft-dark`）**：文本 `::selection` 反白选区，以及结果库、历史记录、设置分类、命令面板的**当前选中行**。
-- **三脊滚动条滑块（`--plat-scroll-thumb`）**：亮色 `#9999ff`、暗色 `#5c5c9e`，复刻 Mac OS 9 标志性三横脊立体滑块。
-- **禁止泛紫规则**：普通按钮（含发送、采集并比较、重试、下一步）、未选中列表行悬停（`--hover-soft: #eeeeee` / `#2a2a33`）与站点档位徽标一律使用中性 Platinum 银灰/白底，不涂浅紫衬底。
+- 键盘焦点与文本链接使用 `accent`，亮色为 `#1e40af`，暗色为 `#7cb4ff`。
+- 文本选区使用 `accent-soft`。当前记录使用 `selection-soft` 灰底和 `active-bar` 色轨。
+- 三脊滚动条滑块使用 `--plat-scroll-thumb`，亮色为 `#cccccc`，暗色为 `#4a4a4a`。
+- 普通按钮与站点档位徽标延续银灰，未选中列表行悬停使用 `--hover-soft`。
 
 ### Neutral
 
 | 语义 | 令牌 | 使用位置 |
 | --- | --- | --- |
-| 桌面画布 | `canvas` | 多站工作区灰桌面底面（亮 `#bfbfbf` / 暗 `#18181c`） |
+| 桌面画布 | `canvas` | 多站工作区灰桌面底面（亮 `#bfbfbf` / 暗 `#181818`） |
 | 窗体表面 | `surface-sunken` / `--plat-g400` | 窗口外框、侧抽屉、设置外围、对话框底板 |
 | 工具条与按钮面 | `panel-muted` / `--plat-g300` | 命令栏、工具条、常态凸起按钮、表头与小窗顶栏 |
 | 悬停提亮面 | `surface-elevated` / `--plat-g200` | 按钮悬停、代码块内底、内嵌提示卡 |
@@ -294,7 +306,7 @@ Markdown 正文五、六级标题同为 `13px`，以 `700 / 600` 字重与颜色
 
 - **默认主按钮（Default Push Button，`.send` / `.primary`）**：复刻 Mac OS 9 HIG 默认按钮双层黑框外环（按钮自身 `1px` 黑框 + `2px` 灰槽 + `1px` 外黑环），面色维持银灰 `#ddd` 配高对比文字。
 - **常规立体按钮**：`#ddd` 四层凸起斜面，仅在未激活且未按下的常态下悬停提亮至 `#eee`；按下或展开/激活（`:active`、`[aria-pressed="true"]`、`[aria-expanded="true"]`、`.active`）锁定为 `#666` 深炭内凹配白字，避免悬停覆盖激活底色；禁用态降不透明度并移除凹凸阴影。
-- **跨视图 Platinum 弹出菜单（`platinum-popup-menu.ts`）**：顶栏自定义分组菜单、右上角「更多」菜单、跨站查找（`Ctrl+F`）溢出菜单与外壳输入框右键编辑菜单统一通过挂载在 `window.contentView` 最顶层的透明 `WebContentsView` 自绘（`#ddd` / `#353540` 斜面方框、双线凹槽分隔线、`#333399` / `#9e9eff` 悬停反白与纯等宽英文快捷键），既能盖住底层九个实时 AI `WebContentsView`，又不抢夺主窗口系统焦点导致标题栏横纹变灰。
+- **跨视图 Platinum 弹出菜单（`platinum-popup-menu.ts`）**：顶栏自定义分组菜单、右上角「更多」菜单、跨站查找（`Ctrl+F`）溢出菜单与外壳输入框右键编辑菜单统一通过挂载在 `window.contentView` 最顶层的透明 `WebContentsView` 自绘（`#ddd` / `#363636` 斜面方框、双线凹槽分隔线、`#333333` / `#e0e0e0` 悬停反白与纯等宽英文快捷键），既能盖住底层九个实时 AI `WebContentsView`，又不抢夺主窗口系统焦点导致标题栏横纹变灰。
 
 ### Inputs / Fields
 
@@ -306,7 +318,7 @@ Markdown 正文五、六级标题同为 `13px`，以 `700 / 600` 字重与颜色
 
 ### Navigation
 
-命令栏模式/档位/分页、工作台双页签、结果库分类及阅读模式切换统一采用连体 `.seg` 机械分段组，选中项以 `#666` 深底内凹白字表达。文件夹栏、记录列表与设置分类导航采用白底列表井内的薰衣草选中行 + `3px` 左侧强调色轨表达当前位置。
+命令栏模式/档位/分页、工作台双页签、结果库分类及阅读模式切换统一采用连体 `.seg` 机械分段组，选中项以 `#666` 深底内凹白字表达。文件夹栏、记录列表与设置分类导航采用白底列表井内的浅灰或炭灰选中行与左侧色轨表达当前位置。
 
 ### Chips and Status
 
@@ -341,7 +353,7 @@ Markdown 正文五、六级标题同为 `13px`，以 `700 / 600` 字重与颜色
 
 ### Do:
 
-- **Do** 保持按钮与工具栏纯粹中性银灰，把 Lavender 严格留给滚动条、焦点环、文本选区与当前选中列表项。
+- **Do** 保持默认主题的银灰工具栏、滚动条和列表选区，使用蓝色标记焦点与链接。
 - **Do** 方形图标按钮一律声明 `padding: 0`，折叠区域一律走 `platinum-widgets.css` 立体金属三角并留足内边距。
 - **Do** 修改顶栏、底栏、标题栏或内缩尺寸时同步更新 `shared/display.ts` 与 `main/workspace-layout.ts`。
 

@@ -67,10 +67,11 @@ app.whenReady().then(async () => {
   const contentLayout = await require('./library-content-visual.cjs')({ win, nativeTheme, output, run, wait, click, shot });
   const copyStates = await require('./library-copy-visual.cjs')({ win, nativeTheme, output, run, wait, click, fill, shot });
   const colors = await require('./library-color-visual.cjs')({ win, nativeTheme, output, run, wait, click, shot });
+  const skins = await run('window.libraryTest.themes');
   for (const locale of (process.env.POLYASK_UI_QUICK ? [] : ['zh-CN', 'zh-TW', 'en'])) {
     for (const theme of ['light', 'dark']) {
       nativeTheme.themeSource = theme;
-      for (const skin of ['platinum', 'minimal']) {
+      for (const skin of skins) {
         for (const width of [960, 1280, 1600]) {
           win.setContentSize(width, 900);
           await win.loadFile(join(output, 'index.html'), { query: { locale, skin } });
@@ -94,7 +95,8 @@ app.whenReady().then(async () => {
           }
           const reading = await readingLayout.reading(run);
           assert.deepEqual(findIconButtonIssues(await run(ICON_BUTTON_PROBE_SOURCE), `library/${locale}/${skin}/${theme}/${width}`), []);
-          reports.push({ locale, theme, skin, width, boxes, reading });
+          const themeDetails = locale === 'zh-CN' && width === 1600 ? await readingLayout.themeDetails(run, skin) : undefined;
+          reports.push({ locale, theme, skin, width, boxes, reading, themeDetails });
           const suffix = skin === 'platinum' ? '' : '-' + skin;
           if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}${suffix}`);
           if (locale === 'en' && (width === 960 || width === 1600)) {

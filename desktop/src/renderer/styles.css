@@ -38,7 +38,8 @@
 @import "./page-zoom.css";
 @import "./command-bar.css";
 @import "./site-find.css";
-@import "./minimal.css";
+@import "./flat-themes.css";
+@import "./theme-variants.css";
 
 /* Let the native window show its accepted theme while the first SQLite snapshot is in flight. */
 :root[data-shell-boot]:not([data-ui-theme]), :root[data-shell-boot]:not([data-ui-theme]) body { background: transparent; }

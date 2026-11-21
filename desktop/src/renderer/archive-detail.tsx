@@ -141,7 +141,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
             aria-current={currentSource === index ? 'location' : undefined}
             aria-label={best ? `${label} · ${copy.archiveBestAnswer}` : undefined}>
             {siteKey ? <i className="site-dot-mark" data-site-glyph={siteKey} aria-hidden="true" /> : null}
-            <span>{label}</span>
+            <span className="reading-source-label">{label}</span>
             {lengthBadge ? <span className="archive-answer-length" data-length={lengthBadge} aria-hidden="true" /> : null}
             <span className="archive-answer-best" aria-hidden="true">{best ? <StarIcon /> : null}</span></a>;
         })}
@@ -159,7 +159,7 @@ export function ArchiveDetail(props: ArchiveDetailProps): React.JSX.Element {
           return (
             <section className="archive-answer" id={`archive-answer-${index}`} key={`${result.host}:${index}`}>
               <header>
-                <h2 className="archive-answer-heading">{siteKey ? <SiteGlyph site={siteKey} className="archive-answer-glyph" /> : null}<span>{answerSourceId(index)} {result.label}{tier}</span>{lengthBadge ? <span className="archive-heading-length" data-length={lengthBadge} aria-hidden="true" /> : null}</h2>
+                <h2 className="archive-answer-heading">{siteKey ? <SiteGlyph site={siteKey} className="archive-answer-glyph" /> : null}<span className="reading-source-label">{answerSourceId(index)} {result.label}{tier}</span>{lengthBadge ? <span className="archive-heading-length" data-length={lengthBadge} aria-hidden="true" /> : null}</h2>
                 {successful ? <div className="archive-answer-actions">
                   {props.onExportAnswer && <button type="button" data-action="archive-answer-export" disabled={props.busy} onClick={() => props.onExportAnswer?.(index)}>{copy.markdownSingle}</button>}
                   <button type="button" aria-label={best ? copy.unmarkBest : copy.markBest} aria-pressed={best} disabled={props.busy} onClick={() => props.onPatch({ winnerHost: best ? null : result.host })}>{best ? <StarIcon /> : null}<span>{best ? copy.unmarkBest : copy.markBest}</span></button>

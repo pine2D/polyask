@@ -28,7 +28,7 @@ export async function buildPreferencesShell(output: string): Promise<void> {
 
 export function runPreferencesShell(output: string, locale: string, phase: 'themes' | 'write' | 'read'): void {
   const result = spawnSync(require('electron') as string, [join(__dirname, 'preferences-drafts-native-runtime.cjs'), output, locale, phase], {
-    encoding: 'utf8', timeout: 60000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '', WAYLAND_DISPLAY: '', WAYLAND_SOCKET: '',
+    encoding: 'utf8', timeout: phase === 'themes' ? 150000 : 60000, env: { ...process.env, ELECTRON_RUN_AS_NODE: '', WAYLAND_DISPLAY: '', WAYLAND_SOCKET: '',
       DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` }
   });
   console.log(`Preferences/drafts native ${locale} ${phase}: ${output}\n${result.stdout}`);

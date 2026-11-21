@@ -16,6 +16,7 @@ export { registerDecisionIpc } from '../../src/main/decision-ipc';
 export { registerTaskFolderIpc } from '../../src/main/task-folder-ipc';
 export { createArchiveRecord } from '../../src/shared/archive';
 export { getCopy } from '../../src/shared/copy';
+export { UI_THEME_IDS, UI_THEMES } from '../../src/shared/ui-theme';
 export { SITES } from '../../src/main/sites';
 export { applicationMenu } from '../../src/main/application-menu';
 export { bindApplicationCommandInput } from '../../src/main/application-command-routing';

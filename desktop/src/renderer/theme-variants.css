@@ -1,0 +1,77 @@
+/* Theme accents belong to PolyAsk surfaces. Geometry is shared with the native site views. */
+@media not (forced-colors: active) {
+  @scope (:root[data-ui-theme="proof"]) {
+    .reading-page :is(.archive-question-prompt h1, .question-prompt h2, .markdown-preview :is(h3, h4, h5, h6)) {
+      font-family: "Iowan Old Style", Georgia, "Songti SC", "Noto Serif CJK SC", SimSun, serif;
+    }
+    .reading-navigation { border-radius: 0; border-inline: 0; }
+    .reading-page .reading-source-list > :is(a[aria-current=location], button[aria-pressed=true]) {
+      color: var(--text); background: var(--panel); border-color: transparent;
+      box-shadow: inset 0 -2px var(--accent); text-decoration: none;
+    }
+  }
+
+  @scope (:root[data-ui-theme="pocket"]) {
+    .window-titlebar, .window-titlebar[data-window-focused="false"] {
+      background: var(--skin-selection); border-bottom-color: var(--skin-control);
+    }
+    .window-titlebar .window-tbox { color: var(--text); }
+    .window-titlebar .window-title, .site-model-badge, .command-bar kbd {
+      font-family: var(--font-mono);
+    }
+    .reading-page .reading-source-list > :is(a, button) { border-radius: 0; font-family: var(--font-mono); }
+    .reading-page .reading-source-list > :is(a[aria-current=location], button[aria-pressed=true]) { color: var(--text); }
+    .tile-frame[data-focused="true"] .tile-header { box-shadow: inset 0 -2px var(--accent); }
+    .reading-navigation { border-radius: 2px; }
+  }
+
+  @scope (:root[data-ui-theme="blueprint"]) {
+    .tile-frame { border-color: var(--skin-control); }
+    .tile-frame[data-focused="true"]::before, .tile-frame[data-focused="true"]::after {
+      content: ""; position: absolute; top: -1px; width: 11px; height: 7px; z-index: 1;
+      border-top: 2px solid var(--accent); pointer-events: none;
+    }
+    .tile-frame[data-focused="true"]::before { left: -1px; border-left: 2px solid var(--accent); }
+    .tile-frame[data-focused="true"]::after { right: -1px; border-right: 2px solid var(--accent); }
+    .reading-source-label, .archive-heading-length, .archive-answer-length, .question-reader-intro time,
+    .run-progress-summary-counts, .health-totals dd { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+    .app-shell:has(.tile-layer:empty), .archive-empty, .question-scroll > .question-empty:not([role]) {
+      --grid-line: color-mix(in srgb, var(--skin-control) 15%, transparent);
+      background-image: linear-gradient(var(--grid-line) 1px, transparent 1px), linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 16px 16px;
+    }
+    .reading-navigation { border-radius: 2px; border-color: var(--skin-control); }
+  }
+
+  @scope (:root[data-ui-theme="darkroom"]) {
+    .tile-frame, .tile-frame[data-focused="true"] { border-color: var(--skin-control); }
+    .tile-well { border-color: var(--skin-control); }
+    .tile-frame[data-focused="true"] .tile-header { box-shadow: inset 3px 0 var(--accent); }
+    .reading-page .reading-source-list > :is(a[aria-current=location], button[aria-pressed=true]) {
+      box-shadow: inset 3px 0 var(--accent); color: var(--text); text-decoration: none;
+    }
+  }
+
+  :root[data-ui-theme="solstice"] {
+    --accent: var(--skin-text); --on-accent: var(--skin-panel);
+    --field-focus-line: var(--skin-accent); --field-focus-shadow: inset 0 0 0 1px var(--skin-accent);
+  }
+  @scope (:root[data-ui-theme="solstice"]) {
+    :focus-visible, a[href], .site-select:has(input:focus-visible), .tile-frame[data-focused="true"] {
+      --accent: var(--skin-accent);
+    }
+    .reading-page .markdown-preview { line-height: 1.68; }
+    .markdown-preview blockquote {
+      color: var(--text); border-color: transparent; border-inline-start: 3px solid var(--skin-control);
+      background: var(--skin-chrome);
+    }
+    .markdown-preview .markdown-code pre {
+      background: light-dark(#ece9de, #192e30); color: var(--text);
+    }
+    .markdown-code figcaption { background: var(--skin-canvas); }
+    .reading-page .reading-source-list > :is(a[aria-current=location], button[aria-pressed=true]) {
+      color: var(--skin-accent); text-decoration: underline; text-underline-offset: 3px;
+    }
+  }
+  .theme-swatch[data-swatch="pocket"] { background-color: var(--skin-selection); }
+}

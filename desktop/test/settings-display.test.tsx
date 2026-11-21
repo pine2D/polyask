@@ -17,7 +17,9 @@ test('settings expose the built-in themes, densities and default site scales', a
     assert.equal(radio(h.document, 'settings-density', 'comfortable').checked, true);
     assert.equal(radio(h.document, 'settings-site-scale', '1').checked, true);
     assert.match(groups[0].textContent!, /PolyAsk controls and reading views/);
-    assert.deepEqual([...groups[0].querySelectorAll<HTMLInputElement>('input')].map(node => node.value), ['platinum', 'minimal']);
+    const themes = ['platinum', 'minimal', 'proof', 'pocket', 'blueprint', 'darkroom', 'solstice'];
+    assert.deepEqual([...groups[0].querySelectorAll<HTMLInputElement>('input')].map(node => node.value), themes);
+    assert.deepEqual([...groups[0].querySelectorAll<HTMLElement>('[aria-hidden=true][data-swatch]')].map(node => node.dataset.swatch), themes);
     assert.match(groups[1].textContent!, /app controls and spacing/);
     assert.match(groups[2].textContent!, /not zoomed manually.*Ctrl\+0/s);
   } finally { await h.close(); }
@@ -54,6 +56,25 @@ test('an unknown saved skin stays unselected until an explicit replacement succe
     await h.click(radio(h.document, 'settings-theme', 'platinum'));
     assert.deepEqual(intents, ['platinum']);
     assert.equal(h.document.querySelector('input[name=settings-theme]:checked') === null, true);
+    assert.equal(h.document.querySelector('.settings-display [role=alert]') !== null, true);
+  } finally { await h.close(); }
+});
+
+test('a failed theme change keeps the accepted skin selected throughout the save', async () => {
+  let reject!: (error: Error) => void;
+  const h = await mountSettings({ preferenceSync: {
+    snapshot: { values: { ...DEFAULT_PREFERENCE_VALUES, uiTheme: 'pocket' }, deviceId: 'local',
+      following: { display: false, layout: false, siteZoom: false, proxy: false }, initialized: ['uiTheme'], versions: {}, draftSync: false },
+    onThemeChange: () => new Promise<void>((_, fail) => { reject = fail; }),
+    onFollowingChange: async () => {}, onLayoutModeChange: async () => {}, onDraftSyncChange: async () => {}
+  } });
+  try {
+    const accepted = radio(h.document, 'settings-theme', 'pocket'), requested = radio(h.document, 'settings-theme', 'darkroom');
+    await h.click(requested);
+    assert.equal(accepted.checked, true); assert.equal(requested.checked, false);
+    assert.equal(requested.matches(':disabled'), true);
+    await act(async () => reject(Error('save failed')));
+    assert.equal(accepted.checked, true); assert.equal(requested.matches(':disabled'), false);
     assert.equal(h.document.querySelector('.settings-display [role=alert]') !== null, true);
   } finally { await h.close(); }
 });
