@@ -188,7 +188,7 @@
 .library .decision-detail-actions { min-height: 40px; padding: 6px 16px; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--plat-ink); background: var(--plat-g300); box-shadow: var(--plat-strip-bevel); }
 .library-decision-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 6px; }
 .library .decision-detail-actions .library-primary {
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
 }
 .library .decision-editor { max-width: var(--reading-page-width); padding: 16px 20px 48px; }
 .library .decision-editor h1 { font-size: 18px; font-weight: 700; line-height: 1.4; margin-bottom: 12px; }
@@ -212,7 +212,7 @@
 .library .folder-modal {
   width: min(460px, calc(100vw - 40px)); max-height: calc(100vh - 60px); overflow: auto; font-size: 12.5px; padding: 16px;
   border: 1px solid var(--plat-ink); border-radius: 0; background: var(--plat-g400);
-  box-shadow: var(--plat-window-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink), 4px 4px 0 var(--plat-shadow);
+  box-shadow: var(--dialog-shadow);
 }
 .library .folder-modal > p { font-size: 12px; line-height: 1.5; color: var(--muted); }
 .library .folder-modal > input { width: 100%; min-height: 26px; }

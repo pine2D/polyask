@@ -1,6 +1,7 @@
 import { webContents, WebContentsView, type BrowserWindow } from "electron";
 import { normalizePopupAnchor, type PopupAnchor } from "../shared/popup-anchor";
 import { buildPlatinumPopupHtml, type PlatinumPopupEntry } from "./platinum-popup-template";
+import { onWindowUiTheme, windowUiTheme } from "./native-shell-policy";
 
 export type { PlatinumPopupEntry } from "./platinum-popup-template";
 
@@ -54,6 +55,13 @@ export function showPlatinumPopupMenu<Id extends string>(
       }
     });
     view.setBackgroundColor("#00000000");
+    let loaded = false;
+    const initialTheme = windowUiTheme(window);
+    const updateTheme = (): void => {
+      if (!loaded || view.webContents.isDestroyed()) return;
+      const theme = windowUiTheme(window);
+      void view.webContents.executeJavaScript(`document.documentElement.dataset.uiTheme = ${JSON.stringify(theme)}`).catch(cancel);
+    };
 
     const finish = (value: Id | null, closedByBlur = false): void => {
       if (settled) return;
@@ -63,6 +71,7 @@ export function showPlatinumPopupMenu<Id extends string>(
       window.off("blur", onWindowBlur);
       window.off("resize", cancel);
       window.off("closed", cancel);
+      unsubscribeTheme();
       if (!shellContents.isDestroyed()) shellContents.off("did-navigate", cancel);
       if (!window.isDestroyed()) {
         try { window.contentView.removeChildView(view); } catch { /* Already detached */ }
@@ -109,6 +118,8 @@ export function showPlatinumPopupMenu<Id extends string>(
     view.setBounds({ x: 0, y: 0, width: contentWidth, height: contentHeight });
     view.webContents.once("did-finish-load", () => {
       if (settled || view.webContents.isDestroyed()) return;
+      loaded = true;
+      if (windowUiTheme(window) !== initialTheme) updateTheme();
       view.webContents.setZoomFactor(zoom);
       view.webContents.focus();
       popupObserver?.onOpen?.({ entries, anchor, view });
@@ -119,9 +130,10 @@ export function showPlatinumPopupMenu<Id extends string>(
 
     window.on("resize", cancel);
     window.on("closed", cancel);
+    const unsubscribeTheme = onWindowUiTheme(window, updateTheme);
     shellContents.on("did-navigate", cancel);
 
-    const html = buildPlatinumPopupHtml(entries, anchor, process.platform);
+    const html = buildPlatinumPopupHtml(entries, anchor, process.platform, initialTheme);
     void view.webContents.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`).catch(cancel);
   });
 }

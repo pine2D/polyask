@@ -84,6 +84,9 @@
     --reading-block-gap: 10px;
     --reading-section-gap: 18px;
     --inner-highlight: inset 1px 1px 0 #ffffff;
+    --default-button-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+    --dialog-shadow: var(--plat-window-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink), 4px 4px 0 var(--plat-shadow);
+    --danger-button-shadow: inset 1px 1px 0 #f87171, inset -1px -1px 0 #7f1d1d, 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
     --shadow-control: var(--plat-btn-bevel);
     --shadow-popover: 2px 2px 0 #262626;
     --shadow-elevated: 2px 2px 0 #262626;

@@ -38,6 +38,10 @@
 @import "./page-zoom.css";
 @import "./command-bar.css";
 @import "./site-find.css";
+@import "./minimal.css";
+
+/* Let the native window show its accepted theme while the first SQLite snapshot is in flight. */
+:root[data-shell-boot]:not([data-ui-theme]), :root[data-shell-boot]:not([data-ui-theme]) body { background: transparent; }
 
 @layer base {
 :root {
@@ -165,7 +169,7 @@ button { cursor: default; }
 .confirm-dialog {
   width: min(420px, 100%); padding: 14px 16px 12px; display: grid; gap: 10px;
   border: 1px solid var(--plat-ink); border-radius: 0; background: var(--plat-g400);
-  box-shadow: var(--plat-window-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink), 4px 4px 0 var(--plat-shadow);
+  box-shadow: var(--dialog-shadow);
 }
 .confirm-dialog header { display: flex; align-items: center; gap: 8px; }
 .confirm-dialog h2 { margin: 0; flex: 1; font-size: 13px; font-weight: 700; }
@@ -175,8 +179,8 @@ button { cursor: default; }
 .confirm-dialog .confirm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
 .confirm-dialog .confirm-actions button { min-height: 24px; margin: 0; padding: 0 13px; border: 1px solid var(--plat-ink); border-radius: 3px; color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel); font-weight: 700; }
 .confirm-dialog .confirm-actions button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
-.confirm-dialog .confirm-actions button.primary { box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink); }
-.confirm-dialog .confirm-actions button.primary.danger { border-color: var(--plat-ink); color: #fff; background: var(--danger); box-shadow: inset 1px 1px 0 #f87171, inset -1px -1px 0 #7f1d1d, 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink); }
+.confirm-dialog .confirm-actions button.primary { box-shadow: var(--default-button-shadow); }
+.confirm-dialog .confirm-actions button.primary.danger { border-color: var(--plat-ink); color: #fff; background: var(--danger); box-shadow: var(--danger-button-shadow); }
 .confirm-dialog .confirm-actions button:disabled { opacity: .45; box-shadow: none; }
 
 .archive-workspace { position: fixed; z-index: 10; inset: var(--window-top, 0px) 0 var(--feedback-height, 26px) 0; display: grid; grid-template-rows: 40px minmax(0, 1fr) 22px; background: var(--canvas); }
@@ -264,7 +268,7 @@ button { cursor: default; }
 .synthesis-preview textarea { min-height: 0; padding: 8px; resize: none; font: 12px/1.5 var(--font-mono); }
 .synthesis-workspace > footer { grid-column: 1 / -1; padding: 4px 8px; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--plat-ink); background: var(--plat-g300); box-shadow: var(--plat-strip-bevel); }
 .synthesis-workspace > footer span { flex: 1; overflow: hidden; color: var(--warning-ink); font-size: var(--font-meta); text-overflow: ellipsis; white-space: nowrap; }
-.synthesis-workspace > footer button { min-height: 24px; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--plat-ink); border-radius: 3px; color: var(--text); background: var(--plat-g300); box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink); font-weight: 700; }
+.synthesis-workspace > footer button { min-height: 24px; padding: 0 12px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--plat-ink); border-radius: 3px; color: var(--text); background: var(--plat-g300); box-shadow: var(--default-button-shadow); font-weight: 700; }
 .synthesis-workspace > footer button:disabled { opacity: .45; box-shadow: none; }
 .archive-status { padding: 2px 8px; overflow: hidden; border-top: 1px solid var(--plat-ink); color: var(--text); font-size: var(--font-meta); text-overflow: ellipsis; white-space: nowrap; background: var(--plat-g300); box-shadow: var(--plat-strip-bevel); }
 }

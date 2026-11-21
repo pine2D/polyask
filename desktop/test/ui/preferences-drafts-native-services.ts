@@ -22,6 +22,12 @@ export { bindApplicationCommandInput } from '../../src/main/application-command-
 export { registerShellPanelIpc } from '../../src/main/shell-panel-ipc';
 export { dispatchAppCommand } from '../../src/main/app-command-dispatch';
 export { runViewMenuAction } from '../../src/main/view-menu-actions';
+export { bindShellTheme, setWindowUiTheme } from '../../src/main/native-shell-policy';
+export { showCommandMenu } from '../../src/main/native-menus';
+export { setPlatinumPopupObserver } from '../../src/main/platinum-popup-menu';
+export { BroadcastCoordinator } from '../../src/main/broadcast';
+export { savedDetail } from './history-to-library-data';
+export { questionAnswerId } from '../../src/main/question-repository';
 
 /** Synthetic file transport only: the production engine still merges and uploads. */
 export class NativeCloud implements SyncDrive {

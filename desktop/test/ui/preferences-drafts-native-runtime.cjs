@@ -1,9 +1,9 @@
-const { app, BrowserWindow, ipcMain, session, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, session, Menu, nativeTheme } = require('electron');
 const { join } = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const output = process.argv[2], locale = process.argv[3], phase = process.argv[4];
-const profile = join(output, locale, 'profile');
+const profile = join(output, locale, phase === 'themes' ? 'theme-profile' : 'profile');
 app.setPath('userData', profile);
 app.commandLine.appendSwitch('lang', locale);
 app.whenReady().then(async () => {
@@ -24,14 +24,16 @@ app.whenReady().then(async () => {
       { host: 'www.kimi.com', label: 'Kimi', text: 'Another locally generated answer for draft testing.' }
     ] }, { id: 'native-archive', now: 100, deviceId: 'native-local' }));
   const workspace = new WorkspaceService(database.state, database.meta, () => {});
+  if (phase === 'themes') workspace.setSelection(['claude', 'kimi']);
   if (phase === 'write') { workspace.setSelection(['claude', 'chatgpt', 'gemini', 'deepseek', 'kimi']); workspace.setParticipation(['claude', 'kimi']); }
   let blocked = 0, forbidden = 0;
   for (const s of [session.defaultSession, session.fromPartition('persist:polyask-sites')]) {
     s.webRequest.onBeforeRequest({ urls: ['http://*/*', 'https://*/*'] }, (_request, callback) => { blocked++; callback({ cancel: true }); });
   }
-  const win = new BrowserWindow({ show: true, width: 1400, height: 900,
+  const win = new BrowserWindow({ show: true, width: 1400, height: 900, frame: phase !== 'themes',
     webPreferences: { preload: join(output, 'preload.cjs'), sandbox: true, contextIsolation: true } });
   win.setMenuBarVisibility(false);
+  services.bindShellTheme(win, nativeTheme);
   win.webContents.on('console-message', event => { if (event.level === 'error') console.log('Renderer:', event.message); });
   const { ViewManager } = require(join(output, 'manager.cjs'));
   const uiPath = join(profile, 'ui.json');
@@ -65,7 +67,7 @@ app.whenReady().then(async () => {
   const repository = new PreferencesRepository(database.state, database.meta);
   const drafts = new DraftRepository(database.state, database.meta);
   preferences = new PreferenceRuntime(repository, drafts, manager,
-    value => win.webContents.send('polyask:preferences-changed', value), value => {
+    value => { services.setWindowUiTheme(win, value.values.uiTheme); win.webContents.send('polyask:preferences-changed', value); }, value => {
       manager.setDisplayPreferences(value); win.webContents.send('polyask:display-preferences', value);
     }, () => {});
   const drive = new NativeCloud(join(profile, 'synthetic-cloud.json'));
@@ -92,8 +94,8 @@ app.whenReady().then(async () => {
   handle('archive-search', value => local.archives.search(value ?? {}));
   handle('archive-tags', () => local.archives.tags());
   handle('archive-get', id => local.archives.get(id));
-  handle('show-command-menu', () => 'open-settings');
-  for (const channel of ['broadcast', 'synthesis-send', 'open-external', 'new-session', 'collect', 'archive-capture']) handle(channel, () => {
+  if (phase !== 'themes') handle('show-command-menu', () => 'open-settings');
+  for (const channel of [...(phase === 'themes' ? [] : ['broadcast']), 'synthesis-send', 'open-external', 'new-session', 'collect', 'archive-capture']) handle(channel, () => {
     forbidden++; throw Error('native_fixture_disallows_site_send');
   });
   registerWorkspaceSelectionIpc(ipcMain, workspace, trusted, () => workspace.getState());
@@ -104,6 +106,11 @@ app.whenReady().then(async () => {
     ['set-layout', value => { manager.setLayout(value.mode, value.focused); preferences.set('layoutMode', value.mode); }],
     ['set-surface', value => { surface = value; }]
   ]) ipcMain.on('polyask:' + channel, (event, value) => { if (trusted(event)) action(value); });
+  if (phase === 'themes') {
+    await require('./preferences-drafts-native-themes.cjs')({ services, database, preferences, handle, win, views,
+      manager, workspace, tools, dispatch, locale, output, nativeTheme });
+    engine.dispose(); remoteEngine.dispose(); database.close(); remote.close(); win.destroy(); app.quit(); return;
+  }
   await win.loadFile(join(output, 'index.html')); win.focus(); win.webContents.focus();
   await wait('!!document.querySelector("textarea[name=prompt]")');
   await require('./command-bar-layout.cjs')({ win, run, output, label: `${locale}-${phase}` });
@@ -114,6 +121,8 @@ app.whenReady().then(async () => {
   const closeSettings = async () => { await click('.settings-toolbar .panel-close'); await wait('!!document.querySelector("textarea[name=prompt]")'); };
   if (phase === 'write') {
     await openSettings();
+    await click('input[name=settings-theme][value=minimal]');
+    await wait('document.documentElement.dataset.uiTheme==="minimal"');
     await click('[data-settings-section=sync]');
     for (const group of ['display', 'layout', 'siteZoom']) for (const value of ['shared', 'local', 'shared']) {
       await click(`input[name="settings-follow-${group}"][value="${value}"]`);
@@ -171,6 +180,7 @@ app.whenReady().then(async () => {
       if (Date.now() >= persisted) throw Error('Restored prompt did not persist'); await pause(30);
     }
   } else {
+    assert.equal(await run('document.documentElement.dataset.uiTheme'), 'minimal', 'stored skin survives restart');
     await wait('document.documentElement.dataset.density==="comfortable"');
     assert.deepEqual(manager.getDisplayPreferences(), { density: 'comfortable', siteScale: 0.9 });
     for (const key of ['density', 'siteScale']) assert.deepEqual(database.state.get('preference:' + key), coldSharedDisplay[key],

@@ -73,7 +73,7 @@
   flex-shrink: 0; min-height: max(30px, var(--control-height)); margin-inline-start: auto;
   padding: 4px 14px; border: 1px solid var(--plat-ink); border-radius: var(--radius-control);
   color: var(--text); background: var(--plat-g300);
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
   font-size: var(--font-control); font-weight: 700;
 }
 .task-setup-footer-actions button:hover:not(:disabled, :active) { background: var(--plat-g200); }

@@ -70,33 +70,37 @@ app.whenReady().then(async () => {
   for (const locale of (process.env.POLYASK_UI_QUICK ? [] : ['zh-CN', 'zh-TW', 'en'])) {
     for (const theme of ['light', 'dark']) {
       nativeTheme.themeSource = theme;
-      for (const width of [960, 1280, 1600]) {
-        win.setContentSize(width, 900);
-        await win.loadFile(join(output, 'index.html'), { query: { locale } });
-        await wait('!!document.querySelector(".archive-detail h1")');
-        await pause(100);
-        const boxes = await geometry();
-        for (const box of boxes) {
-          assert.ok(box.scroll <= box.width + 2, `${locale}/${theme}/${width} overflow ${JSON.stringify(box)}`);
-          assert.ok(box.right <= box.viewport + 2, `${locale}/${theme}/${width} offscreen ${JSON.stringify(box)}`);
-        }
-        const nav = await run(`(() => { const e=document.querySelector('.archive-answer-nav'), detail=document.querySelector('.archive-detail').getBoundingClientRect(), r=e.getBoundingClientRect();
-          return { overflowX:getComputedStyle(e).overflowX, right:r.right, detailRight:detail.right, links:[...e.querySelectorAll('a')].map(a=>a.textContent), rowSources:document.querySelectorAll('.library-item-sources').length }; })()`);
-        assert.ok(nav.overflowX === 'auto' && nav.right <= nav.detailRight + 2 && nav.links.length === 9 && nav.links[0].includes('Claude') && nav.links[8].includes('Zhipu') && nav.rowSources === 0,
-          `${locale}/${theme}/${width} source navigation stays contained with nine sources and clean list rows: ${JSON.stringify(nav)}`);
-        const controls = await run(`(() => [...document.querySelectorAll('.library-selection-controls button, .library-pagination button, .library-list-summary button')]
-          .filter(e => e.getClientRects().length).map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
-        for (const control of controls) {
-          assert.equal(control.border, 'solid', `${locale}/${theme} list controls must use the themed border`);
-          assert.ok(control.radius >= 2 && control.radius <= 3 && control.height >= 22, `${locale}/${theme} list controls must keep Platinum geometry: ${JSON.stringify(control)}`);
-        }
-        const reading = await readingLayout.reading(run);
-        assert.deepEqual(findIconButtonIssues(await run(ICON_BUTTON_PROBE_SOURCE), `library/${locale}/${theme}/${width}`), []);
-        reports.push({ locale, theme, width, boxes, reading });
-        if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}`);
-        if (locale === 'en' && (width === 960 || width === 1600)) {
-          await run('document.querySelector(".archive-answer .markdown-preview h5").scrollIntoView({block:"center"})');
-          await shot(`typeset-${theme}-${width}`);
+      for (const skin of ['platinum', 'minimal']) {
+        for (const width of [960, 1280, 1600]) {
+          win.setContentSize(width, 900);
+          await win.loadFile(join(output, 'index.html'), { query: { locale, skin } });
+          await wait('!!document.querySelector(".archive-detail h1")');
+          await pause(100);
+          assert.equal(await run('document.documentElement.dataset.uiTheme'), skin);
+          const boxes = await geometry();
+          for (const box of boxes) {
+            assert.ok(box.scroll <= box.width + 2, `${locale}/${skin}/${theme}/${width} overflow ${JSON.stringify(box)}`);
+            assert.ok(box.right <= box.viewport + 2, `${locale}/${skin}/${theme}/${width} offscreen ${JSON.stringify(box)}`);
+          }
+          const nav = await run(`(() => { const e=document.querySelector('.archive-answer-nav'), detail=document.querySelector('.archive-detail').getBoundingClientRect(), r=e.getBoundingClientRect();
+            return { overflowX:getComputedStyle(e).overflowX, right:r.right, detailRight:detail.right, links:[...e.querySelectorAll('a')].map(a=>a.textContent), rowSources:document.querySelectorAll('.library-item-sources').length }; })()`);
+          assert.ok(nav.overflowX === 'auto' && nav.right <= nav.detailRight + 2 && nav.links.length === 9 && nav.links[0].includes('Claude') && nav.links[8].includes('Zhipu') && nav.rowSources === 0,
+            `${locale}/${skin}/${theme}/${width} source navigation stays contained with nine sources and clean list rows: ${JSON.stringify(nav)}`);
+          const controls = await run(`(() => [...document.querySelectorAll('.library-selection-controls button, .library-pagination button, .library-list-summary button')]
+            .filter(e => e.getClientRects().length).map(e => { const s=getComputedStyle(e); return { border:s.borderTopStyle, radius:parseFloat(s.borderRadius), height:e.getBoundingClientRect().height }; }))()`);
+          for (const control of controls) {
+            assert.equal(control.border, 'solid', `${locale}/${skin}/${theme} list controls must use the themed border`);
+            assert.ok(control.radius >= 2 && control.radius <= 3 && control.height >= 22, `${locale}/${skin}/${theme} list controls must keep their target size and shape: ${JSON.stringify(control)}`);
+          }
+          const reading = await readingLayout.reading(run);
+          assert.deepEqual(findIconButtonIssues(await run(ICON_BUTTON_PROBE_SOURCE), `library/${locale}/${skin}/${theme}/${width}`), []);
+          reports.push({ locale, theme, skin, width, boxes, reading });
+          const suffix = skin === 'platinum' ? '' : '-' + skin;
+          if (locale === 'zh-CN' && (width === 960 || width === 1600)) await shot(`reading-${theme}-${width}${suffix}`);
+          if (locale === 'en' && (width === 960 || width === 1600)) {
+            await run('document.querySelector(".archive-answer .markdown-preview h5").scrollIntoView({block:"center"})');
+            await shot(`typeset-${theme}-${width}${suffix}`);
+          }
         }
       }
     }

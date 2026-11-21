@@ -1,6 +1,7 @@
 import { formatCopy, type DesktopCopy } from '../shared/copy';
 import { formatDateTime } from '../shared/format';
 import type { BackupPreviewItem } from '../shared/backup';
+import { isUiTheme, UI_THEMES } from '../shared/ui-theme';
 
 const OMIT = new Set(['id', 'schema', 'format', 'context', 'textHash', 'searchText', 'resultPreviews', 'preview']);
 const FIELD_KEYS: Record<string, keyof DesktopCopy> = {
@@ -20,7 +21,7 @@ export function backupKind(copy: DesktopCopy, kind: string): string { return cop
 
 export function backupItemTitle(copy: DesktopCopy, item: Pick<BackupPreviewItem, 'kind' | 'id' | 'title'>): string {
   if (item.kind !== 'preference') return item.title || backupKind(copy, item.kind);
-  const labels: Record<string, keyof DesktopCopy> = { density: 'densityMenu', siteScale: 'siteScaleMenu',
+  const labels: Record<string, keyof DesktopCopy> = { density: 'densityMenu', siteScale: 'siteScaleMenu', uiTheme: 'settingsThemeLabel',
     completionNotifications: 'completionNotifications', layoutMode: 'layoutLabel', workbenchGuide: 'gettingStarted',
     sitePageCloseConfirm: 'sitePageCloseConfirmSetting', newSessionConfirm: 'newSessionConfirmSetting' };
   return item.id.startsWith('siteZoom.') ? `${copy.siteScaleMenu} · ${formatBackupValue(item.id.slice(9), 'site', copy, '')}`
@@ -35,6 +36,7 @@ export function formatBackupValue(value: unknown, field: string, copy: DesktopCo
     try { return formatDateTime(value, locale); } catch { return String(value); }
   }
   const text = String(value);
+  if (field === 'value' && isUiTheme(value)) return copy[UI_THEMES[value].label];
   if (['site', 'host', 'hosts', 'sites', 'selectedSites', 'winnerHost'].includes(field)) return SITE_NAMES[text] ?? (SITE_KEYS[text] ? copy[SITE_KEYS[text]] : text);
   let enums: Record<string, keyof DesktopCopy> | undefined;
   if (field === 'status') enums = { draft: 'decisionDraft', verify: 'decisionVerify', final: 'decisionFinal' };

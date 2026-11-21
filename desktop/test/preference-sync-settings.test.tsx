@@ -8,7 +8,7 @@ import { mountDom } from './ui/dom-harness';
 import { mountSettings } from './ui/settings-dom';
 
 const state: PreferenceSnapshot = {
-  values: { completionNotifications: false, display: { density: 'compact', siteScale: 0.9 },
+  values: { completionNotifications: false, uiTheme: 'minimal', display: { density: 'compact', siteScale: 0.9 },
     layoutMode: 'focus', siteZoom: {}, workbenchGuide: null, sitePageCloseConfirm: true, newSessionConfirm: true, ...DEFAULT_TIER_PRESETS },
   following: { display: false, layout: true, siteZoom: false, proxy: false }, draftSync: false,
   initialized: [], versions: {}, deviceId: 'fixture'
@@ -20,7 +20,7 @@ test('each preference group names the accepted value, current source and edit sc
     onFollowingChange={async () => {}} onLayoutModeChange={async () => {}} onDraftSyncChange={async () => {}} />);
   try {
     assert.equal(h.document.querySelector('[data-preference-group="display"]') === null, false);
-    assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-current]')!.textContent!, /Compact.*90%/);
+    assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-current]')!.textContent!, /Compact.*90%.*Minimal/);
     assert.match(h.document.querySelector('[data-preference-group="display"] [data-preference-scope]')!.textContent!, /this device/i);
     assert.match(h.document.querySelector('[data-preference-group="layout"] [data-preference-current]')!.textContent!, /Focus/);
     assert.match(h.document.querySelector('[data-preference-source="layout"]')!.textContent!, /shared/i);

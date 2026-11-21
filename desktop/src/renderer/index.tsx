@@ -42,6 +42,7 @@ import { useBroadcastFlow } from "./use-broadcast-flow";
 import { useCommandDiscovery } from "./use-command-discovery";
 import { useCommandPaletteShortcut } from "./use-command-palette-shortcut";
 import { useDisplayPreferences } from "./use-display-preferences";
+import { startThemedShell } from "./ui-theme";
 import { useDraftConfirmation } from "./use-draft-confirmation";
 import { useDraftReplaceUndo } from "./use-draft-replace-undo";
 import { useFeedback } from "./use-feedback";
@@ -391,9 +392,9 @@ function App(): React.JSX.Element {
   );
 }
 
-document.documentElement.lang = resolveLocale(navigator.language) === "zhCN"
-  ? "zh-CN"
-  : resolveLocale(navigator.language) === "zhTW" ? "zh-TW" : "en";
+const languageTags = { zhCN: 'zh-CN', zhTW: 'zh-TW', en: 'en' };
+document.documentElement.lang = languageTags[resolveLocale(navigator.language)];
 document.documentElement.dataset.platform = currentPlatform;
 document.title = getCopy(navigator.language).appTitle;
-createRoot(document.getElementById("root")!).render(<StrictMode><FeedbackProvider copy={getCopy(navigator.language)}><App /></FeedbackProvider></StrictMode>);
+void startThemedShell(() => createRoot(document.getElementById("root")!).render(
+  <StrictMode><FeedbackProvider copy={getCopy(navigator.language)}><App /></FeedbackProvider></StrictMode>));

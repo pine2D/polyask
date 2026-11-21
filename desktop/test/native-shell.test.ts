@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { EventEmitter } from 'node:events';
-import { shellBackground, bindShellTheme, shellContextMenu } from '../src/main/native-shell-policy';
+import { shellBackground, bindShellTheme, setWindowUiTheme, shellContextMenu } from '../src/main/native-shell-policy';
 import { applicationMenu } from '../src/main/application-menu';
 import { COPY } from '../src/shared/copy';
 import { DEFAULT_DISPLAY_PREFERENCES } from '../src/shared/display';
@@ -10,11 +10,14 @@ test('window background tracks theme and unsubscribes on close', () => {
   const theme = Object.assign(new EventEmitter(), { shouldUseDarkColors: true });
   const colors: string[] = [];
   const win = Object.assign(new EventEmitter(), { setBackgroundColor: (color: string) => colors.push(color) });
-  assert.equal(shellBackground(theme), '#18181c');
+  assert.equal(shellBackground(theme), '#181818');
   bindShellTheme(win, theme);
   theme.shouldUseDarkColors = false;
   theme.emit('updated');
-  assert.deepEqual(colors, ['#18181c', '#bfbfbf']);
+  setWindowUiTheme(win, 'minimal');
+  theme.shouldUseDarkColors = true; theme.emit('updated');
+  setWindowUiTheme(win, 'future-skin');
+  assert.deepEqual(colors, ['#181818', '#bfbfbf', '#f3f4f5', '#1b1d20', '#181818']);
   win.emit('closed');
   assert.equal(theme.listenerCount('updated'), 0);
 });

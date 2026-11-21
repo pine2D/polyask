@@ -21,7 +21,7 @@
 .draft-recovery button:active:not(:disabled) { color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed); }
 .draft-recovery button:disabled { opacity: .45; box-shadow: none; }
 .draft-recovery button.primary {
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
 }
 .draft-recovery-entry > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .folder-modal:has(> .draft-recovery) { max-height: calc(100dvh - 48px); grid-template-rows: auto minmax(0, 1fr); }

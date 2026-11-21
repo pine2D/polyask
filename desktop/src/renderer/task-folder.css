@@ -102,7 +102,7 @@ p.archive-field-errors { padding-left: 0; }
   padding: 4px 7px; font: inherit;
 }
 .folder-modal .primary {
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
 }
 .folder-workspace button:focus-visible, .folder-workspace input:focus-visible, .folder-workspace select:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 1px;

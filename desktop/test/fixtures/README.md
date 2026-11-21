@@ -23,6 +23,8 @@
 
 `schema1-state-preferences-proxy.json` 是 2026-10-12 新增的网络代理偏好样本，setting `polyask.preference.proxy` 的值为规范形式的代理配置（固定字段顺序、小写主机、不含密码）。旧客户端不认识该键，会原样带回。`preferences-proxy-boundary.test.ts` 覆盖投影往返、非规范值拒收，以及该值不进入偏好快照和 outbox；旧样本不修改。
 
+`schema1-state-ui-theme.json` 是显示组独立主题键的冻结样本。`ui-theme-preference.test.ts` 核对跨设备覆盖、未知主题透传、备份恢复和本机重置。
+
 ## 新实体与备份
 
 - `schema2-*.json`：决策卡及删除标记，实体 schema 2。

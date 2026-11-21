@@ -4,6 +4,8 @@ import { CONFIRMATION_KEYS, type ConfirmationKey, type GeneralPreferenceGroup, t
 import { COMPLETION_NOTIFICATIONS_KEY, saveCompletionNotifications } from './completion-notification-preference';
 import { readLocalUiPreferences, writeWorkbenchGuidePreference, type LocalUiStorage } from './local-ui-preferences';
 import { shell } from './shell-api';
+import type { UiTheme } from '../shared/ui-theme';
+import { applyUiTheme } from './ui-theme';
 
 export interface SyncedPreferencesOptions {
   readonly display: DisplayPreferences;
@@ -16,6 +18,7 @@ export interface PreferenceSyncSettingsState {
   readonly snapshot: PreferenceSnapshot | null;
   readonly onFollowingChange: (group: GeneralPreferenceGroup, enabled: boolean) => Promise<void>;
   readonly onLayoutModeChange: (mode: PreferenceValues['layoutMode']) => Promise<void>;
+  readonly onThemeChange?: (theme: UiTheme) => Promise<void>;
   readonly onDraftSyncChange: (enabled: boolean) => Promise<void>;
 }
 
@@ -60,6 +63,7 @@ export function useSyncedPreferences(options: SyncedPreferencesOptions) {
     if (!mounted.current) return;
     revision.current++;
     setSnapshot(next);
+    applyUiTheme(document, next.values.uiTheme);
     if (next.values.display.density !== lastDisplay.current.density || next.values.display.siteScale !== lastDisplay.current.siteScale) {
       lastDisplay.current = next.values.display;
       latest.current.onDisplay(next.values.display);
@@ -122,7 +126,8 @@ export function useSyncedPreferences(options: SyncedPreferencesOptions) {
     lifecycle.current++;
     try { await run(() => shell.getPreferences()); } catch { /* Central persistence feedback owns the failure. */ }
   }, [run]);
-  const settings: PreferenceSyncSettingsState = { snapshot, onFollowingChange, onLayoutModeChange, onDraftSyncChange };
+  const settings: PreferenceSyncSettingsState = { snapshot, onFollowingChange, onLayoutModeChange, onDraftSyncChange,
+    onThemeChange: theme => setPreference('uiTheme', theme) };
   return { snapshot, ready: snapshot !== null, completionNotifications: snapshot?.values.completionNotifications ?? localNotifications,
     onCompletionNotifications, settings, refresh,
     // 快照未到时一律确认：偏好未读到不等于用户选过「不再提示」。

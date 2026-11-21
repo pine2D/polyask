@@ -9,6 +9,7 @@ import { PromptDraftRecovery } from '../../src/renderer/prompt-draft-recovery';
 import { DraftRecovery } from '../../src/renderer/draft-recovery';
 import { PageTabs } from '../../src/renderer/page-tabs';
 import { SettingsWorkspace } from '../../src/renderer/settings-workspace';
+import { applyUiTheme } from '../../src/renderer/ui-theme';
 import { WorkspaceDrawer } from '../../src/renderer/workspace-drawer';
 import { SiteFrames } from '../../src/renderer/site-frames';
 import { ConfirmDialog } from '../../src/renderer/confirm-dialog';
@@ -188,6 +189,8 @@ function Fixture(): React.JSX.Element {
     onOpenShortcuts={noop} onOpenGuide={noop} confirmations={{ sitePageCloseConfirm: true, newSessionConfirm: true }} onConfirmationChange={noop}
     onCheckUpdates={noop} completionNotifications={notifications} onCompletionNotificationsChange={setNotifications}
     preferenceSync={{ snapshot: preferences,
+      onThemeChange: async uiTheme => { applyUiTheme(document, uiTheme);
+        setPreferences(p => ({ ...p, values: { ...p.values, uiTheme } })); },
       onFollowingChange: async (group, enabled) => setPreferences(p => ({ ...p, following: { ...p.following, [group]: enabled } })),
       onLayoutModeChange: async layoutMode => setPreferences(p => ({ ...p, values: { ...p.values, layoutMode } })),
       onDraftSyncChange: async draftSync => setPreferences(p => ({ ...p, draftSync })) }} />;

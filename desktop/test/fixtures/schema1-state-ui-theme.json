@@ -1,0 +1,14 @@
+{
+  "file": {
+    "id": "drive-state-theme",
+    "name": "state-theme-desktop.json",
+    "appProperties": { "app": "polyask", "schema": "1", "kind": "state", "id": "theme-desktop" }
+  },
+  "body": {
+    "schema": 1, "deviceId": "theme-desktop",
+    "settings": {
+      "polyask.preference.uiTheme": { "value": "minimal", "updatedAt": 70, "deviceId": "theme-desktop" }
+    },
+    "templates": {}, "groups": {}
+  }
+}

@@ -3,6 +3,7 @@ import type { DesktopCopy } from '../shared/copy';
 import { formatCopy } from '../shared/copy';
 import type { PreferenceSyncCopy } from '../shared/preference-sync-copy';
 import type { GeneralPreferenceGroup } from '../shared/preferences';
+import { resolveUiTheme, UI_THEMES } from '../shared/ui-theme';
 import type { PreferenceSyncSettingsState } from './use-synced-preferences';
 import { formatBackupValue } from './backup-data';
 import { ProxySyncRow } from './proxy-sync-row';
@@ -32,6 +33,7 @@ export function PreferenceSyncSettings(props: PreferenceSyncSettingsState & {
     layout: copy.preferenceSyncLayout, siteZoom: copy.preferenceSyncSiteZoom };
   const values: Record<GeneralPreferenceGroup, string> = {
     display: snapshot ? formatCopy(copy.preferenceSyncCurrentDisplay, {
+      theme: copy[UI_THEMES[resolveUiTheme(snapshot.values.uiTheme)].label],
       density: snapshot.values.display.density === 'compact' ? copy.compactDensity : copy.comfortableDensity,
       scale: `${Math.round(snapshot.values.display.siteScale * 100)}%`
     }) : copy.preferenceSyncLoading,

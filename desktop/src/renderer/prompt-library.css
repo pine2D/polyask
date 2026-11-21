@@ -63,7 +63,7 @@
   background: var(--plat-g300); box-shadow: var(--plat-strip-bevel);
 }
 .prompt-variable-editor .template-apply {
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
 }
 .prompt-variable-editor button:disabled { color: var(--muted); background: var(--plat-g300); opacity: .48; box-shadow: none; cursor: default; }
 .prompt-variable-editor .prompt-variable-invalid[data-invalid="true"] { color: var(--danger-ink); }

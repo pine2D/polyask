@@ -15,7 +15,7 @@
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
 .decision-detail-actions .library-primary, .decision-create {
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
 }
 .decision-create { margin-top: 10px; }
 .decision-toolbar { grid-template-columns: auto minmax(180px, 1fr) auto; }

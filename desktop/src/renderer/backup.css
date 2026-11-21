@@ -85,7 +85,7 @@
 .backup-footer > div { max-width: 80%; }
 .backup-footer button { flex-shrink: 0; }
 .backup-workspace button.primary {
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
 }
 .backup-summary { padding: 20px; overflow: auto; flex: 1; background: var(--panel); }
 .backup-summary p { color: var(--muted); line-height: 1.6; }

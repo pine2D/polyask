@@ -1,4 +1,5 @@
 import type { PopupAnchor } from "../shared/popup-anchor";
+import { DEFAULT_UI_THEME, resolveUiTheme, UI_THEME_PALETTE_CSS, type UiTheme } from "../shared/ui-theme";
 
 export type PlatinumPopupEntry<Id extends string = string> =
   | { readonly type: "separator" }
@@ -19,17 +20,19 @@ function escapeJsonForScript(value: unknown): string {
 export function buildPlatinumPopupHtml<Id extends string>(
   entries: readonly PlatinumPopupEntry<Id>[],
   anchor: PopupAnchor,
-  platform: NodeJS.Platform
+  platform: NodeJS.Platform,
+  theme: UiTheme = DEFAULT_UI_THEME
 ): string {
   const checkColumn = entries.some((entry) => entry.type !== "separator" && (entry.checkable || entry.checked !== undefined));
   const payload = escapeJsonForScript({ entries, anchor, checkColumn });
   return `<!doctype html>
-<html data-platform="${platform}">
+<html data-platform="${platform}" data-ui-theme="${resolveUiTheme(theme)}">
 <head>
 <meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
 <title>ready</title>
 <style>
+  ${UI_THEME_PALETTE_CSS}
   :root {
     color-scheme: light dark;
     --font-ui: "Charcoal", "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "PingFang SC", "Noto Sans CJK SC", system-ui, sans-serif;
@@ -128,6 +131,20 @@ export function buildPlatinumPopupHtml<Id extends string>(
     text-shadow: none;
   }
   .plat-item[data-active="true"] .plat-accel { opacity: 1; }
+  @media not (forced-colors: active) {
+    :root[data-ui-theme="minimal"] {
+      --font-ui: system-ui, "Microsoft YaHei UI", sans-serif;
+      --menu-bg: var(--skin-panel); --menu-fg: var(--skin-text); --menu-border: var(--skin-line);
+      --menu-active-bg: var(--skin-selection); --menu-active-fg: var(--skin-text);
+      --menu-disabled-fg: var(--skin-muted); --menu-disabled-etch: none;
+    }
+    [data-ui-theme="minimal"] #menu {
+      border-radius: 6px; box-shadow: 0 3px 12px rgb(0 0 0 / .16);
+      scrollbar-color: var(--skin-control) transparent;
+    }
+    [data-ui-theme="minimal"] .plat-item { border-radius: 3px; font-weight: 500; }
+    [data-ui-theme="minimal"] .plat-sep { background: var(--skin-line); height: 1px; }
+  }
   @media (forced-colors: active) {
     #menu { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; }
     .plat-sep { background: GrayText; height: 1px; }

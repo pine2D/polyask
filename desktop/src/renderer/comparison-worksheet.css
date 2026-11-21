@@ -26,7 +26,7 @@
 .manual-invalid-quotes button:active:not(:disabled), .manual-quote button:active:not(:disabled), .evidence-overview button:active:not(:disabled) {
   color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
-.manual-comparison > button { box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink); }
+.manual-comparison > button { box-shadow: var(--default-button-shadow); }
 .manual-comparison > button:disabled { opacity: .48; box-shadow: none; color: var(--muted); }
 .manual-comparison-source > button, .manual-invalid-quotes button { margin-left: 8px; }
 .manual-source-changed { color: var(--warning-ink); }
@@ -44,7 +44,9 @@
 .evidence-overview h3, .evidence-overview h4 { margin: 10px 0; font-weight: 700; }
 .evidence-overview-item { margin: 10px 0; padding: 10px; background: var(--panel); border: 1px solid var(--plat-ink); border-radius: 0; }
 .evidence-overview blockquote { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; padding-left: 10px; border-left: 3px solid var(--plat-mid-dark); line-height: 1.56; }
-[name=evidence-review-original] { width: 100%; min-height: 200px; resize: vertical; font: inherit; line-height: 1.56; }
+.folder-modal > textarea[name=evidence-review-original] {
+  width: 100%; min-height: 200px; padding: 10px 12px; resize: vertical; font: inherit; line-height: 1.56;
+}
 @container library-detail (min-width: 1080px) {
   .library .archive-compare[data-evidence-dock="true"] > .manual-comparison {
     padding: 12px 14px 14px; border: 1px solid var(--plat-ink); border-radius: 0;

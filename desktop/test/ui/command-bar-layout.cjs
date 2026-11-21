@@ -4,7 +4,12 @@ const { join } = require('node:path');
 
 module.exports = async ({ win, run, output, label }) => {
   // 命令栏适配（toolbar-fit.ts）在尺寸变化后的下一次渲染更新里完成；先等两帧并收尾过渡动画再量静止态。
-  await run('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => { for (const animation of document.getAnimations()) animation.finish(); resolve(); })))');
+  await run(`new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const animation of document.getAnimations()) {
+      if (Number.isFinite(animation.effect?.getComputedTiming().endTime)) animation.finish();
+    }
+    resolve();
+  })))`);
   const result = await run(`(() => {
     const bar=document.querySelector('.command-bar'), rect=bar.getBoundingClientRect();
     const visible=e=>e.getClientRects().length && getComputedStyle(e).visibility!=='hidden';

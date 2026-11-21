@@ -26,7 +26,12 @@ export class PreferenceRuntime {
     if (this.legacySeedEnabled) this.repository.seed(values);
     return this.applySnapshot();
   }
-  set(key: PreferenceKey, value: unknown): PreferenceSnapshot { this.repository.set(key, value); return this.applySnapshot(); }
+  set(key: PreferenceKey, value: unknown): PreferenceSnapshot {
+    const state = this.repository.set(key, value);
+    // A skin change is paint-only. Leave live site views and their zoom/focus alone.
+    if (key === 'uiTheme') { this.publish(state); return state; }
+    return this.applySnapshot(state);
+  }
   follow(group: PreferenceGroup, enabled: boolean): PreferenceSnapshot {
     this.repository.setFollowing(group, enabled); return this.applySnapshot();
   }
@@ -50,8 +55,7 @@ export class PreferenceRuntime {
   // 外部刷新入口：同步拉取（onWorkspace）、备份恢复（afterApply）、本机重置（reset）。只有它置代理脏标记（spec §3.4）；
   // 通用偏好写入走 applySnapshot，不碰代理——否则每次改布局/密度都会让后台重算占住 OperationGate，群发被拒成 operation_busy。
   refresh(): PreferenceSnapshot { const state = this.applySnapshot(); this.proxy(); return state; }
-  private applySnapshot(): PreferenceSnapshot {
-    const state = this.snapshot();
+  private applySnapshot(state = this.snapshot()): PreferenceSnapshot {
     this.applying = true;
     try {
       this.notifications(state.values.completionNotifications);

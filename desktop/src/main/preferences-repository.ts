@@ -95,6 +95,8 @@ export class PreferencesRepository {
     if (device.following[group] === enabled) return this.snapshot();
     const effective = entriesFromValues(this.snapshot().values);
     for (const key of GENERAL_KEYS.filter(key => preferenceGroup(key) === group)) {
+      // A pre-theme profile has no choice to publish over another device's theme.
+      if (key === "uiTheme" && !this.readShared(key) && !Object.hasOwn(device.overrides, key)) continue;
       if (enabled) {
         if (!this.readShared(key) && Object.hasOwn(effective, key)) this.writeShared(key, effective[key]);
       } else if (Object.hasOwn(effective, key)) device.overrides[key] = effective[key];
@@ -136,7 +138,7 @@ export class PreferencesRepository {
   }
 }
 
-const PLAIN_FIELDS = ["completionNotifications", "layoutMode", "workbenchGuide", "sitePageCloseConfirm", "newSessionConfirm",
+const PLAIN_FIELDS = ["completionNotifications", "uiTheme", "layoutMode", "workbenchGuide", "sitePageCloseConfirm", "newSessionConfirm",
   ...PRESET_KEYS] as const;
 const isPlainField = (field: string): field is typeof PLAIN_FIELDS[number] => (PLAIN_FIELDS as readonly string[]).includes(field);
 
@@ -173,6 +175,7 @@ function valuesFromEntries(entries: PreferenceEntries): PreferenceValues {
   return {
     ...Object.fromEntries(PRESET_KEYS.map(key => [key, structuredClone(entries[key])])) as Record<SitePresetKey, TierPreset | null>,
     completionNotifications: entries.completionNotifications as boolean,
+    uiTheme: entries.uiTheme as string,
     display: { density: entries.density as "compact" | "comfortable", siteScale: entries.siteScale as 0.9 | 1 },
     layoutMode: entries.layoutMode as LayoutMode, siteZoom,
     workbenchGuide: structuredClone(entries.workbenchGuide) as PreferenceValues["workbenchGuide"],

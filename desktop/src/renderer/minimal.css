@@ -1,0 +1,134 @@
+/* The same controls, portals and native view bounds serve both skins.
+   Keep system high-contrast overrides authoritative. */
+@media not (forced-colors: active) {
+  :root[data-ui-theme="minimal"] {
+    --font-ui: system-ui, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", sans-serif;
+    --canvas: var(--skin-canvas);
+    --panel: var(--skin-panel);
+    --panel-muted: var(--skin-chrome);
+    --surface-elevated: var(--skin-panel);
+    --surface-sunken: var(--skin-canvas);
+    --field: var(--skin-panel);
+    --text: var(--skin-text);
+    --muted: var(--skin-muted);
+    --border: var(--skin-line);
+    --border-subtle: var(--skin-line);
+    --border-strong: var(--skin-control);
+    --field-border: var(--skin-control);
+    --accent: var(--skin-accent);
+    --on-accent: var(--skin-onAccent);
+    --accent-soft: var(--skin-selection);
+    --selection-soft: var(--skin-selection);
+    --active-bar: var(--accent);
+    --menu-active-bg: var(--skin-selection);
+    --menu-active-fg: var(--text);
+    --hover-soft: var(--skin-hover);
+    --image-outline: var(--border);
+    --shadow-popover: 0 3px 12px rgb(0 0 0 / .16);
+    --shadow-elevated: var(--shadow-popover);
+    --dialog-shadow: var(--shadow-elevated);
+    --default-button-shadow: none;
+    --danger-button-shadow: none;
+    --field-focus-line: var(--accent);
+    --field-focus-shadow: inset 0 0 0 1px var(--accent);
+    --font-reading: 14px;
+
+    /* Existing surfaces also use the original material tokens directly.
+       A transparent shadow remains valid inside compound shadow lists. */
+    --flat-shadow: 0 0 0 transparent;
+    --plat-ink: var(--border);
+    --plat-g200: var(--skin-hover);
+    --plat-g300: var(--skin-chrome);
+    --plat-g400: var(--skin-canvas);
+    --plat-mid-dark: var(--border);
+    --plat-shadow: transparent;
+    --plat-hi: transparent;
+    --plat-dark-bevel: transparent;
+    --plat-pressed-bg: var(--skin-selection);
+    --plat-pressed-fg: var(--accent);
+    --plat-tip-bg: var(--skin-panel);
+    --plat-stripe-pattern: none;
+    --plat-tbox-fill: transparent;
+    --inner-highlight: var(--flat-shadow);
+    --plat-tbox-bevel: var(--flat-shadow);
+    --plat-btn-bevel: var(--flat-shadow);
+    --plat-btn-bevel-pressed: var(--flat-shadow);
+    --plat-strip-bevel: var(--flat-shadow);
+    --plat-sunken-bevel: var(--flat-shadow);
+    --plat-window-bevel: var(--flat-shadow);
+    --plat-window-shadow: var(--flat-shadow);
+  }
+
+  @scope (:root[data-ui-theme="minimal"]) {
+    .window-titlebar, .window-titlebar[data-window-focused="false"] {
+      color: var(--text); background: var(--skin-chrome); box-shadow: none;
+    }
+    .window-titlebar .window-title { background: transparent; font-weight: 600; }
+    .window-stripe, .tile-frame[data-focused="true"] .tile-stripe { visibility: hidden; }
+    .window-titlebar .window-tbox {
+      color: var(--muted); background: transparent; border-radius: 3px; box-shadow: none;
+    }
+    .window-titlebar .window-tbox:hover:not(:disabled) { color: var(--text); background: var(--hover-soft); }
+    .window-titlebar .window-tbox.is-close:hover:not(:disabled) { color: var(--danger-ink); }
+    .window-titlebar .window-tbox:active:not(:disabled) { background: var(--accent-soft); color: var(--text); box-shadow: none; }
+    .command-bar button, .tile-header button, .reading-page .reading-source-list > :is(a, button) { font-weight: 500; }
+    .command-bar .send { border-color: var(--accent); color: var(--on-accent); background: var(--accent); box-shadow: none; }
+    .command-bar .send:hover:not(:disabled, :active) { background: color-mix(in srgb, var(--accent) 88%, var(--text)); }
+    .command-bar .send:active:not(:disabled) {
+      background: color-mix(in srgb, var(--accent) 85%, var(--text));
+      color: var(--on-accent); box-shadow: none;
+    }
+    .command-bar .send kbd, .command-bar .send:active:not(:disabled) kbd { color: inherit; }
+    .command-bar .send:disabled { background: var(--skin-hover); border-color: var(--border); color: var(--muted); }
+    .tile-frame[data-focused="true"] { border-color: var(--accent); }
+    .tile-frame[data-focused="true"]:not([data-uncertain="true"]) .tile-header { background: var(--skin-chrome); color: var(--text); }
+    .tile-well, .tile-header button:active:not(:disabled) { box-shadow: none; }
+    .tile-header button:not(.site-retry, :hover, :active) { background: transparent; border-color: transparent; }
+    .group-apply[aria-pressed="true"] small { color: var(--accent); }
+    .selection-mark { border-radius: 3px; border-color: var(--skin-control); }
+    [data-selected="true"] > .selection-mark { background: var(--accent); border-color: var(--accent); }
+    [data-selected="true"] > .selection-mark path { stroke: var(--on-accent); }
+    .reading-navigation { border-radius: 5px; }
+    .command-palette, .confirm-dialog, .library .folder-modal { border-radius: 6px; background: var(--panel); }
+    .markdown-code, .markdown-preview .markdown-code pre { background: var(--skin-chrome); }
+    :scope :is(#root, body) * { scrollbar-color: var(--skin-control) var(--skin-chrome); }
+    :scope :is(#root, body) select,
+    :scope :is(#root, body) select:active:not(:disabled) {
+      background-image: conic-gradient(from -45deg at 50% 100%, currentColor 0 90deg, transparent 0);
+      background-size: 9px 5px;
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+      background-color: var(--field);
+      border-color: var(--field-border);
+      box-shadow: none;
+    }
+    :scope :is(#root, body) select:active:not(:disabled) { background-color: var(--accent-soft); color: var(--text); }
+    :scope :is(#root, body) input:is([type="radio"], [type="checkbox"]):not(.sr-only) {
+      border-color: var(--field-border); background: var(--field); box-shadow: none;
+    }
+    :scope :is(#root, body) input[type="checkbox"]:not(.sr-only) { border-radius: 3px; }
+    :scope :is(#root, body) input:is([type="radio"], [type="checkbox"]):not(.sr-only):checked {
+      border-color: var(--accent); background: var(--accent);
+    }
+    :scope :is(#root, body) input[type="radio"]:not(.sr-only):checked::before { background: var(--on-accent); }
+    :scope :is(#root, body) input[type="checkbox"]:not(.sr-only):checked::before { border-color: var(--on-accent); }
+    :scope :is(#root, body) :is(select, input[type="radio"], input[type="checkbox"]):focus-visible {
+      outline: 2px solid var(--accent); outline-offset: 2px;
+    }
+    :scope :is(#root, body) details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
+      background: var(--muted);
+    }
+    :scope #root .prompt-composer,
+    :scope :is(#root, body) :is(textarea:not([name="prompt"]), input:where(:not([type]), [type="text"], [type="search"],
+      [type="email"], [type="password"], [type="url"], [type="tel"], [type="number"])) {
+      border-radius: 4px;
+    }
+    .preference-switch span { border-radius: 10px; background: var(--skin-control); box-shadow: none; }
+    .preference-switch span::after { border-radius: 50%; background: var(--panel); border-color: transparent; box-shadow: none; }
+    .preference-switch input:checked + span { background: var(--accent); border-color: var(--accent); }
+    .preference-switch input:checked + span::after { background: var(--on-accent); }
+  }
+  @media (prefers-contrast: more) {
+    :root[data-ui-theme="minimal"] { --border: var(--skin-control); --field-border: var(--text); }
+  }
+}

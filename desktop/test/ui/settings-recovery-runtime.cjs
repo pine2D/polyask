@@ -65,7 +65,7 @@ async function visualBounds(win, selector) {
 async function settingsFlow(win, name) {
   await wait(win, '!!window.recoveryFixture && !!document.querySelector(".settings-advanced")', 'settings disclosure');
   check(await read(win, '!document.querySelector(".settings-advanced").open'), 'advanced starts collapsed');
-  check(await read(win, 'document.querySelectorAll(".settings-display:not(.settings-global-shortcut) fieldset").length===2'), 'two display groups');
+  check(await read(win, 'document.querySelectorAll(".settings-display:not(.settings-global-shortcut) fieldset").length===3'), 'theme, density and default scale');
   await navigate(win, 'display');
   await read(win, 'document.querySelector(".settings-toolbar button").focus()');
   for (let count = 0; count < 16; count++) {
@@ -163,6 +163,7 @@ async function settingsFlow(win, name) {
   await shot(win, `${name}-settings`);
 }
 async function healthFlow(win, name) {
+  let completed = 0;
   for (const reason of ['control', 'unconfirmed', 'capture', 'busy', 'page']) {
     await read(win, `window.recoveryFixture.health(${JSON.stringify(reason)})`);
     await wait(win, `document.querySelector('.health-first-step')?.dataset.reason===${JSON.stringify(reason)}`, 'health machine advice');
@@ -173,7 +174,9 @@ async function healthFlow(win, name) {
       await shot(win, `${name}-health-busy`);
     } else {
       await click(win, find('.health-first-step button'));
+      await wait(win, 'window.recoveryFixture.calls.health.length===' + ++completed, reason + ' action delivered');
       await click(win, textButton('healthCopyReport'));
+      await wait(win, 'window.recoveryFixture.calls.health.length===' + ++completed, reason + ' report delivered');
     }
   }
   check(await read(win, 'JSON.stringify(window.recoveryFixture.calls.health)===JSON.stringify(["focus","report","focus","report","focus","report","reload","report"])'), 'only expected manual health callbacks');

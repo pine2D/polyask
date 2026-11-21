@@ -246,6 +246,7 @@ export function SettingsWorkspace(props: SettingsWorkspaceProps): React.JSX.Elem
         <div className="settings-grid" ref={bodyRef}>
         <SettingsCategoryPanel category="appearance" active={currentSection === 'appearance'} title={labels.appearance}>
           <SettingsDisplay copy={props.copy} display={props.display} busy={busy}
+            theme={props.preferenceSync?.snapshot?.values.uiTheme} onThemeChange={props.preferenceSync?.onThemeChange}
             following={props.preferenceSync?.snapshot?.following.display} onChange={props.onDisplayChange} />
           {props.preferenceSync ? <SettingsLayout {...props.preferenceSync} copy={props.copy} busy={busy} /> : null}
         </SettingsCategoryPanel>

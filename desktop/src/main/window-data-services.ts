@@ -20,6 +20,7 @@ export async function createWindowDataServices(options: {
   readonly coordinator: BroadcastCoordinator; readonly synthesisCoordinator: BroadcastCoordinator;
   readonly publish: (channel: string, payload?: unknown) => void;
   readonly applyDisplay: (value: DisplayPreferences) => void;
+  readonly applyTheme: (value: string) => void;
   readonly setNotifications: (enabled: boolean) => void;
   readonly proxy: ProxyServices;
   readonly userDataPath?: string;
@@ -30,7 +31,10 @@ export async function createWindowDataServices(options: {
   // proxy 回调只置脏标记（spec §3.4）：只有同步拉取、备份恢复、本机重置的 refresh 触发，proxy-runtime 从 store 重读最新输入。
   const preferences = new PreferenceRuntime(new PreferencesRepository(database.state, database.meta),
     new DraftRepository(database.state, database.meta), manager,
-    state => publish('polyask:preferences-changed', state), options.applyDisplay, options.setNotifications,
+    state => {
+      options.applyTheme(state.values.uiTheme);
+      publish('polyask:preferences-changed', state);
+    }, options.applyDisplay, options.setNotifications,
     () => options.proxy.runtime.request());
   const synthesis = new SynthesisService({
     sites: SITES, archives: local.archives,

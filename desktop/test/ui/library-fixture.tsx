@@ -5,6 +5,7 @@ import { ArchiveSurface } from '../../src/renderer/archive-surface';
 import { setShellApi } from '../../src/renderer/shell-api';
 import { getCopy } from '../../src/shared/copy';
 import { createArchiveRecord } from '../../src/shared/archive';
+import { applyUiTheme } from '../../src/renderer/ui-theme';
 import '../../src/renderer/styles.css';
 import '../../src/renderer/accessibility.css';
 const state = { failSave: false, failLoad: false, failMarkdown: false, failExternal: false, writes: 0, folderWrites: 0, links: [] as string[] };
@@ -56,7 +57,9 @@ setShellApi(withFolderPages({
   archiveMarkdown: async () => { if (state.failMarkdown) throw Error('fixture_markdown_failed'); return '# Exported result'; },
   openExternal: async (url: string) => { if (state.failExternal) throw Error('fixture_open_failed'); state.links.push(url); }
 }) as any);
-const locale = new URLSearchParams(location.search).get('locale') || 'zh-CN';
+const query = new URLSearchParams(location.search);
+const locale = query.get('locale') || 'zh-CN';
+applyUiTheme(document, query.get('skin'));
 document.documentElement.lang = locale;
 const copy = getCopy(locale);
 (window as any).libraryTest.copy = copy;

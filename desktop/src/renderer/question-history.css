@@ -24,7 +24,7 @@
 :where(.question-history) button:disabled { opacity: .48; box-shadow: none; cursor: default; color: var(--muted); }
 .question-history button.primary {
   color: var(--text); background: var(--plat-g300); border-color: var(--plat-ink);
-  box-shadow: var(--plat-btn-bevel), 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--default-button-shadow);
 }
 .question-header > button:last-child { width: 24px; height: 24px; min-height: 24px; display: grid; place-items: center; padding: 0; }
 .question-header svg { width: 14px; height: 14px; }

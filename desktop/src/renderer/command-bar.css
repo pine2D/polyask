@@ -135,7 +135,7 @@
 .workspace-actions > button.more-trigger::after { font-variant-numeric: tabular-nums; }
 .cancel {
   color: #ffffff; background: var(--danger);
-  box-shadow: inset 1px 1px 0 #f87171, inset -1px -1px 0 #7f1d1d, 0 0 0 2px var(--plat-g400), 0 0 0 3px var(--plat-ink);
+  box-shadow: var(--danger-button-shadow);
 }
 .send:disabled {
   opacity: .52; color: var(--muted);

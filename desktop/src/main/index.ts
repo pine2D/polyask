@@ -4,6 +4,7 @@ import { CommandPaletteShortcutRuntime } from './command-palette-shortcut';
 import { CommandPaletteShortcutRepository } from './command-palette-shortcut-repository';
 import { createApplicationMenuController, createMainWindow } from './main-window';
 import { createWindowDataServices } from './window-data-services';
+import { setWindowUiTheme } from './native-shell-policy';
 import type { PreferenceRuntime } from './preference-runtime';
 import { mkdirSync } from "node:fs";
 import { basename, join } from "node:path";
@@ -250,6 +251,7 @@ async function createWindow(): Promise<void> {
   const { archives, recentPrompts, promptLibrary, decisions, folders, backup, autoBackup, questions, collection, preferences, synthesis, sync, dataAdmin } = await createWindowDataServices({
     database, manager, workspace, coordinator, synthesisCoordinator, proxy, publish: sendToShell, userDataPath: app.getPath("userData"),
     applyDisplay: value => applyDisplayPreferences(manager, value),
+    applyTheme: value => setWindowUiTheme(window, value),
     setNotifications: enabled => completionNotifier.setEnabled(enabled)
   });
   preferenceRuntime = preferences;

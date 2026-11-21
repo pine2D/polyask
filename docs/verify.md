@@ -88,6 +88,7 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 
 - 完整多依据与决策保存：`cd desktop && npm run test:unit -- test/multi-evidence-native.check.ts`（另有焦点子集 `POLYASK_EVIDENCE_FOCUS_NATIVE=1`、来源版本冲突子集 `POLYASK_EVIDENCE_CONFLICT_NATIVE=1`）。
 - 静态与组合报告导出：`npm run test:unit -- test/report-export.check.ts test/report-combined.check.ts`（真实 Electron 内存 session 导出 HTML/A4 PDF、公式/图表与恶意输入清洗）。
+- 内置主题专项：`cd desktop && xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:unit -- test/ui-theme-native.check.ts`。在两个隔离站点视图上切换皮肤，核对群发回执、草稿选区和视图身份，抓取工作台、提问历史、跨视图菜单及空态/错误态的窗口合成图，并记录最小窗口下两套主题的明暗、密度与缩放矩阵。
 - 偏好草稿同步、提问框同帧动效/激活与本机重置：`node scripts/test-safe.mjs command node scripts/preferences-drafts-native.mjs`、`npm run test:unit -- test/workspace-motion-native.check.ts test/composer-session-native.check.ts test/composer-activation-native.check.ts test/local-data-reset-interaction.check.ts`。
 - SQLite/IPC 与多页资源基线：`node scripts/test-safe.mjs command node scripts/resource-baseline.mjs`（1k/5k/20k 真实磁盘库查询与 1/3/9 页挂载切换测量）。
 

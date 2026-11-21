@@ -10,6 +10,7 @@ import { SiteZoomController } from '../src/main/site-zoom';
 import * as draftContract from '../src/shared/drafts';
 import * as presetContract from '../src/shared/tier-presets';
 import * as preferenceContract from '../src/shared/preferences';
+import * as themeContract from '../src/shared/ui-theme';
 import type { DesktopUiState } from '../src/shared/desktop-ui-state';
 import type { DisplayPreferences } from '../src/shared/display';
 import { readSource } from './fixtures';
@@ -101,6 +102,7 @@ function register(runtime: PreferenceRuntime) {
       if (name === '../shared/drafts') return draftContract;
       if (name === '../shared/tier-presets') return presetContract;
       if (name === '../shared/preferences') return preferenceContract;
+      if (name === '../shared/ui-theme') return themeContract;
       assert.equal(name, 'electron');
       return { ipcMain: { handle: (key: string, action: any) => handlers.set(key, action), removeHandler: (key: string) => handlers.delete(key) } };
     }
@@ -122,6 +124,21 @@ test('all preference and draft IPC routes reject untrusted origins before inspec
     assert.equal(ipc.notifications(), 0);
   } finally { ipc.dispose(); s.db.close(); }
   assert.equal(ipc.handlers.size, 0);
+});
+
+test('theme IPC accepts an explicit built-in choice without reapplying site display or seeding a shared default', () => {
+  const s = setup(), ipc = register(s.runtime);
+  try {
+    const set = ipc.handlers.get('polyask:preference-set')!, seed = ipc.handlers.get('polyask:preferences-seed')!;
+    const displays = s.displays.length, layouts = s.layouts.length;
+    assert.throws(() => seed(true, { uiTheme: 'platinum' }), /invalid_preference/);
+    assert.throws(() => set(true, { key: 'uiTheme', value: 'future-paper' }), /invalid_preference/);
+    assert.equal(set(true, { key: 'uiTheme', value: 'minimal' }).values.uiTheme, 'minimal');
+    assert.equal(s.published.at(-1)?.values.uiTheme, 'minimal');
+    assert.equal(s.displays.length, displays);
+    assert.equal(s.layouts.length, layouts);
+    assert.equal(s.db.outbox.count(), 0);
+  } finally { ipc.dispose(); s.db.close(); }
 });
 
 test('draft IPC requires valid epochs and rejects delayed saves and deletions after a reset lifecycle', () => {

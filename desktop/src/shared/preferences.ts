@@ -3,9 +3,10 @@ import { SITE_KEYS, type LayoutMode, type SiteKey } from "./contracts";
 import { DEFAULT_DISPLAY_PREFERENCES, type DisplayPreferences } from "./display";
 import { isProxyPreference } from "./proxy-preference";
 import type { SiteZoomPreferences } from "./site-zoom";
+import { DEFAULT_UI_THEME } from "./ui-theme";
 import { validSyncTime, type VersionedSyncValue } from "./sync";
 
-export type PreferenceKey = "completionNotifications" | "density" | "siteScale" | "layoutMode" |
+export type PreferenceKey = "completionNotifications" | "density" | "siteScale" | "uiTheme" | "layoutMode" |
   "workbenchGuide" | SitePresetKey | ConfirmationKey | `siteZoom.${SiteKey}` | "proxy";
 /** 可「不再提示」的确认：值为 false 表示用户选了不再提示。不归组，始终随同步跨设备生效。 */
 export type ConfirmationKey = "sitePageCloseConfirm" | "newSessionConfirm";
@@ -21,6 +22,7 @@ export type WorkbenchGuideState = null | { readonly version: 1; readonly disposi
 export interface PreferenceValues extends Readonly<Record<SitePresetKey, TierPreset | null>> {
   readonly completionNotifications: boolean;
   readonly display: DisplayPreferences;
+  readonly uiTheme: string;
   readonly layoutMode: LayoutMode;
   readonly siteZoom: SiteZoomPreferences;
   readonly workbenchGuide: WorkbenchGuideState;
@@ -49,13 +51,14 @@ export const PREFERENCE_STATE_PREFIX = "preference:";
 export const GENERAL_PREFERENCE_GROUPS: readonly GeneralPreferenceGroup[] = ["display", "layout", "siteZoom"];
 export const PREFERENCE_GROUPS: readonly PreferenceGroup[] = [...GENERAL_PREFERENCE_GROUPS, "proxy"];
 export const PREFERENCE_KEYS: readonly PreferenceKey[] = [
-  "completionNotifications", "density", "siteScale", "layoutMode", "workbenchGuide", ...CONFIRMATION_KEYS, ...PRESET_KEYS,
+  "completionNotifications", "density", "siteScale", "uiTheme", "layoutMode", "workbenchGuide", ...CONFIRMATION_KEYS, ...PRESET_KEYS,
   ...SITE_KEYS.map(site => `siteZoom.${site}` as const), "proxy"
 ];
 export const DEFAULT_PREFERENCE_VALUES: PreferenceValues = {
   ...DEFAULT_TIER_PRESETS,
   completionNotifications: false,
   display: DEFAULT_DISPLAY_PREFERENCES,
+  uiTheme: DEFAULT_UI_THEME,
   layoutMode: "overview",
   siteZoom: {},
   workbenchGuide: null,
@@ -69,7 +72,7 @@ export function isPreferenceKey(value: unknown): value is PreferenceKey {
 
 export function preferenceGroup(key: PreferenceKey): PreferenceGroup | null {
   if (key === "proxy") return "proxy";
-  if (key === "density" || key === "siteScale") return "display";
+  if (key === "density" || key === "siteScale" || key === "uiTheme") return "display";
   if (key === "layoutMode") return "layout";
   return key.startsWith("siteZoom.") ? "siteZoom" : null;
 }
@@ -80,6 +83,7 @@ export function isPreferenceValue(key: PreferenceKey, value: unknown): boolean {
   if (isSitePresetKey(key)) return value === null || isTierPreset(value);
   if (key === "completionNotifications" || CONFIRMATION_KEYS.includes(key as ConfirmationKey)) return typeof value === "boolean";
   if (key === "density") return value === "compact" || value === "comfortable";
+  if (key === "uiTheme") return typeof value === "string" && /^[a-z][a-z0-9-]{0,63}$/.test(value);
   if (key === "siteScale") return value === 0.9 || value === 1;
   if (key === "layoutMode") return value === "overview" || value === "duel" || value === "focus";
   if (key === "workbenchGuide") {
