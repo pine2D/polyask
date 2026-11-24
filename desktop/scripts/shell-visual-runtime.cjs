@@ -47,6 +47,10 @@ app.whenReady().then(async () => {
     throw new Error(`Blank screenshot: ${name}`);
   };
   const check = (ok, message) => { if (!ok) failures.push(message); };
+  if (process.argv.includes('--composer-scroll-only')) {
+    await require('./composer-scroll-visual.cjs')({ win, output, run, wait, paint, shot });
+    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+  }
   if (process.argv.includes('--desktop-tools-only')) {
     await require('./desktop-tools-visual.cjs')({ win, output, run, wait, paint, shot });
     assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
@@ -62,7 +66,7 @@ app.whenReady().then(async () => {
     await wait('!!document.querySelector(".command-bar")'); await paint();
     for (const zoom of [1.5, 1, 2, 1]) {
       win.webContents.setZoomFactor(zoom); await paint();
-      const geometry = await run(`(() => {const bar=document.querySelector('.command-bar'),prompt=bar.querySelector('.prompt-composer');
+      const geometry = await run(`(() => {const bar=document.querySelector('.command-bar'),prompt=bar.querySelector('textarea[name=prompt]');
         return {height:bar.getBoundingClientRect().height,prompt:prompt.getBoundingClientRect().width,layout:document.documentElement.dataset.toolbarLayout};})()`);
       const stacked = zoom > 1;
       assert.equal(geometry.layout, stacked ? 'stacked' : 'inline');
@@ -111,6 +115,7 @@ app.whenReady().then(async () => {
   await require('./interface-polish-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./workspace-entry-visual.cjs')({ win, output, run, wait, paint, shot });
+  await require('./composer-scroll-visual.cjs')({ win, output, run, wait, paint, shot });
   const measure = () => run(`(() => {
     const visible = e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden';
     const selectors = ['.command-bar', '.command-bar > *', '.page-tabs button', '.scope-split', '.settings-card', '.settings-actions', '.sync-stage-list', '.workspace-drawer'];
@@ -127,7 +132,7 @@ app.whenReady().then(async () => {
       return {selector:e.className, ratio:(Math.max(a,b)+.05)/(Math.min(a,b)+.05)};
     });
     return {boxes, ratios, viewport:innerWidth, height:document.querySelector('.command-bar')?.getBoundingClientRect().height,
-      prompt:document.querySelector('.command-bar .prompt-composer')?.getBoundingClientRect().width, fit:document.querySelector('.command-bar')?.dataset.fit,
+      prompt:document.querySelector('.command-bar textarea[name=prompt]')?.getBoundingClientRect().width, fit:document.querySelector('.command-bar')?.dataset.fit,
       textSize:[...document.querySelectorAll('.sync-state span,.sync-privacy,.preference-card small,.danger-zone label,.sync-stage-list small')].map(e => parseFloat(getComputedStyle(e).fontSize))};
   })()`);
   for (const surface of ['shell', 'settings']) for (const locale of ['zh-CN', 'zh-TW', 'en']) {

@@ -10,10 +10,7 @@ import { SETTINGS_RECOVERY_COPY } from '../../src/shared/settings-recovery-copy'
 import { proxyShellStubs } from './proxy-state-fixture';
 import type { SyncStatus } from '../../src/shared/sync';
 import type { DesktopImage } from '../../src/shared/images';
-import '../../src/renderer/styles.css';
-import '../../src/renderer/settings.css';
-import '../../src/renderer/accessibility.css';
-import '../../src/renderer/feedback.css';
+import '../../src/renderer/shell-styles.css';
 const params = new URLSearchParams(location.search), locale = params.get('locale') || 'en';
 document.documentElement.lang = locale;
 const copy = { ...getCopy(locale), ...SETTINGS_RECOVERY_COPY[locale as 'en'] };

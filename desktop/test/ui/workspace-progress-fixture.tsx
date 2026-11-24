@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import { useState } from 'react';
 import { PageTabs } from '../../src/renderer/page-tabs';
 import { WorkspaceProgress } from '../../src/renderer/workspace-progress';
+import { WindowTitleBar } from '../../src/renderer/window-titlebar';
 import { QuestionHistory } from '../../src/renderer/question-history';
 import { FeedbackProvider } from '../../src/renderer/feedback-provider';
 import { useQuestionRunProgress } from '../../src/renderer/use-question-run-progress';
@@ -12,11 +13,13 @@ import { SITE_KEYS } from '../../src/shared/contracts';
 import { SITES } from '../../src/main/sites';
 import type { QuestionRunProgress } from '../../src/shared/question-run-progress';
 import type { SiteStatus } from '../../src/shared/protocol';
-import '../../src/renderer/styles.css';
-import '../../src/renderer/feedback.css';
+import '../../src/renderer/shell-styles.css';
 
 const query = new URLSearchParams(location.search), copy = getCopy(query.get('locale') || 'en');
-applyDisplayDensity(document.documentElement, { density: query.get('density') === 'comfortable' ? 'comfortable' : 'compact', siteScale: 1 });
+const applyDensity = () => applyDisplayDensity(document.documentElement, {
+  density: query.get('density') === 'comfortable' ? 'comfortable' : 'compact', siteScale: 1 });
+applyDensity();
+window.addEventListener('resize', applyDensity);
 let progress: QuestionRunProgress = { runId: 'current', questionId: 'question', revision: 1, state: 'available', answers: [] };
 let push: (value: QuestionRunProgress) => void = () => undefined, reads = 0, live = 0;
 let controls: { evidence: (mode: string) => void; expanded: (value: boolean) => void };
@@ -45,8 +48,8 @@ function Fixture() {
       kimi: { site: 'kimi', phase: 'failed', submission: { runId: 'current', state: 'unconfirmed' } },
       deepseek: { site: 'deepseek', phase: 'cancelled', submission: { runId: 'current', state: 'cancelled' } } });
   } };
-  return <FeedbackProvider copy={copy}><main className={`app-shell${expanded ? ' is-composer-expanded' : ''}`}>
-    <div data-composer style={{ height: expanded ? query.get('density') === 'comfortable' ? 144 : 120 : query.get('density') === 'comfortable' ? 64 : 52 }}>
+  return <FeedbackProvider copy={copy}><WindowTitleBar copy={copy} isMac={false}/><main className={`app-shell${expanded ? ' is-composer-expanded' : ''}`}>
+    <div data-composer className={`command-bar${expanded ? ' is-expanded' : ''}`}>
       <PageTabs copy={copy} sites={SITES} selectedSites={SITE_KEYS} statuses={statuses} page={page} inputMethod="keyboard" summaryRunId="current" onPageChange={setPage}/>
     </div>
     <WorkspaceProgress copy={copy} statuses={statuses}

@@ -1,8 +1,9 @@
 // Only synthetic inputs and production global styles; no shell bridge or account data.
-import '../../src/renderer/styles.css';
-import '../../src/renderer/settings.css';
-import '../../src/renderer/accessibility.css';
-import '../../src/renderer/feedback.css';
+import { createElement, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { PromptComposer } from '../../src/renderer/prompt-composer';
+import { getCopy } from '../../src/shared/copy';
+import '../../src/renderer/shell-styles.css';
 
 const query = new URLSearchParams(location.search);
 const locale = query.get('locale') || 'en';
@@ -37,8 +38,16 @@ document.querySelector('#root')!.innerHTML = `<main class="field-fixture">
     <label>${labels[3]}<input id="readonly" value="Synthetic" readonly /></label>
     <label>${labels[4]}<input id="invalid" value="Synthetic" aria-invalid="true" /></label>
     <label>${labels[5]}<input id="disabled" value="Synthetic" disabled /></label>
-    <div class="command-bar"><label>${labels[6]}<div class="prompt-composer"><textarea name="prompt">${labels[6]}</textarea></div></label></div>
+    <div class="command-bar"><span>${labels[6]}</span><div id="field-composer"></div></div>
   </section></main>`;
+function ComposerField() {
+  const [text, setText] = useState(labels[6]);
+  const [expanded, setExpanded] = useState(false);
+  return createElement(PromptComposer, { promptRef: useRef<HTMLTextAreaElement>(null), copy: getCopy(locale),
+    text, expanded, busy: false, isMac: false, onTextChange: setText, onExpandedChange: setExpanded,
+    onSubmit: () => {}, onPasteImages: () => {} });
+}
+createRoot(document.querySelector('#field-composer')!).render(createElement(ComposerField));
 const popover = document.createElement('aside');
 popover.className = 'field-fixture library-popover';
 popover.innerHTML = `<label>${labels[7]}<input id="popover" type="search" placeholder="${labels[7]}" /></label>`;

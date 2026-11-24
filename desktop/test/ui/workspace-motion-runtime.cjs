@@ -14,8 +14,8 @@ app.whenReady().then(async()=>{
   const nativeBounds=()=>win.contentView.children.filter(v=>v.webContents&&v.webContents!==win.webContents).map(v=>v.getBounds());
   const manager=new ViewManager(win,()=>{},layout=>{
     events++;
-    win.webContents.send('motion:native',nativeBounds());
-    win.webContents.send('polyask:layout',layout);
+    // Sample the actual views and deliver their bounds with the same layout event, so a frame cannot combine two revisions.
+    win.webContents.send('polyask:layout',layout,nativeBounds());
   },()=>{}, {selectedSites:['claude','chatgpt','deepseek','gemini']});
   const views=win.contentView.children.filter(v=>v.webContents&&v.webContents!==win.webContents);
   const startupEnd=Date.now()+5000;
@@ -71,8 +71,8 @@ app.whenReady().then(async()=>{
     await click('textarea');
     await wait('document.querySelector(".command-bar").classList.contains("is-expanded")');
     assert.deepEqual(await position(),before,'selection and scroll survive outside-click collapse and re-entry');
-    const style=await run('(()=>{const e=document.querySelector("textarea"),s=getComputedStyle(e),p=getComputedStyle(e.parentElement);return{outline:s.outlineStyle,border:s.borderColor,shadow:p.boxShadow}})()');
-    assert.equal(style.outline,'none');assert.equal(style.border,'rgba(0, 0, 0, 0)');assert.notEqual(style.shadow,'none');
+    const style=await run('(()=>{const s=getComputedStyle(document.querySelector("textarea[name=prompt]"));return{outline:s.outlineStyle,border:s.borderStyle,shadow:s.boxShadow}})()');
+    assert.equal(style.outline,'solid');assert.equal(style.border,'solid');assert.equal(style.shadow.includes('inset'),true);
     if(zoom===1){const r=await run('(()=>{const r=document.querySelector(".prompt-composer").getBoundingClientRect();return{x:Math.floor(r.x)-12,y:0,width:Math.ceil(r.width)+24,height:Math.ceil(r.bottom)+12}})()');writeFileSync(join(output,`${theme}-${density}.png`),(await win.webContents.capturePage(r)).toPNG())}
     const beforeCloseEvents=events,beforeCloseResize=await resizeCounts();
     const closing=await trace('[data-composer-toggle]');
@@ -88,9 +88,13 @@ app.whenReady().then(async()=>{
     for(const selector of ['.scope-main','.image-trigger']){
       await click(selector);await pause(160);
       const pane=selector==='.scope-main'?'.workspace-drawer':'.image-tray';
-      const bounds=nativeBounds();await click(pane+' .panel-close');
-      assert.equal(await run(`document.querySelector(${JSON.stringify(pane)})?.hasAttribute('inert')`),true,'closing panel is inert');
-      assert.deepEqual(nativeBounds(),bounds,'native width retained during 120ms panel exit');
+      const bounds=nativeBounds();
+      await run(`window.motionPanelExit=null;{const pane=document.querySelector(${JSON.stringify(pane)});
+        new MutationObserver((_,observer)=>{if(pane.inert){window.motionPanelExit=window.motionNative;observer.disconnect();}})
+          .observe(pane,{attributes:true,attributeFilter:['inert']});}`);
+      await click(pane+' .panel-close');
+      await wait('window.motionPanelExit!==null');
+      assert.deepEqual(await run('window.motionPanelExit'),bounds,'native width retained when the closing panel becomes inert');
       await wait(`!document.querySelector(${JSON.stringify(pane)})`);
     }
     await click('.question-trigger');await pause(160);
@@ -115,12 +119,12 @@ app.whenReady().then(async()=>{
   assert.equal(await run('getComputedStyle(document.querySelector(".prompt-composer")).transitionDuration'),'0s');
   await debug.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});
   await click('textarea');await pause(220);
-  assert.equal(await run('getComputedStyle(document.querySelector(".prompt-composer")).outlineStyle'),'solid','system focus remains in forced colors');
+  assert.equal(await run('getComputedStyle(document.querySelector("textarea[name=prompt]")).outlineStyle'),'solid','system focus remains in forced colors');
   await debug.sendCommand('Emulation.setEmulatedMedia',{features:[]});debug.detach();
   for(const type of ['keyDown','keyUp'])win.webContents.sendInputEvent({type,keyCode:'Tab'});
   for(const type of ['keyDown','keyUp'])win.webContents.sendInputEvent({type,keyCode:'Tab',modifiers:['shift']});
   await wait('document.activeElement===document.querySelector("textarea")');
-  assert.equal(await run('getComputedStyle(document.querySelector(".prompt-composer")).boxShadow.includes("inset")'),true,'keyboard focus retains the same bottom edge');
+  assert.equal(await run('getComputedStyle(document.querySelector("textarea[name=prompt]")).boxShadow.includes("inset")'),true,'keyboard focus retains the same bottom edge');
   writeFileSync(join(output,'report.json'),JSON.stringify(reports,null,2));
   console.log(`Native motion passed: ${reports.length} theme/density/zoom scenarios; delayed layout, four real views, selection, reversal, panels, reduced motion, forced colors and keyboard focus.`);
   win.destroy();app.exit(0);

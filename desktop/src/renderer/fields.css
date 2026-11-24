@@ -1,9 +1,9 @@
-/* Platinum sunken editable wells: crisp 1px black frame + inner top-left shadow, 0ms instant focus.
+/* Platinum sunken editable wells: a 1px field boundary, inner top-left shadow and instant focus.
    Scoped via :is(#root, body) to preserve (1,0,0) ID specificity while covering all document.body React portals. */
-:is(#root, body) :is(textarea:not([name="prompt"]), input:where(:not([type]),
+:is(#root, body) :is(textarea, input:where(:not([type]),
   [type="text"], [type="search"], [type="email"], [type="password"],
   [type="url"], [type="tel"], [type="number"])) {
-  border: 1px solid var(--plat-ink);
+  border: 1px solid var(--field-border);
   border-radius: 0;
   background: var(--field);
   color: var(--text);
@@ -11,40 +11,27 @@
   box-shadow: var(--plat-sunken-bevel), 1px 1px 0 var(--plat-hi);
   transition: none;
   &:focus {
-    outline: none;
+    /* An inset outline also paints over a native textarea scrollbar. */
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
     border-color: var(--accent);
-    box-shadow: inset 0 0 0 1px var(--accent), var(--plat-sunken-bevel);
+    box-shadow: var(--plat-sunken-bevel);
   }
   &[readonly] { background: var(--plat-g200); }
   &[aria-invalid="true"] {
     border-color: var(--danger-ink);
+    outline-color: var(--danger-ink);
     box-shadow: inset 0 0 0 1px var(--danger-ink), var(--plat-sunken-bevel);
   }
   &:disabled { opacity: .55; box-shadow: none; background: var(--plat-g300); }
 }
-#root .prompt-composer {
-  border: 1px solid var(--plat-ink);
-  border-radius: 0;
-  background: var(--field);
-  box-shadow: var(--plat-sunken-bevel), 1px 1px 0 var(--plat-hi);
-}
-#root .prompt-composer:has(> textarea:focus) {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: inset 0 0 0 1px var(--accent), var(--plat-sunken-bevel);
-}
 @media (forced-colors: active) {
-  :is(#root, body) :is(textarea:not([name="prompt"]), input:where(:not([type]),
+  :is(#root, body) :is(textarea, input:where(:not([type]),
     [type="text"], [type="search"], [type="email"], [type="password"],
     [type="url"], [type="tel"], [type="number"])) {
     border: 1px solid CanvasText; background: Canvas; box-shadow: none;
     &:focus { background: Canvas; box-shadow: none; outline: 2px solid Highlight; outline-offset: -2px; }
     &[aria-invalid="true"] { border-color: LinkText; }
     &:disabled { opacity: 1; border-color: GrayText; color: GrayText; }
-  }
-  #root .prompt-composer { border: 1px solid CanvasText; background: Canvas; box-shadow: none; }
-  #root .prompt-composer > textarea { border: 0; }
-  #root .prompt-composer:has(> textarea:focus) {
-    background: Canvas; box-shadow: none; outline: 2px solid Highlight; outline-offset: -2px;
   }
 }

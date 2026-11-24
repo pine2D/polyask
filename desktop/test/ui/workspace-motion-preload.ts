@@ -1,10 +1,10 @@
-// The fixture uses the production shell API; this extra channel reports actual native geometry only.
+// The fixture samples the actual view bounds from the same IPC delivery as the production layout.
 import '../../src/preload/shell';
 import { contextBridge, ipcRenderer } from 'electron';
 contextBridge.exposeInMainWorld('motionTest', {
   onNative: (listener: (bounds: unknown) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, bounds: unknown) => listener(bounds);
-    ipcRenderer.on('motion:native', handler);
-    return () => ipcRenderer.removeListener('motion:native', handler);
+    const handler = (_event: Electron.IpcRendererEvent, _layout: unknown, bounds: unknown) => listener(bounds);
+    ipcRenderer.on('polyask:layout', handler);
+    return () => ipcRenderer.removeListener('polyask:layout', handler);
   }
 });

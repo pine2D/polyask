@@ -53,7 +53,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       const entry = await run(`(() => { const e=document.querySelector('.archive-trigger'), r=e.getBoundingClientRect();
         return {visible:e.getClientRects().length>0,width:r.width,height:r.height,left:r.left,right:r.right,
           name:e.getAttribute('aria-label'),hint:e.dataset.hint,target:parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--target-size')),
-          prompt:document.querySelector('.prompt-composer').getBoundingClientRect().width}; })()`);
+          prompt:document.querySelector('textarea[name=prompt]').getBoundingClientRect().width}; })()`);
       assert.equal(entry.visible && entry.width >= entry.target && entry.height >= entry.target, true,
         `${locale}/${density}: library stays visible at minimum desktop width: ${JSON.stringify(entry)}`);
       assert.equal(entry.left >= 0 && entry.right <= 960 && entry.prompt >= 320, true,
@@ -90,7 +90,7 @@ module.exports = async ({ win, output, run, wait, paint, shot }) => {
       for (const state of ['sending', 'cancelling']) {
         await win.loadFile(join(output, 'index.html'), { query: {locale,density,stress:'1',[state]:'1'} });
         await wait('!!document.querySelector(".cancel")'); await paint();
-        const action = await run(`(() => { const p=document.querySelector('.prompt-composer'),a=document.querySelector('.cancel');
+        const action = await run(`(() => { const p=document.querySelector('textarea[name=prompt]'),a=document.querySelector('.cancel');
           return {prompt:p.getBoundingClientRect().width,label:a.textContent,width:a.getBoundingClientRect().width}; })()`);
         assert.ok(action.prompt >= 320, `${locale}/${density}/${state}: ${JSON.stringify(action)}`);
       }

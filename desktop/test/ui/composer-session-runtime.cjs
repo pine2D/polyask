@@ -70,7 +70,7 @@ app.whenReady().then(async () => {
         const s=document.querySelector(".send").getBoundingClientRect(),a=document.querySelector(".command-bar"),select=document.querySelector(".tier-select");
         return {width:innerWidth,fit:a.dataset.fit||"",labelVisible:shown(document.querySelector("[data-current-tier]")),
           pressedVisible:shown(document.querySelector('[data-tier-icon="think"][aria-pressed="true"]')),selectVisible:shown(select)&&select.value==="think",
-          promptWidth:Math.round(document.querySelector(".prompt-composer").getBoundingClientRect().width),
+          promptWidth:document.querySelector("textarea[name=prompt]").getBoundingClientRect().width,
           sendVisible:s.width>=24&&s.right<=innerWidth,overflow:a.scrollWidth>a.clientWidth+1,height:a.getBoundingClientRect().height}})()`);
       const tierVisible = bounds.labelVisible || bounds.pressedVisible || bounds.selectVisible;
       assert.equal(tierVisible && bounds.sendVisible && !bounds.overflow && bounds.promptWidth >= 320, true, `toolbar stays usable: ${JSON.stringify(bounds)}`);

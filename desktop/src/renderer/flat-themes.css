@@ -117,8 +117,7 @@
     :scope :is(#root, body) details:not(.question-menu):not(.archive-record-context) > summary:not([hidden])::before {
       background: var(--muted);
     }
-    :scope #root .prompt-composer,
-    :scope :is(#root, body) :is(textarea:not([name="prompt"]), input:where(:not([type]), [type="text"], [type="search"],
+    :scope :is(#root, body) :is(textarea, input:where(:not([type]), [type="text"], [type="search"],
       [type="email"], [type="password"], [type="url"], [type="tel"], [type="number"])) {
       border-radius: 4px;
     }

@@ -16,14 +16,14 @@ export const COMPACT_MORE_COMMANDS: readonly CommandId[] = ["collect-compare"];
  * 纯函数式重算（宽度+内容 → 级别），不存在滞回振荡；无布局环境（jsdom）宽度为 0 时保持完整布局。
  */
 export function fitToolbar(bar: HTMLElement, minimum = MIN_PROMPT_WIDTH): number {
-  const composer = bar.querySelector<HTMLElement>(".prompt-composer");
-  if (!composer || bar.getBoundingClientRect().width <= 0) { applyFit(bar, 0); return 0; }
+  const editor = bar.querySelector<HTMLTextAreaElement>('textarea[name="prompt"]');
+  if (!editor || bar.getBoundingClientRect().width <= 0) { applyFit(bar, 0); return 0; }
   const root = bar.ownerDocument.documentElement;
   const layout = applyToolbarLayout(root, root.dataset.density === 'comfortable' ? 'comfortable' : 'compact', Math.floor(bar.getBoundingClientRect().width));
   if (layout === 'stacked') { applyFit(bar, TOOLBAR_FIT_LEVELS - 1); return TOOLBAR_FIT_LEVELS - 1; }
   for (let level = 0; level < TOOLBAR_FIT_LEVELS; level++) {
     applyFit(bar, level);
-    if (composer.getBoundingClientRect().width >= minimum) return level;
+    if (editor.getBoundingClientRect().width >= minimum) return level;
   }
   return TOOLBAR_FIT_LEVELS - 1;
 }

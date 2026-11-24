@@ -18,7 +18,7 @@ input, textarea, [contenteditable="true"] { user-select: text; }
 button { transition: none; }
 
 @media (prefers-contrast: more) {
-  :root { --border: var(--plat-ink); --field-border: var(--plat-ink); }
+  :root { --border: var(--plat-ink); --field-border: var(--text); }
 }
 @media (forced-colors: active) {
   :root {

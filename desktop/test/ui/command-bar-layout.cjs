@@ -33,7 +33,7 @@ module.exports = async ({ win, run, output, label }) => {
     return {bar:{left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom},boxes,contents,
       actions:[...bar.querySelectorAll('.prompt-composer,.new-session-trigger,.question-trigger,.draft-trigger,.send,.archive-trigger')].filter(visible).map(e=>{
         const r=e.getBoundingClientRect();return {name:e.className,left:r.left,right:r.right,top:r.top,bottom:r.bottom};}),
-      prompt:bar.querySelector('.prompt-composer').getBoundingClientRect().width,
+      prompt:bar.querySelector('textarea[name=prompt]').getBoundingClientRect().width,
       history:style(bar.querySelector('.question-trigger')),draft:style(bar.querySelector('[data-draft-open]'))};
   })()`);
   const failures = result.boxes.filter(box => box.left < result.bar.left - 1 || box.right > result.bar.right + 1 ||

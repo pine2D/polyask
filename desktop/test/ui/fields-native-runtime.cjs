@@ -24,7 +24,7 @@ app.whenReady().then(async () => {
     boundary();
   };
   const measure = () => run(`(() => {
-    const selectors=['#normal','#notes','#readonly','#invalid','#disabled','.prompt-composer','#popover'];
+    const selectors=['#normal','#notes','#readonly','#invalid','#disabled','[name=prompt]','#popover'];
     return {width:innerWidth,dpr:devicePixelRatio,contrast:matchMedia('(prefers-contrast: more)').matches,
       forced:matchMedia('(forced-colors: active)').matches,overflow:document.documentElement.scrollWidth>innerWidth+1,
       fields:selectors.map(selector=>{const node=document.querySelector(selector),style=getComputedStyle(node),r=node.getBoundingClientRect();
@@ -84,20 +84,19 @@ app.whenReady().then(async () => {
     if (preference !== 'forced-colors') assert.equal(state['#invalid'].border === state['#normal'].border, false, 'invalid state keeps its semantic border');
     await run('document.querySelector("#normal").focus()'); await paint();
     const focus = (await measure()).fields[0];
-    assert.equal(preference === 'forced-colors' ? focus.outline === 'solid' : focus.shadow.includes('inset'), true, 'focus indicator remains visible');
+    assert.equal(focus.outline, 'solid', 'focus indicator remains visible');
     if (locale === 'en' && density === 'comfortable' && zoom === 2 && preference === 'default')
       writeFileSync(join(output, `fields-${theme}-input-focus-200.png`), (await win.webContents.capturePage()).toPNG());
     await run('document.querySelector("#invalid").focus()'); await paint();
     const invalidFocus = (await measure()).fields.find(field => field.selector === '#invalid');
     assert.equal(invalidFocus.border, state['#invalid'].border, 'focus retains error boundary');
     await run('document.querySelector("[name=prompt]").focus()'); await paint();
-    const composer = (await measure()).fields.find(field => field.selector === '.prompt-composer');
-    assert.equal(preference === 'forced-colors' ? composer.outline === 'solid' : composer.shadow.includes('inset'), true, 'composer owns its focus indicator');
+    const composer = (await measure()).fields.find(field => field.selector === '[name=prompt]');
+    assert.equal(composer.outline, 'solid', 'composer owns its focus indicator');
     if (locale === 'en' && density === 'comfortable' && zoom === 2 && preference === 'default')
       writeFileSync(join(output, `fields-${theme}-composer-focus-200.png`), (await win.webContents.capturePage()).toPNG());
-    const promptStyle = await run('(()=>{const s=getComputedStyle(document.querySelector("[name=prompt]"));return {outline:s.outlineStyle,shadow:s.boxShadow,borderWidth:s.borderLeftWidth};})()');
-    assert.equal(promptStyle.outline, 'none'); assert.equal(promptStyle.shadow, 'none', 'no second textarea focus indicator');
-    if (preference === 'forced-colors') assert.equal(promptStyle.borderWidth, '0px', 'system colors do not add a second textarea boundary');
+    const frame = await run('(()=>{const s=getComputedStyle(document.querySelector(".prompt-composer"));return [s.outlineStyle,s.boxShadow,s.borderLeftWidth];})()');
+    assert.deepEqual(frame, ['none', 'none', '0px'], 'the layout group does not draw a second field');
     await run('document.activeElement.blur()'); await paint();
     if (locale === 'en' && density === 'comfortable') writeFileSync(join(output, `fields-${theme}-${preference}-${zoom * 100}.png`), (await win.webContents.capturePage()).toPNG());
     reports.push({ ...scenario, geometry, pixels, focus, invalidFocus, composer });

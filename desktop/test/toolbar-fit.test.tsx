@@ -15,9 +15,12 @@ import { mountDom } from "./ui/dom-harness";
 function syntheticBar(document: Document, barWidth: number, prompt: number, step: number) {
   const bar = document.createElement("header"); bar.className = "command-bar";
   const composer = document.createElement("div"); composer.className = "prompt-composer";
+  const editor = document.createElement("textarea"); editor.name = "prompt";
+  composer.append(editor);
   bar.append(composer); document.body.append(bar);
   bar.getBoundingClientRect = () => ({ width: barWidth }) as DOMRect;
-  composer.getBoundingClientRect = () => ({ width: prompt + toolbarFitLevel(bar) * step }) as DOMRect;
+  editor.getBoundingClientRect = () => ({ width: prompt + toolbarFitLevel(bar) * step }) as DOMRect;
+  composer.getBoundingClientRect = () => ({ width: editor.getBoundingClientRect().width + 30 }) as DOMRect;
   return bar;
 }
 
@@ -25,6 +28,7 @@ test("toolbar fit picks the lowest level that keeps the prompt at least 320px wi
   const dom = await mountDom(null);
   try {
     assert.equal(fitToolbar(syntheticBar(dom.document, 1600, 400, 50)), 0);
+    assert.equal(fitToolbar(syntheticBar(dom.document, 968, 296, 30)), 1, "the toggle cannot count towards the editor minimum");
     const bar = syntheticBar(dom.document, 960, 200, 50);
     assert.equal(fitToolbar(bar), 3);
     assert.equal(bar.dataset.fit, "1 2 3", "levels accumulate so CSS can target `at least N`");

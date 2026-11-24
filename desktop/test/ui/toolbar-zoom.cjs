@@ -12,7 +12,7 @@ module.exports = async ({ win, run, paint, wait, click, position, before, densit
       const boxes=[...bar.querySelectorAll('button,select,.prompt-composer')].filter(visible).map(e=>{
         const r=e.getBoundingClientRect();return {name:e.getAttribute('aria-label')||e.className,
           left:r.left,right:r.right,top:r.top,bottom:r.bottom,width:r.width};});
-      return {width:innerWidth,height:rect.height,prompt:bar.querySelector('.prompt-composer').getBoundingClientRect().width,
+      return {width:innerWidth,height:rect.height,prompt:bar.querySelector('textarea[name=prompt]').getBoundingClientRect().width,
         libraryVisible:bar.querySelector('.archive-trigger').getClientRects().length>0,
         overflow:bar.scrollWidth>bar.clientWidth+1,boxes};
     })()`);

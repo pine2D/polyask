@@ -18,8 +18,8 @@ const prepare = async () => {
   await new Promise((resolve, reject) => {
     const compiler = webpack({ mode: 'production', context: root, devtool: false,
       entry: join(root, 'test/ui/fields-native-fixture.ts'), output: { path: output, filename: 'bundle.js' },
-      resolve: { extensions: ['.ts', '.js'] }, module: { rules: [
-        { test: /\.ts$/, exclude: /node_modules/, use: [{ loader: 'ts-loader', options: { transpileOnly: true } }] },
+      resolve: { extensions: ['.tsx', '.ts', '.js'] }, module: { rules: [
+        { test: /\.tsx?$/, exclude: /node_modules/, use: [{ loader: 'ts-loader', options: { transpileOnly: true } }] },
         { test: /\.css$/, use: ['style-loader', 'css-loader'] }
       ] } });
     compiler.run((error, stats) => compiler.close(() => error || stats.hasErrors()

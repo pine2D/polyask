@@ -13,9 +13,7 @@ import { useWorkspaceMotion } from '../../src/renderer/use-workspace-motion';
 import { getCopy } from '../../src/shared/copy';
 import type { LayoutState, Tier } from '../../src/shared/protocol';
 import { SITES } from '../../src/main/sites';
-import '../../src/renderer/styles.css';
-import '../../src/renderer/accessibility.css';
-import '../../src/renderer/feedback.css';
+import '../../src/renderer/shell-styles.css';
 
 const query = new URLSearchParams(location.search), density = query.get('density') === 'comfortable' ? 'comfortable' : 'compact';
 document.documentElement.dataset.density = density;

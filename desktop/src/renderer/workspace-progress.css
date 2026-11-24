@@ -1,9 +1,11 @@
 /* Platinum run-progress micro-matrix inside bottom status bar. */
 .feedback-workspace:empty { display: none; }
-.feedback-workspace { flex: 1; min-width: 0; container-type: inline-size; }
+.feedback-bar:has(.run-progress) { overflow-x: auto; scrollbar-width: none; }
+.feedback-workspace { flex: 1; min-width: min-content; }
 .feedback-bar[data-has-notice="false"]:has(.run-progress) .feedback-notice:not([hidden]) { display: none; }
 .run-progress { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; font-size: 11px; white-space: nowrap; }
-.run-progress-content { flex: 1; min-width: 0; container-type: inline-size; }
+/* Reserve a readable count alongside the buttons even when a transient notice shares the footer. */
+.run-progress-content { flex: 1; min-width: 9ch; container-type: inline-size; }
 .run-progress-summary { display: flex; align-items: center; gap: 8px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
 .run-progress-summary > strong { font-size: inherit; font-weight: 700; }
 .run-progress-matrix {
@@ -46,10 +48,13 @@
 @container (max-width: 820px) { .run-progress-summary-counts > span { display: none; } }
 @container (max-width: 680px) { .run-progress-matrix { display: none; } }
 @container (max-width: 580px) { .run-progress-summary-counts { display: none; } }
-@container (max-width: 440px) {
+@media (max-width: 680px) {
+  .feedback-bar:has(.run-progress) { gap: 4px; padding-inline: 4px; }
+  .feedback-bar[data-has-notice="true"]:has(.run-progress) .feedback-notice { min-width: 6ch; }
+  .feedback-bar:has(.run-progress) > button, .run-progress button, .run-progress button[name="read-run-copies"]:not(:disabled) { padding-inline: 4px; }
   .run-read-label { display: none; }
   .run-read-compact { display: inline; }
-  .run-progress, .run-progress-summary { gap: 6px; }
+  .run-progress, .run-progress-summary { gap: 4px; }
 }
 @media (forced-colors: active) {
   .run-progress button { color: ButtonText; border: 1px solid ButtonText; box-shadow: none; }

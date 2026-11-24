@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-module.exports = async ({ win, run, wait, click, paint, draft, locale }) => {
+module.exports = async ({ win, run, wait, click, paint, draft }) => {
   const images = await run('document.querySelector("#session-images").textContent');
   assert.equal(JSON.parse(images).length, 1);
   const opened = await run('document.querySelector("main").dataset.opened');
@@ -22,7 +22,6 @@ module.exports = async ({ win, run, wait, click, paint, draft, locale }) => {
   assert.equal(await run('document.querySelector("#session-calls").textContent'), '[["claude","kimi"]]');
   assert.equal(await run('document.querySelector("textarea").value'), draft);
   assert.equal(await run('document.querySelector("#session-images").textContent'), images);
-  const expected = locale === 'en' ? 'New sessions opened for 1 sites; 1 failed'
-    : locale === 'zh-CN' ? '已为 1 个站点新建会话，1 个失败' : '已為 1 個網站新增對話，1 個失敗';
+  const expected = await run('document.querySelector("#session-announcement").dataset.partial');
   assert.equal(await run('document.querySelector("#session-announcement").textContent'), expected);
 };

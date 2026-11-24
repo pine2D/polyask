@@ -72,7 +72,7 @@ app.whenReady().then(async()=>{
   assert.equal((await state()).scroll,before.scroll);
   await click('[name=prompt]');await check('reclick already focused editor',true);
   await key('Escape');win.webContents.send('polyask:command','focus-prompt');await pause(250);await check('focus command already focused editor',true);
-  const focusStyle=()=>run('getComputedStyle(document.querySelector(".prompt-composer")).boxShadow');
+  const focusStyle=()=>run('getComputedStyle(document.querySelector("textarea[name=prompt]")).boxShadow');
   const pointerShadow=await focusStyle();await key('C',['control']);assert.equal(await focusStyle(),pointerShadow,'copy does not change focus style');
   fs.writeFileSync(join(output,'composer-focus.png'),(await win.webContents.capturePage()).toPNG());
   await key('Escape');
@@ -204,10 +204,10 @@ app.whenReady().then(async()=>{
   for(const theme of ['light','dark']){
     nativeTheme.themeSource=theme;
     await run('document.querySelector("[name=prompt]").focus()');await pause(150);const reference=await focusStyle();
-    const referenceBorder=await run('getComputedStyle(document.querySelector(".prompt-composer")).borderColor');
+    const referenceBorder=await run('getComputedStyle(document.querySelector("textarea[name=prompt]")).borderColor');
     for(const selector of [...Array.from({length:12},(_,i)=>'[name=field-'+i+']'),'[name=portal-search]']){
       await run(`document.querySelector(${JSON.stringify(selector)}).focus()`);await pause(135);const s=await fieldStyle(selector);
-      assert.equal(s.shadow,reference,theme+' '+selector+' consistent focus');assert.equal(s.outline,'none');assert.equal(s.border,referenceBorder);report.fields.push({theme,selector,...s});
+      assert.equal(s.shadow,reference,theme+' '+selector+' consistent focus');assert.equal(s.outline,'solid');assert.equal(s.border,referenceBorder);report.fields.push({theme,selector,...s});
     }
     await run('document.querySelector("[name=error]").focus()');await pause(135);const error=await fieldStyle('[name=error]');assert.notEqual(error.shadow,reference,'errors retain separate feedback');
     await run('document.querySelector("[name=readonly]").focus()');assert.equal(await run('document.activeElement.getAttribute("name")'),'readonly','read-only fields remain selectable');

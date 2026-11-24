@@ -1,9 +1,5 @@
 /* Mac OS 9 Platinum classic native widgets: 3-ridge scrollbars, popup.css selects, beveled checkboxes & radios.
    Scoped via :is(#root, body) to preserve (1,0,0) ID specificity while covering all document.body React portals. */
-:is(#root, body) * {
-  scrollbar-width: auto;
-}
-
 :is(#root, body) *::-webkit-scrollbar {
   width: 15px;
   height: 15px;

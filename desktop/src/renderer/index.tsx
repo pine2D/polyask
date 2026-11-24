@@ -67,10 +67,7 @@ import {
   type WorkspacePanelState,
   type WorkspacePanelTab
 } from "./workspace-panel-state";
-import "./styles.css";
-import "./settings.css";
-import "./accessibility.css";
-import "./feedback.css";
+import "./shell-styles.css";
 
 const INITIAL_DISPLAY = loadDisplayPreferences(
   window.localStorage,

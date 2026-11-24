@@ -207,7 +207,7 @@ test("cross-layer motion durations, WebContentsView geometry tokens, popups, por
   assert.doesNotMatch(widgetsCss, /(?:^|\n)\s*#root\b/, "platinum-widgets.css must use :is(#root, body) so all portals inherit widgets");
   assert.match(widgetsCss, /:is\(#root, body\) select\b/);
   assert.match(widgetsCss, /:is\(#root, body\) input\[type="checkbox"\]/);
-  assert.match(fieldsCss, /:is\(#root, body\) :is\(textarea:not\(\[name="prompt"\]\)/);
+  assert.match(fieldsCss, /:is\(#root, body\) :is\(textarea, input:where/);
 
   // 5. Stateful toolbar buttons must exclude active/expanded/pressed states from :hover background brightening.
   const barCss = renderer("command-bar.css");

@@ -62,13 +62,6 @@
   position: relative; z-index: 1; color: var(--plat-pressed-fg); background: var(--plat-pressed-bg); box-shadow: var(--plat-btn-bevel-pressed);
 }
 
-.command-bar textarea {
-  margin-left: 2px; width: calc(100% - 2px); height: var(--control-height); resize: none; padding: 3px 8px;
-  border: 1px solid var(--plat-ink); border-radius: 0; color: inherit; background: var(--field);
-  line-height: 18px; font-size: var(--font-body);
-}
-.command-bar.is-expanded textarea { height: calc(var(--composer-field-expanded-height) - 14px); }
-
 .summary { max-width: 112px; overflow: hidden; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .workspace-actions {
   height: var(--control-height); display: flex; align-items: center; gap: 4px; margin-left: 2px; padding-left: 6px;
@@ -224,10 +217,11 @@ kbd { opacity: .9; font: 10px var(--font-mono); }
 .command-bar[data-fit~="3"] .scope-label-count { display: inline-flex; }
 .command-bar[data-fit~="3"] .tier-select { display: block; }
 .command-bar[data-fit~="3"] .uncertain-retry-trigger .review-glyph { display: inline; }
-.command-bar[data-fit~="4"] { padding-inline: var(--space-1); column-gap: 3px; }
+.command-bar[data-fit~="4"] { padding-inline: 2px; column-gap: 2px; }
 .command-bar[data-fit~="4"] .prompt-history-tools { gap: 3px; }
-.command-bar[data-fit~="4"] .primary-action { padding: 0 6px; gap: 3px; }
-.command-bar[data-fit~="4"] .workspace-actions { gap: 2px; padding-left: 4px; }
+.command-bar[data-fit~="4"] .primary-action { padding-inline: 4px; gap: 3px; }
+.command-bar[data-fit~="4"] .workspace-actions { gap: 2px; padding-left: 2px; }
+.command-bar[data-fit~="4"] .workspace-actions > :is(.retry-trigger, .uncertain-retry-trigger, .archive-trigger) { padding-inline: 4px; }
 .command-bar[data-fit~="4"] :is(.health-trigger, .compare-trigger) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > button:not(.layout-toggle) { display: none; }
 .command-bar[data-fit~="4"] .mode-switch > .layout-toggle { display: inline-flex; }

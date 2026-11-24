@@ -48,9 +48,11 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 
 ## 外壳与设置页视觉回归
 
-在 `desktop/` 运行 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:shell-ui`（Linux 需 `xdotool`；仅跑草稿工具栏可用 `--toolbar-only`）。构建生产外壳组件 + `test/ui/shell-fixture.tsx` 合成数据，临时空白 profile、阻断联网，输出截图与 `report.json` 到临时目录：
+在 `desktop/` 运行 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:shell-ui`（Linux 需 `xdotool`；仅跑草稿工具栏可用 `--toolbar-only`）。通过 `shell-styles.css` 加载正式外壳的完整样式，使用生产组件和 `test/ui/shell-fixture.tsx` 的合成数据，临时空白 profile、阻断联网，输出截图与 `report.json` 到临时目录：
 
-- 覆盖三语 × 明暗 × 紧凑/舒适密度 × 960/1101/1280/1401/1600px 共 96 组布局、180 组命令栏文字与图标不溢出检查（收起提问框保底 ≥320px）、24 组草稿工具栏检查及 150% 设置页缩放。
+- 覆盖三语 × 明暗 × 紧凑/舒适密度 × 960/1101/1280/1401/1600px 共 96 组布局、180 组命令栏文字与图标不溢出检查（测量收起 textarea 的实际边框宽度，保底 320px）、24 组草稿工具栏检查及 150% 设置页缩放。
+- 提问框专项可单跑 `npm run test:shell-ui -- --composer-scroll-only`，再加 `--force-device-scale-factor=1.5` 可独立核验系统缩放。最小窗口中实际点击收起字段底边，输入短句和 42 行草稿，拖动滑块并用滚轮到底，取样焦点线跨越轨道处的像素。200% 外壳缩放下展开底栏计数，与临时发送提示同时显示时至少能读到一项完整计数，各操作按钮互不遮挡。方向键可横向查看其余计数，轨道不占用文字高度。结果写入 `composer-scroll-report.json` 和截图。
+- `node scripts/test-safe.mjs command node scripts/fields-native.mjs` 与外壳专项同属定时和手动 UI 回归。它使用生产提问框，取样输入区内、边框和周围背景的实际像素，覆盖 32 组语言、密度、缩放、明暗和系统强制颜色组合。
 - 子项涵盖：`workspace-entry-visual.cjs`（无障碍树名称、窄窗发送/取消、收纳菜单）、`settings-section-visual.cjs`（七分类 72 组布局切换、隐藏分类 `inert`、窄窗选择器）、`settings-interaction-visual.cjs`（IME Escape、`DELETE` 门槛、异步恢复）、`interface-polish-visual.cjs`（禁用态无按压反馈但保留键盘原因提示、10% 慢放页签指示器中断重定、减少动态效果、合成附图增删）、`site-order-visual.cjs`（键盘与原生拖拽重排）。
 
 ## 结果库视觉与交互回归

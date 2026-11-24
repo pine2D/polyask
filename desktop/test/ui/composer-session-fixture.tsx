@@ -14,7 +14,7 @@ import { executeCommand } from '../../src/renderer/command-dispatcher';
 import type { PendingSessionConfirmation } from '../../src/renderer/session-confirmation';
 import type { SiteKey } from '../../src/shared/contracts';
 import { formatCopy } from '../../src/shared/copy';
-import '../../src/renderer/styles.css';
+import '../../src/renderer/shell-styles.css';
 const opened: readonly SiteKey[] = ['claude', 'chatgpt', 'deepseek', 'gemini', 'kimi'];
 const participants: readonly SiteKey[] = ['claude', 'kimi'];
 const query = new URLSearchParams(location.search);
@@ -68,7 +68,7 @@ function Fixture() {
       onConfirm={() => pending.decide(true)} onCancel={() => pending.decide(false)} />}
     <output id="session-confirm-count">{pending?.count ?? 0}</output>
     <output id="session-calls">{JSON.stringify(calls)}</output>
-    <output id="session-announcement">{announcement}</output>
+    <output id="session-announcement" data-partial={formatCopy(copy.newSessionPartial, { ok: 1, failed: 1 })}>{announcement}</output>
     <output id="session-images">{JSON.stringify(imageSelection.images)}</output>
     <output id="composer-transitions">{JSON.stringify(transitions.current)}</output>
     <output id="composer-inputs">{trusted.current}</output>

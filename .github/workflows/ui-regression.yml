@@ -75,3 +75,6 @@ jobs:
               test/stars-native.check.ts \
               test/site-find-native.check.ts \
               test/proxy-native.check.ts
+          sudo systemd-run --scope --quiet -p MemoryMax=4G -p MemorySwapMax=512M \
+            --uid="$(id -u)" --gid="$(id -g)" \
+            env "PATH=$PATH" node scripts/test-safe.mjs command node scripts/fields-native.mjs

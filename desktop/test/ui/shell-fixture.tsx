@@ -38,16 +38,14 @@ import { desktopToolsShellStubs } from './desktop-tools-fixture';
 import { requestSurfaceChange } from '../../src/renderer/surface-transition';
 import { describeSiteSnapshotError } from '../../src/shared/status-copy';
 import type { SiteHealth } from '../../src/shared/site-health';
-import '../../src/renderer/styles.css';
-import '../../src/renderer/settings.css';
-import '../../src/renderer/accessibility.css';
-import '../../src/renderer/feedback.css';
+import '../../src/renderer/shell-styles.css';
 
 const query = new URLSearchParams(location.search);
 const locale = query.get('locale') || 'zh-CN';
 const stress = query.get('stress') === '1';
 const preview = query.get('preview') === '1';
 const copy = getCopy(locale);
+if (query.has('skin')) applyUiTheme(document, query.get('skin'));
 document.documentElement.lang = locale;
 document.documentElement.dataset.density = query.get('density') || 'compact';
 const platform = (query.get('platform') || currentPlatform) as DesktopPlatform;
