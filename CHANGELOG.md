@@ -8,6 +8,10 @@
 
 ## [未发布]
 
+## [1.37.2] - 2026-11-25
+
+Windows 隔离试玩版已在 150% 缩放下验证长草稿滚动。正式安装与升级流程仍待 Windows、Linux 和 macOS 实机验收。[验收记录](https://github.com/pine2D/polyask/blob/v1.37.2/docs/acceptance.md#2026-11-24-提问框和底栏验收)
+
 ### 修复
 
 - 提问框的滚动条现紧贴输入区右边缘，展开按钮移到框外右侧。收起时整行都能点击进入编辑，长草稿滚动时焦点边框保持完整。窄窗下工具栏按实际可编辑宽度收起次要按钮。
@@ -1840,7 +1844,8 @@
 - 新增 Alt+A 快捷键打开群发控制台
 - 新增发送后自动置顶全部窗口（popup 可关闭）
 
-[未发布]: https://github.com/pine2D/polyask/compare/v1.37.1...HEAD
+[未发布]: https://github.com/pine2D/polyask/compare/v1.37.2...HEAD
+[1.37.2]: https://github.com/pine2D/polyask/compare/v1.37.1...v1.37.2
 [1.37.1]: https://github.com/pine2D/polyask/compare/v1.37.0...v1.37.1
 [1.37.0]: https://github.com/pine2D/polyask/compare/v1.36.0...v1.37.0
 [1.36.0]: https://github.com/pine2D/polyask/compare/v1.35.1...v1.36.0
