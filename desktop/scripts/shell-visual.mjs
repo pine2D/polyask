@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { visualExitCode } from './lib/visual-exit-code.mjs';
 const require = createRequire(import.meta.url);
 const webpack = require('webpack');
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -25,9 +26,7 @@ const env = { ...process.env, ELECTRON_RUN_AS_NODE: '', WAYLAND_DISPLAY: '', WAY
   DBUS_SESSION_BUS_ADDRESS: `unix:path=${join(output, 'no-session-bus')}` };
 const child = spawn(require('electron'), [join(root, 'scripts/shell-visual-runtime.cjs'), output, ...process.argv.slice(2)], { stdio: 'inherit', env });
 // Includes all settings categories across locale, density, theme and zoom; allow software rendering.
-const timer = setTimeout(() => child.kill('SIGTERM'), 420_000);
-const status = await new Promise(resolve => child.on('exit', resolve));
-clearTimeout(timer);
+const status = await visualExitCode(child, join(output, 'checks-complete'), 420_000);
 if (process.platform === 'linux') {
   let boundary;
   try { boundary = JSON.parse(await readFile(join(output, 'process-boundary.json'), 'utf8')); }

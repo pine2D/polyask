@@ -16,6 +16,11 @@ app.whenReady().then(async () => {
   const win = new BrowserWindow({ width: 1600, height: 1000, show: true,
     webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false } });
   win.setMenuBarVisibility(false);
+  const finish = () => {
+    writeFileSync(join(output, 'checks-complete'), '');
+    win.destroy();
+    app.quit();
+  };
   const errors = [], reports = [], failures = [];
   win.webContents.on('console-message', event => {
     if (event.level !== 'error') return;
@@ -49,16 +54,16 @@ app.whenReady().then(async () => {
   const check = (ok, message) => { if (!ok) failures.push(message); };
   if (process.argv.includes('--composer-scroll-only')) {
     await require('./composer-scroll-visual.cjs')({ win, output, run, wait, paint, shot });
-    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+    assert.deepEqual(errors, []); return finish();
   }
   if (process.argv.includes('--desktop-tools-only')) {
     await require('./desktop-tools-visual.cjs')({ win, output, run, wait, paint, shot });
-    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+    assert.deepEqual(errors, []); return finish();
   }
   if (process.argv.includes('--settings-section-only') || process.argv.includes('--settings-polish-only')) {
     await require('./settings-polish-visual.cjs')({ win, output, run, wait, paint, shot });
     if (process.argv.includes('--settings-section-only')) await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
-    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+    assert.deepEqual(errors, []); return finish();
   }
   if (process.argv.includes('--toolbar-resize-only')) {
     win.setContentSize(1280, 900);
@@ -75,38 +80,38 @@ app.whenReady().then(async () => {
     }
     assert.deepEqual(errors, []);
     console.log('Toolbar resize passed: four inline/stacked zoom transitions without observer errors.');
-    win.destroy(); app.quit(); return;
+    return finish();
   }
   if (process.argv.includes('--send-key-contrast-only')) {
     await require('./send-key-contrast-visual.cjs')({ win, output, run, wait, paint });
-    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+    assert.deepEqual(errors, []); return finish();
   }
   if (process.argv.includes('--image-picker-only')) {
     await require('./image-picker-accessibility-visual.cjs')({ win, output, run, wait, paint });
-    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+    assert.deepEqual(errors, []); return finish();
   }
   if (process.argv.includes('--workspace-entry-only')) {
     await require('./workspace-entry-visual.cjs')({ win, output, run, wait, paint, shot });
-    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+    assert.deepEqual(errors, []); return finish();
   }
   if (process.argv.includes('--proxy-leave-only')) {
     await require('./settings-proxy-leave-visual.cjs')({ win, output, run, wait, paint, shot });
-    assert.deepEqual(errors, []); win.destroy(); app.quit(); return;
+    assert.deepEqual(errors, []); return finish();
   }
   await require('./shortcut-reference-visual.cjs')({ win, output, run, wait, paint, shot });
-  if (process.argv.includes('--shortcut-reference-only')) { assert.deepEqual(errors, []); win.destroy(); app.quit(); return; }
+  if (process.argv.includes('--shortcut-reference-only')) { assert.deepEqual(errors, []); return finish(); }
   await require('./settings-proxy-leave-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./image-picker-accessibility-visual.cjs')({ win, output, run, wait, paint });
   await require('./send-key-contrast-visual.cjs')({ win, output, run, wait, paint });
   if (!process.argv.includes('--site-order-only')) {
     await require('./draft-tools-visual.cjs')({ win, output, run, wait, paint, shot });
-    if (process.argv.includes('--toolbar-only')) { assert.deepEqual(errors, []); win.destroy(); app.quit(); return; }
+    if (process.argv.includes('--toolbar-only')) { assert.deepEqual(errors, []); return finish(); }
   }
   if (process.argv.includes('--site-order-only')) {
     await require('./site-order-visual.cjs')({ win, output, run, wait, paint, shot });
     assert.deepEqual(errors, []);
     writeFileSync(join(output, 'report.json'), JSON.stringify({ scope: 'site-order-participation', failures, errors }, null, 2));
-    win.destroy(); app.quit(); return;
+    return finish();
   }
   await require('./settings-interaction-visual.cjs')({ win, output, run, wait, paint, shot });
   await require('./settings-section-visual.cjs')({ win, output, run, wait, paint, shot });
@@ -198,5 +203,5 @@ app.whenReady().then(async () => {
   writeFileSync(join(output, 'report.json'), JSON.stringify({ reports, failures }, null, 2));
   if (failures.length) { console.error(failures.slice(0, 16).join('\n')); throw new Error(`${failures.length} UI checks failed`); }
   console.log(`Shell UI passed: ${reports.length} layout variants, action/status contrast, composer and diagnostics keyboard flow, 150% settings zoom.`);
-  win.destroy(); app.quit();
+  finish();
 }).catch(error => { writeFileSync(join(output, 'failure.json'), JSON.stringify({ message: error.message, stack: error.stack }, null, 2)); console.error(error); app.exit(1); });

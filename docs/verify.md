@@ -48,6 +48,8 @@ React/jsdom 测试若将 DOM 节点直接传给 `assert.equal(el, null)`，失�
 
 ## 外壳与设置页视觉回归
 
+外壳与结果库的原生检查都要求在时限内完成最后一项断言。即使 Electron 提前以 0 退出，缺少本轮完成标记（外壳）或最终 `report.json`（结果库），命令仍会报错。
+
 在 `desktop/` 运行 `xvfb-run -a -s '-screen 0 1920x1200x24' npm run test:shell-ui`（Linux 需 `xdotool`；仅跑草稿工具栏可用 `--toolbar-only`）。通过 `shell-styles.css` 加载正式外壳的完整样式，使用生产组件和 `test/ui/shell-fixture.tsx` 的合成数据，临时空白 profile、阻断联网，输出截图与 `report.json` 到临时目录：
 
 - 覆盖三语 × 明暗 × 紧凑/舒适密度 × 960/1101/1280/1401/1600px 共 96 组布局、180 组命令栏文字与图标不溢出检查（测量收起 textarea 的实际边框宽度，保底 320px）、24 组草稿工具栏检查及 150% 设置页缩放。

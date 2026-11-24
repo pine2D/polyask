@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { visualExitCode } from './lib/visual-exit-code.mjs';
 const require = createRequire(import.meta.url);
 const webpack = require('webpack');
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -22,8 +23,6 @@ await new Promise((resolve, reject) => {
 });
 await writeFile(join(output, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="default-src \'self\'; style-src \'self\' \'unsafe-inline\'; script-src \'self\'; img-src \'none\'; connect-src \'none\'"><title>Result library UI test</title></head><body><div id="root"></div><script src="bundle.js"></script></body></html>');
 const child = spawn(require('electron'), [join(root, 'scripts/library-visual-runtime.cjs'), output], { stdio: 'inherit' });
-const timer = setTimeout(() => child.kill('SIGTERM'), 210_000);
-const status = await new Promise(resolve => child.on('exit', resolve));
-clearTimeout(timer);
+const status = await visualExitCode(child, join(output, 'report.json'), 210_000);
 console.log(`UI report and screenshots: ${output}`);
 if (status !== 0) process.exitCode = 1;
